@@ -4,25 +4,48 @@
 **Last reviewed:** 2026-10-26<br>
 **Current stage:** Local-first final: CV quality parity
 
-This document describes product direction, not fixed delivery dates. **Now** is
-the current commitment, **Next** is planned work that may change after
-discovery or pilot evidence, and **Later** is directional. The status model
-describes evidence for a product outcome; it does not count lines of code or
-package-level capabilities.
+This page says where DraftLoop is going and what is being built now. It is for
+anyone deciding what to work on next. Finished stages, their evidence and the
+older change log are in the [roadmap history](roadmap-history.md).
+
+- **Now** is the current commitment.
+- **Next** is planned work that may change after discovery or pilot evidence.
+- **Later** is directional.
+
+The [status model](#status-model) describes evidence for a product outcome, not
+lines of code or package capabilities.
+
+## Contents
+
+- [Vision](#vision)
+- [Product principles](#product-principles)
+- [Status model](#status-model)
+- [Current state](#current-state)
+- [Reference workflow and parity target](#reference-workflow-and-parity-target)
+- [Candidate knowledge-base model](#candidate-knowledge-base-model)
+- [Roadmap](#roadmap)
+- [Explicitly deferred](#explicitly-deferred)
+- [Success measures](#success-measures)
+- [Stage evidence](#stage-evidence)
+- [Review cadence and change log](#review-cadence-and-change-log)
+
+## How sprints are planned
 
 GitHub milestones are dependency-closed delivery sprints. Every open
-prerequisite of a sprint issue belongs to the same milestone and is ordered
-before the work it enables; completed prerequisites remain in their historical
-milestones. This keeps execution inside the visible sprint scope.
+prerequisite of a sprint issue belongs to the same milestone and comes before
+the work it enables; completed prerequisites stay in their historical
+milestones.
 
-Issue count is not a capacity measure. Broad outcome issues may remain as
-rollups for a milestone exit, but they are never executable sprint units and
-do not enter implementation until ordered child issues exist. Each execution
-issue must target one observable outcome, one primary architecture boundary,
-one focused test surface, and one PR. Active implementation and review is
-limited to 20 minutes, excluding test and CI wait time; reaching the limit
-requires another split rather than silent continuation. Quality gates remain
-unchanged.
+- **Rollups are not sprint work.** A broad outcome issue may stay open as a
+  rollup for a milestone exit, but it is never implemented until ordered child
+  issues exist.
+- **One issue, one PR.** Each execution issue targets one observable outcome,
+  one primary architecture boundary and one focused test surface.
+- **A 20-minute budget.** Active implementation and review is limited to 20
+  minutes, excluding test and CI waits. Reaching the limit means another
+  split, never silent continuation. Quality gates stay the same.
+
+Issue count is not a capacity measure.
 
 ## Vision
 
@@ -51,11 +74,11 @@ CV quality has not been validated for these choices.
 
 The current curated choices use three tiers:
 
-| Tier | Pair | Purpose |
-| ---- | ---- | ------- |
-| **Economy** | Claude Haiku 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
-| **Balanced** | Claude Sonnet 5.5 + GPT-6.1 Terra | Middle-cost configuration |
-| **Standard** | Claude Opus 5.5 + GPT-6.1 Sol | Opt-in configuration for more demanding work |
+| Tier         | Pair                              | Purpose                                      |
+| ------------ | --------------------------------- | -------------------------------------------- |
+| **Economy**  | Claude Haiku 5.5 + GPT-6 Luna     | Lower-cost configuration and workflow checks |
+| **Balanced** | Claude Sonnet 5.5 + GPT-6.1 Terra | Middle-cost configuration                    |
+| **Standard** | Claude Opus 5.5 + GPT-6.1 Sol     | Opt-in configuration for more demanding work |
 
 These are configuration choices, not validated CV-quality rankings. Premium
 choices are deferred. Older exact profile versions remain available for
@@ -168,42 +191,23 @@ unless its exit criterion was demonstrated.
 
 The product status is easiest to read by outcome:
 
-| Outcome                            | Current evidence                      | What is true now                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ---------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Integrated author–critic workspace | [Released v0.8.0-alpha.5 checkpoint](releases/stage-evidence-v0.8.0-alpha.5.md); [v0.8.0-alpha.2](releases/stage-evidence-v0.8.0-alpha.2.md) closed milestone 17; representative outcome not recorded | CLI and packaged Electron share the application driver for local intake, provenance, SQLite run history, orchestration, review, recovery, and Markdown/DOCX/PDF export. Versioned profile controls are snapshotted and reused on resume; CLI/desktop selection, public API price scenarios, and bounded local availability checks are integrated. Representative CV quality remains unvalidated. |
-| Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
-| Workspace retrieval and policy     | Policy and CKB lexical runtime integrated | Explicit CKB selections rebuild and query exact source-version indexes, fail visibly on unavailable retrieval, persist immutable content-free traces, and provide only selected opaque chunk references and bounded text to live author/critic requests. Legacy unselected workspaces retain the earlier evidence path. Writing policies remain integrated with immutable lineage and shared controls. |
-| Opportunity brief                  | Integrated reviewed-version handoff      | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries.                    |
-| Portable CKB                       | [Released Sprint 2 checkpoint](releases/stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, retention, backup/restore, exact-plan deletion, and exact-version lexical retrieval. |
-| CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #111 accepted | Shared CLI/desktop controls create, open, select, rename, archive, preview/delete, export, inspect, and restore CKB stores without projecting roots through the renderer. Workspace bindings produce immutable path-free source-version snapshots for new runs, survive restart and legacy migration, and block lifecycle drift before provider execution. Retrieval, reactivation, visual lifecycle UI, and provider use remain outside the product path. |
+| Outcome                            | Current evidence                                                                                                                                                                                      | What is true now                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integrated author–critic workspace | [Released v0.8.0-alpha.5 checkpoint](releases/stage-evidence-v0.8.0-alpha.5.md); [v0.8.0-alpha.2](releases/stage-evidence-v0.8.0-alpha.2.md) closed milestone 17; representative outcome not recorded | CLI and packaged Electron share the application driver for local intake, provenance, SQLite run history, orchestration, review, recovery, and Markdown/DOCX/PDF export. Versioned profile controls are snapshotted and reused on resume; CLI/desktop selection, public API price scenarios, and bounded local availability checks are integrated. Representative CV quality remains unvalidated.                                                              |
+| Application-grade quality          | v0.6 release; validation failed                                                                                                                                                                       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                                      |
+| Workspace retrieval and policy     | Policy and CKB lexical runtime integrated                                                                                                                                                             | Explicit CKB selections rebuild and query exact source-version indexes, fail visibly on unavailable retrieval, persist immutable content-free traces, and provide only selected opaque chunk references and bounded text to live author/critic requests. Legacy unselected workspaces retain the earlier evidence path. Writing policies remain integrated with immutable lineage and shared controls.                                                        |
+| Opportunity brief                  | Integrated reviewed-version handoff                                                                                                                                                                   | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries. |
+| Portable CKB                       | [Released Sprint 2 checkpoint](releases/stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated        | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, retention, backup/restore, exact-plan deletion, and exact-version lexical retrieval.                                                                                                                                                    |
+| CKB directory recovery             | Implemented bounded components                                                                                                                                                                        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                                                                                                  |
+| Product CKB workflow               | [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #111 accepted                                                                                                               | Shared CLI/desktop controls create, open, select, rename, archive, preview/delete, export, inspect, and restore CKB stores without projecting roots through the renderer. Workspace bindings produce immutable path-free source-version snapshots for new runs, survive restart and legacy migration, and block lifecycle drift before provider execution. Retrieval, reactivation, visual lifecycle UI, and provider use remain outside the product path.    |
 
-The CKB foundation has a [Released Sprint 2 checkpoint](releases/stage-evidence-v0.7.0-alpha.2.md),
-and v0.7.0-alpha.3 is a [Released drafting and review foundations checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md), not a v0.7
-stage exit. It freezes the post-alpha.2 confirmed-deletion slice,
-provider-independent readiness/adjudication/stopping/layout foundations, the
-first dormant runtime carrier, and Windows user-session environment hardening.
-The v0.7 stage remains incomplete and unvalidated; profile, opportunity,
-retrieval, planning, complete CV, writing-policy, runtime/UI integration, and
-representative validation remain. The [Released v0.7.0-alpha.4 checkpoint](releases/stage-evidence-v0.7.0-alpha.4.md)
-carries forward Windows user-session environment hardening
-and adds packaged-desktop OpenAI authentication selection (API key or
-authenticated Codex/ChatGPT session), independent per-provider persisted
-preferences, strict environment precedence, restart-required/no-silent-fallback
-behavior, and Codex reasoning lifecycle compatibility while continuing to
-reject tool events and ignore reasoning content.
-
-The [Released v0.7.0-alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md)
-follows merged feature PR [#202](https://github.com/akoita/draft-loop/pull/202)
-and release prep PR [#203](https://github.com/akoita/draft-loop/pull/203). It
-carries forward alpha.4 authentication selection and fixes Windows/session
-critic compatibility by accepting and discarding passive `todo_list` and
-`item.updated` lifecycle output while commands, mutations, search, tool, error,
-and unknown event/item types remain fail-closed. The v0.7 implementation history
-is retained here; the current release candidate is documented below. See [the architecture](architecture/overview.md) for stable boundaries and
-[ADR 0007](adr/0007-portable-candidate-knowledge-store.md) for the canonical
-CKB contract. The [privacy and evaluation policy](security/privacy-and-evaluation.md)
-and [threat model](security/threat-model.md) remain authoritative for their concerns.
+The release checkpoints behind these rows, including the v0.7 alpha history,
+are in the [roadmap history](roadmap-history.md#current-state-checkpoints).
+Stable boundaries are in [the architecture](architecture/overview.md), and
+[ADR 0007](adr/0007-portable-candidate-knowledge-store.md) is the canonical CKB
+contract. The [privacy and evaluation policy](security/privacy-and-evaluation.md)
+and the [threat model](security/threat-model.md) remain authoritative for their
+concerns.
 
 ## Reference workflow and parity target
 
@@ -263,1628 +267,137 @@ applications.
 
 ## Roadmap
 
-| Horizon  | Stage                                                                                                             | Evidence status                                      | Outcome                                                                               | Remaining gate                                                                                                          |
-| -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](releases/stage-evidence-v0.6.0.md)                          |
-| Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
-| Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
-| Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
-| Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
-| Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
-| Previous | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))      | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md); no draft reached validation | Determine whether the corrected boundary can produce one accepted representative draft | All three author attempts ended with a provider `api_error`; the sign-in probe did not exercise the model |
-| Previous | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Exit met: synthetic preflight `available`; status-less `api_error` results carry bounded cause codes | Prove the declared author route can answer and make its request-level failures diagnosable | No real author request has succeeded since the fixes; the #446 cause remains unobserved |
-| Previous | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected | Obtain the first real validator verdict on a representative author draft              | Structured retry feedback did not produce an accepted draft; one of three attempts ended with an unexplained `api_error` |
-| Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
-| Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
-| Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
-| Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
-| Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Previous | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md); 23/23 issues closed; representative CV quality unvalidated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned controls; #694 defines the active four-model catalog; #684/#686 provide explicit CLI/desktop selection; #679 adds bounded local availability checks. Default promotion (#683) requires separate representative quality evidence; broad fixtures (#583) remain separate. Superseded as the current stage by Manual parity. |
-| Previous | Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22)) | Closed 2026-10-15; [v0.8.0-alpha.3 checkpoint](releases/stage-evidence-v0.8.0-alpha.3.md); full-source input and sensitivity controls shipped, remaining inputs work deferred to the client-server version | Give the author the candidate's full eligible career material under approved policy and sensitivity controls | Exit: one scored parity observation (#878) against a manually produced reference CV |
-| Previous | Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23)) | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed; packaged on all platforms; evaluated on invented cases only; lexical stays the default (#114) | Retrieve paraphrased and cross-language candidate evidence locally on CPU-only hardware | Real-embedding evaluation (#919) shows gains without lexical regression, and packaged acceptance passes on every platform |
-| Previous | Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24)) | Completed in code: 21/21 issues closed; the exit check on a real Windows run is pending | Make setup unambiguous and accept pasted job pages | One career-evidence concept bound to the selected knowledge base (#983), and reviewed requirements from a pasted job page (#979) |
-| Previous | Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25)) | Completed in code: 11/11 issues closed; Mistral extraction checked live; full reviews on both pairs pending | Cheaper development runs and a third opt-in author provider | Claude Haiku 5.5 + GPT-6 Luna is the economy pair (#998), and an opt-in Mistral Large 4 author runs end to end (#999–#1002) |
-| Previous | Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26)) | Completed: 51/51 issues closed, ending with source kinds (#1127–#1131), fact-first retrieval (#1132–#1135) and the live output-ratio re-measurement (#1053); the "structured in minutes" check still needs a live consented run | Interpret career evidence in any format, structure it into one verified career record, and feed retrieval from it | A mixed-format knowledge base is structured in minutes, re-adding one source re-processes only that source, and runs retrieve verified facts first (#1029) |
-| Previous | Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28)) | Completed in code: 29/29 issues closed, ending with a per-application model pair and provider readiness in New application step 4 (#1065) | One workspace per candidate, with many job applications reusing one reviewed profile | Two applications for different jobs come from one workspace and one reviewed profile; per-job workspaces can be imported (#1059) |
-| Previous | Tailored, sendable CVs ([milestone](https://github.com/akoita/draft-loop/milestone/30)) | [Completed](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172): 29/29 issues closed; exit met on reference E | Make drafts tailored to the job and sendable without hand edits to structure | A fresh run covers the job's responsibilities, opens with a job-led headline and core areas, and contains no copied source notes |
-| Previous | Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29)) | [Exit met in a fixture walk](evaluation/first-run-journey.md) on 2026-10-15; released in the [v0.8.0-alpha.4 checkpoint](releases/stage-evidence-v0.8.0-alpha.4.md) | Make the desktop journey simple to follow: one job per screen and every blocker explained where you act | From an empty workspace, a first-time user reaches a started review with no dead end (#1092) |
-| Now | Local-first final: CV quality parity ([milestone](https://github.com/akoita/draft-loop/milestone/31)) | Planned 2026-10-15 (#1309); run comparison done (#1276); [v0.8.0-alpha.5 checkpoint](releases/stage-evidence-v0.8.0-alpha.5.md) released 2026-10-31, exit not met | Make local-first CVs as good as the manual Claude/Codex loop, then release the local-first version | On 3 of 4 private references: requirement coverage at least the manual CV's, recall at least 85%, no leaks, a sendable DOCX, and 3 or fewer edits before sending (#1302–#1308, #1108, #1112, #1113), with a two-page layout as dense as a hand-made CV (#1327) and rendering templates (#1328–#1331) |
-| Next | Client-server version ([ADR 0011, accepted](adr/0011-client-server-version.md)) | Architecture accepted 2026-10-17; phase 0 (#1347) merged 2026-10-17; region `europe-west1` and cost per run recorded (#1357); phase 1 (#1358): Postgres storage merged 2026-10-17, sprint 1b (Cloud Storage blobs and the local stack, [milestone](https://github.com/akoita/draft-loop/milestone/35)) merged 2026-10-21, sprint 1c (the API and the worker, [milestone](https://github.com/akoita/draft-loop/milestone/36)) merged 2026-10-21, sprint 1d (the model gateway, [milestone](https://github.com/akoita/draft-loop/milestone/37)) merged 2026-10-22, sprint 1e (API setup and source intake, [milestone](https://github.com/akoita/draft-loop/milestone/38)) merged 2026-10-22, sprint 1f (review, approval and export through the API, [milestone](https://github.com/akoita/draft-loop/milestone/39)) merged 2026-10-22, sprint 1g (cloud deployment, [milestone](https://github.com/akoita/draft-loop/milestone/40)) merged 2026-10-22 with `server-v0.1.0` on staging 2026-10-23 and production held by the owner, sprint 1h (the web review screen, [milestone](https://github.com/akoita/draft-loop/milestone/41)) merged 2026-10-23, sprint 1i (parity readiness, [milestone](https://github.com/akoita/draft-loop/milestone/42)) merged 2026-10-23, hosted parity runs 2026-10-23 and 2026-10-24 matched on quality and failed on cost; with the prompt cache working, two rounds cost US$3.64 (#1357), and a complete run on the cost fixes is still to measure (#1597); phase 2 (#1359): sprint 1j (phase 2a, sign-in and tenancy, [milestone](https://github.com/akoita/draft-loop/milestone/43)) merged 2026-10-24 with staging still on the owner token until Keycloak is hosted, sprint 1k (phase 2b, candidate records and consent, [milestone](https://github.com/akoita/draft-loop/milestone/44)) merged 2026-10-24, with consent enforced only in sign-in mode, sprint 1l (phase 2c, export and deletion, [milestone](https://github.com/akoita/draft-loop/milestone/45)) merged 2026-10-24, with export as a [record archive](reference/record-archive.md) and backups ageing out within 35 days, sprint 1m (phase 2d, the safety stack: injection screening of job posts and uploads with quarantine, plus hardening of sprints 1j–1l, [milestone](https://github.com/akoita/draft-loop/milestone/46)) merged 2026-10-24 (main `a547df9`) with a red-team [flow test](security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads) (#1666), with model screening on staging and production still open, sprint 1n (phase 2e, entitlements and credits, [milestone](https://github.com/akoita/draft-loop/milestone/47)) built 2026-10-24: plan catalog v1, a credit ledger, run caps, operator plan and credit routes, and a members' balance view, enforced in sign-in mode only and proven by a two-organisation flow test (#1694), with billing, the pricing page and self-serve plan changes moved after the validation tests and the prices waiting for the cost check (#1597), sprint 1o (the desktop's shared screens on the web, ADR 0011 D9, [milestone](https://github.com/akoita/draft-loop/milestone/48)) built 2026-10-25: the web opens each record on the shared Home, New application, career evidence and start, and starts a run there, sprint 1p ([milestone](https://github.com/akoita/draft-loop/milestone/49)) built 2026-10-25: the career profile, the shared review with its decisions, approval and export downloaded by the browser, and the run details and comparison, with the web's classic steps removed; a browser walk with fictional data passed from Home through export, and `server-v0.4.0` reached staging 2026-10-25, sprint 1q (hosted run recovery, [milestone](https://github.com/akoita/draft-loop/milestone/50)) built 2026-10-25 after the live Sonnet run on staging failed on provider errors the web could not recover: rejected-output diagnostics, worker retries of every retryable failure, no dead retry button, spent credit named as such, and owner-token bases owned by their workspace, and the live run on `server-v0.4.1` passed 2026-10-25 from Home through an approved DOCX export (#1725), sprint 1r (staging clean-up and web polish, [milestone](https://github.com/akoita/draft-loop/milestone/51)) merged 2026-10-25: the operator wipe of the owner token's tenant, naming knowledge bases on the web, findings in plain words, the final checks shown before approval and a queued profile generation shown as waiting, with `server-v0.4.2` on staging and staging wiped 2026-10-26, sprint 1s (fixes from the owner's staging walk, [milestone](https://github.com/akoita/draft-loop/milestone/52)) admitted 2026-10-26: the desktop's first-run setup on the web, readable export names, the preset in the start dialog, grouped repeated warnings, word-match coverage gaps as warnings until a judge or critic confirms them, a wider review screen and the template's own look in the built-in PDF, with phone width left to #1794, sprint 1t (follow-ups from the owner's re-walk, [milestone](https://github.com/akoita/draft-loop/milestone/53)) admitted 2026-10-26: coverage judged on hosted runs, a job by file and by approved page address on the web, and the review screen at wide and phone widths, merged 2026-10-26 with `server-v0.5.0` on staging, sprint 1u (fixes from the second re-walk, [milestone](https://github.com/akoita/draft-loop/milestone/54)) admitted 2026-10-27: job pages read through a separate page fetcher, the one hosted runtime that reaches the web, refused exports and unreadable job pages that say why, Carlito in PDFs, approved runs without decision errors, the review at phone width, the workspace's preset in the model dialog and relevance over the reviewed brief, merged 2026-10-27 with `server-v0.6.2` on staging, sprint 1v (draft quality and a clearer review, [milestone](https://github.com/akoita/draft-loop/milestone/55)) admitted 2026-10-27: author prompt `cli-author-v15` that states each fact once, warnings for a fact repeated across sections, a CV without a header, an unlabelled Skills line and a revision that loses coverage, and requirements and responsibilities counted apart with grouped "Not ready" reasons, merged 2026-10-28 with `server-v0.7.0` on staging, sprint 1w (fixes from the 0.7.0 re-walk, [milestone](https://github.com/akoita/draft-loop/milestone/56)) admitted 2026-10-28: emphasis advice no longer confirms a word-match gap, confirmed gaps marked as known in one step, author prompt `cli-author-v16` with one fact per bullet, a fuller summary and a placeholder header, and warnings for semicolon-stitched bullets and header placeholders, with applying accepted fixes after the last round moved to a follow-up, merged 2026-10-28 with `server-v0.8.0` and `server-v0.8.1` (Enter submits reason fields) on staging, sprint 1x (your edits reach the export, [milestone](https://github.com/akoita/draft-loop/milestone/58)) admitted 2026-10-28: approval applies the candidate's review edits as a new version and checks it again, on the desktop, the CLI and the API, edited blocks stay marked, header placeholders block approval again, settled known gaps satisfy approval without a separate override, and the web offers a reload when a new release is serving, shipped with reasoning levels per role as `server-v0.9.0` on staging 2026-10-28, with `server-v0.9.1` fixing the web model dialog that refused a changed pair, `server-v0.9.2` saving web review edits whole and locking an approved draft, `server-v0.9.3` hiding the web's approval actions while a round runs, `server-v0.9.4` exporting a PDF with a wrapped headline and keeping finding decisions on an edited approved version, `server-v0.9.5` drawing a one-line header as the name plus a contact line, and `server-v0.9.6` giving the web the desktop's header instead of its own top bar, sprint 1y (one web flow, [milestone](https://github.com/akoita/draft-loop/milestone/59)) admitted 2026-10-29: the web's interim Workspace, Sources, Job brief and Run tabs removed, with the permission to store material, each file's screening check and private-section rules on the Career evidence page, and the provider consent and credit cost in the start dialog, shipped as `server-v0.10.0` with the review's foldable side panel, one panel scroll, an action's error shown once and edits said to be checked again at approval (#1939), sprint 1z (the server on your own machine, [milestone](https://github.com/akoita/draft-loop/milestone/60)) admitted 2026-10-29: keys from local secret files, direct and local model routes, blobs on disk and a self-hosted Compose stack, with the desktop in maintenance mode, built 2026-10-29 with a flow test from an upload to an exported DOCX on the self-hosted configuration and the [self-hosted server](operations/self-hosted.md) guide, shipped as `server-v0.11.0` and validated on the owner's machine 2026-10-29, the quality check of 2026-10-29 (#1307) scored four new private references: the default Balanced draft is not sendable and the Standard draft is close, so a quality sprint ([milestone](https://github.com/akoita/draft-loop/milestone/61)) was admitted 2026-10-29: a 64,000-token Opus cap, billed failed calls counted in a run's cost, autopilot on hosted runs, a coverage judge that credits shown behaviour, author prompt `cli-author-v17` for a full first draft and the run's writing policy shown on the web, with the four references scored again after it ([manual parity](evaluation/manual-parity.md)),, a local install sprint ([milestone](https://github.com/akoita/draft-loop/milestone/62)) was admitted 2026-11-03: server images published on GHCR, a `draft-loop-server` script that installs, upgrades, backs up and restores the self-hosted stack, a CI job over that stack, with the Keycloak sign-in profile deferred, merged 2026-11-03 without the desktop import, which became the desktop import sprint ([milestone](https://github.com/akoita/draft-loop/milestone/63), #2056, #2067–#2069): a `draft-loop server import` command that sends a career evidence backup and desktop applications with their history to the server, built 2026-11-03, and later phases are rollups (#1360–#1361); an MCP agent channel is planned, local first (D17, #1403), starting with the work journal sprint admitted 2026-11-03 (#2018, #2019–#2025): a `record_work` tool that files notes from the candidate's coding agent into a pending inbox, approved into career evidence on the Career evidence page or the CLI, built 2026-11-03 with `draftloop-mcp init` for Claude Code and Codex and the [agent channel](reference/agent-channel.md) reference; the desktop becomes a first-class client of the server beside the web (D9, amended 2026-11-03), built in the desktop client [milestone](https://github.com/akoita/draft-loop/milestone/65) (#2089–#2094), shipped in v0.9.0, with the v0.8 local engine retired 2026-11-04 ([milestone](https://github.com/akoita/draft-loop/milestone/67), #2117–#2119), and a release sprint ([milestone](https://github.com/akoita/draft-loop/milestone/66), #2103–#2105) admitted 2026-11-03 to ship both: next steps printed by `draft-loop-server up`, the work journal in the record archive and the notes for `server-v0.14.0`, with the work journal's sign-in mode (#2079) waiting for hosted sign-in; local-first work deferred to its own [milestone](https://github.com/akoita/draft-loop/milestone/32) | A professional, hosted version with traceability, reusing the local-first packages, while the local-first version keeps evolving beside it | Phase 1: a parity run on the hosted service matches the local result under the [hosted parity rules](evaluation/hosted-parity.md) (#1358); the owner decisions phase 2 needs are recorded (#1357); deferred local-first issues are reassessed for either version |
-| Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
-| Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
-
-### Released — Integration hardening and outcome validation (v0.6)
-
-v0.6 established the integrated local alpha: installed-app acceptance covered
-the supported desktop targets, provider transmission and recovery controls
-were exercised, and a release candidate was published. The consented
-representative workflow did not meet its product outcome. Major sections and
-chronology were omitted, seniority changed, and unsupported quantification was
-introduced despite successful technical export.
-
-The release is therefore explicitly non-validated. The [stage-evidence
-record](releases/stage-evidence-v0.6.0.md) carries the negative result into v0.7; it is
-not waived by the integration or packaging evidence.
-
-### Previous — Evidence-backed CV drafting (v0.7)
-
-v0.7 is the first complete drafting vertical for the application-grade program.
-It must connect reusable CKB data to the application path, not merely add more
-storage components. The first two sprints used bounded leaf issues. Milestone 3
-now carries every open prerequisite needed to complete the drafting and review
-vertical, ordered dependency-first:
-
-- Sprint 1 is complete: the single legacy selection-migration slice #160 closed
-  [Sprint 1](https://github.com/akoita/draft-loop/milestone/2).
-- Sprint 2 is complete. Store-wide writer leases in #161 prevent current CKB
-  commands from interleaving, and #162 deterministically reconciles interrupted
-  owned writes after lease takeover without claiming legacy or unknown data.
-  #163 defines six-class retention, expiry eligibility, and preservation
-  overrides without deleting data. #164 exports strict integrity-checkable
-  packages without machine-local state, and #165 restores them into approved
-  new directories without overwriting identities. The completed
-  [Sprint 2](https://github.com/akoita/draft-loop/milestone/5) deliberately
-  deferred confirmed deletion #166; its later standalone delivery completes
-  the #113 aggregate storage outcome.
-- Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
-  opportunity brief (#67), and use the CKB-scoped SQLite FTS/BM25 baseline
-  (#80).
-- Plan requirement-to-achievement coverage, compose every required CV section
-  without factual or chronological regression, and apply a versioned writing
-  policy (#68–#70).
-
-Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
-outside this critical path. Source lifecycle work through #136, workspace/run
-binding slices under #111, and the shared path-safe CLI/desktop controls rolled
-up by #112 are implemented. Sprint 1 is complete, #160 is closed, and the CKB
-foundation is a [Released checkpoint](releases/stage-evidence-v0.7.0-alpha.1.md).
-
-The desktop renderer now exposes native store creation, opening, and explicit
-single-base selection (#589), plus file and directory intake with complete or
-partial counts and source readiness (#590), and explicitly approved import of
-workspace candidate material (#591). These three slices complete #533.
-Selection and intake reset the chosen canonical profile without changing
-existing run history.
-
-Desktop restart recovery (#172) now clears a stale review when the host has
-lost its workspace context and offers explicit reopening through the native
-picker. Saved approval and export workflows remain available after reopening.
-
-Packaged desktop builds now keep bounded local diagnostics for host errors
-(#534), with capability and recognized error codes and no messages, stacks,
-paths, filenames, or provider content.
-
-Sprint 2 is complete with writer coordination, interrupted-write recovery,
-retention, backup export, and collision-safe restore. Its five feature PRs
-added 10,365 lines across 71 file-changes, so #166 was removed instead of
-extending an already oversized sprint. Future sprint admission requires
-measured, independently closable units. Confirmed deletion #166 was subsequently
-implemented as a standalone prerequisite on the #69 dependency chain.
-Milestone 3 contains the six remaining MVP capabilities and their satisfied
-prerequisites. Their issue bodies define bounded exits; standalone architecture
-programs and generalized infrastructure are deferred until after the MVP.
-
-Issue #346 records one bounded observation of the corrected revision, run to
-the first human review boundary under predeclared limits. The first author
-attempt exceeded the output-token budget with no failure stage recorded, the
-second was rejected on a factual invariant, and the third produced an accepted
-eight-section artifact; the independent critic completed on its first attempt,
-after 462 seconds of active provider time. Evidence, accuracy, differentiation,
-format, and credibility scored 1.0 and clarity 0.80, so the draft carried no
-factual-invariant violation and no unsupported model-added claim. Relevance
-scored 0.29, covering six of the twenty-one requirements #326 now extracts, and
-one content-omission error remains. Uncovered counts are not comparable with
-earlier observations because the requirement set changed. No threshold was
-lowered and no adjudication, approval, or export occurred. Parity remains
-indeterminate and #250 remains blocked, and the evidence now points at a genuine
-role mismatch rather than a pipeline defect.
-
-Issue #350 records the first bounded observation against a materially matched
-backend role. The first author attempt exceeded its output-token budget and was
-correctly classified under the new #348 stage. The corrective retry produced a
-seven-section artifact, and the independent critic completed on its first
-attempt after 355 seconds of cumulative active provider time.
-
-The matched artifact still failed the product boundary. Deterministic relevance
-was 0.28, covering five of eighteen requirements, with one blocking disclosure
-error and seventeen warnings. Read-only review found source-backed required
-sections replaced with unavailable placeholders (#351) and substantive prose
-outside the extracted claim graph despite perfect evidence and accuracy scores
-(#352). No adjudication, revision, approval, export, or submission occurred.
-The result remains indeterminate and #250 remains blocked.
-
-**Exit criterion:** One default and optional additional isolated CKBs can be
-maintained and explicitly selected without source or retrieval leakage; selected
-source versions produce a reviewed profile and opportunity brief; CKB-scoped
-lexical retrieval supports a planned, complete CV whose required sections,
-chronology, factual invariants, provenance, and writing-policy checks pass.
-
-### Released alpha — Usable CV MVP (v0.8.0-alpha.1)
-
-Turn selected candidate evidence and one reviewed opportunity into a complete,
-independently reviewed, human-approved, ATS-readable CV.
-
-Retrieval #80, planning #68, complete CV composition #69, the #72 runtime
-author handoff, exact approval readiness #73, and bounded rendering QA #74 are
-integrated. All 17 v0.8 issues are closed and deterministic validation is
-complete. The cross-platform alpha artifact is Released with manifests,
-checksums, an SBOM, and platform workflow evidence. No representative consented
-outcome has been recorded, so do not label the v0.8 outcome Validated.
-
-Existing #71, #72, and #73 contracts are supporting components, not reasons to
-build generalized frameworks. The MVP adds only the runtime behavior required
-for one CV workflow. Vector or hybrid retrieval, extra provider roles,
-multiple template families, exhaustive evaluation infrastructure, standalone
-architecture programs, and autonomous submission remain outside v0.8.
-
-The first #67 component defines a strict, versioned opportunity-brief contract
-and pure builder. It preserves source-linked role, employer, responsibilities,
-requirements, priorities, and candidate instructions; visible source failures
-and contradictions survive acknowledgement; and only a complete state with no
-open issue can become reviewed. Persistence, secure multi-source intake,
-provider extraction, shared CLI/desktop editing and review, and binding one
-exact reviewed brief version into run planning were left to later work by that
-initial contract slice. The current job-description path and provider context
-were unchanged.
-
-The next #67 component adds application intake for multiple
-explicitly approved URLs, selected local files, pasted content, and candidate
-instructions. It preserves caller order, records captured checksums, keeps
-unavailable/unsupported/partial results and duplicate bytes visible without
-leaking raw content or host paths, and creates immutable edit/review versions.
-SQLite schema v22 and an adapter-neutral persistence service now store those
-versions append-only, enforce immediate lineage and explicit stale-version
-checks, verify canonical payload checksums, and reload deeply frozen briefs
-after restart without refetching sources. Audit events retain only opaque,
-content-free version metadata. A further slice extracts source-linked facts
-through the configured author-provider adapter only after explicit
-transmission approval. It excludes candidate inputs and local provenance,
-validates the strict output and citations, assigns application-owned IDs, and
-records contradictions or fixed content-free failures. Shared CLI/desktop
-application operations create, reload, list, edit, and review immutable
-versions. The CLI keeps paths in runtime-only JSON input, while the packaged
-desktop host owns native file selection and returns a bounded path- and
-URL-free projection. New runs can now bind one exact reviewed version after
-checksum verification and persist its safe reference and structured content in
-immutable context. Resume cannot replace that selection, and later edits do
-not alter the run. This completes #67; the milestone remains incomplete pending
-its downstream planning and drafting work.
-
-The completed #66 canonical-profile path derives a draft from the exact latest source versions
-in an explicitly selected CKB or approved combination. Managed reads return
-fresh path-free bytes after one-handle integrity verification, and byte
-ingestion reuses the bounded text/PDF/DOCX pipeline. Explicit provider-data
-approval is required before any read; the application checks the lifecycle
-snapshot before extraction and again before persistence. A strict
-provider-independent proposal covers all 12 profile
-categories; every fact needs a locally verified quote from its cited normalized
-source that contains the proposed value, and the quote is discarded after exact CKB provenance is mapped.
-Application code owns deterministic IDs, conflicts, possible duplicates,
-omissions, and append-only persistence. Concrete
-provider execution now uses the configured author model through the existing
-API-key, authenticated user-session, or local transports while retaining the
-strict path-free request and response boundaries. Shared application and
-local-driver operations now derive from the workspace's validated pinned
-selection and provide provider-free exact/latest reads, history, optimistic
-edits, and review without exposing store roots. The CLI now exposes those five
-operations with an explicit provider-data flag for derivation. The packaged
-desktop host provides equivalent strict capabilities and returns only a bounded
-profile projection. New runs can select an exact reviewed profile version;
-DraftLoop verifies its checksum and current CKB lifecycle selection, pins a
-safe ID/version/checksum reference in immutable context, and never accepts a
-replacement on resume. Review and new-run use now fail closed when that stored
-selection is no longer current, while immutable profile history, existing run
-references, and approved exports remain intact. Whole-workspace backup and
-retention preserve those records; #80 owns removal and rebuild of derived index
-rows. The collecting desktop workspace now provides a dedicated profile
-history, edit, review, derivation-approval, and exact run-selection surface.
-The [sanitized representative acceptance](evaluation/profile-acceptance.md) now proves
-12-of-12 category preservation, exact candidate-source provenance, private
-project handling without public proof, visible unresolved conflicts,
-duplicates and omissions, path-free schema round trips, and SQLite restart.
-This completes #66. Exact selected source versions now drive the CKB lexical
-runtime, with lifecycle-checked rebuilds and content-free workspace traces.
-
-The #70 writing-policy outcome is integrated. Local SQLite history stores
-immutable checksum-addressed versions and migrates existing managed policies;
-activation and import are separate actions. Structured rules and preferences
-cover forbidden terms and punctuation, transparent anti-formulaic defaults,
-tone, spelling locale, verbosity, page target, section order, and emphasis.
-The exact effective policy reaches both model roles, while deterministic
-findings and ordinary status views remain content-free.
-
-Shared CLI and desktop controls expose activation, import, history, safe run
-lineage, and explicit content reads. One reviewed opportunity may bind an
-imported policy as a complete run override without mutating the active
-workspace policy. The run pins both base and override versions. This completes
-issue #70; the milestone remains incomplete pending its other drafting outcomes.
-
-Issue #74 now connects the controlled A4 renderers to a strict, content-free
-rendering-QA report at export time. Markdown uses deterministic checks; PDF and
-DOCX use named byte inspectors for recovered text order, package integrity, and
-bounded page/layout failures. Export refuses incomplete or failing PDF/DOCX QA
-and persists the report with export history. DOCX OOXML cannot establish true
-office pagination or visual clipping, so that limitation remains explicit
-rather than being represented as viewer certification. Cross-viewer golden
-tests, link modeling, UI profile selection, and broader validation remain out
-of scope. The bounded v0.8 implementation and deterministic validation are
-complete; representative outcome evidence remains before a Validated outcome
-claim.
-
-**Exit criterion:** The complete factual draft receives an independent critique
-and traceable revision; unresolved disagreements remain visible; deterministic
-factuality, completeness, chronology, ATS, and approval gates prevent a
-regressed artifact from being labelled application-ready.
-
-### Previous — Workflow parity and release (v0.9, unreleased)
-
-After v0.8.0-alpha.1 publication, the project compared the complete workflow with the
-consented private manual baseline using predeclared factuality, completeness, recall, coverage, effort, cost,
-confidence, and usability measures (#75), with release evidence, artifacts,
-manifests, checksums, platform results, limitations, and the next decision gated by
-(#76).
-
-Issues #75 and #76 remain outcome rollups rather than executable sprint units.
-The dependency-ordered v0.9 work first enforces a private predeclared
-comparison gate (#248), runs the provider-free synthetic trust preflight
-(#253), then records one consented parity result (#249). It prepares the exact
-release candidate after #75 closes (#250) and publishes the release evidence
-and next decision (#251) before closing #76. Each child keeps one primary
-boundary, focused verification, and a one-PR exit.
-
-The [consented result](evaluation/consented-pilot-v0.9.md) remains indeterminate. An
-initial run reached independent critique but timed out during revision; the one
-approved fresh retry timed out during authoring because the user-session
-adapter's 120-second request limit could not use the 20-minute case budget. No
-revised, approved, or exported artifact was produced. The private manual
-baseline also targets a related but different role, which limits any future
-comparison.
-
-The bounded provider-timeout, author-grounding, and corrective
-retry blockers #256, #258, and #260 are closed. The corrective observation
-under issue #262 is closed as indeterminate: it used all three author attempts,
-with output-token excess followed by two different single claim-text
-factual-invariant failures. No draft reached the critic. The per-evidence
-author-grounding guide blocker #264 then closed.
-
-The authorized observation
-under #266 repeatedly failed before author output because structured Claude
-nonzero-exit errors were classified generically. Issue #267 delivered the
-bounded classification fix. Keep #75 unvalidated; another authorized
-comparison under #271 then reached all three author attempts. Output-token
-excess was followed by three claim-text factual-invariant paths; the final
-corrective attempt reduced them to one repeated path, but no proposal reached
-the critic.
-
-Issue #272 delivered bounded exact-value citation completion: local
-normalization may append only exact supporting retrieved chunks, while the
-unchanged validator still rejects unsupported values. The authorized
-post-completion observation under #275 then completed both provider roles on
-their first attempts and reached the human boundary. Readiness remained false
-with eight warnings and one unresolved chronology omission; the unsupported-
-claim finding was a warning rather than a factuality error. No adjudication,
-revision, approval, export, or submission occurred.
-
-Issue #277 stages the
-candidate's exact adjudication through the shared application/local boundary,
-and #278 preserves active provider-duration accounting across human waits and
-restart boundaries. The fresh observation under #286 used 307 seconds of
-active time, reached an accepted author draft on attempt three, and completed
-independent critique on attempt one. Its twelve findings were materially
-different from the previously confirmed nine, so no adjudication was applied.
-
-Typed history then rejected the distinct new artifact because another run in
-the workspace already held version 1. Migration 26 under #287 removed that
-storage blocker. Under #290, the candidate then confirmed one accept, two
-rejects, and nine nuanced decisions; the exact package persisted before any
-provider call. The first revision attempt used an incorrect API-key default,
-and the two authenticated user-session attempts retained the 120-second
-per-request default and timed out. No revised artifact or new critique exists.
-
-The fresh observation under #291 applied the explicit 20-minute request timeout
-to every user-session subprocess. Authoring completed on attempt three and the
-critic on attempt one. After the candidate confirmed two accepts, two rejects,
-and six nuanced decisions, all three revision calls returned before timeout but
-failed structured-response validation. The run exhausted after 959 active
-seconds without a revised artifact or second critique.
-
-Issue #293 delivered
-content-free failure-stage classification (`transport-parsing`,
-`response-schema-validation`, `artifact-schema-validation`,
-`factual-invariant-rejection`) and sanitized deterministic 10-finding carrier
-verification before another live observation. The ninth observation under #296
-exercised that classification during a fresh same-scope author attempt: all
-three author calls returned before timeout but failed local factual-invariant
-checks, correctly classified under `factual-invariant-rejection`. The run
-exhausted after 313 seconds of active provider time without accepted author
-output, so the critic was not called.
-
-Issue #348 extends the failure-stage vocabulary with
-`output-token-budget-exceeded` for future output-token budget overruns. Existing
-observation records retain their original classifications; the unclassified
-overrun recorded under #346 is not rewritten.
-
-The tenth observation under #298 also
-exhausted three author attempts across token-budget excess and
-`factual-invariant-rejection` after 412 active seconds. Keep #75 unvalidated and
-leave #250 blocked.
-
-Issue #300 tightens numeric grounding in citation completion and author
-validation: a number must match a whole source value, including its decimal
-part, percentage marker, or magnitude suffix. For example, `2020` cannot
-support a claimed metric of `20`. Deterministic regression coverage establishes
-this bounded safety correction; it does not explain the live author failures
-or change the indeterminate parity result.
-
-Issue #321 preserves dated Markdown headings in local-source provider evidence,
-scoped to the pinned source IDs and checksums. Local reconstruction of #320
-retains both previously omitted chronology headings in eighteen chunks, within
-the twenty-chunk and 128 KiB bounds. Author and critic share this selection;
-CKB retrieval is unchanged. The original run and captured revision remain
-unchanged, and correcting the revision still requires separate work.
-
-Issue #318 keeps approved accepted-effect exceptions conditional. A directly
-observed change remains verified when an exception was supplied, while effects
-without a direct change still need their approved exception. Local replay of
-the unchanged #314 capture with all nine original exceptions now yields a valid
-trace: seven verified effects and seven overridden effects. This establishes
-structural trace validity, not semantic resolution of findings. The original
-run and approved plan remain unchanged, with no provider calls or acceptance.
-
-Issue #315 corrects the explicit negative-experience false positive identified
-by the captured #314 diagnostic revision. Local replay of that unchanged
-proposal now passes author validation. Focused checks preserve technology-name
-identity and positive/negative meaning, require explicit source support, and
-reject contradictory or qualified evidence. This is local validation only:
-no new provider call, accepted application revision, independent critique,
-approval, or export followed, and the preserved exhausted run is unchanged.
-
-Issue #309 corrects the synthetic action-verb grounding false positive: `Built
-TypeScript tools` can cite `Built local-first TypeScript tools` while still
-requiring support for the technology name. The exception is limited to known
-opening past-tense verbs, single acronyms or mixed-case names, and recognized
-software-object nouns. Negative checks retain protection for changed names,
-titles, credentials, dates, and metrics. This does not establish the cause of
-the private #306 rejection or validate a live revision; that run remains
-preserved with retries exhausted.
-
-The eleventh observation under #302 completed author, critic, automatic revision,
-and second critic on their first attempts, reaching human review after 239
-active seconds. Readiness remained false with thirteen warnings and one error.
-The durable snapshot retains artifact version 2, but typed-history projection
-failed because its version-1 parent had not been persisted first. Issue #303
-implements checksum-verified, parent-first artifact projection and restores
-earlier round records before executions. The preserved run was recovered through
-the application resume contract with provider transmission disabled: two artifacts
-and four executions were projected, while durable snapshots and execution history
-remained unchanged. At recovery, it was in round-two human review with approval
-pending. No candidate adjudication, approval, or export had occurred.
-
-The twelfth observation under #306 staged the candidate-approved version-2
-review plan: fourteen accepted decisions, with nine conditional overrides that
-preserve unsupported gaps. Three revision attempts then exhausted the existing
-retry limit: output-token excess, factual-invariant rejection, and output-token
-excess. No new artifact or critic result was accepted. The continuation used
-689 additional active-provider seconds, bringing the run to 928 seconds within
-its unchanged 1,200-second cumulative budget. The approved decisions and
-version-2 draft remain preserved; parity is still indeterminate and release
-preparation remains blocked.
-
-Issue #308 exposes the unchanged author output cap in every model-facing request
-and retains compact-output instructions across all retries. Deterministic
-provider-handoff coverage preserves the cap and adjudication through token-budget
-and factual-invariant failures. This corrects a missing prompt contract; it does
-not establish the cause of cumulative usage overages or validate a live revision.
-The #306 run remains preserved with retries exhausted. Issue #309 separately
-addresses the synthetic action-verb/protected-name false positive found during
-this verification; it is not established as the private run's failure cause.
-
-Issue #312 adds opt-in local replay capture for author proposals rejected by
-application validation. Inspection confirmed that none of the three failed #306
-outputs was retained, so the private factual rejection cannot be replayed or
-attributed to #309. Future explicitly configured diagnostic sessions retain the
-proposal and exact validation inputs locally. The separately authorized #314 diagnostic revision used the preserved draft
-and approved inputs for one author attempt capped at ten minutes. After 135
-seconds, local capture and replay identified a source-backed negative-experience
-statement rejected because its opening negation was grouped with a technology
-name. Issue #315 owns that bounded correction. The original run is unchanged;
-no critic or accepted application revision followed. Parity remains
-indeterminate and release preparation remains blocked.
-
-Issue #320 records one independent critic review of the locally validated #314
-revision after #315 and #318. It completed in eighteen seconds with two date
-errors and two warnings; local readiness remains false. Source inspection found
-that retrieval omitted two chronology headings: one generated range matches an
-omitted heading, while the transition range differs from its explicit source.
-Issue #321 owns bounded preservation of approved chronology in provider evidence.
-The original run is unchanged, with no acceptance, candidate approval, or export.
-
-Issue #324 records one independent review after the local source-backed chronology
-correction. With eighteen approved evidence chunks, the critic completed in
-thirteen seconds and returned no errors and one staging-versus-production
-warning. The earlier date findings were not repeated. Local readiness remains
-false because the relevance threshold is unmet. The corrected artifact remains
-outside the preserved application run; no acceptance, approval, or export occurred.
-
-Issue #326 corrects local requirement-unit extraction after inspection found
-that the pilot's relevance input included headings and wrapped-line fragments,
-truncated later criteria, and assigned priority by line position. Local
-reconstruction now yields twenty-one complete source units with neutral
-priority, retaining later criteria. These units still require semantic review
-through the opportunity-brief path before interpreting relevance as job fit.
-The existing context, score, and run remain unchanged; no threshold was lowered.
-
-Issue #328 prevents deterministic coverage from pooling requirement tokens
-across unrelated CV blocks, with one shared rule for validation and readiness.
-This addresses a demonstrated false match without changing rubric thresholds
-or existing run records. Issue #329 adds a closed rule for explicit
-computer-science/quantitative degree alternatives, with negatives for
-coursework, unrelated subjects, and negated or unfinished credentials.
-Unsupported phrasing remains outside that rule. Neither correction alone
-establishes semantic coverage or closes the workflow-parity gate.
-
-Issue #332 records one independent assessment of eighteen candidate-reviewed
-criteria: seven supported, seven partial, and four not established, with valid
-input references. Local review identified an unsupported startup-stage inference
-and an added condition on an explicit alternative. These remain raw diagnostic
-judgments, not accepted coverage or a replacement score. The original run,
-artifact, and thresholds are unchanged; parity remains indeterminate and #250
-remains blocked. See the [pilot record](evaluation/consented-pilot-v0.9.md) for limits.
-
-Issue #335 adds a [synthetic matched application reference](../packages/evaluations/fixtures/matched-application/README.md)
-for testing substantive selection, source corrections, and maturity boundaries.
-It contains fictional facts and authored review expectations, not private
-candidate records or a measured parity result.
-
-Issue #341 corrects the two coverage defects that #332 observed. Deterministic
-coverage no longer treats organisation type as an organisation-maturity
-qualifier, and a requirement listing permitted alternatives is now matched once
-per alternative instead of becoming harder to satisfy with each added
-alternative. Both rules are closed lexical rules in their own modules, shared
-by validation and readiness. This is a bounded deterministic correction: it
-does not establish semantic coverage, no threshold was lowered, and existing
-contexts, scores, and run records are unchanged. Parity remains indeterminate
-and #250 remains blocked.
-
-Issue #344 corrects the granularity of the closed degree rule: its grammar is
-evaluated per clause, so a stated degree is no longer lost when the same block
-adds an unrelated clause. Measuring the #335 synthetic reference against the
-shared rule now records four of five requirements as the rule decides them and
-keeps one known miss visible: `Implement and maintain Solidity contracts…`
-stays uncovered because `implement`/`implemented` and `contract`/`contracts`
-are distinct tokens, and stemming remains out of scope. That measurement is
-provider-free synthetic evidence, not a parity result and not a threshold: no
-threshold was lowered, the fixture's authored labels were not turned into a
-gate, and existing contexts, scores, and run records are unchanged. Parity
-remains indeterminate and #250 remains blocked.
-
-Issues #351, #352, and #356 merged before the fifteenth bounded observation
-under #358. On 2026-09-12, after explicit authorization for provider
-transmission, the matched-backend run reused the private v1 comparison gate and
-private case inputs; its manual baseline was withheld from generation. All
-three author attempts returned content-free rate-limit failures, with the third
-exhausting the author cap. No artifact, critic call, or review boundary
-occurred. This adds no product-outcome evidence and establishes no product
-defect; #75 remains open and #250 remains blocked.
-
-The sixteenth bounded observation under #360 reused the same private
-matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed limits,
-with explicit provider-transmission authorization. Both authentication probes
-passed, but all three author attempts returned content-free rate-limit
-failures; the first two were retryable and the third exhausted the cap. The run
-persisted 7,508 ms of active duration with zero token counts and no artifact or
-review boundary. It adds no product-outcome evidence; #75 and #250 remain
-blocked. That authorization did not extend to later live attempts.
-
-The seventeenth bounded observation under #362 reused the same private
-matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed limits,
-with separate explicit authorization before execution. Both user-session
-authentication probes passed. All three Anthropic author executions failed
-with generic `invalid-response`; attempts one and two were retryable, and the
-third exhausted the cap. The final durable failure stage and reason were
-`output-token-budget-exceeded`. Active duration was 1,033,665 ms; all execution
-token counts were zero and `estimatedUsd` was null. Provider-reported cost was
-unavailable. No artifact or review boundary occurred, so #362 adds no
-product-outcome evidence; #75 and #250 remain blocked. See the [consented pilot
-report](evaluation/consented-pilot-v0.9.md) for the detailed record.
-
-The eighteenth bounded observation under #364 reused the same private
-matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed limits.
-After Claude reauthentication, explicit provider-transmission authorization
-preceded execution, and both user-session authentication probes passed. All
-three Anthropic author executions failed with generic `invalid-response`;
-attempt two was observed with `factual-invariant-rejection` and eight
-content-free diagnostics. The first two attempts were retryable, and the third
-exhausted the cap. The final durable failure stage and reason were
-`output-token-budget-exceeded`, with one content-free diagnostic. Active
-duration was 504,772 ms; execution token counts were zero and `estimatedUsd`
-was null. Provider-reported cost was unavailable. No artifact or review
-boundary occurred, so #364 adds no product-outcome evidence; #75 and #250
-remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for
-the detailed record.
-
-Issue #366 bounds the provider-side cause exposed by #362 and #364 before any
-later live attempt. The Anthropic user-session adapter now allocates at most
-half of the declared output-token budget to Sonnet 4.5's manual extended
-thinking, leaving the remainder for the structured proposal. Requests too
-small for Anthropic's minimum thinking allocation disable thinking explicitly,
-and ambient Claude thinking settings cannot override either policy. This is a
-provider-free transport correction, not product-quality evidence.
-
-The nineteenth bounded observation under #368 exercised the #366 thinking
-bound after separate explicit provider-transmission authorization on
-2026-09-13. Both user-session authentication probes passed. It reused the same
-private matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed
-limits as #350, #358, #360, #362, and #364. All three Anthropic author attempts
-failed with generic `invalid-response`: attempts one and two had
-`output-token-budget-exceeded` failures and were retryable; attempt three had
-`factual-invariant-rejection` with eight content-free diagnostics and exhausted
-the cap non-retryably. The thinking bound did not eliminate output-budget
-failures, so this observation does not show that failure mode fully resolved.
-Active duration was 598,380 ms; execution token counts were zero and
-`estimatedUsd` was null. Provider-reported cost was unavailable. No artifact,
-critic call, or review occurred; #75 and #250 remain blocked. Any later live
-attempt needs separate bounded authorization. See the [consented pilot
-report](evaluation/consented-pilot-v0.9.md) for the full record.
-
-Issue #370 bounds a provider-transport attribution gap before any later live
-attempt. The Anthropic user-session adapter suppresses Claude Code's
-CLI-managed terminal-title and prompt-suggestion model requests and disables
-other nonessential traffic in the child process. Ambient settings cannot
-re-enable those paths. This provider-free control makes the selected author
-model the only intended generation call; it does not reinterpret the usage
-record from observation #368 or add product-quality evidence.
-
-Issue #372 adds provider-free, content-free attribution to any later Claude
-output-budget failure. The adapter retains its existing failure stage while
-categorizing the result as single-turn, cumulative multi-turn, or unavailable
-and recording only an allowlisted final stop-reason category. It persists no
-provider prose, exact counts, or private material and changes neither the
-budget nor retry policy. This diagnostic work does not reinterpret #368 or
-authorize another live attempt.
-
-The twentieth bounded observation under #374 followed #370 and #372 and reused
-the #368 matched-backend setup. Explicit authorization on 2026-09-13 covered the
-non-fixture run; both 20-second authentication probes passed, but the three
-author attempts failed before a draft across output-budget and factuality
-failures. The fixed diagnostics indicate cumulative multi-turn usage ending in
-`tool_use`, without establishing the cause or reinterpreting earlier runs. No
-artifact, critic call, or review occurred; parity remains indeterminate, #75
-and #250 remain blocked, and the authorization is exhausted. Any later live
-attempt needs separate bounded authorization. See the [consented pilot
-report](evaluation/consented-pilot-v0.9.md) for details.
-
-Issue #376 corrects the provider-side accounting mismatch exposed by #374.
-Claude Code applies `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to each model generation,
-while its Agent SDK result reports output usage cumulatively across every step
-in the query. The user-session adapter now retains that cumulative usage for
-metering without comparing it to a single generation's cap. This is a
-provider-free transport correction; it does not reinterpret prior observations
-or authorize another live attempt.
-
-The twenty-first bounded observation under #378 followed #376 on merged
-revision `04609d4583c7ed8c32ed779bc97ecb6d677c9ee0`. After explicit
-provider-transmission authorization, both 20-second authentication probes
-passed, but the single Anthropic author attempt failed non-retryably with
-`unknown` after 14,405 ms, without a failure stage, reason, or diagnostics. No
-artifact, critic call, or review occurred. This run does not exercise or
-validate #376's corrected cumulative-usage acceptance in live use and adds no
-product-quality evidence. The authorization is exhausted; #75 and #250 remain
-blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for the
-complete sanitized record.
-
-Issue #380 adds provider-free attribution for statusless Claude result errors.
-The adapter retains existing error codes, retryability, messages, and HTTP
-status handling while recording only allowlisted result-subtype, terminal, and
-stop-reason categories. Missing, malformed, or future values receive fixed
-fallback diagnostics, and free-form provider errors remain excluded. This does
-not reinterpret #378 or authorize another live attempt.
-
-Issue #393 adds opt-in, local-only capture for unrecognized Claude result
-subtype and terminal-reason category strings. Capture is disabled by default
-and writes only bounded category-shaped values to a new `0600` JSON file inside
-an unpredictable `0700` subdirectory of a caller-selected existing parent.
-Stop reasons, provider prose, prompts, outputs, paths, credentials, and other
-private material remain excluded; durable diagnostics record only fixed
-capture-saved or capture-failed codes. This provider-free diagnostic does not
-reinterpret #384 or authorize another live attempt.
-
-Issue #395 routes that explicit capture parent through the local application
-run boundary only when a diagnostic caller supplies it. Default workflows,
-API-key adapters, OpenAI user sessions, CLI and renderer controls, persisted
-workspace configuration, and provider behavior remain unchanged. This plumbing
-makes #393 usable by a later bounded diagnostic workflow but neither performs
-nor authorizes provider transmission.
-
-The twenty-second bounded observation under #382 used revision
-`349388de4820eca30543492d8ad1266199cdda3e` after explicit provider-transmission
-authorization. Both 20-second authentication probes passed, but three
-Anthropic author attempts failed with generic `invalid-response`; the first two
-were retryable, while the third was non-retryable with
-`factual-invariant-rejection` as its failure stage and reason. No artifact,
-critic call, or review occurred. Cumulative `activeDurationMs` was 670,049 and
-provider-reported cost was unavailable; authorization is exhausted, and #75/#250
-remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for
-the sanitized record.
-
-The twenty-third bounded observation under #384 used revision
-`e502705355953c6450dd2d81ceeeba77f98b09a7` after explicit provider-transmission
-authorization. Both 20-second authentication probes passed, but one Anthropic
-author attempt failed non-retryably with `unknown` after 351,508 ms and no
-failure stage or reason. The fixed diagnostics classify subtype and terminal
-reason as unrecognized and stop reason as `stop_sequence`; they do not explain
-the underlying cause. No artifact or review occurred, provider-reported cost
-was unavailable, and authorization is exhausted. Parity remains
-indeterminate; #75/#250 remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md)
-for the sanitized record.
-
-The twenty-fourth bounded observation under #397 used revision
-`75e288f60ae268be31839947ccb8203e3a8e10c4` after explicit authorization.
-Both 20-second authentication probes passed. One Anthropic author attempt then
-failed non-retryably with `unknown`, no failure stage or reason, and no artifact
-or critic call. Fixed diagnostics retained only category classifications; the
-private local capture established terminal reason `api_error` and retained no
-subtype. Official Agent SDK sources document this terminal category, while a
-`success` subtype is only an inference here. Issue #398 implements the provider-free
-classification change: a structured `api_error` without a finite numeric API
-status is now retryable within the existing orchestration cap, while fixed
-diagnostics and status-first handling retain the privacy and failure bounds.
-Authorization is exhausted, parity remains indeterminate, and #75/#250 remain
-blocked. A later live observation requires a fresh bounded issue and explicit
-authorization.
-
-The twenty-fifth bounded observation under #401 used revision
-`10bed45cf577e1d8bc2697571c86ae453ce1bce9` after explicit authorization.
-Both 20-second user-session authentication probes passed. All three Anthropic
-author responses reached local validation but failed with
-`factual-invariant-rejection`: the first two attempts were retryable, and the
-third exhausted the cap. No statusless API error occurred, so the #398 branch
-was not exercised. No artifact or critic review existed, provider-reported cost
-was unavailable, and authorization is exhausted. Parity remains indeterminate;
-issues #75/#250 remain blocked, and another live attempt requires a new bounded
-issue and explicit authorization.
-
-The twenty-sixth bounded observation under #405 used exact clean main revision
-`9e0f62d1183b0b060cea350c5bcc36bef7be85b9` after explicit authorization.
-Both 20-second user-session authentication probes passed. All three Anthropic
-author attempts returned `invalid-response` and failed
-`factual-invariant-rejection` validation: attempts one and two were retryable,
-with factual/substantive diagnostic counts of 4/4 and 3/5, while attempt three
-exhausted the cap with counts of 6/2. Persisted active duration was 622,328 ms;
-execution token counts were zero and no provider cost was reported. No artifact,
-critic call, findings, review, or release action occurred. Authorization is
-exhausted, parity remains indeterminate, and any later provider call requires a
-fresh bounded issue and explicit authorization.
-
-The project ended this stage on 2026-09-19. Twenty-six bounded observations did
-not produce a human-approved artifact or satisfy the parity gate. Issue #75
-therefore closed unmet, while release rollup #76 and release children #250 and
-issue #251 closed as not pursued. No v0.9.0 release candidate, tag, artifacts, or
-release evidence exists. This is a negative stage decision, not a release or a
-validation claim.
-
-**Unmet exit criterion:** The representative comparison records no factual-invariant
-violations or unsupported model-added facts, preserves required sections and
-chronology, meets the agreed relevance and coverage thresholds, and produces a
-professionally usable artifact after bounded human review.
-
-### Completed — Retrieval and provider quality
-
-Preserve the provider-independent retrieval port and workspace-scoped lexical
-baseline. Compare local embeddings and hybrid retrieval against citation
-accuracy, recall, irrelevant context, and unsupported claims on representative
-cases. Demonstrate index deletion, rebuild, retention, workspace isolation,
-and provenance before enabling vector retrieval by default. Integrate bounded
-cancellation, timeout, retry, rate-limit recovery, progress, and reproducible
-run manifests into the packaged path. Before another consented provider run,
-use provider-free fixtures and captured or replayable validation inputs to
-demonstrate a measurable improvement at the author-validation boundary. Any
-additional transport or provider needs its own architecture, privacy, billing,
-and release decision.
-
-The first bounded slice under #410 replays the existing private rejected-author
-capture shape through the live local validation boundary without a provider
-call. Issue #412 adds a bounded batch summary with accepted/rejected totals and
-deterministic failure-stage and diagnostic-code counts. Private proposal,
-evidence, source, provider, and model content remain caller-owned and outside
-results.
-
-Issue #414 records the first sanitized replay baseline: three invented local
-cases produce one acceptance, two rejections, one factual-invariant diagnostic,
-and one substantive-coverage diagnostic. This is a deterministic reference,
-not evidence of an improvement or of live-provider quality.
-
-Issue #416 improves that same corpus to two acceptances and one rejection by
-adding missing full-span claim metadata only when an already-cited retrieved
-chunk contains the entire block text. The factual-invariant rejection remains;
-no provider prose, evidence, or validation rule is rewritten or weakened.
-
-Issue #418 compares production SQLite FTS5/BM25 retrieval with the existing
-local term-frequency/RRF hybrid on three queries over one sanitized corpus. The
-candidate ties the lexical baseline on every recorded metric, so hybrid remains
-disabled; a passing non-regression gate alone is not evidence of improvement.
-
-Issue #420 makes the outer cross-platform installed-app gate require the
-existing progress, cancellation, restart-resume, and interrupted-run evidence.
-The packaged acceptance workflow now fails closed if any recovery proof is
-missing or false, rather than trusting the inner report implicitly.
-
-Issue #422 improves the unchanged sanitized retrieval corpus by preferring
-multi-term BM25 hits only when at least one exists. Lexical citation accuracy
-rises from two-thirds to one and irrelevant context falls from one-third to
-zero, while coverage, unsupported claims, reciprocal rank, sparse-query recall,
-fallback, order, limits, and workspace isolation remain unchanged. Hybrid now
-fails the comparison gate and remains disabled.
-
-**Exit criterion:** Retrieval or provider changes measurably improve coverage or
-evidence accuracy without increasing unsupported claims, and failure/recovery
-behavior is demonstrated in the packaged app.
-
-This criterion is met by the provider-free author-validation and lexical
-retrieval gains recorded above and by the strengthened cross-platform packaged
-acceptance gate. See the canonical
-[stage evidence](evaluation/retrieval-provider-quality.md). The result does not
-validate a live-provider or real-application outcome.
-
-### Ended — Broader real-application pilot
-
-Run a small, consented pilot comparing first drafts, revised drafts, and manual
-baselines. Measure unsupported claims, critical-requirement coverage, useful
-findings, review time, edits, rounds, cost, export completion, and confidence.
-The implemented harness and adversarial fixtures make the study possible; they
-are not the study result. Include misleading-evidence and prompt-injection
-cases before treating a passing score as readiness.
-
-**Exit criterion:** Revised drafts do not regress factuality, improve the agreed
-measures over first drafts, and reduce meaningful user effort on representative
-consented cases.
-
-Roadmap rollup #426 owns the stage. Its first bounded prerequisite, #427,
-requires a provider-independent multi-case gate before any new consented run:
-the cohort size and fixed decision rules must be declared before the first
-draft, one case cannot pass the stage, and sanitized output remains limited to
-bounded statuses and reason codes. Issue #429 additionally requires completed
-misleading-evidence and prompt-injection observations before a cohort can pass.
-These prerequisites do not authorize an authentication probe or provider call.
-
-The first declared cohort case under #430 ended indeterminate before producing
-an accepted draft. One author attempt returned a retryable structured API
-error; two further attempts failed local factual and coverage validation. No
-critic, approval, or export occurred. Because the fixed cohort rule requires
-every case gate to pass, the declared cohort can no longer satisfy its exit
-criterion. See the [sanitized pilot record](evaluation/broader-real-application-pilot.md).
-
-Cases B and C were not run because their predeclared stop conditions applied:
-additional observations could not restore the fixed all-cases-pass result. The
-stage ended early with its exit criterion unmet, no product validation, and no
-release.
-
-### Completed — Author-draft acceptance reliability
-
-Improve the provider-independent author-validation boundary using sanitized
-replay cases derived from the observed structural failure classes, without
-permitting factual violations, unsupported claims, uncovered substantive text,
-or reduced required-section coverage.
-
-**Exit criterion:** An expanded sanitized replay corpus shows a material
-complete-draft acceptance gain while factual, unsupported-claim, coverage, and
-required-section gates remain unchanged or stronger.
-
-The exit is met. On the unchanged six-case corpus, accepted drafts rose from
-two to three, every negative control kept its intended rejection, and the
-bounded retry fixture succeeded. See the canonical
-[stage evidence](evaluation/author-draft-acceptance-reliability.md). The result
-does not establish live-model or real-application quality.
-
-### Ended — Representative author-draft revalidation
-
-Determine whether the corrected boundary produces one accepted author draft on
-a consented representative case, verified by the candidate's first review.
-
-**Exit criterion:** The #446 result is recorded against its predeclared rules,
-and the roadmap names the next stage.
-
-The exit is met with an **indeterminate** result. Under the #446
-authorization, both sign-in probes passed, but all three author attempts on
-unchanged case A inputs ended within about eight seconds with a provider
-`api_error`. No draft reached the corrected validator, and no critic call,
-review, approval, or export occurred. The result neither confirms nor refutes
-the milestone 8 corrections. See the
-[sanitized record](evaluation/representative-author-draft-revalidation.md).
-
-### Completed — Author route readiness
-
-Prove that the declared author model can answer through the authenticated user
-session before any candidate material is sent. The sign-in probe only checks
-login state, and case A's first attempt under #430 failed with the same
-`api_error`, so the route itself is the open question.
-
-[Milestone 10](https://github.com/akoita/draft-loop/milestone/10) runs in
-order:
-
-- #449 adds a synthetic model-level author preflight with provider-free tests.
-- One synthetic preflight on the declared author model, with no candidate
-  material, requires a separate user authorization.
-
-The authorized #449 preflight reported `available` for `claude-sonnet-4-5` in
-about five seconds, using the author output budget. The model, sign-in, and
-author settings therefore work; the #446 failures depend on the real author
-request. Case A's retry once produced a draft from a nearly identical request,
-so the failure may also be intermittent.
-
-The adapter currently discards the result text of a status-less `api_error`,
-so its cause is invisible. #453 adds a bounded, allowlisted cause code without
-copying any text.
-
-**Exit criterion:** The declared author model passes the synthetic preflight,
-and a status-less `api_error` reports a bounded cause. Only then may a new
-gated observation issue be created.
-
-The exit is met. #449 and #453 are merged, and the authorized preflight
-returned `available`. The milestone sent no candidate material, and it neither
-explains nor reproduces the #446 failures.
-
-### Ended — Author-draft revalidation retry
-
-Obtain the first real validator verdict on a representative author draft.
-[Milestone 11](https://github.com/akoita/draft-loop/milestone/11) has one
-execution issue, #456. It reuses the #446 case, models, bounds, and decision
-rules unchanged, and adds two things: a synthetic author preflight that must
-report `available` before any candidate material is sent, and recorded
-`claude_api_error_*` cause codes.
-
-Creating #456 authorizes no provider call. The observation requires a later
-user instruction that names it.
-
-**Exit criterion:** The #456 result is recorded against its predeclared rules
-in the same PR as the stage decision. A pass admits a separately gated
-multi-case cohort. A fail returns to provider-free replay work. An
-indeterminate result with a cause code opens one bounded fix; without a cause
-code, the route question goes to the user.
-
-The exit is met with a **fail**. The author preflight returned `available`,
-but the validator rejected both drafts the run produced. The first author
-attempt ended with an `api_error` after about eight minutes, and no cause code
-was recorded. See the
-[retry observation](evaluation/representative-author-draft-revalidation.md#retry-observation).
-
-### Completed — Author correction reliability
-
-Make real author drafts pass the unchanged factual-invariant, evidence, and
-substantive-coverage gates, measured provider-free in
-[milestone 12](https://github.com/akoita/draft-loop/milestone/12).
-
-**Exit criterion:** A replay corpus that includes the #456 failure classes
-shows a material acceptance gain while every negative control stays rejected.
-
-The exit is met. Rejections now record uncapped counts (#459). The #456 drafts
-had not been saved, so #460 classified them from capped diagnostics. #461
-turned the classes into invented replay cases. Measuring the controls exposed
-a single-word name gap (#466), which #469 closed before any relaxation. #470
-and #471 then fixed the two wrongly rejected supported cases under explicit
-controls.
-
-The corpus holds 48 cases, and all 21 controls are rejected. Every case is
-invented, so live author quality remains unproven. See the
-[stage decision](evaluation/author-correction-reliability.md#stage-decision).
-
-### Ended — Live author revalidation
-
-Test the corrected validator on one real author draft. A new, separately
-gated observation reuses the unchanged case A inputs and the #456 rules. It
-runs the synthetic author preflight and saves rejected proposals locally, so
-any failure can be re-validated and classified from real structure. The
-unexplained author `api_error` remains an open risk.
-
-[Milestone 13](https://github.com/akoita/draft-loop/milestone/13) has one
-execution issue, #476. Its evidence and stage decision land in one PR. On a
-fail, a local script re-validates the captured proposals and reports only
-codes, paths, section kinds, and counts.
-
-Creating #476 authorizes no provider call. The observation requires a later
-user instruction that names it.
-
-**Exit criterion:** The #476 result is recorded against its predeclared rules,
-and the roadmap names the next stage:
-
-- **Pass:** a separately gated multi-case cohort.
-- **Fail:** a provider-free milestone seeded from the captured proposals.
-- **Indeterminate with a cause code:** one bounded fix.
-- **Indeterminate without a cause code:** the route question goes to the user.
-
-The exit is met with a **fail**. The synthetic preflight passed and no provider
-error occurred, but the validator rejected all three drafts. Captured
-proposals, analysed without reading their text, show two causes:
-
-- Every attempt had ten blocks with uncovered text, mostly entry headings, the
-  header contact line, and skills lists whose fields the author did not claim.
-- Three of seven factual failures joined an opening action verb to a
-  supported name, which is a validator false rejection.
-
-See the [record](evaluation/live-author-revalidation.md).
-
-### Ended — Structural claim coverage
-
-Make real drafts pass coverage and factual checks for structured blocks,
-provider-free. Stop joining opening action verbs to supported names in
-protected values, then measure deterministic claim completion for heading,
-contact, and skills fields found verbatim in cited or retrieved evidence. Each
-change is measured on invented replay cases and, with content-free scripts, on
-the three private #476 captures.
-
-[Milestone 14](https://github.com/akoita/draft-loop/milestone/14) runs in
-order:
-
-1. #479 adds a repo-owned, tested summary that re-validates captured proposals
-   and prints only counts, so every fix is measured the same way.
-2. #480 stops joining opening action verbs to supported names, while keeping
-   inflated titles such as "Senior Engineer" rejected.
-3. #481 adds claims for separator-delimited fields found verbatim in evidence.
-   Fields absent from the evidence still fail.
-4. #482 records the stage decision.
-
-**Exit criterion:** On the three #476 captures, uncovered blocks plus factual
-failures fall by at least half from 37. Every replay control stays rejected,
-and no factual, unsupported-claim, or required-section rule is weakened.
-
-The exit is **not met**. The captures fell from 37 to 28 issues, short of 18,
-while every replay control stayed rejected and no rule was weakened. Almost
-every remaining uncovered block contains a field the evidence does not
-contain, so further validator relaxation would accept unsupported text. See
-the [stage record](evaluation/structural-claim-coverage.md).
-
-### Ended — Structured-block author guidance
-
-Change the author prompt so that heading roles, organisations, dates, contact
-details, and skills items are copied verbatim from evidence and claimed field
-by field. Replay cannot measure author behaviour, so the change is measured by
-a new, separately gated live observation on the unchanged case A inputs, with
-the preflight and local capture, compared with #476 through `capture-report`.
-
-[Milestone 15](https://github.com/akoita/draft-loop/milestone/15) runs in
-order:
-
-1. #488 adds the structured-field instruction to the author prompt and bumps
-   the author prompt version to `cli-author-v2`. It is provider-free and
-   leaves validator behaviour unchanged.
-2. #489 records one gated observation. Its result rules match #476. A
-   guidance-effect rule, fixed in advance, compares the mean issues per
-   rejected attempt with #476.
-
-Creating #489 authorizes no provider call. The observation requires a later
-user instruction that names it.
-
-**Exit criterion:** The #489 result and guidance effect are recorded against
-their predeclared rules, and the roadmap names the next stage:
-
-- **Pass:** a gated cohort.
-- **Fail with guidance effective or partial:** one further guidance iteration.
-- **Fail with guidance not effective:** the author route goes to the user.
-
-After #489 (preflight `api-error`) and #493 (the v2 author hit `max_tokens`)
-both ended indeterminate, #495 adds `cli-author-v3`: the same guidance with a
-16,384-token output budget. v1 and v2 runs keep their original prompt and
-8,192 budget. Gated #496 measures v3 under the same rules and requires its own
-user authorization.
-
-The stage ended with the guidance **not effective**. With a 16,384-token
-budget, the v3 author produced larger drafts that averaged 15.3 capture issues
-against 9.3 under v1. The author wrote more structured fields but did not copy
-them verbatim. See the
-[stage record](evaluation/structured-block-author-guidance.md). The user chose
-to test a current-generation author model next.
-
-### Reframed — Author model revalidation
-
-The stage tested smaller author models and diagnosed the route. It is
-reframed as the reference model pair stage below, following the frontier
-model strategy. Its findings are in the
-[model record](evaluation/author-model-revalidation.md) and the
-[route diagnosis](evaluation/author-route-diagnosis.md).
-
-### Completed observation — Reference model pair
-
-[Milestone 16](https://github.com/akoita/draft-loop/milestone/16) started as
-author model revalidation on smaller models. It recorded a bounded observation
-of the first **reference pair**: one frontier Anthropic author and one frontier
-OpenAI critic, reached through authenticated user sessions.
-
-**What the economy-model work already established:**
-
-- #499: `claude-sonnet-5` produced no draft within the budget.
-- #501 and #503: 12 synthetic requests did not reproduce the status-less
-  `api_error`.
-- #503: the production schema and prompt work on `claude-sonnet-4-5`.
-- #503: Claude 5 models can ignore the adapter's thinking limit and spend the
-  output budget on thinking.
-
-**Engineering done:** #505 recognises the resulting failure, and #506 adds the
-CLI `--effort` control. Both apply to every Claude 5 model, including the
-frontier ones.
-
-**Route established:** #507 found no reachable frontier author. #516 and #510
-then traced every frontier failure to outdated `claude` and `codex` CLIs in
-the Node global packages. After the update, `claude-opus-5-5` returned
-schema-valid proposals 2 of 2. `gpt-6-luna` and `gpt-6-sol` returned valid
-critiques on synthetic requests. See the
-[route record](evaluation/author-route-diagnosis.md#frontier-route-and-cli-versions).
-
-The #518 recheck ran `claude-sonnet-5` on the updated CLI. It still fails the
-author replica, so its earlier failures were real.
-
-**Remaining order,** one pair at a time:
-
-1. **Use case, economy pair.** #526 reached an accepted draft and independent
-   critique with `claude-sonnet-4-5` and `gpt-6-luna`, but failed candidate review
-   because it merged employment periods from different employers. #544 requires
-   complete ranges in one cited chunk, including fully covered blocks whose
-   endpoints are separate claims. It does not establish employer association
-   for a range already present elsewhere. See the [observation and comparison
-   record](evaluation/author-model-revalidation.md#economy-pair-with-author-revision-feedback).
-   The [#548 recheck](evaluation/author-model-revalidation.md#economy-pair-recheck-after-complete-range-validation)
-   initially stopped at a synthetic preflight error. After investigation, a fresh
-   follow-up completed drafting and critique but failed source review: a
-   career-wide range was assigned to one employer. #550 adds a narrow cited
-   employer/range association check for structured experience headers; it is
-   verified without another provider call. The initial error cause remains
-   unknown. #551 then reached an accepted draft and critique, but omitted recent
-   roles and employment dates. Candidate feedback was positive without exhaustive
-   category counts, so the strict first-review pass remains unverified. Its CKB retrieval missed
-   dated headings retained by the legacy route. #552 corrects that evidence
-   selection within the existing provider cap. #554 verified chronology handoff
-   but ended without an accepted draft after coverage rejections and structured-output
-   retry exhaustion. Offline replay reproduced the rejections; the final provider
-   error had no validator verdict, so the observation is indeterminate.
-2. **Quality, standard frontier pair.** The same case used
-   `claude-opus-5-5` and `gpt-6-sol` under a separate explicit admission. Earlier
-   fixed-rule observations retain their original results: #555 lacks exhaustive
-   first-review counts, while candidate review of #562 and #573 confirmed
-   omissions needing revision. The full-profile manual revision is
-   candidate-accepted with acknowledged warnings; it does not establish the
-   normal automated reference result.
-
-   The normal handoff now preserves production skills (#563), bounded role
-   contributions (#569 and #574), supplied contacts (#575), and relevant
-   independent projects (#576/#580). Supported-text grounding fixes (#564/#565)
-   and the versioned output ceiling (#571) preserve earlier runs. Provider
-   metadata uses opaque source labels (#577).
-
-   The fresh #584 observation locally accepted its second draft, but the critic
-   could not start because repeated artifact evidence exceeded the session's
-   input limit. #586 fixes the first draft's narrow proxy-description grounding
-   false positive; #587 owns lossless evidence deduplication before another
-   independent review. Captures remain private. The subsequent #601 normal
-   workflow completed and the candidate accepted it with disclosed warnings;
-   [the evidence record](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601)
-   retains its failed automatic readiness score. Workspace defaults remain
-   unchanged, and further live requests require a fresh admission.
-
-Premium models (Fable, GPT-6 Astra) remain later; the API-key route (#515) is
-last.
-
-**Acceptance direction, clarified by the user:** stop when the user accepts the
-remaining findings in number, severity, and substance. Zero is ideal, not a
-required finding count. Preserve acknowledged limitations and the user's
-rationale. Future evaluation admissions must reflect this rule; historical
-fixed-rule observations retain their results. The later accepted #601 normal
-observation establishes only this bounded case and does not authorize export.
-
-**Direction: automate the user's proven loop,** in three steps:
-
-1. **Implemented in #524 / PR #525:** a specific validation report goes back
-   to the author, which revises its rejected proposal.
-2. A richer critic report, requirement by requirement, that names missing
-   accomplishments and gaps not to manufacture. The author reconciles each
-   point as accepted, changed, not changed on purpose, or still open.
-3. The candidate's source of truth and house writing rules as default
-   workspace inputs.
-
-None of these steps authorizes a provider call without a user instruction that
-names its issue.
-
-**Exit criterion:** One reference pair is selected, its identities and
-runtime controls are recorded, and a gated observation records a result
-against predeclared rules. Candidate acceptance permits a separately gated
-cohort proposal; it authorizes no cohort calls or model-default change.
-
-### Completed observation — Software-engineering generalization
-
-[Milestone 18](https://github.com/akoita/draft-loop/milestone/18) followed
-the reference-pair milestone. Its fixed scope was the
-[#618](https://github.com/akoita/draft-loop/issues/618) rollup and ordered
-children #619–#622: fictional grounding cases and baseline; separation of
-uncertain terminology from hard factual rejection; source-grounded review
-through the existing critic; and a separately admitted reserved-profile
-cohort. The provider-free changes and fictional regression fixtures were
-delivered in #619–#621. The explicitly authorized frozen #622 cohort did not
-reach author inference: both Claude subscription-session calls failed during
-OAuth token refresh, before any draft or critic review. Its quality result is
-indeterminate and the workflow-completion exit was not met. The
-[fixture record](../packages/evaluations/fixtures/reserved-software-engineering-cohort/README.md)
-states the exact bounds and preflight limitations. A fresh cohort requires a
-new admission and authorization; this milestone does not acquire extra work.
-
-Domain keywords can support familiar conventions, but reliability must not
-depend on hardcoding every technology, concept or career path in advance. A
-follow-up cohort must show that unfamiliar software engineers can use the
-normal author–critic workflow without profile-specific code changes. Candidate
-clarifications and acceptance of disclosed warnings remain normal product
-actions. #515, the optional API-key route experiment, is deferred and requires
-separate billing authorization.
-
-### Completed observation — Generalization evidence follow-up
-
-[Milestone 19](https://github.com/akoita/draft-loop/milestone/19) closes the
-specific gaps exposed by #622 in bounded order: [#628](https://github.com/akoita/draft-loop/issues/628)
-classifies Claude OAuth refresh contention at the subscription-session
-boundary; [#629](https://github.com/akoita/draft-loop/issues/629) preserves dated
-chronology through source markers; [#632](https://github.com/akoita/draft-loop/issues/632)
-associates required section headings with adjacent source bodies; and
-[#630](https://github.com/akoita/draft-loop/issues/630) prepared a fresh,
-fictional reserved cohort. Its separately authorized run made two author calls
-and one critic call without retries. Case C was rejected by a Markdown-emphasis
-false positive in protected-name grounding; case D reached independent review
-with zero critic findings but omitted its explicitly required employment gap.
-The [cohort record](../packages/evaluations/fixtures/fresh-software-engineering-cohort/README.md)
-gives the exact result and limits. The two-case workflow and coverage exit was
-not met. Fixes and a fresh observation belong to a new bounded milestone; the
-frozen #630 cohort cannot be rerun or silently treated as a pass. The
-model-profile milestone remained deferred during these observations; its
-current scope is described below.
-
-### Completed observation — Generalization coverage follow-up
-
-[Milestone 20](https://github.com/akoita/draft-loop/milestone/20) had a fixed,
-ordered exit: [#636](https://github.com/akoita/draft-loop/issues/636) corrected
-the protected-name Markdown-emphasis false positive;
-[#637](https://github.com/akoita/draft-loop/issues/637) added a versioned
-source-to-CV critic instruction for explicit employment gaps; and
-[#638](https://github.com/akoita/draft-loop/issues/638) froze and measured a
-new fictional cohort after both changes. Each issue owned one boundary and one
-PR. The milestone itself authorized no provider call or retry; the cohort used
-a separate concrete admission and user authorization. The [frozen #638
-observation](../packages/evaluations/fixtures/independent-software-engineering-cohort/README.md)
-used two author calls and one critic call. Case E stopped at a new
-protected-possessive false positive before independent review; case F reached
-review without a fabricated employment gap and received zero critic findings.
-The two-case exit was not met. The E/F cohort cannot be retuned or rerun under
-that admission; a new bounded milestone must own the lexical correction and
-any fresh observation.
-
-### Completed observation — Protected identity and reference observation
-
-[Milestone 21](https://github.com/akoita/draft-loop/milestone/21) contained
-two ordered issues. [#642](https://github.com/akoita/draft-loop/issues/642)
-fixed the source-backed possessive-name rejection at the application grounding
-boundary. [#643](https://github.com/akoita/draft-loop/issues/643) froze and
-measured a new fictional two-profile cohort under a separate admission and
-explicit user authorization. Both profiles produced grounded drafts and
-independent reviews in one round, without a retry. The [sanitized
-observation](../packages/evaluations/fixtures/reference-software-engineering-cohort/observation.md)
-records that G's draft omitted a source-explicit dated work interval, which
-the critic flagged. H did not infer unemployment from separate role dates.
-The milestone closed with its frozen coverage exit unmet; the consumed G/H
-cohort cannot be tuned or rerun under that admission. Milestone 17 is now the
-priority. Further generalization observations require fresh bounded work and
-separate authorization.
-
-### Completed — Model profiles and tiers
-
-Offer four curated models: `claude-sonnet-5-5`, `claude-opus-5-5`,
-`gpt-6-luna`, and `gpt-6.1-sol`, grouped into economy and standard presets.
-The opt-in `development-glm` preset adds the GLM-5.3-Flash author through
-DeepInfra with the GPT-6 Luna critic; it uses the dedicated key and does not
-change defaults. Its conservative standard API price metadata was reviewed
-2026-10-02; quality is unvalidated and account availability unchecked. The
-opt-in `development-gemini` preset adds the Gemini 3.8 Flash author (profile v2; v1 on 3.7 stays resumable) with the
-same critic and the dedicated Google key, with price metadata reviewed
-2026-10-04 and the same unvalidated status
-([#813](https://github.com/akoita/draft-loop/issues/813)).
-Runs without a reviewed brief now refuse job-description units over 40
-meaningful tokens at start, before any provider call, because relevance could
-never cover them ([#858](https://github.com/akoita/draft-loop/issues/858)).
-A person can now approve past failing final CV checks with a recorded reason
-bound to the exact artifact and blocker codes, so a review stays finishable at
-the round limit.
-Existing exact profile versions and run snapshots remain compatible. A profile holds:
-
-- provider and exact model ID;
-- tier (`premium`, `standard`, or `economy`);
-- runtime controls: effort, output budget, and thinking behaviour;
-- known limits.
-
-Versioned contracts, snapshots, the application registry, and supported runtime
-controls are delivered under [#511](https://github.com/akoita/draft-loop/issues/511).
-Profiled runs record full controls and reuse them on resume; unprofiled runs
-retain the existing workspace path. API and verified Claude-session profile
-controls are supported; Codex and local profile routes remain unavailable.
-
-The CLI accepts exact profile versions or tier presets for a new run
-([#684](https://github.com/akoita/draft-loop/issues/684)). The desktop picker
-([#686](https://github.com/akoita/draft-loop/issues/686)) explicitly applies
-supported pairs to future workspace destinations, refreshes transmission
-consent, and attaches exact versions to the next new run. Manual model editing
-and unrestricted typed IDs remain available. Registry-derived fallback IDs
-([#678](https://github.com/akoita/draft-loop/issues/678)) disclose availability
-and quality limitations. Pricing and explicit token/call scenarios are delivered in
-[#687](https://github.com/akoita/draft-loop/issues/687); local availability
-preflight is delivered in [#679](https://github.com/akoita/draft-loop/issues/679).
-The approved content-free check on 2026-09-30 passed for both Anthropic API
-authors and both OpenAI Codex-session critics; [PR #693](https://github.com/akoita/draft-loop/pull/693)
-records the exact revision, routes, controls, time, and CLI version. These
-checks establish bounded local availability, not profile-control support or
-representative CV quality. Catalog availability remains an account-specific
-runtime check rather than a global guarantee.
-
-On 2026-09-30 the user narrowed curated choices to Sonnet 5.5, Opus 5.5,
-GPT-6 Luna, and GPT-6.1 Sol. This supersedes the seven-model catalog and premium
-preset. Workspace defaults remain unchanged. Frontier options
-remain unvalidated for representative CV quality; tier labels are not quality
-recommendations. Default promotion moves to
-[#683](https://github.com/akoita/draft-loop/issues/683), requiring a separately
-admitted validation plan and explicit migration decision. Earlier generalization
-failures remain recorded; this milestone does not authorize another live cohort.
-Broad cross-profession and multilingual validation (#583) stays deferred.
-
-**Exit criterion:** Users can choose supported versioned author/critic profiles,
-economy or standard pair presets, and the opt-in development GLM pair.
-Profile-selected runs record
-the full controls and resume from their snapshots; the legacy path remains
-available. The catalog discloses API pricing, estimated-budget assumptions,
-and availability and quality limitations. Current defaults stay unchanged;
-representative validation and default promotion are tracked separately.
-
-### Now — Manual parity: inputs
-
-DraftLoop exists to replace a manual loop: the candidate passes a resume
-between Claude and Codex until both agree it is ready to send. On 2026-10-05 a
-DraftLoop draft for a real application was accurate but far from sendable when
-compared with the CV that loop produced from the same career source. Rollup
-[#869](https://github.com/akoita/draft-loop/issues/869) records the causes:
-
-- the author sees at most 20 retrieved excerpts of a much larger career source;
-- the reviewed canonical profile is only a run reference and never reaches the author;
-- the source's own CV-usable, interview-only and never-share markings are not
-  modelled, so private context reached the draft;
-- there is no default writing policy;
-- the critic checks grounding only, and export stops at Markdown.
-
-This sprint fixes the inputs and measures before the review loop changes:
-
-1. [#870](https://github.com/akoita/draft-loop/issues/870) content-free parity score and baseline;
-2. [#871](https://github.com/akoita/draft-loop/issues/871) one large source without manual splitting;
-3. [#872](https://github.com/akoita/draft-loop/issues/872), [#873](https://github.com/akoita/draft-loop/issues/873), [#874](https://github.com/akoita/draft-loop/issues/874) normal, sensitive and never-share sections, enforced before any provider call;
-4. [#875](https://github.com/akoita/draft-loop/issues/875), [#876](https://github.com/akoita/draft-loop/issues/876) a default writing policy and a desktop editor;
-5. [#877](https://github.com/akoita/draft-loop/issues/877) a full-source evidence mode within a token budget;
-6. [#878](https://github.com/akoita/draft-loop/issues/878) one scored parity observation.
-
-Product constraints decided with the user:
-
-- **Defaults for everyone.** A new user gets a working configuration;
-  candidate-specific rules live in user configuration editable in the desktop,
-  never in code.
-- **Data tiers.** Never-share material is never sent; sensitive material is
-  sent only with explicit consent.
-- **Model routes.** Subscription sessions are preferred when available, with
-  API routes as an explicit alternative when session limits are reached.
-  Economy development presets remain for cheap runs.
-- **Private references.** Four reference applications stay outside the
-  repository; only content-free scores enter it.
-
-**Exit criterion:** #878 records a scored parity observation for one
-reference application with the new inputs, and states which remaining gap
-(critic, stopping rule, or export) to address first.
-
-### Completed — Tailored, sendable CVs
-
-Completed on 2026-10-15 with 29/29 issues closed. The exit criterion was met on
-reference E: a standard-pair run checked the job's responsibilities as
-requirements, opened with a job-led headline and core areas, and contained no
-copied source notes ([observation](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172)).
-Recall and requirement coverage did not exceed the economy pair; the author now
-receives the critic's coverage verdicts (#1211) and dropped covering lines are
-flagged (#1212), to be checked by the next reference-E observation.
-
-The stage as planned:
-
-Two comparisons with the candidate's manual CVs for private reference
-applications (2026-10-10 and 2026-10-11, the second being reference E) traced the gap to what the author receives and what it
-may do, not to the writing model. Full-source evidence is now the default
-(#1168). The remaining causes:
-
-- the job's responsibilities never become checked requirements;
-- the author prompt forbids job-specific selection, so drafts have no headline,
-  no core-areas section and no ordering by the ad;
-- nothing catches copied career notes, fragments or negative asides, and runs
-  are approved over blockers;
-- the candidate cannot see what the author received, compare runs, or tell
-  when the job text is garbled.
-
-The ordered issues (milestone "Tailored, sendable CVs"):
-
-1. count the job's responsibilities as requirements (#1171);
-2. observe a full-source frontier run on reference E (#1172);
-3. a versioned author prompt that tailors to the job (#1173);
-4. professional prose and an editorial critique with a ready-to-send verdict
-   (#728, #1174);
-5. show the evidence mode and what the author received (#904, #1175);
-6. a run picker (#1176) and a garbled job text warning (#1177).
-
-**Exit criterion:** a fresh run on a reference application covers the job's
-responsibilities, opens with a job-led headline and core areas, and contains
-no copied source notes.
-
-### Completed — Local semantic retrieval
-
-Add learned local embeddings to CKB retrieval so evidence phrased differently
-from a requirement, or written in another language, can still be found. This
-stage runs alongside Manual parity: inputs. It targets the excerpt-selection
-gap recorded in #869: when the full-source mode (#877) cannot fit the token
-budget, retrieval must still surface the strongest evidence. The
-[selection spike](evaluation/local-embedding-model-selection.md) found that
-BM25 recalled 0.16 of relevant passages in the top three on an invented
-paraphrase-heavy set, against 0.81–0.92 for local embedding models.
-
-[ADR 0009](adr/0009-local-semantic-retrieval.md) records the choices:
-
-- **Model.** IBM Granite Embedding Multilingual R2, Apache-2.0: 311M by default
-  and 97M for low-resource machines. EmbeddingGemma 2 (#923) is an optional
-  experimental tier. It is more precise on the invented fixtures but about 3.4
-  times slower to index on CPU.
-- **Runtime.** CPU-only `onnxruntime-node` in a new `packages/embeddings`
-  package behind a model-agnostic port.
-- **Privacy.** The model is installed only on explicit user action with pinned
-  checksums. Embeddings and vectors never leave the machine.
-- **Storage.** Each CKB keeps an exact-version vector projection beside its
-  lexical index, with the same lifecycle rules.
-- **Fallback.** Lexical retrieval remains the default and the visible fallback.
-
-What has shipped, rolled up in [#114](https://github.com/akoita/draft-loop/issues/114):
-
-- **Runtime and model.** An ONNX embedder (#916) and explicit, checksum-pinned
-  model install, status, and removal (#917).
-- **Storage.** An exact-version vector index per CKB (#918, #933). Query-time
-  retrieval reuses a current lexical index (#929).
-- **Retrieval.** A semantic and hybrid engine (#934) and a calibrated
-  relevance floor (#926).
-- **Settings and traces.** A workspace retrieval-mode setting and content-free
-  semantic companion traces (#935).
-- **Runs.** Run wiring for the primary requirement query, with a visible
-  lexical fallback (#936).
-- **Controls and packaging.** CLI and desktop controls (#939, #940), and the
-  packaged CPU-only runtime with installed-app acceptance on Linux, macOS, and
-  Windows (#922).
-
-The [real-embedding comparison](evaluation/semantic-retrieval-comparison.md)
-used invented cases. On paraphrase and cross-language requirements, recall
-rose from 0.38 to 0.97 with the 311M tier and unsupported claims fell from
-0.63 to zero. With the #926 relevance floor, exact-term cases no longer lose
-precision against lexical retrieval.
-
-**Default-mode decision (#114, 2026-10-06): revise.** Lexical stays the
-default. Semantic and hybrid remain explicit per-workspace choices. The user
-chose this because every quality result so far comes from invented cases. The
-decision is revisited after a consented real-CV observation compares lexical
-and hybrid retrieval. The [semantic requirement coverage investigation](evaluation/semantic-requirement-coverage.md)
-(#727) found that embeddings find the right evidence but cannot decide coverage
-alone. Its follow-up is now in place:
-
-- **Degree rule.** A degree-level gap in the strict degree rule is fixed (#950).
-- **Requirement assessments.** Validation produces requirement-level coverage
-  assessments (#951).
-- **Candidates and judgement.** Lexically uncovered, non-protected requirements
-  get semantic candidates (#952), and the critic judges them (#959 to #961).
-- **Readiness.** Readiness counts critic-judged coverage (#966).
-- **Display.** The CLI and desktop show each requirement's status, basis,
-  evidence, and rationale (#971, #972).
-
-The degree and maturity rules stay deterministic gates. Judge quality on real
-material still needs a consented observation.
-
-**Exit criterion:** Users can install the local model, index selected CKBs, and
-run semantic or hybrid retrieval with visible fallback on every packaged
-platform. The roadmap records the #114 enable, revise, or reject decision for
-the default mode from #919 evidence, with no regression on the existing lexical
-cases and no increase in unsupported claims.
-
-The criterion was met on 2026-10-07. Every packaged platform passes
-installed-app acceptance with the embedding runtime, and #114 recorded a revise
-decision.
-
-### Completed — Inputs and setup clarity
-
-Testing `main` with real material on Windows on 2026-10-07 exposed two setup
-problems that block or mislead a normal first run.
-
-- **Two stores of career material ([#983](https://github.com/akoita/draft-loop/issues/983)).**
-  Setup card 02 manages files in the workspace `evidence` folder, while runs
-  read the selected knowledge base whenever one is in use. Semantic retrieval
-  works only on the knowledge base. The fix makes the selected knowledge base
-  the single **Career evidence** concept:
-  - the card is bound to it (#984);
-  - a workspace without one gets a knowledge base created, with a visible
-    one-time import of legacy evidence (#985);
-  - the wording is unified everywhere (#986).
-
-  All three have shipped: the desktop, CLI help, and docs say **Career
-  evidence** for the material and **legacy workspace evidence** for the folder.
-- **Pasted job pages are refused ([#979](https://github.com/akoita/draft-loop/issues/979)).**
-  Careers pages copied into `job.md` lose their bullet structure, so the #858
-  check refuses the run. The fix uses the existing reviewed opportunity brief:
-  - extract requirements from the workspace job description, after consent
-    (#980);
-  - review and edit them in the desktop (#981);
-  - start from the reviewed brief, with the blocker leading into this flow
-    (#982).
-
-Three follow-ups found while testing also shipped:
-
-- the knowledge panel follows the base card 02 creates, instead of offering a
-  second create/open entry point (#996);
-- requirements extraction can be cancelled while it runs, and nothing is
-  saved (#991);
-- each extracted requirement shows the verified job-text quote it came from
-  (#993).
-
-**Exit criterion:** A new user can add career evidence once and see it used by
-the run. A pasted job page can become reviewed requirements and start a review
-without hand-editing files. Existing runs, pinned selections, and legacy
-workspaces stay readable. Every issue has shipped. A real run on the
-Windows install still has to confirm the criterion.
-
-### Completed — Development model providers
-
-Two releases on 2026-10-06 and 2026-10-07 change the development options. This
-stage follows the completed Inputs and setup clarity.
-
-- **Claude Haiku 5.5 becomes the economy author ([#998](https://github.com/akoita/draft-loop/issues/998)).**
-  At $0.10 / $0.50 per MTok, it is the best cost/quality trade-off for
-  development and workflow checks. GPT-6 Luna stays the critic. Sonnet 5.5
-  stays resolvable for saved selections.
-- **Mistral Large 4 as an opt-in development author.** It follows the
-  Gemini integration path:
-  - an adapter (#999);
-  - runtime and CLI wiring (#1000);
-  - desktop key management (#1001);
-  - a `development-mistral` preset with the Luna critic (#1002).
-
-  The model is in public preview, so its identity and behaviour may change.
-
-Neither change makes a quality claim. Quality validation stays on the standard
-frontier pair.
-
-Live checks with synthetic data found and fixed two problems:
-
-- the desktop package failed to build because of the Mistral SDK's optional
-  tracing dependencies (#1007; #1009 tracks the hidden build error);
-- Mistral overran the 4,096-token requirements-extraction limit, which is now
-  16,384 for Mistral (#1000).
-
-With the fixes, CLI requirements extraction on Mistral Large 4 returned
-verified quotes for every entry. The Haiku pair runs over an Anthropic API key,
-or over a Claude subscription session where the account allows Claude Code.
-
-**Exit criterion:** A review runs end to end from the desktop and the CLI on
-both the Haiku 5.5 economy pair and the Mistral development pair. Every issue
-has shipped; full reviews on both pairs are still pending.
-
-### Completed — Any-format career intake
-
-Candidates will never provide career evidence in one format. A CV, a
-LinkedIn export, a performance review, loose notes and a transcript each
-need different interpretation. Taking whatever they provide, structuring it
-into one verified career record, and feeding retrieval from that record is a
-core part of DraftLoop's value.
-
-Real use on 2026-10-08 showed the gap. One ~200K-character career file was
-split by size into 27 sequential calls, and a single slow call timed out and
-lost all the work. The rules stay unchanged: never invent, keep an exact
-quote for every fact, flag conflicts, and stay local by default. The ordered
-issues ([#1029](https://github.com/akoita/draft-loop/issues/1029)):
-
-1. stream Mistral responses with an idle timeout (#1022);
-2. run extraction parts in parallel and keep completed parts (#1023);
-3. size windows to the model (#1024);
-4. split along the source's structure, such as headings and sections (#1025);
-5. extract only new or changed sources (#1026);
-6. recognise each source's kind and guide extraction (#1027): a local
-   detector (#1127), stored and correctable kinds (#1128), kind-specific
-   extraction guidance (#1129), then CLI (#1130) and desktop (#1131);
-7. retrieve verified profile facts first (#1028): persist each fact's quote
-   (#1132), rank facts ahead of chunks (#1133), use them in review runs
-   (#1134), and trace each item's origin (#1135).
-
-**Exit criterion:** A mixed-format knowledge base is structured in minutes.
-Re-adding one source re-processes only that source, and review runs retrieve
-verified facts first.
-
-Every ordered issue has shipped. Incremental reuse and fact-first retrieval are
-covered by tests. The output ratio was re-measured live (#1053): windows now
-plan on 1.6 output tokens per character, about half the calls. Timing on a real
-mixed-format knowledge base still needs a live consented run.
-
-### Completed — Candidate home and applications
-
-Real use on 2026-10-08 showed that a workspace holds one job, so a second
-application meant a new workspace and a regenerated profile. Decided the same
-day ([ADR 0010](adr/0010-workspace-as-candidate-home.md)): a workspace is the
-candidate's home. Career evidence, one reviewed career profile, the writing
-policy and default models live once, and each job application lives inside
-it. The ordered issues ([#1059](https://github.com/akoita/draft-loop/issues/1059)):
-
-1. an application record holding a job source, briefs, runs and exports (#1054);
-2. a Home dashboard with the Applications list as the landing page (#1055);
-3. a New application flow: job, reviewed requirements, reviewed profile,
-   review (#1056);
-4. profile freshness and reuse across applications (#1057);
-5. import of existing per-job workspaces (#1058);
-6. workspace-level setup moved off the application screen (#1062);
-7. a per-application model pair and credential readiness before Start (#1065):
-   provider readiness in step 4 (#1119), the pair stored on the application and
-   recorded on its runs (#1120), and the choice in step 4 (#1122).
-
-This stage follows the profile-extraction fixes in Any-format career intake.
-It comes ahead of that stage's remaining issues (#1027, #1028), because a fast,
-reusable profile needs a journey that reuses it.
-
-**Exit criterion:** Two applications for different jobs come from one
-workspace and one reviewed profile without regenerating it, and existing
-per-job workspaces can be imported.
-
-### Now — Simple guided workflow
-
-Real use on 2026-10-14 added review-screen work to this stage: confirm the
-models and inputs before a review starts (#1199) and rebalance the review
-screen so the side panel holds only the work (#1205). Finding decisions now
-say what they do to approval (#1202), the approval gate comes into view when
-approval is blocked (#1201), and the side panel and draft can be resized
-(#1216, #1217).
-
-Real use on 2026-10-09 showed the desktop journey is hard to follow. Features
-added stage by stage left workspace settings on the application screen, gave
-two ways to start an application, explained start blockers off screen, and
-filled the Career profile page with internal terms.
-
-The target, recorded in [ADR 0010](adr/0010-workspace-as-candidate-home.md#screen-responsibilities),
-gives each screen one job:
-
-- **Home** holds the evidence and profile status, the Applications list and
-  the workspace settings.
-- **Career evidence** and **Career profile** are the only places to manage
-  those.
-- **An application** is three steps: job and requirements, profile, review.
-
-The ordered issues ([#1092](https://github.com/akoita/draft-loop/issues/1092)):
-
-1. explain every start blocker next to the Start button, with its fix (#1087);
-2. the application screen as three steps (#1088);
-3. one path to a new application (#1089);
-4. a plain-language Career profile page (#1090);
-5. walk the first-run journey and record it (#1091).
-
-The fixture walk on 2026-10-15 is recorded in
-[First-run journey walk](evaluation/first-run-journey.md). It did not meet the
-exit criterion: in a demo workspace, profile generation has no fixture path, so
-a new application cannot start a review offline. #1251 added that path, and
-the repeat walk the same day reached a started review offline, but the exit is
-still not met: a brief whose job text names no employer could not be reviewed
-in the app. #1265 lets such a brief be reviewed, and #1278 makes Start wait for
-a reviewed brief.
-
-The third walk, on base `07af3d2`, met the exit criterion in fixture mode: a
-new application reached a started review with no dead end, and every disabled
-control on the way said why. It left small usability findings and no blocker.
-The walks' other findings are #1252 to #1254 and #1266. The stage shipped in
-the [v0.8.0-alpha.4 checkpoint](releases/stage-evidence-v0.8.0-alpha.4.md).
-
-It follows #1065 and comes ahead of the remaining Any-format career intake
-issues, because people must be able to use what already works.
-
-**Exit criterion:** From an empty workspace, a first-time user reaches a
-started review with no dead end, and every disabled control says why and
-offers the fix.
+```mermaid
+flowchart LR
+  done["Done<br/>25 stages, v0.6 to the<br/>simple guided workflow"] --> now["Now<br/>Local-first final:<br/>CV quality parity"]
+  now --> next["Next<br/>Client-server version<br/>(ADR 0011)"]
+  next --> later["Later<br/>Production-ready beta,<br/>controlled expansion"]
+```
+
+| Horizon | Stage                                                                                                           | Outcome                                                                                                                                    | Remaining gate                                                                                                                                                                                                                                                                                       |
+| ------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Now     | Local-first final: CV quality parity ([milestone](https://github.com/akoita/draft-loop/milestone/31))           | Make local-first CVs as good as the manual Claude/Codex loop, then release the local-first version                                         | On 3 of 4 private references: requirement coverage at least the manual CV's, recall at least 85%, no leaks, a sendable DOCX, and 3 or fewer edits before sending (#1302–#1308, #1108, #1112, #1113), with a two-page layout as dense as a hand-made CV (#1327) and rendering templates (#1328–#1331) |
+| Next    | [Client-server version](#next--client-server-version) ([ADR 0011, accepted](adr/0011-client-server-version.md)) | A professional, hosted version with traceability, reusing the local-first packages, while the local-first version keeps evolving beside it | A hosted parity run matches the local result under the [hosted parity rules](evaluation/hosted-parity.md) (#1358); the owner decisions phase 2 needs are recorded (#1357); deferred local-first issues are reassessed for either version                                                             |
+| Next    | [Manual parity: review and export](#next--manual-parity-review-and-export)                                      | Review and export at parity with the manual loop                                                                                           | See the section below                                                                                                                                                                                                                                                                                |
+| Later   | Production-ready beta                                                                                           | Distribute a safe, dependable desktop application                                                                                          | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                                                                                                                                                                                                   |
+| Later   | Controlled expansion                                                                                            | Extend a proven workflow without weakening trust boundaries                                                                                | Core CV evidence plus separate integration, privacy, and threat decisions                                                                                                                                                                                                                            |
+
+**Now: evidence so far.** Planned 2026-10-15 (#1309); the run comparison is done
+(#1276); the [v0.8.0-alpha.5 checkpoint](releases/stage-evidence-v0.8.0-alpha.5.md)
+was released 2026-10-31 with the exit not met.
+
+### Completed stages
+
+Each stage's full scope, evidence and decision are in the
+[roadmap history](roadmap-history.md#stages).
+
+| Stage                                                                                                             | Result                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released                                                                                                                                                    |
+| Evidence-backed CV drafting (v0.7 program)                                                                        | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md)                                                                                    |
+| Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1))                | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md)                                                                                                 |
+| Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md)                                                                                    |
+| Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                    | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md)                                                              |
+| Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early                                                                                                                                                |
+| Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded |
+| Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))          | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md)                                                                               |
+| Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                           | Exit met: synthetic preflight `available`                                                                                                                   |
+| Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected                                     |
+| Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                    | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted                            |
+| Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                         | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free                                                     |
+| Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                        | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18                                                      |
+| Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                 | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1                       |
+| Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                             | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601)                           |
+| Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18))              | Closed with indeterminate live observation                                                                                                                  |
+| Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                         | [Released v0.8.0-alpha.2 evidence](releases/stage-evidence-v0.8.0-alpha.2.md)                                                                               |
+| Manual parity: inputs ([milestone](https://github.com/akoita/draft-loop/milestone/22))                            | Closed 2026-10-15                                                                                                                                           |
+| Local semantic retrieval ([milestone](https://github.com/akoita/draft-loop/milestone/23))                         | [Completed](evaluation/semantic-retrieval-comparison.md): 30/30 issues closed                                                                               |
+| Inputs and setup clarity ([milestone](https://github.com/akoita/draft-loop/milestone/24))                         | Completed in code: 21/21 issues closed                                                                                                                      |
+| Development model providers ([milestone](https://github.com/akoita/draft-loop/milestone/25))                      | Completed in code: 11/11 issues closed                                                                                                                      |
+| Any-format career intake ([milestone](https://github.com/akoita/draft-loop/milestone/26))                         | Completed: 51/51 issues closed                                                                                                                              |
+| Candidate home and applications ([milestone](https://github.com/akoita/draft-loop/milestone/28))                  | Completed in code: 29/29 issues closed                                                                                                                      |
+| Tailored, sendable CVs ([milestone](https://github.com/akoita/draft-loop/milestone/30))                           | [Completed](evaluation/manual-parity.md#observation-reference-e-2026-10-14-1172): 29/29 issues closed                                                       |
+| Simple guided workflow ([milestone](https://github.com/akoita/draft-loop/milestone/29))                           | [Exit met in a fixture walk](evaluation/first-run-journey.md) on 2026-10-15                                                                                 |
+
+### Next — Client-server version
+
+The client-server version is a hosted, professional DraftLoop that reuses the
+local-first packages ([ADR 0011](adr/0011-client-server-version.md)). The
+architecture was accepted on 2026-10-17, with region `europe-west1` and the
+cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
+
+**Where it stands:**
+
+- **Staging runs** every server release; production is held by the owner.
+- **Cost:** hosted parity runs matched on quality and failed on cost. With the
+  prompt cache working, two rounds cost US$3.64 (#1357); a complete run on the
+  cost fixes is still to measure (#1597).
+- **Quality:** the check of 2026-10-29 (#1307) scored four new private
+  references. The default Balanced draft is not sendable and the Standard
+  draft is close, so a quality sprint followed (see
+  [manual parity](evaluation/manual-parity.md)).
+- **Sign-in:** staging still uses the owner token until Keycloak is hosted;
+  consent and entitlements are enforced in sign-in mode only.
+- **Later phases** are rollups (#1360–#1361), and local-first work is deferred
+  to its own [milestone](https://github.com/akoita/draft-loop/milestone/32).
+
+#### Phase 1: the hosted engine (#1358)
+
+| Sprint                                                  | Delivered                                                      | Merged     |
+| ------------------------------------------------------- | -------------------------------------------------------------- | ---------- |
+| 1a                                                      | Postgres storage                                               | 2026-10-17 |
+| [1b](https://github.com/akoita/draft-loop/milestone/35) | Cloud Storage blobs and the local stack                        | 2026-10-21 |
+| [1c](https://github.com/akoita/draft-loop/milestone/36) | The API and the worker                                         | 2026-10-21 |
+| [1d](https://github.com/akoita/draft-loop/milestone/37) | The model gateway                                              | 2026-10-22 |
+| [1e](https://github.com/akoita/draft-loop/milestone/38) | API setup and source intake                                    | 2026-10-22 |
+| [1f](https://github.com/akoita/draft-loop/milestone/39) | Review, approval and export through the API                    | 2026-10-22 |
+| [1g](https://github.com/akoita/draft-loop/milestone/40) | Cloud deployment; `server-v0.1.0` on staging 2026-10-23        | 2026-10-22 |
+| [1h](https://github.com/akoita/draft-loop/milestone/41) | The web review screen                                          | 2026-10-23 |
+| [1i](https://github.com/akoita/draft-loop/milestone/42) | Parity readiness; hosted parity runs 2026-10-23 and 2026-10-24 | 2026-10-23 |
+
+#### Phase 2: a service people can use (#1359)
+
+| Sprint                                                              | Delivered                                                                                                                                                                                                                                                                                            | Shipped             |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| [1j](https://github.com/akoita/draft-loop/milestone/43) (2a)        | Sign-in and tenancy                                                                                                                                                                                                                                                                                  | 2026-10-24          |
+| [1k](https://github.com/akoita/draft-loop/milestone/44) (2b)        | Candidate records and consent                                                                                                                                                                                                                                                                        | 2026-10-24          |
+| [1l](https://github.com/akoita/draft-loop/milestone/45) (2c)        | Export as a [record archive](reference/record-archive.md) and deletion, with backups ageing out within 35 days                                                                                                                                                                                       | 2026-10-24          |
+| [1m](https://github.com/akoita/draft-loop/milestone/46) (2d)        | The safety stack: injection screening of job posts and uploads with quarantine, a red-team [flow test](security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads) (#1666) and hardening of 1j–1l; model screening on staging and production still open                  | 2026-10-24          |
+| [1n](https://github.com/akoita/draft-loop/milestone/47) (2e)        | Entitlements and credits: plan catalog v1, a credit ledger, run caps, operator routes and a members' balance view, proven by a two-organisation flow test (#1694). Billing, the pricing page and self-serve plan changes come after the validation tests, and prices wait for the cost check (#1597) | 2026-10-24          |
+| [1o](https://github.com/akoita/draft-loop/milestone/48)             | The desktop's shared screens on the web (ADR 0011, D9): Home, New application, career evidence and start                                                                                                                                                                                             | 2026-10-25          |
+| [1p](https://github.com/akoita/draft-loop/milestone/49)             | The career profile, the shared review, approval, browser export, run details and comparison; a fictional browser walk passed, `server-v0.4.0`                                                                                                                                                        | 2026-10-25          |
+| [1q](https://github.com/akoita/draft-loop/milestone/50)             | Hosted run recovery after a failed live run: rejected-output diagnostics, worker retries, no dead retry button, spent credit named; the live run on `server-v0.4.1` passed through an approved DOCX (#1725)                                                                                          | 2026-10-25          |
+| [1r](https://github.com/akoita/draft-loop/milestone/51)             | Staging clean-up and web polish: the operator wipe, named knowledge bases, findings in plain words, final checks before approval; `server-v0.4.2`, staging wiped 2026-10-26                                                                                                                          | 2026-10-25          |
+| [1s](https://github.com/akoita/draft-loop/milestone/52)             | Fixes from the owner's staging walk: first-run setup on the web, readable export names, the preset in the start dialog, word-match gaps as warnings until confirmed, the template's look in the built-in PDF                                                                                         | 2026-10-26          |
+| [1t](https://github.com/akoita/draft-loop/milestone/53)             | Coverage judged on hosted runs, a job by file or approved page address, the review at wide and phone widths; `server-v0.5.0`                                                                                                                                                                         | 2026-10-26          |
+| [1u](https://github.com/akoita/draft-loop/milestone/54)             | Job pages through a separate page fetcher, refused exports that say why, Carlito in PDFs, the review at phone width, relevance over the reviewed brief; `server-v0.6.2`                                                                                                                              | 2026-10-27          |
+| [1v](https://github.com/akoita/draft-loop/milestone/55)             | Draft quality: `cli-author-v15`, warnings for repeated facts, a missing header, an unlabelled Skills line and lost coverage, grouped "Not ready" reasons; `server-v0.7.0`                                                                                                                            | 2026-10-28          |
+| [1w](https://github.com/akoita/draft-loop/milestone/56)             | Fixes from the 0.7.0 re-walk: `cli-author-v16`, emphasis advice no longer confirms a gap, known gaps in one step, semicolon and placeholder warnings; `server-v0.8.0` and `server-v0.8.1`                                                                                                            | 2026-10-28          |
+| [1x](https://github.com/akoita/draft-loop/milestone/58)             | Review edits reach the export as a new, re-checked version on every client; header placeholders block approval; settled gaps satisfy approval; reasoning levels per role; `server-v0.9.0` to `server-v0.9.6`                                                                                         | 2026-10-28          |
+| [1y](https://github.com/akoita/draft-loop/milestone/59)             | One web flow: the interim tabs removed, storage permission, screening and private-section rules on Career evidence, consent and credit cost in the start dialog; `server-v0.10.0` (#1939)                                                                                                            | 2026-10-29          |
+| [1z](https://github.com/akoita/draft-loop/milestone/60)             | The server on your own machine: local secret files, direct and local model routes, blobs on disk, the self-hosted Compose stack and [guide](operations/self-hosted.md); `server-v0.11.0`, validated on the owner's machine                                                                           | 2026-10-29          |
+| [Quality](https://github.com/akoita/draft-loop/milestone/61)        | A 64,000-token Opus cap, billed failed calls in a run's cost, autopilot on hosted runs, a coverage judge that credits shown behaviour, `cli-author-v17`, the run's writing policy on the web                                                                                                         | Admitted 2026-10-29 |
+| [Local install](https://github.com/akoita/draft-loop/milestone/62)  | Server images on GHCR, the `draft-loop-server` install, upgrade, backup and restore script, a CI job over that stack; the Keycloak sign-in profile deferred                                                                                                                                          | 2026-11-03          |
+| [Desktop import](https://github.com/akoita/draft-loop/milestone/63) | `draft-loop server import` sends a career evidence backup and desktop applications with their history to a server (#2056, #2067–#2069)                                                                                                                                                               | 2026-11-03          |
+
+#### Agent channel and the desktop client
+
+- **Agent channel (D17, #1403).** An MCP channel, local first. The work journal
+  sprint (#2018, #2019–#2025) added `record_work`, which files notes from the
+  candidate's coding agent into a pending inbox for approval, with
+  `draftloop-mcp init` for Claude Code and Codex and the
+  [agent channel](reference/agent-channel.md) reference. Built 2026-11-03.
+- **Desktop client (D9, amended 2026-11-03).** The desktop is a first-class
+  client of the server beside the web, built in its
+  [milestone](https://github.com/akoita/draft-loop/milestone/65) (#2089–#2094)
+  and shipped in v0.9.0. The v0.8 local engine was retired on 2026-11-04
+  ([milestone 67](https://github.com/akoita/draft-loop/milestone/67),
+  #2117–#2119).
+- **Release sprint** ([milestone 66](https://github.com/akoita/draft-loop/milestone/66),
+  #2103–#2105, admitted 2026-11-03) ships both: next steps printed by
+  `draft-loop-server up`, the work journal in the record archive and the notes
+  for `server-v0.14.0`. The work journal's sign-in mode (#2079) waits for hosted
+  sign-in.
 
 ### Next — Manual parity: review and export
 
@@ -2051,234 +564,55 @@ records that negative decision explicitly and does not create a release.
 The entries below record material product and stage decisions. Git history and
 issues retain implementation chronology.
 
-| Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-04 | Retired the v0.8 desktop with its own local engine ([milestone 67](https://github.com/akoita/draft-loop/milestone/67), #2117–#2119): the required `Installed app acceptance gate` now packages and checks the desktop client, the credential gate is removed, and `apps/desktop` left the repository. | The desktop client is the only desktop app. v0.8 users move their work with `draft-loop server import`; local-first runs stay in the CLI. |
-| 2026-11-03 | Admitted the release sprint (#2103–#2105): `draft-loop-server up` prints what to do next, the record archive holds the work journal, and the notes for `server-v0.14.0` cover the work journal and desktop client sprints. The sign-in mode part of #2079 waits for hosted sign-in. | Two merged sprints were not released, and staging runs with the owner token, so sign-in mode would add nothing usable yet. No paid run is needed. |
-| 2026-11-03 | Admitted the work journal sprint (#2018, #2019–#2025), planned and decided 2026-11-01: the agent channel's first tools `record_work` and `list_work`, with notes pending until the candidate approves them into a `work-journal` knowledge source, and an amendment to ADR 0011 D17 that makes `apps/mcp` a stdio HTTP client of the API served by the self-hosted stack. No model call is needed to build or test it. | Coding agents can file evidence as work ships without writing CV claims. #1309 still waits on the 2026-11-14 credit, and this sprint needs no paid run, so it goes ahead of it. The CLI-only path without the self-hosted stack is not served. |
-| 2026-11-03 | Split the desktop import out of the local install sprint into its own sprint ([milestone 63](https://github.com/akoita/draft-loop/milestone/63), #2056, #2067–#2069). The import is a CLI command over the server's HTTP API, and the application import route is offered in owner-token mode only. | The desktop has no backup button and its history spans many applications, so the import was larger than one issue. Going through the API keeps screening and quarantine on every imported file, and owner-token mode keeps imported history with the one person whose desktop it came from. |
-| 2026-11-03 | Admitted the local install sprint ([milestone 62](https://github.com/akoita/draft-loop/milestone/62), #2050–#2058): published server images, an install and backup script, a self-hosted CI job and desktop import (D12). The Keycloak sign-in profile is deferred until more than one person uses a self-hosted stack, and the desktop stays in maintenance mode without becoming a launcher. | The stage does not move: #1309 waits on the next scored run after the 2026-11-14 credit. A desktop user gets a supported way to the server, so maintenance mode no longer strands their workspace. |
-| 2026-11-02 | Widened the critic's omission check to every retrieved chunk, in slices of 32, and let every omission it finds block, at most twelve per round (`cli-critic-v10`, #2046). No model call was made; the next #1307 scoring run on G, after the 2026-11-14 credit, measures it at a $7 cap over two rounds. | The 2026-11-02 G run (v9) opened round 2 on three blocking omissions, but its check read only the 20 chunks the plan's themes cite and named one of the twelve accomplishments the draft left out; eight of them sat in uncited chunks, and a cap of three blocking per round could add at most six over two rounds where the bar needs seven. The stage does not move until #1307 scores the change. |
-| 2026-11-01 | Cached the author's prefix for five minutes instead of an hour, with a one-token copy of a long in-flight request every 3.5 minutes keeping it alive (#2043); author profiles now record the five-minute cache-write rate. No model call was made beyond one sub-cent live check of the keep-alive on a synthetic prefix. | On a one-round G run the author's one-hour write was $1.38 of $3.62; the five-minute write is about $0.86 and the keep-alive reads cost cents. A run's author calls land within minutes of each other, so the hour paid for time no run used. |
-| 2026-11-01 | Sent each retrieved chunk to the models as id, run-local source alias, line range and text, keeping checksum, workspace id, rank and ordinal local (#2041), and corrected the Sonnet 5.5 cache-read price in the profile catalog. No model call was made; the next #1307 scoring run records the smaller cached prefixes. | The 2026-11-01 Console notice reported a 16% cache hit rate; on a one-round G run the two one-hour cache writes were $2.00 of $3.62 and chunk metadata about a sixth of each prefix. A smaller prefix cuts every run's write cost; the author's five-minute lifetime with a keep-alive follows in its own issue. |
-| 2026-11-01 | Moved the omission review out of the critique into a separate check call before it (`cli-critic-v9`, #2039): the critic model compares the CV's text with the plan's theme chunks alone, and its answers are the blocking omission findings. No model call was made; the next #1307 scoring run on G measures it. | The 2026-11-01 G runs with v7 and v8 each reported one omission, as a warning, of 13 and 10 left out: a paragraph inside a 300k-token critique does not get a chunk-by-chunk comparison done, and round 2 never ran. The stage does not move until #1307 scores the change. |
-| 2026-11-01 | Replaced the critic's one-pass omission review with a chunk-by-chunk one on the plan's theme chunks (`cli-critic-v8`, #2031) and shortened the model-facing draft (#2030). No model call was made; the next #1307 scoring run measures both. | The 2026-11-01 G run (v7) ended ready after one round at 21/34 recall: the critic reported 1 of 13 omissions, as a warning, although 10 of them sat in chunks the plan's themes cite. Its prompt was 345k tokens, mostly the draft's reference id lists, not the evidence. |
-| 2026-11-01 | Added an omission review to the critic (`cli-critic-v7`, #2026): a supported, job-relevant accomplishment the draft leaves out is a blocking `coverage-omitted-accomplishment` finding, at most three blocking per critique, so the round revises instead of ending ready. No model call was made; the effect on recall is measured by the next #1307 scoring run. | The 2026-10-30 G run ended ready after one round at 19/34 recall because nothing in the loop asked what the draft dropped; the plan narrows the draft to its themes and the critic checked only what the draft says and leads with. The stage does not move until #1307 scores the change. |
-| 2026-10-31 | Ran nine autonomous sprints on the owner's standing instruction, one PR each: critic prompt-cache sharing with cache tokens recorded per call (#1986), the Anthropic-only parity scores on F and G (#2002), legal pack drafts for lawyer review (#2003), the hosted budget route (#1993), the dependency audit (#2007), every stop reason worded in the run details, autopilot's conflict pause included (#1110, #2013), and the retrieved evidence each call saw recorded with an `evidence-usage` report and CLI command (#2010). No model call was made.           | The stage does not move: the #1309 exit is still scored by #1307 on the private references, and the G run (19/34 recall, US$3.59) predates the evidence references, so it cannot be diagnosed retroactively. The next paid run reads its cache tokens and its evidence usage from saved history, so a recall miss is traced to retrieval or to the author instead of being re-run blind.                                                                                                                                                                                                                                                                                                                                |
-| 2026-10-31 | Published [v0.8.0-alpha.5](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.5) with [checkpoint evidence](releases/stage-evidence-v0.8.0-alpha.5.md) after release prep PR [#1999](https://github.com/akoita/draft-loop/pull/1999) and the live-gate fix [#2000](https://github.com/akoita/draft-loop/pull/2000). | Installed desktops get Electron 44.10.0 with Node.js 24.22.1 and its October 2026 security fixes. The checkpoint claims no parity; the #1309 exit is scored by #1307. |
-| 2026-10-30 | Added Interview preparation as a later stage (#1995) and gave freelance mission dossiers (#1996) and pull requests as evidence (#1997) their own rollups under Controlled expansion. Interview-loop measurement and claim checking needed no new work: the parity scoring and the reviewer already cover them. | The career record gets a second use without a new product. Nothing moves ahead of Local-first final (#1309); each rollup starts with a no-code test. |
-| 2026-10-28 | Admitted client-server sprint 1x: the candidate's review edits reach the approved and exported CV ([milestone 58](https://github.com/akoita/draft-loop/milestone/58), #1899–#1905, rollup #1876). Approval builds the next version from the latest edit of each block and runs the final checks on it; the critic does not review the edits. | The 0.8.0 re-walk found that edits in the review never reached the export, so a header filled in by hand still exported with placeholders. Header placeholders block approval again now that an edit can fix them. |
-| 2026-10-29 | Admitted client-server sprint 1z: the server on your own machine ([milestone 60](https://github.com/akoita/draft-loop/milestone/60), #1946–#1954). The same API, worker, page fetcher and web screen run on one machine with Docker Compose, the operator's own keys or a local model, and files on disk (ADR 0011, D5, D14, D15). A local model may write the CV, with a warning until one passes the evaluation gate. | The owner put the desktop in maintenance mode on 2026-10-28 and still wants a full local option. The server already ran locally except for model calls, keys and blob storage. The sign-in tests wait on hosted Keycloak and the cost check on a paid run, so neither can start first. |
-| 2026-10-29 | Admitted client-server sprint 1y: one web flow ([milestone 59](https://github.com/akoita/draft-loop/milestone/59), #1935–#1938). The web's interim Workspace, Sources, Job brief and Run tabs go; the hosted-only controls move into the shared screens through optional host panels the desktop does not provide. | The owner could not follow the tabs, which repeated Home and kept a job brief no application used. With the desktop in maintenance mode, the web is the main screen. |
-| 2026-10-28 | Let each role choose a reasoning level from the levels its model allows, on the desktop, the web and the CLI ([milestone 57](https://github.com/akoita/draft-loop/milestone/57), #1891–#1898). A changed level keeps the preset's name, as "Balanced · writer high", and credit rule v2 doubles a hosted run's base for `high`, `xhigh` or `max`. | The price and quality trade-off of a level can be as large as a model change, so the person chooses it and every run records it. No paid run measured a level's cost yet, so the cost scenario only notes a raised level. |
-| 2026-10-28 | Made GPT-6.1 Terra the Balanced reviewer in place of GPT-6.1 Sol (#1887). Standard keeps Sol. | Balanced runs get about 10% cheaper: Terra costs half of Sol and is listed for OpenAI EU data residency. Quality stays unvalidated, and no paid run was made for the change. |
-| 2026-10-26 | Admitted client-server sprint 1t: follow-ups from the owner's re-walk ([milestone 53](https://github.com/akoita/draft-loop/milestone/53), #1806–#1808, #1794, #1775, and #1809–#1813 split from #1792 and #1793, rollup #1359). | The re-walk passed, but a hosted run's relevance stayed near 5% because the worker has no embedding model, the web takes a job only as pasted text, and the review screen wastes wide screens and overflows phones. |
-| 2026-10-26 | Admitted client-server sprint 1s: fixes from the owner's staging walk ([milestone 52](https://github.com/akoita/draft-loop/milestone/52), #1782–#1791, rollup #1359), ahead of the validation tests. | Walking staging as a new user, the owner hit a setup form unlike the desktop's, a Modern PDF that looked Classic, coverage errors for words the draft already covered and warnings repeated once per line. The validation tests would hit the same screens. |
-| 2026-10-25 | Admitted client-server sprint 1r: staging clean-up and web polish ([milestone 51](https://github.com/akoita/draft-loop/milestone/51), #1771–#1774, #1760, rollup #1359), ahead of the validation tests on staging. | The live run passed, but staging still holds old knowledge bases that no route could erase, and the walk found screens that hide what the person needs: a base they cannot name, ids in findings, blockers shown only after a refused approval and a profile generation that looks stuck. |
-| 2026-10-25 | Admitted client-server sprint 1q: hosted run recovery ([milestone 50](https://github.com/akoita/draft-loop/milestone/50), #1757–#1759, #1762–#1764, rollup #1359), then the sprint 1p live run again on staging (#1725). | The live run on staging failed twice on provider errors that the hosted service neither explained nor retried, and the web offered a retry that could only fail. Proving approval and export live needs that recovery first. |
-| 2026-10-25 | Admitted client-server sprints 1o and 1p: the desktop's shared screens on the web (ADR 0011, D9; [milestone 48](https://github.com/akoita/draft-loop/milestone/48) and [milestone 49](https://github.com/akoita/draft-loop/milestone/49), rollup #1359), ahead of the validation tests on staging and of billing. Sprint 1o moves the screens into `packages/ui` and serves Home, New application, career evidence and the run start over the HTTP API; sprint 1p brings the career profile, the shared review, approval and export, and removes the web's own steps. | Walking staging as an end user showed the web screen far behind the desktop. Validation tests on a screen people will not use would measure the wrong thing, and one set of screens keeps the two versions from drifting apart. |
-| 2026-10-24 | Admitted client-server sprint 1n, phase 2e: entitlements and credits ([milestone 47](https://github.com/akoita/draft-loop/milestone/47), rollup #1359). Plans are versioned data, and a credit ledger and run caps enforce them in sign-in mode. | D13 says services check entitlements, never plan names, so plans can change without code changes. The plan catalog v1 holds the D13 working defaults, and the prices still apply only once the cost check (#1597) passes. Billing stays out of the sprint. |
-| 2026-10-24 | Admitted client-server sprint 1m, phase 2d: the safety stack ([milestone 46](https://github.com/akoita/draft-loop/milestone/46), #1658–#1666 with the follow-ups #1615, #1616, #1636–#1638 and #1654, rollup #1359). Job posts and uploads are screened on the server, and flagged material is quarantined until an owner or admin releases it. | The phase 2 gate is a security review with a red-team pass on injection through job posts and uploads, and nothing screened untrusted content. Author and critic prompts stay unchanged, since D16 gates prompt changes on an evaluation run. Entitlements and credits still wait for the cost check (#1597). |
-| 2026-10-24 | Admitted client-server sprint 1l, phase 2c: export and deletion ([milestone 45](https://github.com/akoita/draft-loop/milestone/45), #1640–#1647, rollup #1359). A record is exported as a [record archive v1](reference/record-archive.md), not as the ADR 0007 portable backup. | D7 promises that an organisation can export everything held about a candidate and delete it, objects included, before other users arrive. The ADR 0007 package holds one knowledge store without runs or consents, so converting to it moves to import (D12). Entitlements and credits still wait for the cost check (#1597). |
-| 2026-10-24 | Admitted client-server sprint 1k, phase 2b: candidate records and consent ([milestone 44](https://github.com/akoita/draft-loop/milestone/44), #1617–#1625, rollup #1359). | Organisations need per-candidate access before a coach can hold several candidates, and D7 requires recorded consent before material is stored or sent to a provider. Entitlements and credits wait for the cost check (#1597). |
-| 2026-10-24 | Admitted client-server sprint 1j, phase 2a: sign-in and tenancy ([milestone 43](https://github.com/akoita/draft-loop/milestone/43), #1588–#1596, rollup #1359), starting with one Postgres pool serving many tenants (#1588). The phase 1 cost check finishes beside it. | Every phase 2 feature needs real tenants, and the database is already tenant-scoped, so the groundwork can start now. It admits no other user: staging keeps the owner token until Keycloak is hosted. |
-| 2026-10-23 | Admitted client-server sprint 1i ([milestone 42](https://github.com/akoita/draft-loop/milestone/42)): refusing to review a brief without requirements (#1539), listing hosted briefs and runs (#1538), the writing policy (#1550) and sensitivity rules (#1551) through the API and the web screen (#1552), prompt caching on Claude calls (#1553), and the parity rules fixed before the gate run (#1554). The gate run itself is #1555. | A hosted run could not take the candidate's writing policy or sensitivity rules, so it was not comparable with the local parity runs, and no Claude call asked for caching, so it could not meet the US$3 cached-run condition (#1357). The parity rules are written down before any run. |
-| 2026-10-23 | Admitted client-server sprint 1h ([milestone 41](https://github.com/akoita/draft-loop/milestone/41)): sign-in and a typed client (#1529), the API serving the screen (#1530), workspace setup (#1531), sources (#1532), the job brief (#1533), runs (#1534), review (#1535), approval and export (#1536) in a browser, and a run taken from setup to a downloaded CV through the web client (#1537). Amended ADR 0011 D9. | The owner needs a browser screen before the phase 1 parity run. A small screen built for the owner reaches the gate sooner than extracting the desktop's screens into a shared package, which moves to phase 2. The API serves the screen, so it needs no new infrastructure. |
-| 2026-10-23 | Deployed `server-v0.1.0` to staging only. The staging smoke passed, and the owner held the production deploy. | Staging is enough to build the web screen and the parity run against. Production stays on placeholder images until the owner asks for it; the images that passed staging are tagged for that deploy. |
-| 2026-10-22 | Admitted client-server sprint 1g ([milestone 40](https://github.com/akoita/draft-loop/milestone/40)): the deployment decisions (#1516), Cloud SQL sign-in without a runtime password (#1517), a worker that drains the queue as a job (#1518), the API waking it on enqueue (#1519) and content-free logs (#1520). The infrastructure itself is built in the private infrastructure repository. | The worker runs only when there is work, the API serves its Cloud Run address behind the owner token until sign-in arrives, and no runtime holds a database password. Fixed cost stays near US$50 a month for staging and production. A server tag needs the CI gate, and the staging smoke gates production. |
-| 2026-10-22 | Admitted client-server sprint 1f ([milestone 39](https://github.com/akoita/draft-loop/milestone/39)): a run's review (#1499), finding decisions and edits (#1500), approving and stopping a run (#1501), revisions, pause and resume through the worker queue (#1502), export to the tenant's blob storage (#1503), export download (#1504) and smaller server images (#1505) through the API, and a run taken from setup to a downloaded CV through the API only (#1506). | A hosted run stopped at awaiting approval, so neither the web screen nor the parity run could use it. Review comes before infrastructure because a deployed service that cannot approve or export is not usable. The server prints PDFs with the built-in writer, not a browser engine, and downloads stream through the API so the owner token and the checksum check stay in one place. Infrastructure and deploy follow in sprint 1g, then the web screen. |
-| 2026-10-22 | Admitted client-server sprint 1e ([milestone 38](https://github.com/akoita/draft-loop/milestone/38)): no provider keys in the API process (#1478), workspace setup (#1479), brief edits and versions (#1480), hosted source intake (#1481), knowledge bases (#1482), source uploads (#1483) and knowledge selection (#1484) through the API, and a run set up through the API only (#1485). | The owner must set up a hosted run without database seeding. The API stores uploaded files without parsing them, because PDF and DOCX parsing belongs in workers (D11). The web screen moves to its own sprint on top of these routes, and the API image size to sprint 1f. |
-| 2026-10-21 | Admitted client-server sprint 1d ([milestone 37](https://github.com/akoita/draft-loop/milestone/37)): the route of every provider call in run history (#1457), Claude on Vertex AI in a server-only model gateway package (#1458), a route policy with recorded, opt-in fallback (#1459), provider keys from Secret Manager (#1460), a deployment budget ceiling (#1461), run and tenant usage from the API (#1462), a shared idempotency store on Postgres (#1463), and the worker running through the gateway (#1464). | Hosted runs need EU model endpoints, keys outside images and a spending limit before the owner uses the service. The direct Claude API fallback processes material outside the EU, so it is off unless a deployment turns it on. The API's setup, brief-edit and intake routes move to sprint 1e with the web screen that needs them. |
-| 2026-10-21 | Re-sliced sprint 1c to fit one PR per issue: the knowledge store opener (#1440) and its Postgres store (#1452) split apart, and the hosted driver became #1447. The orchestrator keeps run state as key-value entries, so Postgres gained a tenant-scoped run-state table. | Each issue stays within the execution budget. The API has no workspace-setup, job-brief edit or intake routes yet, so the end-to-end smoke (#1444) seeds its workspace and knowledge in storage; those routes belong to a later sprint. |
-| 2026-10-21 | Admitted client-server sprint 1c ([milestone 36](https://github.com/akoita/draft-loop/milestone/36)): the `apps/api` foundation (#1437), workspace settings behind a port with a Postgres implementation (#1438, #1439), a hosted application driver (#1440), the first `/v1` routes (#1441), a Postgres run queue (#1442), `apps/worker` (#1443), and both apps in the local Compose stack with an end-to-end offline run (#1444). | The application driver still read each workspace's settings from files in its folder, which a stateless API cannot do, so the settings move behind a port before the routes call the application service. Uploading sources needs managed files on Cloud Storage and sandboxed ingestion, so it waits for a later sprint. |
-| 2026-10-21 | Admitted client-server sprint 1b ([milestone 35](https://github.com/akoita/draft-loop/milestone/35)): a shared blob conformance suite (#1422), a server-only Cloud Storage adapter tested against an emulator (#1423), and a local Docker Compose stack for Postgres and the emulator (#1424). | Hosted exports and uploaded sources get a tenant-scoped, checksum-verified object store before the API and worker (sprint 1c) need one. Encryption keys stay with the infrastructure, outside this repository. |
-| 2026-10-21 | Published [v0.8.0-alpha.4](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.4) with [checkpoint evidence](releases/stage-evidence-v0.8.0-alpha.4.md) after release prep PR [#1425](https://github.com/akoita/draft-loop/pull/1425). | The checkpoint ships the seven stages completed since alpha.3, including the simple guided workflow, and the CV quality work so far. It claims no parity; the #1309 exit is scored by #1307. |
-| 2026-10-20 | Accepted the proposed price levels and retention defaults as working defaults (ADR 0011 D13 and D7, #1357). | Prices apply only once phase 1 measures a cached run at US$3 or less. A GDPR lawyer confirms retention before phase 2 admits other users. |
-| 2026-10-17 | Chose Keycloak managed by Clever Cloud as the sign-in service for the hosted version, and named Scaleway as the European hosting exit with its switch criteria (ADR 0011 D14, #1357). | Google's Identity Platform is out because it processes accounts only in the US. Hosting stays on Google Cloud until Claude can be called with EU processing elsewhere. |
-| 2026-10-17 | Added an agent channel to ADR 0011 (D17): DraftLoop as an MCP server for Claude, Codex and other agents, first as a local stdio server, then over the hosted API (#1403). Corrected D9, which still called the desktop app frozen. | Agents become one more client over the same application services. The host agent never writes CV claims itself, and exports still need approval in DraftLoop. |
-| 2026-10-17 | Started client-server phase 1 (#1358) after phase 0 merged. The owner chose `europe-west1` and the cost per run was recorded (#1357). Amended ADR 0011: hosted retrieval stays Postgres-native (D11), the monorepo has explicit revisit criteria, and infrastructure lives in a private repository (D2). | The first phase 1 sprint is Postgres storage behind the phase 0 ports; the API, worker, model gateway, web screen and infrastructure follow as separately admitted sprints. No cloud identifiers enter this public repository. |
-| 2026-10-17 | Accepted ADR 0011. Kept the local-first version as a product that can keep evolving in parallel with the client-server version, instead of freezing it (D15). Completed the ADR with entry points, pricing, retention, observability and per-service egress. Planned phase 0 (#1347) and opened rollups for the owner decisions (#1357) and phases 1–4 (#1358–#1361). | Both versions ship from one repository and one CI gate, with independent releases (`v*` for the desktop, `server-v*` for the server). Shared-package changes must keep both clients green. |
-| 2026-10-16 | Added rendering templates to Local-first final: a bounded template format with Classic, Modern and Compact templates, a picker at export, and templates derived locally from a CV the person likes (#1328–#1331). Describing a template in words, shared template libraries and bundled PDF fonts go to the client-server version (#1332). | Format fit is part of the parity exit. A manual reference fits about 1,730 words on two A4 pages, while the old standard layout fit about 370 words per page (#1327). Deriving a template from the person's own reference CV is the most direct route to layout parity. |
-| 2026-10-15 | Made the next stage the last local-first one, Local-first final: CV quality parity (#1309), and deferred the remaining local-first work (career interview, harness observability, inputs follow-ups) to the client-server version. | The project moves to a client-server version as soon as possible, but local-first CVs must first match the manual Claude/Codex loop. The evidence puts the gap in judgement, not access: recall is 86–91% while requirement coverage trails the manual CV (11/17 against 14/17), and format fit fails without a laid-out DOCX. The stage keeps only the levers that address those gaps, and quantifies its exit on the private references. |
-| 2026-10-15 | Added run comparison to Manual parity: review and export (#1276: #1273–#1275), and decided that Start waits for a reviewed requirements brief, with starting from the raw job text only as an explicit Advanced choice (#1265). | Several runs per application now exist, so choosing the better draft, as the manual loop does, is the next useful step. Comparisons flag differing inputs, so model pairs are not credited for better inputs. A run silently using raw job text weakens coverage scoring without telling the candidate. |
-| 2026-10-15 | Recorded the first standard-pair observation on a real application (#1172, reference E in [manual parity](evaluation/manual-parity.md)). | Inputs and models are no longer the limit: the frontier pair writes cleaner than the economy pair but recalls and covers no more. The remaining gap is the author acting on judged coverage, addressed by #1211 and #1212, with the next reference-E observation as the check. |
-| 2026-10-14 | Stamped run-workflow records no earlier than the artifacts they describe (#1214). | A backward wall-clock step between drafting and approval no longer fails approval, revision tracing or revision drafting. Readiness reports, stopping decisions, revision traces and revised artifacts take the later of the current time and their source record's time. Adjudication plans do the same for a submitted report up to 5 minutes ahead, so clearly future-dated reports are still rejected. Every ordering validator is unchanged. |
-| 2026-10-14 | Extended the #389 backward-clock fix to URL fetch times and portable backups (#1210). | On WSL2 the wall clock stepped back about 1.2 s every 31 s under load, which made URL refresh and backup restore fail in the full gate. URL `fetchedAt` now uses the service's monotonic clock. The backup "not in the future" checks allow 5 minutes of clock skew, so clearly future-dated backups are still rejected. |
-| 2026-10-11 | Opened the Tailored, sendable CVs stage (#1171 to #1177, with #728 and #904) and made a reviewed brief's responsibilities run requirements (#1171). | Both reference comparisons showed the gap comes from inputs and the no-tailoring rule. Responsibilities were sent to the author but never checked, so coverage and critique missed what the job says the candidate will do. #904 moved here from Manual parity: inputs. |
-| 2026-10-11 | Made full-source evidence the default when it fits (#1168). | Runs without a saved evidence mode send every eligible chunk of the selected sources and fall back to retrieval visibly when they exceed the budget. Two comparisons with hand-made CVs showed the twenty-chunk limit hid every job-specific achievement. `evidence mode <workspace> retrieval` keeps the old behaviour. |
-| 2026-10-10 | Closed #1053: profile windows plan on 1.6 output tokens per character after a live Mistral Large 4 check (at most 1.33 measured, no truncated calls). | A long career source takes about half the extraction calls. `pnpm test:profile-windows:live` re-checks any route on made-up text. |
-| 2026-10-10 | Completed Any-format career intake (milestone 26, 50/51 issues) in code; #1053 stays open for a live measurement. | Each source has a detected or user-set kind that guides extraction. Runs that pin a reviewed profile retrieve its verified facts first, with chunks as backup and a content-free origin trace. |
-| 2026-10-10 | Completed Candidate home and applications (milestone 28, 29/29 issues) in code. | One workspace holds many applications that reuse one reviewed profile. An application can use its own preset model pair, and step 4 shows the pair's provider readiness before Start. |
-| 2026-10-09 | Planned Harness observability and evaluation as a Later stage (#1101, #1102–#1113); no implementation yet. | Tracing, critic calibration, revision attribution and a bounded author tool loop are ordered behind gates. Current stages keep priority. |
-| 2026-10-07 | Completed Inputs and setup clarity (milestone 24, 21/21 issues) in code, including #991, #993 and #996. | Setup has one Career evidence concept, and pasted job pages become reviewed, quotable requirements. A real Windows run still has to confirm the exit criterion. |
-| 2026-10-08 | Opened Candidate home and applications (milestone 28, #1054–#1059) and accepted ADR 0010: a workspace is the candidate's home with many applications. | One reviewed career profile per candidate is reused across job applications. Home with an Applications list becomes the landing page. This comes ahead of #1027 and #1028. |
-| 2026-10-08 | Opened Any-format career intake (milestone 26, #1022–#1029) and Guided career interview (milestone 27, #1030). | Interpreting and structuring career evidence in any format becomes the next stage, ahead of Manual parity: review and export. A guided, multi-session interview with local voice input follows it. |
-| 2026-10-08 | Completed Development model providers (milestone 25, 11/11 issues) in code. | Claude Haiku 5.5 is the economy author, and Mistral Large 4 is an opt-in development author in the CLI and desktop. Mistral extraction passed a live check; full reviews on both pairs are pending. |
-| 2026-10-07 | Opened Development model providers (milestone 25, #998–#1002) after Claude Haiku 5.5 and Mistral Large 4 were released. | Claude Haiku 5.5 replaces Sonnet 5.5 as the economy (development) author, with GPT-6 Luna as critic. Mistral Large 4 joins as an opt-in development author. Quality validation stays on the standard pair. |
-| 2026-10-07 | Opened Inputs and setup clarity (milestone 24, #979 and #983) after real-material testing on Windows. | Setup gets one career-evidence concept and accepts pasted job pages through reviewed briefs. This comes before Manual parity: review and export. |
-| 2026-10-07 | Completed Local semantic retrieval (milestone 23, 30/30 issues). Requirement coverage now pairs semantic candidates with critic judgement (#727). | Semantic and hybrid retrieval, critic-judged coverage, and requirement-level rationale ship opt-in and local. Representative quality, retrieval and judge alike, still needs a consented real-CV observation. |
-| 2026-10-06 | Decided #114: lexical retrieval stays the default; semantic and hybrid remain opt-in per workspace. | Semantic retrieval ships complete but opt-in. A real-CV comparison of lexical and hybrid is needed before any default change. EmbeddingGemma 2 is evaluated next (#923). |
-| 2026-10-06 | Opened local semantic retrieval (milestone 23) alongside Manual parity: inputs. Granite Embedding Multilingual R2 on CPU-only onnxruntime-node was chosen over EmbeddingGemma 2, which no released Node runtime supports yet ([ADR 0009](adr/0009-local-semantic-retrieval.md), #914). | Retrieval gains a model-agnostic local embedding path with explicit model install and lexical fallback. It targets the #869 excerpt-selection gap; a non-lexical default still requires #919 evidence. |
-| 2026-10-05 | Opened the Manual parity stage (#869) with sprint milestone 22 (#870–#878) after a real application showed DraftLoop drafts are accurate but not sendable. | Inputs come first: full eligible source material, sensitivity tiers, default policy, measured against private reference CVs. Model profiles and tiers is closed; default promotion (#683) and broad fixtures (#583) stay separate. |
-| 2026-10-05 | Refused job-description requirement units over 40 meaningful tokens at run start (#858). | A job ad pasted from a web page without bullets can no longer spend every round at 0% relevance. The user is told to list requirements as bullets or use a reviewed brief. |
-| 2026-09-26 | Candidate review confirmed a factual chronology error in #526: the accepted draft merged employment periods from different employers, so the fixed factuality rule failed. | Milestone 16 remains active. #544 adds complete-range checks for substantive claims and fully covered blocks before another live observation. Each new live run needs explicit authorization; frontier evaluation remains separately gated. |
-| 2026-09-23 | Sent the author a specific validation report after a rejection (#524). The next attempt in the same process revises its rejected proposal; the report stays in memory and out of run history. | First step of automating the user's proven loop: validation report, then a richer critic report with author reconciliation, then source of truth and house rules as default inputs. |
-| 2026-09-23 | Replaced verbatim coverage with grounded coverage (#522). Text outside claims is rejected only when a word, protected value, date range, or name is unsupported by the evidence. | Honest wording no longer fails, and invented wording, dates, and names still do. Offline, the #520 drafts remain rejected on employment dates absent from the source. |
-| 2026-09-23 | Recorded #520: the economy pair (`claude-sonnet-4-5` + `gpt-6-luna`) failed on case A. All three drafts were rejected on substantive coverage; the last had no factual violations. | The provider route works. The blocker is the verbatim coverage rule against natural CV prose, so model changes alone are unlikely to clear it. The coverage decision returns to the user. |
-| 2026-09-23 | Ordered validation economy pair first: use case validation on `claude-sonnet-4-5` with `gpt-6-luna`, then quality validation on Opus with GPT-6 Sol. #518 confirmed that `claude-sonnet-5` still fails the author replica on the updated CLI. | Workflow defects surface on cheap attempts before frontier models are used. Economy results validate that a use case works, never CV quality. |
-| 2026-09-23 | Recorded #516 and #510: frontier failures on the user-session routes came from outdated `claude` (2.1.265) and `codex` (0.153.4) CLIs in the Node global packages. | After the update, `claude-opus-5-5` succeeded 2 of 2 on the author replica, and `gpt-6-luna` and `gpt-6-sol` returned valid critiques. The first basic scenario can use Opus with Luna, then Sol. Premium models and the API-key route (#515) are deferred. |
-| 2026-09-23 | Recorded the #507 calibration: frontier author candidates were not reachable through the Claude CLI session. | The Fable preflight was rate-limited and the Opus preflight failed. `claude-sonnet-5` failed structured output even at medium effort with no thinking. The route to frontier authors returns to the user. |
-| 2026-09-23 | Refined the model strategy into premium (Fable, GPT-6 Astra), standard frontier (latest Opus, GPT-6 Sol), and economy tiers, evaluated step by step. | The standard frontier tier is the default and meets most needs, premium is a paid option for maximum confidence, and the first basic scenario uses one pair, testing the GPT-6 Luna critic before GPT-6 Sol. |
-| 2026-09-23 | Adopted the frontier model strategy: a reference tier of frontier Anthropic and OpenAI models for production and validation, an economy tier for cost-conscious use and development, and other providers only after the reference pair works. | Milestone 16 becomes the reference model pair stage, #507 calibrates frontier author candidates, and a new milestone 17 introduces versioned model profiles, tiers, and user selection (#84). The first-version priority on one Anthropic and OpenAI pair is unchanged. |
-| 2026-09-23 | Recorded the #503 schema replica: production schema and prompt work on `claude-sonnet-4-5`, but `claude-sonnet-5` exhausts its budget on thinking. | The `api_error` is not caused by the schema or the prompt and stays unexplained. `claude-sonnet-5` used 15,200 of 16,384 output tokens thinking, so the adapter's thinking limit is not honoured for it. |
-| 2026-09-23 | Recorded the #501 synthetic route diagnosis: 0 of 6 requests failed. | Real-sized inputs, large outputs, and runs over five minutes succeeded on both models, so size and duration alone do not cause the `api_error`. The production author schema is the leading hypothesis. |
-| 2026-09-23 | Recorded #499 as indeterminate: `claude-sonnet-5` produced no draft within the budget. | Attempt 1 ended in a status-less `api_error` after about eleven minutes and attempt 2 timed out on the remaining budget. The route decision returns to the user. |
-| 2026-09-23 | Ended structured-block author guidance as not effective and planned milestone 16 with gated #499 on `claude-sonnet-5`. | The author model becomes the single variable against #496. Provider diversity is preserved, and no code change is needed. |
-| 2026-09-23 | Recorded #496 as a fail with the structured-field guidance not effective. | With a 16,384-token budget the v3 author produced larger drafts that averaged 15.3 capture issues against 9.3 under v1. The author route decision returns to the user. |
-| 2026-09-23 | Recorded the #493 retry as indeterminate after the v2 author hit its output-token limit. | The preflight passed, but the single author attempt ended at `max_tokens` with structured-output retries exhausted, which never happened under v1. The v2 guidance probably lengthens proposals past the 8,192-token budget; the decision returns to the user. |
-| 2026-09-23 | Recorded #489 as indeterminate after the author preflight returned a status-less `api-error`. | No candidate material was sent. With no cause code, the rule returns the author route decision to the user: retry, model change, or diagnosis. |
-| 2026-09-23 | Planned milestone 15 for structured-block author guidance as #488 and #489. | The prompt change is provider-free and versioned. Its effect is measured by one gated live observation against the #476 captures, with result and effect rules fixed in advance. |
-| 2026-09-23 | Ended structural claim coverage under #482 with the exit not met and named structured-block author guidance. | Validator fixes cut the #476 capture issues from 37 to 28 without weakening any rule. The remaining fields are absent from evidence, so the next lever is the author prompt, measured live. |
-| 2026-09-23 | Planned milestone 14 for structural claim coverage as #479–#482. | Fixes are measured on invented replay cases and on the private #476 captures through a content-free summary, against an exit rule fixed before implementation. |
-| 2026-09-23 | Recorded the #476 live observation as a fail and named structural claim coverage. | Captured proposals show that structural blocks lack author claims and that opening verbs cause false factual rejections. The next stage is provider-free and measured on replay and the private captures. |
-| 2026-09-22 | Planned milestone 13 for live author revalidation as #476. | The observation reuses the #446/#456 rules and adds local capture of rejected proposals, so a fail can be analysed from real structure. No provider call is authorized until a later instruction names #476. |
-| 2026-09-22 | Completed author correction reliability under #462 and named live author revalidation. | The replay corpus accepts both wrongly rejected supported cases and rejects all 21 controls, with the factual gate strengthened by #469. The next live observation must save rejected proposals locally. |
-| 2026-09-22 | Planned milestone 12 for author correction reliability as #459–#462. | The stage starts with uncapped counts and a local, content-free classification of the #456 drafts before any replay fixture or author change. No provider call belongs to it. |
-| 2026-09-22 | Recorded the #456 retry observation as a fail and admitted author correction reliability. | The corrected validator rejected both real drafts for factual, unsupported-claim, and coverage reasons despite structured retry feedback. The next stage is provider-free and starts with uncapped diagnostic counts; no cohort is admitted. |
-| 2026-09-22 | Completed author route readiness (#449, #453) and admitted the revalidation retry as milestone 11 (#456). | The author route passes a synthetic preflight, and status-less `api_error` failures now report a bounded cause. The retry reuses the #446 rules unchanged and requires a separate authorization naming #456. |
-| 2026-09-22 | Recorded the authorized #449 author preflight as `available` and added #453 to milestone 10. | The declared model answers a synthetic request with the author settings, so the observed `api_error` is request-specific. A bounded cause code must exist before another consented observation spends attempts. |
-| 2026-09-22 | Ended representative author-draft revalidation as indeterminate under #447 and admitted author route readiness. | The #446 observation produced no draft: every author attempt ended with a provider `api_error` that the sign-in probe cannot detect. Milestone 10 (#449) requires a synthetic model-level preflight before any further consented observation. |
-| 2026-09-22 | Planned milestone 9 for representative author-draft revalidation as #446 and #447. | One consented observation reuses case A inputs with predeclared pass, fail, and indeterminate rules and ends at first review. No provider call is authorized until a later instruction names #446. |
-| 2026-09-19 | Ended the broader real-application pilot early under #433. | Case A was indeterminate with no accepted draft, and the fixed all-cases-pass contract made the declared cohort exit impossible; cases B/C were not pursued. The exit criterion is unmet, no validation or release exists, and the next decision returns to provider-free author-draft acceptance reliability. |
-| 2026-09-19 | Recorded broader-pilot case A under #430 as indeterminate. | Both authentication probes passed, but the three-attempt author cap ended with no accepted draft: one retryable structured API error, then two local factual/coverage rejections. No critic, approval, or export occurred, so the fixed all-cases-pass cohort can no longer pass. |
-| 2026-09-19 | Required completed adversarial observations under #429. | A cohort remains indeterminate when any misleading-evidence or prompt-injection observation is `not-tested`; bounded `observed` and `not-observed` states count as completed evidence without exposing private details. |
-| 2026-09-19 | Started the broader real-application pilot under #426. | Milestone 7 begins with provider-independent cohort gate #427: more than one case, predeclared fixed aggregate rules, and bounded sanitized results are required before any new consented provider observation can count. No provider call is authorized. |
-| 2026-09-19 | Completed retrieval and provider quality under #409. | Sanitized replay acceptance improved from 1/3 to 2/3; lexical citation accuracy improved from 2/3 to 1 while irrelevant context fell from 1/3 to 0; and packaged recovery evidence passed on Linux, macOS, and Windows. No live provider ran, no release was created, and any pilot still requires consent and explicit authorization. |
-| 2026-09-19 | Improved lexical precision with a recall-preserving multi-term preference under #422. | On the unchanged three-query corpus, citation accuracy rises from 2/3 to 1 and irrelevant context falls from 1/3 to 0 without changing coverage, unsupported claims, or reciprocal rank. Hybrid now regresses against lexical and remains disabled. |
-| 2026-09-19 | Required packaged failure-and-recovery evidence under #420. | Cross-platform installed-app acceptance now fails unless its sanitized report explicitly confirms observable progress, in-flight cancellation, restart resume, and interrupted-run explanation. This closes an enforcement gap without adding provider calls or changing recovery behavior. |
-| 2026-09-19 | Kept hybrid retrieval disabled after the sanitized comparison under #418. | Across three queries, lexical and local term-frequency/RRF hybrid retrieval tie at 2/3 citation accuracy, full requirement coverage, 1/3 irrelevant-context ratio, zero unsupported claims, and reciprocal rank 1. No measured gain justifies changing the default. |
-| 2026-09-19 | Completed exactly supported block coverage under #416. | On the unchanged three-case sanitized corpus, acceptance improves from one to two while the unsupported factual-inflation case remains rejected. The former substantive-coverage diagnostic is removed only by exact, already-cited evidence. |
-| 2026-09-19 | Recorded a three-case sanitized rejected-author baseline under #414. | The provider-free reference produces one acceptance and two rejections, split across one factual-invariant and one substantive-coverage diagnostic. It establishes a comparison point without claiming improvement or live-provider quality. |
-| 2026-09-19 | Added bounded rejected-author replay summaries under #412. | Up to one hundred private replay inputs can produce deterministic acceptance and structural-diagnostic counts without returning case content or identity, creating a provider-free measurement primitive for later comparisons. |
-| 2026-09-19 | Started retrieval and provider quality with provider-free rejected-author replay under #410. | Private capture inputs can be replayed through the live local validator while results expose only fixed structural diagnostics. This creates a deterministic baseline for improvement before another consented provider run. |
-| 2026-09-19 | Ended v0.9 as indeterminate and unreleased under #407. | Twenty-six bounded observations did not satisfy workflow parity or produce a human-approved artifact. #75 closed unmet; #76/#250/#251 closed as not pursued. The project moves to provider-free and replay-first retrieval/provider-quality work before any new consented run. |
-| 2026-09-19 | Recorded #405 as an indeterminate twenty-sixth matched-backend observation. | Both user-session authentication probes passed on the exact clean main revision, but three Anthropic author attempts failed local factual and substantive-coverage validation. The attempt cap was exhausted without an artifact or critic review; authorization is exhausted and #75/#250 remain blocked. |
-| 2026-09-15 | Made candidate-knowledge application timestamps monotonic under #389. | A deterministic backward-clock case reproduced the captured `StorageValidationError`. Candidate-knowledge services now retain their latest valid generated timestamp across wall-clock regressions, while storage anti-rollback validation and invalid-timestamp rejection remain unchanged. |
-| 2026-09-15 | Recorded #401 as an indeterminate twenty-fifth matched-backend observation. | Both user-session authentication probes passed, but three Anthropic author responses failed local factual and substantive-coverage validation before an artifact or critic review. The run did not exercise #398's API-error branch. Authorization is exhausted, and #75/#250 remain blocked. |
-| 2026-09-15 | Classified statusless structured Claude API errors under #398. | The documented `api_error` terminal reason and error-result `success` subtype now produce fixed diagnostics. Without a finite numeric status, the failure is transient and retryable only within existing orchestration caps; numeric statuses retain precedence, provider prose remains excluded, and no live attempt is authorized. |
-| 2026-09-15 | Recorded #397 as an indeterminate twenty-fourth matched-backend observation. | Both authentication probes passed, but one Anthropic author attempt failed non-retryably with `unknown`. Private bounded capture established terminal reason `api_error` but no subtype or underlying cause; no artifact or critic review occurred. Authorization is exhausted, #398 owns classification, and #75/#250 remain blocked. |
-| 2026-09-15 | Routed opt-in Claude category capture through the local run boundary under #395. | A programmatic diagnostic caller can pass the private capture parent to Anthropic user-session run adapters without enabling capture for default, API-key, OpenAI, CLI, renderer, or persisted workspace paths. This provider-free plumbing does not authorize a live attempt. |
-| 2026-09-14 | Added opt-in local capture for unknown Claude categories under #393. | Explicit diagnostic sessions can preserve only bounded, category-shaped unknown result subtype and terminal-reason strings in a private caller-owned file. Capture is disabled by default, durable history remains content-free, provider behavior is unchanged, and no live attempt is authorized. |
-| 2026-09-13 | Recorded #384 as an indeterminate twenty-third matched-backend observation. | After explicit authorization, both 20-second authentication probes passed, but one Anthropic author attempt failed non-retryably with `unknown` after 351,508 ms. Fixed diagnostics classify only result subtype, terminal reason, and stop reason; no artifact or review occurred, and authorization is exhausted. This adds no product-quality evidence; #75/#250 remain blocked. |
-| 2026-09-13 | Recorded #382 as an indeterminate twenty-second matched-backend observation. | After explicit authorization, both 20-second auth probes passed, but three Anthropic author attempts failed with generic `invalid-response`; the first two were retryable and the final attempt was non-retryable with factual-invariant rejection. No artifact or review occurred; authorization is exhausted and #75/#250 remain blocked. |
-| 2026-09-13 | Added content-free Claude result-error attribution under #380. | Statusless structured failures retain their existing safe classification and retryability while allowlisted result, terminal, and stop categories make later failures diagnosable without provider prose or private material. This does not reinterpret #378 or authorize another live attempt. |
-| 2026-09-13 | Recorded #378 as an indeterminate twenty-first matched-backend observation. | After #376, one explicitly authorized Anthropic author attempt failed with non-retryable `unknown` after 14,405 ms, without a failure stage, reason, or diagnostics. No artifact or review occurred. This does not validate the corrected usage handling or add product-quality evidence; authorization is exhausted and #75/#250 remain blocked. |
-| 2026-09-13 | Corrected Claude user-session output-cap accounting under #376. | The exact requested cap remains pinned per Claude generation, while cumulative Agent SDK result usage is retained for metering rather than rejected against one generation's limit. This provider-free correction does not reinterpret prior observations or authorize another live attempt. |
-| 2026-09-13 | Recorded #374 as an indeterminate twentieth observation. | Explicit authorization covered a non-fixture matched-backend run after #370/#372; both 20-second authentication probes passed, but three Anthropic author attempts failed before a draft across output-budget, factuality, and output-budget outcomes. Fixed diagnostics indicate cumulative multi-turn usage ending in `tool_use`, not its cause. No artifact or review occurred; provider-reported cost is unavailable, authorization is exhausted, and #75/#250 remain blocked. |
-| 2026-09-13 | Added safe Claude output-budget attribution under #372. | Later output-budget failures retain their existing classification while fixed diagnostics distinguish single-turn from cumulative multi-turn usage and categorize only allowlisted stop reasons. No provider text or exact counts persist, and neither retry policy nor the pilot threshold changes. |
-| 2026-09-13 | Suppressed auxiliary Claude user-session traffic under #370. | The adapter explicitly disables terminal-title generation, prompt suggestions, and other nonessential Claude Code traffic so the selected author model remains the only intended generation call. This provider-free attribution control does not reinterpret #368 or advance the pilot threshold; #75/#250 remain blocked. |
-| 2026-09-13 | Recorded #368 as an indeterminate nineteenth observation. | The authorized post-#366 matched-backend run passed both user-session authentication probes, but all three author attempts returned generic `invalid-response`. Attempts one and two were retryable `output-token-budget-exceeded` failures; attempt three was non-retryable, failed `factual-invariant-rejection` with eight diagnostics, and exhausted the cap. The thinking bound did not eliminate output-budget failures. No artifact or review occurred; provider-reported cost is unavailable, and #75/#250 remain blocked. |
-| 2026-09-12 | Bounded Claude user-session thinking under #366. | The adapter caps thinking at half the output-token budget and disables it below Anthropic's minimum manual-thinking allocation. This provider-free control was exercised by #368; output-budget failures persisted, so the failure mode is not shown resolved and the pilot threshold remains unchanged. |
-| 2026-09-12 | Recorded #364 as an indeterminate eighteenth observation. | The authorized matched-backend run passed both user-session authentication probes but exhausted three Anthropic author attempts. Attempt two had a factual-invariant rejection; the final durable failure was `output-token-budget-exceeded`. No artifact or review occurred, and provider-reported cost was unavailable; #75 and #250 remain blocked. |
-| 2026-09-12 | Recorded #362 as an indeterminate seventeenth observation. | The separately authorized matched-backend run passed both user-session authentication probes but exhausted three author attempts on generic `invalid-response`; its final durable failure classification was `output-token-budget-exceeded`. No artifact or review existed and provider-reported cost was unavailable; #75 and #250 remain blocked. |
-| 2026-09-12 | Recorded #360 as an indeterminate sixteenth observation. | The explicitly authorized matched-backend run passed both authentication probes but exhausted three author attempts on content-free rate-limit failures before an artifact or review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
-| 2026-09-12 | Recorded #358 as an indeterminate fifteenth observation. | After #351, #352, and #356 merged, the explicitly authorized matched-backend run exhausted three bounded author attempts on content-free rate-limit responses before producing a draft or reaching review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
-| 2026-09-11 | Recorded #350 as an indeterminate matched-backend observation and bounded two product defects. | The author recovered from one classified output-budget failure and the critic completed, but source-backed required content was omitted (#351) and substantive prose escaped claim validation (#352). No approval or export occurred; #75 and #250 remain blocked. |
-| 2026-09-10 | Delivered #348 output-token budget failure-stage classification. | Future user-session output-token overruns persist as `output-token-budget-exceeded` in both failure-stage fields while retaining content-free diagnostics and bounded retry behavior; historical observation records, including #346, remain unchanged. |
-| 2026-09-05 | Recorded #298 as indeterminate after the fresh observation exhausted three author attempts across token-budget excess and `factual-invariant-rejection`. | The run exhausted after 412 active seconds within the 1,200,000 ms budget; attempt two exceeded output tokens, while attempts one and three failed factual-invariant checks without leaking private data. No proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
-| 2026-09-04 | Recorded #296 as indeterminate after the fresh observation exhausted three author attempts under `factual-invariant-rejection`. | The newly delivered failure-stage classification accurately identified factual invariant violations across all three author attempts without exposing candidate prose or private data. The run exhausted after 313 active seconds within the 1,200,000 ms budget; no proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
-| 2026-09-04 | Delivered #293 content-free failure-stage classification for adjudicated-revision validation. | The runtime and provider error contracts distinguish transport parsing, response-schema validation, artifact-schema validation, and factual-invariant rejection without exposing prose or private data; sanitized deterministic tests verify the ten-finding carrier shape and safe recovery. Parity comparison #75 and release prep #250 remain unvalidated pending the next live pilot observation. |
-| 2026-09-02 | Recorded #291 as indeterminate after the declared request timeout enabled a complete initial author/critic round but three confirmed-adjudication revision responses failed validation. | The exact two-accept, two-reject, six-nuance package and two accepted effects persisted before provider execution. The run exhausted after 959 active seconds without timeout, authentication, credit, or quota failure. #293 owns safe failure-stage classification and correction; #75 and #250 remain blocked. |
-| 2026-09-02 | Recorded #290 as indeterminate after exact candidate adjudication staged successfully but revision execution exhausted its attempts. | Migration 26 persisted both version-1 artifact lineages and the confirmed one-accept, two-reject, nine-nuance package. One incorrect API-key attempt and two authenticated 120-second defaults produced no revision; this was not a credit failure. #291 must use the existing explicit 20-minute request timeout before #75 or #250 can advance. |
-| 2026-09-02 | Implemented the bounded multi-run artifact-history fix #287; landing remains subject to review. | Distinct immutable artifact IDs can each start at version 1 in one workspace, while migration 26 preserves dependent history and foreign-key/immutability safeguards. After #287 lands, the materially different #286 findings still require review; #75 and #250 remain blocked. |
-| 2026-09-02 | Recorded the fresh post-adjudication-infrastructure observation under #286 as indeterminate and bounded storage blocker #287. | The author succeeded on attempt three and the critic on attempt one within 307 active seconds, but twelve materially different findings required new human review. The durable run remained readable after typed history rejected a second run's distinct artifact version 1. No revision, approval, export, or submission occurred; #75 and #250 remain blocked. |
-| 2026-09-01 | Delivered #278 persisted active-duration accounting for bounded orchestration. | Configured duration budgets now measure active author, critic, and revision time while excluding explicit human-review, pause, and provider-retry waits; focused deterministic checks cover legacy and restart behavior. The representative parity outcome remains unvalidated, and #75 and #250 remain blocked. |
-| 2026-09-01 | Delivered #277 exact adjudication staging through the shared application/local boundary. | The application persists one immutable readiness report with complete accept/reject/nuance decisions and optional accepted-effect overrides without opening a provider. #277 is the prerequisite for #278 duration accounting; #75 and #250 remain blocked. |
-| 2026-09-01 | Recorded the post-citation-completion observation under #275 as indeterminate. | Both provider roles completed on their first attempts, but readiness stopped on eight warnings and one unresolved chronology omission; the unsupported-claim finding was a warning, not a factuality error. Candidate adjudication is the next explicit boundary; #75 stays open and #250 remains blocked. |
-| 2026-09-01 | Delivered bounded exact-value evidence citation completion in #272. | Omitted provider citations may be completed from exact matching retrieved chunks without changing claim content; unsupported protected values remain rejected. Another authorized #75 comparison is next, and #250 remains blocked pending that result. |
-| 2026-08-31 | Recorded #271 as indeterminate and bounded exact-value evidence citation completion as #272. | Structured recovery reached all three author attempts, but one claim-text factual-invariant path remained after correction. No accepted author or critic result exists; #75 stays open and #250 remains blocked. |
-| 2026-08-31 | Delivered the bounded structured Claude nonzero-exit classification fix in #267. | Structured session errors now retain safe classification without provider output; #75 remains unvalidated, another authorized comparison is next, and #250 remains blocked. |
-| 2026-08-31 | Recorded #266 as indeterminate and bounded structured Claude nonzero-exit classification as #267. | The authenticated author transport returned a structured 429 without quota markers, but the adapter persisted non-retryable `unknown` before parsing it. No author or critic result exists; #75 stays open and #250 remains blocked. |
-| 2026-08-31 | Closed #262 as indeterminate and bounded the per-evidence author-grounding guide as #264. | The guide is the current blocker before another authorized #75 attempt; parity remains unvalidated and #250 remains blocked. |
-| 2026-08-31 | Recorded the corrective consented rerun under #262 as indeterminate. | Retry feedback moved the author beyond its initial output-token failure, but two subsequent attempts failed different single claim-text factual invariants. No accepted draft or critic result exists; #75 stays open and #250 remains blocked. |
-| 2026-08-31 | Closed author-grounding blocker #258 and bounded author retry feedback as #260. | Parity remains unvalidated; #260 must close before another consented #75 attempt, and #250 remains blocked pending that outcome. |
-| 2026-08-31 | Closed provider-timeout blocker #256 and bounded the next author-grounding blocker as #258. | #258 became the next gate before a fresh consented attempt; the pilot remained incomplete and unvalidated. |
-| 2026-08-31 | Identified the provider-timeout blocker as #256 after the indeterminate #249 result. | The blocker was bounded for execution while the pilot remained incomplete and unvalidated. |
-| 2026-08-30 | Recorded the first consented v0.9 workflow-parity observation as indeterminate. | The initial run timed out during revision and its one approved fresh retry timed out during authoring at the user-session adapter's 120-second limit. No revised or approved artifact exists; the role-mismatched manual baseline remains a limitation, #75 stays open, and #250 remains blocked. |
-| 2026-08-30 | Added a provider-free synthetic trust preflight between the private comparison gate and the consented parity run. | #253 exercises eight sanitized deterministic scenarios before #249; its results are implementation evidence and cannot satisfy the consented outcome requirement. |
-| 2026-08-30 | Split the v0.9 workflow-parity and release rollups into four dependency-ordered execution issues. | #248 predeclares the private comparison gate before #249 records the consented outcome; #250 prepares the release candidate only after #75 closes, and #251 records released evidence and the next decision before #76 closes. |
-| 2026-08-30 | Integrated #74 controlled rendering QA into approved export. | Markdown uses deterministic integrity checks; PDF and DOCX use named byte inspectors before any file is written, and the content-free report is retained with export history. DOCX office pagination and clipping remain explicit limitations rather than implied certification. |
-| 2026-08-30 | Integrated #73 exact application-readiness approval and export binding. | Human approval now follows a fresh deterministic decision for the current reviewed artifact, revisions invalidate it, and export accepts only the exact approved content checksum. |
-| 2026-08-30 | Integrated the #72 live author handoff for adjudicated revisions. | The matching revision author receives the persisted content-safe plan with explicit accepted-effect, disagreement-preservation, and evidence-safety instructions; the remaining v0.8 sequence is #73, then #74. |
-| 2026-08-30 | Added deterministic requirement-to-achievement planning before provider drafting. | Each selected achievement cites one unique retrieved chunk, uncovered requirements remain explicit, and zero relevant evidence blocks provider drafting. The implementation lives in a focused module while the local-runtime hotspot shrinks. |
-| 2026-08-30 | Froze growth in the six concentrated TypeScript architecture hotspots. | New MVP behavior must live in focused modules, validation rejects hotspot line-count growth, and every extraction lowers the permanent baseline instead of allowing the monoliths to regrow. |
-| 2026-08-30 | Cut live selected-CKB runs over to exact-version lexical retrieval. | The application rebuilds only the explicit lifecycle-ready selection, deterministically fuses multi-CKB hits, records content-free per-CKB traces, and sends only opaque chunk IDs with bounded text. Retrieval failure blocks selected runs instead of silently becoming zero context. |
-| 2026-08-30 | Reset v0.8 around the smallest usable CV workflow and direct Luna execution. | Six existing issues now carry bounded MVP exits in dependency order. Standalone refactors, routine Maestro orchestration, subagents, generalized frameworks, and non-blocking polish are deferred; active work stops at 20 minutes. |
-| 2026-08-30 | Replaced unbounded epic execution with an enforceable sprint-size and active-work budget. | Outcome rollups no longer enter implementation directly. Each child must fit one boundary, focused test surface, and PR; active implementation and review stops at 30 minutes and splits again instead of silently consuming hours. Required quality gates remain unchanged. |
-| 2026-08-30 | Persisted the first CKB lexical projection and immutable workspace retrieval traces without cutting over live runs. | Migration 25 keeps CKB chunks and FTS rows separate from legacy evidence, binds one projection to an exact single-CKB source-version manifest, exposes stale/unindexed states, uses bounded deterministic fallback, and invalidates the whole derived projection on source-version deletion. Lifecycle-triggered indexing and application fan-out remain open #80 work. |
-| 2026-08-30 | Defined the CKB-scoped lexical retrieval boundary before persistence and runtime integration. | Each CKB owns a replaceable exact-source-version FTS projection, multi-CKB retrieval is explicit application fan-out with deterministic fusion, and the workspace stores immutable content-free traces. Provider projections contain only bounded text and opaque citable chunk IDs; stale or unavailable indexes cannot silently become empty context. |
-| 2026-08-30 | Validated the canonical candidate profile with a deterministic sanitized representative career. | A real temporary CKB and SQLite round trip preserves all 12 categories with exact candidate provenance, accepts private-project evidence without public proof, and keeps conflicts, duplicates, and omissions visible before review. This completes #66 while #80 retains ownership of future derived-index lifecycle behavior. |
-| 2026-08-30 | Added the candidate-facing canonical-profile review surface. | The collecting desktop workspace can derive with explicit transmission approval, load immutable history, inspect bounded provenance, edit latest-draft fact values and issue statuses, review, and bind the exact selected reviewed version to the next run without exposing roots or stored selections. |
-| 2026-08-30 | Defined canonical-profile lifecycle reconciliation without erasing audit history. | Drafts cannot become reviewed and reviewed profiles cannot enter new runs when their exact CKB selection is unavailable or changed. Immutable profiles, run references, and approved exports survive workspace backup/restore and audit retention; #80 owns derived-index cleanup. |
-| 2026-08-30 | Bound exact reviewed canonical-profile versions to new runs. | Shared application, CLI, and desktop start contracts accept an opaque profile ID/version pair, verify reviewed status, checksum, and current CKB lifecycle selection, and persist only a safe reference in immutable context. Resume cannot replace it; legacy unbound runs remain readable. |
-| 2026-08-30 | Added packaged-desktop host capabilities for the canonical-profile workflow. | Strict bridge and native-host operations use the active workspace, accept no store roots, require explicit derivation approval, and return an explicit bounded facts/issues/provenance projection without the stored selection snapshot. Lifecycle reconciliation, run binding, and visual profile UI remain open #66 work. |
-| 2026-08-30 | Exposed canonical-profile derivation and review through the CLI. | The CLI derives only from the workspace's configured selection, requires an explicit provider-data flag, accepts no CKB store root, and provides provider-free exact/latest reads, history, edits, and review. Desktop host controls, lifecycle reconciliation, and run binding remain open #66 work. |
-| 2026-08-30 | Added the shared application and local-driver canonical-profile workflow. | Adapter-neutral operations derive from the workspace's validated pinned CKB selection and provide provider-free immutable reads, history, edits, and candidate review without accepting or returning store roots. CLI/desktop host controls, lifecycle reconciliation, and exact reviewed-profile run binding remain open #66 work. |
-| 2026-08-30 | Added configured-provider execution for canonical-profile extraction. | Explicitly approved, bounded path-free source text can use the workspace author model through existing API-key, authenticated user-session, or local transports. Strict local schema, citation, and grounding checks still own what can become a profile; application/CLI/desktop invocation, lifecycle reconciliation, and run binding remain open #66 work. |
-| 2026-08-28 | Added integrity-verified, explicitly approved canonical-profile derivation from selected managed CKB versions. | Exact managed bytes are normalized without exposing paths; every proposed fact needs a locally verified source quote before its opaque citation maps to candidate-provided provenance, while application logic owns IDs, conflicts, duplicates, omissions, and append-only draft persistence. Provider/adapters, lifecycle reconciliation, and run binding remain open #66 work. |
-| 2026-08-28 | Added workspace-local immutable canonical-profile history and provider-independent edit/review transitions. | Migration 24 stores checksum-verified linear versions with content-free audits. Profiles may combine CKBs and therefore remain outside single-CKB portable backups; derivation, retention/deletion, run binding, and adapters remain open #66 work. |
-| 2026-08-28 | Added the first #66 canonical candidate-profile contract. | Profile versions can represent complete normalized career facts with exact selected CKB source-version provenance, visible conflicts and omissions, review blockers, and deterministic immutable round trips. Persistence, derivation, retention/backup behavior, run binding, and adapters remain open. |
-| 2026-08-28 | Integrated immutable writing-policy history and explicit opportunity-bound overrides through shared application, CLI, and desktop contracts. | Candidates can activate or import local versions, inspect safe history, and select one complete imported override for an exact reviewed opportunity. Runs pin base and override lineage without mutating the workspace default; both model roles receive the effective policy. |
-| 2026-08-28 | Bound an exact reviewed opportunity version into immutable run context. | Start requires an explicit brief ID/version pair, verifies reviewed status and checksum, derives opportunity context only from that record, and stores a safe reference. Resume reuses the snapshot; URLs, paths, raw intake, and provenance do not enter provider-facing context. |
-| 2026-08-28 | Integrated durable opportunity create, reload, list, edit, and review through the shared application, CLI, and packaged-desktop host contracts. | CLI paths remain runtime-only, desktop files use native pickers, renderer results omit paths and URLs, provider extraction requires explicit per-create approval, and stale edits or reviews fail closed. Exact reviewed planning handoff remains open. |
-| 2026-08-27 | Added provider-backed structured opportunity extraction and typed local candidate instructions. | Approved opportunity text crosses the existing author-provider boundary only after explicit consent; candidate inputs and local provenance stay local, response citations are allowlisted, application IDs are deterministic, and failures remain visible without leaking provider or source content. Shared adapters and exact reviewed planning handoff remain open. |
-| 2026-08-27 | Added durable local opportunity-brief version persistence and restart recovery. | Workspace-scoped SQLite versions are append-only, checksum-verified, parent-linked, and protected from stale edits; audit events remain content-free. Extraction, shared adapters, and exact reviewed planning handoff remain open. |
-| 2026-08-27 | Added structured tone, spelling-locale, and verbosity preferences to the selected writing-policy snapshot. | Both model roles receive the same bounded advisory preferences through immutable run context. Spell checking, numeric length enforcement, layout selection, policy history/migration, anti-formulaic defaults, opportunity overrides, and shared editing remain open. |
-| 2026-08-27 | Added the next #67 secure process-local opportunity intake and review component. | Multiple approved URL/file/pasted/instruction sources can form one immutable versioned draft with honest checksums and content-free visible failures. Persistence, extraction, shared adapters, and planning handoff remain open. |
-| 2026-08-27 | Added the next #70 structured writing-policy enforcement component. | Exact forbidden-term and punctuation rules compiled from the selected local policy are frozen into run context and checked during normal orchestration with stable, content-free locations. Policy history/migration, broader preferences, opportunity overrides, and shared editing remain open. |
-| 2026-08-27 | Added the first #67 provider-independent opportunity-brief contract and pure builder. | Draft and reviewed versions distinguish opportunity facts from candidate instructions, retain source provenance and visible limitations, and reject unreviewed or instruction-contaminated facts. Persistence, ingestion, adapters, provider extraction, and exact reviewed-version planning handoff remain open. |
-| 2026-08-27 | Accepted the #78 reusable CKB foundation after its source-lifecycle, selection, product-control, and storage-safety deliveries passed the program audit. | Candidates can maintain and explicitly select isolated CKBs through shared CLI/desktop contracts; immutable run snapshots retain exact source versions, while lifecycle, retention, backup/restore, and deletion preserve provenance and unknown data. #80 remains the sole owner of retrieval/index construction, freshness, and query enforcement. |
-| 2026-08-27 | Accepted the delivered #113 storage-safety boundary after auditing all six leaf outcomes and the current validation gate. | Store-wide leases and prospective journals make owned mutations recoverable; six retention classes are explicit, with classes not yet supplied by #80 reported as not materialized. Portable backup/restore preserves logical provenance without machine-origin continuity, and exact-plan deletion retains an immutable content-free audit while preserving unknown or unowned data. |
-| 2026-08-27 | Accepted the delivered #111 CKB-selection boundary after a criterion-by-criterion audit and a green repository validation gate. | One default and optional isolated CKBs can be selected only through explicit local action; immutable path-free source-version snapshots persist in new runs, survive restart and legacy migration, and fail closed on lifecycle drift. Retrieval/index versions, freshness, and query enforcement remain owned by #80. |
-| 2026-08-26 | Published [v0.7.0-alpha.3](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.3) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.3.md) after release prep PR [#197](https://github.com/akoita/draft-loop/pull/197). | The released checkpoint freezes the post-alpha.2 confirmed-deletion slice, provider-independent readiness/adjudication/stopping/layout foundations, the first dormant runtime carrier, and Windows user-session environment hardening. It does not validate or complete v0.7; profile, opportunity, retrieval, planning, complete-CV, writing-policy, runtime/UI integration, and representative validation remain. |
-| 2026-08-26 | Published [v0.7.0-alpha.4](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.4) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.4.md) after feature PR [#199](https://github.com/akoita/draft-loop/pull/199) and release prep PR [#200](https://github.com/akoita/draft-loop/pull/200). | The released checkpoint carries forward Windows user-session environment hardening and adds packaged-desktop OpenAI authentication selection (API key or authenticated Codex/ChatGPT session), independent per-provider persisted preferences, strict environment precedence, restart-required/no-silent-fallback behavior, and Codex reasoning lifecycle compatibility while continuing to reject tool events and ignore reasoning content. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain, with signing, updates, and CLI packaging incomplete. |
-| 2026-08-26 | Published [v0.7.0-alpha.5](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.5) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.5.md) after feature PR [#202](https://github.com/akoita/draft-loop/pull/202) and release prep PR [#203](https://github.com/akoita/draft-loop/pull/203). | The released checkpoint carries forward alpha.4's packaged-desktop OpenAI authentication selection and fixes Windows/session critic compatibility by accepting and discarding passive `todo_list` and `item.updated` lifecycle output while commands, mutations, search, tool, error, and unknown event/item types remain fail-closed. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain. |
-| 2026-08-26 | Added packaged-desktop provider authentication mode selection for OpenAI API keys or an authenticated Codex/ChatGPT session. | Windows subscription-backed provider authentication is now represented in the desktop preference and UI; focused checks cover the boundary, while representative Windows validation and release support remain open. |
-| 2026-08-26 | Made milestone 3 dependency-closed and ordered its open prerequisites before the review/readiness outcomes. | #66–#70, #78, #80, #111, and #113 joined the sprint. Work now proceeds #111 → #113 → #78; #67/#70; #66 → #80 → #68; #69; then #72 → #73 → #74, without leaving the sprint for an open blocker. |
-| 2026-08-26 | Implemented confirmed deletion #166 as an independently closable prerequisite on the #69 dependency chain. | An archived non-default CKB can be deleted only with an exact fresh-plan token under the store-wide lease. Verified managed data is staged and recoverable, blockers fail closed, unknown or unowned entries are preserved, and CLI/desktop results stay path-free. |
-| 2026-08-26 | Added the first #74 controlled-layout and rendering-QA contract component. | A4 profile selection, content-free deterministic integrity signals, local active-content checks, and inspectable PDF page targets are available behind package contracts; independent viewer evidence, visual golden tests, adapters, persistence, UI selection, approval/export wiring, and full #74/#69/#73 integration remain out of scope. |
-| 2026-08-26 | Integrated #73 application-readiness stopping decisions into the approval and export boundary. | Approval freshly evaluates the current artifact and persists the strict decision plus exact content/version binding; deterministic/report errors, unmet thresholds, disputed dimensions, incomplete independence or inputs, and missing accepted revision effects block approval. Revision or artifact replacement clears the binding, and export verifies the exact application-ready approval. Provider, presentation, rendering-QA, and broader #69/#70/#72 integration remain open. |
-| 2026-08-26 | Added the first #72 author-adjudication and artifact-revision trace component behind strict provider-independent contracts. | The contract requires one explicit accept/reject/nuance rationale for each report finding; accepted effects are proven only by bounded artifact diffs or explicit effect overrides, while disagreements remain visible. The separate runtime-carrier slice is limited to existing snapshots and revision execution; report generation, provider prompt, CLI, and desktop integration remain gated by #69. |
-| 2026-08-26 | Added the first #72 runtime-carrier slice in the dormant orchestrator boundary. | Existing run snapshots retain the exact report, canonical plan, accepted-effect overrides, and derived trace across restart; only the matching revision author receives the pending carrier. Report generation, persistence tables, provider prompt integration, UI controls, approval/export wiring, and complete #69/#70/#72 integration remain out of scope. |
-| 2026-08-25 | Published [v0.7.0-alpha.2](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.2) with [Sprint 2 checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.2.md). | The released storage-safety foundation does not complete or validate the v0.7 drafting outcome. |
-| 2026-08-25 | Ended Sprint 2 after #161–#165 and returned confirmed deletion #166 to the unmilestoned backlog following a capacity audit. | Five storage feature PRs added 10,365 lines across 71 file-changes. Future sprint work must be admitted from measured, independently closable units rather than broad feature narratives. |
-| 2026-08-25 | Bounded portable CKB restore to new destinations with an explicit fail-if-existing collision policy. | Restore re-inspects and migrates a package transactionally, preserves logical IDs and safe provenance, publishes only a validated store, and deliberately recreates no machine origin or active ownership; merge and rename modes remain out of scope. |
-| 2026-08-24 | Defined portable CKB backup as a strict directory package with a logical manifest and checksum-addressed managed objects. | Export requires destination approval, complete ownership evidence, self-inspection, and no-replace manifest-last publication; machine-local origins, locks, journals, credentials, and workspace data stay out, while #165 owns restore. |
-| 2026-08-24 | Defined append-only CKB retention policy and deterministic effective-revision planning across six explicit data classes. | Legacy data remains retained by default; holds override expiry, only proven managed raw versions can become eligible, and #166 retains the separate confirmation and physical-deletion boundary. |
-| 2026-08-24 | Made new managed CKB writes recoverable from versioned owned journal records under the store-wide lease. | Restart reconciliation rolls back verified pre-commit artifacts or completes verified committed cleanup, reports only path-free operation status, and preserves legacy, unknown, unjournaled, or mismatched data. |
-| 2026-08-24 | Started Sprint 2 with #161's recoverable store-wide writer lease and fenced, content-free conflict contract. | Current direct and multi-step CKB mutations share one exclusive command scope; a private coordinator remains separate from replaceable CKB data so #164–#166 can reuse it for backup, restore, and deletion. |
-| 2026-08-24 | Completed Sprint 1 by closing #160 and published [v0.7.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.1), with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.1.md). | The CKB foundation is a Released checkpoint; the v0.7 stage remains incomplete and unvalidated, with Sprint 2 planned but not started. |
-| 2026-08-24 | Reframed GitHub milestones as bounded delivery sprints: Sprint 1 closes the CKB foundation with #160, while Sprint 2 delivers storage safety through #161–#166; broad issues #66–#70, #80, #111, and #113 remain unmilestoned epics. | Milestone progress now measures independently closable outcomes instead of PR volume inside long-lived epics. Closing #112 records the delivered shared lifecycle surface while its storage, retrieval, and migration residuals remain explicit in their leaf issues. |
-| 2026-08-24 | Exposed confirmed directory add-members through shared CLI and desktop contracts.                                                                                                                                          | One bounded scan appends unmatched files in deterministic order; complete or partial results contain capped opaque source identities and counts while roots, paths, labels, hashes, checksums, and content remain local.                                                       |
-| 2026-08-24 | Exposed directory reconciliation preview and confirmed retirement apply through shared CLI and desktop contracts.                                                                                                         | Complete scans partition member state path-free; apply acts only on explicitly approved missing source IDs, preserves deterministic partial progress, and refuses incomplete scans through the shared application contract.                                                    |
-| 2026-08-24 | Exposed moved-candidate preview and confirmed one-source directory member move through shared CLI and desktop contracts.                                                                                                  | Both controls derive targets from one bounded local scan and expose only opaque identity, time, status, and counts. Move changes only the selected member origin under atomic guards; no target path crosses an adapter boundary.                                                |
-| 2026-08-24 | Exposed bounded directory-refresh preview and confirmed apply through shared CLI and desktop contracts.                                                                                                                    | The remembered root remains sensitive local state. Preview is read-only; apply rescans, records observations, and appends changed same-member sources in deterministic order, with capped path-free complete or partial progress.                                                  |
-| 2026-08-24 | Exposed guarded directory-root rebind preview and confirmed apply through shared CLI and desktop contracts.                                                                                                                | Candidate roots remain runtime-only or native-host local; apply repeats the bounded exact-membership scan and atomically guards the root revision plus member origins. Results contain only opaque identity, status, time, and counts.                                             |
-| 2026-08-24 | Exposed exact-byte single-file origin rebind, path-free retirement state, and confirmed logical retirement through shared CLI and desktop contracts.                                                                       | Replacement paths remain runtime-only or native-host local; retirement is idempotent, preserves evidence, blocks later mutation, and is not presented as deletion. No reactivation control exists.                                                                                |
-| 2026-08-24 | Exposed bounded directory intake through shared CLI and desktop contracts.                                                                                                                                                 | The CLI root is runtime-only and the desktop owns a native picker; complete and partial results expose scan counts plus capped opaque source/version identities while roots, filenames, hashes, labels, checksums, and content remain local. Rebind and reconciliation were separate controls. |
-| 2026-08-24 | Exposed path-free source origin status, persisted refresh state, remembered-file refresh, and separately approved URL refresh through shared CLI/desktop contracts.                                                        | File origins and URL provenance remain sensitive local state; adapter results contain only opaque identity, lifecycle status, timestamps, and a created version ID. Rebind was delivered as a separate control.                                                                |
-| 2026-08-24 | Exposed explicit one-source file-version append through the shared CLI and desktop application contracts.                                                                                                                  | Runtime append paths remain outside renderer IPC and generic results, identical bytes are a no-op, changed bytes extend immutable lineage, and the remembered origin binding is preserved. Refresh/rebind remain separate controls.                                               |
-| 2026-08-24 | Exposed explicitly approved CKB URL intake through the shared CLI and desktop application contracts.                                                                                                                       | Both adapters preserve centralized HTTPS/network safety and emit only opaque source/version identity; URLs, query strings, labels, and fetched content remain local. Later-version mutation remains a separate control.                                                          |
-| 2026-08-24 | Exposed explicit single-file CKB intake through shared CLI and desktop application contracts.                                                                                                                              | The CLI accepts an intentional local path while the desktop host owns a dedicated picker; renderer results contain only opaque source/version identity. URL/directory intake and later-version mutation were delivered as separate controls.                                    |
-| 2026-08-23 | Exposed bounded, path-free CKB source, duplicate, and managed-file inventory inspection through the shared CLI/desktop boundary.                                                                                           | Users can review source identities and structural warnings without renderer-visible roots or generic diagnostic leakage; intake, refresh/rebind, cleanup, and one cross-command snapshot remain separate controls.                                                               |
-| 2026-08-23 | Added fail-closed application-operation drift checks for immutable run CKB selections.                                                                                                                                    | Provider-capable start, resume, and revision compare fresh lifecycle evidence with the run record before execution or mutation; retrieval/index versions, adapter controls, and cross-store writer coordination remain separate.                                                  |
-| 2026-08-23 | Bound explicit local CKB choices to workspace configuration and freshly validated, immutable run-context snapshots.                                                                                                      | New runs pin exact path-free store/CKB/source/version identities while old runs remain reproducible; adapter controls, CKB retrieval, provider use, index versions, and pre-provider drift enforcement remain separate work.                                                      |
-| 2026-08-23 | Added the first #111 contract slice: canonical path-free CKB/source-version selection snapshots with explicit multi-CKB approval.                                                                                         | Safe lifecycle revisions make the selected versions auditable and available to immutable context records, while workspace/run binding, provider use, adapter controls, index versions, and drift enforcement remain unintegrated.                                               |
-| 2026-08-23 | Added the deterministic path-free lifecycle-readiness projection for #136 without claiming indexing or product integration.                                                                                               | One consistent CKB snapshot blocks ineligible latest source versions and exposes a structured non-sensitive revision for #80. Live checks, TTLs, index construction/freshness, application selection, adapters, deletion, and repair remain separately owned.                         |
-| 2026-08-23 | Added complete explicit missing-member reconciliation for #135 without advancing the v0.7 stage beyond component implementation.                                                                                          | One bounded scan partitions every member and unmatched file path-free; explicit retirement selections run in lexical source-ID order with guarded atomic markers and an explicit partial result after a later failure. Physical deletion, automatic decisions, adapters, indexing, and #136 remain deferred. |
-| 2026-08-23 | Completed the bounded #110/#134 directory-member component slices, including append-only member revisions, guarded root rebind, and the explicit one-source member move.                                                   | Root rebind and one-source move are implemented at component/application-contract level. The move is one-scan, exact-integrity, selected-source only, path-free, and returns `moved`/`current`; automatic inference and complete reconciliation under #135/#136 remain deferred. |
-| 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and moved hybrid retrieval to #114. | The current stage has one coherent drafting outcome; optional research (#79) and vector/hybrid optimization (#114) are outside its critical path.                                                                                                                                |
-| 2026-08-15 | Reset stage claims to Designed/Implemented/Integrated/Validated/Released evidence levels and published v0.6.0 as a non-validated alpha after the representative quality failure.                                           | Integration, packaging, and synthetic evidence remain useful, but application readiness must be demonstrated again in v0.7.                                                                                                                                                      |
-| 2026-08-12 | Created the living roadmap for a local integrated alpha.                                                                                                                                                                   | Product direction moved from phase-0 implementation toward packaged integration and real outcome validation.                                                                                                                                                                     |
+| Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-04 | Retired the v0.8 desktop with its own local engine ([milestone 67](https://github.com/akoita/draft-loop/milestone/67), #2117–#2119): the required `Installed app acceptance gate` now packages and checks the desktop client, the credential gate is removed, and `apps/desktop` left the repository.                                                                                                                                                                                                                                                                 | The desktop client is the only desktop app. v0.8 users move their work with `draft-loop server import`; local-first runs stay in the CLI.                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-03 | Admitted the release sprint (#2103–#2105): `draft-loop-server up` prints what to do next, the record archive holds the work journal, and the notes for `server-v0.14.0` cover the work journal and desktop client sprints. The sign-in mode part of #2079 waits for hosted sign-in.                                                                                                                                                                                                                                                                                   | Two merged sprints were not released, and staging runs with the owner token, so sign-in mode would add nothing usable yet. No paid run is needed.                                                                                                                                                                                                                                                                                                             |
+| 2026-11-03 | Admitted the work journal sprint (#2018, #2019–#2025), planned and decided 2026-11-01: the agent channel's first tools `record_work` and `list_work`, with notes pending until the candidate approves them into a `work-journal` knowledge source, and an amendment to ADR 0011 D17 that makes `apps/mcp` a stdio HTTP client of the API served by the self-hosted stack. No model call is needed to build or test it.                                                                                                                                                | Coding agents can file evidence as work ships without writing CV claims. #1309 still waits on the 2026-11-14 credit, and this sprint needs no paid run, so it goes ahead of it. The CLI-only path without the self-hosted stack is not served.                                                                                                                                                                                                                |
+| 2026-11-03 | Split the desktop import out of the local install sprint into its own sprint ([milestone 63](https://github.com/akoita/draft-loop/milestone/63), #2056, #2067–#2069). The import is a CLI command over the server's HTTP API, and the application import route is offered in owner-token mode only.                                                                                                                                                                                                                                                                   | The desktop has no backup button and its history spans many applications, so the import was larger than one issue. Going through the API keeps screening and quarantine on every imported file, and owner-token mode keeps imported history with the one person whose desktop it came from.                                                                                                                                                                   |
+| 2026-11-03 | Admitted the local install sprint ([milestone 62](https://github.com/akoita/draft-loop/milestone/62), #2050–#2058): published server images, an install and backup script, a self-hosted CI job and desktop import (D12). The Keycloak sign-in profile is deferred until more than one person uses a self-hosted stack, and the desktop stays in maintenance mode without becoming a launcher.                                                                                                                                                                        | The stage does not move: #1309 waits on the next scored run after the 2026-11-14 credit. A desktop user gets a supported way to the server, so maintenance mode no longer strands their workspace.                                                                                                                                                                                                                                                            |
+| 2026-11-02 | Widened the critic's omission check to every retrieved chunk, in slices of 32, and let every omission it finds block, at most twelve per round (`cli-critic-v10`, #2046). No model call was made; the next #1307 scoring run on G, after the 2026-11-14 credit, measures it at a $7 cap over two rounds.                                                                                                                                                                                                                                                              | The 2026-11-02 G run (v9) opened round 2 on three blocking omissions, but its check read only the 20 chunks the plan's themes cite and named one of the twelve accomplishments the draft left out; eight of them sat in uncited chunks, and a cap of three blocking per round could add at most six over two rounds where the bar needs seven. The stage does not move until #1307 scores the change.                                                         |
+| 2026-11-01 | Cached the author's prefix for five minutes instead of an hour, with a one-token copy of a long in-flight request every 3.5 minutes keeping it alive (#2043); author profiles now record the five-minute cache-write rate. No model call was made beyond one sub-cent live check of the keep-alive on a synthetic prefix.                                                                                                                                                                                                                                             | On a one-round G run the author's one-hour write was $1.38 of $3.62; the five-minute write is about $0.86 and the keep-alive reads cost cents. A run's author calls land within minutes of each other, so the hour paid for time no run used.                                                                                                                                                                                                                 |
+| 2026-11-01 | Sent each retrieved chunk to the models as id, run-local source alias, line range and text, keeping checksum, workspace id, rank and ordinal local (#2041), and corrected the Sonnet 5.5 cache-read price in the profile catalog. No model call was made; the next #1307 scoring run records the smaller cached prefixes.                                                                                                                                                                                                                                             | The 2026-11-01 Console notice reported a 16% cache hit rate; on a one-round G run the two one-hour cache writes were $2.00 of $3.62 and chunk metadata about a sixth of each prefix. A smaller prefix cuts every run's write cost; the author's five-minute lifetime with a keep-alive follows in its own issue.                                                                                                                                              |
+| 2026-11-01 | Moved the omission review out of the critique into a separate check call before it (`cli-critic-v9`, #2039): the critic model compares the CV's text with the plan's theme chunks alone, and its answers are the blocking omission findings. No model call was made; the next #1307 scoring run on G measures it.                                                                                                                                                                                                                                                     | The 2026-11-01 G runs with v7 and v8 each reported one omission, as a warning, of 13 and 10 left out: a paragraph inside a 300k-token critique does not get a chunk-by-chunk comparison done, and round 2 never ran. The stage does not move until #1307 scores the change.                                                                                                                                                                                   |
+| 2026-11-01 | Replaced the critic's one-pass omission review with a chunk-by-chunk one on the plan's theme chunks (`cli-critic-v8`, #2031) and shortened the model-facing draft (#2030). No model call was made; the next #1307 scoring run measures both.                                                                                                                                                                                                                                                                                                                          | The 2026-11-01 G run (v7) ended ready after one round at 21/34 recall: the critic reported 1 of 13 omissions, as a warning, although 10 of them sat in chunks the plan's themes cite. Its prompt was 345k tokens, mostly the draft's reference id lists, not the evidence.                                                                                                                                                                                    |
+| 2026-11-01 | Added an omission review to the critic (`cli-critic-v7`, #2026): a supported, job-relevant accomplishment the draft leaves out is a blocking `coverage-omitted-accomplishment` finding, at most three blocking per critique, so the round revises instead of ending ready. No model call was made; the effect on recall is measured by the next #1307 scoring run.                                                                                                                                                                                                    | The 2026-10-30 G run ended ready after one round at 19/34 recall because nothing in the loop asked what the draft dropped; the plan narrows the draft to its themes and the critic checked only what the draft says and leads with. The stage does not move until #1307 scores the change.                                                                                                                                                                    |
+| 2026-10-31 | Ran nine autonomous sprints on the owner's standing instruction, one PR each: critic prompt-cache sharing with cache tokens recorded per call (#1986), the Anthropic-only parity scores on F and G (#2002), legal pack drafts for lawyer review (#2003), the hosted budget route (#1993), the dependency audit (#2007), every stop reason worded in the run details, autopilot's conflict pause included (#1110, #2013), and the retrieved evidence each call saw recorded with an `evidence-usage` report and CLI command (#2010). No model call was made.           | The stage does not move: the #1309 exit is still scored by #1307 on the private references, and the G run (19/34 recall, US$3.59) predates the evidence references, so it cannot be diagnosed retroactively. The next paid run reads its cache tokens and its evidence usage from saved history, so a recall miss is traced to retrieval or to the author instead of being re-run blind.                                                                      |
+| 2026-10-31 | Published [v0.8.0-alpha.5](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.5) with [checkpoint evidence](releases/stage-evidence-v0.8.0-alpha.5.md) after release prep PR [#1999](https://github.com/akoita/draft-loop/pull/1999) and the live-gate fix [#2000](https://github.com/akoita/draft-loop/pull/2000).                                                                                                                                                                                                                                       | Installed desktops get Electron 44.10.0 with Node.js 24.22.1 and its October 2026 security fixes. The checkpoint claims no parity; the #1309 exit is scored by #1307.                                                                                                                                                                                                                                                                                         |
+| 2026-10-30 | Added Interview preparation as a later stage (#1995) and gave freelance mission dossiers (#1996) and pull requests as evidence (#1997) their own rollups under Controlled expansion. Interview-loop measurement and claim checking needed no new work: the parity scoring and the reviewer already cover them.                                                                                                                                                                                                                                                        | The career record gets a second use without a new product. Nothing moves ahead of Local-first final (#1309); each rollup starts with a no-code test.                                                                                                                                                                                                                                                                                                          |
+| 2026-10-28 | Admitted client-server sprint 1x: the candidate's review edits reach the approved and exported CV ([milestone 58](https://github.com/akoita/draft-loop/milestone/58), #1899–#1905, rollup #1876). Approval builds the next version from the latest edit of each block and runs the final checks on it; the critic does not review the edits.                                                                                                                                                                                                                          | The 0.8.0 re-walk found that edits in the review never reached the export, so a header filled in by hand still exported with placeholders. Header placeholders block approval again now that an edit can fix them.                                                                                                                                                                                                                                            |
+| 2026-10-29 | Admitted client-server sprint 1z: the server on your own machine ([milestone 60](https://github.com/akoita/draft-loop/milestone/60), #1946–#1954). The same API, worker, page fetcher and web screen run on one machine with Docker Compose, the operator's own keys or a local model, and files on disk (ADR 0011, D5, D14, D15). A local model may write the CV, with a warning until one passes the evaluation gate.                                                                                                                                               | The owner put the desktop in maintenance mode on 2026-10-28 and still wants a full local option. The server already ran locally except for model calls, keys and blob storage. The sign-in tests wait on hosted Keycloak and the cost check on a paid run, so neither can start first.                                                                                                                                                                        |
+| 2026-10-29 | Admitted client-server sprint 1y: one web flow ([milestone 59](https://github.com/akoita/draft-loop/milestone/59), #1935–#1938). The web's interim Workspace, Sources, Job brief and Run tabs go; the hosted-only controls move into the shared screens through optional host panels the desktop does not provide.                                                                                                                                                                                                                                                    | The owner could not follow the tabs, which repeated Home and kept a job brief no application used. With the desktop in maintenance mode, the web is the main screen.                                                                                                                                                                                                                                                                                          |
+| 2026-10-28 | Let each role choose a reasoning level from the levels its model allows, on the desktop, the web and the CLI ([milestone 57](https://github.com/akoita/draft-loop/milestone/57), #1891–#1898). A changed level keeps the preset's name, as "Balanced · writer high", and credit rule v2 doubles a hosted run's base for `high`, `xhigh` or `max`.                                                                                                                                                                                                                     | The price and quality trade-off of a level can be as large as a model change, so the person chooses it and every run records it. No paid run measured a level's cost yet, so the cost scenario only notes a raised level.                                                                                                                                                                                                                                     |
+| 2026-10-28 | Made GPT-6.1 Terra the Balanced reviewer in place of GPT-6.1 Sol (#1887). Standard keeps Sol.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Balanced runs get about 10% cheaper: Terra costs half of Sol and is listed for OpenAI EU data residency. Quality stays unvalidated, and no paid run was made for the change.                                                                                                                                                                                                                                                                                  |
+| 2026-10-26 | Admitted client-server sprint 1t: follow-ups from the owner's re-walk ([milestone 53](https://github.com/akoita/draft-loop/milestone/53), #1806–#1808, #1794, #1775, and #1809–#1813 split from #1792 and #1793, rollup #1359).                                                                                                                                                                                                                                                                                                                                       | The re-walk passed, but a hosted run's relevance stayed near 5% because the worker has no embedding model, the web takes a job only as pasted text, and the review screen wastes wide screens and overflows phones.                                                                                                                                                                                                                                           |
+| 2026-10-26 | Admitted client-server sprint 1s: fixes from the owner's staging walk ([milestone 52](https://github.com/akoita/draft-loop/milestone/52), #1782–#1791, rollup #1359), ahead of the validation tests.                                                                                                                                                                                                                                                                                                                                                                  | Walking staging as a new user, the owner hit a setup form unlike the desktop's, a Modern PDF that looked Classic, coverage errors for words the draft already covered and warnings repeated once per line. The validation tests would hit the same screens.                                                                                                                                                                                                   |
+| 2026-10-25 | Admitted client-server sprint 1r: staging clean-up and web polish ([milestone 51](https://github.com/akoita/draft-loop/milestone/51), #1771–#1774, #1760, rollup #1359), ahead of the validation tests on staging.                                                                                                                                                                                                                                                                                                                                                    | The live run passed, but staging still holds old knowledge bases that no route could erase, and the walk found screens that hide what the person needs: a base they cannot name, ids in findings, blockers shown only after a refused approval and a profile generation that looks stuck.                                                                                                                                                                     |
+| 2026-10-25 | Admitted client-server sprint 1q: hosted run recovery ([milestone 50](https://github.com/akoita/draft-loop/milestone/50), #1757–#1759, #1762–#1764, rollup #1359), then the sprint 1p live run again on staging (#1725).                                                                                                                                                                                                                                                                                                                                              | The live run on staging failed twice on provider errors that the hosted service neither explained nor retried, and the web offered a retry that could only fail. Proving approval and export live needs that recovery first.                                                                                                                                                                                                                                  |
+| 2026-10-25 | Admitted client-server sprints 1o and 1p: the desktop's shared screens on the web (ADR 0011, D9; [milestone 48](https://github.com/akoita/draft-loop/milestone/48) and [milestone 49](https://github.com/akoita/draft-loop/milestone/49), rollup #1359), ahead of the validation tests on staging and of billing. Sprint 1o moves the screens into `packages/ui` and serves Home, New application, career evidence and the run start over the HTTP API; sprint 1p brings the career profile, the shared review, approval and export, and removes the web's own steps. | Walking staging as an end user showed the web screen far behind the desktop. Validation tests on a screen people will not use would measure the wrong thing, and one set of screens keeps the two versions from drifting apart.                                                                                                                                                                                                                               |
+| 2026-10-24 | Admitted client-server sprint 1n, phase 2e: entitlements and credits ([milestone 47](https://github.com/akoita/draft-loop/milestone/47), rollup #1359). Plans are versioned data, and a credit ledger and run caps enforce them in sign-in mode.                                                                                                                                                                                                                                                                                                                      | D13 says services check entitlements, never plan names, so plans can change without code changes. The plan catalog v1 holds the D13 working defaults, and the prices still apply only once the cost check (#1597) passes. Billing stays out of the sprint.                                                                                                                                                                                                    |
+| 2026-10-24 | Admitted client-server sprint 1m, phase 2d: the safety stack ([milestone 46](https://github.com/akoita/draft-loop/milestone/46), #1658–#1666 with the follow-ups #1615, #1616, #1636–#1638 and #1654, rollup #1359). Job posts and uploads are screened on the server, and flagged material is quarantined until an owner or admin releases it.                                                                                                                                                                                                                       | The phase 2 gate is a security review with a red-team pass on injection through job posts and uploads, and nothing screened untrusted content. Author and critic prompts stay unchanged, since D16 gates prompt changes on an evaluation run. Entitlements and credits still wait for the cost check (#1597).                                                                                                                                                 |
+| 2026-10-24 | Admitted client-server sprint 1l, phase 2c: export and deletion ([milestone 45](https://github.com/akoita/draft-loop/milestone/45), #1640–#1647, rollup #1359). A record is exported as a [record archive v1](reference/record-archive.md), not as the ADR 0007 portable backup.                                                                                                                                                                                                                                                                                      | D7 promises that an organisation can export everything held about a candidate and delete it, objects included, before other users arrive. The ADR 0007 package holds one knowledge store without runs or consents, so converting to it moves to import (D12). Entitlements and credits still wait for the cost check (#1597).                                                                                                                                 |
+| 2026-10-24 | Admitted client-server sprint 1k, phase 2b: candidate records and consent ([milestone 44](https://github.com/akoita/draft-loop/milestone/44), #1617–#1625, rollup #1359).                                                                                                                                                                                                                                                                                                                                                                                             | Organisations need per-candidate access before a coach can hold several candidates, and D7 requires recorded consent before material is stored or sent to a provider. Entitlements and credits wait for the cost check (#1597).                                                                                                                                                                                                                               |
+| 2026-10-24 | Admitted client-server sprint 1j, phase 2a: sign-in and tenancy ([milestone 43](https://github.com/akoita/draft-loop/milestone/43), #1588–#1596, rollup #1359), starting with one Postgres pool serving many tenants (#1588). The phase 1 cost check finishes beside it.                                                                                                                                                                                                                                                                                              | Every phase 2 feature needs real tenants, and the database is already tenant-scoped, so the groundwork can start now. It admits no other user: staging keeps the owner token until Keycloak is hosted.                                                                                                                                                                                                                                                        |
+| 2026-10-23 | Admitted client-server sprint 1i ([milestone 42](https://github.com/akoita/draft-loop/milestone/42)): refusing to review a brief without requirements (#1539), listing hosted briefs and runs (#1538), the writing policy (#1550) and sensitivity rules (#1551) through the API and the web screen (#1552), prompt caching on Claude calls (#1553), and the parity rules fixed before the gate run (#1554). The gate run itself is #1555.                                                                                                                             | A hosted run could not take the candidate's writing policy or sensitivity rules, so it was not comparable with the local parity runs, and no Claude call asked for caching, so it could not meet the US$3 cached-run condition (#1357). The parity rules are written down before any run.                                                                                                                                                                     |
+| 2026-10-23 | Admitted client-server sprint 1h ([milestone 41](https://github.com/akoita/draft-loop/milestone/41)): sign-in and a typed client (#1529), the API serving the screen (#1530), workspace setup (#1531), sources (#1532), the job brief (#1533), runs (#1534), review (#1535), approval and export (#1536) in a browser, and a run taken from setup to a downloaded CV through the web client (#1537). Amended ADR 0011 D9.                                                                                                                                             | The owner needs a browser screen before the phase 1 parity run. A small screen built for the owner reaches the gate sooner than extracting the desktop's screens into a shared package, which moves to phase 2. The API serves the screen, so it needs no new infrastructure.                                                                                                                                                                                 |
+| 2026-10-23 | Deployed `server-v0.1.0` to staging only. The staging smoke passed, and the owner held the production deploy.                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Staging is enough to build the web screen and the parity run against. Production stays on placeholder images until the owner asks for it; the images that passed staging are tagged for that deploy.                                                                                                                                                                                                                                                          |
+| 2026-10-22 | Admitted client-server sprint 1g ([milestone 40](https://github.com/akoita/draft-loop/milestone/40)): the deployment decisions (#1516), Cloud SQL sign-in without a runtime password (#1517), a worker that drains the queue as a job (#1518), the API waking it on enqueue (#1519) and content-free logs (#1520). The infrastructure itself is built in the private infrastructure repository.                                                                                                                                                                       | The worker runs only when there is work, the API serves its Cloud Run address behind the owner token until sign-in arrives, and no runtime holds a database password. Fixed cost stays near US$50 a month for staging and production. A server tag needs the CI gate, and the staging smoke gates production.                                                                                                                                                 |
+| 2026-10-22 | Admitted client-server sprint 1f ([milestone 39](https://github.com/akoita/draft-loop/milestone/39)): a run's review (#1499), finding decisions and edits (#1500), approving and stopping a run (#1501), revisions, pause and resume through the worker queue (#1502), export to the tenant's blob storage (#1503), export download (#1504) and smaller server images (#1505) through the API, and a run taken from setup to a downloaded CV through the API only (#1506).                                                                                            | A hosted run stopped at awaiting approval, so neither the web screen nor the parity run could use it. Review comes before infrastructure because a deployed service that cannot approve or export is not usable. The server prints PDFs with the built-in writer, not a browser engine, and downloads stream through the API so the owner token and the checksum check stay in one place. Infrastructure and deploy follow in sprint 1g, then the web screen. |
+| 2026-10-22 | Admitted client-server sprint 1e ([milestone 38](https://github.com/akoita/draft-loop/milestone/38)): no provider keys in the API process (#1478), workspace setup (#1479), brief edits and versions (#1480), hosted source intake (#1481), knowledge bases (#1482), source uploads (#1483) and knowledge selection (#1484) through the API, and a run set up through the API only (#1485).                                                                                                                                                                           | The owner must set up a hosted run without database seeding. The API stores uploaded files without parsing them, because PDF and DOCX parsing belongs in workers (D11). The web screen moves to its own sprint on top of these routes, and the API image size to sprint 1f.                                                                                                                                                                                   |
+| 2026-10-21 | Admitted client-server sprint 1d ([milestone 37](https://github.com/akoita/draft-loop/milestone/37)): the route of every provider call in run history (#1457), Claude on Vertex AI in a server-only model gateway package (#1458), a route policy with recorded, opt-in fallback (#1459), provider keys from Secret Manager (#1460), a deployment budget ceiling (#1461), run and tenant usage from the API (#1462), a shared idempotency store on Postgres (#1463), and the worker running through the gateway (#1464).                                              | Hosted runs need EU model endpoints, keys outside images and a spending limit before the owner uses the service. The direct Claude API fallback processes material outside the EU, so it is off unless a deployment turns it on. The API's setup, brief-edit and intake routes move to sprint 1e with the web screen that needs them.                                                                                                                         |
+| 2026-10-21 | Re-sliced sprint 1c to fit one PR per issue: the knowledge store opener (#1440) and its Postgres store (#1452) split apart, and the hosted driver became #1447. The orchestrator keeps run state as key-value entries, so Postgres gained a tenant-scoped run-state table.                                                                                                                                                                                                                                                                                            | Each issue stays within the execution budget. The API has no workspace-setup, job-brief edit or intake routes yet, so the end-to-end smoke (#1444) seeds its workspace and knowledge in storage; those routes belong to a later sprint.                                                                                                                                                                                                                       |
+| 2026-10-21 | Admitted client-server sprint 1c ([milestone 36](https://github.com/akoita/draft-loop/milestone/36)): the `apps/api` foundation (#1437), workspace settings behind a port with a Postgres implementation (#1438, #1439), a hosted application driver (#1440), the first `/v1` routes (#1441), a Postgres run queue (#1442), `apps/worker` (#1443), and both apps in the local Compose stack with an end-to-end offline run (#1444).                                                                                                                                   | The application driver still read each workspace's settings from files in its folder, which a stateless API cannot do, so the settings move behind a port before the routes call the application service. Uploading sources needs managed files on Cloud Storage and sandboxed ingestion, so it waits for a later sprint.                                                                                                                                     |
+| 2026-10-21 | Admitted client-server sprint 1b ([milestone 35](https://github.com/akoita/draft-loop/milestone/35)): a shared blob conformance suite (#1422), a server-only Cloud Storage adapter tested against an emulator (#1423), and a local Docker Compose stack for Postgres and the emulator (#1424).                                                                                                                                                                                                                                                                        | Hosted exports and uploaded sources get a tenant-scoped, checksum-verified object store before the API and worker (sprint 1c) need one. Encryption keys stay with the infrastructure, outside this repository.                                                                                                                                                                                                                                                |
+| 2026-10-21 | Published [v0.8.0-alpha.4](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.4) with [checkpoint evidence](releases/stage-evidence-v0.8.0-alpha.4.md) after release prep PR [#1425](https://github.com/akoita/draft-loop/pull/1425).                                                                                                                                                                                                                                                                                                                     | The checkpoint ships the seven stages completed since alpha.3, including the simple guided workflow, and the CV quality work so far. It claims no parity; the #1309 exit is scored by #1307.                                                                                                                                                                                                                                                                  |
+| 2026-10-20 | Accepted the proposed price levels and retention defaults as working defaults (ADR 0011 D13 and D7, #1357).                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Prices apply only once phase 1 measures a cached run at US$3 or less. A GDPR lawyer confirms retention before phase 2 admits other users.                                                                                                                                                                                                                                                                                                                     |
+| 2026-10-17 | Chose Keycloak managed by Clever Cloud as the sign-in service for the hosted version, and named Scaleway as the European hosting exit with its switch criteria (ADR 0011 D14, #1357).                                                                                                                                                                                                                                                                                                                                                                                 | Google's Identity Platform is out because it processes accounts only in the US. Hosting stays on Google Cloud until Claude can be called with EU processing elsewhere.                                                                                                                                                                                                                                                                                        |
+| 2026-10-17 | Added an agent channel to ADR 0011 (D17): DraftLoop as an MCP server for Claude, Codex and other agents, first as a local stdio server, then over the hosted API (#1403). Corrected D9, which still called the desktop app frozen.                                                                                                                                                                                                                                                                                                                                    | Agents become one more client over the same application services. The host agent never writes CV claims itself, and exports still need approval in DraftLoop.                                                                                                                                                                                                                                                                                                 |
+| 2026-10-17 | Started client-server phase 1 (#1358) after phase 0 merged. The owner chose `europe-west1` and the cost per run was recorded (#1357). Amended ADR 0011: hosted retrieval stays Postgres-native (D11), the monorepo has explicit revisit criteria, and infrastructure lives in a private repository (D2).                                                                                                                                                                                                                                                              | The first phase 1 sprint is Postgres storage behind the phase 0 ports; the API, worker, model gateway, web screen and infrastructure follow as separately admitted sprints. No cloud identifiers enter this public repository.                                                                                                                                                                                                                                |
+| 2026-10-17 | Accepted ADR 0011. Kept the local-first version as a product that can keep evolving in parallel with the client-server version, instead of freezing it (D15). Completed the ADR with entry points, pricing, retention, observability and per-service egress. Planned phase 0 (#1347) and opened rollups for the owner decisions (#1357) and phases 1–4 (#1358–#1361).                                                                                                                                                                                                 | Both versions ship from one repository and one CI gate, with independent releases (`v*` for the desktop, `server-v*` for the server). Shared-package changes must keep both clients green.                                                                                                                                                                                                                                                                    |
+
+Older entries, from 2026-08-12 to 2026-10-16, are in the
+[roadmap history](roadmap-history.md#older-change-log).
 
 [adr-0007]: adr/0007-portable-candidate-knowledge-store.md

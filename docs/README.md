@@ -37,7 +37,8 @@ contributors, maintainers, and operators to the current information they need.
   views are the canonical homes for their respective subjects. Keep them
   synchronized with package interfaces and executable behavior.
 - **Roadmap and status:** `roadmap.md` is the source for current stage, scope,
-  evidence, and priorities.
+  evidence, and priorities. `roadmap-history.md` keeps finished stages and the
+  older change log.
 - **Historical product context:** `product/` contains the original concept
   document. It is historical context; the roadmap and architecture are
   authoritative now.
