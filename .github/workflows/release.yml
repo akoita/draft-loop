@@ -309,4 +309,11 @@ jobs:
           if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
             release_args+=(--prerelease)
           fi
+          # Generated notes start at the previous desktop release, never at a server-v* tag:
+          # GitHub's default pick can reach back far enough to pass the 125,000-character limit.
+          previous_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq '[.[] | select(.draft | not) | select(.tag_name | test("^v[0-9]"))][0].tag_name // empty')"
+          if [[ -n "$previous_tag" ]]; then
+            release_args+=(--notes-start-tag "$previous_tag")
+          fi
           gh release create "${release_args[@]}"
