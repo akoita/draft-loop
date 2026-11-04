@@ -6,8 +6,8 @@
 #   draft-loop-server.ps1 upgrade <version>            switch to a newer release and restart
 #   draft-loop-server.ps1 backup [file] | restore <file>   one archive of the database, files and secrets
 #
-# Every command except install works on the folder that holds this script's bin\ folder, or on
-# DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
+# Every command except install works on DRAFT_LOOP_SERVER_HOME, else on the folder that holds
+# this script's bin\ folder, else, for a downloaded copy, on ~\draft-loop-server. It never prints a secret except the owner token you ask for.
 param(
   [Parameter(Position = 0)][string]$Command = "help",
   [Parameter(Position = 1, ValueFromRemainingArguments = $true)][string[]]$Rest = @()
@@ -35,7 +35,14 @@ function Show-Usage {
 
 function Get-ServerHome {
   if ($env:DRAFT_LOOP_SERVER_HOME) { return $env:DRAFT_LOOP_SERVER_HOME }
-  return (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+  $own = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+  # A downloaded copy, such as one in Downloads, sits in no stack: use install's default.
+  $default = Join-Path $HOME "draft-loop-server"
+  if (-not (Test-Path -LiteralPath (Join-Path $own "compose.yaml")) -and
+    (Test-Path -LiteralPath (Join-Path $default "compose.yaml"))) {
+    return $default
+  }
+  return $own
 }
 
 function Assert-Version([string]$Version) {
