@@ -405,8 +405,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   #2112, #2140–#2143, admitted 2026-11-04) makes those releases safe to depend
   on without a paid model run. The desktop acceptance passes beside a running
   server, the [server threat model](security/server-threat-model.md) covers
-  every server runtime (#2135), and a real Claude Code session walks the work
-  journal. The review's gaps are follow-ups #2144–#2148.
+  every server runtime (#2135), and a real Claude Code session
+  [walked the work journal](evaluation/work-journal-walk.md). The review's gaps are follow-ups #2144–#2148.
 
 ### Next — Manual parity: review and export
 

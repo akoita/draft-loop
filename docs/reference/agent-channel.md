@@ -11,17 +11,28 @@ The channel is `draftloop-mcp`, a stdio MCP server that calls the
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
+A real Claude Code session was walked through this setup on 2026-11-04; the
+[walk record](../evaluation/work-journal-walk.md) lists what passed and the
+open defects.
+
 ## Set it up
 
 1. Run the self-hosted server, and turn on **Accept notes from coding agents**
    in the Work journal panel of its Career evidence page. The server refuses
    notes while it is off.
-2. Put `draftloop-mcp` on your `PATH` from a clone of this repository:
+2. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
+   link from inside `apps/mcp`: `pnpm --dir apps/mcp link --global` links the
+   root package instead.
 
    ```text
    pnpm install
-   pnpm --dir apps/mcp link --global
+   cd apps/mcp
+   pnpm link --global
+   draftloop-mcp --help
    ```
+
+   If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `pnpm setup`, open a new
+   shell, and link again. The last command prints the tool's usage.
 
 3. In the project whose work you want to record, run `init` for your agent:
 
@@ -42,22 +53,22 @@ nothing for it to call: the CLI-only path is not served.
 files hold only names: the token stays in the environment, and no path of your
 machine is written.
 
-| Host | Server entry | Instructions | Skill |
-| --- | --- | --- | --- |
-| Claude Code | `.mcp.json` | `CLAUDE.md` | `.claude/skills/log-work/SKILL.md` |
-| Codex | `.codex/config.toml` | `AGENTS.md` | `.agents/skills/log-work/SKILL.md` |
-| Other MCP hosts | `.mcp.json` | `AGENTS.md` | `.agents/skills/log-work/SKILL.md` |
+| Host            | Server entry         | Instructions | Skill                              |
+| --------------- | -------------------- | ------------ | ---------------------------------- |
+| Claude Code     | `.mcp.json`          | `CLAUDE.md`  | `.claude/skills/log-work/SKILL.md` |
+| Codex           | `.codex/config.toml` | `AGENTS.md`  | `.agents/skills/log-work/SKILL.md` |
+| Other MCP hosts | `.mcp.json`          | `AGENTS.md`  | `.agents/skills/log-work/SKILL.md` |
 
 Codex reads a project's `.codex/config.toml` only in a trusted project; copy
 the marked block into `~/.codex/config.toml` otherwise.
 
 The server reads three settings from its environment:
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `DRAFT_LOOP_SERVER_URL` | `http://127.0.0.1:8080` | The self-hosted server's address |
-| `DRAFT_LOOP_SERVER_TOKEN` | none | The owner token; `DRAFT_LOOP_SERVER_TOKEN_FILE` reads it from a file instead |
-| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner` | The workspace that receives the notes |
+| Variable                      | Default                 | Meaning                                                                      |
+| ----------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
+| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The self-hosted server's address                                             |
+| `DRAFT_LOOP_SERVER_TOKEN`     | none                    | The owner token; `DRAFT_LOOP_SERVER_TOKEN_FILE` reads it from a file instead |
+| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace that receives the notes                                        |
 
 ### The `/log-work` skill and the Stop hook
 
