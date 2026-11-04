@@ -1,373 +1,228 @@
 # Threat model
 
-This document is the repository-grounded security baseline for the current
-DraftLoop alpha. The [roadmap](../roadmap.md) records the current stage. It is not
-a claim that the product is safe for every deployment; controls, assumptions,
-and residual risks must be revisited as boundaries change.
+This page is the repository-grounded security baseline for DraftLoop. It is
+written for anyone who changes a trust boundary or reviews a release, and it
+lists what is protected, how, and what risk remains. It is not a claim that the
+product is safe for every deployment. Revisit it whenever a boundary changes.
+The [roadmap](../roadmap.md) records the current stage.
 
-## Scope and assumptions
+## Contents
 
-DraftLoop is a local, single-user CLI and Electron desktop workspace. There is
-no internet-facing DraftLoop service, account system, multi-tenant database,
-background job runner, browser extension, or external job submission path.
-Application workspaces own current evidence, run history, and exports.
+- [Scope](#scope)
+- [Assumptions](#assumptions)
+- [Contract scopes](#contract-scopes)
+- [Assets and trust boundaries](#assets-and-trust-boundaries)
+- [Ranked abuse paths](#ranked-abuse-paths)
+- [Hosted service: prompt injection through job posts and uploads](#hosted-service-prompt-injection-through-job-posts-and-uploads)
+- [Runtime and build-time controls](#runtime-and-build-time-controls)
+- [Open risks and review triggers](#open-risks-and-review-triggers)
 
-The active network boundaries are explicitly approved Anthropic and OpenAI
-requests, approved HTTPS URL intake and refresh, and an optional configured
-OpenAI-compatible local endpoint. The endpoint and its operator remain part of
-the user's trust decision. Credentials may come from SDK environment variables,
-the desktop credential flow, or a provider-managed local session. The Electron
-main process owns desktop credential persistence; OS-backed `safeStorage` is
-preferred, with a local AES-256-GCM fallback protected by file permissions.
-Neither protects against a process that controls the same user account.
+## Scope
 
-The hosted service of [ADR 0011](../adr/0011-client-server-version.md) is not
-covered by this baseline, except for [prompt injection through job posts and
-uploads](#hosted-service-prompt-injection-through-job-posts-and-uploads), which
-has its own section.
+DraftLoop runs in four ways ([architecture overview](../architecture/overview.md#ways-to-run)).
+This baseline covers them unevenly.
 
-Source files, fetched pages, model output, exports, backups, diagnostic data,
-and retrieval indexes are sensitive or untrusted. Models and source material
-may contain errors or indirect instructions. DraftLoop treats source content as
-data, not as application policy or executable instructions.
+| Way to run                | Covered here                                                                                              | Not yet covered                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| CLI and the shared engine | Fully: ingestion, the CKB, briefs, policies, profiles, retrieval, provider calls and exports              | none                                                                                                              |
+| Self-hosted server        | The shared engine, and prompt injection through job posts and uploads                                     | Authentication, the Compose stack, local secret files ([#2135](https://github.com/akoita/draft-loop/issues/2135)) |
+| Hosted service (staging)  | The shared engine, and [prompt injection](#hosted-service-prompt-injection-through-job-posts-and-uploads) | Tenant isolation, operator routes, erasure, model routes, Secret Manager keys and the page fetcher (#2135)        |
+| Desktop client (alpha)    | The window boundary, in the table below                                                                   | A full review of the client (#2135)                                                                               |
 
-### Current opportunity-brief scope
+The v0.8 desktop, with its own engine, renderer bridge and credential store, was
+retired on 2026-11-04 (#2117–#2119), and its boundaries are no longer modelled.
+DraftLoop has no browser extension and no job submission path.
 
-The #67 contract separates opportunity facts from candidate instructions,
-requires every structured field to cite known source identities, and prevents
-candidate-instruction sources from establishing employer requirements or other
-opportunity facts. Application-level intake reuses the existing approval,
-HTTPS/SSRF, redirect, size, timeout, content-type, and stable-file controls for
-approved URLs and selected files. It does not perform uncontrolled research.
+## Assumptions
 
-The brief retains bounded provenance, including sensitive approved URLs and
-captured-content checksums, but no raw source content or host paths. Failed or
-inaccessible sources remain visible without fabricated checksums, and their
-diagnostics omit paths, URL queries, source content, ingestion messages, and OS
-errors. Duplicate captured bytes and partial results remain explicit review
-issues. Editing and review create immutable versions in the local workspace
-database. Composite workspace/brief/version identity, parent enforcement,
-canonical checksums, and update/delete guards detect stale, conflicting, or
-corrupted state; reload never refetches a source. Audit events use opaque brief
-identity and content-free version/status/checksum metadata rather than copying
-the sensitive payload. Explicitly approved extraction sends only sanitized
-opportunity source IDs, classifications, statuses, media types, checksums, and
-text through the configured author-provider adapter. Candidate inputs, URLs,
-paths, and provenance stay local. Source text remains untrusted, tools and
-research are unavailable, citations are allowlisted, malformed output fails
-closed into a content-free issue, and extraction cannot alter provider policy,
-permissions, or model selection.
+- **Network egress.** The CLI's network boundaries are approved Anthropic and
+  OpenAI requests, the opt-in development providers, approved HTTPS URL intake
+  and refresh, and an optional OpenAI-compatible local endpoint. The endpoint and
+  its operator are part of the user's trust decision.
+- **Credentials.** The CLI takes keys from SDK environment variables, or uses a
+  provider-managed local session. Neither protects against a process that
+  controls the same user account.
+- **Untrusted inputs.** Source files, fetched pages, model output, exports,
+  backups, diagnostics and retrieval indexes are sensitive or untrusted. Models
+  and sources may contain errors or indirect instructions.
+- **Data, not instructions.** DraftLoop treats source content as data, never as
+  application policy or executable instructions.
 
-Shared opportunity commands keep CLI file paths in runtime-only manifests and
-resolve desktop files inside the native host. The strict renderer bridge
-allowlists source descriptors, edit fields, versions, and approval intent; its
-result projection omits paths, URLs, raw source text, and provenance objects.
-Reload, list, edit, and review operate on durable versions without refetching
-sources or invoking providers, and stale expected versions fail closed.
+## Contract scopes
 
-Run start accepts only an exact brief ID/version pair and requires the stored
-record to be reviewed with a valid checksum. It derives opportunity context
-only from that immutable record and retains a path- and URL-free reference in
-the run snapshot. Resume cannot replace the selection, and later brief versions
-do not mutate the pinned context. The existing explicit provider-transmission
-approval remains independently required.
+Each contract below is canonical in
+[Candidate evidence](../architecture/candidate-evidence.md). This section keeps
+only the security properties that the threats rely on.
 
-### Current writing-policy scope
+### Opportunity briefs
 
-The workspace writing policy is candidate-authored, untrusted style data.
-Bounded content is stored locally as immutable, checksum-addressed versions;
-ordinary status and history projections expose metadata only. The effective
-version is captured in immutable run context and sent to author and critic only
-through the existing provider-approval boundary. Rules and preferences cannot
-override system instructions, evidence requirements, provider identity,
-transmission policy, permissions, or tools.
+- **Facts versus instructions.** Opportunity facts and candidate instructions
+  are kept apart (#67). Every structured field cites a known source, and
+  candidate instructions can never establish an employer requirement.
+- **Bounded intake.** Intake reuses the approval, HTTPS and SSRF, redirect,
+  size, timeout, content-type and stable-file controls. There is no
+  uncontrolled research.
+- **What is stored.** Bounded provenance and checksums are stored, never raw
+  source content or host paths.
+- **Content-free failures.** Diagnostics omit paths, URL queries, content,
+  ingestion messages and OS errors. Failed sources stay visible without a
+  fabricated checksum.
+- **Tamper-evident versions.** Composite identity, parent checks, canonical
+  checksums and update and delete guards detect stale, conflicting or corrupted
+  state. Reload never refetches a source.
+- **Extraction.** Approved extraction sends only sanitized source records.
+  Tools and research are unavailable, citations are allowlisted, and malformed
+  output fails closed. Extraction cannot change provider policy, permissions or
+  model selection.
+- **Run binding.** A run takes only an exact reviewed brief ID and version with
+  a valid checksum. Resume cannot replace it, and the provider-transmission
+  approval is still required separately.
 
-Policy findings expose stable rule, section, block, and bounded position data
-without reproducing the forbidden value, matched artifact content, source
-paths, or context. Older content-only snapshots remain readable. Structured
-tone, locale, verbosity, page target, section order, emphasis, and transparent
-anti-formulaic defaults remain bounded advisory style data. A reviewed
-opportunity may bind one imported version as a complete override; the run pins
-base and override lineage, and the active workspace policy is not mutated.
+### Writing policies
 
-### Current canonical-profile scope
+- **Untrusted style data.** The policy is candidate-authored style data, stored
+  as bounded, checksummed versions.
+- **No authority.** Rules cannot override system instructions, evidence
+  requirements, provider identity, transmission policy, permissions or tools.
+- **Content-free findings.** Findings give rule, section and block positions,
+  never the forbidden value or matched text.
+- **Overrides.** A per-opportunity override is pinned in the run, and never
+  changes the workspace policy.
 
-Canonical profile facts are sensitive candidate data. Immutable versions are
-stored only in workspace-local SQLite with canonical payload checksums,
-immediate lineage, monotonic update timestamps, and update/delete triggers.
-Every fact points to an exact selected CKB source version and requires
-candidate-provided provenance. Persisted audit events exclude fact values,
-issue messages, raw source content, URLs, and host paths.
+### Canonical profiles
 
-The derivation boundary reads exact managed versions as fresh byte copies after
-one-handle size, checksum, and identity verification; storage paths and URL or
-origin metadata do not cross that boundary. It normalizes bounded content,
-checks the lifecycle snapshot before extraction and again before persistence,
-and requires explicit provider-data approval before reading or invoking the
-extraction port. Source
-text remains untrusted data. A strict proposal schema accepts only facts,
-grounded evidence quotes with opaque citations, and issue relationships. A
-quote must occur in its cited normalized source and contain the proposed value; it is discarded after local
-verification; application code owns provenance, IDs, severity, messages,
-duplicate/conflict detection, and visible omissions.
+- **Sensitive data.** Profile facts are sensitive candidate data, stored only in
+  workspace-local SQLite with checksums, lineage and immutable triggers. Audit
+  events exclude values, messages, content, URLs and paths.
+- **Verified reads.** Derivation reads exact managed versions as fresh,
+  verified byte copies. Paths and origins never cross that boundary.
+- **Checked before saving.** Derivation revalidates the lifecycle snapshot
+  before extraction and again before saving, and needs explicit provider-data
+  approval first.
+- **Untrusted text.** Source text stays untrusted. A strict schema accepts only
+  facts, grounded quotes with opaque citations, and issues.
+- **Application-owned records.** The application owns provenance, IDs,
+  severity, messages and conflict detection.
+- **Fail closed on drift.** A profile whose CKB selection no longer matches
+  cannot be reviewed or enter a run. Retirement, deletion, missing stores and
+  changed versions therefore fail closed for future use, while history stays
+  auditable.
 
-A configured-provider adapter now uses the existing author-provider policy and
-auth boundary. Its system prompt treats normalized source text as untrusted,
-its structured request contains no managed paths or CKB provenance, and the
-strict response is still revalidated and grounded locally. Shared application
-operations accept no store roots: the local driver resolves and revalidates the
-workspace's pinned CKB selection before derivation. Provider-free reload,
-history, edit, and review operations stay within workspace storage.
+### The portable CKB
 
-One exact reviewed profile may be bound to a new run by opaque ID and version.
-The local driver verifies the stored checksum and requires the profile's CKB
-selection to match the workspace's current lifecycle-ready selection before
-persisting only its ID, version, and checksum in immutable context. Resume
-accepts no replacement selection, and renderer inputs expose no roots or stored
-selection snapshot.
-
-The local application reconciles availability without mutating history. A
-draft cannot become reviewed and a reviewed profile cannot enter a new run
-when its exact CKB selection no longer matches the workspace's current
-lifecycle-ready selection. Retirement, deletion, missing stores, and changed
-source versions therefore fail closed at future-use boundaries, while exact
-profile reads and existing run references remain auditable.
-
-Because one profile may combine CKBs, it is not copied into a single CKB
-portable backup; whole-workspace database backups preserve it. Workspace audit
-retention and CKB deletion do not cascade into immutable profile or approved
-export records. Exact-source indexes are rebuilt from the current selection and
-invalidated under the same availability rule. The CLI
-exposes the shared profile API without accepting store roots and requires a
-visible flag before derivation can transmit data.
-The desktop host exposes the same operations through strict bridge inputs and
-an explicit result projection that omits the stored selection snapshot, paths,
-source URLs, and unrecognized future fields. The visual profile surface edits
-only values and statuses on projected records while preserving opaque
-provenance; derivation needs a fresh explicit approval, and run start forwards
-only the selected reviewed profile ID and version.
-
-### Current CKB scope
-
-The portable Candidate Knowledge Base (CKB) is a separate local plaintext
-component with a logical UUID, lifecycle metadata, stable source identity,
-immutable source-version metadata, and opaque managed raw bytes. Approved local
-file intake and manual append enforce supported types, extraction, stable-file
-checks, and the 20 MiB per-file limit. Approved directory intake is bounded;
-its root and immutable normalized-relative-path membership hashes are sensitive
-local state. Partial and legacy runtime-only imports have no directory binding.
-
-Host paths, URL provenance, and membership hashes are not portable identity.
-Generic manifests, provider requests, and content-free diagnostics exclude
-them. Labels and checksums are local CKB metadata, but provider and content-free
-surfaces exclude them too.
-
-The shared application contract can bind path-free selection evidence to new
-runs. CLI and desktop expose selection and bounded CKB metadata maintenance
-without carrying roots through the desktop renderer boundary. Archival requires
-explicit confirmation.
-
-Single-file desktop intake uses a dedicated native picker, keeps the selected
-path in the host, and returns only opaque source/version identity. Cancellation
-performs no import, and ingestion failures use path-free diagnostics. URL intake
-requires approval for each adapter request, preserves the centralized HTTPS and
-network-safety boundary, and returns no URL, query string, label, or fetched
-content through generic CLI or renderer results.
-
-File-version append also keeps the selected path outside generic results and
-renderer IPC. Atomic latest-version checks reject stale concurrent mutation; a
-successful append does not replace the sensitive remembered origin binding.
-Explicit file refresh uses only that remembered origin. URL refresh requires
-fresh approval and preserves the existing SSRF, redirect, time, size, and
-content limits.
-
-Directory intake uses the same bounded application contract. The CLI root is
-runtime-only, the desktop host owns the picker, and generic complete or partial
-results contain only scan counts and capped opaque source/version identities.
-Directory roots, filenames, membership hashes, and content remain local;
-path-free status and refresh-state results omit origins and provenance.
-
-No application run retrieves CKB content yet, so the existing workspace
-evidence boundary remains authoritative. See
-[ADR 0007](../adr/0007-portable-candidate-knowledge-store.md),
-[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md),
-[privacy policy](privacy-and-evaluation.md), and [architecture](../architecture/overview.md)
-for ownership and exact contracts.
-
-One-file origin rebind keeps the replacement path in runtime CLI input or the
-native desktop host and succeeds only for stable bytes exactly matching the
-current managed version. Generic results expose no origin or checksum.
-Path-free retirement inspection and explicitly confirmed retirement expose
-only logical state and time. Retirement is idempotent and preserves evidence;
-it is neither physical deletion nor reversible through a current adapter.
-
-Directory-root rebind has distinct preview and confirmed apply controls. Both
-keep the candidate root in runtime CLI input or the native host and expose only
-opaque identity, status, time, and counts. Apply does not trust preview state:
-it repeats the bounded exact-membership scan, then storage atomically guards
-the root revision and every member origin against races.
-
-Directory refresh uses the sensitive remembered root entirely inside the
-application and native host. Preview is read-only; apply requires explicit
-confirmation before store access and repeats the bounded scan. Generic results
-cap and sort opaque member/refreshed identities, report partial progress
-explicitly, and omit paths, filenames, hashes, checksums, labels, and content.
-
-Moved-candidate preview exposes only unique source identities and never target
-paths. One-source move requires explicit confirmation, repeats the bounded
-scan, and atomically guards the root, member revision, version, and origin.
-
-Reconciliation apply requires explicit confirmation and source-ID retirement
-selection. The application refuses incomplete scans and guards each logical
-retirement; generic complete or partial progress remains path-free.
-
-Lifecycle actions are explicit and bounded. A root rebind performs one complete
-bounded scan, stable per-member verification, and a guarded all-member origin
-commit or same-root no-op. The implemented one-source member-move command
-accepts only source identity, derives a unique target from one bounded local
-scan, and retains that target path only in runtime memory. It uses the same
-guarded handle for the move and an already-current no-op, maps failures to a
-path-free error, and persists only the sensitive origin binding and append-only
-member revision. Its public result exposes no path, filename, checksum,
-content, integrity tuple, or version identity.
-
-File shape never proves ownership. Complete reconciliation reports
-moved-candidate evidence separately and acts only on explicit retirement
-source IDs. Incomplete scans perform no writes. Selected retirements run in
-deterministic order with root/member/version/origin guards; each marker is
-atomic, and a later failure exposes only path-free partial source IDs.
-Automatic move inference, automatic retirement or deletion,
-backup/export/restore, retrieval integration, and background refresh remain
-deferred.
-
-Indexing consumers receive a frozen CKB-scoped lifecycle-readiness projection
-instead of reading sensitive tables. It blocks retired, archived, unmanaged,
-unbound, directory-conflicted, adverse-observation, and stale-observation state.
-Its structured revision uses only safe identities, timestamps, booleans, and
-numeric directory revisions, so newer persisted lifecycle evidence invalidates
-an older selection without exposing paths, URLs, labels, hashes, checksums, or
-content. It is not an index-freshness or live-origin assertion.
-
-The selection boundary records only portable store, CKB, source, and version
-IDs plus those safe revisions. It requires explicit approval before combining
-CKBs and excludes runtime store roots. A workspace retains roots only in its
-sensitive local manifest, pins logical store/CKB identities, and revalidates
-readiness before each new run records a path-free snapshot. Provider-capable
-start, resume, and revision operations also require the current canonical
-entries to match the run's immutable record. CKB-content authorization and
-retrieval-index drift checks remain separate controls.
-
-The count-only structural inventory does not adopt or delete unknown entries.
-Owned managed-write records do not retroactively claim legacy entries. Recovery
-durably claims an eligible phase with a newer fencing generation before
-inspecting artifacts, blocking stale journal and commit transactions. It acts
-only on versioned records whose integrity and immutable staging identity are
-verified; unknown, mismatched, or unjournaled residue remains untouched.
-
-CLI and desktop can request this inventory, path-free source/version identity
-summaries, and duplicate groups through the same read-only application
-contracts. Adapter projections are bounded and omit roots, labels, filenames,
-URLs, checksums, content, and relative-path hashes; separate calls can observe
-different valid states if another local writer acts
-between them. The [threat risks below](#ranked-abuse-paths) cover these
-limitations without repeating the implementation chronology.
-
-Future cloud sync, authentication, multi-tenancy, remote retrieval, autonomous
-tools, or job submission require a new threat-model review.
+- **A plaintext local store.** It has logical identity, immutable versions and
+  opaque managed bytes.
+- **Intake limits.** Intake enforces supported types, extraction, stable-file
+  checks, a 20 MiB per-file limit, and bounded directory traversal.
+- **Sensitive and local.** Host paths, URL provenance and membership hashes are
+  not portable identity. Manifests, provider requests and diagnostics exclude
+  them, and labels and checksums too.
+- **Confirmed lifecycle actions.** Refresh, rebind, retirement, directory
+  reconciliation and deletion are explicit and guarded, and each needs
+  confirmation where it writes. Apply steps repeat their bounded scan and never
+  trust preview state.
+- **Ownership needs evidence.** File shape never proves ownership. Unknown,
+  unjournaled or mismatched entries are preserved, and recovery acts only on
+  verified, journalled records under a newer fencing generation.
+- **Selection.** Indexing reads a frozen readiness projection, never the
+  sensitive tables. A selection records only portable IDs and safe revisions,
+  combining CKBs needs explicit approval, and runs revalidate readiness before
+  each provider-capable step.
+- **Retrieval.** Runs retrieve only exact selected source versions. Contracts
+  are in [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md) and
+  [ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md).
 
 ## Assets and trust boundaries
 
-| Boundary                                      | Asset at risk                                                                     | Current control                                                                                                                                              | Residual concern                                                                                                              |
-| --------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Selected files and approved pages → ingestion | Career history, employer material, and indirect instructions                      | Explicit approval, supported-type and size checks, extraction, source/evidence boundaries, bounded context, no autonomous tools                              | Parsers and source text remain untrusted and can contain prompt injection or edge cases                                       |
-| Desktop renderer → preload/main               | Credentials, commands, and approval intent                                        | Context isolation, sandboxing, one narrow validated bridge, allowlisted commands                                                                             | A compromised renderer can still invoke an allowed command and observe a key while it is entered                              |
-| Main process → credential store               | Provider API keys and OAuth session boundaries                                    | OS `safeStorage` when available, documented encrypted fallback, explicit resolution, status/removal controls, no history projection                          | Linux fallback and host compromise remain within the user boundary                                                            |
-| Workspace → model provider                    | Candidate context, prompts, drafts, and provider identity                         | Fingerprinted transmission preflight, fresh host-side checks, `DataExposurePolicy`, bounded scope, provider/model/endpoint visibility, budgets               | Provider retention and training behavior are external; cross-platform acceptance is incomplete                                |
-| Workspace → approved URL                      | URL, local network reachability, fetched bytes, and provenance                    | Explicit approval, HTTPS, literal/resolved-address checks, a connection pinned to the checked address, redirect/time/size/content limits, extraction, URL-free errors | Tracking, malicious markup, and sensitive query strings remain risks                                                          |
-| Approved directory → CKB intake               | Files, paths, traversal reachability, and aggregate size                          | Real non-symlink root outside the store, canonical containment, deterministic bounded traversal, no child-symlink or special-entry opens, complete preflight | Same-user mutation races remain possible; counts disclose limited shape; later changes do not reconcile automatically         |
-| Local file/directory → portable CKB           | Plaintext bytes, source identity, origins, labels, checksums, and lifecycle state | Opaque managed copies, immutable versions, sensitive bindings, path-free results, confirmed add/retirement controls                                          | Same-user processes and backups can read plaintext; reactivation, deletion, backup, and retrieval remain incomplete           |
-| CKB filesystem → inventory/journal            | Unknown entries and ownership evidence                                            | Count-only inventory; versioned integrity and staging identity; durable recovery claim under a newer fencing generation; no shape-based adoption            | Unjournaled, legacy, mismatched, and unrecognized entries remain unknown and are preserved                                    |
-| Application → local model endpoint            | Candidate data, credentials, and output                                           | Explicit adapter configuration and structured provider boundary; loopback policy for the `local` company                                                     | “Local” does not by itself prove identity, same-machine operation, or trustworthy retention                                   |
-| Application → installed user-session runtime  | Context, local files, provider session, and process environment                   | Empty temporary directory, tools/customizations/MCP/web disabled where supported, bounded IO, structured output, no OAuth extraction                         | Vendor runtime and subscription behavior can change; output ceilings are not fully enforceable                                |
-| Workspace history/retrieval → local storage   | Run metadata, evidence chunks, decisions, artifacts, and derived indexes          | Workspace identifiers, checksums, immutable records, scoped lexical retrieval, safe-payload validation                                                       | Host compromise, deletion bugs, and isolation mistakes can expose or mix data                                                 |
-| CKB → approved backup/restore destination     | Candidate bytes, logical identity, provenance, and lifecycle metadata              | Explicit destination approval and collision policy; strict versioned manifest; verified allowlisted managed objects; no-replace publication; origins, locks, journals, credentials, and workspace data excluded | Hashes detect corruption but not authorship; exported and restored copies can outlive the source and remain readable to same-user processes |
-| Backups/purge/diagnostics → copies            | Retained workspace data and operational metadata                                  | Explicit local operations, confirmed purge, content-free diagnostics                                                                                         | User backups, exports, and restored stores can outlive deletion                                                              |
-| Rendered artifact → viewer/export             | Links, markup, and generated files                                                | Local rendering, controlled formats, checksum records, visible approval                                                                                      | Unsafe links, images, markup, or viewers can create egress or spoofing risks                                                  |
-| Repository/CI/release → installed artifact    | Credentials, dependencies, build output, and update trust                         | Secret-free fixtures, lockfile review, lint/type/test gates, scans, checksums, SBOM                                                                          | Unsigned installers, compromised dependencies, CI credentials, or unsafe updates remain possible                              |
+| Boundary                                        | Asset at risk                                                          | Current control                                                                                                                                                                                        | Residual concern                                                                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Selected files and approved pages → ingestion   | Career history, employer material, indirect instructions               | Explicit approval, type and size checks, extraction, source and evidence boundaries, bounded context, no autonomous tools                                                                              | Parsers and source text stay untrusted, and can carry prompt injection or edge cases                             |
+| Workspace → model provider                      | Candidate context, prompts, drafts, provider identity                  | `DataExposurePolicy`, explicit `--allow-provider-data` per command, bounded scope, visible provider, model and endpoint, budgets                                                                       | Provider retention and training are external                                                                     |
+| Workspace → approved URL                        | The URL, local network reachability, fetched bytes, provenance         | Explicit approval, HTTPS, literal and resolved-address checks, a connection pinned to the checked address, redirect, time, size and content limits, URL-free errors                                    | Tracking, malicious markup and sensitive query strings                                                           |
+| Approved directory → CKB intake                 | Files, paths, traversal reachability, total size                       | A real non-symlink root outside the store, canonical containment, bounded deterministic traversal, no child symlinks or special entries, complete preflight                                            | Same-user mutation races; counts reveal limited shape; later changes do not reconcile automatically              |
+| Local file or directory → portable CKB          | Plaintext bytes, identity, origins, labels, checksums, lifecycle state | Opaque managed copies, immutable versions, sensitive bindings, path-free results, confirmed add and retirement                                                                                         | Same-user processes and backups can read plaintext; reactivation is not built                                    |
+| CKB filesystem → inventory and journal          | Unknown entries, ownership evidence                                    | Count-only inventory; versioned integrity and staging identity; durable recovery claims under a newer fencing generation; no shape-based adoption                                                      | Unjournaled, legacy, mismatched and unknown entries stay unknown and are kept                                    |
+| Application → local model endpoint              | Candidate data, credentials, output                                    | Explicit adapter configuration, a structured provider boundary, a loopback policy for the `local` company                                                                                              | "Local" does not prove identity, same-machine operation or trustworthy retention                                 |
+| Application → installed user-session runtime    | Context, local files, the provider session, the process environment    | Empty temporary directory, tools, customizations, MCP and web disabled where supported, bounded IO, structured output, no OAuth extraction                                                             | Vendor runtime and subscription behaviour can change; output ceilings are not fully enforceable                  |
+| Workspace history and retrieval → local storage | Run metadata, evidence chunks, decisions, artifacts, derived indexes   | Workspace identifiers, checksums, immutable records, scoped lexical retrieval, safe-payload validation                                                                                                 | Host compromise, deletion bugs and isolation mistakes can expose or mix data                                     |
+| CKB → approved backup or restore destination    | Candidate bytes, identity, provenance, lifecycle metadata              | Explicit destination approval and collision policy; strict versioned manifest; verified allowlisted objects; no-replace publication; origins, locks, journals, credentials and workspace data excluded | Hashes detect corruption, not authorship; copies can outlive the source and stay readable to same-user processes |
+| Backups, purge, diagnostics → copies            | Retained workspace data, operational metadata                          | Explicit local operations, confirmed purge, content-free diagnostics                                                                                                                                   | User backups, exports and restored stores can outlive deletion                                                   |
+| Rendered artifact → viewer or export            | Links, markup, generated files                                         | Local rendering, controlled formats, checksum records, visible approval                                                                                                                                | Unsafe links, images, markup or viewers can create egress or spoofing                                            |
+| Desktop client window → server                  | The owner token, the server's web screen                               | Loads only its server's origin; other links go to the system browser; other schemes refused; sandboxed page without Node or device permissions; token encrypted by the system keychain                 | Full review pending (#2135); Linux without a keyring remembers nothing                                           |
+| Repository, CI, release → installed artifact    | Credentials, dependencies, build output, update trust                  | Secret-free fixtures, lockfile review, lint, type and test gates, scans, checksums, SBOM                                                                                                               | Unsigned installers, compromised dependencies, CI credentials or unsafe updates                                  |
 
 ## Ranked abuse paths
 
-The ratings are qualitative priority indicators, not a guarantee of exploit
-likelihood. Follow-up items are required before the affected boundary is
-expanded.
+The ratings are qualitative priorities, not exploit likelihoods. A follow-up
+must be done before its boundary is widened. IDs are stable, so a retired
+threat keeps its number.
 
-| ID    | Severity / confidence | Threat                                                                                                                                 | Current control                                                                                                                                                                        | Residual risk / follow-up                                                                                                        |
-| ----- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| T-001 | High / high           | A file or fetched page injects instructions that produce unsupported claims or disclosure.                                             | Delimited source data, structured model ports, deterministic validation, bounded context, no autonomous tools.                                                                         | Keep adversarial fixtures for every source type and review before enabling tools. The hosted service adds screening and quarantine, below. |
-| T-002 | High / high           | Sensitive material reaches an unapproved provider, model, endpoint, or scope.                                                          | `DataExposurePolicy`, fingerprinted visible preflight, explicit acknowledgement, fresh host checks, corpus exclusion, fail-closed stale policy.                                        | Complete installed-app and cross-platform acceptance; keep provider-retention disclosures accurate.                              |
-| T-003 | High / medium         | Prompts, responses, sources, credentials, or confidential terms leak through logs, tests, diagnostics, or errors.                      | Allowlisted `contentRedacted` events, deterministic credential redaction, normalized errors, synthetic fixtures, safe-payload assertions.                                              | Route every diagnostic path through the allowlist and add explicit confidential-term rules.                                      |
-| T-004 | High / high           | A compromised renderer or local process steals or misuses a provider credential.                                                       | Narrow IPC, renderer isolation, explicit credential resolution, encrypted persistence, lifecycle controls, process-only canaries, no secret projection.                                | Add CSP and renderer-compromise regressions; rate-limit credential commands and never log payloads.                              |
-| T-005 | High / medium         | URL intake reaches a private service, unsafe redirect, excessive response, or malicious markup.                                        | HTTPS, literal and resolved-address checks, a connection pinned to the checked address (no resolver-to-connect race), manual redirects with each hop re-checked, caps, content restrictions, exact-byte checks, immutable local provenance, URL-free failures. | Continue redirect/parser/egress tests.                                                                                           |
-| T-006 | High / medium         | A generated link, image, HTML fragment, or export fetches remote content or spoofs trusted content.                                    | Local controlled rendering and visible export approval; external submission is out of scope.                                                                                           | Sanitize links and images, disable active content, and test supported viewers.                                                   |
-| T-007 | Medium / high         | A provider, critic, malformed response, or retry policy causes an unbounded loop or cost spike.                                        | Round, cost, duration, and attempt budgets; bounded adapter retries; normalized errors; cancellation treated as non-retryable.                                                         | Enforce budgets at every provider boundary and keep deterministic timeout/restart tests.                                         |
-| T-008 | High / medium         | Data remains readable after a user believes primary history or a copy was deleted.                                                     | Explicit local purge, backup operations, content-free diagnostics, documented retention limits.                                                                                        | Define coverage for FTS, exports, backups, temp files, credentials, and CKB copies on every platform.                            |
-| T-009 | High / medium         | Retrieval mixes workspaces, serves stale chunks, or retains derived data after source deletion.                                        | Workspace-scoped legacy queries; migration 25 stores exact-version CKB indexes behind strict single-CKB scopes, invalidates whole projections on deletion, exposes drift, and keeps immutable content-free workspace traces. | Implement and prove lifecycle-triggered synchronization, selection-only multi-CKB fan-out, and provider cutover before vector/hybrid retrieval. |
-| T-010 | High / medium         | A configured “local” endpoint is remote, malicious, or impersonated.                                                                   | Explicit endpoint policy and structured provider boundary; literal loopback host checks for the `local` company.                                                                       | Display and approve exact endpoint/trust identity; define authentication and certificate expectations.                           |
-| T-011 | High / medium         | A dependency, build workflow, installer, or update path executes with local access.                                                    | Pinned dependencies, lockfile review, secret/license scans, checksums, platform builds, SBOM.                                                                                          | Add signed installers, provenance, verified update/rollback, and release-key procedures.                                         |
-| T-012 | High / medium         | A subscription runtime loads tools, repository instructions, plugins, or account configuration beyond the request.                     | Empty temporary directory, disabled tools/customizations/MCP/web, bounded output, rejected tool events, no OAuth copy.                                                                 | Keep experimental until vendor terms, retention, and enforceable budgets are acceptance-tested.                                  |
-| T-013 | High / medium         | Plaintext managed bytes or a copied CKB remain after the original or workspace is deleted.                                             | Opaque names; logical identity separate from host paths; explicit six-class retention policy; destination-approved portable export and restore exclude machine-local state.              | Same-user access remains possible; exported and restored copies need independent deletion, while derived-data cleanup remains unimplemented. |
-| T-022 | High / medium         | A malformed, traversing, incomplete, or modified backup is accepted as a safe restore source, or export/restore overwrites an unrelated destination. | Strict manifest/version and safe-relative-name validation; bounded complete inventory; manifest/object hashes; symlink rejection; repeat inspection; explicit fail-if-existing publication. | Checksums do not authenticate the producer; merge/replace is unsupported, and unknown or unowned partial destinations are preserved. |
-| T-014 | High / medium         | A label/checksum leaks information, duplicate evidence is treated as identity, or a configuration-like file becomes instruction.       | Content-free projections omit labels/checksums; duplicate signals are read-only and one-CKB-scoped; all candidate files remain inert data.                                             | Keep UI and diagnostics separate; require explicit lifecycle decisions and adversarial filename tests.                           |
-| T-015 | High / medium         | A selected file changes during validation, copying, rebind, or one-source move.                                                        | Regular-file/type/size checks, stable capture, extraction, immutable copy, checksum/size verification, exact latest-version match, guarded handle.                                     | Same-user mutation races cannot be eliminated; retain boundary regression tests.                                                 |
-| T-016 | Medium / high         | A crash or concurrent writer leaves an unreferenced blob or metadata without verified bytes.                                           | File-first/database-second publication, no-replace targets, managed markers, versioned owned-write records, durable recovery claims, fenced lease takeover, and deterministic retry.     | Legacy, unjournaled, mismatched, and unrecognized residue remains unknown and requires a separate user-visible decision.         |
-| T-017 | Medium / medium       | Inventory leaks entry identity or is mistaken for cleanup authority.                                                                   | Bounded counts only; no names, IDs, paths, checksums, content, unknown-byte reads, recursion, symlink following, mutation, or provider exposure.                                       | Counts still reveal limited shape; scan limits can be incomplete and require separate diagnostics policy.                        |
-| T-018 | Medium / medium       | A journal entry, matching bytes, or staging-shaped name is mistaken for ownership.                                                     | Recovery and retention require versioned ownership evidence; expiry plans and confirmed deletion act only on verified committed managed versions and preserve unknown or unmanaged data. | Keep exact-plan confirmation, under-lease revalidation, fail-closed blockers, and interruption recovery covered at every destructive boundary. |
-| T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state; retrieval rebuilds exact-version indexes and source-version deletion invalidates derived rows. Confirmed deletion is separately limited to archived non-default CKBs. | Reactivation remains future work; same-user mutation races are bounded but cannot be eliminated. |
-| T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
-| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, accepts a replaced store, continues after lifecycle drift, or leaks a local store root through history. | Bindings pin logical identities; new runs record canonical path-free snapshots, provider-capable operations revalidate complete entries, and retrieval binds every query to exact selected versions while storing content-free traces. | Cross-store validation is not atomic; same-user writes can race the final check. |
+| ID    | Severity / confidence | Threat                                                                                                                                     | Current control                                                                                                                                                                                     | Residual risk / follow-up                                                                                         |
+| ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| T-001 | High / high           | A file or fetched page injects instructions that produce unsupported claims or disclosure                                                  | Delimited source data, structured model ports, deterministic validation, bounded context, no autonomous tools. The hosted service adds screening and quarantine (below).                            | Keep adversarial fixtures for every source type, and review before enabling tools                                 |
+| T-002 | High / high           | Sensitive material reaches an unapproved provider, model, endpoint or scope                                                                | `DataExposurePolicy`, explicit per-command approval, corpus exclusion, fail-closed stale policy. On the server, recorded transmission consent.                                                      | Keep provider-retention disclosures accurate                                                                      |
+| T-003 | High / medium         | Prompts, responses, sources, credentials or confidential terms leak through logs, tests, diagnostics or errors                             | Allowlisted `contentRedacted` events, deterministic credential redaction, normalized errors, synthetic fixtures, safe-payload assertions                                                            | Route every diagnostic path through the allowlist, and add confidential-term rules                                |
+| T-004 | Retired               | A compromised desktop renderer steals a stored provider credential                                                                         | Retired with the v0.8 desktop on 2026-11-04. The desktop client holds no provider keys.                                                                                                             | Desktop client review in #2135                                                                                    |
+| T-005 | High / medium         | URL intake reaches a private service, an unsafe redirect, an excessive response or malicious markup                                        | HTTPS, literal and resolved-address checks, a connection pinned to the checked address, manual redirects with each hop re-checked, caps, content restrictions, exact-byte checks, URL-free failures | Continue redirect, parser and egress tests                                                                        |
+| T-006 | High / medium         | A generated link, image, HTML fragment or export fetches remote content or spoofs trusted content                                          | Controlled rendering and visible export approval; external submission is out of scope                                                                                                               | Sanitize links and images, disable active content, and test supported viewers                                     |
+| T-007 | Medium / high         | A provider, critic, malformed response or retry policy causes an unbounded loop or cost spike                                              | Round, cost, duration and attempt budgets; a per-call cost guard; bounded adapter retries; cancellation is non-retryable                                                                            | Keep deterministic timeout and restart tests                                                                      |
+| T-008 | High / medium         | Data stays readable after a user believes history or a copy was deleted                                                                    | Explicit local purge, backup operations, content-free diagnostics, documented retention limits                                                                                                      | Define coverage for FTS, exports, backups, temp files and CKB copies on every platform                            |
+| T-009 | High / medium         | Retrieval mixes workspaces, serves stale chunks, or keeps derived data after source deletion                                               | Workspace-scoped legacy queries; exact-version CKB indexes behind strict single-CKB scopes (migration 25); whole-projection invalidation on deletion; visible drift; content-free traces            | Prove lifecycle-triggered synchronization before vector or hybrid retrieval becomes a default                     |
+| T-010 | High / medium         | A configured "local" endpoint is remote, malicious or impersonated                                                                         | Explicit endpoint policy; literal loopback host checks for the `local` company                                                                                                                      | Show and approve the exact endpoint identity; define authentication and certificate expectations                  |
+| T-011 | High / medium         | A dependency, build workflow, installer or update path runs with local access                                                              | Pinned dependencies, lockfile review, secret and license scans, checksums, platform builds, SBOM; the desktop client's release check never downloads                                                | Add signed installers, provenance, verified update and rollback, and release-key procedures                       |
+| T-012 | High / medium         | A subscription runtime loads tools, repository instructions, plugins or account settings beyond the request                                | Empty temporary directory, disabled tools, customizations, MCP and web, bounded output, rejected tool events, no OAuth copy                                                                         | Keep experimental until vendor terms, retention and enforceable budgets are tested                                |
+| T-013 | High / medium         | Plaintext managed bytes or a copied CKB remain after the original or workspace is deleted                                                  | Opaque names; identity separate from paths; a six-class retention policy; destination-approved export and restore exclude machine-local state                                                       | Same-user access remains; exported and restored copies need their own deletion; derived-data cleanup is not built |
+| T-014 | High / medium         | A label or checksum leaks information, a duplicate is treated as identity, or a config-like file becomes an instruction                    | Content-free projections omit labels and checksums; duplicate signals are read-only and per CKB; every candidate file is inert data                                                                 | Keep the screens and diagnostics separate; adversarial filename tests                                             |
+| T-015 | High / medium         | A selected file changes during validation, copying, rebind or move                                                                         | Regular-file, type and size checks, stable capture, immutable copy, checksum and size verification, exact latest-version match, a guarded handle                                                    | Same-user races cannot be eliminated; keep boundary tests                                                         |
+| T-016 | Medium / high         | A crash or concurrent writer leaves an unreferenced blob, or metadata without verified bytes                                               | File first and database second, no-replace targets, managed markers, versioned write records, durable recovery claims, fenced lease takeover, deterministic retry                                   | Legacy, unjournaled and unknown residue needs a separate visible decision                                         |
+| T-017 | Medium / medium       | Inventory leaks entry identity, or is mistaken for cleanup authority                                                                       | Bounded counts only; no names, IDs, paths, checksums, content, unknown-byte reads, recursion, symlink following, mutation or provider exposure                                                      | Counts still reveal limited shape; scan limits can leave it incomplete                                            |
+| T-018 | Medium / medium       | A journal entry, matching bytes or a staging-shaped name is mistaken for ownership                                                         | Recovery and retention need versioned ownership evidence; expiry plans and confirmed deletion act only on verified committed versions                                                               | Keep exact-plan confirmation, under-lease revalidation and interruption recovery at every destructive boundary    |
+| T-019 | High / medium         | A retired or ineligible source stays selectable, or retirement is presented as deletion                                                    | Immutable retirement and a path-free readiness projection block ineligible state; deletion invalidates derived rows; confirmed deletion is limited to archived non-default CKBs                     | Reactivation is future work; same-user races remain                                                               |
+| T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special or hidden files, exceeds limits, or writes after a failed preflight | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete preflight, guarded rebind and move                                                             | Same-user races remain; automatic reconciliation and deletion are deferred                                        |
+| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous scope, accepts a replaced store, continues after drift, or leaks a store root          | Bindings pin logical identities; runs record path-free snapshots; provider-capable steps revalidate; retrieval binds to exact versions with content-free traces                                     | Cross-store validation is not atomic; same-user writes can race the final check                                   |
+| T-022 | High / medium         | A malformed, traversing, incomplete or modified backup is accepted, or export or restore overwrites an unrelated destination               | Strict manifest and safe-name validation; complete bounded inventory; manifest and object hashes; symlink rejection; repeat inspection; fail-if-existing publication                                | Checksums do not authenticate the producer; merge and replace are unsupported                                     |
 
 ## Hosted service: prompt injection through job posts and uploads
 
-A job post comes from a third party, and an upload may come from one. Either
-can carry text that tries to steer the author or critic: override earlier
+A job post comes from a third party, and an upload may too. Either can carry
+text that tries to steer the author or critic. It may override earlier
 instructions, change the model's role, hide text from the reader, or plant a
 link that exfiltrates the draft. The hosted service (ADR 0011, phase 2d) stops
 such text before a model reads it. Screening is detection, not proof, so the
 grounding checks and the candidate's approval stay in place behind it.
 
+The routes and storage are in
+[Hosted service](../architecture/hosted-service.md#intake-screening).
+
 ### Controls
 
 - **Rule screener.** A deterministic screener in `packages/ingestion` always
-  runs. It folds invisible characters, full-width forms, accents and Unicode
-  tag characters before matching English and French patterns, and reports
-  closed signal codes: instruction override, role change, hidden text and
-  exfiltration link. It makes no model call.
+  runs. It folds invisible characters, full-width forms, accents and Unicode tag
+  characters before matching English and French patterns. It reports closed
+  signal codes: instruction override, role change, hidden text and exfiltration
+  link. It makes no model call.
 - **Model screener.** With `DRAFT_LOOP_SCREENING=rules+model`, Claude Haiku 5.5
-  on the EU Vertex route also classifies the text. A job post always goes to
-  it. A candidate source goes only when the deployment allows provider data and
-  the record's consent names Anthropic.
+  on the EU Vertex route also classifies the text. A job post always goes to it.
+  A candidate source goes only when the deployment allows provider data and the
+  record's consent names Anthropic.
 - **Fail closed.** A screener that fails, or an upload with no readable text,
   leaves the result `unscreened`, which is quarantined like `flagged`.
 - **Quarantine.** The API refuses a run on quarantined material with 409
   `material_quarantined`. The worker asks the same question as it claims each
   job, so material flagged after queueing pauses the run before any provider
   call.
-- **No result is not clear.** With screening on, the run gate and the worker
-  also treat material with no stored result as needing screening: a brief
-  source or knowledge source version that was saved while screening was `off`,
-  predates screening, or lost its result write. The API refuses the run with
-  409 `material_unscreened` and lists the subjects by ids; saving the brief or
-  uploading the file again screens it. The worker pauses the run the same way.
-- **Release with audit.** Only an owner or admin releases a result, once, with
-  a written reason. The release covers that result only, so a later flag
-  quarantines the text again. It appends a `content-screening.released` audit
-  event that holds the result and member ids and no text.
+- **No result is not clear.** With screening on, material with no stored result
+  also needs screening. That covers a source saved while screening was `off`, one
+  that predates screening, and one whose result write failed. The API answers 409
+  `material_unscreened`, and the worker pauses the run the same way.
+- **Release with audit.** Only an owner or admin releases a result, once, with a
+  written reason. A later flag quarantines the text again. The release appends a
+  `content-screening.released` audit event, with ids and no text.
 - **Content-free alerts.** Quarantine, release, a paused run and a refused
-  access each log one `WARNING` with ids and closed codes, never the text, a
-  file name or a release reason.
-- **Evidence.** A red-team flow test runs the synthetic corpus through the API:
-  every injected case, as a job post and as an upload, is quarantined by the
-  rule screener and no clean case is. A run on quarantined material is refused,
+  access each log one `WARNING`, with ids and closed codes only.
+- **Evidence.** A red-team flow test runs the synthetic corpus through the API.
+  Every injected case, as a job post and as an upload, is quarantined by the
+  rule screener, and no clean case is. A run on quarantined material is refused,
   a queued run pauses with no author or critic call, and one release lets a run
   finish with its audit event.
 
@@ -375,74 +230,89 @@ grounding checks and the candidate's approval stay in place behind it.
 
 - **The worker reads its own text.** The API screens the text it extracts from
   an upload, and the worker may extract slightly different text from the same
-  file. The worker screens nothing; it only checks the stored results. Screening
-  the exact text the worker reads is a follow-up.
+  file. The worker screens nothing and only checks stored results. Screening the
+  exact text the worker reads is a follow-up.
 - **Model screening is not deployed everywhere.** It runs only where Claude on
-  Vertex AI in the EU is available to the API. Staging and production keep the
-  rules mode until Claude works on Vertex there, so paraphrased or other-language
-  injection is not caught by a model.
-- **Brief edits are not re-screened.** Edits to a reviewed brief are typed by
-  a member and go to the author unscreened.
+  Vertex AI in the EU is available to the API. Staging and production keep rules
+  mode until then, so paraphrased or other-language injection is not caught by a
+  model.
+- **Brief edits are not re-screened.** A member types them, and they reach the
+  author unscreened.
 - **Prompts are unchanged.** The author and critic prompts carry no extra
-  hardening until a D16 evaluation run shows that a change does not cost
-  quality. Delimited source data, schema-only outputs and grounding validation
-  remain the second line.
+  hardening until a D16 evaluation run shows it does not cost quality. Delimited
+  source data, schema-only outputs and grounding validation are the second line.
 
 ## Runtime and build-time controls
 
-Runtime controls are deny-by-default provider egress, a durable fingerprinted
-transmission acknowledgement revalidated before every live start/resume/revision,
-explicit URL and local-file approval, validated bridge commands, credential
-protection with a documented fallback, provider-diversity visibility, bounded
-orchestration, structured outputs, source references, human approval, local
-retention, and content-free operational events. These controls reduce impact;
-they do not make model output or the local machine authoritative.
+**Runtime controls** reduce impact. They do not make model output or the local
+machine authoritative.
 
-The `local` provider company is accepted only for an `http` or `https` endpoint
-whose literal host is `localhost`, `::1`, or in `127.0.0.0/8`, without embedded
-credentials. Hosts that merely resolve to loopback are rejected. Workspace
-configuration is checked at creation and load so a hand-edited endpoint cannot
-silently change its trust classification.
+- **Egress.** Provider egress is denied by default.
+- **Approvals.** Every transmitting command needs explicit approval. On the
+  server, the start, resume or revision needs recorded consent.
+- **Intake.** URL and local-file intake need explicit approval.
+- **Visibility.** Provider diversity is visible.
+- **The loop.** Orchestration is bounded, with structured outputs, source
+  references and human approval.
+- **Data.** Retention is local, and operational events are content-free.
 
-The CKB path, selected roots, and manual-append paths are local configuration.
-Only deliberate sensitive local tables retain origins, URL provenance, root
-bindings, labels, or membership hashes. No CKB data is provider data, and no
-file shape is ownership proof. Root rebind and one-source member move use
-bounded scans and stable final verification; target paths stay runtime-only.
+**The `local` company** is accepted only for an `http` or `https` endpoint
+whose literal host is `localhost`, `::1` or in `127.0.0.0/8`, without embedded
+credentials.
 
-Build-time controls are strict TypeScript, schema validation, linting,
-deterministic tests, lockfile review, secret-free fixtures, security scans,
-release contract tests, checksums, SBOM generation, and evaluation regression
-tests. CI must fail when redaction, storage, provider-policy, URL-ingestion,
-credential-boundary, or quality invariants regress.
+- **Literal hosts only.** A host that merely resolves to loopback is rejected.
+- **Checked on create and load.** The workspace configuration is checked at
+  creation and at load, so a hand-edited endpoint cannot silently change trust.
+
+**CKB configuration.** The store path, selected roots and manual-append paths
+are local configuration.
+
+- **Sensitive tables only.** Origins, URL provenance, root bindings, labels and
+  membership hashes live only in deliberate sensitive local tables.
+- **Not provider data.** No CKB data is provider data, and no file shape proves
+  ownership.
+- **Runtime-only targets.** Root rebind and member move use bounded scans and a
+  stable final check, and their target paths stay runtime-only.
+
+**Build-time controls.**
+
+- strict TypeScript and schema validation
+- linting and deterministic tests
+- lockfile review and secret-free fixtures
+- security scans and release contract tests
+- checksums and SBOM generation
+- evaluation regression tests
+
+CI must fail when a redaction, storage, provider-policy, URL-ingestion,
+credential-boundary or quality invariant regresses.
 
 ## Open risks and review triggers
 
-The following remain open during the current stage:
+These risks remain open now:
 
-- Provider-specific retention and training settings need verification and
-  accurate user-facing disclosure.
-- Desktop credentials and transmission preflight need supported-platform
-  acceptance, including acknowledgement persistence, invalidation, OS-store
-  availability, and fallback behavior.
-- URL fetching needs continuing SSRF, redirect, DNS, parser, and content-egress
-  review whenever supported sources or formats expand.
-- Retrieval deletion, rebuild, provenance, and workspace isolation need
-  integrated proof before vector or hybrid retrieval is enabled by default.
-- Automatic moved-origin inference, automatic retirement, retrieval integration,
-  cross-store writer coordination, background refresh, and general cleanup or
-  secure erasure beyond verified CKB-owned data remain deferred.
-- Plaintext permissions, copied stores, missing/corrupt blobs, writer
-  coordination, cleanup approval, migration rollback, and backup destinations
-  require explicit policy and platform evidence.
-- Signed desktop updates, installer permissions, and release-key response need
-  a separate deployment review.
-- Cloud sync, accounts, multi-tenancy, remote retrieval, browser access,
-  autonomous tools, and job submission each add trust boundaries and require a
-  new review.
+- **Server boundaries.** The self-hosted server, the hosted service, the desktop
+  client and the agent channel need their own threat analysis (#2135).
+- **Provider terms.** Provider retention and training settings need
+  verification, and accurate disclosure to users.
+- **URL fetching** needs continuing SSRF, redirect, DNS, parser and egress review
+  whenever sources or formats expand.
+- **Retrieval.** Deletion, rebuild, provenance and workspace isolation need
+  integrated proof before vector or hybrid retrieval becomes a default.
+- **Deferred CKB work.** Automatic move inference, automatic retirement,
+  cross-store writer coordination, background refresh, and cleanup or secure
+  erasure beyond verified CKB-owned data.
+- **Local storage policy.** Plaintext permissions, copied stores, missing or
+  corrupt blobs, writer coordination, cleanup approval, migration rollback and
+  backup destinations need explicit policy and platform evidence.
+- **Releases.** Signed desktop client updates, installer permissions and
+  release-key response need a deployment review.
 
-See [privacy and evaluation](privacy-and-evaluation.md) for retention,
-redaction, logging, and evaluation policy. See [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md)
-for the CKB implementation contract, [ADR 0004](../adr/0004-desktop-credential-boundary.md)
-for desktop credentials, and [architecture](../architecture/overview.md) for system
-boundaries.
+Each new trust boundary needs a review before it ships. Examples are remote
+retrieval, browser access, autonomous tools and job submission.
+
+Related pages:
+
+- [Privacy and evaluation](privacy-and-evaluation.md): retention, redaction,
+  logging and evaluation
+- [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md): the CKB contract
+- [Architecture overview](../architecture/overview.md): system boundaries
