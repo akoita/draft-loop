@@ -36,6 +36,10 @@
       "types": "./src/work-journal-panel.tsx",
       "import": "./src/work-journal-panel.tsx"
     },
+    "./work-journal-pending": {
+      "types": "./src/work-journal-pending.tsx",
+      "import": "./src/work-journal-pending.tsx"
+    },
     "./*": {
       "types": "./src/*.ts",
       "import": "./src/*.ts"

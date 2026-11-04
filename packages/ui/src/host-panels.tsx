@@ -19,6 +19,16 @@ export interface HostPanels {
    * `null` to lift it.
    */
   readonly startDialog?: (context: StartDialogContext) => ReactNode;
+  /**
+   * Shown inside Home's Career evidence card, such as the work journal notes that wait for review.
+   * `openEvidence` opens the Career evidence page.
+   */
+  readonly homeEvidence?: (context: HomeEvidenceContext) => ReactNode;
+}
+
+/** What the host's panel in Home's Career evidence card is given. */
+export interface HomeEvidenceContext {
+  readonly openEvidence: () => void;
 }
 
 /** What the host's Start confirmation panel is given. */
@@ -43,4 +53,9 @@ export function HostEvidenceAfter({ revision }: { readonly revision: number }) {
 /** The host's panel in the Start confirmation; nothing without one. */
 export function HostStartDialog(context: StartDialogContext) {
   return useContext(HostPanelsContext).startDialog?.(context) ?? null;
+}
+
+/** The host's panel in Home's Career evidence card; nothing without one. */
+export function HostHomeEvidence(context: HomeEvidenceContext) {
+  return useContext(HostPanelsContext).homeEvidence?.(context) ?? null;
 }
