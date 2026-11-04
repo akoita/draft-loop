@@ -109,6 +109,11 @@ export function composeHostedApplication(
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
     workJournal: createWorkJournalService({ store: storage.workJournalNotes, tenantId }),
     sourceEvidenceKinds: storage,
+    careerInterview: {
+      sessions: storage.careerInterviewSessions,
+      allowProviderData: parts.screening?.allowProviderData ?? false,
+      ...(parts.screening?.claudeRoute === undefined ? {} : { route: parts.screening.claudeRoute }),
+    },
     knowledgeStore: {
       id: hostedKnowledgeStoreId,
       reference: hostedKnowledgeStoreReference(tenantId, hostedKnowledgeStoreId),

@@ -106,6 +106,72 @@ export interface ApiSchemas {
     readonly issuer: string;
     readonly clientId: string;
   };
+  "CareerInterviewActionInput": {
+    readonly action: "accept";
+    readonly topic_key: string;
+  } | {
+    readonly action: "decline";
+    readonly topic_key: string;
+  } | {
+    readonly action: "own_subject";
+    readonly subject: string;
+  } | {
+    readonly action: "answer";
+    readonly topic_key: string;
+    readonly text?: string;
+    readonly mark?: "skipped" | "unknown";
+  } | {
+    readonly action: "confirm";
+    readonly topic_key: string;
+    readonly knowledge_base_id: string;
+    readonly tier?: "normal" | "sensitive" | "never-share";
+    readonly summary?: string;
+  } | {
+    readonly action: "set_aside";
+    readonly topic_key: string;
+  } | {
+    readonly action: "pause";
+  } | {
+    readonly action: "close";
+  };
+  "CareerInterviewConflicts": {
+    readonly conflicts: readonly ({
+      readonly kind: "date";
+      readonly summary_value: string;
+      readonly fact_id: string;
+      readonly fact_value: string;
+    })[];
+  };
+  "CareerInterviewSessionView": {
+    readonly session: {
+      readonly id: string;
+      readonly workspace_id: string;
+      readonly status: "open" | "paused" | "closed";
+      readonly topics: readonly ({
+        readonly key: string;
+        readonly kind: "role-gap" | "untold-period" | "untold-theme" | "application-relevance" | "candidate-subject";
+        readonly reason: string;
+        readonly status: "proposed" | "declined" | "open" | "summarised" | "closed";
+        readonly fact_ids: readonly (string)[];
+        readonly requirement_ids: readonly (string)[];
+        readonly turns: readonly ({
+          readonly role: "interviewer" | "candidate";
+          readonly text: string;
+          readonly mark?: "skipped" | "unknown";
+          readonly at: string;
+        })[];
+        readonly summary?: string;
+      })[];
+      readonly model?: {
+        readonly provider: string;
+        readonly model: string;
+      };
+      readonly created_at: string;
+      readonly updated_at: string;
+    };
+    readonly proposal: string;
+    readonly published_source_id?: string;
+  };
   "CareerProfile": {
     readonly workspaceId: string;
     readonly checksum: string;
@@ -1872,6 +1938,37 @@ export interface ApiOperations {
       readonly enabled: boolean;
     };
     readonly response: ApiSchemas["WorkJournalIntake"];
+  };
+  "POST /v1/workspaces/{workspaceId}/career-interview/sessions": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["CareerInterviewSessionView"];
+  };
+  "GET /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly sessionId: string;
+    };
+    readonly response: ApiSchemas["CareerInterviewSessionView"];
+  };
+  "GET /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/conflicts": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly sessionId: string;
+    };
+    readonly query: {
+      readonly topic_key: string;
+    };
+    readonly response: ApiSchemas["CareerInterviewConflicts"];
+  };
+  "POST /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/actions": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly sessionId: string;
+    };
+    readonly body: ApiSchemas["CareerInterviewActionInput"];
+    readonly response: ApiSchemas["CareerInterviewSessionView"];
   };
   "POST /v1/workspaces/{workspaceId}/agent-tokens": {
     readonly path: {

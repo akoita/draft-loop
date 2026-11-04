@@ -43,6 +43,11 @@ export interface ContentScreeningSetup {
   readonly rules: ContentScreener;
   /** Present with `rules+model`. */
   readonly model?: ModelScreenerFactory;
+  /**
+   * The API's Claude route, present with `rules+model`; the guided career interview (#1030) calls
+   * its own model on it.
+   */
+  readonly claudeRoute?: AnthropicRouteBuilder;
   readonly now?: () => string;
 }
 
@@ -109,6 +114,7 @@ export function contentScreeningSetup(
     mode,
     allowProviderData,
     rules,
+    claudeRoute: route,
     model: (options) =>
       createHostedContentScreener(route, {
         ...options,
