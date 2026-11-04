@@ -144,7 +144,7 @@ describe("self-hosted smoke", () => {
 });
 
 describe("Self-hosted stack CI job", () => {
-  it("runs the smoke on every pull request", async () => {
+  it("runs the smoke on pull requests that can reach the stack", async () => {
     const ci = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
     const job = ci.match(/\n {2}self-hosted-stack:\n([\s\S]*?)(?=\n {2}[a-z-]+:\n|$)/u);
     assert.ok(job, "ci.yml defines the self-hosted-stack job");

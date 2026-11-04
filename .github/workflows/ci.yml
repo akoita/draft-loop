@@ -9,7 +9,36 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  # Decides which jobs this change needs (scripts/ci-scope.mjs): tests run for the packages a
+  # pull request touches and the packages that depend on them. Pushes to main run everything.
+  scope:
+    name: Change scope
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      run_all: ${{ steps.scope.outputs.run_all }}
+      tests: ${{ steps.scope.outputs.tests }}
+      packages: ${{ steps.scope.outputs.packages }}
+      server_storage: ${{ steps.scope.outputs.server_storage }}
+      self_hosted: ${{ steps.scope.outputs.self_hosted }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Test the change scope
+        run: node --test scripts/ci-scope.test.mjs
+      - name: Decide what the change reaches
+        id: scope
+        run: node scripts/ci-scope.mjs >> "$GITHUB_OUTPUT"
+
+  static-checks:
+    name: Static checks
+    needs: scope
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -27,15 +56,80 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check formatting
         run: pnpm format:check
+      - name: Lint the docs
+        if: needs.scope.outputs.docs_only == 'true'
+        run: pnpm lint:docs
       - name: Lint
+        if: needs.scope.outputs.docs_only != 'true'
         run: pnpm lint
       - name: Typecheck
+        if: needs.scope.outputs.docs_only != 'true'
         run: pnpm typecheck
-      - name: Test
-        run: pnpm test
+
+  tests:
+    name: Tests
+    needs: scope
+    if: needs.scope.outputs.tests == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4.4.0
+        with:
+          version: 10.18.3
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test every package
+        if: needs.scope.outputs.run_all == 'true'
+        run: pnpm exec vitest run
+      - name: Test the affected packages
+        if: needs.scope.outputs.run_all != 'true' && needs.scope.outputs.packages != ''
+        env:
+          PACKAGES: ${{ needs.scope.outputs.packages }}
+        # Word splitting is intended: PACKAGES is a space-separated list of package folders.
+        run: pnpm exec vitest run --passWithNoTests $PACKAGES
+      - name: Test the release and CI tooling
+        run: pnpm test:release
+
+  # The required check. It always reports, so a job skipped by scope never blocks a merge.
+  validate:
+    name: validate
+    needs: [scope, static-checks, tests, server-storage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job the change needs to pass
+        env:
+          SCOPE: ${{ needs.scope.result }}
+          STATIC: ${{ needs.static-checks.result }}
+          TESTS: ${{ needs.tests.result }}
+          TESTS_NEEDED: ${{ needs.scope.outputs.tests }}
+          STORAGE: ${{ needs.server-storage.result }}
+          STORAGE_NEEDED: ${{ needs.scope.outputs.server_storage }}
+        run: |
+          check() {
+            if [ "$2" = true ]; then want=success; else want=skipped; fi
+            if [ "$3" != "$want" ]; then
+              echo "::error::$1 ended $3; this change needs it to be $want."
+              exit 1
+            fi
+            echo "$1: $3"
+          }
+          check "Change scope" true "$SCOPE"
+          check "Static checks" true "$STATIC"
+          check "Tests" "$TESTS_NEEDED" "$TESTS"
+          check "Server storage" "$STORAGE_NEEDED" "$STORAGE"
 
   server-storage:
     name: Server storage
+    needs: scope
+    if: needs.scope.outputs.server_storage == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -85,6 +179,8 @@ jobs:
   # Not required yet (#2053): it becomes a required check once it has stayed green for a while.
   self-hosted-stack:
     name: Self-hosted stack
+    needs: scope
+    if: needs.scope.outputs.self_hosted == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

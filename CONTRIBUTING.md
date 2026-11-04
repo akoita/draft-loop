@@ -31,6 +31,27 @@ for its exact plan, as described in
 [docs/operations/releasing.md](docs/operations/releasing.md#live-provider-checks-manual).
 No paid check runs in CI.
 
+## What CI runs on a pull request
+
+CI runs only what a change can reach. The Change scope job decides, using
+[`scripts/ci-scope.mjs`](scripts/ci-scope.mjs):
+
+| Change | What runs |
+| --- | --- |
+| Docs only (`docs/`, root Markdown files, issue and PR templates) | formatting and Markdown lint |
+| A workspace package under `apps/` or `packages/` | static checks, then tests for that package and every package that depends on it |
+| `deploy/`, Compose files or a Dockerfile | static checks, tooling tests and the Self-hosted stack |
+| The toolchain, `ci.yml`, or a path the script does not know | everything |
+
+Static checks (formatting, lint and typecheck) always cover the whole
+repository. Every push to `main` runs everything. The required check
+`validate` is a gate job that reports on every pull request, so a skipped job
+never blocks a merge.
+
+When CI skipped a package you expected it to test, check its `package.json`
+declares the workspace dependency. Then add the case to
+[`scripts/ci-scope.test.mjs`](scripts/ci-scope.test.mjs).
+
 ## Pull requests
 
 Explain the user-visible or architectural effect, identify privacy and provider
