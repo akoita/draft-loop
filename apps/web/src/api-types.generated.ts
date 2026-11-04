@@ -1,6 +1,12 @@
 // Generated from apps/api/openapi.json by `pnpm --filter @draft-loop/web api-types`. Do not edit.
 
 export interface ApiSchemas {
+  "AgentToken": {
+    readonly id: string;
+    readonly label: string;
+    readonly created_at: string;
+    readonly revoked_at?: string;
+  };
   "ApiError": {
     readonly error: {
       readonly code: string;
@@ -227,6 +233,13 @@ export interface ApiSchemas {
   };
   "Health": {
     readonly status: "ok";
+  };
+  "IssuedAgentToken": {
+    readonly id: string;
+    readonly label: string;
+    readonly created_at: string;
+    readonly revoked_at?: string;
+    readonly token: string;
   };
   "KnowledgeBase": {
     readonly id: string;
@@ -1849,6 +1862,30 @@ export interface ApiOperations {
       readonly enabled: boolean;
     };
     readonly response: ApiSchemas["WorkJournalIntake"];
+  };
+  "POST /v1/workspaces/{workspaceId}/agent-tokens": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly label: string;
+    };
+    readonly response: ApiSchemas["IssuedAgentToken"];
+  };
+  "GET /v1/workspaces/{workspaceId}/agent-tokens": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly tokens: readonly (ApiSchemas["AgentToken"])[];
+    };
+  };
+  "DELETE /v1/workspaces/{workspaceId}/agent-tokens/{tokenId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly tokenId: string;
+    };
+    readonly response: void;
   };
   "GET /v1/workspaces/{workspaceId}/archive": {
     readonly path: {

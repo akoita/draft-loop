@@ -1,6 +1,12 @@
+import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { JWTVerifyGetKey } from "jose";
 
+import {
+  authenticateAgentToken,
+  isAgentRequestAllowed,
+  isAgentTokenShape,
+} from "./agent-token-auth.js";
 import { apiError } from "./errors.js";
 import {
   IdentityProviderUnavailableError,
@@ -122,10 +128,14 @@ export function registerRequestAuthentication(
   app: FastifyInstance,
   ownerToken: string,
   auth: ApiAuthOptions = { mode: "owner" },
+  /** The owner tenant's agent tokens (#2159); owner mode accepts them on the work journal only. */
+  agentTokens?: AgentTokenStore,
 ): void {
   const authenticate = authenticatorFor(ownerToken, auth);
   const authenticateOperator = ownerAuthenticator(ownerToken);
+  const agents = auth.mode === "owner" ? agentTokens : undefined;
   app.decorateRequest("caller", undefined);
+  app.decorateRequest("agentToken", undefined);
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     if (isPublicRequest(request.routeOptions.url, request.url)) return;
     const operator = isOperatorRequest(request.routeOptions.url, request.url);
@@ -141,6 +151,32 @@ export function registerRequestAuthentication(
         .code(503)
         .send(apiError("identity_provider_unavailable", "Sign-in is unavailable; retry later."));
       return;
+    }
+    const presented = bearerToken(request.headers.authorization);
+    if (
+      authentication.outcome === "unauthenticated" &&
+      !operator &&
+      agents !== undefined &&
+      presented !== undefined &&
+      isAgentTokenShape(presented)
+    ) {
+      const agent = await authenticateAgentToken(agents, presented);
+      if (agent.outcome === "agent") {
+        if (!isAgentRequestAllowed(request, agent.workspaceId)) {
+          request.log.info({ agentTokenId: agent.id }, "agent token refused on this route");
+          await reply
+            .code(403)
+            .send(
+              apiError("forbidden", "An agent token reaches only its workspace's work journal."),
+            );
+          return;
+        }
+        // It acts in the owner's tenant, on the two work journal routes checked above only.
+        request.caller = { kind: "owner" };
+        request.agentToken = { id: agent.id, workspaceId: agent.workspaceId };
+        return;
+      }
+      authentication = agent;
     }
     if (authentication.outcome === "authenticated") {
       request.caller = authentication.caller;
