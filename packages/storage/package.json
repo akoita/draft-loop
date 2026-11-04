@@ -118,6 +118,10 @@
     "./work-journal-notes": {
       "types": "./src/work-journal-notes.ts",
       "import": "./src/work-journal-notes.ts"
+    },
+    "./agent-tokens": {
+      "types": "./src/agent-tokens.ts",
+      "import": "./src/agent-tokens.ts"
     }
   },
   "files": [
