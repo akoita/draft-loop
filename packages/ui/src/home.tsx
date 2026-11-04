@@ -53,6 +53,7 @@ import {
   profileStatusPresentation,
   readHomeProfile,
 } from "./home-model.js";
+import { HostHomeEvidence } from "./host-panels.js";
 import { useInlineRename } from "./inline-rename.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
@@ -676,6 +677,7 @@ export function HomeView({
               {evidenceView.detail === "" ? null : (
                 <p className="home-card-copy">{evidenceView.detail}</p>
               )}
+              <HostHomeEvidence openEvidence={onManageEvidence} />
             </SummaryCard>
             <SummaryCard
               id="home-profile-title"

@@ -2,13 +2,14 @@ import type { HostPanels } from "@draft-loop/ui/host-panels";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { EvidenceSections, StoragePermissionPanel } from "./evidence-panels.js";
+import { HomeWorkJournal } from "./home-work-journal.js";
 import { StartPanel } from "./start-panels.js";
 
 /**
  * What the web adds to the shared screens. In sign-in mode, where the server enforces consent and
  * credits, the storage permission above the Career evidence and the consent and credit cost in
  * the Start dialog; in both modes the evidence page's file checks and private-section rules; with
- * the owner token, the work journal review (#2024).
+ * the owner token, the work journal review (#2024) and its waiting notes on Home (#2151).
  */
 export function webHostPanels(
   client: ApiClient,
@@ -25,5 +26,12 @@ export function webHostPanels(
     evidenceAfter: ({ revision }) => (
       <EvidenceSections client={client} revision={revision} workJournal={mode === "owner"} />
     ),
+    ...(mode === "owner"
+      ? {
+          homeEvidence: ({ openEvidence }) => (
+            <HomeWorkJournal client={client} openEvidence={openEvidence} />
+          ),
+        }
+      : {}),
   };
 }
