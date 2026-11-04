@@ -30,6 +30,9 @@ describe("health", () => {
 
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     expect(response.headers["strict-transport-security"]).toBeDefined();
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["x-frame-options"]).toBe("SAMEORIGIN");
+    expect(String(response.headers["content-security-policy"])).toContain("frame-ancestors 'none'");
   });
 });
 

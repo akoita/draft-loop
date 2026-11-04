@@ -41,6 +41,9 @@ describe("web screen", () => {
     expect(policy).toContain("connect-src 'self'");
     expect(policy).toContain("frame-ancestors 'none'");
     expect(policy).not.toContain("unsafe-inline");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["x-frame-options"]).toBe("SAMEORIGIN");
   });
 
   it("serves hashed assets as immutable", async () => {
