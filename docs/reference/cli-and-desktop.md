@@ -1530,4 +1530,3 @@ status badge, the basis, the rationale, and the cited blocks, which jump to the
 block when it is in the draft, under a summary such as
 `3 judged · 2 satisfied · 1 not satisfied`. Without a recorded coverage
 judgement there is no Coverage tab.
-
