@@ -159,7 +159,7 @@ and grants credits with the owner token, the only credential the
   seats, 404 `organisation_not_found`, 409 `idempotency_conflict` for a key
   reused with another amount.
 - **Effect:** a member's run start reads the plan and reserves its credits
-  (see the [architecture overview](../architecture/overview.md)). An
+  (see the [hosted service architecture](../architecture/hosted-service.md#run-queue)). An
   organisation with no plan is refused with 403 `plan_required` until the
   operator assigns one. Inviting past the plan's seats or creating a record
   past its record limit answers 409 `plan_limit_reached`.

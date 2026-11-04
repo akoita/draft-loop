@@ -1,0 +1,781 @@
+# Hosted service architecture
+
+This page is the reference for the parts of DraftLoop that exist only in the
+server: the run queue, the model routes, run limits, the `/v1` API from setup
+to export, organisations and plans, and intake screening. The self-hosted
+server runs the same code with local adapters
+([self-hosted server](../operations/self-hosted.md)).
+
+Start with the [architecture overview](overview.md) for the system map. Storage
+ports and tenant isolation are in [Storage and tenancy](storage-and-tenancy.md),
+and the decisions behind this page are in
+[ADR 0011](../adr/0011-client-server-version.md).
+
+```mermaid
+flowchart LR
+  client["Web screen, desktop client<br/>or coding agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
+  api -->|screen untrusted text| screen["Intake screening"]
+  api -->|ids only| queue[("Run queue<br/>packages/run-queue")]
+  api -->|one approved hop| fetcher["Page fetcher<br/>apps/page-fetcher"]
+  queue --> worker["Worker<br/>apps/worker"]
+  worker --> gateway["Model routes<br/>packages/model-gateway"]
+  gateway -->|approved context only| models{"Claude on Vertex AI EU<br/>critic route"}
+  api & worker --> pg[("Postgres<br/>row-level security")]
+  api & worker --> gcs[("Cloud Storage<br/>tenant prefixes")]
+```
+
+## Contents
+
+- [Server apps](#server-apps)
+- [Run queue](#run-queue)
+- [Model routes and provider keys](#model-routes-and-provider-keys)
+- [Run limits and usage](#run-limits-and-usage)
+- [The API from setup to export](#the-api-from-setup-to-export)
+- [Organisations, plans and deletion](#organisations-plans-and-deletion)
+- [Intake screening](#intake-screening)
+
+## Server apps
+
+What each server app owns, and what it must not own. The rules behind them are in the repository's `AGENTS.md`.
+
+### API (`apps/api`)
+
+The hosted service's HTTP adapter over `ApplicationService`: Zod-typed `/v1` routes for workspace setup, workspaces, knowledge bases, job briefs, applications, runs and their review, path-free projections, idempotent run starts that queue the run for a worker, the committed OpenAPI document, request authentication (the owner token, or identity-provider sign-in tokens resolved to an organisation and role), serving each request from its caller's tenant, organisation membership and operator routes over the tenant directory, and the error shape
+
+It does not own: domain logic, storage engines, or provider calls.
+
+### Worker (`apps/worker`)
+
+The hosted service's run executor: claims queued runs, resumes each through `ApplicationService` from its last saved step, requeues a usage- or rate-limited run for when the limit allows, and stops within Cloud Run's shutdown notice.
+
+It also extracts a queued live brief from its application's kept job text, only while the brief is at the queued version and the text matches its checksum, and derives a queued career profile from the workspace's selected evidence, stopping within seconds of a cancel
+
+It does not own: domain logic, provider calls outside the application service, or job payloads with content.
+
+### Page fetcher (`apps/page-fetcher`)
+
+The hosted service's only runtime that reaches public web servers: one `POST /v1/fetch` hop of an approved job page per request through the pinned fetcher, answering the hop's status, content type, redirect target and at most one byte past intake's limit, and logging the host only. Cloud Run's IAM check decides who may call it
+
+It does not own: a database, secrets, candidate material, text extraction, or following redirects.
+
+### Web screen (`apps/web`)
+
+The owner's browser screen over the `/v1` API, served by the API on the same origin: sign-in with the owner token or, in `oidc` mode, through the identity provider (authorization code with PKCE), kept in the tab, and a client typed from the committed OpenAPI document.
+
+In `oidc` mode it lists the caller's candidate records, switches between them and lets owners and admins assign members, export a record's archive and delete a record. In sign-in mode the shared header carries the organisation's credit balance as a chip, and the Start dialog (`@draft-loop/ui/host-panels`, `start-panels.tsx`) shows the run's credit estimate and asks for the candidate's consent to send material to the workspace's providers, holding Start until it is recorded; a plan refusal is explained in plain words (`credits_insufficient`, `model_tier_not_in_plan`, `plan_required`, `run_cap_reached`, `plan_limit_reached`); the balance stays hidden with the owner token, which keeps one workspace.
+
+Each record opens on the desktop's shared Home and New application screens (`shared-screens.tsx`), which hide what the hosted service does not offer: closing the workspace and provider sign-in.
+
+An attached job file goes to the API's `applications/from-file` route, which keeps only its text; a job page address goes with the person's approval, and the API fetches the page once when requirements are extracted.
+
+The run's review, approval and export happen on the shared review screen, with its run details and the comparison between an application's runs.
+
+The page has no bar of its own: the shared screens' header carries the web's actions where the desktop has Close workspace (a service status dot, the credit balance in sign-in mode, and Sign out), and a red strip shows when the service cannot be reached.
+
+Its HTTP bridge (`http-bridge.ts`) answers the shared screens' workspace model, writing policy, application, brief, run, review-load and model catalog commands over the API, and advertises nothing else.
+
+Its profile bridge (`profile-bridge.ts`) derives the career profile on the worker, waiting for it with progress and cancel, then reads, edits and reviews it, so a run binds a reviewed version as on the desktop.
+
+Its review actions (`review-actions.ts`) start a run from the application's reviewed brief and an optional reviewed profile, then decide findings, edit blocks, approve, ask for a revision, pause, resume, stop and export through the review routes, reading the review state again after each.
+
+An export is downloaded by the browser under the name the review state then shows (`@draft-loop/ui/export-file-name`), Modern unless another template is chosen; autopilot and provider recovery are refused for now.
+
+Career evidence (`knowledge-bridge.ts`) uploads a file from the browser's picker, lists only the bases the record owns and selects one, in one store per tenant; folders, URLs and store switching stay hidden; the page also gets the web's own panels through `@draft-loop/ui/host-panels` (`evidence-panels.tsx`): in sign-in mode the permission to store the material above the evidence, and in both modes each file's screening check, with the release control, and the selected bases' private-section rules (`private-sections.tsx`), read as sentences, below the knowledge panel
+
+It does not own: domain logic, imports of `apps/api` or server packages, or provider calls.
+
+## Run queue
+
+The hosted service starts runs through a queue rather than in the request
+(ADR 0011, D4):
+
+- `POST /v1/workspaces/:id/runs` begins the run, which saves it without a
+  provider call, then queues its ids in `packages/run-queue`. A request that
+  saved the run but could not queue it answers 503, and a retry with the same
+  `Idempotency-Key` queues the saved run.
+- A live workspace's brief made from an application's job text is saved
+  without extraction. Once injection screening clears that text,
+  `POST /v1/workspaces/:id/opportunities` queues its extraction on the same
+  queue's brief extraction queue, and the brief's view says `extraction:
+  pending` until the worker saves the extracted next version (or `failed`). A
+  flagged or unscreened text is never queued, and a fixture workspace's brief
+  is extracted as it is saved. The shared setup card says the requirements are
+  being read and reads the brief again every few seconds until they arrive.
+- The career profile is derived on the worker too, from the workspace's
+  selected evidence with the desktop's extractor, sensitivity exclusions and
+  provider approval (a fixture workspace calls no model). Its job carries ids
+  and the person's choices only; the worker records content-free progress
+  (calls done of calls planned), a cancel stops it before its next provider
+  call, and the job keeps how it ended: the saved version, or a fixed message
+  the person can act on.
+- `/v1/workspaces/:id/profiles/:profileId/derivation` starts (POST), reads
+  (GET) and cancels (DELETE) that derivation; a start needs the record's
+  transmission consent in sign-in mode. The profile's own routes read, list,
+  edit, review and check freshness through `ApplicationService`, and a run
+  start's optional `candidateProfile` binds a reviewed version as on the
+  desktop. The hosted history records no retrieval origin traces yet, so a
+  hosted run with a profile retrieves the same evidence and traces none.
+- Its optional `modelProfiles` binds exact author and critic profile versions
+  to that run, such as a preset's pair, as the CLI and the desktop do. Without
+  them the run uses provider-default runtime controls and unknown context
+  windows, so a full-source request over the default budget falls back to
+  retrieval. A pair the registry refuses answers 422.
+- In sign-in mode the run must also fit the organisation's plan and credits
+  (ADR 0011, D13), checked after the budget ceiling, screening and consent by
+  `entitlement-gate.ts`. Owner-token mode skips it: its tenant has no
+  organisation row to hold a plan or a ledger, so nothing there is refused or
+  metered. The refusals are, in order:
+  - 403 `plan_required`: the organisation has no plan yet.
+  - 422 `model_tier_unknown`: a model's tier cannot be determined (`role`).
+  - 403 `model_tier_not_in_plan`: the plan lacks a model's tier (`role`,
+    `tier`).
+  - 429 `run_cap_reached`: the plan's concurrent or daily run cap is reached
+    (`cap`, `limit`).
+  - 402 `credits_insufficient`: the balance does not cover the estimate
+    (`estimate`, `remaining`).
+
+  These answers carry codes, a role, a tier and numbers only. The tiers come
+  from the application's own pair, else the request's `modelProfiles`, else the
+  workspace's configured models, as `resolveRunCreditTiers` reads them, and the
+  estimate is `estimateRunCredits` at the workspace's round limit. Rule v2
+  charges 1 credit per block of two rounds, doubled when a model is premium or
+  a named profile runs at a `high`, `xhigh` or `max` reasoning level; each
+  reservation records the rule version that priced it, so a v1 run keeps its
+  price.
+- The gate reserves the estimate before the run is saved. It picks the run id,
+  reserves under the ledger's lock (credits and caps together, so concurrent
+  starts cannot overspend), then passes the id to `begin` (`runId` on the
+  begin command). A refusal therefore saves nothing, and a `begin` that fails
+  refunds the reservation. All of it runs inside the `Idempotency-Key`'s one
+  execution, so a replay reserves nothing more. A reservation stays after a
+  queueing failure, since the run is saved. A process that dies between the
+  reservation and the save leaves one open reservation, which the worker's
+  reconciliation releases (next item).
+- `GET /v1/workspaces/:workspaceId/runs/estimate` (`credit-routes.ts`) says what
+  a run on the workspace's current settings would reserve: `credits`,
+  `estimateVersion`, the tiers and the round limit it assumed. It prices with
+  `priceRun` (`run-pricing.ts`), the function the gate itself uses, so a member
+  sees the number the gate reserves. `?applicationId=` prices an application's
+  own pair. It refuses nothing and works in both modes; a model whose tier is
+  unknown answers 422 `model_tier_unknown`. In sign-in mode a member also gets
+  `plan` (whether the plan allows the tiers, with the code the gate would
+  answer) and `balance` (whether `remaining` covers the estimate).
+- `GET /v1/organisation/credits` (sign-in mode, any role) answers the plan id,
+  the entitlements a member needs (`modelTiers`, `runsPerDay`,
+  `concurrentRuns`, `seats`, `candidateRecords`) and the period's `allowance`,
+  `used`, `reserved`, `grantsRemaining`, `remaining`, `periodStart`, `periodEnd`
+  and `unlimited`. An organisation with no plan gets 403 `plan_required`;
+  owner-token mode answers 404.
+  - **`used`** is the credits of the period's allowance that finished runs
+    settled plus the part of `reserved` taken from the allowance, so a started
+    run counts at once. Operator grants are not counted, and `reserved` is the
+    total held from both.
+  - **`warning`** is true once `used` is at least 80% of `allowance`. It is
+    never true on an unlimited plan or a zero allowance, which answer `null`
+    for `allowance` and `remaining`.
+- The gate logs two content-free `WARNING` lines when a new reservation crosses
+  a threshold: `credit allowance 80% used` and `credit balance exhausted`. The
+  ledger returns the balance just before and just after the reservation, read
+  under its lock, so racing starts cross a threshold once. A line carries
+  `organisationId`, `periodEnd`, `allowance`, `used` and `remaining`, and is
+  written once the run is saved: a start refused or refunded writes nothing.
+  Because the ledger holds no flag, a refund that brings the balance back under
+  a threshold followed by a new reservation can cross it again. Unlimited plans
+  and a zero allowance never log the 80% line.
+- The worker closes each reservation, in `run-credit-settlement.ts`, after a
+  job leaves its run in a final state. The ledger acts once, so a retried or
+  replayed job settles once.
+  - **Settle** when the run has a draft: `awaiting-approval`, `approved`,
+    `exported`, `stopped` or `provider-error` with an artifact.
+  - **Refund** when the run ended in one of those states without a draft, or
+    when its job was dropped for an erased record or a missing run.
+  - **Keep** while the run can continue: a user pause, a usage-limit pause, a
+    failure waiting for the worker's retry, a consent or quarantine hold, or a
+    step in flight. A job for a run with no reservation, as in owner-token mode,
+    does nothing.
+  - **No free run.** Only the worker retries a `provider-error` run, and the
+    shared screen offers no retry by hand there: it says the service retries
+    the step, or that a new run is needed (#1764). A repeated begin request
+    still queues its run again. A job whose run has a
+    refunded reservation therefore ends as `credits-closed` without a
+    provider call.
+  - **Reconciliation.** After each job the worker reads that tenant's open
+    reservations older than an hour and compares them with their runs: no
+    saved run (a crash between reservation and save, or an erased record) is
+    refunded, and a run that finished with no job to say so, such as a paused
+    run the person stopped, is settled or refunded as above. It runs per
+    tenant, since the ledger does, so a tenant's orphan is found when the
+    tenant next has a job.
+  - **Known limits.** Erasing a record does not close the reservation of its
+    paused runs at once; the reconciliation does within the hour after the
+    tenant's next job. A run above the deployment's ceiling keeps its
+    reservation. Rounds a person adds after the run reached its first draft
+    are not charged again.
+- Idempotency keys live in Postgres (`idempotency_keys`, under row-level
+  security), so every API instance replays a key's first result for a day. A
+  retry that arrives while the first request still runs waits up to five
+  seconds, then answers a retryable 409 `idempotency_in_progress`; it never
+  runs the command again. A request that stopped without a result frees its
+  key after a two-minute lease, and each new key removes up to 100 expired
+  ones.
+- The queue keeps at most one waiting and one active job per run, so repeated
+  requests collapse, and a paused run can queue its resumption while the
+  paused attempt finishes.
+- `apps/worker` claims a job, reads the run, and resumes it only when its
+  state allows: a run the person paused, one awaiting approval, or one
+  finished is left alone, so a duplicate or late job does nothing.
+- One worker serves every tenant. It opens one `openPostgresTenancy` pool and
+  one bucket at startup; for each job, `tenantServices` composes the
+  application over `forTenant(job.tenantId)` and that tenant's blob prefix.
+  Composition only wraps the shared pool and model routes, so nothing is
+  cached between jobs or carried from one tenant's job to another's.
+- A run paused on a provider usage limit is queued again for the reset time
+  (15 minutes when the provider names none) and resumed then.
+- A run stopped by a retryable failure is queued again and retries while its
+  step has attempts left (#1763). The failures are a rate limit, a timeout, a
+  provider fault and an output DraftLoop rejected. A rate limit waits at least
+  a minute, the others at least 10 seconds, or later if the provider asks. An
+  authentication or credit failure waits for the operator.
+- A job that fails or stops sending heartbeats, as after a crash, is retried
+  with backoff, and the worker resumes the run from its last saved step.
+- On SIGTERM the worker stops claiming and gives the job in flight 8 seconds.
+  It never cancels a step, which would record the run as cancelled; a step
+  still running is failed back to the queue and repeated by the retry.
+- Queue migrations run as the schema owner (`migrateRunQueue`), and
+  `grantRunQueueAccess` gives the runtime role table and function access only.
+
+## Model routes and provider keys
+
+Every provider call records its route beside its company and model, such as
+`anthropic-api`, `vertex-ai` or `openai-api`, so a change of endpoint is never
+silent (ADR 0011, D5). Run status in the CLI and the API lists each step's
+routes. For the hosted author, `packages/model-gateway` reaches Claude on
+Vertex AI:
+
+- Only an EU location is accepted: the `eu` multi-region or a `europe-*`
+  region. The endpoint is set explicitly, never from the environment.
+- Authentication uses the runtime's service identity, so no long-lived key
+  exists.
+- Only listed models are called, under their first-party ids; any other model
+  is refused rather than replaced.
+- Cost estimates apply the location's price factor, which the deployment takes
+  from Google's price list.
+- The content screener (`createHostedContentScreener`) classifies untrusted job
+  and candidate text with Claude Haiku 5.5 on this route. It sees the text only
+  inside a delimited block of the user turn, answers with closed signal codes,
+  fails closed on any route or answer error, and reports each call's usage and
+  cost through `onUsage` for the caller to record against the tenant.
+
+`createRoutedAdapter` applies the deployment's route policy. The direct Claude
+API is an optional fallback, off unless the deployment turns it on, because it
+processes material outside the EU. A call falls back only when its model is
+not offered on the primary route or the deployment may not use it there, such
+as a project whose billing account cannot buy Claude on Vertex AI
+(`model-not-offered`), or the route still refuses after the adapter's retries
+(`route-unavailable`). It never falls back
+on content, policy, authentication or budget errors. A fallback keeps the
+company and the model, and run history records the route it left and why.
+
+Provider keys come from Secret Manager at call time, never from an image or an
+environment file. `createSecretManagerCredentialResolver` reads the secret
+version the deployment names for each key: OpenAI's key for the critic, and the
+Claude API key only when the fallback is on, since Vertex AI needs none. A key
+stays in memory for five minutes, so a rotated key takes effect without a
+restart. A failed read names only the provider, never the value or the
+client's error.
+
+`apps/worker` composes these routes at startup from its settings, listed in
+the [local server stack](../operations/local-server-stack.md#model-routes)
+guide. The author's Anthropic models go through `createHostedAnthropicRoute`,
+which the shared driver takes as `providerClientFactories.anthropicRoute`. The
+critic's OpenAI client targets the EU endpoint. Without these settings, as on
+the local stack, the worker knows no key, so only fixture runs work.
+
+`apps/api` never drafts or reviews with a model. Its driver resolves no key and
+refuses to build any provider client (`apiProviderOptions`), whatever its
+environment holds, so only the worker reaches a provider for a run. The one
+model call the API makes is the opt-in injection screener, described under
+[Intake screening](#intake-screening).
+
+## Run limits and usage
+
+Each hosted deployment sets a ceiling per run: rounds, cost and duration, all
+required. A workspace without a cost or duration limit gets the ceiling's
+(`withRunBudgetDefaults`). Beginning a run whose workspace asks for more than
+the ceiling answers 422 `budget_above_ceiling` and names the limit to change,
+and the worker re-checks each run's saved budget before it executes, so a
+lowered ceiling also holds for runs already queued.
+
+A cost limit is checked before each priced call, not only between steps. The
+orchestrator passes each agent what the run may still spend, and the agent
+estimates the call's worst cost: its prompt size at the input rate, with the
+prefix a declared prompt cache serves at the cache-read rate, plus its whole
+output budget at the output rate. A call that could pass the limit is never
+sent, and the run stops as budget-exhausted with the estimate in the reason
+and nothing billed (`packages/application/src/call-cost-guard.ts`). A cache
+the provider has let expire costs more than the estimate; the limit, checked
+again after the call, still stops the run.
+
+A cost limit holds only while every call is priced. When a call on a metered
+route returns no cost estimate, a run with a cost limit stops as
+budget-exhausted. Subscription sessions, local models and fixtures are
+unmetered and exempt.
+
+A failed attempt counts too when the provider billed it. A response the adapter
+or the application rejects, such as a draft stopped at its output cap, keeps
+its tokens and cost on the failed execution and in the run's total, so the
+cost limit and the usage reads see what was spent.
+
+The owner reads usage from the API, in counts and amounts only:
+
+- `GET /v1/workspaces/:id/runs/:runId/usage` sums one run's billed calls by
+  company, model and route: calls, input and output tokens, and estimated
+  cost. It counts the application plan's calls, which the plan step records
+  apart from the run's executions.
+- `GET /v1/usage?month=YYYY-MM` gives the tenant's totals for a UTC month in
+  the same shape, summed in Postgres under row-level security.
+- Calls without a cost estimate are counted as `unpricedCalls`, never as zero
+  cost.
+
+## The API from setup to export
+
+These routes take a hosted run from an empty workspace to a downloaded CV. Each
+group below follows the same rules as the desktop and the CLI, because the API
+only adapts `ApplicationService`.
+
+### Workspace setup
+
+The owner sets up a hosted workspace through the API before any run:
+
+- `PUT /v1/workspaces/:id` creates the workspace with its language, author and
+  critic models, run limits, fixture mode and autopilot. Only Anthropic and
+  OpenAI models are accepted, because the gateway routes only those, and a
+  budget above the deployment's ceiling answers 422 before anything is saved.
+  The request names no file or folder, and an existing workspace answers 409
+  instead of being overwritten. `GET /v1/workspaces` lists the workspaces the
+  caller can reach.
+- A side the request leaves out gets the hosted default, the Balanced preset:
+  Claude Sonnet 5.5 as the author and GPT-6.1 Terra as the critic. The desktop
+  keeps the cheaper Economy pair as its own default. The Anthropic-only
+  presets (`balanced-anthropic`, `standard-anthropic`) keep a different Claude
+  model on each side, so their lineages differ and need no override.
+- `PATCH /v1/workspaces/:id/models` changes the author and critic for the
+  next runs, Anthropic and OpenAI only. A pair from one lineage needs
+  `independenceOverrideRationale`, and a change while a run is executing
+  answers 422; recorded runs keep the pair they ran with.
+- A new hosted workspace has autopilot on unless the request turns it off, so
+  a run revises through the critic's blocking findings up to its round limit.
+  `PUT /v1/workspaces/:id/autopilot` turns it on or off from the next run
+  action, and the web screen's **Autopilot** checkbox calls it.
+- `PUT /v1/workspaces/:id/budget` replaces the round, cost and duration
+  limits the workspace's next runs get, checked against the deployment's
+  ceiling like creation; a limit left out falls back to the ceiling. It is
+  the way out when the ceiling drops below a budget stored at creation, which
+  would otherwise refuse every new run with `budget_above_ceiling` (#1993).
+  The workspace view shows the stored cost and duration limits.
+- `GET /v1/model-catalog` lists the catalog's model profiles the gateway
+  serves, with their tier, roles, list prices, default reasoning level and the
+  levels a run may choose, the presets whose author and critic it both serves,
+  and the default preset (`hosted-model-catalog.ts`). Desktop-only companies
+  and local models are left out.
+- A model profile reference in a run start or an application's pair may carry
+  an `effort` the profile allows, and the application view returns it; an
+  unknown level answers 400 and a level the profile refuses answers 422.
+- `PUT /v1/workspaces/:id/writing-policy` sets the candidate's writing policy
+  from its Markdown text, at most 64 KiB, as a new immutable version that the
+  next runs follow and record. `GET` reads the active policy, and
+  `GET .../versions` lists the versions without their text. The server never
+  reads a policy file a client names.
+  `GET /v1/writing-policy-template` reads the template an editor starts from
+  when a workspace has none, and saves nothing.
+- `PATCH /v1/workspaces/:id/opportunities/:briefId` saves an edit of a job
+  brief as a new draft version, from a patch of its editable fields in their
+  brief shape. Its `expectedVersion` must be the latest, or the edit answers
+  409 `brief_version_stale`, as a review of a stale version does.
+  `GET .../versions` lists each version's number, status and dates.
+
+### Job applications and briefs
+
+The owner manages a workspace's job applications through the API
+(`application-lifecycle-routes.ts`), as the desktop does:
+
+- `POST /v1/workspaces/:id/applications` creates one from a name and pasted job
+  text. The hosted service keeps that text in the application's record, never
+  in a file, and `GET .../applications/:applicationId/job` reads it back.
+- The same route takes a job page address instead, with `jobUrlApproved: true`
+  as the person's approval to fetch it. Nothing is fetched then; the job reads
+  back as that address.
+- The page is fetched once, when requirements are extracted: the brief's
+  `approved-url` source must be the application's approved address. The
+  fetcher connects only to an address it checked (`job-page-brief.ts`, over
+  `@draft-loop/ingestion`'s pinned fetcher). A deployment's API has no route
+  to the internet, so it makes each hop through `apps/page-fetcher` when
+  `DRAFT_LOOP_PAGE_FETCHER_URL` is set (#1837), and still checks every
+  redirect and bounds the page itself. It waits 25 s for each hop, past the
+  fetcher's own 15 s limit on the site and its cold start (#1853), so a slow
+  site is reported by the fetcher's own timeout. A page it cannot read is refused
+  with 422 before a brief is saved, and the brief records the original and
+  final address and the fetch time. The page's text is kept with the
+  application for the worker's extraction and screened like pasted job text
+  before the worker's model sees it.
+- `POST .../applications/from-file?name=<name>&fileName=<file name>` creates
+  one from a job description file sent as the raw body: a PDF, DOCX, Markdown
+  or plain text file within the career-evidence upload limit
+  (`application-file-routes.ts`). The API reads the file's text as it reads
+  career evidence and keeps that text as if it were pasted; the file is not
+  stored.
+- `PATCH .../applications/:applicationId` renames, archives or restores one,
+  and an unknown application answers 404.
+- `PUT .../models` sets or clears an application's author and critic pair, and
+  `PUT .../chosen-run` chooses the run whose draft it uses.
+
+### Review state for the shared screens
+
+The shared screens open on a review state the server projects
+(`review-state-routes.ts`), with the same `packages/review-state` code the
+desktop host calls:
+
+- `GET /v1/workspaces/:id/review-state` returns the run on screen with its
+  draft, findings, decisions and edits, and the workspace's readiness for the
+  next run. `applicationId` scopes it to one application's newest run, and
+  `runId` names an earlier one; a run the application does not hold answers
+  404.
+- With an application, the state carries the run details and the comparison's
+  run list as the desktop shows them: each run's recorded author and critic
+  models, round, state and score (`@draft-loop/review-state/application-runs`),
+  plus the run's evidence mode and what its latest author step was sent.
+- Readiness reads the application's pasted job or reviewed brief, the selected
+  knowledge bases' sources and the writing policy. Without a run the state is
+  the start state, with `runId` `pending`.
+- The provider preflight names the gateway's routes and reads as acknowledged,
+  because the server itself refuses a provider call without recorded consent.
+- The web's HTTP bridge answers `review.load` from this route, and the port
+  validates every field as it does the desktop host's.
+
+### Career knowledge
+
+Candidate sources reach a hosted knowledge store through
+`createHostedKnowledgeIntake` in `packages/application`, over the storage ports
+and the blob port:
+
+- A tenant has one knowledge store, created with its first knowledge base,
+  because knowledge bases belong to the tenant.
+- A source file is a PDF, DOCX, Markdown or plain text file of at most 10 MiB by
+  default. Its type is checked by its signature only: the service never parses
+  an upload to store it (ADR 0011, D11), and the run worker extracts the text
+  from the stored bytes. The API reads an upload's text once more, only to
+  screen it (see [Intake screening](#intake-screening)).
+- The bytes go to the tenant's blob prefix first, then the source and its
+  managed version are recorded, so a recorded version always has its bytes.
+  The same bytes in the same knowledge base return the existing source.
+
+The owner manages that knowledge through the API, never naming a store or a
+storage location:
+
+- `POST /v1/knowledge-bases` creates a knowledge base, and `GET` lists them.
+- `GET /v1/knowledge-bases/:id/sources` lists a base's sources with their
+  latest file's name, media type, size, checksum and date, never its content.
+- `POST /v1/knowledge-bases/:id/sources?name=<file name>` uploads one source
+  file as the raw request body, with its media type as the `Content-Type`.
+  Another type answers 415, a file over the limit 413
+  (`DRAFT_LOOP_MAX_SOURCE_BYTES`), and the same bytes again 200 with the
+  existing source, so a retry is safe. The answer carries the upload's
+  `screening`. Every other route keeps parsing JSON.
+- `GET /v1/knowledge-bases/:id/sensitivity-rules` lists a base's sensitivity
+  rules, `POST` adds one and `DELETE .../:ruleId` removes one. A rule marks the
+  Markdown sections under a heading as `sensitive` or `never-share`; each
+  change saves a new version of the list, and runs withhold the marked
+  sections as they do locally. A duplicate rule answers 422.
+- `PUT /v1/workspaces/:id/knowledge-selection` selects the knowledge bases a
+  workspace's runs use, by id. The API names the tenant's store itself, an
+  unknown base answers 404, and several bases need `combinationApproved`. The
+  workspace view lists the selected `knowledgeBaseIds`.
+
+### Reviewing a run
+
+The owner reviews a hosted run through the API, with the same rules as the
+desktop review:
+
+- `GET /v1/workspaces/:id/runs/:runId/review` returns the draft with the
+  owner's latest block edits, each claim with its evidence excerpts, the
+  critic's findings with their ids and decisions, the run's recorded review
+  independence, and the latest readiness scores. Before the first draft, the
+  draft is null.
+- `PUT .../findings/:findingId/decision` records a decision on one finding
+  (accepted, rejected, deferred, overridden or back to pending, with an
+  optional rationale), and `PUT .../edits/:blockId` records replacement text
+  for one block. Both answer the updated review. Only a run awaiting approval
+  takes them (409 `review_closed`), and a finding or block outside the current
+  draft answers 404.
+- `POST .../approve` approves a run awaiting approval. A blocking finding still
+  pending, deferred or only accepted answers 409 `findings_unresolved`, as the
+  desktop refuses it. When the final CV checks fail it answers 409 `readiness_blocked`, the review's `approvalCheck` lists
+  the blockers, and approving past them needs `readinessOverrideRationale`.
+  `POST .../stop` stops a run for good. Any action the run's state does not
+  allow answers 409 `run_state_conflict` (`RunTransitionError`).
+- `POST .../revision` sends a run awaiting approval back for another round,
+  with the owner's optional direction for the author. `POST .../pause` pauses
+  an active run, and `POST .../resume` lifts the pause without running a step
+  (`releasePause`). Revision and resume take an `Idempotency-Key` and queue
+  the run, so a worker drafts the next round or continues the step.
+- These actions change the run's state only. Their engine has no agents, so
+  the API still reaches no provider.
+
+### Exporting an approved run
+
+The owner exports an approved hosted run through the API:
+
+- `POST /v1/workspaces/:id/runs/:runId/exports` renders the approved draft as
+  Markdown, DOCX or PDF, with an optional built-in template, under an
+  `Idempotency-Key`. It runs the same rendering checks as the desktop and marks
+  the run exported. A run not yet approved answers 409.
+- Each export gets a new path under its workspace, so an earlier document is
+  never replaced. Its bytes go to the tenant's blob prefix
+  (`workspaceReferenceBlobs`), and the export record keeps their checksum and
+  size. The API never shows where a document is stored.
+- PDFs come from the built-in writer: the server images carry no browser
+  engine.
+- `GET .../exports` lists a run's exports, newest first, and
+  `GET .../exports/:exportId/content` downloads one as an attachment, named
+  `cv-<day>-<export id>.<extension>` as the review state labels it, with its
+  media type and its SHA-256 in `X-Content-SHA256`. The bytes are checked
+  against the recorded checksum and size before they are sent: a document
+  that changed answers 409 `export_integrity` and is never served. Downloads go
+  through the owner token, with no signed storage URLs.
+
+Together these routes take a hosted run from setup to a downloaded CV through
+the API only: set up the workspace and its knowledge, review a brief, begin a
+run, let the worker draft it, decide the findings, approve, export and
+download. The local server stack's smoke and `pnpm test:postgres` both run
+that flow, one of them through a revision round
+([local server stack](../operations/local-server-stack.md#tests-against-the-stack)).
+
+## Organisations, plans and deletion
+
+People manage their organisation through the API once it has a tenant
+directory (ADR 0011, D6):
+
+- `GET /v1/me` says who the caller is: a member's organisation, id, role and
+  email, or `{ "kind": "owner" }` for the owner token, which belongs to no
+  organisation.
+- `GET` and `POST /v1/organisation/members` list the caller's organisation and
+  invite a person by email.
+- `PATCH` and `DELETE /v1/organisation/members/:memberId` change a role or
+  remove a member.
+- In sign-in mode the plan's `seats` and `candidateRecords` limit growth
+  (`plan-limits.ts`, ADR 0011, D13):
+  - An invitation takes a seat, active and invited members alike, and removing
+    a member frees it. An email already invited answers 409 `member_exists` and
+    takes none. The directory counts under the organisation's row lock in the
+    same transaction as the insert, so racing invitations cannot pass the
+    limit.
+  - Creating a workspace takes a record slot. Records are counted as
+    `GET /v1/workspaces` lists them, so an erased or closing record takes none,
+    and an archived one still does. The count and the save are separate steps,
+    so racing creations can pass the limit by a record; these are
+    operator-scale actions, and the next creation is refused.
+  - Past a limit the answer is 409 `plan_limit_reached` with `limit` (`seats`
+    or `candidateRecords`) and `value`; an organisation with no plan gets 403
+    `plan_required`. Owner-token mode checks nothing.
+- Owners and admins may manage members; members get 403. Only an owner grants, takes away or
+  removes the owner role, and the last owner answers 409 `last_owner`. The directory checks the
+  acting role against the target's role inside the change, under the organisation's row lock, so
+  a promotion racing an admin's request cannot slip past.
+- `POST /v1/operator/organisations` creates an organisation and invites its
+  first owner. Operator routes take only the deployment's owner token, in
+  both authentication modes, never a member's sign-in.
+- `PUT /v1/operator/organisations/:organisationId/plan`, `POST
+  /v1/operator/organisations/:organisationId/credit-grants` and `GET
+  /v1/operator/organisations/:organisationId/credits` let the operator assign an
+  organisation's plan, grant it credits and read its plan, entitlements and
+  balance (`operator-plan-routes.ts`). The plan body is `planId`, optional
+  `overrides`, `seats` and `periodStart` (today's UTC date by default); an unknown
+  plan, a seat-priced plan without seats or an impossible date answers 422
+  `invalid_plan_assignment`, and an unknown organisation 404
+  `organisation_not_found`. A grant is 1 to 1,000,000 credits with a reason
+  code, needs an `Idempotency-Key` so a retry is not doubled, and expires after
+  12 months. Each write logs one content-free `audit` line (ids, plan id, numbers,
+  reason code), since a plan belongs to no workspace's audit trail.
+- `DELETE /v1/organisation`, by an owner with the organisation id typed back
+  as `confirm`, and `DELETE /v1/operator/organisations/:organisationId`, by the
+  operator's token, delete an organisation. Each record is erased as
+  `DELETE /v1/workspaces/:workspaceId` does, then every object left under the
+  tenant's Cloud Storage prefix, then what the tenant still holds through
+  `erase_tenant_remainder`: tenant-wide knowledge bases, idempotency keys, and
+  the organisation with its members last. A queued or running run anywhere
+  answers 409 `run_active`. The first call marks the organisation as closing
+  (`organisations.closing_at`, never cleared); until it is gone, every member
+  request but the repeated delete answers 409 `organisation_closing` and the
+  worker drops its queued jobs, so nothing is created mid-deletion. An
+  interrupted deletion finishes on the next call. Accounts at the identity provider are not deleted; a person's sign-in
+  simply no longer resolves to an organisation.
+- Each change logs one content-free line with the action, the organisation,
+  the member and the role, never an email. The hash-chained audit trail is
+  per workspace, and membership belongs to none.
+- Each candidate record keeps an append-only consent ledger (ADR 0011, D7),
+  the `ConsentLedger` port from `@draft-loop/storage/consent-ledger` over the
+  `consent_events` table. `GET /v1/workspaces/:workspaceId/consents` returns
+  each kind's latest entry and the history, and `POST` records a
+  `material-storage` or `provider-transmission` grant or withdrawal with its
+  basis, recorded by the caller. The runtime role may only read and insert
+  entries, and each one logs a content-free line without its note.
+- In sign-in mode the API enforces the ledger (`consent-enforcement.ts`). A
+  source upload needs a current `material-storage` grant on the base's record;
+  starting a run, a revision or a resume needs a `provider-transmission` grant
+  naming every company the workspace's author and critic use. Otherwise it
+  answers 409 `storage_consent_required` or `transmission_consent_required`.
+  A worker with `DRAFT_LOOP_AUTH_MODE=oidc` always checks again as it claims
+  each job (in owner mode `DRAFT_LOOP_REQUIRE_CONSENT=true` opts in) and
+  pauses the run, without a provider call, when consent is gone.
+  `DRAFT_LOOP_ALLOW_PROVIDER_DATA` stays a ceiling above consent.
+- `GET /v1/workspaces/:workspaceId/archive` downloads everything held about
+  a candidate record as a zip in the [record archive v1](../reference/record-archive.md)
+  format, with the manifest's SHA-256 in `X-Archive-Manifest-SHA256`. Owners
+  and admins may export, and the owner token in owner-token mode; members get 403. The archive holds the bases the record owns in sign-in mode, and every
+  base of the tenant in owner-token mode, as the API's auth mode chooses.
+  `openPostgresRecordArchives` reads the record's rows from one snapshot and
+  checks every source and export object before the first byte is sent, so
+  a missing or changed object answers 409 `archive_integrity`. The zip streams
+  one file at a time, and each download logs one content-free line.
+- `DELETE /v1/workspaces/:workspaceId` erases a candidate record for good.
+  Owners and admins only, or the owner token in owner-token mode, with the
+  workspace id typed back as `{ "confirm": "<id>" }` (400
+  `confirmation_mismatch`). A queued or running run answers 409 `run_active`
+  until the caller stops it. The record is closed first and is missing (404)
+  to every other route from then on; its stored objects go next, removed by
+  key whatever they hold, then its rows. Calling again finishes an interrupted
+  erasure, and a record already gone answers 404. One content-free line logs
+  the ids and the counts removed. A job queued for an erased record ends in
+  the worker with outcome `record-erased`, without a provider call.
+- Erasure has two storage steps (`@draft-loop/storage/record-erasure`).
+  Closing a record writes a `candidate_record_erasures` mark, after which the record
+  is missing to every reader, and returns the object keys its rows name.
+  Erasing it calls `erase_candidate_record`, a `SECURITY DEFINER` function
+  owned by the migrating role: the only delete the runtime role may make on
+  the consent ledger and the audit chain. It removes, in one transaction, the
+  record's history, settings, run state, idempotency keys, assignments,
+  consent, screening results, its owned knowledge bases with their sources,
+  versions and indexes, and the mark last. A repeated close finds the mark, so an interrupted
+  erasure finishes on the next call.
+- Screening results and quarantine are stored through the `ContentScreeningStore`
+  port from `@draft-loop/storage/content-screening`, over the append-only
+  `content_screening_results` and `content_screening_releases` tables. A result
+  is the content-free outcome of the content screener and names its subject: a
+  pasted job source of an opportunity brief, or one knowledge source version.
+  Quarantine is derived rather than stored: a subject is quarantined while its
+  latest result is `flagged` or `unscreened` and no release covers that result,
+  so a newer `clear` result lifts it and a newer flag brings it back. A member's
+  release covers one result, keeps a short written reason in the table and
+  appends a content-free `content-screening.released` audit event with the
+  result and member ids. Record and organisation erasure remove both tables, and
+  the record archive includes them.
+- Each organisation's plan assignment (ADR 0011, D13) is stored by
+  `createOrganisationPlans` in `@draft-loop/storage-postgres`, reached as
+  `forTenant(organisationId).organisationPlans`. The current row of
+  `organisation_plans` is keyed by the tenant, which is the organisation, and holds
+  the plan id, catalog version, validated entitlement overrides, seats and the UTC
+  start of the credit period. `organisation_plan_history` appends every assignment
+  and refuses updates and deletes. The operator assigns by opening the
+  organisation's tenant. Organisation erasure removes both tables; record
+  erasure and the record archive leave them alone, since a plan is not candidate
+  material.
+- Each organisation's credits (ADR 0011, D13) live in an append-only ledger,
+  `createCreditLedger` in `@draft-loop/storage-postgres`, reached as
+  `forTenant(organisationId).creditLedger`. Rows of kind `grant`, `reserve`,
+  `settle`, `refund` and `expire` hold positive amounts, and the balance is
+  summed from them. Every write first locks the organisation's balance row, so
+  reservations, run caps and the period roll cannot race. A reservation spends
+  the period's allowance first, then the operator grant that expires first;
+  a refund never revives expired credits. Organisation erasure removes both
+  tables.
+
+## Intake screening
+
+The API screens untrusted text for prompt injection before any model reads it
+(ADR 0011, phase 2d), in `content-screening-*.ts`. `DRAFT_LOOP_SCREENING`
+chooses how, the same in both auth modes: `off`, `rules` (the default) or
+`rules+model`. Anything else stops the API at startup.
+
+- **What is screened.** Each source of `POST /v1/workspaces/:id/opportunities`
+  and each file of the knowledge source upload, after it is saved, so the
+  subject ids exist. The rule screener (`packages/ingestion`) always runs;
+  `rules+model` adds Claude Haiku 5.5 on the EU Vertex route
+  (`packages/model-gateway`), and `screenWith` merges the verdicts. An
+  upload's text comes from the same extraction the run uses; a file with no
+  readable text is left unscreened. An edit to a reviewed brief is typed by a
+  member and is not screened again.
+- **What the answer shows.** A `screening` object with the verdict, the closed
+  signal codes and the stored result id, never a quote of the text. With
+  screening `off` nothing is screened or stored and the object is absent.
+- **Fail closed.** A screener that fails makes the result `unscreened`, which
+  is quarantined like `flagged`. The request itself still succeeds, and the
+  same bytes uploaded again are screened again while the result is unscreened
+  and unreleased.
+- **Consent.** A job post is third-party text, so `rules+model` always sends it
+  to the model. A candidate source (an upload, or a brief's candidate-input
+  source) reaches the model only when `DRAFT_LOOP_ALLOW_PROVIDER_DATA` is on
+  and the record's current `provider-transmission` consent names Anthropic;
+  otherwise only the rules run, and the result's `screeners` shows that. A base
+  that no record owns, as in owner-token mode, has no consent to read, so its
+  uploads get the rules only. The data policy is built from that consent, as a
+  run's is.
+- **Usage.** Each answered model call writes one content-free log line with the
+  tenant, model, token counts and estimated cost. There is no usage table yet;
+  per-tenant metering comes with entitlements.
+- **The run gate.** `POST /v1/workspaces/:id/runs` answers 409
+  `material_quarantined` when the brief's job sources, or the latest version of
+  any source in a selected knowledge base, are quarantined, and lists them with
+  their result ids in `error.quarantined`. The gate reads stored results, so it
+  holds in every mode, including `off`. With screening on, it also answers 409
+  `material_unscreened` for material with no stored result, such as a brief
+  saved while screening was `off` or whose result write failed, and lists those
+  subjects by ids in `error.unscreened` (`unscreenedRunMaterial` in
+  `packages/application`). It does not screen at run start, because the brief's
+  text and the upload's bytes are not at hand there; saving the brief again or
+  uploading the file again screens it.
+- **The worker check.** Material can be flagged after a run is queued, so the
+  worker asks the same question (`quarantinedRunMaterial` in
+  `packages/application`, shared with the gate) as it claims each job, in every
+  auth mode and before any provider call. If anything the run would send is
+  quarantined, or, with screening on, has no stored result, it pauses the run
+  as it does for withdrawn consent, ends the job
+  with outcome `material-quarantined` and logs one content-free `WARNING` with
+  the tenant, workspace and run ids and, for each piece, its kind, result id and
+  signal codes. After a release, a resume queues the run and the next job
+  continues it.
+- **Release.** `POST /v1/workspaces/:id/screening/:resultId/release` with a
+  `{ "reason" }` of 1 to 500 characters lets one result through. Owners and
+  admins, and the owner token, may release; members get 403. A result must
+  belong to the record (its job source, or a base the record owns in sign-in
+  mode), else 404. A result that a newer one replaced answers 409
+  `result_superseded`, and a clear one 409 `not_releasable`. A later flagged or
+  unscreened result quarantines the text again.
+- **Status.** `GET /v1/workspaces/:id/screening` reads the record's latest
+  status after a reload: each job source of its briefs, and each current source
+  version in the bases the record owns or selects (every base in owner-token
+  mode). Each item has the subject ids, verdict, signal codes, result id,
+  `quarantined` and, when released, `release` with the member and time. The
+  release reason is member-written, so only owners and admins get it. The
+  route needs the same sign-in and record access as other workspace routes and
+  answers an empty list when nothing was screened.
+- **Web screen.** `apps/web` reads that route to badge each uploaded file and
+  the job brief with text, not colour alone: clear, quarantined (flagged with
+  its signals in words, or not screened), released, or not screened. A 409
+  `material_quarantined` at the run start names what is quarantined from
+  `error.quarantined`. Owners and admins release each piece in a dialog that
+  requires a reason; other members see the status only, and the API enforces
+  the same rule.
+- **Alerts.** Four content-free `WARNING` lines let the owner alert on screening
+  and on refused access (ADR 0011, D16): `material quarantined` at intake,
+  `quarantined material released`, `run paused for quarantined material` in the
+  worker, and `access refused` when the API refuses a record, run or knowledge
+  base. Ids and closed codes only, never the text, a file name or a release
+  reason. [Server deploy](../operations/server-deploy.md#logs) lists their
+  fields.
+- **Red-team test.** `apps/worker/src/injection-flow.test.ts` runs the
+  synthetic corpus of `packages/ingestion` through the API on Postgres and the
+  worker with a scripted gateway. It checks that every injected case is
+  quarantined, as a job post and as an upload, by the rule screener alone, that
+  clean cases are not, and that no author or critic call happens before a
+  release. The [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
+  lists the remaining gaps.

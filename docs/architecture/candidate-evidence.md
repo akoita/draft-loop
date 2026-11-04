@@ -464,3 +464,28 @@ Vector and hybrid retrieval remain deferred evaluation components rather than
 the default CKB retrieval path.
 
 [adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md
+
+## Retrieval in runs
+
+Career evidence is the material a run uses. Runs read the selected knowledge
+base; legacy workspace evidence (the workspace `evidence` folder) is used only
+when none is selected, and the desktop imports it into a new base once.
+
+Retrieval is workspace-scoped behind a provider-independent port. SQLite
+FTS/BM25 is the integrated lexical baseline and supplies selected chunks to live
+author and critic requests. Local vector and hybrid implementations remain
+evaluation components until deletion, retention, isolation, provenance, and
+quality are validated for the product path.
+
+[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
+each portable store owns its replaceable exact-source-version lexical index,
+while the application fans out only across the workspace's explicit selection
+and persists content-free retrieval traces in workspace history. The exact
+selected projection stays inside the lifecycle boundary that can delete or
+rebuild it. Migration 25 supplies the CKB chunk/FTS projection, freshness
+inspection, exact-scope query and fallback, whole-projection invalidation on
+source-version deletion, and immutable workspace traces. Runs with an explicit
+CKB selection provide only opaque chunk references and bounded text to author
+and critic; legacy workspaces without a CKB selection keep the earlier
+workspace evidence index. CKB selection remains explicit and path-free in run
+contexts.

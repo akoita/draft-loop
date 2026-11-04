@@ -49,6 +49,48 @@ claim or a blocking factuality finding. It never loops indefinitely to optimize
 a subjective score. See [stop and pause on findings](#stop-and-pause-on-findings-1113)
 and [ADR 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
 
+### Grounding checks on author output
+
+Before evidence reaches the author, bounded supplementary searches reserve
+content for required CV sections. If a search limit is reached without
+establishing section content, drafting fails visibly because the search cannot
+establish absence. Author validation rejects empty sections and unavailable
+placeholders when supplied evidence establishes content; missing individual
+details may remain explicit.
+
+Author-output validation checks every substantive claim against its cited
+evidence. Protected multi-word values stay within one cited chunk, and numbers,
+names, and explicit experience contradictions stay protected.
+
+Block text outside substantive claims fails with the content-free
+`substantive_text_uncovered` diagnostic, for bounded author retry, when any of
+these holds:
+
+- An uncovered content word appears in no retrieved chunk. A short closed list
+  of function words, such as articles, prepositions, and connectives, is exempt.
+- A protected value in the block is not supported by the chunks its claims cite.
+- A date range is not stated with the same start and end in one cited chunk.
+- A capitalised single-word name appears in no retrieved chunk.
+
+Headings, labels, and explicit missing-data notices stay exempt. Wording built
+only from function words and evidence words is left to critic and human review.
+
+The checks never pass ungrounded content, but one failing block does not
+discard the whole draft. When every failure is confined to individual blocks,
+the draft keeps the blocks that pass:
+
+- A block with a failing claim, or a failing date range in its text, is removed.
+  A section left without blocks is removed.
+- A block whose claims pass but whose surrounding text fails is shortened to
+  its own claim text, with no new wording.
+- The kept draft is re-checked with the same rules. The draft carries one
+  content-free `ungrounded-author-content-dropped` warning with the counts, so
+  the critic, the revision round, and the user see that content was left out.
+
+The author step still fails, with the original diagnostics, when a failure is
+not confined to a block, such as a required section losing all its content, or
+when no section would remain.
+
 ### Degree coverage
 
 Standalone requirements of the form `[a] <subject> [or <subject>] degree

@@ -234,8 +234,11 @@ chunks it was sent and how many its draft cites, as counts and ranks only.
 | Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                           |
 
 The [architecture overview](docs/architecture/overview.md) is the entry point:
-it shows how each way to run maps onto the packages, then links the detailed
-views of [candidate evidence](docs/architecture/candidate-evidence.md),
+it maps the ways to run, the components and a run's path in diagrams, then
+links the detailed views of the
+[hosted service](docs/architecture/hosted-service.md),
+[storage and tenancy](docs/architecture/storage-and-tenancy.md),
+[candidate evidence](docs/architecture/candidate-evidence.md),
 [drafting and review](docs/architecture/drafting-and-review.md), and
 [runtime and trust](docs/architecture/runtime-and-trust.md).
 
@@ -271,7 +274,7 @@ Runs read only the source versions a workspace selects; see
 
 - [Documentation map](docs/README.md) · [Roadmap and current status](docs/roadmap.md) · [Release history](https://github.com/akoita/draft-loop/releases)
 - [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
-- [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
+- [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Hosted service](docs/architecture/hosted-service.md) · [Storage and tenancy](docs/architecture/storage-and-tenancy.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
 - [Self-hosted server](docs/operations/self-hosted.md) · [Local server stack](docs/operations/local-server-stack.md) · [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)

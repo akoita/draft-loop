@@ -12,10 +12,12 @@ contributors, maintainers, and operators to the current information they need.
 | --- | --- |
 | Install and run DraftLoop on your own machine | [Self-hosted server](operations/self-hosted.md) |
 | Understand the current product and status | [Roadmap and current status](roadmap.md) |
-| Understand the ways to run, system boundaries and flows | [Architecture overview](architecture/overview.md) |
+| Understand the ways to run, the components and a run's path, in diagrams | [Architecture overview](architecture/overview.md) |
 | Read source, policy, opportunity, and profile contracts | [Candidate evidence architecture](architecture/candidate-evidence.md) |
 | Read drafting, review, and rendering boundaries | [Drafting and review architecture](architecture/drafting-and-review.md) |
 | Read workflow, provider, and trust boundaries | [Runtime and trust architecture](architecture/runtime-and-trust.md) |
+| Read the hosted service's queue, model routes, API and screening | [Hosted service architecture](architecture/hosted-service.md) |
+| Read storage ports, drivers and tenant isolation | [Storage and tenancy architecture](architecture/storage-and-tenancy.md) |
 | Run CLI and desktop commands | [CLI and desktop reference](reference/cli-and-desktop.md) |
 | Read the hosted service's record export format | [Record archive v1](reference/record-archive.md) |
 | Let a coding agent record your work for review | [Agent channel](reference/agent-channel.md) |
