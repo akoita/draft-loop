@@ -1,6 +1,7 @@
 import { text } from "node:stream/consumers";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import { defaultAgentTokenPath } from "./agent-token.js";
 import { configFromEnvironment, createWorkJournalApi } from "./client.js";
 import { runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
@@ -14,7 +15,10 @@ if (command === "init") {
     process.stderr.write(`${parsed.problem}\n`);
     process.exitCode = 2;
   } else {
-    for (const line of await runInit(process.cwd(), parsed)) process.stdout.write(`${line}\n`);
+    const setup = { environment: process.env, tokenPath: defaultAgentTokenPath() };
+    for (const line of await runInit(process.cwd(), parsed, setup)) {
+      process.stdout.write(`${line}\n`);
+    }
   }
 } else if (command === "hook" && rest[0] === "stop") {
   // An advisory hook never fails the turn: any problem prints nothing.
@@ -26,7 +30,7 @@ if (command === "init") {
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook]\n",
+    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--no-token]\n",
   );
   process.exitCode = 2;
 }

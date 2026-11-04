@@ -1,11 +1,16 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { agentTokenLabel, isAgentToken, issueAgentToken, saveAgentToken } from "./agent-token.js";
+import { defaultServerUrl, defaultServerWorkspace } from "./client.js";
+
 /**
  * `draftloop-mcp init` (#2025): sets up the work journal in one project for one host. It writes the
  * MCP server entry, a short instructions snippet, the `/log-work` skill and, for Claude Code on
- * request, an advisory Stop hook. Every file holds only names: the token stays in the environment
- * and no path of this machine is written. Existing files are merged, never replaced.
+ * request, an advisory Stop hook. Every file holds only names: no token and no path of this
+ * machine is written. Existing files are merged, never replaced. With the owner token in its
+ * environment, `init` also asks the server for an agent token and saves it outside the project
+ * (#2160), so the agent never holds the owner token.
  */
 
 export const initHosts = ["claude-code", "codex", "generic"] as const;
@@ -70,9 +75,9 @@ function hookCommand(command: string): string {
   return `${command} hook stop`;
 }
 
+// No token: the server reads the agent token `init` saved (#2160).
 const serverEnvironment = {
   DRAFT_LOOP_SERVER_URL: "${DRAFT_LOOP_SERVER_URL:-http://127.0.0.1:8080}",
-  DRAFT_LOOP_SERVER_TOKEN: "${DRAFT_LOOP_SERVER_TOKEN:-}",
 };
 
 function splitCommand(command: string): { readonly command: string; readonly args: string[] } {
@@ -145,7 +150,7 @@ function codexBlock(options: InitOptions): string {
     "[mcp_servers.draftloop]",
     `command = ${tomlString(command)}`,
     `args = [${args.map(tomlString).join(", ")}]`,
-    'env_vars = ["DRAFT_LOOP_SERVER_URL", "DRAFT_LOOP_SERVER_TOKEN"]',
+    'env_vars = ["DRAFT_LOOP_SERVER_URL", "XDG_CONFIG_HOME"]',
     codexEnd,
   ].join("\n");
 }
@@ -195,12 +200,23 @@ export function planInit(
   });
 }
 
-export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--dry-run]
+export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--no-token] [--dry-run]
 
-Sets up the DraftLoop work journal in the current project. The token stays in DRAFT_LOOP_SERVER_TOKEN.`;
+Sets up the DraftLoop work journal in the current project. With the owner token in
+DRAFT_LOOP_SERVER_TOKEN, it also issues an agent token that reaches only the work journal and
+saves it outside the project; --no-token skips that.`;
 
 export interface InitArguments extends InitOptions {
   readonly dryRun: boolean;
+  /** Issue and save an agent token; on unless `--no-token`. */
+  readonly token?: boolean;
+}
+
+/** What `init` needs to issue an agent token: its environment and where to save the token. */
+export interface AgentTokenSetup {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly tokenPath: string;
+  readonly fetch?: typeof fetch;
 }
 
 /** The `init` arguments, or why they cannot be used. */
@@ -209,12 +225,14 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   let command = "draftloop-mcp";
   let hook = false;
   let dryRun = false;
+  let token = true;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--host") host = argv[++index];
     else if (argument === "--command") command = argv[++index] ?? "";
     else if (argument === "--hook") hook = true;
     else if (argument === "--dry-run") dryRun = true;
+    else if (argument === "--no-token") token = false;
     else return { problem: `Unknown argument ${argument}.\n\n${initUsage}` };
   }
   if (!initHosts.includes(host as InitHost)) return { problem: initUsage };
@@ -222,11 +240,50 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   if (hook && host !== "claude-code") {
     return { problem: "--hook is for Claude Code only; other hosts get the skill and snippet." };
   }
-  return { host: host as InitHost, command, hook, dryRun };
+  return { host: host as InitHost, command, hook, dryRun, token };
+}
+
+const intakeLine =
+  'Then turn on "Accept notes from coding agents" in the Work journal panel of the Career evidence page.';
+
+/** Issues and saves the agent token, or says why not; one or two report lines. */
+async function setUpAgentToken(
+  root: string,
+  options: InitArguments,
+  setup: AgentTokenSetup,
+): Promise<string[]> {
+  const ownerToken = setup.environment.DRAFT_LOOP_SERVER_TOKEN?.trim();
+  const ask =
+    "set DRAFT_LOOP_SERVER_TOKEN to the owner token `draft-loop-server token` prints and run init again.";
+  if (ownerToken === undefined || ownerToken === "") return [`No agent token issued: ${ask}`];
+  if (isAgentToken(ownerToken)) {
+    return [`No agent token issued: DRAFT_LOOP_SERVER_TOKEN holds an agent token; ${ask}`];
+  }
+  if (options.dryRun) return [`would issue: an agent token, saved to ${setup.tokenPath}`];
+  try {
+    const issued = await issueAgentToken({
+      baseUrl: setup.environment.DRAFT_LOOP_SERVER_URL ?? defaultServerUrl,
+      workspaceId: setup.environment.DRAFT_LOOP_SERVER_WORKSPACE ?? defaultServerWorkspace,
+      ownerToken,
+      label: agentTokenLabel(options.host, root),
+      ...(setup.fetch === undefined ? {} : { fetch: setup.fetch }),
+    });
+    await saveAgentToken(setup.tokenPath, issued.token);
+    return [
+      `issued: agent token ${issued.id}, saved to ${setup.tokenPath}`,
+      "The agent sends that token, which reaches only the work journal; keep the owner token out of its environment.",
+    ];
+  } catch (error) {
+    return [`No agent token issued: ${error instanceof Error ? error.message : String(error)}`];
+  }
 }
 
 /** Plans and writes the files under `root`; returns one report line per file. */
-export async function runInit(root: string, options: InitArguments): Promise<string[]> {
+export async function runInit(
+  root: string,
+  options: InitArguments,
+  setup?: AgentTokenSetup,
+): Promise<string[]> {
   const existing = new Map<string, string | undefined>();
   const paths = [
     ".mcp.json",
@@ -248,10 +305,15 @@ export async function runInit(root: string, options: InitArguments): Promise<str
       await writeFile(join(root, file.path), file.content);
     }
   }
+  const token =
+    options.token === false || setup === undefined
+      ? []
+      : await setUpAgentToken(root, options, setup);
   return [
     ...planned.map(
       (file) => `${options.dryRun ? `would be ${file.change}` : file.change}: ${file.path}`,
     ),
-    'Set DRAFT_LOOP_SERVER_TOKEN to the token `draft-loop-server token` prints, then turn on "Accept notes from coding agents" on the Career evidence page.',
+    ...token,
+    intakeLine,
   ];
 }

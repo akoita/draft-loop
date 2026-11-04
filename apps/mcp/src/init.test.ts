@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { configFromEnvironment } from "./client.js";
 import { stopHookAdvice, turnNeedsAdvice } from "./hook.js";
 import {
   instructionsSnippet,
@@ -42,7 +43,7 @@ describe("draftloop-mcp init", () => {
       "updated: CLAUDE.md",
       "created: .claude/skills/log-work/SKILL.md",
       "created: .claude/settings.json",
-      expect.stringContaining("DRAFT_LOOP_SERVER_TOKEN"),
+      expect.stringContaining("Accept notes from coding agents"),
     ]);
     const mcp = JSON.parse(await readFile(join(root, ".mcp.json"), "utf8"));
     expect(mcp.mcpServers.other).toEqual({ command: "other-server" });
@@ -51,7 +52,6 @@ describe("draftloop-mcp init", () => {
       args: [],
       env: {
         DRAFT_LOOP_SERVER_URL: "${DRAFT_LOOP_SERVER_URL:-http://127.0.0.1:8080}",
-        DRAFT_LOOP_SERVER_TOKEN: "${DRAFT_LOOP_SERVER_TOKEN:-}",
       },
     });
     const instructions = await readFile(join(root, "CLAUDE.md"), "utf8");
@@ -83,7 +83,7 @@ describe("draftloop-mcp init", () => {
         "[mcp_servers.draftloop]",
         'command = "draftloop-mcp"',
         "args = []",
-        'env_vars = ["DRAFT_LOOP_SERVER_URL", "DRAFT_LOOP_SERVER_TOKEN"]',
+        'env_vars = ["DRAFT_LOOP_SERVER_URL", "XDG_CONFIG_HOME"]',
         "# /draftloop:work-journal",
         "",
       ].join("\n"),
@@ -108,7 +108,104 @@ describe("draftloop-mcp init", () => {
       command: "draftloop-mcp",
       hook: false,
       dryRun: true,
+      token: true,
     });
+  });
+});
+
+describe("draftloop-mcp init's agent token", () => {
+  let root: string;
+  let tokenPath: string;
+  const ownerToken = "owner-token-for-tests-0123456789abcdef";
+  const agentToken = `dlagent_${"a".repeat(43)}`;
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), "draftloop-mcp-token-"));
+    tokenPath = join(root, "config", "draftloop", "agent-token");
+  });
+
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("issues one with the owner token and saves it outside the project's files", async () => {
+    const requests: { url: string; authorization: string | null; body: unknown }[] = [];
+    const fetcher = (async (url: string, init: RequestInit) => {
+      requests.push({
+        url,
+        authorization: new Headers(init.headers).get("authorization"),
+        body: JSON.parse(String(init.body)),
+      });
+      return new Response(JSON.stringify({ id: "dlat_fixture0001", token: agentToken }), {
+        status: 201,
+      });
+    }) as typeof fetch;
+
+    const lines = await runInit(root, claude, {
+      environment: { DRAFT_LOOP_SERVER_TOKEN: ownerToken },
+      tokenPath,
+      fetch: fetcher,
+    });
+
+    expect(requests).toEqual([
+      {
+        url: "http://127.0.0.1:8080/v1/workspaces/owner/agent-tokens",
+        authorization: `Bearer ${ownerToken}`,
+        body: { label: expect.stringMatching(/^claude-code in draftloop-mcp-token-/u) },
+      },
+    ]);
+    expect(lines).toContain(`issued: agent token dlat_fixture0001, saved to ${tokenPath}`);
+    expect((await readFile(tokenPath, "utf8")).trim()).toBe(agentToken);
+    for (const path of [".mcp.json", "CLAUDE.md", ".claude/settings.json"]) {
+      const written = await readFile(join(root, path), "utf8");
+      expect(written).not.toContain(agentToken);
+      expect(written).not.toContain(ownerToken);
+    }
+
+    // The MCP server then sends the agent token, even with the owner token still exported.
+    const config = configFromEnvironment({ DRAFT_LOOP_SERVER_TOKEN: ownerToken }, tokenPath);
+    expect(await config.token()).toBe(agentToken);
+  });
+
+  it("keeps an older setup on the owner token working, and says how to issue one", async () => {
+    const lines = await runInit(root, claude, { environment: {}, tokenPath });
+    expect(lines).toContainEqual(expect.stringMatching(/^No agent token issued: set/u));
+
+    const agentInEnvironment = await runInit(root, claude, {
+      environment: { DRAFT_LOOP_SERVER_TOKEN: agentToken },
+      tokenPath,
+    });
+    expect(agentInEnvironment).toContainEqual(expect.stringContaining("holds an agent token"));
+
+    const config = configFromEnvironment({ DRAFT_LOOP_SERVER_TOKEN: ownerToken }, tokenPath);
+    expect(await config.token()).toBe(ownerToken);
+  });
+
+  it("reports a server that issues no agent tokens, and skips with --no-token", async () => {
+    const old = (async () => new Response("{}", { status: 404 })) as typeof fetch;
+    const lines = await runInit(root, claude, {
+      environment: { DRAFT_LOOP_SERVER_TOKEN: ownerToken },
+      tokenPath,
+      fetch: old,
+    });
+    expect(lines).toContainEqual(expect.stringContaining("server-v0.15.0"));
+
+    let called = false;
+    const skipped = await runInit(
+      root,
+      { ...claude, token: false },
+      {
+        environment: { DRAFT_LOOP_SERVER_TOKEN: ownerToken },
+        tokenPath,
+        fetch: (async () => {
+          called = true;
+          return new Response("{}");
+        }) as typeof fetch,
+      },
+    );
+    expect(called).toBe(false);
+    expect(skipped.some((entry) => entry.includes("agent token"))).toBe(false);
+    expect(parseInitArguments(["--host", "codex", "--no-token"])).toMatchObject({ token: false });
   });
 });
 
