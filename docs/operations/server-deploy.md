@@ -84,6 +84,12 @@ Until the hosted identity provider is running, staging uses owner-token mode.
 The owner opens the web screen at the API's address and signs in with the
 owner token from Secret Manager. The tab keeps the token until it closes.
 
+To replace the owner token on a deployment, add a new version of its secret
+in Secret Manager, then deploy the API again. Cloud Run sends traffic to the new
+revision only once it is ready, so no request is refused for downtime. Disable
+the old version afterwards, and sign in again as the
+[self-hosted guide](self-hosted.md#replace-the-owner-token) lists.
+
 Each part has its own service account with only the access it needs:
 
 | Part         | Network reach                                                                                                                                             |

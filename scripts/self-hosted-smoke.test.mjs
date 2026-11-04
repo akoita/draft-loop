@@ -21,6 +21,7 @@ const repository = new URL("..", import.meta.url).pathname;
 function fakeSpawn({ runsAfter = "2", failOn } = {}) {
   const calls = [];
   let restored = false;
+  let rotated = false;
   const spawn = (command, args, options) => {
     const line = [command, ...args].join(" ");
     calls.push({ line, env: options.env });
@@ -31,7 +32,14 @@ function fakeSpawn({ runsAfter = "2", failOn } = {}) {
       writeFileSync(join(home, ".env"), `DRAFT_LOOP_VERSION=${selfHostedSmokeVersion}\n`);
     }
     if (line.includes(" restore ")) restored = true;
-    if (line.endsWith(" token")) return { status: 0, stdout: "generated-token\n" };
+    if (line.endsWith(" token --rotate")) rotated = true;
+    if (line.endsWith(" token")) {
+      return { status: 0, stdout: rotated ? "replaced-token\n" : "generated-token\n" };
+    }
+    if (command === "curl") {
+      const current = rotated ? "replaced-token" : "generated-token";
+      return { status: 0, stdout: line.includes(`Bearer ${current} `) ? "200" : "401" };
+    }
     if (line.includes("count(*) from draft_loop.runs")) {
       return { status: 0, stdout: restored ? `${runsAfter}\n` : "2\n" };
     }
@@ -53,6 +61,9 @@ function steps(calls) {
       [/draft-loop-server install /u, "install"],
       [/draft-loop-server up$/u, "up"],
       [/draft-loop-server token$/u, "token"],
+      [/draft-loop-server token --rotate$/u, "rotate"],
+      [/^curl .*Bearer generated-token /u, "old-token"],
+      [/^curl .*Bearer replaced-token /u, "new-token"],
       [/vitest run /u, "smoke"],
       [/count\(\*\) from draft_loop\.runs/u, "count-runs"],
       [/find \/blobs/u, "count-files"],
@@ -91,6 +102,10 @@ describe("self-hosted smoke", () => {
       "count-files",
       "token",
       "smoke",
+      "rotate",
+      "token",
+      "old-token",
+      "new-token",
     ]);
     const smoke = calls.find(({ line }) => line.includes("vitest"));
     assert.equal(smoke.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN, "generated-token");

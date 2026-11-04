@@ -109,6 +109,18 @@ export function runSelfHostedSmoke({
     ],
   ];
   const ok = (result) => result.status === 0;
+  /** The HTTP status the stack answers an owner-only route with for this token. */
+  const answerTo = (token) =>
+    read("curl", [
+      "--silent",
+      "--output",
+      "/dev/null",
+      "--write-out",
+      "%{http_code}",
+      "--header",
+      `authorization: Bearer ${token}`,
+      `${selfHostedSmokeApiUrl}/v1/openapi.json`,
+    ]);
   const smoke = (token) =>
     ok(
       run("pnpm", ["exec", "vitest", "run", ...selfHostedSmokeTests], {
@@ -189,6 +201,17 @@ export function runSelfHostedSmoke({
       }
       if (read("bash", [script, "token"]) !== token) return fail("the owner token changed");
       if (!smoke(token)) return fail("the smoke failed after the restore");
+
+      // Replacing the owner token (#2146): the old one is refused, the new one is served.
+      if (!ok(run("bash", [script, "token", "--rotate"])))
+        return fail("replacing the token failed");
+      const replaced = read("bash", [script, "token"]);
+      if (replaced === undefined || replaced === "" || replaced === token) {
+        return fail("the owner token was not replaced");
+      }
+      if (answerTo(token) !== "401" || answerTo(replaced) !== "200") {
+        return fail("the API did not refuse the old owner token and accept the new one");
+      }
       process.stdout.write(
         `self-hosted smoke: passed; ${after.runs} runs and ${after.files} files restored
 `,
