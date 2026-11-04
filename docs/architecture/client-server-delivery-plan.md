@@ -22,6 +22,28 @@ The stages cover:
 Anthropic's public guidance anchors the evaluation, safety and context
 stages (see [Sources](#sources)).
 
+```mermaid
+flowchart LR
+    S1[1 Discovery] --> S2[2 Solution design]
+    S2 --> S3[3 Evaluation gate]
+    S3 --> S4[4 Safety stack]
+    S4 --> S5[5 Pilot]
+    S5 --> S6[6 Production readiness]
+    S6 --> S7[7 Adoption]
+    S7 --> S8[8 Operation]
+```
+
+| Stage                  | Gate to pass before the next stage                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| 1 Discovery            | One plan has a qualified use case, a measurable value hypothesis and a pilot partner     |
+| 2 Solution design      | ADR 0011 accepted, and the storage port merged with both clients green                   |
+| 3 Evaluation gate      | The suite reproduces the local-first parity baseline (#1307) within tolerance            |
+| 4 Safety stack         | A threat model review and an injection red-team pass, with no open high-severity finding |
+| 5 Pilot                | Metrics beat the captured baseline, with no safety incident                              |
+| 6 Production readiness | Objectives met for four weeks in the pilot, and a recovery drill passed                  |
+| 7 Adoption             | Retention and expansion in pilot organisations, and a first paid plan per tier           |
+| 8 Operation            | Someone other than the original builder ships a change through the evaluation gate       |
+
 ## Principles
 
 1. **Evidence before scale.** No stage starts on intent alone. A gate names
@@ -132,28 +154,38 @@ with structural ROI per plan (ADR 0011, D13).
 
 **Goal:** every risk has a placed control and a defined failure behaviour.
 
-| Risk | Control (where) | When the control fails |
-|---|---|---|
-| Invented facts or employers | Every claim cites a supporting quote, and unsupported claims are retracted, as Anthropic's guidance recommends; grounding validation (validation package) and the candidate's approval before export | Approval is blocked, and the finding is shown with its evidence. These controls reduce hallucination but don't eliminate it, which is why the human approval stays |
-| Indirect prompt injection through job posts, URLs or uploaded files (third-party content, trusted user) | Layered: a cheap screening model classifies untrusted content before it reaches the author or critic, plus untrusted-content delimiting, sandboxed ingestion and schema-only outputs (D11) | The content is quarantined or the output rejected by schema or grounding; the run pauses for review, and outputs are monitored for signs of injection |
-| Leaking never-share or sensitive material | Server-side sensitivity tiers before any provider call (D7) | Transmission is refused, and an audit event is recorded |
-| Cross-tenant access | Tenant scoping in services plus row-level security (D3) | The query returns nothing, and an alert is raised |
-| Runaway cost | Per-run and per-tenant budgets, and entitlements (D13). Built in sign-in mode (sprint 1n): the credit ledger reserves a run's estimate before it starts, plan caps limit concurrent and daily runs, and the margin line and the 80% and exhaustion alerts watch spend. Owner-token mode is not metered | The run pauses at its budget, and the start is refused (402 or 429) when credits or caps run out. Email notices wait for billing (sprint 1o) |
-| Provider outage or limits | Retries, usage-limit pause (#1306), optional second route (D14) | The run pauses and is resumable; no silent route switch |
-| Same-company author and critic | The pairing check and its warning (ADR 0005) | The warning is shown, and the override is recorded |
-| Unequal quality across candidates | An evaluation slice with synthetic profile variants that differ only in name, age or gender signals (stage 3) | A gap beyond tolerance blocks the change, as a regression does |
-| A service reaching more than it needs | Per-service identity and egress allowlists (D11, D14) | The call is denied, and an alert is raised |
+| Risk                                                                                                    | Control (where)                                                                                                                                                                                      | When the control fails                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Invented facts or employers                                                                             | Every claim cites a supporting quote, and unsupported claims are retracted, as Anthropic's guidance recommends; grounding validation (validation package) and the candidate's approval before export | Approval is blocked, and the finding is shown with its evidence. These controls reduce hallucination but don't eliminate it, which is why the human approval stays |
+| Indirect prompt injection through job posts, URLs or uploaded files (third-party content, trusted user) | Layered: a cheap screening model classifies untrusted content before it reaches the author or critic, plus untrusted-content delimiting, sandboxed ingestion and schema-only outputs (D11)           | The content is quarantined or the output rejected by schema or grounding; the run pauses for review, and outputs are monitored for signs of injection              |
+| Leaking never-share or sensitive material                                                               | Server-side sensitivity tiers before any provider call (D7)                                                                                                                                          | Transmission is refused, and an audit event is recorded                                                                                                            |
+| Cross-tenant access                                                                                     | Tenant scoping in services plus row-level security (D3)                                                                                                                                              | The query returns nothing, and an alert is raised                                                                                                                  |
+| Runaway cost                                                                                            | Per-run and per-tenant budgets, and entitlements (D13)                                                                                                                                               | The run pauses at its budget, and the start is refused (402 or 429) when credits or caps run out                                                                   |
+| Provider outage or limits                                                                               | Retries, usage-limit pause (#1306), optional second route (D14)                                                                                                                                      | The run pauses and is resumable; no silent route switch                                                                                                            |
+| Same-company author and critic                                                                          | The pairing check and its warning (ADR 0005)                                                                                                                                                         | The warning is shown, and the override is recorded                                                                                                                 |
+| Unequal quality across candidates                                                                       | An evaluation slice with synthetic profile variants that differ only in name, age or gender signals (stage 3)                                                                                        | A gap beyond tolerance blocks the change, as a regression does                                                                                                     |
+| A service reaching more than it needs                                                                   | Per-service identity and egress allowlists (D11, D14)                                                                                                                                                | The call is denied, and an alert is raised                                                                                                                         |
 
-- **Status of the injection row (sprint 1m, 2026-10-24):** built for job posts
-  and uploads on the hosted service. A rule screener and, where Claude on
-  Vertex AI in the EU is available, a model screener classify the text. A
-  flagged or unscreened source is quarantined, the run gate and the worker
-  refuse it, and an owner or admin releases it with an audited reason. A
-  red-team flow test over a synthetic corpus passes. With screening on, material
-  with no stored result is never clear (#1677). Still open: screening the
-  exact text the worker reads, model screening on staging and production, and
-  prompt hardening, which waits for a stage 3 evaluation run. The [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
+Status of the controls that are built:
+
+- **Runaway cost:** built in sign-in mode. The credit ledger reserves a run's
+  estimate before it starts, and plan caps limit concurrent and daily runs.
+  The margin line and the 80% and exhaustion alerts watch spend. Owner-token
+  mode is not metered, and email notices wait for billing.
+- **Injection, built:** job posts and uploads on the hosted service pass a
+  rule screener and, where Claude on Vertex AI in the EU is available, a model
+  screener. A flagged or unscreened source is quarantined, the run gate and
+  the worker refuse it, and an owner or admin releases it with an audited
+  reason. With screening on, material with no stored result is never clear
+  (#1677). A red-team flow test over a synthetic corpus passes.
+- **Injection, still open:** screening the exact text the worker reads, model
+  screening on staging and production, and prompt hardening, which waits for a
+  stage 3 evaluation run. The
+  [threat model](../security/threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads)
   lists the gaps.
+
+Other stage 4 decisions:
+
 - **Review routing by stakes:** the candidate approves every export.
   Team plans can also require a reviewer's approval by policy. Low-stakes
   steps, such as requirement extraction, need no human review.
