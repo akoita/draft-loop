@@ -130,9 +130,6 @@ concision wins in overviews. The full guide is the agent-toolkit
 - `apps/desktop-client` is the desktop client (ADR 0011, D9): an Electron
   shell over a DraftLoop server's own web screen. It holds no domain logic and
   never depends on engine, storage, provider or server packages.
-- `apps/desktop` is the v0.8 local-first desktop, in maintenance mode until
-  the desktop client replaces it: a UI shell over `packages/ui` that calls the
-  same application contracts as the CLI.
 
 ## Commands and quality gates
 

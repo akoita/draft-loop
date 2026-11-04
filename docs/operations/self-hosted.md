@@ -139,9 +139,8 @@ server version than the one installed.
 
 ## Coming from the desktop app
 
-The v0.8 desktop alpha runs its own local engine, which gets fixes only and is
-retired one release after the desktop client ships. It keeps working with its
-own workspaces until then. The `draft-loop` CLI copies its career evidence, applications and
+The v0.8 desktop alpha ran its own local engine and is retired. Its installed
+copies keep their files on disk, so you can still move them. The `draft-loop` CLI copies its career evidence, applications and
 run history into this server, and never changes the desktop's files. From a
 clone of this repository, run the CLI as `pnpm start -- <command>`.
 

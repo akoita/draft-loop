@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { desktopAffected } from "./desktop-ci-scope.mjs";
 
 describe("desktop CI scope", () => {
-  it("skips documentation and test-only changes", () => {
+  it("skips changes that cannot reach the packaged desktop client", () => {
     assert.equal(
       desktopAffected([
         "docs/roadmap.md",
@@ -12,23 +12,26 @@ describe("desktop CI scope", () => {
         "AGENTS.md",
         "compose.yaml",
         ".claude/skills/steward/SKILL.md",
-        "packages/storage/src/conformance/sqlite.test.ts",
-        "apps/desktop/src/renderer/app.test.tsx",
-        "scripts/desktop-acceptance.test.mjs",
+        "packages/storage/src/knowledge-store.ts",
+        "apps/web/src/main.tsx",
+        "apps/api/src/server.ts",
+        "apps/desktop-client/src/navigation.test.ts",
+        "scripts/release.mjs",
       ]),
       false,
     );
   });
 
-  it("runs when any bundled source, script, workflow or dependency changes", () => {
+  it("runs when the client, its acceptance, its workflow or the dependencies change", () => {
     for (const path of [
-      "packages/storage/src/knowledge-store.ts",
-      "apps/desktop/forge.config.ts",
-      "packages/rendering/fonts/carlito/NOTICE.md",
-      "scripts/desktop-acceptance.mjs",
+      "apps/desktop-client/src/main.ts",
+      "apps/desktop-client/forge.config.ts",
+      "scripts/desktop-client-acceptance.mjs",
+      "scripts/desktop-ci-scope.mjs",
       ".github/workflows/desktop-acceptance.yml",
       "pnpm-lock.yaml",
       "package.json",
+      ".nvmrc",
     ]) {
       assert.equal(desktopAffected(["docs/roadmap.md", path]), true, path);
     }

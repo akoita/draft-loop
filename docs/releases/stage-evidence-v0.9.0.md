@@ -104,4 +104,5 @@ previous desktop release.
 - Representative consented CV quality remains unvalidated, and the #1309 exit
   is not met.
 
-The next decision is retiring the v0.8 desktop now that the client has shipped.
+After this release the v0.8 desktop was retired from the repository
+([milestone 67](https://github.com/akoita/draft-loop/milestone/67)).

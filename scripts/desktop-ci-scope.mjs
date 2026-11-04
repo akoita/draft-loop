@@ -3,22 +3,28 @@ import { execFileSync } from "node:child_process";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-// Paths that cannot change the packaged desktop application. Everything else,
-// including workflows, scripts, the lockfile and any package the app bundles,
-// keeps the cross-platform desktop acceptance jobs in scope.
-const outOfScope = [
-  (path) => path.startsWith("docs/"),
-  (path) => path.startsWith(".claude/"),
-  (path) => !path.includes("/") && path.endsWith(".md"),
-  (path) => path === "compose.yaml",
-  (path) => /\.test\.(?:ts|tsx|mjs)$/.test(path),
+// Paths that can change the packaged desktop client (ADR 0011, D9). The client
+// bundles no workspace package: it loads the server's own web screen, so only
+// its own sources, its acceptance, the toolchain and the dependencies count.
+// Tests are left out because the acceptance drives the packaged app.
+const inScope = [
+  (path) => path.startsWith("apps/desktop-client/"),
+  (path) => path === "scripts/desktop-client-acceptance.mjs",
+  (path) => path === "scripts/desktop-ci-scope.mjs",
+  (path) => path === ".github/workflows/desktop-acceptance.yml",
+  (path) => path === "package.json",
+  (path) => path === "pnpm-lock.yaml",
+  (path) => path === "pnpm-workspace.yaml",
+  (path) => path === ".nvmrc",
 ];
+
+const testOnly = (path) => /\.test\.(?:ts|tsx|mjs)$/.test(path);
 
 export function desktopAffected(paths) {
   if (paths.length === 0) {
     return true;
   }
-  return paths.some((path) => !outOfScope.some((matches) => matches(path)));
+  return paths.some((path) => !testOnly(path) && inScope.some((matches) => matches(path)));
 }
 
 function pullRequestPaths() {

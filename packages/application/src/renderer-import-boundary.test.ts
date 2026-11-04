@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
-// Application modules imported at runtime by the shared screens (packages/ui) and the desktop renderer (apps/desktop/src).
+// Application modules imported at runtime by the shared screens (packages/ui), which run in a browser.
 const rendererEntries = [
   "model-profile-budget.ts",
   "model-profile-catalog.ts",
@@ -34,7 +34,7 @@ function runtimeImportClosure(entries: readonly string[]): Map<string, string[]>
   return visited;
 }
 
-describe("desktop renderer import boundary", () => {
+describe("shared screen import boundary", () => {
   it("never loads the providers package entry, which pulls in SDKs and Node-only code", () => {
     const offenders = [...runtimeImportClosure(rendererEntries)]
       .filter(([, specifiers]) => specifiers.includes("@draft-loop/providers"))

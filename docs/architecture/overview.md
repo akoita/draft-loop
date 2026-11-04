@@ -28,19 +28,19 @@ One set of packages runs in four ways, which differ only at their adapters
 | Way to run | Status | Clients | Storage and keys | Model routes |
 | --- | --- | --- | --- | --- |
 | Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, coding agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
-| Desktop app (v0.8 alpha) | Local engine in maintenance mode since 2026-10-28; a client of the server is in development | Electron renderer over the main-process host | SQLite workspace store, portable CKB, local exports; keys encrypted by the desktop host ([ADR 0004](../adr/0004-desktop-credential-boundary.md)) | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
-| CLI | Source only | Terminal commands | The same workspace store and CKB as the desktop | The same adapters as the desktop |
+| Desktop client ([guide](../reference/cli-and-desktop.md#desktop-client)) | Alpha (v0.9.0) | An Electron window over a self-hosted server's own web screen, and the hosted service's once it opens | None of its own: the server's storage and keys; the owner token is remembered in the system keychain | The server's |
+| CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | Hosted service | In development, staging only | The web screen | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the v0.8 desktop alpha and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service run the same images. Only their
 adapters differ: keys from local files or Secret Manager, files on disk or
 Cloud Storage, `direct` model routes or Vertex AI in the EU.
 
-The desktop is becoming a client of the server beside the web (ADR 0011, D9).
-Until that client ships, the v0.8 alpha keeps its own local engine with fixes
-only, and `draft-loop server import` moves its workspaces to a server.
+The desktop is a client of the server beside the web (ADR 0011, D9). The v0.8
+desktop with its own local engine is retired; `draft-loop server import` moves
+its workspaces to a server.
 
 ## The system at a glance
 
@@ -178,7 +178,7 @@ engine and on adapters behind ports, which depend on the domain.
 
 ```mermaid
 flowchart TB
-  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · desktop-client · cli · desktop v0.8"]
+  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · desktop-client · cli"]
   usecases["<b>Use cases</b><br/>application · ui · review-state"]
   engine["<b>Engine</b><br/>orchestrator · ingestion · evidence<br/>validation · evaluations · artifacts · rendering"]
   adapters["<b>Adapters behind ports</b><br/>providers · model-gateway · storage<br/>storage-postgres · storage-gcs · run-queue · embeddings"]
@@ -217,7 +217,7 @@ on, are in the repository's `AGENTS.md`.
 ```mermaid
 flowchart LR
   app["Application contracts"] --> ports["Storage ports"]
-  ports --> local["Local driver<br/>desktop and CLI"]
+  ports --> local["Local driver<br/>CLI"]
   ports --> hosted["Hosted driver<br/>API and worker"]
   local --> sqlite[("SQLite store, CKB<br/>and files")]
   hosted --> pg[("Postgres<br/>row-level security")]
@@ -248,11 +248,9 @@ Detail: [Storage and tenancy](storage-and-tenancy.md).
   time.
 - **Nothing leaves without approval.** Exports need an approved run, and
   DraftLoop never submits applications, sends messages or publishes documents.
-- **The v0.8 desktop keeps keys in its main process.** The renderer reaches the
-  host only through a frozen preload bridge, and stored keys never reach it
-  ([ADR 0004](../adr/0004-desktop-credential-boundary.md)).
-
-![System boundaries of the v0.8 desktop and the CLI: the candidate uses the CLI or the desktop renderer, which reaches the Electron main host through a frozen preload bridge; both call shared application contracts over a provider-independent core; local stores, provider adapters, and the credential store sit beneath it; and only approved transmissions, validated URL requests, approved local intake, and approved artifacts cross external boundaries.](../assets/system-boundaries.svg)
+- **The desktop client holds no engine or keys.** It loads only its server's
+  origin, sends other links to the system browser, and runs the page sandboxed
+  without Node.js access.
 
 Detail: [Runtime and trust](runtime-and-trust.md#trust-and-privacy-controls),
 the [threat model](../security/threat-model.md) and
@@ -271,8 +269,6 @@ the [threat model](../security/threat-model.md) and
 
 ## Current limitations
 
-- The v0.8 desktop's local engine gets no new features; they reach the web
-  screen first, until the desktop client ships.
 - The hosted service runs on staging only, and production is not open.
 - Local vector and hybrid retrieval remain evaluation components; runs use
   lexical retrieval over the selected source versions.
