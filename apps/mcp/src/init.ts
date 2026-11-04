@@ -1,7 +1,13 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { agentTokenLabel, isAgentToken, issueAgentToken, saveAgentToken } from "./agent-token.js";
+import {
+  agentTokenLabel,
+  isAgentToken,
+  issueAgentToken,
+  readIntakeEnabled,
+  saveAgentToken,
+} from "./agent-token.js";
 import { defaultServerUrl, defaultServerWorkspace } from "./client.js";
 
 /**
@@ -246,35 +252,46 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
 const intakeLine =
   'Then turn on "Accept notes from coding agents" in the Work journal panel of the Career evidence page.';
 
-/** Issues and saves the agent token, or says why not; one or two report lines. */
+/** Issues and saves the agent token, or says why not, and whether intake is already on. */
 async function setUpAgentToken(
   root: string,
   options: InitArguments,
   setup: AgentTokenSetup,
-): Promise<string[]> {
+): Promise<{ readonly lines: string[]; readonly intakeOn?: boolean }> {
   const ownerToken = setup.environment.DRAFT_LOOP_SERVER_TOKEN?.trim();
   const ask =
     "set DRAFT_LOOP_SERVER_TOKEN to the owner token `draft-loop-server token` prints and run init again.";
-  if (ownerToken === undefined || ownerToken === "") return [`No agent token issued: ${ask}`];
-  if (isAgentToken(ownerToken)) {
-    return [`No agent token issued: DRAFT_LOOP_SERVER_TOKEN holds an agent token; ${ask}`];
+  if (ownerToken === undefined || ownerToken === "") {
+    return { lines: [`No agent token issued: ${ask}`] };
   }
-  if (options.dryRun) return [`would issue: an agent token, saved to ${setup.tokenPath}`];
+  if (isAgentToken(ownerToken)) {
+    return {
+      lines: [`No agent token issued: DRAFT_LOOP_SERVER_TOKEN holds an agent token; ${ask}`],
+    };
+  }
+  if (options.dryRun)
+    return { lines: [`would issue: an agent token, saved to ${setup.tokenPath}`] };
+  const server = {
+    baseUrl: setup.environment.DRAFT_LOOP_SERVER_URL ?? defaultServerUrl,
+    workspaceId: setup.environment.DRAFT_LOOP_SERVER_WORKSPACE ?? defaultServerWorkspace,
+    ownerToken,
+    ...(setup.fetch === undefined ? {} : { fetch: setup.fetch }),
+  };
   try {
-    const issued = await issueAgentToken({
-      baseUrl: setup.environment.DRAFT_LOOP_SERVER_URL ?? defaultServerUrl,
-      workspaceId: setup.environment.DRAFT_LOOP_SERVER_WORKSPACE ?? defaultServerWorkspace,
-      ownerToken,
-      label: agentTokenLabel(options.host, root),
-      ...(setup.fetch === undefined ? {} : { fetch: setup.fetch }),
-    });
+    const issued = await issueAgentToken({ ...server, label: agentTokenLabel(options.host, root) });
     await saveAgentToken(setup.tokenPath, issued.token);
-    return [
-      `issued: agent token ${issued.id}, saved to ${setup.tokenPath}`,
-      "The agent sends that token, which reaches only the work journal; keep the owner token out of its environment.",
-    ];
+    const intakeOn = await readIntakeEnabled(server);
+    return {
+      lines: [
+        `issued: agent token ${issued.id}, saved to ${setup.tokenPath}`,
+        "The agent sends that token, which reaches only the work journal; keep the owner token out of its environment.",
+      ],
+      ...(intakeOn === undefined ? {} : { intakeOn }),
+    };
   } catch (error) {
-    return [`No agent token issued: ${error instanceof Error ? error.message : String(error)}`];
+    return {
+      lines: [`No agent token issued: ${error instanceof Error ? error.message : String(error)}`],
+    };
   }
 }
 
@@ -307,13 +324,14 @@ export async function runInit(
   }
   const token =
     options.token === false || setup === undefined
-      ? []
+      ? { lines: [] }
       : await setUpAgentToken(root, options, setup);
   return [
     ...planned.map(
       (file) => `${options.dryRun ? `would be ${file.change}` : file.change}: ${file.path}`,
     ),
-    ...token,
-    intakeLine,
+    ...token.lines,
+    // Only when the server did not say the switch is already on (#2170).
+    ...(token.intakeOn === true ? [] : [intakeLine]),
   ];
 }

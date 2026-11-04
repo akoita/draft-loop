@@ -167,6 +167,26 @@ describe("draftloop-mcp init's agent token", () => {
     expect(await config.token()).toBe(agentToken);
   });
 
+  it.each([
+    [true, false],
+    [false, true],
+  ])("with intake on=%s, names the intake switch: %s", async (enabled, named) => {
+    const fetcher = (async (url: string) =>
+      url.endsWith("/work-journal/intake")
+        ? new Response(JSON.stringify({ enabled }), { status: 200 })
+        : new Response(JSON.stringify({ id: "dlat_fixture0001", token: agentToken }), {
+            status: 201,
+          })) as typeof fetch;
+
+    const lines = await runInit(root, claude, {
+      environment: { DRAFT_LOOP_SERVER_TOKEN: ownerToken },
+      tokenPath,
+      fetch: fetcher,
+    });
+
+    expect(lines.some((line) => line.includes("Accept notes from coding agents"))).toBe(named);
+  });
+
   it("keeps an older setup on the owner token working, and says how to issue one", async () => {
     const lines = await runInit(root, claude, { environment: {}, tokenPath });
     expect(lines).toContainEqual(expect.stringMatching(/^No agent token issued: set/u));

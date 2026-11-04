@@ -93,3 +93,24 @@ export async function saveAgentToken(path: string, token: string): Promise<void>
 export function agentTokenLabel(host: string, root: string): string {
   return `${host} in ${basename(root) || "a project"}`.slice(0, 120);
 }
+
+/**
+ * Whether the workspace accepts notes from coding agents, read with the owner token (#2170);
+ * undefined when the server does not say, so the caller still names the switch.
+ */
+export async function readIntakeEnabled(
+  input: Omit<IssueAgentTokenInput, "label">,
+): Promise<boolean | undefined> {
+  const fetcher = input.fetch ?? fetch;
+  const url = `${input.baseUrl.replace(/\/+$/u, "")}/v1/workspaces/${encodeURIComponent(input.workspaceId)}/work-journal/intake`;
+  try {
+    const response = await fetcher(url, {
+      headers: { authorization: `Bearer ${input.ownerToken}` },
+    });
+    if (!response.ok) return undefined;
+    const body = (await response.json()) as { enabled?: unknown };
+    return typeof body.enabled === "boolean" ? body.enabled : undefined;
+  } catch {
+    return undefined;
+  }
+}
