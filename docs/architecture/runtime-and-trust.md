@@ -1,390 +1,390 @@
 # Runtime and trust architecture
 
-This page is the canonical current-state reference for the author–critic runtime, workflow states, active-duration accounting, application adapters, provider controls, and local export boundaries. It describes how shared application contracts preserve approvals, identity, recovery, and user-visible trust guarantees.
+This page is the reference for the author–critic runtime and the boundaries
+that keep it trustworthy. It covers model profiles and provider routes, the
+workflow states, active-duration accounting, what reaches a provider, prompt
+caching, the adapters, and exports. It is written for a developer or coding
+agent changing `packages/orchestrator`, `providers`, `application` or an
+adapter.
 
-Use [Architecture overview](overview.md) for the system map. See [Candidate evidence](candidate-evidence.md) for the local source and profile contracts, and [Drafting and review](drafting-and-review.md) for the evaluator, artifact, and rendering-quality boundaries. The [privacy and evaluation policy](../security/privacy-and-evaluation.md) and [threat model](../security/threat-model.md) document the broader trust controls.
+Use the [architecture overview](overview.md) for the system map. Related pages:
+
+- [Candidate evidence](candidate-evidence.md): sources and profiles
+- [Drafting and review](drafting-and-review.md): prompts, grounding, critique
+  and rendering
+- [Privacy and evaluation policy](../security/privacy-and-evaluation.md) and
+  [threat model](../security/threat-model.md): the wider trust controls
 
 ## Author–critic loop
 
-Every live author request carries its prompt version's output cap in both its
-model-facing budget and its transport configuration. New runs record
-`cli-author-v3`, which has a 16,384-token cap. Runs started on `cli-author-v1`
-or `cli-author-v2` keep their exact prompt and 8,192-token cap when resumed.
+```mermaid
+flowchart LR
+  inputs["Job, evidence, policy,<br/>rubric"] --> author["Author drafts<br/>with citations"]
+  author --> checks["Deterministic checks"]
+  checks --> critic["Independent critic<br/>structured findings"]
+  critic -->|findings| revise["Author revises or<br/>records a rejection"]
+  revise --> checks
+  critic -->|ready, stable or budget ends| approval(["Explicit approval<br/>before export"])
+```
 
-The prompt asks for compact, schema-only JSON while preserving supported facts,
-required sections, chronology, and citations. Initial drafts, ordinary revisions, and adjudicated revisions all
-retain this guidance, including retries whose latest failure concerns factuality.
-The critic has its own independent output contract.
+1. A workspace holds a job, a selected knowledge base (or legacy evidence
+   folder), instructions, a truthfulness policy and a readiness rubric.
+2. Selected sources are ingested and normalized into a canonical evidence base.
+3. The author drafts, with evidence references on important claims.
+4. The independent critic gets the same inputs, the draft and the rubric. It
+   returns structured findings, never an untracked rewrite.
+5. The author revises each finding, or records a visible rejection.
+6. The loop repeats within the round, cost and time budgets.
+7. Deterministic checks run, open disagreements are shown, and export needs
+   explicit approval.
 
-The existing provider usage checks still enforce the cap. Claude reports
-[cumulative usage across a call](https://code.claude.com/docs/en/agent-sdk/cost-tracking),
-so a token-budget failure alone does not establish the size of the final JSON.
-Prompt guidance is not a guarantee of compliance; live effectiveness requires a
-separate observation.
+- **Default pair.** One Anthropic model and one OpenAI model, with swappable
+  roles. A same-company pair is shown and warned about.
+- **History.** Provider identity and model version are recorded in run history.
+- **Prompts and caps.** The author template versions, their output caps and
+  the critic's contract are in
+  [Drafting and review](drafting-and-review.md). Every live author request
+  carries its template's cap in both its prompt budget and its transport
+  settings, and a resumed run keeps its original template and cap.
+- **Usage checks still enforce the cap.** Claude reports
+  [cumulative usage across a call](https://code.claude.com/docs/en/agent-sdk/cost-tracking),
+  so a token-budget failure alone does not show the size of the final JSON.
 
-1. Create a workspace with a job description, local evidence directory or a
-   selected knowledge base, instructions, truthfulness policy, and readiness rubric.
-2. Ingest and normalize selected sources into a canonical evidence base.
-3. Ask the author for a draft with evidence references on important claims.
-4. Give the independent critic the same canonical inputs, draft, and rubric;
-   it returns structured findings rather than an untracked rewrite.
-5. Ask the author to revise each finding or record a user-visible rejection.
-6. Repeat within configured round and cost/time budgets.
-7. Run deterministic checks, surface unresolved disagreements, and require
-   explicit approval before export.
+## Model profiles
 
-The default pairing is one Anthropic model and one OpenAI model, with roles
-configurable and swappable. Same-company pairings must be visible and warned
-about. Provider identity and model version are part of run history.
+A **model profile** is a versioned provider and model identity. It holds a
+tier, the roles it supports, runtime controls for effort, output and thinking,
+and declared limits. The framework-free contract is in
+`@draft-loop/domain/model-profile` and `@draft-loop/schemas/model-profile`.
 
-The framework-free `ModelProfile` contract is available from the
-`@draft-loop/domain/model-profile` and `@draft-loop/schemas/model-profile`
-subpaths. It describes a versioned provider/model identity, tier, supported roles,
-runtime effort/output/thinking controls, and declared limits. Validation keeps
-the runtime output ceiling within the known output limit and a budgeted
-thinking allowance within that output ceiling; an optional context-window limit
-remains independent. The `provider-default` effort value means an adapter
-omits its effort override; it makes no numeric effort or capability guarantee.
-[Anthropic's migration guide](https://platform.claude.com/docs/en/models/sonnet-5/migration-guide)
-notes that Sonnet 4.5 had no effort parameter.
-The public `@draft-loop/application/model-profiles` subpath exports
-`createModelProfileRegistry` and the `defaultModelProfileRegistry` singleton.
-It resolves an exact profile ID and required version for a requested author or
-critic role; it does not choose the latest version or fall back. Registry inputs
-and each result from `resolve()` or `list()` are detached copies.
+- **Limits.** Validation keeps the output ceiling within the model's output
+  limit, and a thinking budget within that ceiling. A context-window limit is
+  separate.
+- **`provider-default` effort** means the adapter omits its effort override. It
+  makes no numeric or capability promise.
+- **The registry.** `@draft-loop/application/model-profiles` exports
+  `createModelProfileRegistry` and `defaultModelProfileRegistry`. It resolves an
+  exact profile ID and version for a role, and never picks the latest version
+  or falls back. Inputs and results are detached copies.
+- **Historical profiles.** `legacy-anthropic-author@1` (Anthropic's
+  `claude-sonnet-4-5` alias) and `legacy-openai-critic@1` (OpenAI's
+  `gpt-5.6-luna` alias) stay registered so old runs resume. Their limits were
+  verified on 2026-09-30. Aliases do not pin provider-side weights, or claim
+  availability or quality.
 
-The economy `legacy-anthropic-author` preset is author-only and describes
-Anthropic's `claude-sonnet-4-5` alias
-([model reference](https://platform.claude.com/docs/fr/models/sonnet-4-5/overview)).
-The economy `legacy-openai-critic` preset is critic-only and describes OpenAI's
-`gpt-5.6-luna` alias
-([model reference](https://developers.openai.com/api/docs/models/gpt-5.6-luna));
-limits were verified on 2026-09-30. These aliases and their metadata do not pin
-provider-side model weights or claim account availability or quality.
+The current presets and catalog are listed in the
+[CLI reference](../reference/cli-and-desktop.md#cli-model-profiles).
 
-At the provider adapter boundary, matching configured and requested profile
-snapshots are validated before SDK calls. Anthropic receives explicit effort
-and supported thinking controls; OpenAI receives explicit reasoning effort and
-rejects thinking modes it cannot represent. Provider-default controls remain
-omitted. The Claude user-session adapter also applies profile output limits,
-effort, and verified Sonnet 4.5 thinking modes after removing inherited CLI
-control overrides ([Claude Code environment-variable reference](https://code.claude.com/docs/en/env-vars)).
+### Routes that support profiles
 
-The supported routes for recorded model profiles are:
+Before an SDK call, the adapter checks that the configured and requested
+profile snapshots match. Provider-default controls stay omitted.
 
-| Provider route | Profile support |
-| --- | --- |
-| Anthropic API key | Output budget, effort, and supported thinking controls |
-| Anthropic Claude user session | Output budget and effort; budgeted/disabled thinking only for the verified Sonnet 4.5 alias and snapshot |
-| OpenAI API key | Output budget and effort; thinking must remain `provider-default` |
-| OpenAI Codex user session | Rejected before launch: no verified generation-output cap |
-| Local adapter | Rejected before invocation: profile controls are not implemented |
+| Route                         | Profile support                                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anthropic API key             | Output budget, effort and supported thinking controls                                                                                                                                                                               |
+| Anthropic Claude user session | Output budget and effort. Budgeted or disabled thinking only for the verified Sonnet 4.5 alias and snapshot. Inherited CLI control overrides are removed first ([environment variables](https://code.claude.com/docs/en/env-vars)). |
+| OpenAI API key                | Output budget and reasoning effort. Thinking must stay `provider-default`.                                                                                                                                                          |
+| OpenAI Codex user session     | Rejected before launch, because there is no verified generation-output cap                                                                                                                                                          |
+| Local adapter                 | Rejected before invocation, because profile controls are not implemented                                                                                                                                                            |
 
-[#674](https://github.com/akoita/draft-loop/issues/674) records this route
-restriction for application integration. Verification on 2026-09-30 found no
-supported generation-output cap in the current [Codex configuration
-reference](https://developers.openai.com/codex/config-reference/); the installed
-CLI is 0.159.1. Its post-generation usage check remains a legacy acceptance
-check, not a generation cap. Codex profiles remain unavailable until a control
-can be verified and implemented in a separate issue. Profile selection must
-reject an unsupported configured route visibly; it must not switch
-transports, authentication, or providers automatically.
+**Codex** profiles stay unavailable until a cap can be verified and built
+([#674](https://github.com/akoita/draft-loop/issues/674)). On 2026-09-30 the
+[Codex configuration reference](https://developers.openai.com/codex/config-reference/)
+had no generation-output cap, for installed CLI 0.159.1. Its post-generation
+usage check is a legacy acceptance check, not a cap. An unsupported route is
+refused visibly, and transports, authentication and providers are never
+switched automatically.
 
-Context model selections can carry a validated, detached copy of a profile
-beside the exact provider/model identity and prompt-template version, and JSON
-round-trips preserve that snapshot. The application `begin` and `start`
-contracts accept exact author and critic profile ID/version references for one
-run. The registry resolves each once, and the full snapshots are bound to the
-context before its input records are persisted. A profile replaces the
-workspace model pair for that run only; it does not reconfigure the workspace.
+### How a profile binds to a run
 
-The author prompt and request use the recorded profile output cap, and the
-critic request uses its recorded cap. Resume validates the saved profile route
-against current authentication settings without consulting the registry, then
-continues with the context's provider, model, and runtime controls. Existing
-workspace settings remain the source for runs without profile references.
-There is no CLI or UI selector or profile-default promotion in this integration.
-
-Before transmission, author and critic share a projection of the local context.
-Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;
-filenames, filesystem locations and source URLs are not used as those labels.
-Source IDs, checksums, other manifest metadata and candidate fact text remain
-unchanged.
-
-Artifact evidence references also receive logical source-path labels
-before critique or author revision; matching manifest references reuse its labels,
-while other references use opaque labels in first-occurrence order. Excerpts,
-locators and checksums stay intact. Stored artifacts retain their original
-provenance. Local knowledge selection and operator lineage are omitted. The
-projection creates new manifest entries and does not rewrite the stored snapshot
-or its provenance. The existing user-controlled transmission policy still applies.
-
-Provider-facing artifacts use `evidenceEncoding: reference-table-v1`. Each
-claim's ordered `evidenceReferenceIds` resolves to a complete entry in that
-artifact's `evidenceReferences` table. Identical references appear once; distinct
-checksums, locators and excerpts remain distinct, and every full excerpt is
-retained. Both the critic's artifact and the author's prior draft use this
-encoding after path projection. Table IDs are separate from retrieved-evidence
-chunk IDs used in author proposals. Stored artifacts keep their original
-references, and model instructions explain how to resolve the table.
-
-Author validation requires substantive claim coverage for factual block text.
-In Skills blocks, the exact leading label `Cloud and DevOps:` is presentation
-when followed by content and a substantive claim. Every listed technology
-still needs claim coverage and supporting evidence; arbitrary labels and
-proficiency assertions receive no exemption.
-Protected multiword names may also match same-line evidence with balanced
-Markdown strong emphasis around individual words. Matching preserves word
-identity and order; it does not join separate lines or ignore arbitrary
-punctuation, escaped markers, or code literals.
-
-Closed software-phrase contexts distinguish an opening transition, API
-authentication, and an opening use of two technical tools from compound names.
-The resulting product and tool names still require whole-word source support;
-employer, title, linking-word, numeric and date checks remain in force.
+- **Resolved once.** `begin` and `start` accept exact author and critic profile
+  references. The registry resolves each once, and the full snapshots join the
+  run context before its inputs are saved.
+- **Run only.** A profile replaces the workspace pair for that run, and never
+  reconfigures the workspace.
+- **Caps.** The author prompt and request use the recorded output cap, and the
+  critic request uses its own.
+- **Resume** checks the saved route against the current authentication settings,
+  without the registry, then continues with the context's provider, model and
+  controls.
+- **No profile.** Runs without profile references use workspace settings.
 
 ### Reasoning levels in the run snapshot
 
-Each run records both roles' resolved model profiles, runtime controls
-included, in its context snapshot. A saved pair, an application's pair or a run
-start may choose a reasoning level per role from the levels the catalog lists
-for that exact profile version (`model-profile-efforts.ts`). The level is
-applied when the profile is resolved, so the snapshot holds the level the run
-actually used, resume reuses it, and the review screens read it from there.
+Each run records both roles' resolved profiles, runtime controls included, in
+its context snapshot.
+
+- **Choosing a level.** A saved pair, an application's pair or a run start may
+  choose a level per role, from the levels the catalog lists for that exact
+  version (`model-profile-efforts.ts`).
+- **Applied at resolution.** The level is applied when the profile is resolved,
+  so the snapshot holds the level the run actually used.
+- **Reused.** Resume reuses it, and the review screens read it from the
+  snapshot.
 
 ## Workflow state machine
 
-Each transition emits an auditable event and retains relevant inputs, outputs,
-evidence links, and user decisions.
+Each transition emits an auditable event, and keeps the relevant inputs,
+outputs, evidence links and user decisions.
 
-| State               | Meaning                                                            | Allowed next states                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `collecting`        | Workspace inputs are being assembled.                              | `ingesting`, `paused`, `stopped`                                                                                                              |
-| `ingesting`         | Selected local material is being normalized.                       | `drafting`, `collecting`, `paused`, `stopped`                                                                                                 |
-| `drafting`          | The configured author is creating a draft.                         | `reviewing`, `paused`, `stopped`, `budget-exhausted`                                                                                          |
-| `reviewing`         | The independent critic is producing structured findings.           | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                      |
-| `revising`          | The author is addressing accepted findings.                        | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                     |
-| `provider-error`    | A provider request failed and safe recovery metadata is available. | Corresponding active step on explicit retry (at most three attempts), `awaiting-approval` when an artifact can return to review, or `stopped` |
-| `awaiting-approval` | Checks are complete and the user must decide.                      | `approved`, `revising`, `paused`, `stopped`                                                                                                   |
-| `approved`          | The user approved the current artifact.                            | `exported`, `revising`                                                                                                                        |
-| `exported`          | An approved artifact was rendered locally.                         | —                                                                                                                                             |
-| `paused`            | The user temporarily suspended the run.                            | `collecting`, `drafting`, `reviewing`, `revising`, `awaiting-approval`, `stopped`                                                             |
-| `stopped`           | The user ended the run.                                            | —                                                                                                                                             |
-| `budget-exhausted`  | A round, cost, or time budget ended the loop.                      | `awaiting-approval`, `revising`, `stopped`                                                                                                    |
+| State               | Meaning                                                            | Allowed next states                                                                                                             |
+| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `collecting`        | Workspace inputs are being assembled                               | `ingesting`, `paused`, `stopped`                                                                                                |
+| `ingesting`         | Selected material is being normalized                              | `drafting`, `collecting`, `paused`, `stopped`                                                                                   |
+| `drafting`          | The author is creating a draft                                     | `reviewing`, `paused`, `stopped`, `budget-exhausted`                                                                            |
+| `reviewing`         | The critic is producing structured findings                        | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                        |
+| `revising`          | The author is addressing accepted findings                         | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                       |
+| `provider-error`    | A provider request failed, and safe recovery metadata is available | The same active step on retry (at most three attempts), `awaiting-approval` when an artifact can return to review, or `stopped` |
+| `awaiting-approval` | Checks are complete, and the user must decide                      | `approved`, `revising`, `paused`, `stopped`                                                                                     |
+| `approved`          | The user approved the current artifact                             | `exported`, `revising`                                                                                                          |
+| `exported`          | An approved artifact was rendered                                  | none                                                                                                                            |
+| `paused`            | The user suspended the run                                         | `collecting`, `drafting`, `reviewing`, `revising`, `awaiting-approval`, `stopped`                                               |
+| `stopped`           | The user ended the run                                             | none                                                                                                                            |
+| `budget-exhausted`  | A round, cost or time budget ended the loop                        | `awaiting-approval`, `revising`, `stopped`                                                                                      |
 
-The loop enters `awaiting-approval` when readiness criteria are met, quality is
-stable across configured rounds, the user reviews early, or a budget ends. It
-must not claim readiness with unresolved high-severity factuality issues,
-unaddressed critical requirements without an explicit gap, or newly introduced
-unsupported claims. `provider-error` stays distinct across application and
-desktop boundaries. Retry does not silently broaden the acknowledged
-transmission scope.
+The loop enters `awaiting-approval` in four cases:
+
+- the readiness criteria are met
+- quality is stable across the configured rounds
+- the user reviews early
+- a budget ends
+
+Readiness is never claimed while any of these is open:
+
+- a high-severity factuality issue
+- a critical requirement with no explicit gap
+- a newly introduced unsupported claim
+
+`provider-error` stays a distinct state across every boundary. A retry never
+widens the acknowledged transmission scope.
 
 ### Active provider-duration accounting
 
-When `maxDurationMs` is configured, each `RunSnapshot` persists an optional
-`durationAccounting` record with accumulated active milliseconds and an
-`activeSince` timestamp (or `null`). New runs start active at `startedAt`.
-Drafting, reviewing, and revising accrue time; awaiting human approval,
-explicit pause, provider-error retry waits, budget exhaustion, and terminal
-states do not. Leaving active work settles the segment, and retry/resume or a
-revision request starts a new segment. Provider calls remain inside the active
-segment, so their elapsed time is counted without timers or cancellation.
+With `maxDurationMs` set, each `RunSnapshot` keeps a `durationAccounting`
+record, holding accumulated active milliseconds and `activeSince` (or `null`).
 
-Snapshots written before this record existed use conservative wall-clock time
-from `startedAt` until a safe transition persists the migrated accounting.
-Malformed accounting fails closed at the duration budget boundary, and clock
-regressions never reduce accumulated active time. This accounting changes only
-duration measurement; round, cost, retry, and cancellation semantics remain
-unchanged.
+| Accrues time                                                                  | Does not accrue time                                                                     |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `drafting`, `reviewing`, `revising`, including the provider calls inside them | Awaiting approval, pause, provider-error retry waits, budget exhaustion, terminal states |
+
+- **Segments.** A new run starts active at `startedAt`. Leaving active work
+  settles the segment, and a retry, a resume or a revision request starts a new
+  one. Nothing uses timers or cancellation.
+- **Old snapshots** use wall-clock time from `startedAt`, until a safe
+  transition saves the migrated record.
+- **Safety.** Malformed accounting fails closed at the duration budget, and a
+  clock that goes backwards never reduces accumulated time.
+- **Scope.** Only duration is measured this way. Round, cost, retry and
+  cancellation rules are unchanged.
 
 ## Trust and privacy controls
 
-The system keeps evidence links, structured findings, approved artifact
-versions, revisions, decisions, provider/model identity, usage, and checksums
-recoverable without storing hidden chain-of-thought. Raw prompts and raw
-provider responses are not operational-log or audit payloads. Provider calls
-require an explicit data policy, and local retention settings are visible per
-workspace. Human approval is mandatory; job discovery, application submission,
-and uncontrolled external research are outside the MVP.
+- **Recoverable, without hidden reasoning.** Evidence links, structured
+  findings, approved versions, revisions, decisions, provider and model
+  identity, usage and checksums stay recoverable, and hidden chain-of-thought
+  is never stored.
+- **No raw payloads in logs.** Raw prompts and provider responses are never
+  operational-log or audit payloads.
+- **An explicit data policy.** Every provider call needs one, and local
+  retention settings are visible per workspace.
+- **Human approval** is mandatory.
+- **Out of scope.** Job discovery, application submission and uncontrolled
+  research are not part of the product.
 
-See [the threat model](../security/threat-model.md) and [privacy and evaluation
-policy](../security/privacy-and-evaluation.md) for current trust boundaries, redaction
-rules, retention defaults, and deterministic evaluation gates.
+The [threat model](../security/threat-model.md) and the
+[privacy and evaluation policy](../security/privacy-and-evaluation.md) hold the
+trust boundaries, redaction rules, retention defaults and evaluation gates.
 
-### Desktop host boundary
+### What reaches a provider
 
-In the [system boundaries diagram](overview.md#trust-boundaries), solid arrows
-show application data or control flow. The dotted credential edge
-is lookup-only: stored keys are never projected to the renderer. Network and
-export edges require visible approval. The solid CKB edge covers the explicit
-file, URL, and bounded-directory commands documented in
-[Candidate evidence](candidate-evidence.md). It also represents exact selected
-source-version lexical retrieval through the CKB-owned index; selection is
-explicit and does not imply implicit workspace access. See the [CKB integration
-status](candidate-evidence.md#ckb-integration-status) for remaining limits.
+Before transmission, the author and critic share a projection of the local
+context. The stored snapshot and its provenance are never rewritten, and the
+transmission policy still applies.
 
-The renderer receives bounded projections for workspace and run state. Native
-dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
-construction, URL fetching, and export writes remain in the main process. The
-renderer can submit an API key only through the allowlisted credential command;
-the host validates it and owns encryption, status, removal, and environment
-fallback. Browser mode has no native filesystem or persistent credential
-capabilities and keeps a deterministic fixture fallback. See [ADR
-0004](../adr/0004-desktop-credential-boundary.md).
+| Item                                                                | Sent as                                                                                                                                                                      |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source manifest paths                                               | Opaque ordinal labels such as `evidence-source-1`, never filenames, locations or URLs                                                                                        |
+| Source IDs, checksums, other manifest metadata, candidate fact text | Unchanged                                                                                                                                                                    |
+| Artifact evidence references                                        | Logical source labels. Matching manifest references reuse their label, and others get opaque labels in first-occurrence order. Excerpts, locators and checksums stay intact. |
+| Knowledge selection and operator lineage                            | Omitted                                                                                                                                                                      |
+| A retrieved chunk                                                   | Its id, a run-local source alias (`S1`, `S2`, …), its line numbers and its text. The checksum, workspace id, rank and ordinal stay local.                                    |
 
-### Application adapter boundary
+**Evidence tables.** Provider-facing artifacts use
+`evidenceEncoding: reference-table-v1`. Each claim's ordered
+`evidenceReferenceIds` resolves to one entry in the artifact's
+`evidenceReferences` table.
 
-The CLI and packaged desktop host are adapters over the shared application
-driver. The driver stores a workspace manifest beside application SQLite
-history, ingests selected local sources, constructs context snapshots, and
-drives orchestration.
+- **Deduplicated.** Identical references appear once, while distinct
+  checksums, locators and excerpts stay distinct, and every full excerpt is
+  kept.
+- **Where it applies.** The critic's artifact and the author's prior draft both
+  use this encoding, after path projection.
+- **Separate ids.** Table IDs are separate from the retrieved-evidence chunk IDs
+  in author proposals. Stored artifacts keep their original references, and the
+  model instructions explain how to resolve the table.
 
-Across CKB commands, the adapters differ only at the user-interaction edge:
+### Claim coverage rules
 
-- **CLI:** accepts intentional runtime-only file and directory paths.
-- **Desktop:** owns native pickers in the host and projects only path-free,
-  bounded results to the renderer.
-- **Shared application boundary:** applies the same approvals, lifecycle guards,
-  network policy, deterministic ordering, and complete-or-partial result
-  contracts to both adapters.
+Author validation requires substantive claim coverage for factual block text.
+A few narrow rules refine it:
 
-Opportunity commands follow the same split. The CLI reads source manifests and
-edit patches from intentional runtime-only JSON files. The desktop renderer can
-provide approved URLs, pasted text, and typed candidate instructions, but asks
-the host to resolve every local file through a native picker. Both adapters use
-the same immutable application operations; provider extraction is enabled only
-by an explicit per-create approval.
+- **Skills labels.** In Skills blocks, the exact leading label
+  `Cloud and DevOps:` counts as presentation when content and a claim follow.
+  Every listed technology still needs coverage and evidence. Arbitrary labels
+  and proficiency claims get no exemption.
+- **Emphasized names.** A protected multiword name may match same-line evidence
+  with balanced Markdown strong emphasis around single words. Word identity and
+  order are kept. Separate lines are never joined, and arbitrary punctuation,
+  escaped markers and code literals are never ignored.
+- **Software phrases.** Closed contexts tell an opening transition, API
+  authentication and an opening pair of tools apart from compound names. The
+  resulting names still need whole-word support, and employer, title,
+  linking-word, number and date checks stay in force.
 
-The desktop knowledge panel exposes native store creation and opening, then
-explicit selection of one active base for a collecting or stopped workspace.
-Opening a store does not bind it. Selection replaces the workspace binding,
-refreshes the workspace, and clears the selected canonical-profile version;
-existing run contexts stay immutable. Pending setup blocks Start, and hosts
-without the required capabilities show an unavailable explanation.
+## Provider calls and prompt caching
 
-File and directory intake in that panel uses the existing host-owned pickers
-and shared CKB service. Complete and partial results report counts and fresh
-readiness without filenames or source content. Repeated sources are described
-as reused or processed. Successful intake invalidates the chosen profile even
-if subsequent inspection fails; it does not select a knowledge base or start
-provider execution.
+Live provider execution is opt-in, and the provider boundary enforces the data
+policy before the SDK call.
 
-The separate workspace-source intake capability requires an explicit approval
-flag and the current open workspace ID. The host resolves its legacy
-workspace evidence directory and uses the same bounded directory importer and
-result projection as picker intake. Active runs and archived target bases
-block this action. Neither the renderer nor the result supplies a path.
+**Every call is stateless.** Each round resends the system prompt and the full
+input, and no provider-side conversation is reused. Inputs list the run-fixed
+members first, then the per-call members:
 
-A trusted workspace-scoped `not-found` failure clears stale desktop review and
-profile state and presents an explicit **Open workspace** recovery screen. The
-renderer ignores completions from a previously open workspace. Recovery does
-not remember or reopen filesystem paths automatically, discover models, or
-approve an artifact; the native picker opens the saved workspace again. Other
-operation failures leave the current review available.
+| Run-fixed (shared prefix)                                                                             | Per call                                     |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Context, retrieved evidence, the achievement plan, and the author's grounding guide and output budget | Run, round, execution, artifact and findings |
 
-Store setup, selection, inspection, intake, refresh, rebind, retirement, and
-directory maintenance all follow this split. Read-only inspection calls are
-fresh reads rather than a cross-command snapshot. Mutation results expose only
-the opaque identities, statuses, timestamps, counts, and bounded partial
-progress required by the caller. The detailed CKB contracts are documented in
-[Portable Candidate Knowledge Base](candidate-evidence.md#portable-candidate-knowledge-base) and are
-canonical in [ADR 0007][adr-0007].
+Providers with automatic prefix caching can reuse that shared prefix. These are
+Mistral, Gemini, DeepInfra and Claude Code's own caching. Mistral requests also
+carry an opaque cache key hashed from the context snapshot ID.
 
-Archiving a CKB and other destructive or externally visible operations require
-explicit confirmation. Adapter commands do not silently rewrite workspace
-selection or broaden an approved source, URL, or provider scope.
-
-### Provider and export boundary
-
-Live provider execution is opt-in and the provider boundary enforces the
-request data policy before the SDK call. Approved artifacts render locally to
-Markdown, controlled DOCX, or controlled PDF; immutable export records retain
-artifact/template versions, timestamp, format, MIME type, and checksum.
-
-Every provider call is stateless: each round resends the system prompt and the
-full input, and no provider-side conversation or session is reused. Author and
-critic inputs list the members that stay fixed for a run first (context,
-retrieved evidence, achievement plan, and the author's grounding guide and
-output budget), then the per-call members (run, round, execution, artifact, and
-findings). Providers with automatic prefix caching (Mistral, Gemini, DeepInfra,
-and Claude Code's own caching) can then reuse that shared prefix. A retrieved
-chunk reaches the models with its id, its source as a run-local alias (`S1`,
-`S2`, …), its line numbers and its text; the checksum, workspace id, rank and
-ordinal stay local, since no prompt names them and they were about a sixth of
-the cached prefix on a full-source run.
-Mistral requests carry an opaque prompt-cache key hashed from the context
-snapshot ID.
+### Claude
 
 Claude has no automatic prefix cache, so the Anthropic adapter, on the Claude
-API and on Vertex AI, marks one. An author call sends the run's system
-instructions, then the run-stable input members as one block with the
-request's only cache breakpoint. The call's own instructions (adjudication,
-retry, revision, or patch) and per-call members follow it. The words are the
-ones other providers receive in one system prompt and one input; only their
-order differs.
+API and on Vertex AI, marks one.
 
-The author's prefix lives five minutes, written at 1.25x the input rate, since
-a run's author calls land within minutes of each other; the critic's lives one
-hour, at 2x, because its calls bracket the author's drafts. The lifetime counts
-from the start of each request that touches the prefix, and a draft can run
-longer than five minutes, so while a five-minute cached request is in flight
-the adapter sends a copy of it with one output token every 3.5 minutes. The
-copy keeps the request's thinking and output format, reads the prefix at the
-cache-read rate, and its usage joins the call's; a failed copy is ignored. A
-request with budgeted thinking cannot run with one output token and sends none.
+- **Layout.** An author call sends the system instructions, then the run-fixed
+  members as one block, with the request's only cache breakpoint. The call's own
+  instructions (adjudication, retry, revision or patch) and the per-call members
+  follow it. The words match what other providers get, and only their order
+  differs.
+- **Lifetimes.**
 
-The author's application plan calls send the same prefix as its drafts, with the
-plan instructions after it, so the first plan call writes the cache and the plan
-revision and every draft of the run read it.
+  | Role   | Lifetime                                            | Write price |
+  | ------ | --------------------------------------------------- | ----------- |
+  | Author | 5 minutes, since its calls land minutes apart       | 1.25× input |
+  | Critic | 1 hour, since its calls bracket the author's drafts | 2× input    |
 
-Claude's cache also keys on the output format, so every author call of a run
-asks for the same one: an object with one member per author output (plan, draft,
-and revision patch). Each call's instructions name the member it returns, and
-the adapter hands back only that member.
+- **Keep-alive.** A lifetime counts from the start of each request, and a draft
+  can run past five minutes. So, while a five-minute cached request is in
+  flight, the adapter resends a copy with one output token every 3.5 minutes.
+  The copy reads the prefix at the cache-read rate, and its usage joins the
+  call's. A failed copy is ignored, and a request with budgeted thinking sends
+  none.
+- **Plan calls** send the same prefix as the drafts, with the plan instructions
+  after it. The first plan call writes the cache, and the revision and every
+  draft read it.
+- **One output format.** Claude's cache also keys on the output format, so every
+  author call asks for one object with a member per output (plan, draft and
+  revision patch). Each call names its member, and the adapter returns only
+  that.
 
-OpenAI's implicit cache writes the whole prompt of every call, at a price above
-uncached input, and a later call reads it only if it repeats that whole prompt.
-The OpenAI adapter therefore turns it off and caches only through an explicit
-breakpoint, keyed on the context snapshot.
+### OpenAI
+
+OpenAI's implicit cache writes every call's whole prompt, at a price above
+uncached input, and reads it only for a full repeat. The OpenAI adapter
+therefore turns it off. It caches only through an explicit breakpoint, keyed on
+the context snapshot.
 
 - **Critic calls** carry that breakpoint, or the Claude layout on a Claude
-  critic. The plan review and every critique of a run send the same critic
-  instructions, output format and leading input members (context, retrieved
-  evidence and achievement plan), so the plan review writes the prefix and
-  every critique of the run reads it. The review cites evidence by the ids the
-  critiques use, not by the author's short aliases, so the prefixes match.
-- **Coverage-judgement and candidate-direction instructions** vary by round,
-  so they follow the breakpoint. Every critic call asks for one format with a
-  member per critic output (plan review and critique with coverage
-  judgements); the adapter hands back the member the call named, and the
-  empty coverage list of a critique that judged none is dropped.
+  critic. The plan review and every critique send the same instructions, output
+  format and leading members: context, retrieved evidence and achievement plan.
+  The plan review writes the prefix and every critique reads it.
+- **Matching ids.** The review cites evidence by the ids the critiques use,
+  never the author's short aliases, so the prefixes match.
+- **Round-specific instructions.** Coverage-judgement and candidate-direction
+  instructions vary by round, so they follow the breakpoint.
+- **One format.** Every critic call asks for one format, with a member per
+  output. The adapter returns the member the call named, and drops the empty
+  coverage list of a critique that judged none.
 
-Recorded input tokens count every input token a call carried, including
-prompt-cache reads and writes. Adapters that report them also return the
-cached and cache-write counts, and the estimated cost prices each at its own
-rate: the catalog records Claude's cache-read rate and, per profile, the
-cache-write rate of the lifetime its role uses.
-Run history records the cache-read and cache-write counts beside each
-execution's totals, and on each call of the plan step, so a parity run can
-report what its calls read back instead of inferring it from cost.
+### Recorded usage and evidence
 
-Each completed author and critic execution also records the retrieved evidence
-it was sent as content-free references (source id, line range, rank; never the
-text), so a recall miss can be traced to retrieval or to the author from the
-saved run alone. `evidenceUsage` in `packages/evaluations` compares a draft's
-claims with those references: chunks sent, chunks cited, uncited ranks, and
-claims outside the retrieved set.
+- **Input tokens** count everything a call carried, including cache reads and
+  writes.
+- **Cache counts.** Adapters that report cached and cache-write counts return
+  them. The estimate prices each at its own rate: Claude's cache-read rate, and
+  per profile, the write rate for the lifetime its role uses.
+- **History.** Run history records the cache counts beside each execution's
+  totals and on each plan-step call. A parity run can therefore report what its
+  calls read back, instead of inferring it from cost.
+- **Evidence sent.** Each completed author and critic execution records the
+  evidence it was sent, as content-free references: source id, line range and
+  rank, never the text. A recall miss can then be traced to retrieval or to the
+  author from the saved run.
+- **Comparison.** `evidenceUsage` in `packages/evaluations` compares a draft's
+  claims with those references: chunks sent, chunks cited, uncited ranks, and
+  claims outside the retrieved set.
 
-Additional artifact schemas, multilingual templates, portfolio ingestion, and a
-local endpoint adapter reuse these boundaries at component level. They are not
-integrated or outcome-validated merely because contracts and tests exist; the
-[roadmap](../roadmap.md) records each evidence level.
+## Clients and adapters
 
-The `pilot` CLI command uses synthetic local fixtures to exercise ingestion,
-authoring, independent criticism, one bounded revision, approval, export,
-typed local history, and audit events. Its report contains only safe counts and
-identifiers. It validates workflow mechanics, not the quality hypothesis on
-real applications.
+Every client is an adapter over the shared application driver. The driver keeps
+a workspace manifest beside its SQLite history, ingests selected sources, builds
+context snapshots and drives orchestration.
 
-[adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md
+| Client                                 | Where paths and files come from                                                    | Boundary                                                                                                                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI (`apps/cli`)                       | Intentional, runtime-only file and directory paths, and JSON manifests and patches | Local workspace, CKB store and provider keys from the environment                                                                                                                                                 |
+| Hosted API (`apps/api`)                | Browser uploads and approved URLs only. No path crosses the API.                   | See [Hosted service](hosted-service.md)                                                                                                                                                                           |
+| Web screen (`apps/web`)                | The browser's file picker, through the API                                         | Holds no domain logic or keys                                                                                                                                                                                     |
+| Desktop client (`apps/desktop-client`) | The server's web screen                                                            | Holds no engine, storage or keys. It loads only its server's origin, sends other links to the system browser, and runs the page sandboxed without Node.js ([ADR 0011](../adr/0011-client-server-version.md), D9). |
+
+**The same rules apply to every client.** The shared application boundary
+applies the same approvals, lifecycle guards, network policy, ordering, and
+complete-or-partial result contracts.
+
+- **Opportunity briefs.** Provider extraction is enabled only by an explicit
+  per-create approval.
+- **Results.** Mutation results expose only opaque identities, statuses,
+  timestamps, counts and bounded partial progress. Read-only inspections are
+  fresh reads, not a shared snapshot.
+- **Confirmation.** Archiving a CKB, and other destructive or externally visible
+  operations, need explicit confirmation.
+- **No silent widening.** Adapters never silently rewrite a workspace selection,
+  or widen an approved source, URL or provider scope.
+
+The CKB contracts are in
+[Portable Candidate Knowledge Base](candidate-evidence.md#portable-candidate-knowledge-base),
+and are canonical in [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md).
+
+## Exports
+
+Approved artifacts render to Markdown, controlled DOCX or controlled PDF.
+Immutable export records keep the artifact and template versions, the time, the
+format, the MIME type and the checksum. Rendering is described in
+[Drafting and review](drafting-and-review.md).
+
+## Evidence levels
+
+Contracts and tests for these components exist, but they are not integrated or
+outcome-validated by that alone:
+
+- additional artifact schemas
+- multilingual templates
+- portfolio ingestion
+- a local endpoint adapter
+
+The [roadmap](../roadmap.md) records each evidence level.
+
+The `pilot` CLI command runs synthetic fixtures through the whole workflow:
+
+- ingestion
+- authoring
+- independent criticism
+- one bounded revision
+- approval and export
+- typed history and audit events
+
+Its report holds only safe counts and identifiers. It validates the workflow
+mechanics, not the quality of real applications.

@@ -1,491 +1,489 @@
 # Candidate evidence architecture
 
-This page is the canonical current-state reference for the contracts that turn candidate-owned material and opportunity context into bounded, reviewable evidence. It covers opportunity briefs, writing policies, portable candidate knowledge bases, canonical candidate profiles, and their local lifecycle and run-selection boundaries.
+This page is the reference for how candidate material and job context become
+bounded, reviewable evidence for a run. It covers opportunity briefs, writing
+policies, the portable candidate knowledge base (CKB), canonical candidate
+profiles, and retrieval in runs. It is written for a developer or coding agent
+changing `packages/ingestion`, `evidence`, `storage` or `application`.
 
-Use [Architecture overview](overview.md) for the system map. See [Drafting and review](drafting-and-review.md) for author, critic, and artifact-quality boundaries, and [Runtime and trust](runtime-and-trust.md) for workflow, adapter, provider, and export boundaries. The [CLI and desktop reference](../reference/cli-and-desktop.md) documents user operations; [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md) is canonical for the portable CKB contract.
+Use the [architecture overview](overview.md) for the system map. Related pages:
+
+- [Drafting and review](drafting-and-review.md): the author, the critic and
+  artifact quality
+- [Runtime and trust](runtime-and-trust.md): workflow, adapters, providers and
+  exports
+- [CLI and desktop reference](../reference/cli-and-desktop.md): user commands
+- [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md): canonical for
+  the CKB contract
+
+```mermaid
+flowchart LR
+  job["Job post, page or file"] --> brief["Opportunity brief<br/>draft → reviewed"]
+  files["Career files, folders, URLs"] --> ckb[("Portable CKB<br/>sources and versions")]
+  ckb --> sel["Selection snapshot<br/>path-free"]
+  sel --> profile["Candidate profile<br/>draft → reviewed"]
+  policy["Writing policy<br/>versions"] --> ctx
+  brief --> ctx["Immutable run context"]
+  sel --> ctx
+  profile --> ctx
+  ctx --> run(["Author and critic"])
+```
+
+Four rules hold across every part of this page:
+
+- **Immutable versions.** Briefs, policies, source versions and profiles are
+  append-only, checksummed versions. An edit creates a new version.
+- **Exact pins.** A run pins exact reviewed versions in its immutable context,
+  and resume cannot swap them.
+- **Path-free outside the store.** Host paths, URLs and origins stay in local
+  storage. They never reach provider requests, run history, diagnostics or the
+  screens.
+- **Approval to send.** Sending any of this to a provider needs the explicit
+  provider-data approval.
 
 ## Opportunity brief contract
 
-The #67 components define a provider-independent, versioned opportunity brief
-with durable local persistence and application-level intake. A brief distinguishes job
-postings, social announcements, company context, and candidate instructions;
-records approved-URL, local-file, pasted-content, or direct-input provenance;
-and keeps role, employer, responsibilities, requirements, priorities, and
-candidate instructions source-linked. Opportunity requirements are employer
-context, never candidate facts.
+A **brief** is a provider-independent, versioned record of the job: role,
+employer, responsibilities, requirements, priorities and candidate
+instructions. Every field cites its source.
 
-Draft briefs may retain inaccessible, unsupported, failed, partial, stale,
-duplicate, or contradictory source issues. A reviewed brief requires the
-minimum structured opportunity fields and no open issue; acknowledged source
-limitations remain visible. Candidate-instruction sources may support only the
-instruction fields, while opportunity facts may not cite them. The contract
-stores bounded structured fields and checksums, not raw source content or host
-paths, and preserves human-authored ordering.
+| Source kind                                       | May support                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| Job posting, social announcement, company context | Opportunity facts (role, employer, requirements, priorities) |
+| Candidate instructions                            | Only the instruction fields, never opportunity facts         |
 
-Application-level source intake connects that contract to explicitly approved
-HTTPS URLs, selected local files, pasted content, and direct candidate
-instructions. Existing bounded ingestion controls remain authoritative.
-Captured sources retain checksums; failed or inaccessible sources retain a
-visible status and issue without a fabricated checksum. The draft contains
-provenance metadata, not raw intake content or host paths. Duplicate captured
-bytes remain visible for review.
+Opportunity requirements are employer context, never candidate facts. Each
+source records its provenance: approved URL, local file, pasted content or
+direct input.
 
-Edits and review create immutable successive brief versions. Review still
-requires the minimum structured opportunity fields and no open issue; editing
-a reviewed brief creates a new draft rather than changing the reviewed value.
-SQLite schema v22 persists those versions under a workspace-scoped composite
-identity with canonical payload checksums, immediate-parent enforcement, and
-immutable update/delete guards. Identical writes are idempotent; latest-version
-lookup does not create a mutable current pointer. Audit events retain only an
-opaque brief identity, version, status, and checksum rather than brief content
-or source provenance.
+### Intake
 
-An adapter-neutral application service reloads validated, deeply frozen
-versions after restart and applies edits or review only to an explicitly
-expected latest version. Reload never refetches URLs or local files. Provider
-extraction uses the configured author model through the existing
-Anthropic/OpenAI/local adapter boundary and requires the same explicit data
-approval as drafting. Only sanitized opportunity source records cross that
-boundary; candidate inputs, URLs, paths, and provenance remain local. Provider
-output is schema-checked and citation-checked before application-owned IDs are
-created, while failures become fixed content-free draft issues. Shared
-application operations now create, reload, list, edit, and review durable
-versions. The CLI accepts runtime-only JSON manifests; the desktop host owns
-native file selection and returns a bounded path- and URL-free projection
-through its strict capability bridge. A new run may select one exact reviewed
-brief ID and version. The application verifies its stored checksum, derives the
-opportunity context only from that reviewed record, and persists a safe
-ID/version/checksum reference in the immutable run context. Resume reuses that
-snapshot; it cannot select a different opportunity version. Source URLs, paths,
-raw text, and provenance remain outside provider-facing context.
+- **Allowed inputs.** Intake accepts approved HTTPS URLs, selected local files,
+  pasted content and direct candidate instructions. The existing ingestion
+  controls remain authoritative.
+- **What is kept.** Captured sources keep checksums. The draft holds bounded
+  structured fields, provenance metadata and checksums, never raw source content
+  or host paths.
+- **Failures stay visible.** Failed or inaccessible sources keep a visible
+  status and issue, without a fabricated checksum. Duplicate captured bytes stay
+  visible for review.
+- **No refetching.** Reload never refetches URLs or files.
+
+### Review and versions
+
+- **Draft issues.** A draft may hold inaccessible, unsupported, failed,
+  partial, stale, duplicate or contradictory source issues.
+- **Reviewed.** A reviewed brief needs the minimum structured fields and no
+  open issue. Acknowledged limitations stay visible, and human-authored order is
+  preserved.
+- **Edits.** Editing a reviewed brief creates a new draft, never a change to
+  the reviewed value. Edits and reviews apply only to an explicitly expected
+  latest version.
+- **Storage.** Versions live in the workspace's SQLite history (schema v22),
+  under a workspace-scoped composite identity. Canonical checksums,
+  immediate-parent checks and immutable update and delete guards protect them.
+  Identical writes are idempotent, and there is no mutable current pointer.
+- **Audit.** Events keep only an opaque brief identity, version, status and
+  checksum.
+
+### Extraction
+
+Extraction uses the configured author model through the Anthropic, OpenAI or
+local adapter, with the same data approval as drafting.
+
+- **What crosses.** Only sanitized source records cross the boundary: IDs,
+  classifications, statuses, media types, checksums and text. Candidate inputs,
+  URLs, paths and provenance stay local.
+- **Untrusted text.** Source text is treated as data. Tools and research are
+  unavailable.
+- **Checked output.** Output is schema- and citation-checked before the
+  application creates IDs. A failure becomes a fixed, content-free draft issue.
+- **Adapters.** The CLI accepts runtime-only JSON manifests. The hosted API takes
+  job text, an approved URL or an uploaded file (see
+  [hosted service](hosted-service.md#job-applications)).
+
+### Binding to a run
+
+A new run may select one exact reviewed brief ID and version.
+
+- **Verified.** The application verifies the stored checksum, and derives the
+  opportunity context only from that record.
+- **Recorded.** It persists an ID, version and checksum reference in the run
+  context.
+- **Fixed.** Resume reuses that snapshot and cannot select another version.
 
 ## Writing policy enforcement
 
-Writing policies are local, immutable, checksum-addressed versions. Activating
-a Markdown or text file appends it to the workspace's SQLite policy history and
-makes it the default for future runs. Importing appends a version without
-changing that default. Existing managed files are migrated lazily, and direct
-managed-file changes are versioned before the next run rather than silently
-overwriting history.
+A **writing policy** is the candidate's style guidance, stored as local,
+immutable, checksum-addressed versions in the workspace's SQLite history.
 
-The policy compiler recognizes bounded forbidden-term and
-forbidden-punctuation rules, tone, spelling locale, verbosity, a one- or
-two-page target, section order, emphasis areas, and transparent anti-formulaic
-defaults. The defaults are ordinary forbidden-term rules and can be disabled
-explicitly in the policy. Older content-only policy snapshots remain readable.
-Preferences are advisory model context: locale is not a spell checker, page
-target is not a rendering profile, and emphasis does not authorize new facts.
+- **Activate** appends a Markdown or text file and makes it the default for
+  future runs.
+- **Import** appends a version without changing the default.
+- **Managed files.** Existing managed files are migrated lazily. A direct change
+  to a managed file is versioned before the next run, never silently
+  overwritten.
 
-`packages/validation` evaluates the deterministic rules in artifact section
-and block order. Each finding carries a stable rule identity and content-free
-block location; messages do not copy the forbidden term, matched draft text,
-source paths, or surrounding content. The orchestrator applies the exact policy
-from the immutable context during normal draft validation before independent
-critique.
+| Directive                        | Enforced by                          | Notes                                                                     |
+| -------------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| Forbidden terms and punctuation  | `packages/validation`, deterministic | Includes the anti-formulaic defaults, which can be disabled in the policy |
+| Section order                    | `packages/validation`, deterministic | Reports stable, content-free section and block locations                  |
+| Tone, spelling locale, verbosity | Advisory model context               | Locale is not a spell checker                                             |
+| Page target (one or two pages)   | Advisory model context               | Not a rendering profile, and rendering QA checks the document separately  |
+| Emphasis areas                   | Advisory model context               | Never authorizes new facts                                                |
 
-Section-order validation is deterministic and reports stable, content-free
-section and block locations. Page targets and emphasis areas remain advisory;
-rendering QA separately verifies the produced document.
-
-A reviewed opportunity may select one imported policy version as a complete
-run-specific override. The application verifies both immutable versions,
-records base and override checksums in the run context, and supplies the
-effective policy to both author and critic. The selection never changes the
-active workspace policy. CLI and desktop projections expose safe version and
-lineage metadata; exact policy content is available only through an explicit
-local content-read action.
+- **Validation.** It runs in artifact section and block order, during normal
+  draft validation, before independent critique.
+- **Findings.** Each finding carries a stable rule identity and a content-free
+  block location. Messages never copy the forbidden term, the matched text,
+  paths or surrounding content.
+- **Old snapshots.** Older content-only snapshots stay readable.
+- **Per-opportunity override.** A reviewed opportunity may select one imported
+  version as a complete override. The run records base and override checksums,
+  both author and critic get the effective policy, and the workspace's active
+  policy is unchanged.
+- **Reading content.** Projections show version and lineage metadata. The exact
+  content needs an explicit local content-read action.
 
 ## Portable Candidate Knowledge Base
 
 ### Workspace versus portable CKB
 
-An application workspace contains opportunity context, run snapshots, review
-decisions, artifacts, exports, and application-specific SQLite history. A
-portable CKB is a separate local SQLite store for reusable candidate material.
-The CKB has a logical UUID independent of its selected filesystem path. A
-workspace does not implicitly read CKB content. Its local manifest may bind
-explicitly named CKBs by runtime store root and pinned logical store/CKB IDs.
+|          | Application workspace                                                                         | Portable CKB                                                              |
+| -------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Holds    | Opportunity context, run snapshots, review decisions, artifacts, exports, application history | Reusable candidate material: sources, versions and managed bytes          |
+| Storage  | The workspace's SQLite history                                                                | A separate local SQLite store, plus opaque managed files under `sources/` |
+| Identity | Workspace id                                                                                  | A logical UUID, independent of its path                                   |
 
-Before each new run, the shared application boundary reopens those stores,
-checks their logical identities and lifecycle readiness, and embeds a freshly
-canonicalized, path-free selection snapshot in the immutable run context.
-Existing runs continue to use the snapshot they originally recorded. Before a
-provider-capable start, resume, or revision transition, the application reopens
-the current local binding and compares its complete canonical entries with that
-record. Missing, replaced, unready, or changed evidence fails with a path-free
-review-required error before provider execution or run-state mutation.
+A workspace never reads CKB content implicitly. Its local manifest may bind
+named CKBs by runtime store root and pinned logical store and CKB IDs.
 
-For Experience chronology, a saturated date probe triggers a bounded scan of
-the exact managed source versions in that recorded snapshot. The application
-verifies and normalizes those sources locally, then selects dated headings;
-it never reads source origins for this fallback. The scan is limited to 512
-KiB of normalized text and fails closed when that limit is exceeded or the
-complete heading set cannot fit the existing 20-item and 128-KiB provider
-bounds.
-
-Candidate-knowledge lexical queries longer than the storage limit are reduced
-to the same first 48 normalized, distinct, non-stopword terms used by storage.
-The original job text remains in the run context and author input; only local
-lexical search text and its trace checksum are adapted. If the resulting terms
-still exceed the storage limit, retrieval stops with a safe bounds error.
-
-The portable store is local and plaintext. Restrictive filesystem permissions
-are best-effort and are not encryption or protection from another process run
-by the same user. A SQLite-only copy is not a complete CKB backup because raw
-managed bytes live beneath the store's opaque `sources/` layout.
+- **Revalidated per run.** Before each new run, the application reopens those
+  stores, checks identity and readiness, and embeds a fresh path-free selection
+  snapshot in the run context. Existing runs keep the snapshot they recorded.
+- **Checked before sending.** Before a provider-capable start, resume or
+  revision, the application compares the current binding's complete entries
+  with that record. Missing, replaced, unready or changed evidence fails with a
+  path-free review-required error, before any provider call or state change.
+- **Plaintext.** The store is local plaintext. Restrictive permissions are
+  best-effort, not encryption, and do not protect against another process run by
+  the same user.
+- **Backups.** A copy of only the SQLite file is not a complete backup, because
+  the raw bytes live under `sources/`.
 
 ### Source and version model
 
-A source has a stable CKB-scoped logical ID, a `file` or `url` kind, and a local
-label. An immutable ordered version records SHA-256, media type, byte size,
-creation time, and parent lineage. Checksums are integrity metadata and a
-duplicate signal, not source identity. A read-only duplicate projection emits
-only deterministic source/version IDs; it does not merge, prefer, or remove
-evidence.
+A **source** has a stable CKB-scoped logical ID, a `file` or `url` kind, and a
+local label. Each **version** is immutable and ordered, recording SHA-256,
+media type, byte size, creation time and parent lineage.
 
-Approved local files are regular files no larger than 20 MiB in the five
-supported media types: plain text, Markdown, HTML, PDF, and DOCX. Extraction,
-stable-file, and managed-copy checks must succeed before persistence. The store
-copies exact bytes under an opaque ID-derived name. A changed append creates
-the next parent-linked version; identical current bytes are a no-op and do not
-advance time or imply freshness.
+- **Checksums** are integrity metadata and a duplicate signal, not identity.
+  The duplicate projection emits only source and version IDs. It never merges,
+  prefers or removes evidence.
+- **Files.** Regular files of at most 20 MiB, in five media types: plain text,
+  Markdown, HTML, PDF and DOCX. Extraction, stable-file and managed-copy checks
+  must pass before anything is saved. Exact bytes are copied under an opaque
+  ID-derived name.
+- **New versions.** A changed append creates the next parent-linked version.
+  Identical bytes are a no-op, and do not advance time or imply freshness.
+- **URLs.** URL intake reuses the HTTPS-only boundary, with public-address
+  resolution, manual redirects, response and extraction limits, and usable-text
+  checks. It stores the exact response bytes, with sensitive per-version
+  provenance: the approved URL, the final redirect, the fetch time and a URL
+  kind.
+- **URL refresh** is explicit, reuses only the stored original URL, and records
+  changed bytes as a new version. Redirect-only drift is a no-op. A failure after
+  preflight records only a URL-free inaccessible observation.
 
-PDF extraction reads pages through the page tree and decodes each text run with
-the ToUnicode map of the font it selects, including fonts in Form XObjects and
-object streams. Subset fonts reuse glyph codes, so one document-wide map would
-garble any PDF with several fonts. Files without a readable page tree fall back
-to scanning every stream.
+**PDF text.** Extraction walks the page tree and decodes each text run with the
+ToUnicode map of the font that run selects. That includes fonts in Form XObjects
+and object streams, because subset fonts reuse glyph codes and one document-wide
+map would garble multi-font PDFs.
 
-It joins adjacent text fragments on the same line using text-position
-operators, while retaining line changes and separate text objects. This keeps
-browser-generated PDFs that draw individual characters readable. Existing saved
-job text retains its previous extraction until the job document is replaced or
-imported again.
+- **Line joining.** Adjacent fragments on one line are joined using
+  text-position operators, which keeps browser-generated PDFs readable.
+- **No page tree.** Files without a readable page tree fall back to scanning
+  every stream.
+- **Saved job text** keeps its earlier extraction until the job document is
+  replaced or imported again.
 
-Approved URL intake reuses the HTTPS-only boundary, including public-address
-resolution, manual redirects, response and extraction limits, and usable-text
-checks. It stores exact response bytes and sensitive per-version provenance for
-the approved original URL, validated final redirect, fetch time, and bounded
-URL kind. URL refresh is explicit, reuses only the stored original URL, and
-records changed bytes as a new version. Redirect-only drift is a no-op; failures
-after approved preflight record only a URL-free inaccessible observation.
+### Origins, refresh and retirement
 
-### Origins, refresh, and lifecycle
+A managed file create may remember its verified origin path in a sensitive,
+local-only binding table. Manual append paths are runtime-only and never replace
+it. Nothing here runs in the background or reaches a provider.
 
-A successful managed file create may remember its canonical verified origin path
-in a sensitive local-only binding table. Manual append paths are runtime-only;
-they never replace the binding. An explicit status check returns only
-`unbound`, `current`, `changed`, `missing`, or `inaccessible`, without the path
-or observed file metadata. Explicit refresh can append changed bytes from the
-remembered origin and records a path-free observation tied to the examined
-version. Explicit rebind replaces only the sensitive path after an exact
-media-type, checksum, and size match with the latest version. None of these
-operations runs in the background or exposes an origin to a provider.
+| Operation    | Result                                                                                                                                                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status check | `unbound`, `current`, `changed`, `missing` or `inaccessible`, with no path or file metadata                                                                                                                                 |
+| Refresh      | Appends changed bytes from the remembered origin, and records a path-free observation tied to the examined version                                                                                                          |
+| Rebind       | Replaces only the sensitive path, after an exact media type, checksum and size match with the latest version                                                                                                                |
+| Retire       | Writes an immutable `user-requested` marker. It blocks later versions, rebinds and observations, and keeps metadata, bytes, bindings, observations and journal evidence. It is not deletion, index cleanup or reactivation. |
 
-Retirement is an immutable logical `user-requested` marker. It blocks later
-version, rebind, and refresh-observation writes while preserving source/version
-metadata, managed bytes, bindings, observations, and journal evidence. It is
-not physical deletion, index cleanup, or reactivation.
+### Lifecycle readiness
 
-Lifecycle readiness is a CKB-scoped read projection over one consistent SQLite
-snapshot. Each source exposes its latest version identity, `ready` or `blocked`
-state, bounded reasons, and a structured revision containing only safe IDs,
-timestamps, booleans, and numeric current-directory revisions. The revision
-changes when eligibility-relevant persisted evidence changes. Labels, paths,
-URLs, relative-path hashes, content checksums, media types, sizes, and bytes are
-excluded. Fresh intake is eligible without a refresh observation; adverse or
-stale observations block without creating a TTL or live-filesystem claim.
+Readiness is a CKB-scoped read projection over one consistent SQLite snapshot.
+Indexing and selection read it instead of the sensitive tables.
+
+- **Per source.** It shows the latest version identity, `ready` or `blocked`,
+  bounded reasons, and a structured revision.
+- **The revision** holds only safe IDs, timestamps, booleans and numeric
+  directory revisions. It changes when eligibility-relevant evidence changes.
+- **Blocked states.** Retired, archived, unmanaged, unbound,
+  directory-conflicted, adverse-observation and stale-observation sources are
+  blocked.
+- **Fresh intake** is eligible without a refresh observation. Adverse or stale
+  observations block, without any TTL or live-filesystem claim.
+- **Excluded.** Labels, paths, URLs, relative-path hashes, checksums, media
+  types, sizes and bytes.
 
 ### Selection snapshot contract
 
-An explicit application selection produces an immutable schema-versioned
-snapshot containing the portable store ID, CKB ID, exact selected source and
-version IDs, and each source's safe structured lifecycle revision. A single CKB
-needs no additional combination approval; selecting more than one requires an
-explicit approval before any store is opened. Archived, empty, or blocked CKBs
-fail closed.
+A selection produces an immutable, schema-versioned snapshot. It holds the
+store ID, the CKB ID, the exact selected source and version IDs, and each
+source's lifecycle revision.
 
-Entries and sources are canonicalized in lexical order. The snapshot excludes
-store roots, display labels, paths, filenames, URLs, hashes, checksums, media
-types, byte sizes, and content. It can be embedded in an immutable context
-snapshot without breaking older context records that predate the optional
-field. The local workspace binding retains runtime roots only so future runs can
-revalidate the pinned identities; descriptors, context snapshots, run history,
-diagnostics, and provider requests expose only the path-free record. The record
-does not authorize provider transmission or establish retrieval-index
-freshness.
+- **Combining.** One CKB needs no extra approval. More than one needs an
+  explicit approval before any store is opened.
+- **Fail closed.** Archived, empty or blocked CKBs are refused.
+- **Canonical.** Entries and sources are sorted lexically. The snapshot
+  excludes roots, labels, paths, filenames, URLs, hashes, checksums, media types,
+  sizes and content.
+- **Compatible.** It embeds in a run context without breaking older contexts
+  that lack the field.
+- **Roots stay local.** The workspace binding keeps runtime roots only to
+  revalidate future runs. Everything else sees the path-free record.
+- **Not an authorization.** The snapshot does not authorize provider
+  transmission or prove index freshness.
 
 ### Directory and member lifecycle
 
-Directory intake is a bounded selector over ordinary managed file sources, not
-a directory source kind. The selected root must be a real non-symlink directory
-outside the CKB store. Traversal is deterministic by lexical relative path and
-preflights extraction before writes. Limits are depth 32, 1,024 scanned entries,
-256 accepted files, 256 MiB aggregate accepted bytes, and the 20 MiB per-file
-limit. Dot-prefixed entries/subtrees, unsupported files, special entries, and
-child symlinks are skipped and counted. A complete import records a sensitive
-root binding and immutable SHA-256 hashes of normalized relative member paths.
+A directory import is a bounded selector over ordinary file sources, not a
+source kind of its own. The root must be a real, non-symlink directory outside
+the store. Traversal is deterministic by relative path, and extraction is
+checked for every file before anything is written.
 
-The current bounded operations are summarized here; their full contract and
-privacy invariants are canonical in [ADR 0007][adr-0007].
+| Limit           | Value                          |
+| --------------- | ------------------------------ |
+| Depth           | 32                             |
+| Scanned entries | 1,024                          |
+| Accepted files  | 256                            |
+| Accepted bytes  | 256 MiB total, 20 MiB per file |
 
-| Operation                     | Scope and result                                                                                                                                           | Writes                                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Inventory and refresh preview | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count               | None                                                                                                            |
-| Add members                   | Confirm and append unmatched accepted files as independent sources in lexical order through shared CLI/desktop controls                                    | Each candidate's source, version, origin binding, managed bytes, journal event, and immutable member atomically |
-| Observation / applied refresh | Record path-free observations, or append changed bytes for existing active same-member files in source-ID order                                            | Observation batch is atomic; applied refresh may return path-free partial progress after a later member failure |
-| Member retirement             | Approve one active same-member `missing` member with root/member/version/origin guards                                                                    | Existing immutable `user-requested` retirement marker only; bytes and membership remain                         |
-| Root rebind                   | Reuse one complete scan, verify every historical member, and update all origins                                                                            | Guarded append-only root revision with path-free `rebound` counts, or path-free `current` no-op                 |
-| Moved-candidate preview       | Compare exact media type, checksum, and size for same-member missing sources and unmatched files                                                           | None; ambiguous matches are omitted                                                                             |
-| One-source member move        | Reuse exactly one bounded scan for one selected source; accept a unique exact-integrity missing-member match or the scanned current member for idempotency | Verified append-only member revision, or guarded no-op; result is frozen, path-free `moved`/`current`           |
-| Missing-member reconciliation | Partition one complete scan into path-free current, changed, moved-candidate, missing, already-retired, conflicted, and unmatched/new state; apply only explicitly selected retirements in source-ID order | Each retirement marker is atomic; all-success returns `applied`/`current`, while a later failure returns frozen path-free partial IDs |
+Dot-prefixed entries, unsupported files, special entries and child symlinks are
+skipped and counted. A complete import records a sensitive root binding, and
+immutable SHA-256 hashes of the normalized relative member paths.
 
-The explicit move command accepts no target path. It forwards a runtime-only
-match through the verified member handle and does not change source identity,
-version, observation, retirement, blob, journal, or baseline membership
-evidence. Root rebind and one-source member move are exposed through shared
-CLI and desktop adapters; moved-candidate preview is read-only, while move
-requires confirmation and returns only opaque identity, time, and status.
-Neither infers renames automatically or reconciles all removals.
+The operations below are summarized from [ADR 0007][adr-0007], which holds their
+full contract and privacy invariants.
 
-Automatic move inference, indexing, and background refresh remain deferred
-under their owning roadmap issues.
-Historical membership is not rewritten by later source versions, explicit
-origin rebinds, retirement, or readiness projection.
+| Operation                      | Scope and result                                                                                                                                             | Writes                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Inventory and refresh preview  | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count                 | None                                                                                                                  |
+| Add members                    | Confirm and append unmatched accepted files as independent sources, in lexical order                                                                         | Each candidate's source, version, origin binding, managed bytes, journal event and immutable member, atomically       |
+| Observation or applied refresh | Record path-free observations, or append changed bytes for active same-member files in source-ID order                                                       | The observation batch is atomic. An applied refresh may return path-free partial progress after a later failure.      |
+| Member retirement              | Approve one active `missing` member, with root, member, version and origin guards                                                                            | The `user-requested` retirement marker only; bytes and membership remain                                              |
+| Root rebind                    | Reuse one complete scan, verify every historical member, and update all origins                                                                              | A guarded append-only root revision with `rebound` counts, or a `current` no-op                                       |
+| Moved-candidate preview        | Compare exact media type, checksum and size for missing sources and unmatched files                                                                          | None; ambiguous matches are omitted                                                                                   |
+| One-source member move         | Reuse one bounded scan for one selected source; accept a unique exact-integrity match, or the scanned current member as a no-op                              | A verified append-only member revision, or a guarded no-op. The result is `moved` or `current`.                       |
+| Missing-member reconciliation  | Partition one complete scan into current, changed, moved-candidate, missing, already-retired, conflicted and new; apply only explicitly selected retirements | Each marker is atomic. All-success returns `applied` or `current`, and a later failure returns path-free partial IDs. |
 
-### Managed publication and journal
+- **No target path.** The move command takes none. It forwards a runtime-only
+  match through the verified member handle, and changes no source identity,
+  version, observation, retirement, blob, journal or baseline membership.
+- **No inference.** Nothing infers renames automatically or reconciles all
+  removals. Automatic move inference and background refresh stay deferred.
+- **History is kept.** Later versions, rebinds, retirement and readiness never
+  rewrite historical membership.
 
-Managed publication verifies bytes before committing metadata. The database
-marker and opaque file must agree on checksum and size; publication is
-no-replace, file first, database second. Crashes or concurrent losers may leave
-unreferenced opaque entries, but shape or matching bytes do not authenticate
-DraftLoop ownership.
+### Managed publication and the journal
 
-The append-only journal records opaque intent, target resolution, publication,
-managed-marker/database commit, and completion for new managed writes. Versioned
-ownership, expected integrity, immutable staging-file identity, and
-writer-generation fields remain sensitive local state. Recovery first records a
-durable claim with its newer generation, which fences stale journal and commit
-transactions before artifact inspection and remains retryable after cleanup
-failure. These fields authorize only deterministic restart recovery of that exact
-operation and never cross application or provider boundaries. Legacy,
-unjournaled, mismatched, and unrecognized entries remain unknown and untouched.
+**Publication** verifies bytes before committing metadata. The database marker
+and the opaque file must agree on checksum and size. Publication is no-replace,
+file first and database second.
 
-All current CKB mutation commands use one store-wide exclusive writer lease.
-Its private SQLite coordinator is separate from the replaceable CKB data
-database and records only scope, opaque ownership, a safe operation code,
-timestamps, and a monotonically increasing fencing generation. Heartbeat,
-atomic stale takeover, nested fencing checks, and owner-generation-guarded
-release prevent concurrent commands from interleaving. Conflict diagnostics
-identify only the active operation and scope; they never include roots, paths,
-source identity, or content. Reads remain unleased. Store opening uses the same
-lease to roll back verified incomplete publication or finish verified committed
-cleanup, with idempotent path-free reports.
+- **Residue.** A crash or a concurrent loser may leave unreferenced opaque
+  entries.
+- **Ownership.** File shape or matching bytes never prove DraftLoop owns an
+  entry.
 
-The CKB retention contract enumerates raw sources, normalized facts, indexes,
-run snapshots, exports, and backups. All six default to retention until explicit
-deletion. Append-only policy revisions may set bounded day-based expiry, while
-append-only legal-hold and manual-preservation events override expiry. Plans are
-keyed by policy revision, override revision, and an explicit evaluation time.
-They expose only bounded counts and effective states. Current ownership proof
-can mark committed managed raw-source versions eligible; unmanaged, unknown,
-and not-yet-materialized classes remain preserved. Planning never deletes data.
+**The journal** is append-only. For each new managed write, it records opaque
+intent, target resolution, publication, the marker and database commit, and
+completion.
 
-Portable backup export holds the same store-wide lease while it builds a
-versioned directory package outside the source store. The package contains a
-strict logical manifest plus checksum-addressed managed source objects; it
-fails closed when ownership inventory is incomplete or a required managed
-version cannot be verified. Machine-local origins, directory roots, writer
-coordination, recovery journals, application/provider credentials, and
-unrelated workspace data are not exported. A manifest checksum and per-object
-hashes detect corruption or modification but do not authenticate who created a
-package. Export requires an explicit destination approval and publishes with no
-replacement only after the package passes its own inspector.
+- **Sensitive fields.** Versioned ownership, expected integrity, staging-file
+  identity and writer generation stay local, and never cross application or
+  provider boundaries.
+- **Recovery** first records a durable claim with a newer generation. That fences
+  stale journal and commit transactions before any artifact is inspected, and
+  stays retryable after a cleanup failure. It recovers only that exact
+  operation.
+- **Unknown entries.** Legacy, unjournaled, mismatched and unrecognized entries
+  stay unknown and untouched.
 
-Portable restore repeats complete package inspection before any destination
-write, imports into a fully staged current-schema store, validates the restored graph and
-managed bytes, and then publishes to an approved new directory without replacing
-an existing entry. The only supported collision decision is
-`fail-if-destination-exists`; restore never merges stores, renames logical
-identities, or claims continuity with the exporting host. Restored URL evidence
-keeps only its safe fetched-at and kind fields. Original URLs and all file and
-directory bindings remain absent.
+**The writer lease.** Every CKB mutation command takes one store-wide exclusive
+lease. Reads stay unleased.
 
-Confirmed deletion accepts only an archived non-default CKB after a separate
-path-free preview. Its exact token binds the store graph, effective retention
-and override revisions, managed-object integrity, and bounded physical
-inventory. The command revalidates that state under the store-wide writer
-lease, stages verified managed blobs before committing the logical deletion,
-and uses a durable v21 operation journal to recover safely across interruption.
-Legal hold, manual preservation, unmanaged database records, missing or
-mismatched managed blobs, and unknown deletion state block the operation.
-Unknown or unowned filesystem entries are preserved. The retained completion
-audit is content-free; external backups, exports, and copied stores are not
-deleted.
+- **Coordinator.** The lease lives in a private SQLite coordinator, separate from
+  the data database. It records the scope, opaque ownership, an operation code,
+  timestamps and a rising fencing generation.
+- **No interleaving.** Heartbeats, atomic stale takeover, nested fencing checks
+  and a generation-guarded release keep commands from interleaving.
+- **Conflict messages** name only the active operation and scope.
+- **On open,** the store takes the lease to roll back verified incomplete
+  publication, or finish verified committed cleanup.
 
-The package deliberately represents every restored source as unbound. It does
-not preserve directory-root/member relationships or host-binding history, and
-a valid legacy store containing unmanaged source versions cannot be described
-as a complete package, so export refuses it rather than silently omitting
-provenance.
+### Retention, backup, restore and deletion
 
-The schema currently preserves append-only source/version, origin, observation,
-retirement, URL, restored path-free URL provenance, directory-root, and
-directory-member history. [ADR 0007][adr-0007] records the compact v6–v21
-schema-evolution summary and the invariants that
-motivated each boundary.
+**Retention.** The contract covers six classes: raw sources, normalized facts,
+indexes, run snapshots, exports and backups. All six are kept until explicit
+deletion.
+
+- **Expiry.** Append-only policy revisions may set day-based expiry.
+- **Holds.** Legal-hold and manual-preservation events override expiry.
+- **Plans.** A plan is keyed by policy revision, override revision and
+  evaluation time. It shows only counts and effective states, and planning never
+  deletes anything.
+- **What can expire.** Only committed managed raw-source versions with ownership
+  proof. Unmanaged, unknown and not-yet-materialized classes are preserved.
+
+| Operation          | What it does                                                                                                                                                                                                                                                                           | Limits                                                                                                                                                                                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backup export      | Holds the writer lease and builds a versioned package outside the store: a strict logical manifest plus checksum-addressed source objects. It needs an approved destination, and publishes without replacing anything once the package passes its own inspector.                       | Fails closed when the ownership inventory is incomplete, a managed version cannot be verified, or the store holds unmanaged legacy versions. It excludes origins, roots, writer coordination, journals, credentials, workspace data and the rebuildable index. Hashes detect corruption, not authorship. |
+| Restore            | Inspects the whole package again, imports into a staged current-schema store, validates the graph and bytes, then publishes to an approved new directory                                                                                                                               | Only `fail-if-destination-exists`. It never merges stores, renames identities or claims continuity. Every source is restored unbound, URL evidence keeps only its fetch time and kind, and the index must be rebuilt.                                                                                    |
+| Confirmed deletion | Deletes an archived, non-default CKB after a separate path-free preview. Its token binds the store graph, retention revisions, object integrity and physical inventory. Under the lease, it revalidates, stages verified blobs, then commits, with a durable v21 journal for recovery. | Blocked by legal hold, manual preservation, unmanaged records, missing or mismatched blobs, and unknown deletion state. Unknown entries are preserved. External backups, exports and copies are not deleted.                                                                                             |
+
+The schema keeps append-only history for these records:
+
+- sources and versions
+- origins and observations
+- retirements
+- URLs, including restored path-free URL provenance
+- directory roots and members
+
+[ADR 0007][adr-0007] summarizes schema versions v6 to v21.
 
 ### Canonical candidate profile contract
 
-The first #66 component defines a provider-independent, immutable canonical
-profile aggregate without replacing the legacy profile identity used by older
-contexts. A profile version binds an exact path-free CKB selection and stores
-bounded normalized facts for identity, contact, employment and dates,
-achievements, projects, skills, certifications, education, languages, and
-approved links. Every fact cites an exact selected store, CKB, source, and
-source version and requires candidate-provided provenance; public
-corroboration is optional.
+A **canonical profile** is an immutable, provider-independent set of facts about
+the candidate. It binds an exact path-free CKB selection, and keeps the legacy
+profile identity for older contexts.
 
-Conflicts, possible duplicates, and omissions remain explicit issues rather
-than silently selecting a value. Every issue must be handled before reviewed
-status. The strict schema and framework-free constructor enforce version
-lineage, review timestamps, source membership, bounded collections, stable
-identifiers, canonical ordering, deep immutability, and path-free JSON round
-trips.
+- **Fact categories.** Identity, contact, employment and dates, achievements,
+  projects, skills, certifications, education, languages and approved links.
+- **Citations.** Every fact cites an exact store, CKB, source and version, and
+  needs candidate-provided provenance. Public corroboration is optional.
+- **Issues, not choices.** Conflicts, possible duplicates and omissions stay
+  explicit issues, and every issue must be handled before review.
+- **Schema checks.** The strict schema enforces lineage, review timestamps,
+  source membership, bounded collections, stable IDs, canonical order, deep
+  immutability and path-free JSON round trips.
 
-The second #66 component adds workspace-local, append-only profile history in
-SQLite migration 24. Canonical payload checksums, immediate parent lineage,
-monotonic update timestamps, immutable triggers, strict reload validation, and
-content-free audit events protect every version. A provider-independent
-application service supports optimistic fact/issue edits and creates a new
-reviewed version only after the domain review blockers pass.
+**History.** Profiles live in workspace-local, append-only SQLite history
+(migration 24), with canonical checksums, parent lineage, monotonic timestamps,
+immutable triggers, strict reload and content-free audit events. Edits are
+optimistic. A reviewed version is created only after the review blockers pass.
 
-Profiles may combine explicitly selected CKBs, so their history does not belong
-to any one portable CKB package and is not included in CKB backup/restore. This
-component now also has a provider-independent derivation boundary. CKB storage
-returns fresh bytes plus safe version metadata after one-handle size, checksum,
-and file-identity verification; it never exposes the managed path. The
-application revalidates the exact lifecycle snapshot after normalization and
-again after extraction before persistence, requires explicit provider-data
-approval, and sends only
-bounded normalized text, media types, checksums, and application-owned opaque
-source IDs through a strict extraction port.
+**Derivation.**
 
-The strict provider proposal can describe all canonical fact categories and
-relationships but cannot choose persisted IDs, provenance kinds, review state,
-severity, or messages. Each proposed fact must include an evidence quote that
-occurs in its cited normalized source and contains the proposed value, ignoring
-Markdown formatting and typographic punctuation but not wording; the quote is
-checked locally and is not persisted. The application maps valid citations back to exact selected CKB
-versions, generates deterministic IDs, keeps conflicting and duplicate facts
-(local conflicts only for known single-valued fields such as title or start date),
-adds visible category omissions, builds a draft, and appends it through the
-shared history service. The configured-provider adapter uses the workspace's
-author model and existing API-key, authenticated user-session, or local
-transport. Its system prompt treats source text as untrusted data, and the
-strict proposal schema remains the only accepted response shape. A proposed
-conflict or duplicate issue that names fewer than two distinct facts, whether
-as proposed or after unknown keys are removed or identical facts merge, is
-dropped rather than failing the extraction; facts are never dropped for it.
+1. **Read.** CKB storage returns fresh bytes and safe version metadata after a
+   one-handle size, checksum and identity check. It never exposes the managed
+   path.
+2. **Revalidate.** The application checks the lifecycle snapshot after
+   normalization, and again after extraction, before saving.
+3. **Send.** With explicit provider-data approval, it sends only bounded
+   normalized text, media types, checksums and opaque source IDs, through a
+   strict extraction port. The adapter uses the workspace's author model over an
+   API key, a user session or a local transport. Its system prompt treats the
+   text as untrusted.
+4. **Check.** Every proposed fact needs an evidence quote that occurs in its
+   cited source and contains the value. Matching ignores Markdown and
+   typographic punctuation, never wording. The quote is checked locally and not
+   saved.
+5. **Build.** The application maps citations to exact versions, generates
+   deterministic IDs, and keeps conflicting and duplicate facts. Local conflicts
+   apply only to known single-valued fields such as title or start date. It adds
+   visible category omissions and appends the draft.
 
-Shared application and local-driver operations derive from the workspace's
-validated, pinned CKB selection and provide exact/latest reads, immutable
-history, optimistic edits, and candidate review. Store roots remain inside the
-local driver rather than entering adapter-neutral commands or results. The CLI
-and packaged desktop host expose the shared five-operation workflow without
-accepting a CKB store root; only derivation has a provider-transmission approval
-flag. The desktop bridge returns an explicit bounded profile projection and
-does not expose the stored selection snapshot.
+- **What the model cannot choose.** It cannot choose persisted IDs, provenance
+  kinds, review state, severity or messages.
+- **Weak issues.** A proposed conflict or duplicate that names fewer than two
+  distinct facts is dropped, and its facts are kept.
+- **Adapters.** The CLI and the hosted API expose the same derive, get, edit,
+  review and list operations. No command accepts a store root, and only
+  derivation needs the transmission approval. The shared profile screen edits
+  only fact values and issue statuses, and keeps provenance.
 
-New runs may select one exact reviewed profile version. The local driver
-verifies its persisted checksum and requires its CKB selection to match the
-workspace's current lifecycle-ready selection before recording a safe profile
-ID, version, and checksum reference in immutable context. Resume accepts no
-replacement selection, so later profile edits cannot change an existing run.
-Legacy starts without a canonical profile remain readable. Source lifecycle
-changes preserve immutable profile and run history, but the same selection
-check blocks stale drafts from becoming reviewed and blocks unavailable
-profiles from new runs. Whole-workspace backup and retention preserve profile
-and approved-export records; a portable single-CKB backup does not claim a
-cross-CKB workspace profile. #80 owns removal or rebuilding of derived index
-rows when these dependencies become unavailable. A visual profile editor in
-the collecting desktop workspace uses only the bounded host projection. It
-loads exact history, preserves provenance while editing fact values and issue
-statuses, requires explicit transmission approval for derivation, and injects
-the selected reviewed ID/version pair into the existing run-dispatch boundary.
-Historical and reviewed versions remain read-only in that surface.
+**Binding to a run.** A new run may select one exact reviewed version.
 
-A run with a pinned profile retrieves evidence fact first
-(`run-profile-fact-retrieval.ts`, `profile-fact-evidence.ts`):
+- **Checked.** The driver verifies its checksum, and requires its CKB selection
+  to match the workspace's current ready selection. It then records the ID,
+  version and checksum.
+- **Fixed.** Resume accepts no replacement, so later edits cannot change an
+  existing run.
+- **Lifecycle changes** keep profile and run history. The same selection check
+  blocks a stale draft from review, and an unavailable profile from new runs.
+- **Backups.** A profile may combine CKBs, so it is not part of a single CKB
+  backup. Whole-workspace backups keep it.
+- **Derived index rows** for unavailable dependencies are handled by #80.
 
-- **Verification.** At start and at resume the exact profile version is loaded
-  and its checksum checked against the run's reference; a missing or changed
-  version fails the run before any evidence is sent.
-- **Fact items.** Each fact whose quote occurs verbatim in its cited, pinned,
-  non-withheld source version becomes one evidence item. It carries that
-  version's opaque source id, the quote's line range, and the fact value with
-  its quote, so author citations resolve to the source quote and locator.
-- **Selection.** Facts are ranked against the query in the run's retrieval
-  mode, and up to two fifths of the 20-item limit (8 facts) are added beside
-  the chunks a run without a profile gets, so a run sends at most 28 items.
-  Those chunks keep their reserved contact, chronology and priority slots, and
-  a chunk repeating a selected fact's quote is skipped. Facts never compete
-  with reserved chunks: a long career's chronology can fill most of the 20
-  chunk slots on its own.
+**Fact-first evidence.** A run with a pinned profile retrieves evidence facts
+first (`run-profile-fact-retrieval.ts`, `profile-fact-evidence.ts`).
 
-- **Traces.** Each selection appends a content-free origin trace
-  (`retrieval-origin-trace.ts`, a companion table beside the v1 retrieval
-  trace). It holds the pinned profile ID, version and checksum, the fact
-  ranking mode, a query checksum, and each selected item's opaque ID, source ID
-  and origin (`profile-fact` or `knowledge-chunk`), never fact values or quotes.
+| Step        | What happens                                                                                                                                                                                                                                                                              |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Verify      | At start and resume, the exact version is loaded and its checksum checked. A missing or changed version fails the run before any evidence is sent.                                                                                                                                        |
+| Build items | Each fact whose quote occurs verbatim in its cited, pinned, non-withheld source becomes one evidence item. It carries the source id, the quote's line range, and the value with its quote, so author citations resolve to the source.                                                     |
+| Select      | Facts are ranked in the run's retrieval mode. Up to 8 facts (two fifths of the 20-item limit) are added beside the usual chunks, for at most 28 items. Reserved contact, chronology and priority chunks keep their slots, and a chunk repeating a selected quote is skipped.              |
+| Trace       | Each selection appends a content-free origin trace (`retrieval-origin-trace.ts`) beside the v1 retrieval trace. It holds the profile ID, version and checksum, the ranking mode, a query checksum, and each item's opaque ID, source ID and origin (`profile-fact` or `knowledge-chunk`). |
 
 A full-source run already sends every eligible chunk and is unchanged, as is a
-run without a pinned profile.
+run without a profile.
 
 ### CKB integration status
 
-The exact-version lexical path is integrated. Each portable CKB store owns a
-replaceable SQLite FTS5/BM25 projection for its managed source versions. The
-shared application service revalidates explicit selections, synchronizes or
-rebuilds each selected source/version scope, queries selected stores, and
-deterministically fuses multi-CKB results. Provider-facing results carry only
-bounded text and opaque chunk IDs; workspace history stores immutable,
-content-free retrieval traces. Legacy workspaces without a CKB selection
-continue to use the earlier workspace evidence path.
+**Integrated now: exact-version lexical retrieval.**
 
-Lifecycle and integrity checks cover selected-version scope, index freshness,
-retirement, archive state, and managed-byte verification. A stale, unavailable,
-or mismatched selection does not silently become empty context. Derived index
-rows are replaceable and can be invalidated when source versions are deleted;
-historical traces remain part of immutable run history. Portable backup omits
-the rebuildable index, so a restored store must rebuild before retrieval.
+- **Index.** Each store owns a replaceable SQLite FTS5/BM25 projection of its
+  managed versions.
+- **Per run.** The application revalidates the selection, synchronizes or
+  rebuilds each selected scope, queries the selected stores, and fuses
+  multi-CKB results deterministically.
+- **What crosses.** Provider-facing results carry only bounded text and opaque
+  chunk IDs, and workspace history keeps content-free traces.
+- **Fail closed.** A stale, unavailable or mismatched selection never silently
+  becomes empty context.
+- **Invalidation.** Index rows can be invalidated when versions are deleted,
+  while historical traces stay in run history.
 
-Vector and hybrid retrieval remain deferred evaluation components rather than
-the default CKB retrieval path.
+**Not the default yet.** Vector and hybrid retrieval are opt-in (see
+[retrieval mode](../reference/cli-and-desktop.md#retrieval-mode)). They remain
+evaluation components until deletion, retention, isolation, provenance and
+quality are validated.
 
 [adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md
 
 ## Retrieval in runs
 
-Career evidence is the material a run uses. Runs read the selected knowledge
-base; legacy workspace evidence (the workspace `evidence` folder) is used only
-when none is selected, and the desktop imports it into a new base once.
+Runs read the selected knowledge base. Legacy workspace evidence (the
+workspace's `evidence` folder) is used only when no base is selected, and the
+career evidence card says so.
 
-Retrieval is workspace-scoped behind a provider-independent port. SQLite
-FTS/BM25 is the integrated lexical baseline and supplies selected chunks to live
-author and critic requests. Local vector and hybrid implementations remain
-evaluation components until deletion, retention, isolation, provenance, and
-quality are validated for the product path.
+[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB design:
 
-[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
-each portable store owns its replaceable exact-source-version lexical index,
-while the application fans out only across the workspace's explicit selection
-and persists content-free retrieval traces in workspace history. The exact
-selected projection stays inside the lifecycle boundary that can delete or
-rebuild it. Migration 25 supplies the CKB chunk/FTS projection, freshness
-inspection, exact-scope query and fallback, whole-projection invalidation on
-source-version deletion, and immutable workspace traces. Runs with an explicit
-CKB selection provide only opaque chunk references and bounded text to author
-and critic; legacy workspaces without a CKB selection keep the earlier
-workspace evidence index. CKB selection remains explicit and path-free in run
-contexts.
+- each store owns its replaceable exact-version lexical index
+- the application fans out only across the workspace's explicit selection
+- content-free retrieval traces are kept in workspace history
+
+Migration 25 supplies the chunk and FTS projection, freshness checks, exact-scope
+queries with fallback, invalidation on version deletion, and immutable traces.
+Retrieval sits behind a provider-independent port.
+
+| Bound                 | Rule                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Long queries          | A query over the storage limit is cut to its first 48 normalized, distinct, non-stopword terms, the same as storage. The job text in the run context and author input is unchanged. If the terms still exceed the limit, retrieval stops with a bounds error.                                                                                         |
+| Experience chronology | A saturated date probe triggers a scan of the exact source versions in the recorded snapshot. Sources are verified and normalized locally, and dated headings are selected, without reading origins. The scan is limited to 512 KiB of text, and fails closed when it is exceeded or the headings cannot fit the 20-item and 128-KiB provider bounds. |
+
+What the author and critic receive depends on the workspace's
+[evidence mode](../reference/cli-and-desktop.md#evidence-mode), which is
+full source by default.
