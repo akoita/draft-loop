@@ -1,4 +1,5 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
+import { createAgentTokenStore } from "./agent-tokens.js";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { createCandidateRecordAccess } from "./candidate-records.js";
@@ -138,6 +139,7 @@ function tenantStorage(client: SqlSession) {
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),
     workJournalNotes: createWorkJournalNoteStore(client),
+    agentTokens: createAgentTokenStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>
