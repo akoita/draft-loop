@@ -190,6 +190,8 @@ export function formatOutputs(result) {
     `run_all=${result.runAll}`,
     `tests=${result.tests}`,
     `packages=${result.packages.join(" ")}`,
+    // The Tests job's matrix: a full run splits the suite across three runners.
+    `shards=${JSON.stringify(result.runAll ? [1, 2, 3] : [1])}`,
     `server_storage=${result.serverStorage}`,
     `self_hosted=${result.selfHosted}`,
   ].join("\n");
