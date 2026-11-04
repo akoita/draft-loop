@@ -1,4 +1,5 @@
 export { createCandidateRecordAccess } from "./candidate-records.js";
+export { createCareerInterviewSessionStore } from "./career-interview-sessions.js";
 export {
   CloudSqlConfigError,
   type CloudSqlConnector,

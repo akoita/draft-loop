@@ -122,6 +122,10 @@
     "./agent-tokens": {
       "types": "./src/agent-tokens.ts",
       "import": "./src/agent-tokens.ts"
+    },
+    "./career-interview-sessions": {
+      "types": "./src/career-interview-sessions.ts",
+      "import": "./src/career-interview-sessions.ts"
     }
   },
   "files": [
