@@ -288,16 +288,18 @@ check off.
 
 ### Processes
 
-| Variable                          | Used by           | Meaning                                                                                                        |
-| --------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------- |
-| `PORT`                            | API, page fetcher | Listening port, default 8080                                                                                   |
-| `DRAFT_LOOP_WEB_ROOT`             | API               | The built web screen's directory, served at `/`; the image sets it                                             |
-| `DRAFT_LOOP_PAGE_FETCHER_URL`     | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself |
-| `DRAFT_LOOP_WORKER_JOB`           | API               | The worker's Cloud Run job, started after each queued run; unset locally                                       |
-| `DRAFT_LOOP_WORKER_MODE`          | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                |
-| `DRAFT_LOOP_WORKER_IDLE_MS`       | worker            | In drain mode, how long the queue stays empty before exit, default 60000                                       |
-| `DRAFT_LOOP_WORKER_READY_FILE`    | worker            | Touched once the worker claims jobs, for a health check                                                        |
-| `DRAFT_LOOP_EMBEDDING_MODEL_ROOT` | worker            | Where the embedding model is installed; the image sets `/app/models`                                           |
+| Variable                             | Used by           | Meaning                                                                                                                       |
+| ------------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                               | API, page fetcher | Listening port, default 8080                                                                                                  |
+| `DRAFT_LOOP_WEB_ROOT`                | API               | The built web screen's directory, served at `/`; the image sets it                                                            |
+| `DRAFT_LOOP_PAGE_FETCHER_URL`        | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself                |
+| `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited` |
+| `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset        |
+| `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                      |
+| `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                               |
+| `DRAFT_LOOP_WORKER_IDLE_MS`          | worker            | In drain mode, how long the queue stays empty before exit, default 60000                                                      |
+| `DRAFT_LOOP_WORKER_READY_FILE`       | worker            | Touched once the worker claims jobs, for a health check                                                                       |
+| `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`    | worker            | Where the embedding model is installed; the image sets `/app/models`                                                          |
 
 ## Cloud SQL
 

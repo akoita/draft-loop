@@ -10,7 +10,24 @@ describe("readApiConfig", () => {
       port: 9000,
       ownerToken,
       auth: { mode: "owner" },
+      rateLimits: { requestsPerWindow: 1200, refusedPerWindow: 30 },
     });
+  });
+
+  it("reads the request limits and refuses one that is not a positive whole number", () => {
+    const env = { DRAFT_LOOP_API_OWNER_TOKEN: ownerToken };
+    expect(
+      readApiConfig({
+        ...env,
+        DRAFT_LOOP_API_RATE_LIMIT: "50",
+        DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT: "5",
+      }).rateLimits,
+    ).toEqual({ requestsPerWindow: 50, refusedPerWindow: 5 });
+    for (const value of ["0", "-1", "1.5", "lots"]) {
+      expect(() => readApiConfig({ ...env, DRAFT_LOOP_API_RATE_LIMIT: value })).toThrow(
+        ApiConfigError,
+      );
+    }
   });
 
   it("defaults to port 8080", () => {

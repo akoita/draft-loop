@@ -58,6 +58,7 @@ const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
   logger: cloudLoggingOptions(),
+  rateLimits: config.rateLimits,
   tenants: {
     ...hosted.tenants,
     // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself
