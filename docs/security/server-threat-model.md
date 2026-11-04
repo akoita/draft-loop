@@ -1,0 +1,127 @@
+# Server threat model
+
+This page is the security baseline for the DraftLoop server: the API, the
+worker and the page fetcher, as they run on the hosted service and on a
+self-hosted machine. It is for anyone who changes a server boundary or reviews
+a server release. It lists what is protected, how, which test proves it, and
+what risk remains. The engine the server shares with the CLI is covered by the
+[threat model](threat-model.md), and this page does not repeat it.
+
+## Contents
+
+- [Scope](#scope)
+- [Components and boundaries](#components-and-boundaries)
+- [Assets](#assets)
+- [Ranked abuse paths](#ranked-abuse-paths)
+- [Residual risks and follow-ups](#residual-risks-and-follow-ups)
+- [Review triggers](#review-triggers)
+
+## Scope
+
+| Runtime                       | Covered here                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| The API and the worker        | Authentication in both modes, tenant isolation, idempotency, operator routes, record and organisation erasure |
+| The page fetcher              | Server-side request forgery and the one-hop design                                                            |
+| Model routes and keys         | Not yet: review in [#2141](https://github.com/akoita/draft-loop/issues/2141)                                  |
+| The desktop client            | Not yet: #2141                                                                                                |
+| The agent channel             | Not yet: #2141                                                                                                |
+| The self-hosted Compose stack | Not yet: #2141                                                                                                |
+
+Prompt injection through job posts and uploads is modelled in the
+[threat model](threat-model.md#hosted-service-prompt-injection-through-job-posts-and-uploads).
+The legal and privacy texts are out of scope.
+
+## Components and boundaries
+
+```mermaid
+flowchart LR
+    B[Browser or<br/>desktop client] -->|bearer token| API
+    O[Operator] -->|owner token| API
+    IdP[Identity provider] -.->|signing keys| API
+    API[API] --> DB[(Postgres<br/>forced row-level security)]
+    API --> BL[(Blobs under<br/>tenants/&lt;id&gt;/)]
+    API --> Q[(Run queue<br/>ids only)]
+    Q --> W[Worker]
+    W --> DB
+    W --> BL
+    W --> M[Model routes]
+    API -->|one hop, identity token| PF[Page fetcher]
+    PF -->|https only| Web[Public web server]
+```
+
+Each arrow is a boundary. The ones this page reviews are:
+
+- **Caller to API.** Every route but health and the web screen's files needs a
+  bearer token. Owner-token mode takes one deployment token; sign-in mode takes
+  the identity provider's access tokens and keeps the owner token for operator
+  routes.
+- **API and worker to storage.** Both act as one tenant at a time, under
+  forced row-level security, with blobs under the tenant's prefix.
+- **API to queue to worker.** A job carries ids only, never candidate material.
+  The worker re-reads state and re-checks consent, screening and erasure as it
+  claims each job.
+- **API to page fetcher to the web.** The API has no route to the internet. The
+  fetcher makes one checked hop for it and holds no database, secret or
+  candidate material.
+
+The architecture behind these boundaries is in
+[Storage and tenancy](../architecture/storage-and-tenancy.md#tenant-isolation)
+and [Hosted service](../architecture/hosted-service.md).
+
+## Assets
+
+| Asset                        | Where it lives                               | Why it matters                                                  |
+| ---------------------------- | -------------------------------------------- | --------------------------------------------------------------- |
+| Candidate material           | Postgres rows and blobs, per tenant          | Career history, drafts and exports of real people               |
+| Consent and audit records    | Postgres, append-only for the runtime role   | Proof of what the candidate allowed                             |
+| The owner token              | The deployment's secret store or secret file | Full access in owner-token mode; operator power in sign-in mode |
+| Members' sign-in tokens      | The caller's browser or desktop keychain     | One member's access to their organisation                       |
+| Credits and plan assignments | Postgres credit ledger                       | Spend on model calls, and what a plan allows                    |
+| The API's network position   | Inside the deployment's network              | A fetch made from there could reach private services            |
+
+## Ranked abuse paths
+
+The ratings are qualitative priorities. IDs are stable, so a retired threat
+keeps its number. "Evidence" names the test that proves the control.
+
+| ID    | Severity / confidence | Threat                                                                        | Control                                                                                                                                                                                                                                                                                                                         | Evidence                                                                                                                                   | Residual risk                                                                                                                         |
+| ----- | --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| S-001 | High / high           | A member of one organisation reads or changes another's material              | The tenant is bound from the caller before any route runs; a route with no tenant fails closed. Every key includes `tenant_id`, and row-level security is forced on every read and write                                                                                                                                        | `apps/worker/src/tenancy-flow.test.ts` (two organisations, creation to export)                                                             | A query added outside the tenant ports would bypass the binding; review new storage code                                              |
+| S-002 | High / high           | The runtime role escapes row-level security                                   | The store refuses to open as a superuser or `BYPASSRLS` role. Migrations run as the schema owner; the runtime role gets table access only. The one cross-tenant read, the sign-in lookup, is a `SECURITY DEFINER` function the runtime may only execute                                                                         | `packages/storage-postgres/src/postgres-storage.test.ts`, `packages/storage-postgres/src/owner-role-migration.test.ts`                     | A misconfigured grant on a new table; each migration needs the same review                                                            |
+| S-003 | High / medium         | A forged or replayed sign-in token is accepted                                | `jose` verifies the signature against the issuer's published keys, with `iss` and `aud` compared exactly and expiry checked. Discovery refuses a document naming another issuer. The person must hold an active membership, or the API answers 403                                                                              | `apps/api/src/oidc-sign-in.test.ts`                                                                                                        | A stolen, unexpired access token works until it expires; token lifetime is the identity provider's setting                            |
+| S-004 | High / medium         | The owner token is guessed, leaked or misused                                 | At least 32 characters, compared in constant time over hashes. In sign-in mode it reaches only operator routes, matched on both the route and the raw path, and a member's token never reaches them                                                                                                                             | `apps/api/src/config.test.ts`, `apps/api/src/operator-plan-routes.test.ts`                                                                 | One static credential with no expiry or rotation procedure; whoever holds it holds every record in owner-token mode (follow-up below) |
+| S-005 | Medium / high         | A member reaches a record they are not assigned to                            | Record and knowledge access hooks answer 404, the same as an unknown record. Owners and admins assign members; each change writes an audit line                                                                                                                                                                                 | `apps/worker/src/coaching-flow.test.ts`                                                                                                    | Owners and admins reach every record by design                                                                                        |
+| S-006 | Medium / high         | A retried request runs a command twice, such as a run start or a credit grant | Idempotency keys belong to the tenant, under row-level security. A concurrent retry waits, then answers a retryable 409; a stalled request frees its key after a two-minute lease. Credit grants require a key                                                                                                                  | `apps/api/src/idempotency.test.ts`                                                                                                         | Routes that take no key rely on their own state checks                                                                                |
+| S-007 | High / medium         | Erased material survives in rows, blobs or a queued job                       | A close mark hides the record at once. One `SECURITY DEFINER` erase removes its history, consent, screening, keys, assignments and owned bases in one transaction. Objects are removed by key, then the tenant prefix on organisation deletion. Queued jobs end as `record-erased` or are dropped while the organisation closes | `apps/worker/src/erasure-flow.test.ts`, `apps/api/src/postgres-record-erasure.test.ts`, `apps/api/src/organisation-erasure-routes.test.ts` | Database backups keep erased rows until they age out, within 35 days; identity-provider accounts are not deleted                      |
+| S-008 | High / medium         | An approved job page address makes the server reach a private service (SSRF)  | The API has no internet route. The fetcher accepts only `https` without credentials, checks literal and resolved addresses, connects only to the address it checked, and makes one hop. The API checks each redirect before asking for the next hop. Requests are capped at 8 KB; pages at intake's size limit and a timeout    | `apps/page-fetcher/src/page-fetcher.test.ts`, `packages/ingestion/src/pinned-url-fetcher.test.ts`                                          | Parser bugs on the fetched page stay possible; the fetched text is screened as untrusted (T-001)                                      |
+| S-009 | Medium / medium       | Someone other than the API calls the page fetcher to use it as a proxy        | On the hosted service the fetcher takes internal traffic only, and Cloud Run checks an identity token that only the API's account may get. It logs the host only                                                                                                                                                                | Deployment configuration in the private infrastructure repository                                                                          | On a self-hosted stack the fetcher is reachable from inside the Compose network without a token (review in #2141)                     |
+| S-010 | Medium / medium       | A caller runs up model spend or exhausts the service                          | Runs reserve credits before queueing and settle on the run's real cost; plan limits cap runs; each run has a cost cap. Bodies are size-limited per route. The work journal intake rate-limits notes                                                                                                                             | `apps/worker/src/run-credit-settlement.test.ts`, `apps/api/src/plan-limits-routes.test.ts`                                                 | No general request rate limit, including on failed sign-ins (follow-up below)                                                         |
+| S-011 | Medium / medium       | A queued job acts on state that changed after queueing                        | A job carries ids only. The worker re-reads the run, and re-checks consent, screening and erasure as it claims each job, before any provider call                                                                                                                                                                               | `apps/worker/src/run-job-handler.test.ts`, `apps/worker/src/tenant-services.test.ts`                                                       | A change during a provider call takes effect at the next step                                                                         |
+| S-012 | Medium / low          | The web screen is framed, or injected script runs in it                       | The screen renders through React, and the API serves it same-origin with its routes                                                                                                                                                                                                                                             | none                                                                                                                                       | The API sends no `Content-Security-Policy`, `X-Frame-Options` or `X-Content-Type-Options` header (follow-up below)                    |
+| S-013 | Low / medium          | Logs leak candidate material or credentials                                   | Request lines carry tenant and member ids, never an email or token. Refusals and audit lines are content-free                                                                                                                                                                                                                   | `apps/api/src/logging.test.ts`                                                                                                             | New log lines need the same review                                                                                                    |
+
+## Residual risks and follow-ups
+
+The review found three gaps worth their own issue. None blocks staging, and
+each should be closed before production.
+
+| Gap                                                         | Path  | Follow-up                                                 |
+| ----------------------------------------------------------- | ----- | --------------------------------------------------------- |
+| No security headers on the web screen                       | S-012 | [#2144](https://github.com/akoita/draft-loop/issues/2144) |
+| No request rate limit on the API, including failed sign-ins | S-010 | [#2145](https://github.com/akoita/draft-loop/issues/2145) |
+| The owner token has no rotation procedure                   | S-004 | [#2146](https://github.com/akoita/draft-loop/issues/2146) |
+
+The API trusts forwarding headers, since Cloud Run's front end terminates TLS.
+On a self-hosted stack the API is reached directly on 127.0.0.1, so a caller
+there could spoof the address that request logs record. No access decision uses
+that address.
+
+## Review triggers
+
+Revisit this page when any of these change:
+
+- a new route outside the tenant binding, or a new cross-tenant function
+- a new credential, or a change to either auth mode
+- a new table, grant or `SECURITY DEFINER` function
+- a new outbound call from the API or the worker
+- the page fetcher's ingress, identity or hop rules
