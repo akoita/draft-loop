@@ -19,6 +19,7 @@ jobs:
       run_all: ${{ steps.scope.outputs.run_all }}
       tests: ${{ steps.scope.outputs.tests }}
       packages: ${{ steps.scope.outputs.packages }}
+      shards: ${{ steps.scope.outputs.shards }}
       server_storage: ${{ steps.scope.outputs.server_storage }}
       self_hosted: ${{ steps.scope.outputs.self_hosted }}
     steps:
@@ -66,11 +67,16 @@ jobs:
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm typecheck
 
+  # A full run splits the suite across three runners; a scoped run uses one.
   tests:
-    name: Tests
+    name: Tests (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: scope
     if: needs.scope.outputs.tests == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.scope.outputs.shards) }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -85,9 +91,9 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Test every package
+      - name: Test every package, one shard
         if: needs.scope.outputs.run_all == 'true'
-        run: pnpm exec vitest run
+        run: pnpm exec vitest run --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       - name: Test the affected packages
         if: needs.scope.outputs.run_all != 'true' && needs.scope.outputs.packages != ''
         env:
@@ -95,6 +101,7 @@ jobs:
         # Word splitting is intended: PACKAGES is a space-separated list of package folders.
         run: pnpm exec vitest run --passWithNoTests $PACKAGES
       - name: Test the release and CI tooling
+        if: matrix.shard == 1
         run: pnpm test:release
 
   # The required check. It always reports, so a job skipped by scope never blocks a merge.

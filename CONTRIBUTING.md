@@ -44,7 +44,8 @@ CI runs only what a change can reach. The Change scope job decides, using
 | The toolchain, `ci.yml`, or a path the script does not know | everything |
 
 Static checks (formatting, lint and typecheck) always cover the whole
-repository. Every push to `main` runs everything. The required check
+repository. Every push to `main` runs everything, with the tests split
+across three runners. The required check
 `validate` is a gate job that reports on every pull request, so a skipped job
 never blocks a merge.
 

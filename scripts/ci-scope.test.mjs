@@ -101,6 +101,8 @@ describe("CI change scope", () => {
     assert.match(outputs, /^docs_only=false$/mu);
     assert.match(outputs, /^packages=apps\/cli$/mu);
     assert.match(outputs, /^server_storage=false$/mu);
+    assert.match(outputs, /^shards=\[1\]$/mu);
+    assert.match(formatOutputs(classifyChanges([], workspace)), /^shards=\[1,2,3\]$/mu);
   });
 
   it("reads the repository's workspace graph", () => {
