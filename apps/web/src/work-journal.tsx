@@ -1,10 +1,11 @@
+import { workJournalFragment, workJournalPanelId } from "@draft-loop/ui/shared-link";
 import type {
   WorkJournalReviewAction,
   WorkJournalReviewNote,
 } from "@draft-loop/ui/work-journal-model";
 import { workJournalRefusal } from "@draft-loop/ui/work-journal-model";
 import { WorkJournalPanel } from "@draft-loop/ui/work-journal-panel";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { useRecordId } from "./record-context.js";
@@ -55,6 +56,15 @@ export function WorkJournalSection({ client, bases }: WorkJournalSectionProps) {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // A shared link to the work journal scrolls to the panel once its notes are read (#2149).
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (notes === undefined || scrolled.current) return;
+    scrolled.current = true;
+    if (window.location.hash !== workJournalFragment) return;
+    document.getElementById(workJournalPanelId)?.scrollIntoView?.({ block: "start" });
+  }, [notes]);
 
   return (
     <WorkJournalPanel

@@ -88,7 +88,7 @@ describe("work journal routes", () => {
     expect(recorded.json()).toMatchObject({
       status: "pending",
       screening: "clear",
-      review_url: "/career-evidence#work-journal",
+      review_url: "/#work-journal",
     });
   });
 

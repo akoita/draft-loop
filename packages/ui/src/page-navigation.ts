@@ -22,14 +22,18 @@ export interface PageNavigation {
   readonly lastApplication: Extract<WorkspaceView, { kind: "application" }> | null;
 }
 
-/** Opening or creating a workspace lands on Home with nothing to go back to. */
-export function initialPageNavigation(): PageNavigation {
-  return {
+/**
+ * Opening or creating a workspace lands on Home with nothing to go back to. A start page, such as
+ * Career evidence from a shared link, opens over Home so Back still returns there.
+ */
+export function initialPageNavigation(start?: WorkspaceView): PageNavigation {
+  const home: PageNavigation = {
     view: homeView,
     history: [],
     visited: ["home"],
     lastApplication: null,
   };
+  return start === undefined ? home : navigateTo(home, start);
 }
 
 /** Identifies a page: two views with the same key are the same page. */
