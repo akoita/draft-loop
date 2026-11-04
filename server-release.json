@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "The agent channel ready to use",
+  "releaseName": "Self-hosted data protected, API edge hardened",
   "stageIssue": 1359,
-  "milestone": 69,
-  "summary": "One sprint since server-v0.14.0 (milestone 69). Coding agents no longer hold the owner token: draftloop-mcp init asks the server for an agent token with the owner token, saves it in the user's configuration folder and never in the project, and the server admits that token only on record_work and title-only list_work for its workspace; the owner lists and revokes agent tokens through the API, and only a hash is stored (#2147). The review link record_work returns, /#work-journal, now opens the Work journal panel (#2149); the workspace home shows how many notes wait for review (#2151); and draft-loop is on the PATH from a clone, as the self-hosted guide says (#2150).",
-  "knownLimitations": "The work journal and agent tokens are served in owner-token mode only; sign-in mode waits for hosted sign-in (#2079). Agent tokens are revoked through the API, not yet from the web screen. A setup that still exports the owner token keeps working until init is run again. Staging behaviour is otherwise unchanged."
+  "milestone": 70,
+  "summary": "One sprint since server-v0.15.0 (milestone 70). A clone's pnpm self-hosted stack now runs as its own Compose project, draft-loop-dev, on port 8081, so branch code and its migrations never reach an installed stack's data (#2169). The server threat model's four gaps are closed: security headers are pinned by tests (#2144); the API limits requests per source address, with a much smaller budget for refused credentials, and answers 429 rate_limited (#2145); draft-loop-server token --rotate replaces the owner token, and the guides give the procedure (#2146); and the desktop client hands a remembered token only to a server that proves it holds it through POST /v1/auth/proof (#2148, #2172, #2173). draftloop-mcp init names the intake switch only when it is off (#2170).",
+  "knownLimitations": "Request limits are counted per API instance and, on a self-hosted stack, shared by every client on 127.0.0.1, so a misconfigured agent can lock the others out for a minute. The desktop part of #2148 reaches people with the next desktop release. The work journal and agent tokens are still served in owner-token mode only (#2079)."
 }
