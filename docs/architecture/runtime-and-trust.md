@@ -143,6 +143,15 @@ authentication, and an opening use of two technical tools from compound names.
 The resulting product and tool names still require whole-word source support;
 employer, title, linking-word, numeric and date checks remain in force.
 
+### Reasoning levels in the run snapshot
+
+Each run records both roles' resolved model profiles, runtime controls
+included, in its context snapshot. A saved pair, an application's pair or a run
+start may choose a reasoning level per role from the levels the catalog lists
+for that exact profile version (`model-profile-efforts.ts`). The level is
+applied when the profile is resolved, so the snapshot holds the level the run
+actually used, resume reuses it, and the review screens read it from there.
+
 ## Workflow state machine
 
 Each transition emits an auditable event and retains relevant inputs, outputs,
@@ -202,6 +211,27 @@ and uncontrolled external research are outside the MVP.
 See [the threat model](../security/threat-model.md) and [privacy and evaluation
 policy](../security/privacy-and-evaluation.md) for current trust boundaries, redaction
 rules, retention defaults, and deterministic evaluation gates.
+
+### Desktop host boundary
+
+In the [system boundaries diagram](overview.md#trust-boundaries), solid arrows
+show application data or control flow. The dotted credential edge
+is lookup-only: stored keys are never projected to the renderer. Network and
+export edges require visible approval. The solid CKB edge covers the explicit
+file, URL, and bounded-directory commands documented in
+[Candidate evidence](candidate-evidence.md). It also represents exact selected
+source-version lexical retrieval through the CKB-owned index; selection is
+explicit and does not imply implicit workspace access. See the [CKB integration
+status](candidate-evidence.md#ckb-integration-status) for remaining limits.
+
+The renderer receives bounded projections for workspace and run state. Native
+dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
+construction, URL fetching, and export writes remain in the main process. The
+renderer can submit an API key only through the allowlisted credential command;
+the host validates it and owns encryption, status, removal, and environment
+fallback. Browser mode has no native filesystem or persistent credential
+capabilities and keeps a deterministic fixture fallback. See [ADR
+0004](../adr/0004-desktop-credential-boundary.md).
 
 ### Application adapter boundary
 
