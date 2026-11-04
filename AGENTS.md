@@ -57,6 +57,8 @@ recorded limit in the same change so the reduction cannot regress.
 - Summarize and link to the canonical source instead of copying implementation
   history across documents.
 
+<!-- agent-toolkit:writing-policy -->
+
 ## Writing documentation
 
 Write each document for one named reader and one task. Hold it to three tests:
@@ -72,11 +74,18 @@ Write each document for one named reader and one task. Hold it to three tests:
   prerequisites, copy-paste-safe commands, the expected result, and what to do
   when it fails. Link to the canonical source instead of copying it.
 
-State what is true now, label proposals and plans, and delete stale content in
-the same change. When the tests pull apart, completeness wins in procedures and
-concision wins in overviews. The full guide is the agent-toolkit
-`document-software` skill (`references/writing.md`), enabled for Claude Code in
-`.claude/settings.json`.
+Describe the system by concept, not as a changelog, and draw a Mermaid diagram
+for each flow, state machine or component map. Split a section past about 150
+lines and a page past about 4,000 words. State what is true now, label
+proposals and plans, and delete stale content in the same change. When the
+tests pull apart, completeness wins in procedures and concision wins in
+overviews.
+
+The full guide is the agent-toolkit `document-software` skill
+(`references/writing.md`). This section is installed by its
+`scripts/install_policy.py`; edit the skill, not this copy.
+
+<!-- /agent-toolkit:writing-policy -->
 
 ## Architecture boundaries
 
