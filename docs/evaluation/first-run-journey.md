@@ -271,7 +271,8 @@ No page overflowed horizontally at 1280 px apart from D4.
 - Requirement extraction and requirement review.
 - Starting a review on an application the person created.
 - Completing the export, because the walk did not drive the native Save
-  dialog. The fixture export path is covered by `pnpm desktop:smoke`.
+  dialog. The fixture export path was covered by the v0.8 desktop smoke, since
+  removed with that app.
 
 ### Follow-up issues
 

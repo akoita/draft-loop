@@ -27,14 +27,14 @@ candidate decides what to approve and export.
 | Way to run | Status | What it is |
 | --- | --- | --- |
 | [Self-hosted server](#quick-install-with-docker) | Recommended | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk. |
-| [Desktop app](#desktop-app) | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. The v0.8 alpha with its own local engine gets fixes only, and its workspaces move to the server with one command. |
+| [Desktop app](#desktop-app) | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
 | [CLI](#developer-quick-start) | Source only | Every workflow step from a terminal, over the same packages. |
 | Hosted service | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet. |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
 
-[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the v0.8 desktop alpha and the source-only CLI all run the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
+[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
 ## How DraftLoop works
 
@@ -100,11 +100,9 @@ self-hosted server or at the hosted service once it opens. It ships from v0.9.0
 ([ADR 0011, D9](docs/adr/0011-client-server-version.md#d9-clients)) and needs a
 server at 0.14.0 or later to remember your sign-in.
 
-The v0.8 alpha runs its own local engine. That architecture is in maintenance
-mode since 2026-10-28: it gets fixes but no features, and it is retired one
-release after the client ships. Existing users can send a
-workspace's applications and career evidence to a self-hosted server with
-`draft-loop server import`; see
+The v0.8 alpha with its own local engine is retired: its code left the
+repository after v0.9.0. To keep a v0.8 workspace, send its applications and
+career evidence to a self-hosted server with `draft-loop server import`; see
 [Coming from the desktop app](docs/operations/self-hosted.md#coming-from-the-desktop-app).
 
 ### Installing
@@ -144,14 +142,12 @@ DraftLoop has no npm package: from a clone, use Node.js **24.22.1** and pnpm
 pnpm install --frozen-lockfile
 ```
 
-The source-only CLI and both desktop apps run from the clone. The desktop client
-opens your self-hosted server; the v0.8 desktop's **Try demo workspace** runs
-the deterministic fixture workflow offline, with no provider spend:
+The source-only CLI and the desktop client run from the clone. The desktop
+client opens your self-hosted server:
 
 ```sh
 pnpm --filter @draft-loop/cli start --help
 pnpm --filter @draft-loop/desktop-client start
-pnpm --filter @draft-loop/desktop start
 ```
 
 Every CLI command group, from opportunity briefs to candidate knowledge bases,

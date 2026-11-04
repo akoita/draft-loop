@@ -1141,14 +1141,11 @@ visible block with `data-dl-unit`, whose text content is exactly the block's tex
 real `•` in a hanging indent. There is no letter-spacing; Modern's uppercase headings are a CSS case
 transform, so the reported units keep the artifact's text. Keep rules are CSS `break-*` properties.
 
-The desktop host passes a `PdfPrinter` with PDF exports
-(`apps/desktop/src/electron/pdf-printer.ts`). It loads the HTML in a hidden, sandboxed window on an
-in-memory session that refuses every other request, collects the marked units, and prints with
-`printToPDF` (CSS page size, tagged PDF). `exportApprovedRun` then builds the export from those
-bytes with `renderedPrintedPdf`. QA (`buildPrintedPdfRenderingQa`) compares the reported units
-with the artifact in place of reading text back from the bytes, and takes the page count from the
-PDF. An export that fails QA writes nothing. Without a printer, as in the CLI, a PDF is drawn by
-the built-in writer.
+A host may pass a `PdfPrinter` with PDF exports that prints this HTML and reports the marked
+units. `exportApprovedRun` then builds the export from those bytes with `renderedPrintedPdf`, and
+QA (`buildPrintedPdfRenderingQa`) compares the reported units with the artifact and takes the page
+count from the PDF. An export that fails QA writes nothing. No current host passes a printer: the
+v0.8 desktop did, and the CLI and the server draw every PDF with the built-in writer.
 
 #### Rendering templates (#1328)
 
@@ -1193,10 +1190,8 @@ and in the export payload as `renderingTemplate`. The rendering-QA report keeps
 only the layout profile.
 
 The person picks the template at export (#1330): `ExportCommand.templateId`,
-`export --template <id>` in the CLI, and the `template` field of the desktop
-`export` action, which the bridge allowlist accepts only for built-in ids. The
-desktop remembers the choice per application in `localStorage`, keyed by the
-application's first run (`apps/desktop/src/export-template.ts`). A chosen
+`export --template <id>` in the CLI, and `templateId` in the API's export request,
+which accepts only built-in ids. A chosen
 template's page target replaces the writing policy's in the length warning.
 
 #### Role headers
