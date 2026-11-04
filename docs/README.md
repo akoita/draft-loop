@@ -8,27 +8,27 @@ contributors, maintainers, and operators to the current information they need.
 
 ## Start here
 
-| Need | Document |
-| --- | --- |
-| Install and run DraftLoop on your own machine | [Self-hosted server](operations/self-hosted.md) |
-| Understand the current product and status | [Roadmap and current status](roadmap.md) |
-| Understand the ways to run, the components and a run's path, in diagrams | [Architecture overview](architecture/overview.md) |
-| Read source, policy, opportunity, and profile contracts | [Candidate evidence architecture](architecture/candidate-evidence.md) |
-| Read drafting, review, and rendering boundaries | [Drafting and review architecture](architecture/drafting-and-review.md) |
-| Read workflow, provider, and trust boundaries | [Runtime and trust architecture](architecture/runtime-and-trust.md) |
-| Read the hosted service's queue, model routes, API and screening | [Hosted service architecture](architecture/hosted-service.md) |
-| Read storage ports, drivers and tenant isolation | [Storage and tenancy architecture](architecture/storage-and-tenancy.md) |
-| Run CLI and desktop commands | [CLI and desktop reference](reference/cli-and-desktop.md) |
-| Read the hosted service's record export format | [Record archive v1](reference/record-archive.md) |
-| Let a coding agent record your work for review | [Agent channel](reference/agent-channel.md) |
-| Understand privacy and security boundaries | [Privacy and evaluation](security/privacy-and-evaluation.md) · [Threat model](security/threat-model.md) |
-| Review release evidence | [Release evidence](releases/) |
-| Run or review acceptance protocols | [Evaluation protocols and results](evaluation/) |
-| Understand recorded design decisions | [Architecture decision records](adr/) |
-| Release DraftLoop | [Release procedure](operations/releasing.md) |
-| Follow the hosted version's design and phases | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md) |
-| Develop and test the server locally | [Local server stack](operations/local-server-stack.md) |
-| Deploy the hosted service | [Server deploy](operations/server-deploy.md) |
+| Need                                                                     | Document                                                                                                                                                         |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install and run DraftLoop on your own machine                            | [Self-hosted server](operations/self-hosted.md)                                                                                                                  |
+| Understand the current product and status                                | [Roadmap and current status](roadmap.md)                                                                                                                         |
+| Understand the ways to run, the components and a run's path, in diagrams | [Architecture overview](architecture/overview.md)                                                                                                                |
+| Read source, policy, opportunity, and profile contracts                  | [Candidate evidence architecture](architecture/candidate-evidence.md)                                                                                            |
+| Read drafting, review, and rendering boundaries                          | [Drafting and review architecture](architecture/drafting-and-review.md)                                                                                          |
+| Read workflow, provider, and trust boundaries                            | [Runtime and trust architecture](architecture/runtime-and-trust.md)                                                                                              |
+| Read the hosted service's queue, model routes, API and screening         | [Hosted service architecture](architecture/hosted-service.md)                                                                                                    |
+| Read storage ports, drivers and tenant isolation                         | [Storage and tenancy architecture](architecture/storage-and-tenancy.md)                                                                                          |
+| Run CLI and desktop commands                                             | [CLI and desktop reference](reference/cli-and-desktop.md)                                                                                                        |
+| Read the hosted service's record export format                           | [Record archive v1](reference/record-archive.md)                                                                                                                 |
+| Let a coding agent record your work for review                           | [Agent channel](reference/agent-channel.md)                                                                                                                      |
+| Understand privacy and security boundaries                               | [Privacy and evaluation](security/privacy-and-evaluation.md) · [Threat model](security/threat-model.md) · [Server threat model](security/server-threat-model.md) |
+| Review release evidence                                                  | [Release evidence](releases/)                                                                                                                                    |
+| Run or review acceptance protocols                                       | [Evaluation protocols and results](evaluation/)                                                                                                                  |
+| Understand recorded design decisions                                     | [Architecture decision records](adr/)                                                                                                                            |
+| Release DraftLoop                                                        | [Release procedure](operations/releasing.md)                                                                                                                     |
+| Follow the hosted version's design and phases                            | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md)                                       |
+| Develop and test the server locally                                      | [Local server stack](operations/local-server-stack.md)                                                                                                           |
+| Deploy the hosted service                                                | [Server deploy](operations/server-deploy.md)                                                                                                                     |
 
 ## Document types
 

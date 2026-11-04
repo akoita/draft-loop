@@ -24,12 +24,12 @@ candidate decides what to approve and export.
 
 ## Ways to run DraftLoop
 
-| Way to run | Status | What it is |
-| --- | --- | --- |
-| [Self-hosted server](#quick-install-with-docker) | Recommended | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk. |
-| [Desktop app](#desktop-app) | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
-| [CLI](#developer-quick-start) | Source only | Every workflow step from a terminal, over the same packages. |
-| Hosted service | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet. |
+| Way to run                                       | Status         | What it is                                                                                                                                                                                       |
+| ------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Self-hosted server](#quick-install-with-docker) | Recommended    | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk.                                                                                          |
+| [Desktop app](#desktop-app)                      | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
+| [CLI](#developer-quick-start)                    | Source only    | Every workflow step from a terminal, over the same packages.                                                                                                                                     |
+| Hosted service                                   | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet.                                                                  |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
@@ -218,16 +218,16 @@ chunks it was sent and how many its draft cites, as counts and ranks only.
 
 ## Technology and architecture
 
-| Area                  | Technology or boundary                                                        |
-| --------------------- | ----------------------------------------------------------------------------- |
-| Runtime               | TypeScript, Node.js 24.22.1, pnpm 10.18.3                                     |
-| User interfaces       | React 19 and Vite screens shared by the web and the desktop; Electron 44; Commander CLI |
-| Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports              |
-| Server                | Fastify API typed by Zod, a worker on a pg-boss run queue, a separate page fetcher |
-| Providers             | Explicit Anthropic and OpenAI SDK adapters; OpenAI-compatible local models on the server |
-| Data and output       | Postgres with pgvector on the server; SQLite via Drizzle ORM on the desktop; Markdown, PDF, and DOCX exports |
-| Packaging             | Server images on GitHub Container Registry with Docker Compose; desktop ZIP archives |
-| Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                           |
+| Area            | Technology or boundary                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Runtime         | TypeScript, Node.js 24.22.1, pnpm 10.18.3                                                                    |
+| User interfaces | React 19 and Vite screens shared by the web and the desktop; Electron 44; Commander CLI                      |
+| Product core    | Framework-free domain contracts, Zod schemas, orchestrator ports                                             |
+| Server          | Fastify API typed by Zod, a worker on a pg-boss run queue, a separate page fetcher                           |
+| Providers       | Explicit Anthropic and OpenAI SDK adapters; OpenAI-compatible local models on the server                     |
+| Data and output | Postgres with pgvector on the server; SQLite via Drizzle ORM on the desktop; Markdown, PDF, and DOCX exports |
+| Packaging       | Server images on GitHub Container Registry with Docker Compose; desktop ZIP archives                         |
+| Quality         | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                                                          |
 
 The [architecture overview](docs/architecture/overview.md) is the entry point:
 it maps the ways to run, the components and a run's path in diagrams, then
@@ -271,7 +271,7 @@ Runs read only the source versions a workspace selects; see
 - [Documentation map](docs/README.md) · [Roadmap and current status](docs/roadmap.md) · [Release history](https://github.com/akoita/draft-loop/releases)
 - [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
 - [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Hosted service](docs/architecture/hosted-service.md) · [Storage and tenancy](docs/architecture/storage-and-tenancy.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
-- [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
+- [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md) · [Server threat model](docs/security/server-threat-model.md)
 - [Self-hosted server](docs/operations/self-hosted.md) · [Local server stack](docs/operations/local-server-stack.md) · [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
 
