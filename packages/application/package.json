@@ -46,6 +46,14 @@
     "./career-interviewer-model": {
       "types": "./src/career-interviewer-model.ts",
       "import": "./src/career-interviewer-model.ts"
+    },
+    "./career-interview-evidence": {
+      "types": "./src/career-interview-evidence.ts",
+      "import": "./src/career-interview-evidence.ts"
+    },
+    "./career-interview-service": {
+      "types": "./src/career-interview-service.ts",
+      "import": "./src/career-interview-service.ts"
     }
   },
   "files": [
