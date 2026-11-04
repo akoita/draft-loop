@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { WorkJournalNoteListItem } from "@draft-loop/schemas/work-journal";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -139,7 +141,7 @@ describe("DraftLoop MCP server", () => {
   it("answers not_signed_in without a token, through the real HTTP client", async () => {
     let fetched = false;
     const api = createWorkJournalApi({
-      ...configFromEnvironment({}),
+      ...configFromEnvironment({}, join(tmpdir(), "draftloop-no-agent-token", "agent-token")),
       fetch: async () => {
         fetched = true;
         return new Response("{}");

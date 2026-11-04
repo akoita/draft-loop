@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "The work journal and the desktop client",
+  "releaseName": "The agent channel ready to use",
   "stageIssue": 1359,
-  "milestone": 66,
-  "summary": "Three sprints since server-v0.13.0. Work journal (milestone 64, ADR 0011 D17): a new draftloop-mcp stdio MCP server lets the candidate's coding agent record notable work it helped ship with record_work, and list it with list_work, through the server's API and its owner token. Notes are checked, deduplicated, screened for injected instructions and rate limited, and wait as pending until the candidate turns on intake and reviews them in a Work journal panel on the Career evidence page or with draft-loop work-journal in the CLI; an approved note becomes a work-journal knowledge source, sensitive by default for a private project. draftloop-mcp init sets up Claude Code, Codex or another MCP host. Desktop client (milestone 65, ADR 0011 D9): the server's web screen remembers the owner token when it runs inside the new desktop client, which ships separately as desktop v0.9.0. Release sprint (milestone 66): the record archive now holds the record's work journal, and draft-loop-server up prints the web address, the token command and where to get the desktop app.",
-  "knownLimitations": "The work journal is served with the owner token only; sign-in mode waits for hosted sign-in and a design for the agent's credential (#2079). A full run citing an approved note and walks in Claude Code and Codex are still to do. Staging behaviour is otherwise unchanged."
+  "milestone": 69,
+  "summary": "One sprint since server-v0.14.0 (milestone 69). Coding agents no longer hold the owner token: draftloop-mcp init asks the server for an agent token with the owner token, saves it in the user's configuration folder and never in the project, and the server admits that token only on record_work and title-only list_work for its workspace; the owner lists and revokes agent tokens through the API, and only a hash is stored (#2147). The review link record_work returns, /#work-journal, now opens the Work journal panel (#2149); the workspace home shows how many notes wait for review (#2151); and draft-loop is on the PATH from a clone, as the self-hosted guide says (#2150).",
+  "knownLimitations": "The work journal and agent tokens are served in owner-token mode only; sign-in mode waits for hosted sign-in (#2079). Agent tokens are revoked through the API, not yet from the web screen. A setup that still exports the owner token keeps working until init is run again. Staging behaviour is otherwise unchanged."
 }

@@ -7,7 +7,9 @@ until the candidate approves it on the Career evidence page or from the CLI.
 The design is [ADR 0011, D17](../adr/0011-client-server-version.md#d17-agent-channel-an-mcp-server).
 
 The channel is `draftloop-mcp`, a stdio MCP server that calls the
-[self-hosted server](../operations/self-hosted.md)'s API with its owner token.
+[self-hosted server](../operations/self-hosted.md)'s API with an agent token.
+An agent token reaches only the work journal of one workspace: it can file
+notes and list their titles, and every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -34,24 +36,28 @@ open defects.
    If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `pnpm setup`, open a new
    shell, and link again. The last command prints the tool's usage.
 
-3. In the project whose work you want to record, run `init` for your agent:
+3. In the project whose work you want to record, run `init` for your agent,
+   with the owner token for that one command only:
 
    ```text
-   draftloop-mcp init --host claude-code [--hook]
-   draftloop-mcp init --host codex
-   draftloop-mcp init --host generic
+   DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)" draftloop-mcp init --host claude-code
    ```
 
-4. Export the owner token, which `draft-loop-server token` prints, in the
-   shell that starts the agent:
+   Use `--host codex` or `--host generic` for the other hosts, and add
+   `--hook` for Claude Code's Stop hook. `init` writes the project's files,
+   asks the server for an agent token and saves it in your configuration
+   folder, then prints `issued: agent token dlat_..., saved to ...`.
 
-   ```text
-   export DRAFT_LOOP_SERVER_TOKEN=<token>
-   ```
+4. Start the agent from a shell without the owner token. `draftloop-mcp`
+   sends the saved agent token.
 
-`init` merges into existing files, and running it again changes nothing. The
-files hold only names: the token stays in the environment, and no path of your
-machine is written.
+`init` merges into existing files, and running it again changes nothing in
+them; it issues a new agent token each time. The files hold only names: no
+token and no path of your machine is written.
+
+If `init` prints `No agent token issued`, follow the line it prints. A server
+older than `server-v0.15.0` issues none: upgrade it, or keep the owner token
+in `DRAFT_LOOP_SERVER_TOKEN` as before, which still works.
 
 | Host            | Server entry         | Instructions | Skill                              |
 | --------------- | -------------------- | ------------ | ---------------------------------- |
@@ -62,13 +68,31 @@ machine is written.
 Codex reads a project's `.codex/config.toml` only in a trusted project; copy
 the marked block into `~/.codex/config.toml` otherwise.
 
-The server reads three settings from its environment:
+The server reads its token, in order, from `DRAFT_LOOP_SERVER_TOKEN_FILE`, the
+saved agent token, then `DRAFT_LOOP_SERVER_TOKEN`. The saved token is in
+`$XDG_CONFIG_HOME/draftloop/agent-token`, by default
+`~/.config/draftloop/agent-token`, or `%APPDATA%\draftloop\agent-token` on
+Windows.
 
 | Variable                      | Default                 | Meaning                                                                      |
 | ----------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
 | `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The self-hosted server's address                                             |
-| `DRAFT_LOOP_SERVER_TOKEN`     | none                    | The owner token; `DRAFT_LOOP_SERVER_TOKEN_FILE` reads it from a file instead |
+| `DRAFT_LOOP_SERVER_TOKEN`     | none                    | For `init`, the owner token; for the server, a token used when none is saved |
 | `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace that receives the notes                                        |
+
+### Revoke an agent token
+
+The owner lists and revokes agent tokens through the API; a revoked token is
+refused at once and the others keep working:
+
+```text
+export DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)"
+curl -s -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" http://127.0.0.1:8080/v1/workspaces/owner/agent-tokens
+curl -s -X DELETE -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" http://127.0.0.1:8080/v1/workspaces/owner/agent-tokens/dlat_ID
+```
+
+Replace `dlat_ID` with the id the list shows. Run `init` again to issue a new
+one.
 
 ### The `/log-work` skill and the Stop hook
 
@@ -110,7 +134,9 @@ summary and screening result. The candidate can:
 - **Discard** it. A discarded note's text is forgotten after 30 days, and the
   same work is not recorded again.
 
-The same review runs from the CLI with `draft-loop work-journal`; see the
+A pending note's review link, `/#work-journal`, opens this panel, and the
+workspace home shows how many notes wait. The same review runs from the CLI
+with `draft-loop work-journal`; see the
 [self-hosted server](../operations/self-hosted.md#work-journal) guide.
 
 ## Privacy lines

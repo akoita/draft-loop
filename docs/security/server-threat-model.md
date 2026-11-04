@@ -36,7 +36,7 @@ The legal and privacy texts are out of scope.
 ```mermaid
 flowchart LR
     B[Browser or<br/>desktop client] -->|bearer token| API
-    A[Coding agent<br/>draftloop-mcp] -->|owner token,<br/>work journal only| API
+    A[Coding agent<br/>draftloop-mcp] -->|agent token,<br/>work journal only| API
     O[Operator] -->|owner token| API
     IdP[Identity provider] -.->|signing keys| API
     API[API] --> DB[(Postgres<br/>forced row-level security)]
@@ -78,15 +78,16 @@ and [Hosted service](../architecture/hosted-service.md).
 
 ## Assets
 
-| Asset                        | Where it lives                                        | Why it matters                                                  |
-| ---------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| Candidate material           | Postgres rows and blobs, per tenant                   | Career history, drafts and exports of real people               |
-| Consent and audit records    | Postgres, append-only for the runtime role            | Proof of what the candidate allowed                             |
-| The owner token              | The deployment's secret store or secret file          | Full access in owner-token mode; operator power in sign-in mode |
-| Members' sign-in tokens      | The caller's browser or desktop keychain              | One member's access to their organisation                       |
-| Credits and plan assignments | Postgres credit ledger                                | Spend on model calls, and what a plan allows                    |
-| The API's network position   | Inside the deployment's network                       | A fetch made from there could reach private services            |
-| Provider keys                | Secret Manager, or key files on a self-hosted machine | Spend and access at the model provider                          |
+| Asset                        | Where it lives                                                | Why it matters                                                  |
+| ---------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| Candidate material           | Postgres rows and blobs, per tenant                           | Career history, drafts and exports of real people               |
+| Consent and audit records    | Postgres, append-only for the runtime role                    | Proof of what the candidate allowed                             |
+| The owner token              | The deployment's secret store or secret file                  | Full access in owner-token mode; operator power in sign-in mode |
+| Agent tokens                 | A file in the user's configuration folder; a hash in Postgres | Filing and listing one workspace's work journal notes           |
+| Members' sign-in tokens      | The caller's browser or desktop keychain                      | One member's access to their organisation                       |
+| Credits and plan assignments | Postgres credit ledger                                        | Spend on model calls, and what a plan allows                    |
+| The API's network position   | Inside the deployment's network                               | A fetch made from there could reach private services            |
+| Provider keys                | Secret Manager, or key files on a self-hosted machine         | Spend and access at the model provider                          |
 
 ## Ranked abuse paths
 
@@ -112,7 +113,7 @@ keeps its number. "Evidence" names the test that proves the control.
 | S-015 | Medium / medium       | The critic's calls leave OpenAI's EU endpoint                                    | The hosted worker targets OpenAI's EU endpoint unless configured otherwise, and every call records its route                                                                                                                                                                                                                    | `packages/model-gateway/src/hosted-routes.test.ts`                                                                                         | EU residency and zero retention are terms of the OpenAI account, outside the code. A self-hosted stack defaults to the global endpoint          |
 | S-016 | High / medium         | A provider key leaks from the hosted service                                     | Keys are read from Secret Manager at call time, never from an image or environment file, and only by the worker. The API refuses to build a provider client whatever its environment holds. Errors name the provider only                                                                                                       | `packages/model-gateway/src/secret-credentials.test.ts`, `apps/api/src/provider-boundary.test.ts`                                          | Whoever controls the worker's identity can read the keys                                                                                        |
 | S-017 | Medium / medium       | A self-hosted key file is read by another user                                   | Keys are copied into a Docker secrets volume. A key file other users can read is refused, and errors never repeat its content                                                                                                                                                                                                   | `packages/model-gateway/src/file-credentials.test.ts`                                                                                      | The copy in `keys/` stays readable by the owner's account and its processes                                                                     |
-| S-018 | High / medium         | An injected coding agent takes the owner token and calls other routes            | The MCP server offers only `record_work` and `list_work`. The files `draftloop-mcp init` writes hold variable names, never the token                                                                                                                                                                                            | `apps/mcp/src/server.test.ts`, `apps/mcp/src/init.test.ts`                                                                                 | The token is the owner token, held in the agent's environment, and reaches every route (follow-up below)                                        |
+| S-018 | High / medium         | An injected coding agent takes its token and calls other routes                  | The agent holds an agent token, not the owner token: it reaches only `record_work` and title-only `list_work` on its own workspace, is stored as a hash, and is revoked on its own. The files `draftloop-mcp init` writes hold no token                                                                                         | `apps/api/src/agent-token-routes.test.ts`, `apps/mcp/src/init.test.ts`                                                                     | Until revoked, a stolen agent token can file notes, which wait for review, and list titles                                                      |
 | S-019 | Medium / medium       | A note carries injected instructions or invented claims toward a CV              | Notes wait in a pending inbox behind the candidate's consent switch and are screened like uploads. Secret-like text and non-`https` links are refused; notes are rate-limited per hour and capped per tenant. Nothing becomes evidence before the candidate approves it                                                         | `packages/application/src/work-journal.test.ts`, `apps/api/src/work-journal-routes.test.ts`                                                | An approved note is only as true as the candidate's review                                                                                      |
 | S-020 | Medium / high         | The desktop window is steered to another site, or a page reaches Node or devices | The window loads only its server's origin and its sign-in issuer; other links open in the system browser and other schemes are refused. New windows are denied. Pages run sandboxed with context isolation, no Node and no device permissions, in a partition per server. Plain `http` is allowed only for this computer        | `apps/desktop-client/src/navigation.test.ts`, `apps/desktop-client/src/window-security.test.ts`, the packaged acceptance                   | Installers are unsigned (T-011)                                                                                                                 |
 | S-021 | Medium / medium       | The remembered owner token is stolen, or handed to an impostor                   | The token is encrypted by the system keychain, per server origin. Where no keychain is available, including Linux's plain-text backend, nothing is remembered                                                                                                                                                                   | `apps/desktop-client/src/remembered-sign-in.test.ts`                                                                                       | Another process answering on the same loopback address is served the token (follow-up below)                                                    |
@@ -121,7 +122,7 @@ keeps its number. "Evidence" names the test that proves the control.
 
 ## Residual risks and follow-ups
 
-The review found five gaps worth their own issue. None blocks staging, and
+The review found four open gaps worth their own issue. None blocks staging, and
 each should be closed before production.
 
 | Gap                                                            | Path  | Follow-up                                                 |
@@ -129,7 +130,6 @@ each should be closed before production.
 | No security headers on the web screen                          | S-012 | [#2144](https://github.com/akoita/draft-loop/issues/2144) |
 | No request rate limit on the API, including failed sign-ins    | S-010 | [#2145](https://github.com/akoita/draft-loop/issues/2145) |
 | The owner token has no rotation procedure                      | S-004 | [#2146](https://github.com/akoita/draft-loop/issues/2146) |
-| The agent channel holds the owner token                        | S-018 | [#2147](https://github.com/akoita/draft-loop/issues/2147) |
 | A remembered desktop token follows the address, not the server | S-021 | [#2148](https://github.com/akoita/draft-loop/issues/2148) |
 
 The API trusts forwarding headers, since Cloud Run's front end terminates TLS.

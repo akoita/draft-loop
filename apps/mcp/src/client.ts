@@ -1,9 +1,12 @@
 import { readFile } from "node:fs/promises";
 import type { WorkJournalNoteListItem } from "@draft-loop/schemas/work-journal";
 
+import { defaultAgentTokenPath, readAgentTokenFile } from "./agent-token.js";
+
 /**
  * The MCP server's HTTP client of the DraftLoop API (ADR 0011 D17): the self-hosted stack with
- * the owner token today, the cloud with a signed-in token later. It holds no domain logic and
+ * an agent token that reaches only the work journal (#2160), the cloud with a signed-in token
+ * later. It holds no domain logic and
  * never returns the token.
  */
 
@@ -19,9 +22,14 @@ export interface WorkJournalApiConfig {
   readonly fetch?: typeof fetch;
 }
 
-/** The address, token and workspace from the host's environment. */
+/**
+ * The address, token and workspace from the host's environment. The token is read, in order, from
+ * `DRAFT_LOOP_SERVER_TOKEN_FILE`, the agent token `init` saved, then `DRAFT_LOOP_SERVER_TOKEN`,
+ * which an older setup holds the owner token in and which keeps working.
+ */
 export function configFromEnvironment(
   environment: Readonly<Record<string, string | undefined>> = process.env,
+  agentTokenPath: string = defaultAgentTokenPath(environment),
 ): WorkJournalApiConfig {
   const tokenFile = environment.DRAFT_LOOP_SERVER_TOKEN_FILE;
   return {
@@ -32,7 +40,10 @@ export function configFromEnvironment(
         const text = await readFile(tokenFile, "utf8").catch(() => undefined);
         return text?.trim() || undefined;
       }
-      return environment.DRAFT_LOOP_SERVER_TOKEN?.trim() || undefined;
+      return (
+        (await readAgentTokenFile(agentTokenPath)) ??
+        (environment.DRAFT_LOOP_SERVER_TOKEN?.trim() || undefined)
+      );
     },
   };
 }
@@ -53,7 +64,7 @@ export class WorkJournalApiError extends Error {
 const notSignedIn = () =>
   new WorkJournalApiError(
     "not_signed_in",
-    `DraftLoop has no valid token for this server; run \`${signInCommand}\` and set DRAFT_LOOP_SERVER_TOKEN or DRAFT_LOOP_SERVER_TOKEN_FILE.`,
+    `DraftLoop has no valid token for this server; run \`draftloop-mcp init\` again with the owner token that \`${signInCommand}\` prints.`,
   );
 
 export interface RecordWorkResult {
