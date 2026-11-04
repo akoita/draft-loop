@@ -42,6 +42,10 @@
     "./career-interview-topics": {
       "types": "./src/career-interview-topics.ts",
       "import": "./src/career-interview-topics.ts"
+    },
+    "./career-interviewer-model": {
+      "types": "./src/career-interviewer-model.ts",
+      "import": "./src/career-interviewer-model.ts"
     }
   },
   "files": [
