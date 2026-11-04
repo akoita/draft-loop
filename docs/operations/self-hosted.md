@@ -44,7 +44,9 @@ The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 4. Open <http://127.0.0.1:8080> and sign in with the token that
    `draft-loop-server token` prints.
 
-The installed folder holds its own copy of the script. Its other commands are
+The installed folder holds its own copy of the script. A downloaded copy outside
+any stack, such as `/tmp/draft-loop-server`, works on `~/draft-loop-server`; set
+`DRAFT_LOOP_SERVER_HOME` to name another folder. The other commands are
 `down`, `status`, `logs [service]` and `upgrade <version>`, which switches to a
 newer release, keeps your keys and settings, and restarts the stack. Later
 starts keep the generated secrets, run any new database migrations and copy the

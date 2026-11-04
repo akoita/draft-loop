@@ -8,8 +8,8 @@
 #   draft-loop-server upgrade <version>            switch to a newer release and restart
 #   draft-loop-server backup [file] | restore <file>   one archive of the database, files and secrets
 #
-# Every command except install works on the folder that holds this script's bin/ folder, or on
-# DRAFT_LOOP_SERVER_HOME. It never prints a secret except the owner token you ask for.
+# Every command except install works on DRAFT_LOOP_SERVER_HOME, else on the folder that holds
+# this script's bin/ folder, else, for a downloaded copy, on ~/draft-loop-server. It never prints a secret except the owner token you ask for.
 set -euo pipefail
 
 repository="akoita/draft-loop"
@@ -28,11 +28,17 @@ usage() {
 }
 
 script_home() {
+  local own
   if [ -n "${DRAFT_LOOP_SERVER_HOME:-}" ]; then
     printf '%s\n' "$DRAFT_LOOP_SERVER_HOME"
-  else
-    (cd "$(dirname "$0")/.." && pwd)
+    return
   fi
+  own="$(cd "$(dirname "$0")/.." && pwd)"
+  # A downloaded copy, such as /tmp/draft-loop-server, sits in no stack: use install's default.
+  if [ ! -f "$own/compose.yaml" ] && [ -f "$HOME/draft-loop-server/compose.yaml" ]; then
+    own="$HOME/draft-loop-server"
+  fi
+  printf '%s\n' "$own"
 }
 
 check_version() {

@@ -35,12 +35,13 @@ const shells = [
 ];
 
 /** Runs one twin with a fake `docker` that records its arguments. */
-function server(shell, args, { home, env = {} } = {}) {
+function server(shell, args, { home, script, env = {} } = {}) {
   const [command, ...options] = shell.run;
   const target =
-    home === undefined
+    script ??
+    (home === undefined
       ? join(repository, "deploy/local/bin", shell.file)
-      : join(home, "bin", shell.file);
+      : join(home, "bin", shell.file));
   const result = spawnSync(command, [...options, target, ...args], {
     encoding: "utf8",
     env: {
@@ -292,6 +293,28 @@ for (const shell of shells) {
         server(shell, ["restore", join(scratch, "source.tar.gz")], { home: homeOf() }).stderr,
         /is not a DraftLoop server backup/u,
       );
+    });
+
+    it("upgrades the default folder from a downloaded copy of the script", () => {
+      // The install steps fetch the script to a scratch folder such as /tmp, outside any stack.
+      const downloads = join(scratch, `downloads-${shell.name}`);
+      mkdirSync(downloads, { recursive: true });
+      const script = join(downloads, shell.file);
+      cpSync(join(repository, "deploy/local/bin", shell.file), script);
+      const home = join(scratch, `home-default-${shell.name}`);
+      const env = { HOME: home };
+      assert.equal(server(shell, ["install", "0.11.0"], { script, env }).status, 0);
+      writeFileSync(dockerLog, "");
+      const upgraded = server(shell, ["upgrade", "0.12.0"], { script, env });
+      assert.equal(upgraded.status, 0, upgraded.stderr);
+      const installed = join(home, "draft-loop-server");
+      assert.match(
+        readFileSync(join(installed, ".env"), "utf8"),
+        /^DRAFT_LOOP_VERSION=0\.12\.0$/mu,
+      );
+      assert.deepEqual(dockerCalls(), [
+        `compose --file ${join(installed, "compose.yaml")} up --detach --wait --remove-orphans`,
+      ]);
     });
 
     it("names a folder that holds no stack instead of calling Docker", () => {
