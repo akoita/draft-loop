@@ -50,7 +50,6 @@
     "release:preflight": "node scripts/release-local-preflight.mjs",
     "release:manifest": "node scripts/release.mjs manifest",
     "desktop:smoke": "node scripts/desktop-smoke.mjs",
-    "desktop:credential-acceptance": "node scripts/credential-acceptance.mjs",
     "desktop:acceptance": "node scripts/desktop-acceptance.mjs",
     "desktop-client:acceptance": "node scripts/desktop-client-acceptance.mjs",
     "test:model-suggestions:live": "tsx packages/application/src/model-suggestion-preflight-command.ts",
