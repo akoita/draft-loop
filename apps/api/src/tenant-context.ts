@@ -5,6 +5,7 @@ import {
 } from "@draft-loop/application";
 import { WorkJournalError, type WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
+import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
@@ -89,6 +90,8 @@ export interface TenantApplications {
    * the pinned fetcher in this process when unset.
    */
   readonly jobPageFetcher?: UrlFetcher;
+  /** A tenant's agent tokens (#2159); owner mode reads the owner tenant's to admit coding agents. */
+  readonly agentTokensFor?: (tenantId: string) => AgentTokenStore;
 }
 
 export const defaultTenantCacheSize = 100;

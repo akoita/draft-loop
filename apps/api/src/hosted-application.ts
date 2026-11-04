@@ -179,6 +179,7 @@ export async function openHostedTenants(
         ...(config.maxSourceBytes === undefined ? {} : { maxSourceBytes: config.maxSourceBytes }),
         recordAccessFor: (tenantId) => tenancy.forTenant(tenantId).candidateRecords,
         knowledgeOwnersFor: (tenantId) => tenancy.forTenant(tenantId).knowledgeBaseOwners,
+        agentTokensFor: (tenantId) => tenancy.forTenant(tenantId).agentTokens,
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
           blobs: blobs.erasureFor(tenantId),

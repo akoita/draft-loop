@@ -3,6 +3,7 @@ import type {
   HostedKnowledgeIntake,
   HostedSensitivityRules,
 } from "@draft-loop/application";
+import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
@@ -28,6 +29,8 @@ export async function generateOpenApiDocument(): Promise<string> {
       recordAccessFor: () => ({}) as CandidateRecordAccess,
       erasureFor: () => ({}) as TenantErasure,
       operatorFor: () => ({}) as OperatorTenant,
+      ownerTenantId: "openapi-owner",
+      agentTokensFor: () => ({}) as AgentTokenStore,
       entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,

@@ -8,6 +8,7 @@ import {
 } from "@draft-loop/application";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
+import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
@@ -23,7 +24,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
-
+import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
@@ -121,6 +122,11 @@ export interface ApiOptions {
     /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
     readonly sourceEvidenceKinds?: SourceEvidenceKinds;
   };
+  /**
+   * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
+   * tenant's through `agentTokensFor`. Owner mode only; without them agent tokens are refused.
+   */
+  readonly agentTokens?: AgentTokenStore;
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
   /**
@@ -190,7 +196,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     transformObject: jsonSchemaTransformObject,
   });
 
-  registerRequestAuthentication(app, options.ownerToken, auth);
+  const ownerTenantId = options.tenants?.ownerTenantId;
+  const agentTokens =
+    auth.mode === "oidc"
+      ? undefined
+      : (options.agentTokens ??
+        (ownerTenantId === undefined
+          ? undefined
+          : options.tenants?.agentTokensFor?.(ownerTenantId)));
+  registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
 
   app.get(
     "/v1/health",
@@ -463,6 +477,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
               },
             }),
         ...(screening === undefined ? {} : { screening }),
+      });
+    }
+    if (application.workJournal !== undefined && agentTokens !== undefined) {
+      registerAgentTokenRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        tokens: agentTokens,
       });
     }
     if (application.recordArchives !== undefined) {
