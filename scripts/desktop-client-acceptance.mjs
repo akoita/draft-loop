@@ -43,6 +43,18 @@ function startFakeServer() {
   });
 }
 
+/**
+ * Seeds a first-launch profile that lists "This computer" with nothing selected. A fresh
+ * profile would select 127.0.0.1:8080 and open whatever server answers there, such as the
+ * person's own self-hosted stack, instead of the picker (#2112). The list itself is the
+ * one a first launch shows.
+ */
+export async function seedFirstLaunchProfile(userData) {
+  await mkdir(userData, { recursive: true });
+  const list = { servers: [{ origin: "http://127.0.0.1:8080", name: "This computer" }] };
+  await writeFile(join(userData, "servers.json"), `${JSON.stringify(list, null, 2)}\n`, "utf8");
+}
+
 /** Keeps the client off the release check, so no dialog opens during the run. */
 function clientEnvironment() {
   return { ...process.env, DRAFT_LOOP_DESKTOP_RELEASE_CHECK: "off" };
@@ -104,6 +116,7 @@ async function main() {
   const profile = await mkdtemp(join(tmpdir(), "draftloop-client-acceptance-"));
   const userData = join(profile, "user-data");
   try {
+    await seedFirstLaunchProfile(userData);
     let app = await launch(executablePath, userData);
     const picker = await lastWindowWith(app, "#add");
     checks.pickerAtFirstLaunch = picker.url().startsWith("file:");
