@@ -200,9 +200,22 @@ approved note becomes career evidence.
 - **Review on the web** in the same panel: approve a note into a knowledge
   base, edit it, merge it with a likely duplicate shown beside it, or discard
   it.
-- **Review from the CLI** with the owner token:
+- **Review from the CLI** with the owner token. Put `draft-loop` on your
+  `PATH` from a clone once, from inside `apps/cli` (as for `draftloop-mcp` in
+  the [agent channel](../reference/agent-channel.md#set-it-up) reference):
 
 ```text
+pnpm install
+cd apps/cli
+pnpm link --global
+draft-loop work-journal --help
+```
+
+Export the owner token and the address, then review:
+
+```text
+export DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)"
+export DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080
 draft-loop work-journal list
 draft-loop work-journal show <note>
 draft-loop work-journal approve <note> [--knowledge-base <id>] [--tier sensitive]

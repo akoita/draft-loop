@@ -9,7 +9,11 @@
       "import": "./src/index.ts"
     }
   },
+  "bin": {
+    "draft-loop": "./bin/draft-loop.mjs"
+  },
   "files": [
+    "bin",
     "src"
   ],
   "scripts": {
@@ -19,7 +23,8 @@
   "dependencies": {
     "@draft-loop/application": "workspace:*",
     "@draft-loop/evaluations": "workspace:*",
-    "commander": "15.0.0"
+    "commander": "15.0.0",
+    "tsx": "4.23.12"
   },
   "devDependencies": {
     "@draft-loop/storage": "workspace:*"
