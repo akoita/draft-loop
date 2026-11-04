@@ -10,7 +10,6 @@ const testExclusions = [
 const loadSensitiveIntegrationFiles = [
   "apps/cli/src/workflow.test.ts",
   "packages/application/src/adjudicated-revision-validation.test.ts",
-  "apps/desktop/src/electron/host.test.ts",
 ];
 
 export default defineConfig({
@@ -27,7 +26,7 @@ export default defineConfig({
     // The bound stays low enough that a genuinely hung test still fails.
     testTimeout: 30_000,
     hookTimeout: 30_000,
-    // These three filesystem/SQLite integration suites pass alone but have
+    // These filesystem/SQLite integration suites pass alone but have
     // failed at varying assertions when scheduled alongside other files. Keep
     // them in a serial group before the rest of the suite; other files retain
     // Vitest's normal parallel scheduling. Vitest sends isolated, single-worker

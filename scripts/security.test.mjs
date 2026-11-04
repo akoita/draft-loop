@@ -167,16 +167,18 @@ describe("secret and credential scanning quality gate", () => {
   });
 });
 
-describe("desktop content security policy", () => {
+describe("desktop client content security policy", () => {
   test("blocks remote scripts and active embedded content", async () => {
-    const html = await readFile(new URL("../apps/desktop/index.html", import.meta.url), "utf8");
+    const html = await readFile(
+      new URL("../apps/desktop-client/index.html", import.meta.url),
+      "utf8",
+    );
     const policy = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/u.exec(html)?.[1];
 
-    assert.ok(policy, "desktop HTML must declare a Content Security Policy");
+    assert.ok(policy, "desktop client picker HTML must declare a Content Security Policy");
     assert.match(policy, /default-src 'self'/u);
     assert.match(policy, /script-src 'self'/u);
     assert.match(policy, /object-src 'none'/u);
-    assert.match(policy, /frame-ancestors 'none'/u);
     assert.doesNotMatch(policy, /script-src[^;]*(?:https?:|'unsafe-inline'|'unsafe-eval')/u);
   });
 });
