@@ -9,16 +9,16 @@ the cloud, with files on disk and your own provider keys. The full guide is
 1. Put your keys in `keys/`, one file each: `anthropic_api_key` and `openai_api_key`. Git ignores
    every file there.
 2. From the repository root, run `pnpm self-hosted:up`.
-3. Open <http://127.0.0.1:8080> and sign in with the token from `pnpm self-hosted:token`.
+3. Open <http://127.0.0.1:8081> (a clone runs as its own `draft-loop-dev` project, beside any installed stack on 8080) and sign in with the token from `pnpm self-hosted:token`.
 
 ## What it holds
 
-| Piece | Where |
-| --- | --- |
-| `compose.yaml` | The services, with the API on `127.0.0.1` only. It runs the published images of `DRAFT_LOOP_VERSION`. |
-| `compose.build.yaml` | Builds those images from a clone instead; the `pnpm self-hosted:*` scripts pass it. |
-| `init/prepare.sh` | Creates the random owner token and database passwords at first start, and copies your keys into a volume only the API and the worker read. |
-| `init/postgres-setup.sh` | Creates the database role the API and the worker use. |
-| `init/with-secrets.sh` | Gives each service only the secrets it needs. |
-| `bin/` | The `draft-loop-server` script (bash) and its PowerShell twin, which install, start, stop, upgrade, back up and restore the stack. |
-| `keys/` | Your provider keys. Never commit them. |
+| Piece                    | Where                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `compose.yaml`           | The services, with the API on `127.0.0.1` only. It runs the published images of `DRAFT_LOOP_VERSION`.                                      |
+| `compose.build.yaml`     | Builds those images from a clone instead; the `pnpm self-hosted:*` scripts pass it.                                                        |
+| `init/prepare.sh`        | Creates the random owner token and database passwords at first start, and copies your keys into a volume only the API and the worker read. |
+| `init/postgres-setup.sh` | Creates the database role the API and the worker use.                                                                                      |
+| `init/with-secrets.sh`   | Gives each service only the secrets it needs.                                                                                              |
+| `bin/`                   | The `draft-loop-server` script (bash) and its PowerShell twin, which install, start, stop, upgrade, back up and restore the stack.         |
+| `keys/`                  | Your provider keys. Never commit them.                                                                                                     |

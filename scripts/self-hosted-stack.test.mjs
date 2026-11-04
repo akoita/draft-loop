@@ -97,6 +97,16 @@ describe("self-hosted stack", () => {
       assert.match(block[1], new RegExp(`dockerfile: apps/${app}/Dockerfile\\n`, "u"), service);
       assert.match(block[1], new RegExp(`image: draft-loop-${app}:self-hosted`, "u"), service);
     }
+    // A clone's stack must never share the installed stack's project, and so its volumes (#2169).
+    const stack = await read("compose.yaml");
+    assert.match(stack, /\nname: draft-loop-self-hosted\n/u);
+    assert.match(stack, /"127\.0\.0\.1:\$\{DRAFT_LOOP_PORT:-8080\}:8080"/u);
+    assert.match(build, /\nname: draft-loop-dev\n/u);
+    const api = build.match(/\n {2}api:\n([\s\S]*?)(?=\n {2}[a-z-]+:\n|$)/u);
+    assert.match(
+      api[1],
+      /ports: !override\n {6}- "127\.0\.0\.1:\$\{DRAFT_LOOP_PORT:-8081\}:8080"/u,
+    );
     const scripts = JSON.parse(
       await readFile(new URL("../package.json", import.meta.url), "utf8"),
     ).scripts;

@@ -60,20 +60,29 @@ and run `pnpm self-hosted:up` from the repository root, or
 `pnpm self-hosted:token` prints the owner token, and `pnpm self-hosted:down`
 stops the stack and keeps its data.
 
+A clone's stack is a separate Compose project, `draft-loop-dev`, on
+`http://127.0.0.1:8081`. It never touches an installed stack's data, which stays
+in the `draft-loop-self-hosted` project on port 8080, so both can run at once.
+In the desktop client, add `http://127.0.0.1:8081` as the server address.
+
+Before 0.16.0 a clone's stack used the installed stack's project. If you ran one
+then, its data is in the `draft-loop-self-hosted_*` volumes that
+`docker volume ls` lists; the change moves or deletes nothing.
+
 ## Settings
 
 Set these in the installed folder's `.env`, or in `deploy/local/.env` in a
 clone, which Git ignores:
 
-| Variable                          | Default  | Meaning                                                        |
-| --------------------------------- | -------- | -------------------------------------------------------------- |
-| `DRAFT_LOOP_PORT`                 | `8080`   | The port on `127.0.0.1` where the web screen and API listen    |
-| `DRAFT_LOOP_LOCAL_MODELS`         | none     | Local model names the stack offers, separated by commas        |
-| `DRAFT_LOOP_LOCAL_MODEL_ENDPOINT` | none     | The OpenAI-compatible endpoint that serves them                |
-| `DRAFT_LOOP_OPENAI_ENDPOINT`      | `global` | `eu` for an OpenAI project created with EU data residency      |
-| `DRAFT_LOOP_SCREENING`            | `rules`  | `rules+model` also asks Claude Haiku to screen uploads         |
-| `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`      | The most one run may spend on provider calls                   |
-| `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`      | The most revision rounds one run may take                      |
+| Variable                          | Default  | Meaning                                                                        |
+| --------------------------------- | -------- | ------------------------------------------------------------------------------ |
+| `DRAFT_LOOP_PORT`                 | `8080`   | The port on `127.0.0.1` where the web screen and API listen; `8081` in a clone |
+| `DRAFT_LOOP_LOCAL_MODELS`         | none     | Local model names the stack offers, separated by commas                        |
+| `DRAFT_LOOP_LOCAL_MODEL_ENDPOINT` | none     | The OpenAI-compatible endpoint that serves them                                |
+| `DRAFT_LOOP_OPENAI_ENDPOINT`      | `global` | `eu` for an OpenAI project created with EU data residency                      |
+| `DRAFT_LOOP_SCREENING`            | `rules`  | `rules+model` also asks Claude Haiku to screen uploads                         |
+| `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`      | The most one run may spend on provider calls                                   |
+| `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`      | The most revision rounds one run may take                                      |
 
 The full list of server settings is in the
 [local server stack](local-server-stack.md) guide.

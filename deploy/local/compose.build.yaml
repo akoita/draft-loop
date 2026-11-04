@@ -2,6 +2,10 @@
 # developers and for trying an unreleased commit. Pass it after compose.yaml, as the
 # `pnpm self-hosted:*` scripts do:
 #   docker compose --file deploy/local/compose.yaml --file deploy/local/compose.build.yaml up --build
+# It also runs as a Compose project of its own on port 8081, so a clone's branch code and migrations
+# never reach the volumes of an installed stack, which keeps `draft-loop-self-hosted` on 8080.
+name: draft-loop-dev
+
 services:
   migrate:
     build:
@@ -20,6 +24,8 @@ services:
       context: ../..
       dockerfile: apps/api/Dockerfile
     image: draft-loop-api:self-hosted
+    ports: !override
+      - "127.0.0.1:${DRAFT_LOOP_PORT:-8081}:8080"
 
   worker:
     build:
