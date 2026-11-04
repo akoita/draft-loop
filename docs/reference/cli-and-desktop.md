@@ -574,7 +574,7 @@ The start confirmation also offers **Length**: **Writing policy** (the
 default, keeping the policy's page target), **One page** or **Two pages**.
 Choosing one page or two saves it as the writing policy's page target, as a new
 policy version, before the run starts; the author then writes to that length
-(see [Writing to the page target](../architecture/drafting-and-review.md#writing-to-the-page-target-1364)).
+(see [Length and page target](../architecture/drafting-and-review.md#length-and-page-target)).
 While a per-job policy override is selected, the host refuses a length change
 instead of clearing the override.
 

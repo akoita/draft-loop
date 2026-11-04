@@ -1,1239 +1,1157 @@
 # Drafting and review architecture
 
-This page is the canonical current-state reference for evidence-grounded drafting, independent review, deterministic quality checks, and controlled rendering. It describes the provider-independent contracts and boundaries that shape author output, critic findings, revisions, readiness, and export QA.
+This page explains how DraftLoop turns approved evidence into a CV: how the
+author drafts, which checks the draft must pass, how the critic reviews it, how
+a revision works, when the loop stops, and how an approved CV is rendered.
 
-Use [Architecture overview](overview.md) for the system map. See [Candidate evidence](candidate-evidence.md) for the source, policy, opportunity, and profile contracts, and [Runtime and trust](runtime-and-trust.md) for workflow state, provider, and export boundaries. [ADR 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md) records the evaluator–optimizer adaptation.
+It is written for contributors who change the author, the critic, the checks or
+the renderers. For the system map, read the [architecture overview](overview.md).
+Sources and profiles are in [Candidate evidence](candidate-evidence.md), and
+workflow states and provider controls are in
+[Runtime and trust](runtime-and-trust.md).
 
-## Evidence-grounded evaluator–optimizer
+## Contents
 
-DraftLoop applies the evaluator–optimizer pattern to a factual, evidence-backed
-workflow. The author is the optimizer's generator, the independent critic is
-the evaluator, and each revision is a bounded optimization step against a
-visible rubric. The product uses author–critic language in the UI because it is
-clearer to candidates.
+- [A run at a glance](#a-run-at-a-glance)
+- [Planning the application](#planning-the-application)
+- [Evidence the author receives](#evidence-the-author-receives)
+- [What the author writes](#what-the-author-writes)
+- [Grounding checks](#grounding-checks)
+- [Requirement coverage](#requirement-coverage)
+- [How the critic reviews a draft](#how-the-critic-reviews-a-draft)
+- [Deterministic quality warnings](#deterministic-quality-warnings)
+- [Revisions](#revisions)
+- [When the loop stops](#when-the-loop-stops)
+- [Approval and review edits](#approval-and-review-edits)
+- [Rendering and export checks](#rendering-and-export-checks)
+
+## A run at a glance
+
+DraftLoop applies the evaluator–optimizer pattern to a factual workflow. The
+author generates, the independent critic evaluates against a visible rubric,
+and each revision is one bounded step. The screens say "author" and "critic"
+because that is clearer to candidates.
+[ADR 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md) records the
+decision.
+
+```mermaid
+flowchart TD
+  plan["Application plan<br/>themes, what leads, what to cut"] --> evidence["Evidence retrieval<br/>chronology, priorities, required sections"]
+  evidence --> draft["Author drafts"]
+  draft --> grounding{"Grounding checks"}
+  grounding -->|block fails| trim["Drop or shorten<br/>failing blocks"] --> critique
+  grounding -->|whole draft fails| retry["Author retry with<br/>a revision report"] --> draft
+  grounding -->|passes| critique["Omission check<br/>and critique"]
+  critique --> stop{"Stop rules"}
+  stop -->|findings to fix| revise["Targeted revision<br/>(patch)"] --> grounding
+  stop -->|ready, stable,<br/>budget or pause| review["Candidate review<br/>decisions and edits"]
+  review --> approve["Approval binds<br/>one exact version"]
+  approve --> export["Render and<br/>export checks"]
+```
+
+The rubric covers factuality, evidence support, requirement coverage and
+quality. Findings are structured, severity-rated, and linked to claims,
+sections or source locators where possible.
+
+A critic can find a problem but cannot establish truth. The candidate's
+evidence and decisions stay authoritative.
 
 ![Evaluator–optimizer loop: canonical inputs feed the author draft, a structured artifact with evidence links is evaluated by an independent critic and deterministic checks against a visible rubric, accepted findings drive a bounded revision, and the loop stops when stable, on budget exhaustion, or on early user review before human approval and local export.](../assets/evaluator-optimizer-loop.svg)
 
-The rubric covers factuality, evidence support, requirement coverage, and
-quality. Deterministic validators handle checks that do not need a model,
-including duplicated blocks and claims and a phrase of three or more words
-repeated back to back inside one block, which usually means overlapping
-evidence quotes were stitched together.
-Findings are structured, actionable, severity-rated, and linked to claims,
-sections, or source locators where possible. A critic can identify a problem
-but cannot establish truth by itself; user evidence and human decisions remain
-authoritative.
+## Planning the application
 
-Validation and readiness share the block-local lexical coverage matcher in
-`packages/validation`. At least half of the distinct meaningful requirement
-tokens, with at least one match, must occur within one artifact block. Matches
-are never pooled across blocks or sections; section titles and claim-only text do
-not count. Explicit gaps still override lexical matches, and priority weights
-and rubric thresholds are unchanged. Three closed lexical rules refine that
-match: the degree rule, permitted alternatives, and organisation-maturity
-qualifiers, each described below. None of them infers negation, credential
-equivalence, or semantic entailment. Tokens are also compared literally, so
-inflected forms are distinct: `implement` does not match `implemented`, and
-`contract` does not match `contracts`. A block can therefore restate a
-requirement in another grammatical form and still fall below the half-token
-rule. Existing stored contexts and scores are not rewritten; a new evaluation
-can yield a different result.
+Before the first draft, the run decides what the CV should lead with. The plan
+step makes at most three provider calls:
 
-The default author and critic use different companies, with provider and model
-versions recorded in run history. The orchestrator stops at configured round,
-cost, or time limits, when quality is stable, or when the user reviews early.
-With the off-by-default workspace autopilot, it keeps revising through blocking
-findings and stable scores until the round limit, and pauses earlier only when
-the draft is ready, a blocking finding persists, or on a conflict: a disputed
-claim or a blocking factuality finding. It never loops indefinitely to optimize
-a subjective score. See [stop and pause on findings](#stop-and-pause-on-findings-1113)
-and [ADR 0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
+1. **The author model plans:** the job's 3 to 5 ranked central themes, each
+   linked to requirement ids and to the approved evidence that best proves it;
+   what leads (the summary angle and 3 to 5 core-area items); and what to drop
+   or compress. A theme with no supporting evidence is a **gap**, never a claim.
+2. **The critic model reviews the plan** for fit to the job and answers accept,
+   or revise with specific points.
+3. **On revise, the author revises the plan once.** There is no second review.
 
-### Grounding checks on author output
+The plan holds short user-visible text and ids, never reasoning or facts of its
+own.
+
+### Validation
+
+`validateApplicationPlan` (`packages/schemas/src/application-plan.ts`) rejects
+an evidence id the request's approved evidence lacks, an unknown requirement id,
+and a core area that serves a gap.
+
+- **A rejected first plan** fails the step as an invalid response, which can be
+  retried, and names the failed checks as codes and paths.
+- **A rejected revision** does not fail the step. The reviewed plan stands, and
+  the revision's step record keeps the failed checks (`rejectedDiagnostics`).
+
+Evidence is sent under the same short aliases as drafting.
+
+### Running and resuming
+
+`packages/orchestrator/src/application-plan.ts` runs the step through the
+`ApplicationPlanner` port, and `packages/application/src/application-plan-agent.ts`
+implements it with the run's author and critic models.
+
+- Each call is saved on the run snapshot (`applicationPlan`) when it completes,
+  so a resumed run continues mid-plan without repeating a call.
+- Each call's cost adds to the run cost. The cost budget is checked before each
+  call and before the draft, and a call whose estimated worst cost would pass
+  the limit is refused before it is sent.
+- `applicationPlan: false` in the run options turns the step off for tests.
+
+### How the plan is used
+
+The plan goes to the author as guidance on every round. The prompt states that
+the plan is not evidence, that grounding applies as before, and that a
+candidate direction outranks it.
+
+The critic's emphasis review takes its central themes from the plan
+(`emphasisPlanThemeSourceInstructions`) and reports a plan gap as
+`emphasis-theme-gap`. The plan is recorded as a `run.application-plan` event
+and shown in **Run details** as "Application plan".
+
+Runs on author templates before `cli-author-v11` do not plan and resume
+unchanged.
+
+## Evidence the author receives
+
+### Requirements from a local job document
+
+When a run selects no reviewed opportunity brief, the application extracts
+complete list items and paragraphs from the local job document. It joins
+wrapped lines, removes Markdown heading structure, and gives every unit neutral
+`medium` priority.
+
+This makes no claim that every paragraph is a hiring criterion: choosing
+requirements and priorities belongs to the reviewed brief.
+
+The fallback refuses, with a message pointing to a reviewed brief:
+
+- documents over 64 KiB, more than 100 units, or units over 2,000 characters;
+- empty or heading-only input, code fences and tables.
+
+It never silently truncates source text. Pinned contexts are never
+re-extracted on resume, so a corrected interpretation needs a new reviewed
+context.
+
+### Evidence limits
+
+- **`retrieval` mode:** at most 20 chunks and 128 KiB of serialized evidence.
+- **`full-source` mode,** the default for a CKB workspace, replaces those limits
+  with its own size budget; see
+  [Evidence mode](../reference/cli-and-desktop.md#evidence-mode).
+
+Every reservation below shares these limits. When protected evidence cannot
+fit, retrieval fails visibly before any provider call. All queries run locally,
+add no provider call and infer no dates.
+
+### Required CV sections
 
 Before evidence reaches the author, bounded supplementary searches reserve
 content for required CV sections. If a search limit is reached without
-establishing section content, drafting fails visibly because the search cannot
-establish absence. Author validation rejects empty sections and unavailable
-placeholders when supplied evidence establishes content; missing individual
-details may remain explicit.
+establishing a section's content, drafting fails visibly, because the search
+cannot establish absence.
 
-Author-output validation checks every substantive claim against its cited
-evidence. Protected multi-word values stay within one cited chunk, and numbers,
-names, and explicit experience contradictions stay protected.
+### Chronology
 
-Block text outside substantive claims fails with the content-free
-`substantive_text_uncovered` diagnostic, for bounded author retry, when any of
-these holds:
+Dated headings keep a candidate's career ranges available even when the
+headings contain no job-query terms.
 
-- An uncovered content word appears in no retrieved chunk. A short closed list
-  of function words, such as articles, prepositions, and connectives, is exempt.
-- A protected value in the block is not supported by the chunks its claims cite.
-- A date range is not stated with the same start and end in one cited chunk.
-- A capitalised single-word name appears in no retrieved chunk.
+- **Local sources without a CKB selection.** Author and critic retrieval
+  reserves space for dated Markdown headings from the exact pinned source ids
+  and checksums. Headings keep their text, chunk identity and source
+  references, and ranked evidence fills the remaining slots after duplicate and
+  unapproved-source filtering.
+- **CKB workspaces requiring Experience.** The selected-version route also
+  reserves matched dated headings. Fixed local lexical supplements cover English
+  month and ongoing-end terms and the years 1900–2099, in batches below the
+  query-term cap. Each query returns at most 100 hits, and fallback results are
+  ignored.
+- **Merging.** Discovered headings are deduplicated and kept ahead of ranked job
+  evidence, then merged with candidate-priority evidence and the required-section
+  supplements. Indexed chunks are never changed.
 
-Headings, labels, and explicit missing-data notices stay exempt. Wording built
-only from function words and evidence words is left to critic and human review.
+The heading scan reads at most 100 pinned sources and 100 heading chunks per
+source. It recognizes Markdown headings with a year range or an ongoing end
+marker, and never infers dates or repairs chronology.
 
-The checks never pass ungrounded content, but one failing block does not
-discard the whole draft. When every failure is confined to individual blocks,
-the draft keeps the blocks that pass:
+Retrieval fails closed on missing or mismatched sources, a scan overflow, a
+saturated supplement, or headings that cannot fit or are lost in the merge.
+This is bounded discovery, not an exhaustive chronology inventory, and the
+ordinary CKB lifecycle and freshness checks still apply.
 
-- A block with a failing claim, or a failing date range in its text, is removed.
-  A section left without blocks is removed.
-- A block whose claims pass but whose surrounding text fails is shortened to
-  its own claim text, with no new wording.
-- The kept draft is re-checked with the same rules. The draft carries one
-  content-free `ungrounded-author-content-dropped` warning with the counts, so
-  the critic, the revision round, and the user see that content was left out.
+### Role records
 
-The author step still fails, with the original diagnostics, when a failure is
-not confined to a block, such as a required section losing all its content, or
-when no section would remain.
+For each discovered heading, retrieval assembles a bounded role record from that
+source version. Sources are read through the managed store and chunked with the
+same verified derivation as the lexical index.
 
-### Degree coverage
+- **Contribution first.** An explicit contribution region, such as `His work:`
+  or `CV-usable facts`, is preferred over introductory platform or team context.
+  It stops before a sibling or ancestor heading, or another dated role.
+- **Whole blocks only.** Complete paragraphs and top-level list items, with their
+  nested continuations, are chosen by lexical overlap with the job query and
+  kept in source order. Blocks may be left out to fit the 4,000-character limit,
+  but a block is never truncated and a nested caveat never leaves its item.
+- **Fallback prefix.** Without a contribution region or project groups, the
+  record is the heading and its following whole chunks, up to the next
+  same-level or higher heading, another dated role, or the record limit. An
+  overflowing chunk is not skipped to reach later material, and a heading with
+  no eligible body that fits stays as it is.
+- **Identity.** A combined record gets a deterministic identity from its parts
+  and keeps the pinned source, version and full line ranges. Provider evidence,
+  inspection and diagnostics all use the same records.
 
-Standalone requirements of the form `[a] <subject> [or <subject>] degree
-[preferred|required]` use a closed degree rule instead of lexical overlap.
-Subjects are `computer science` (also hyphenated) and `quantitative`. A trailing
-period is allowed. Both alternatives are permitted; they need not both appear
-in the CV. Other requirement phrasing retains the ordinary lexical heuristic.
+Source identity, lifecycle, checksums and exact heading matches are verified
+before assembly; other versions and local paths are never substitutes. No role
+record is read when Experience or dated headings are absent.
 
-The grammar is evaluated per clause, not per block. A block is split on `;` and
-on a sentence-final `.`, never on commas, because the credential grammar uses
-commas for specialization and year ranges and because a qualifier such as `, not
-completed` belongs to the credential it disqualifies. A block covers the
-requirement when one clause states a permitted attained degree on its own, so
-`MSc in Computer Science; training in software architecture.` qualifies. An
-uncertain clause is never rescued by a neighbouring one: `Pursuing an MSc in
-Computer Science; interested in secure development` does not qualify.
+### Project groups
 
-Punctuation alone cannot detach a disqualifier from what it disqualifies. A
-following clause that carries a status term but states no topic of its own —
-`; not completed`, `; expected 2027` — is read as part of the credential clause
-beside it, so it behaves exactly like the comma form `, not completed`. A later
-clause that does state its own topic, such as `; training in software
-architecture`, is independent and neither rescues nor disqualifies.
+Explicitly independent roles can hold project-labelled source groups.
 
-A qualifying clause must start with a supported credential followed by `in`
-and a permitted subject: BS/BSc, MS/MSc, PhD, Bachelor/Master of Science,
-Doctor of Philosophy, bachelor's/master's/doctoral degree, or degree. The
-optional prefixes are `earned`, `completed`, or `holds`, with an optional
-article. A comma-separated alphabetic specialization and comma-separated year
-or year range may follow. Case, whitespace, typographic apostrophes, and the
-computer-science hyphen are normalized. Quantitative field/discipline labels
-are accepted literally; mathematics or other subjects are not automatically
-classified as quantitative.
+- **Requested projects come first.** Exact source titles or declared aliases
+  named in the candidate's instructions reserve evidence in instruction order,
+  with their descriptor, production limits and nested caveats.
+- **Unrequested groups need real overlap** with the job's terms; a project name
+  alone does not establish relevance.
+- **Overflow.** A requested project that cannot fit the role record may add its
+  own source-backed overflow record, with the same per-record limit. Whole
+  bundles from one role and source may share a record when they fit. Overflow
+  records use the priority slots ahead of generic matches and never repeat a
+  project already in the role record.
 
-Negated, coursework-only, or status-qualified entries (such as expected,
-incomplete, candidate, honorary, or revoked) do not establish an attained
-degree. A recognized requirement that fails this rule cannot fall back to
-lexical overlap. Dotted abbreviations, free-form credential prose, degree-level
-requirements, and general subject equivalence are outside this rule. Explicit
-gaps still override a match. This is text matching, not credential verification.
+Groups share the 4,000-character role limit and use no extra retrieval slots.
+Selection never invents an alias or truncates a limitation to fit, and local
+omission reasons stay visible. Supplying a
+requested project's evidence lets the author judge fit; it does not force the
+project into the CV.
 
-### Permitted alternatives
+### Candidate priorities
 
-A requirement that lists permitted alternatives is matched once per alternative
-instead of as one long token list, so naming more alternatives can no longer
-make a requirement harder to satisfy. `Experience with Prometheus or
-OpenTelemetry.` and `Experience with Prometheus, OpenTelemetry, or Datadog.`
-are each satisfied by a block that names one of them. Every condition stated
-outside the enumeration is kept in each branch, so `Production experience with
-Prometheus or OpenTelemetry.` still requires production wording in the same
-block. Branch matches are never combined: one block must satisfy the half-token
-rule for one branch on its own.
+When the candidate's drafting instructions are not blank, CKB retrieval also
+queries the first explicit sentence-level `Prioritize` clause, or the trimmed
+instructions when there is none, with at most 2,000 characters and 20 hits. The
+full instructions still reach the author unchanged.
 
-The grammar is deliberately closed. It reads `A or B` and comma lists ending in
-`or`, with up to five single-word alternatives and exactly one `or` in the
-requirement. Compound `and` conditions, `and/or`, several enumerations in one
-requirement, and multi-word alternatives such as `Google Cloud or AWS` are not
-recognized and fall back to ordinary matching unchanged. A capitalized word
-directly beside the enumeration is read as a possible multi-word alternative
-and stops the rule rather than splitting the phrase.
+- Up to three distinct matched chunks that are not single-line headings are
+  reserved, in query order, after chronology and before general job results.
+- The merge keeps the largest prefix of those chunks that fits beside
+  chronology and required-section evidence.
+- Only Experience may reuse evidence already supplied by chronology. Other
+  required sections keep their own supplements, so policy text that mentions
+  education, credentials or languages cannot displace their source records.
+- A required record found by the general query stays reserved even beyond the
+  priority prefix, and a duplicate id takes one slot.
 
-### Organisation-maturity qualifiers
+Retrieval fails when matched priority evidence exists but not one chunk fits.
+Lexical matches select input; they do not prove job fit or resolve uncertain
+claims.
 
-When a requirement literally states an organisation-maturity qualifier, the
-block that matches it must state that qualifier too. The vocabulary is a closed
-list: early stage, seed stage, pre-seed, series A/B/C, growth stage, late
-stage, scale-up, and startup stage, with hyphen, spacing, and case variants
-normalized. `Early-stage startup experience.` is therefore not covered by
-`Built internal tools at a 40-person startup, gaining broad experience.`
+### Production experience and contact records
 
-Maturity is never inferred. The rule builds no taxonomy of company stages and
-derives nothing from headcount, funding amounts, or organisation type; on its
-own, `startup` is an organisation type rather than a qualifier. The qualifier
-must appear in the same block that matches, not in a neighbouring block.
-Requirements without such a qualifier keep the ordinary lexical rule.
+- **Production experience.** With a Skills section configured, one cached local
+  `production experience` query (20 hits) runs. A substantive explicit
+  `Production experience:` record, plain or Markdown, takes precedence in the
+  Skills supplement. Unavailable, negative, heading-only and fallback results
+  are never promoted.
+- **Contact record.** One matched candidate contact record is reserved for the
+  header, even when Header is not a required section. Selection needs an actual
+  field in explicit candidate contact context; policy mentions and unavailable
+  values do not qualify. The chunk keeps its exact text, identity and
+  provenance.
 
-The guard applies per alternative branch, so `Early-stage or growth-stage
-experience.` is covered by a block stating either stage rather than requiring
-both. Where the alternatives rule cannot split a requirement, every stated
-qualifier is required together: `Series A or Series B experience.` is a
-multi-word enumeration, so it stays uncovered by a block naming only one
-series. That is a known conservative false negative, not an accepted match.
+## What the author writes
 
-### Independent-readiness report boundary
+The author returns a structured proposal of semantic sections: header,
+summary, experience, projects, skills, education, certifications and languages.
+It includes each section that retrieved evidence supports, and its section and
+entry order is kept through the artifact and every exporter.
 
-`packages/schemas` owns the strict, versioned
-`independentReadinessReport` contract. It records the context and artifact
-identity, independent-review record, input completeness, all seven rubric
-dimensions, and provenance-preserving deterministic and critic findings. The
-pure assembler in `packages/evaluations` orders enriched findings, assigns
-their origin, validates the complete report, and returns a deeply immutable
-projection without provider payloads or hidden reasoning.
+New runs use author template `cli-author-v17`. A resumed run keeps the exact
+prompt and output ceiling it started with.
 
-This first v0.8 component is a contract slice only. It does not call providers,
-persist reports, wire the CLI or desktop, establish approval semantics, or
-derive application-ready status or stopping decisions. Runtime integration is
-gated on the complete drafting and writing-policy work in #69 and #70.
+### Writing for the job
 
-### Complete CV composition boundary
-
-The live author contract represents header, summary, experience, projects,
-skills, education, certifications, and languages as semantic sections. The
-author includes each section supported by retrieved candidate evidence and
-preserves authored section and entry order through the canonical artifact and
-Markdown, DOCX, and PDF exporters. Before provider output becomes an artifact,
-the application rejects substantive claims without evidence, unrelated
-citations, and changed exact invariants such as dates, metrics, credentials,
-links, employers, and multi-word titles. Missing configured sections remain
-visible to the existing deterministic completeness check.
-
-New runs record author template `cli-author-v17`, which states and sends a
-32,768-token output ceiling for the structured proposal, including repeated claim
-text and JSON overhead. This is a ceiling, not a target, and permits more output
-and potentially higher request cost. It does not raise reasoning effort or alter
-model selection, critique, grounding or approval. Stored author versions remain
-fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4 to v17 retain 32,768. A model profile with a larger output cap, such as the
-Standard author's 64,000 tokens, states and sends its own cap instead (#1966).
-
-Author v6 asks for concise professional body prose: a coherent summary and
-accomplishment bullets that group related supported facts instead of repeating
-source notes, status reports, or reviewer commentary. It preserves documented
-agency and limits such as production versus staging and credential status. It
-instructs the author to rewrite supported descriptive sentences into
-candidate-focused prose and action-led bullets while retaining factual meaning
-and protected values. The guidance does not add job-specific rules or relax
-factual grounding and exact structured-field requirements.
-
-Author v7 keeps v6 and tailors the CV to the job. The job description, its
-requirements and its responsibilities stay employer context, never candidate
-facts. The author:
+The job description, its requirements and its responsibilities are employer
+context, never candidate facts. The author:
 
 - opens the summary with a one-line headline of the candidate's own supported
   titles and the strongest skill areas the job asks for, never the target title
   as a held role;
-- adds a "Core areas" section (kind `alignment`) after the summary, with three
-  to five grounded bullets that answer the job's main requirements and
-  responsibilities, labelled only with words the cited evidence contains;
-- leads each role with its most relevant bullets and shortens unrelated detail,
+- adds a **Core areas** section (kind `alignment`) after the summary, with three
+  to five grounded items that answer the job's main requirements, labelled only
+  with words the cited evidence contains;
+- leads each role with its most relevant content and shortens unrelated detail,
   while keeping every role, its title, employer and dates, and the chronology;
 - lists the skills and certifications the job asks for first.
 
-A writing policy's section order or emphasis overrides this guidance. Resumed
-v6 runs keep the v6 prompt.
+A writing policy's section order or emphasis overrides this guidance.
 
-Author v8 keeps v7 and, on a revision, receives the critic's judged coverage of
-the draft being revised as `requirementCoverage`: each judged requirement's
-verdict, rationale and, when covered, the cited block ids. The author adds
-content for an uncovered requirement only when the evidence supports it, and
-keeps the cited covering blocks unless an accepted finding requires a change.
-Resumed v7 and earlier runs receive neither the instruction nor the input.
+### Each part of the CV has one job
 
-Author v9 keeps v8 and adds the candidate's directions for the next round, given
-with **Request revision** (at most 1,000 characters). They arrive in a separate
-`candidateDirection.instructions` input, and the prompt tells the author to
-follow them for selection, emphasis, ordering, omission and framing within the
-retrieved evidence. They are instructions, not evidence: a direction cannot add
-a fact, and the claim grounding checks still reject one that does. The next
-round's critic receives the same text with a rule not to flag a requested change
-as a defect, and still reports unsupported claims. The direction is stored on
-the run for that round only, recorded as a revision decision (round, text and
-time) and with the round's `run.author-input` event, and shown in Run details.
-Runs that started on v8 or earlier cannot take directions; requesting a revision
-with one is refused rather than silently ignored.
+- **Experience and Projects** carry the detail of each fact. A role's
+  achievements and leadership stay in its entry.
+- **Summary:** two to three sentences in new words, never a restated bullet: the
+  role and level the evidence supports, the strongest proof, and the focus.
+- **Core areas** group evidence from several roles under one theme the job asks
+  for. A theme with a single example is left to Experience, and each label
+  names the content it heads.
+- **Skills, Education and Certifications** are `Label: items` paragraphs grouped
+  by theme, never bullets, with label words from cited evidence.
 
-After any revision, the orchestrator compares the revised draft with that
-judged coverage. When none of a covered requirement's cited blocks survives,
-by id or by identical text, it adds a content-free `coverage-block-dropped`
-warning naming the requirement id. Block ids change on every revision, so
-rewording a covering block also raises it; a later critic judgement that the
-requirement is covered clears the warning, as it clears the token-match miss.
+### Shape of each role
 
-That check sees only blocks that disappear. A targeted patch keeps a replaced
-block's id, and word-match coverage cites no blocks, so a revision could still
-lose a covered requirement unannounced: the 0.6.2 walk went from 3 to 2 covered
-requirements with no finding (#1861). After each later critique the
-orchestrator therefore also compares the two rounds' verdicts. A requirement
-covered in the previous round, on any basis, that this round finds uncovered or
-only possibly covered gets a content-free `coverage-lost` warning naming its
-id, unless the revision already reported it as dropped.
+- **Per role or project:** a role line, a context paragraph of 1 to 3 lines
+  (what it was, scope, team, stack), then 2 to 4 bullets of about 45 to 70
+  words. Older roles get 0 to 2 bullets.
+- **One statement per bullet.** Each bullet states one achievement; separate
+  facts are never joined with semicolons, and short bullets are never stacked.
+- **Whole CV:** never more than 4 bullets in a row.
+- **Professional prose.** The author rewrites supported sentences into
+  candidate-focused prose and action-led bullets. It keeps documented limits,
+  such as production versus staging or credential status, and never copies
+  source notes, status reports, reviewer comments or third-person narration.
+- **No negatives or repeats:** no statement about work not done, and no
+  repeated sentence.
 
-A token-match miss on a critical requirement blocks approval only when the
-critic also reports the gap (#1789): a judged "uncovered" verdict, an
-`emphasis-theme-gap` finding, or a coverage finding of its own about the
-requirement. Emphasis advice (`emphasis-theme-buried`, `emphasis-order`,
-`emphasis-padding`) is reported as coverage too, but it says the requirement is
-supported and should move or grow, so it never confirms a gap; a walk run had a
-plainly covered requirement blocked that way (#1872). Otherwise the miss stays a
-warning.
+### Length and page target
 
-Critic template `cli-critic-v3` retains evidence-linked
-claim review for attribution, work maturity, and credential scope, and also
-asks the critic to compare explicit dated employment gaps in retrieved sources
-with the complete CV. An omitted interval is a coverage warning with its
-source ID; the critic must not infer gaps from spacing between roles or turn a
-record of no listed software work into a claim of unemployment. The prompt
-does not use a fixed technology vocabulary or external verification. Findings
-use the existing structured contract; resumed v1/v2 runs retain their recorded
-prompt bytes.
+Length follows the writing policy's `Page target`. A one-page CV is a shorter
+text, not the same text printed smaller.
 
-Critic template `cli-critic-v4` is v3 plus an editorial review
-of whether the CV is ready to send. It reports quality warnings that quote the
-offending text and name its section:
+| | Two pages, or no target | One page |
+| --- | --- | --- |
+| Summary | 2 to 3 sentences | 2 to 3 lines |
+| Bullets | About 16 to 20, roughly 1,400 to 1,700 words in all | 6 to 9, at most 3 per role, only for the 2 or 3 most relevant roles |
+| Other roles | Full entries | Role line and a one-line context paragraph |
+| Labelled paragraphs | As needed | 2 or 3 in Core areas; one or two lines for Skills, Education and Certifications |
 
-- `editorial-source-note`: a copied source note, meta-commentary about sources
-  or the job search, or third-person narration about the candidate. Draft
-  validation also raises this code on its own for a block that calls the
-  candidate "he", "she" or "the candidate", or says "labelled as such", so
-  the warning does not depend on the critic noticing;
-- `editorial-fragment`: a fragment or semicolon-stitched evidence quotes;
-- `editorial-negative-aside`: an aside that undercuts an accomplishment
-  instead of stating a real limit once;
-- `editorial-missing-evidence`: a requirement or responsibility that a
-  retrieved chunk clearly supports but the CV does not show, with the chunk ID.
+Every role keeps its title, employer and dates at any length. When the evidence
+holds more job-relevant achievements than fit, the author keeps the
+achievements and cuts detail. The output-budget sentence asks the author to
+avoid redundancy, never to drop supported accomplishments to save tokens.
 
-It never asks for content the evidence does not support. Resumed v3 runs keep
-the v3 prompt.
+When an export names no template, a one-page run is drawn with Compact and any
+other with Modern, so the layout matches the length the author wrote to.
 
-Critic template `cli-critic-v5` is v4 plus a job emphasis review.
-`cli-critic-v6` keeps v5's review and reads a compact evidence table
-(`reference-table-v2`): a claim's evidence found in a retrieved chunk is cited
-by that chunk's ID and the claim's line locator instead of repeated, when it
-is the chunk's whole text or at least 40 characters with a locator, and such
-an entry names nothing else, since the chunk carries its source. Table ids are
-short (`ref-N`), because a full-source draft cites thousands of them. A
-full-source critique therefore no longer sends the source twice (#1986).
-The critic compares the job's central themes, from its requirements and
-responsibilities weighted by priority and repetition, with what the draft leads
-with, expands and compresses. Each finding is a `coverage` finding that names
-one concrete move and the theme or requirement id it serves:
+### Placeholder header
 
-- `emphasis-theme-buried`: expand a supported central theme, or move it up into
-  the summary or core areas;
-- `emphasis-padding`: compress or drop content the job does not ask for;
-- `emphasis-order`: move supported, relevant content earlier;
-- `emphasis-theme-gap`: a central theme the approved evidence does not support,
-  reported as a gap and never as a move.
+When the evidence holds no name or contact details, the header shows
+`[Your name]`, `[Email]`, `[Phone]` and `[City]` as missing-data notices with no
+claims. Claim coverage accepts them only in a header section, and no value is
+ever invented. See `missing-cv-header` under
+[quality warnings](#deterministic-quality-warnings).
 
-Findings are warnings by default. Only `emphasis-theme-buried` can be an error,
-and only when the job's top-priority theme is missing from the summary and core
-areas and retrieved evidence supports it, so the author can fix it; the critic
-contract downgrades an error on any other emphasis code to a warning. They reach
-the author like any critic finding, through the adjudicated revision, so an
-accepted move is still bounded by the grounding rules. The theme source is one
-replaceable sentence in `critic-emphasis.ts`, where the application plan will
-feed the critic. Resumed v4 runs keep the v4 prompt.
+### Inputs on a revision
 
-`cli-critic-v7` is v6 plus an omission review (#2026).
-On the 2026-10-30 run of private reference G, the critic accepted a one-round
-draft that recalled 19 of 34 reference accomplishments: the claim review checks
-what the draft says and the emphasis review what it leads with, and nothing
-asked what it dropped. The critic now compares the whole CV with the retrieved
-evidence, role by role, and reports each supported accomplishment that serves a
-central theme (the plan's themes, or the requirements without a plan) and that
-the CV leaves out or reduces to a bare mention as a `coverage` finding with
-code `coverage-omitted-accomplishment`: a short quote in the evidence's words,
-the chunk ID, the role or project, the theme or requirement served, and one
-move, including the descriptive detail to shorten when the CV is already at its
-length target. It is an error when the accomplishment proves a supported
-central theme or a critical or high requirement, otherwise a warning, with at
-most five per critique; the critique contract keeps at most three of them
-blocking. A blocking omission makes the round revise instead of ending ready,
-and one the author does not fix within a revision pauses the run as a
-persisting finding rather than looping. The review never asks for what the
-plan cuts, what the job does not ask for, or what the evidence does not state,
-and the web verdict names open omission warnings as "supported accomplishments
-left out". Resumed v6 runs keep the v6 prompt.
+- **Requirement coverage.** The author receives the critic's judged coverage of
+  the draft as `requirementCoverage`: each requirement's verdict, rationale and
+  covering block ids. It adds content for an uncovered requirement only when the
+  evidence supports it, and keeps covering blocks unless an accepted finding
+  needs a change.
+- **Candidate directions.** With **Request revision**, the candidate can give up
+  to 1,000 characters of direction for the next round
+  (`candidateDirection.instructions`). The author follows them for selection,
+  emphasis, order, omission and framing within the retrieved evidence. They are
+  instructions, not evidence: grounding still rejects a fact they add.
+- **Repeated facts.** For a `repeated-fact` finding, the author keeps the fact in
+  one section and removes or rewrites the others, unless the candidate rejected
+  that finding.
 
-`cli-critic-v8` is v7 with a focused omission review
-(#2031). On the 2026-11-01 run of reference G, v7's one-pass comparison of the
-whole CV with 316 chunks reported one omission, as a warning, while the draft
-left out 13 reference accomplishments; 10 of them were stated in chunks the
-plan's own themes cite and cited by the author without their substance, so
-nothing blocked and round 2 never ran. v8 narrows the candidates to the chunks
-`applicationPlan.themes` cite (the chunks the achievement plan names on a run
-without a plan) and asks the critic, chunk by chunk, to list each stated
-accomplishment and decide whether the CV states it, mentions it only, or
-leaves it out: a citation is not a statement. Findings, severities and the
-blocking cap are v7's, with at most eight omissions per critique. Resumed v7
-runs keep the v7 prompt.
+The next critic receives the same direction text, with a rule not to flag a
+requested change as a defect; it still reports unsupported claims. A direction
+is stored for its round only, recorded as a revision decision and with the
+round's `run.author-input` event, and shown in Run details. A run that started
+before directions existed refuses one rather than ignoring it.
 
-`cli-critic-v9` moves the omission review out of the critique into its own
-call (#2039). On the 2026-11-01 runs of reference G, v7
-and v8 each reported one omission, as a warning, while the draft left out 13
-and 10 reference accomplishments; a paragraph inside a 300k-token critique
-does not get a chunk-by-chunk comparison done. The critique step now makes a
-separate omission check first, with the critic model: its input is only the
-CV's text (sections in order, bullets marked), the plan's supported themes with
-their requirement ids, the plan's cuts, and the candidate chunks the themes
-cite with the themes each serves; on a run without a plan, each critical or
-high requirement stands as a theme and the candidates are the chunks the
-achievement plan names for them. The check lists each chunk's stated
-accomplishments and returns at most eight the CV leaves out or only mentions,
-each with the chunk id, the theme, the role and one move
-(`critic-omission-check.ts`, instructions `omission-check-v1`). They become
-`coverage-omitted-accomplishment` errors that replace any the critique still
-reports, under the same cap of three blocking; v9's critique prompt is v6's,
-without the omission paragraph. The check is guarded like every call and runs
-before the critique, so a critique the guard then refuses still carries the
-check's bill; the critic execution record sums both calls' tokens and cost. A
-run without candidate chunks skips the check. Resumed v8 runs keep the v8
-prompt and no separate check.
+### Output ceiling
 
-New runs record `cli-critic-v10`, which widens the check to every retrieved
-chunk and lets every omission it finds block (#2046). On the 2026-11-02 run of
-reference G, v9's check read the 20 chunks the plan's themes cite of 316
-retrieved and named one of the twelve accomplishments the draft left out: eight
-of them sat in chunks no theme cites. The check now reads the retrieved
-evidence in slices of at most 32 chunks, one guarded call each with the CV's
-text, every supported theme and the cuts; a chunk carries the themes the plan
-cites it for or none, and an omission from an uncited chunk counts only when
-the check names the theme it serves (instructions `omission-check-v2`). The
-slices' answers are merged once per chunk and accomplishment, at most twelve
-per round, and each of them blocks instead of v9's three, because every one is
-verified against a named chunk. The critic execution record sums every slice
-and the critique, and a guard refusal part-way carries what the earlier slices
-billed. The critique prompt and the author's prompts are unchanged. Resumed v9
-runs keep the v9 check on the cited chunks.
+`cli-author-v17` states and sends a 32,768-token ceiling for the structured
+proposal, including repeated claim text and JSON overhead. It is a ceiling, not
+a target, so it allows more output and possibly higher cost, but it changes no
+reasoning effort, model choice, critique, grounding or approval.
 
-Date ranges in substantive claims and whole block text, including ranges split
-across separately covered claims, must appear as a complete range in one cited
-evidence chunk; separate endpoints or ranges do not combine into support. This
-checks range support across ordinary claims and blocks.
+A model profile with a larger output cap, such as the Standard author's 64,000
+tokens, states and sends its own cap instead (#1966).
 
-Employer-first, pipe-delimited experience paragraph headers additionally require the
-employer identity and each stated range together on one cited source line.
-Separate employer and career-wide date statements, even within one chunk, do
-not establish that association. This narrow check retains date-format and
-year-only equivalence; it does not infer aliases, validate arbitrary prose
-relationships, or independently verify employment. It is not a general semantic
-employer/date proof, including when one source line describes several employers.
+### Author prompt versions
 
-Author grounding treats a narrow English action phrase such as `Built TypeScript
-tools` as an action plus the protected technology name. The exception requires a
-known opening past-tense verb, one acronym or mixed-case name, and a recognized
-software-object noun. For other capitalized multiword values, uncertain word
-order or grouping can pass lexical grounding only when every whole-word
-component appears in the same cited evidence chunk and two of the components
-appear there as adjacent words; components never combine across chunks or match
-as substrings. This is not proof that the combined term
-has the claimed meaning, so the independent critic still evaluates it. Numeric,
-date, URL, and email checks remain exact, and structured employer/date headers
-still require same-line employer association. Headings, contact fields, and
-skills or tool lists retain their exact-copy author instructions. Standalone
-mixed-case names require whole-token support; `SuperTypeScript` cannot support
-a claim of `TypeScript`.
+| Version | What it added | Output ceiling | Issue |
+| --- | --- | --- | --- |
+| v1, v2 | First prompts | 8,192 | |
+| v3 | Compact schema-only JSON | 16,384 | |
+| v4, v5 | Output ceiling raised | 32,768 | |
+| v6 | Concise professional prose | 32,768 | |
+| v7 | Writing for the job, Core areas | 32,768 | |
+| v8 | Requirement coverage input on revisions | 32,768 | |
+| v9 | Candidate directions | 32,768 | |
+| v10 | Targeted revisions (patches) | 32,768 | #1112 |
+| v11 | Application plan | 32,768 | #1304 |
+| v12 | Fuller bullets, labelled Core areas (superseded by v13) | 32,768 | #1338 |
+| v13 | Context paragraphs and labelled lines | 32,768 | #1341 |
+| v14 | Length by page target | 32,768 | #1364 |
+| v15 | Each part of the CV has one job | 32,768 | #1860 |
+| v16 | One statement per bullet, placeholder header | 32,768 | #1875 |
+| v17 | Full first draft at two-page length | 32,768 | #1971 |
 
-Technical descriptions such as an API delivered as an MVP, an MVP API in a
-product definition, a coordinated Solidity/Foundry EVM protocol description,
-generated language/protocol proxies, and replacement of a language-based DSL
-receive component checks only in explicit software grammar. Each technology or
-acronym must still be supported by the cited evidence. Employer, title and ambiguous
-name contexts retain full-name protection; this does not add fuzzy matching or
-verify arbitrary accomplishments.
+## Grounding checks
 
-The same closed grammar recognizes `Built <name>, a Java Model-Driven
-Engineering tool` and `replacing an unmaintainable Haskell-based DSL tool;` as
-separate product, language, or descriptor values. A sentence-opening
-`At <Employer>, <listed lowercase action> ...` with a single capitalized
-employer token protects that name only when the exact structure is present.
-Each resulting identity still needs its own evidence. Generic same-chunk
-composition may pass a reordered title-case phrase lexically, but does not
-establish its identity, employer relationship, or the candidate's role; those
-distinctions remain for independent critique.
+Before a proposal becomes an artifact, the application checks every
+substantive claim against its cited evidence. These checks never pass
+ungrounded content.
 
-### Local job-document requirement units
+### Claims and block text
 
-When a run does not select a reviewed opportunity brief, the application
-extracts complete list items and paragraphs from the local job document. It
-joins wrapped lines, removes Markdown heading structure, preserves later units,
-and assigns neutral `medium` priority. The extraction makes no semantic claim
-that every retained paragraph is a hiring criterion. Selecting substantive
-requirements and assigning priorities belongs to the reviewed opportunity brief.
+- **Claims.** A claim with no evidence, an unrelated citation, or a changed exact
+  value (dates, metrics, credentials, links, employers, multi-word titles) is
+  rejected. Protected multi-word values must stay within one cited chunk.
+- **Block text outside claims** fails with the content-free
+  `substantive_text_uncovered` diagnostic when:
+  - an uncovered content word appears in no retrieved chunk (a short closed list
+    of function words is exempt);
+  - a protected value is not supported by the chunks its claims cite;
+  - a date range is not stated with the same start and end in one cited chunk;
+  - a capitalised single-word name appears in no retrieved chunk.
+- **Exempt:** headings, labels and explicit missing-data notices. Wording built
+  only from function words and evidence words is left to the critic and the
+  candidate.
+- **Sections.** Empty sections and unavailable placeholders are rejected when the
+  supplied evidence establishes content; a missing individual detail may stay
+  explicit.
 
-The fallback rejects documents over 64 KiB, more than one hundred units, units
-over two thousand characters, empty/heading-only input, code fences, and tables
-with an explicit message directing the candidate to a reviewed brief. It does
-not silently truncate source text. Reviewed-brief requirements and priorities
-remain authoritative, and existing pinned contexts are never re-extracted on
-resume. A corrected interpretation requires a new reviewed context.
+### When some blocks fail
 
-### Chronology in evidence retrieval
+One failing block does not discard the whole draft. When every failure is
+confined to individual blocks, the draft keeps the blocks that pass:
 
-For local-source contexts without a CKB selection, author and critic retrieval
-reserves space for dated Markdown headings from the exact pinned source IDs
-and checksums. Headings retain their original text, chunk identity, and source
-references. Ranked evidence fills the remaining slots after duplicate and
-unapproved-source filtering. This keeps explicit career ranges available even
-when their headings contain no job-query terms.
+- a block with a failing claim, or a failing date range in its text, is removed,
+  and a section left with no blocks is removed;
+- a block whose claims pass but whose other text fails is shortened to its own
+  claim text, with no new wording;
+- the kept draft is checked again with the same rules, and carries one
+  content-free `ungrounded-author-content-dropped` warning with the counts.
 
-In the `retrieval` evidence mode, the provider selection allows at most
-twenty chunks and 128 KiB of serialized evidence. The default `full-source` mode
-of a CKB workspace replaces those limits with its own size budget; see
-[Evidence mode](../reference/cli-and-desktop.md#evidence-mode). The heading scan allows at most one hundred pinned sources and one
-hundred heading chunks per source. Missing or mismatched sources, scan overflow,
-or headings that cannot fit the requested count or byte limit fail retrieval
-before provider execution. The bounded matcher recognizes Markdown headings
-with a year range or an ongoing end marker; it does not infer dates or repair
-artifact chronology.
+The author step still fails with the original diagnostics when a failure is not
+confined to a block, such as a required section losing all its content, or when
+no section would remain.
 
-For CKB workspaces requiring Experience, the selected-version route also reserves
-matched dated Markdown headings. Fixed local lexical supplements cover English
-month and ongoing-end terms and years 1900–2099 in batches below the query-term
-cap. Each query returns at most one hundred hits; fallback results are ignored.
-Discovered headings are deduplicated and retained before ranked job evidence,
-then merged with candidate-priority evidence and the existing required-section
-supplements. The original indexed chunks remain unchanged.
+### Dates and employers
 
-The selected CKB source versions are read locally through the managed store and
-normalized with the same verified chunk derivation used by the lexical index.
-For each discovered heading, retrieval assembles a bounded role record within
-that source version. An explicit contribution region, such as `His work:` or
-`CV-usable facts`, is preferred over introductory platform or team context.
-Complete paragraphs and top-level list items, including nested continuations,
-are selected by deterministic lexical overlap with the job query and rendered in
-source order. Selection may omit blocks to fit the 4,000-character limit; it never
-truncates a block or separates a nested caveat from its list item. A contribution
-region stops before a sibling or ancestor heading, or another dated role.
+- **Date ranges,** in claims or block text and even when split across separately
+  covered claims, must appear as one complete range in one cited chunk.
+  Separate endpoints or ranges never combine into support.
+- **Employer-first headers** (pipe-delimited experience headers) also need the
+  employer and each stated range together on one cited source line. Separate
+  employer and career-wide date statements, even in one chunk, do not establish
+  the link.
 
-Explicitly independent roles also support project-labelled source groups.
-Exact source titles or declared aliases mentioned in candidate instructions
-reserve evidence in instruction order before unrequested job-overlap groups.
-Requested groups retain a complete contribution block where available, along
-with their descriptor, applicable production limitations and nested caveats.
-Unrequested groups require substantive job-term overlap; project names alone
-do not establish relevance.
+Date formats and year-only equivalence are accepted. The check infers no
+aliases and does not verify employment, including when one line names several
+employers.
 
-Groups share the existing 4,000-character role-record limit and consume no
-extra retrieval slots. Selection never invents an alias or truncates a block
-or limitation to fit. Local omission reasons remain visible. Supplying a
-requested project's evidence lets the author assess job fit; it does not
-require inclusion in the CV. Lexical overlap and candidate priority are
-input-selection signals, not proof of relevance or candidate achievement.
+### Names, technologies and phrases
 
-Requested projects that cannot fit the role record may contribute separate,
-source-backed overflow records. Each retains its complete descriptor,
-contribution and applicable limitations within the same per-record limit.
-Whole overflow bundles from the same role and pinned source may share a record
-when their complete text fits. Overflow records use the existing priority slots ahead of generic matches;
-they do not duplicate projects already selected in the role record. Their
-identities and locators preserve the pinned source version and source ranges.
-If these records cannot fit alongside contact, chronology and required-section
-evidence within the existing record and byte limits, retrieval fails visibly
-before provider transmission.
+Grounding protects names exactly, with a few closed grammar rules so that normal
+CV phrasing can pass. Each rule still needs every name it separates to be in the
+cited evidence.
 
-Without an explicit contribution region or recognized independent project groups,
-retrieval retains the existing prefix behavior: heading and following whole chunks, stopping at the next same-level or
-higher heading, another dated role, or before the record limit. Non-dated nested
-headings may remain in that prefix; an overflowing chunk is not skipped to reach
-later material. A heading remains unchanged when no eligible body fits.
+- **Action plus technology.** `Built TypeScript tools` is read as an action plus
+  the protected name `TypeScript`. This needs a known opening past-tense verb,
+  one acronym or mixed-case name, and a known software-object noun (including
+  `proxy` and `proxies`).
+- **Reordered title-case phrases.** Other capitalized multi-word values pass
+  lexical grounding only when every whole-word component is in the same cited
+  chunk and two of them are adjacent there. Components never combine across
+  chunks or match as substrings, and the critic still judges the meaning.
+- **Software descriptions.** In explicit software grammar, phrases such as an MVP
+  API, a Solidity/Foundry EVM protocol, generated language proxies
+  (`generating Java and Python FLUXRPC proxies`, also with `producing`), or
+  replacing a Haskell-based DSL get component checks. A language modifier
+  before a platform name yields two protected names, and a claim-start label
+  ending in `MVP:` keeps both the project name and the stage.
+- **Appositives and employers.** `Built <name>, a Java Model-Driven Engineering
+  tool` separates the product, language and descriptor. A sentence opening
+  `At <Employer>, <lowercase action> ...` with one capitalized token protects
+  that employer name only in that exact structure.
+- **Whole tokens.** A standalone mixed-case name needs whole-token support:
+  `SuperTypeScript` cannot support `TypeScript`.
 
-A combined record receives a deterministic identity derived from its original
-constituents and keeps the pinned source/version and full line-range provenance.
-Provider evidence, inspection and diagnostics use the same records. This retains
-available role contributions without increasing the twenty-item/128-KiB handoff
-limits or claiming that all profile content was transmitted. Source identity,
-lifecycle, checksums and exact heading matches are verified before assembly;
-other versions and local origin paths are not substitutes. No role-record read
-is added when Experience or discovered dated headings are absent.
+Employer names, titles, linking statements and ambiguous names keep full-name
+protection. Numbers, dates, URLs and emails stay exact. Headings, contact
+fields and skills or tool lists keep their exact-copy instructions. None of
+these rules adds fuzzy matching or proves what a composed phrase means.
 
-This is bounded lexical discovery, not an exhaustive chronology inventory.
-A saturated matched supplement, discovered headings that cannot fit or are lost
-in the merge, or evidence over the twenty-chunk/128-KiB provider bounds fails
-closed. The queries are local and introduce no provider calls or inferred dates.
-The ordinary CKB lifecycle and freshness checks still apply.
+### Experience statements, phones and references
 
-When candidate drafting instructions are nonblank, CKB retrieval also queries
-the first explicit sentence-level `Prioritize` clause locally, using at most
-2,000 characters and twenty hits. When no such clause exists, it uses the trimmed
-instructions. The full instructions still reach the author unchanged.
-It reserves up to three distinct matched chunks that are not single-line
-Markdown headings, in query order, after chronology and before the general job
-query results. Blank instructions add no query; fallback results are not reserved.
+- **Experience statements.** `No GraphQL experience` and `GraphQL experience`, for
+  one acronym or mixed-case technology, keep both the technology and whether
+  experience is present. A cited source must state the same thing, directly or
+  in an `Experience:` or `No experience:` list. Missing evidence is never
+  evidence of no experience, and conflicting, qualified or partial matches do
+  not qualify.
+- **Phone numbers.** A standalone international phone claim needs its complete
+  literal in one cited chunk; digit groups never combine across chunks.
+- **Section references.** A terminal `; see <section>.` is navigation only when
+  the exact target is configured and present. Everything before it is still
+  checked.
 
-The merge chooses the largest prefix of up to three priority chunks that fits
-alongside chronology and required-section evidence, retaining source/version
-identities and traces. Only Experience may reuse evidence already supplied by
-guaranteed chronology chunks under the existing section matcher. Other required
-sections keep their dedicated supplements: policy text mentioning education,
-credentials, or languages must not displace their source records. Priority and
-unselected general-query hits cannot justify skipping a reservation. A required
-record found by the general query remains reserved even when it falls beyond
-the selected primary prefix; duplicate IDs consume one slot.
-
-Retrieval fails if matched priority evidence is available but not even one chunk
-can fit. This preserves contribution evidence within the existing provider limits;
-lexical matches do not prove job fit or resolve uncertain source claims.
-
-When a Skills section is configured, CKB retrieval also runs one cached local
-`production experience` query with a twenty-hit limit. A substantive explicit
-`Production experience:` record takes precedence within the Skills supplement.
-Plain and Markdown labels are supported; unavailable, negative, heading-only,
-and fallback results are not promoted. Without a matched record, the existing
-supplement behavior remains. The record keeps its source/version identity and
-content-free trace; this adds no provider call or evidence-budget allowance.
-
-CKB retrieval also reserves one matched candidate contact record for the CV
-header, even when Header is not a configured required section. A bounded local
-query looks for contact fields; selection requires an actual field in explicit
-candidate contact context. Policy mentions and unavailable values do not qualify.
-The selected source chunk retains its exact text, identity and provenance. Contact,
-chronology and required-section reservations share the existing evidence limits;
-retrieval fails when protected evidence cannot fit. This performs no contact
-lookup and makes no provider call.
-
-### Explicit experience statements
-
-Author grounding recognizes whole statements such as `No GraphQL experience`
-and `GraphQL experience` for a single acronym or mixed-case technology name.
-Their protected values preserve both the technology and whether experience is
-present or absent. A cited source must explicitly support that same statement,
-either directly or in an `Experience:` / `No experience:` list. The source guide
-includes these protected statements so the author can use supported word order.
-
-Missing evidence is not evidence of no experience. Conflicting positive and
-negative statements, qualified clauses, and partial technology-name matches do
-not satisfy this bounded rule. Ambiguous names and longer prose retain the
-existing grounding behavior; this is not general semantic factual verification.
-
-### Contact fields and internal references
-
-A standalone international phone claim needs its complete literal in one cited
-chunk. Separate digit groups, partial numbers and a number assembled across
-chunks do not establish support. Existing protected-value checks still apply.
-Opening action verbs can precede a technical name and a bounded software
-appositive without becoming part of the name; the technical name itself must
-remain source-backed. Titles, employer names and linking statements keep their
-existing protection.
-
-A terminal `; see <section>.` suffix is navigation only when the exact target is
-both configured and present in the proposal. Grounding still checks all preceding
-text and claims. Unknown targets, additional assertions, dates and unsupported
-names receive the normal checks. This recognizes a document reference, not an
-exception for unsourced achievements.
-
-### Software-description phrases
-
-A bounded language modifier followed by a platform name in a software-object
-phrase produces two protected names. A claim-start project label ending in
-`MVP:` similarly preserves both its project name and stage token for source
-checks. Neither rule exempts a component from support in cited evidence.
-Company subjects, role titles and linking statements still require source-backed
-components; a newly composed full name remains semantically uncertain.
-
-The software-object vocabulary includes singular `proxy` and plural `proxies`.
-In the narrow generation phrase `generating Java and Python FLUXRPC proxies`,
-the closed language modifiers and technology name remain separately protected.
-The same coordination rule applies to `producing`; employer and title phrases
-retain whole-name checks, and each separated component still needs evidence.
-
-Software appositives can include one recognised programming-language modifier
-before their bounded qualifiers. This separates an opening action from its tool
-name while retaining source checks for the language and tool. These syntax rules
-do not establish semantic relationships or replace independent critique.
-
-### Local rejected-author replay
-
-The local driver accepts an optional `authorProposalCaptureDirectory` for
-explicit diagnostic sessions. The selected parent directory must already exist.
-When application validation rejects a parsed author proposal, a new private
-subdirectory contains `replay.json`: the proposal, exact `buildAuthorArtifact`
-validation inputs, provider/model identity, and sanitized failure diagnostics.
-On POSIX, directories use mode `0700` and files use `0600`. Existing captures
-are never overwritten. Capture is disabled by default and has no CLI flag or
-renderer control.
-
-These files contain sensitive candidate material and source paths. The caller
-owns their retention and deletion; keep the directory outside shared repositories.
-Replay locally by passing the saved `validationInputs` to `buildAuthorArtifact`,
-or summarize a capture directory with the content-free `capture-report` command
-described in the [pilot protocol](../evaluation/pilot-protocol.md).
-Only a capture success/failure code joins normal error diagnostics; captured
-content stays out of run history and retry feedback. Capture errors preserve the
-original rejection and retry policy. Transport errors and provider token-budget
-rejections occur before this boundary and are not captured. No provider call,
-retry reset, candidate approval, or export is triggered by capture or replay.
-
-### Author revision report
+### Retrying after a rejection
 
 After a validation rejection, the next author attempt for the same run and
 round in the same process revises its rejected proposal instead of starting
-over. It receives a `revision` input holding:
-
-- the rejected proposal;
-- a bounded report of at most 16 items, each with the issue path and code, the
-  offending text, and specific problems, such as unsupported values, words,
-  and names, or a date range next to the ranges the cited evidence states.
+over. Its `revision` input holds the rejected proposal and a report of at most
+16 items: each issue's path and code, the offending text, and the specific
+problems, such as unsupported values or a date range beside the ranges the
+evidence states.
 
 The report quotes candidate content, so it goes only to the author provider
-and is held only in bounded process memory. Run history, diagnostics, retry
-feedback, and captures stay content-free. After a restart, the memory is empty
-and retries use content-free retry feedback alone.
+and stays in bounded process memory. Run history, diagnostics, retry feedback
+and captures stay content-free. After a restart, retries use the content-free
+retry feedback alone.
 
-### Local unknown Claude category capture
+### Diagnostic captures
 
-The local application driver accepts an optional
-`localClaudeCategoryCaptureParent` for explicit diagnostic sessions and passes
-it only to Anthropic user-session adapters constructed for run execution.
-Capture is disabled by default, has no CLI or renderer control, and requires a
-caller-selected parent directory that already exists. When a structured Claude
-error contains an unrecognized category-shaped `subtype` or `terminal_reason`,
-the adapter writes only those exact strings to a new `categories.json` file in
-an unpredictable private subdirectory. Each value is limited to 128 UTF-8
-bytes; an oversized value prevents any partial capture. On POSIX, the directory
-uses mode `0700` and the file uses `0600`.
+Two local captures help investigate failures. Both are off by default, have no
+CLI flag or screen control, need a caller-chosen parent directory that already
+exists, and never trigger a provider call or change retry behaviour. On POSIX,
+directories are mode `0700` and files `0600`; the caller owns retention and
+deletion.
 
-The capture excludes stop reasons, provider prose, prompts and outputs, errors,
-session and usage data, model content, paths, URLs, credentials, and environment
-values. Neither the capture path nor captured strings enter the provider error
-or run history. A fixed capture success/failure diagnostic is appended without
-changing the original error code, message, status, retryability, or failure
-stage. Capture never triggers a provider call or changes retry behavior; the
-caller owns retention and deletion of the local file.
+| Capture | Option | What it writes |
+| --- | --- | --- |
+| Rejected author proposal | `authorProposalCaptureDirectory` | A new private folder with `replay.json`: the proposal, the exact `buildAuthorArtifact` inputs, provider and model identity, and sanitized diagnostics. Existing captures are never overwritten. |
+| Unknown Claude error category | `localClaudeCategoryCaptureParent` | A `categories.json` file in an unpredictable private folder, holding only an unrecognized `subtype` or `terminal_reason` string (at most 128 bytes, or nothing). |
 
-The allowlist recognizes Claude's `api_error` terminal reason and the `success`
-result subtype, including the documented case where a result is still marked
-`is_error: true`. A structured `api_error` without a finite numeric API status
-is classified as a retryable transient provider failure with fixed diagnostics
-and a generic message. When a numeric status is present, status mapping takes
-precedence, so authentication, quota, rate-limit, server-error, and other
-status-bearing behavior remains unchanged. Dynamic provider prose is never
-used for this statusless classification or retained in diagnostics.
+- **Proposal captures hold sensitive candidate material and paths,** so keep
+  them outside shared repositories. Replay one by passing its
+  `validationInputs` to `buildAuthorArtifact`, or summarize a folder with the
+  content-free `capture-report` command in the
+  [pilot protocol](../evaluation/pilot-protocol.md). Transport errors and
+  token-budget rejections happen earlier and are not captured.
+- **Category captures exclude everything else:** stop reasons, provider prose,
+  prompts, outputs, session and usage data, paths, URLs, credentials and
+  environment values. They apply only to Anthropic user-session adapters built
+  for run execution.
+- **Only a fixed success or failure code** joins the normal diagnostics. The
+  original error code, message, status, retryability and failure stage are
+  never changed.
 
-### Author adjudication and revision trace boundary
+The category allowlist knows Claude's `api_error` terminal reason and the
+`success` subtype, including a result still marked `is_error: true`. A
+structured `api_error` with no numeric API status is a retryable transient
+failure with a generic message; with a status, the status mapping wins.
 
-`packages/schemas` also owns the strict, versioned author-adjudication plan and
-adjudicated-revision trace contracts. A plan binds one explicit `accept`,
-`reject`, or `nuance` decision and concise rationale to every finding in one
-readiness report, snapshots only the finding metadata needed for audit, and
-derives whether a revision is required or a disagreement must remain visible.
-The pure `buildAuthorAdjudicationPlan` helper in `packages/orchestrator`
-validates the report/source-artifact identity, target references, complete
-decision coverage, and deterministic report order.
+## Requirement coverage
 
-`packages/artifacts` owns the pure `diffArtifacts` and
-`traceAdjudicatedRevision` helpers. A trace requires a distinct next artifact
-version linked to its source parent, records strict claim/section/artifact
-diff IDs, and marks accepted effects verified only when the current diff proves
-them. Evidence, requirement, and rubric effects remain missing unless an
-explicit, bounded effect override records a concise rationale; rejected and nuanced
-findings remain `disagreement-preserved`.
+Validation and readiness decide whether a block covers a requirement with one
+shared block-local matcher in `packages/validation`.
 
-Approved overrides are conditional: a direct effect takes precedence and remains `verified`, even when an override
-was supplied. The persisted approved override is retained; duplicate, unknown,
-malformed, and non-accepted overrides still fail validation. A trace is valid
-only when no accepted effect is missing. Verification records structural
-changes, not semantic resolution of findings; it never exposes a `resolved` flag.
-Resolution is judged only by the next critic pass; see below.
+- **The half-token rule.** At least half of a requirement's distinct meaningful
+  tokens, and at least one, must appear within one artifact block.
+- **Never pooled.** Matches never combine across blocks or sections, and section
+  titles and claim-only text do not count.
+- **Literal tokens.** Inflected forms are distinct: `implement` does not match
+  `implemented`. A block can restate a requirement in another form and still
+  fall short.
+- **Gaps win.** An explicit gap overrides a match. Priority weights and rubric
+  thresholds are not changed by this matcher.
 
-The orchestrator exposes a `requestAdjudicatedRevision` runtime carrier. It
-persists the exact report, canonical plan, accepted-effect overrides, and
-nullable derived trace in the existing run snapshot, and passes that carrier
-only to the matching revision author execution. The application author
-adapter now transmits that exact content-safe carrier only on that matching
-revision and adds explicit instructions to apply accepted findings, preserve
-rejected or nuanced disagreements, and retain the evidence and factuality
-safeguards above. Legacy revision requests remain separate, and invalid
-provider lineage fails closed without a trace. This #72 runtime slice does not
-generate reports, add persistence tables or migrations, or change approval and
-stopping semantics. The #277 application/local boundary now stages that exact
-report and complete adjudication through the shared application driver, using
-the existing provider-independent runtime validation and durable run history
-without opening a provider. CLI and desktop controls and report generation
-remain deferred. It stores no raw prompts, raw responses, or hidden reasoning;
-duration accounting issue #278 remains ordered after this staging prerequisite.
+Three closed rules refine the match, below. None infers negation, credential
+equivalence or meaning. Stored contexts and scores are never rewritten, so a
+new evaluation can give a different result.
 
-### Finding attribution and classification (#1108)
+### Degree coverage
 
-A version 2 revision trace carries `attribution`: every changed block (by
-positional `blockKey`) with the ids of the accepted findings that targeted it,
-the accepted findings no changed block could be tied to, and a
-`findingIdentity` for every adjudicated finding. The author's structured output
-is a plain artifact proposal and cannot name finding ids, so attribution is
-derived from the block diff plus each finding's target: a claim finding maps to
-that claim's block, a section finding to every changed block of the section.
-Version 1 traces have no `attribution` and still load and replay unchanged.
-When the revision was a targeted patch (#1112, below) the attribution comes from
-the edits instead and carries `source: "edits"`.
+A standalone requirement of the form `[a] <subject> [or <subject>] degree
+[preferred|required]` uses a closed degree rule instead of lexical overlap. The
+subjects are `computer science` (also hyphenated) and `quantitative`, and
+either alternative is enough.
 
-After the critic pass that reviews the revised artifact, the orchestrator stores
-a content-free `findingClassification` on that critic execution. An accepted
-finding is `persisting` when the pass raises a finding with the same identity
-and `resolved` otherwise. A finding of the pass that matches no adjudicated
-finding is `new`; a recurring rejected or nuanced finding is a preserved
-disagreement and is not classified. Entries carry ids, identity, severity and
-counts only, so #1112 and #1113 can consume them directly.
+- **Per clause.** A block is split on `;` and on a sentence-final `.`, never on
+  commas, because credentials use commas for specialization and years. One
+  clause must state a permitted attained degree on its own:
+  `MSc in Computer Science; training in software architecture.` qualifies.
+- **No rescue.** An uncertain clause is never rescued by a neighbour:
+  `Pursuing an MSc in Computer Science; interested in secure development` does
+  not qualify.
+- **Status clauses stay attached.** A following clause with a status term and no
+  topic of its own, such as `; not completed` or `; expected 2027`, belongs to
+  the credential beside it, exactly like `, not completed`.
+- **Accepted form.** An optional `earned`, `completed` or `holds` and article,
+  then a credential (BS/BSc, MS/MSc, PhD, Bachelor/Master of Science, Doctor of
+  Philosophy, bachelor's/master's/doctoral degree, or degree), then `in` and a
+  permitted subject. A comma-separated specialization and year or year range may
+  follow. Case, whitespace, typographic apostrophes and the hyphen are
+  normalized.
+- **Refused.** Negated, coursework-only or status-qualified entries (expected,
+  incomplete, candidate, honorary, revoked) are not attained degrees, and a
+  recognized requirement that fails this rule cannot fall back to lexical
+  overlap.
 
-Artifact, section, block and claim ids are minted per execution and change on
-every revision, so findings are matched by `findingIdentity`, not by id:
-`normalizedCode|targetKind|locator`. The code is lower-cased with punctuation
-runs collapsed to `-`. A claim target locates its block as
-`<sectionKind>#<n>/b<i>` (the n-th section of that kind, the i-th block), a
-section target as `<sectionKind>#<n>`, requirement, evidence and rubric targets
-keep their stable ids, and an artifact target is `artifact`. Messages and
-severity are ignored, so near-duplicates in one block collapse into one
-finding. The key is positional and code-based: a critic that rewords a code, or
-a revision that inserts or reorders blocks, makes a real match fail and reads as
-one `resolved` plus one `new`.
+Mathematics and other subjects are not classified as quantitative. Dotted
+abbreviations, free-form credential prose, degree-level requirements and
+subject equivalence are outside the rule. This is text matching, not credential
+verification.
 
-### Targeted revisions (#1112)
+### Permitted alternatives
 
-A revision on author template `cli-author-v10` answers with block-level edits
-instead of a whole new proposal. A full rewrite costs output tokens, can change
-blocks nobody flagged and can drop a line that covered a requirement. First
-drafts, retries after a rejection and runs recorded on v9 or earlier keep the
-full-proposal revision and their exact prompts.
+A requirement that lists alternatives is matched once per alternative, so
+listing more alternatives never makes it harder to satisfy. `Experience with
+Prometheus, OpenTelemetry, or Datadog.` is covered by a block naming one of
+them.
 
-**Patch.** `{edits: [...]}`, each edit a `replace`, `insert` or `delete` of one
-block, with the complete new block (type, text and cited claims) for a replace or
-insert, and the `findingIds` of the accepted findings it addresses. The author
-keys edits to the section and block ids of the `currentArtifact` it receives.
-Those ids are minted per execution, but a patch is applied only to the exact
-artifact it was written against, so they are unambiguous. The application maps
-them to the positional keys (`<sectionKind>#<n>/b<i>`) of #1108 for attribution.
+- **Conditions stay in every branch.** `Production experience with Prometheus or
+  OpenTelemetry.` still needs production wording in the same block, and one
+  block must satisfy the half-token rule for one branch on its own.
+- **Closed grammar.** It reads `A or B` and comma lists ending in `or`, with up
+  to five single-word alternatives and exactly one `or`.
+- **Not recognized,** so matched as usual: compound `and` conditions, `and/or`,
+  several enumerations, and multi-word alternatives such as `Google Cloud or
+  AWS`. A capitalized word beside the list is read as a possible multi-word
+  alternative and stops the rule.
 
-**Applying.** The patch is expanded locally into a complete proposal: blocks no
-edit names are copied from the current artifact with their claims and evidence,
-so they stay identical. The proposal then goes through the same citation
-completion, grounding and validation as any author proposal, so an unsupported
-claim in an edited block is rejected. A delete that removes the block covering a
-requirement still raises the dropped-coverage warning (#1212), because that
-check compares the revised artifact with the previous one.
+### Organisation-maturity qualifiers
 
-**Rejection and fallback.** The patch is rejected for malformed JSON, an unknown
-block, section or finding id, two edits to one block, a section left without
-blocks, an unmappable evidence reference, or a result that grounding would
-shorten or leave blocks out of. The agent then requests the full-proposal
-revision in the same attempt and sums the tokens and cost of both calls. The
-mode is stored on the revision execution as `revisionMode`: `patch`, `full`, or
-`patch-fallback`.
+When a requirement states an organisation-maturity qualifier, the block that
+matches it must state it too. `Early-stage startup experience.` is not covered
+by `Built internal tools at a 40-person startup.`
 
-**Attribution.** The execution carries the applied edits, and the trace
-attribution uses each edit's `findingIds` directly (`source: "edits"`), listing a
-finding as unattributed only when no edit names it. A full rewrite keeps the
-derived diff attribution. A replayed execution keeps its stored edit-sourced
-attribution, because the edits are not stored.
+- **Closed vocabulary:** early stage, seed stage, pre-seed, series A/B/C, growth
+  stage, late stage, scale-up and startup stage, with hyphen, spacing and case
+  variants. On its own, `startup` is a type of organisation, not a qualifier.
+- **Never inferred** from headcount, funding or organisation type, and never
+  taken from a neighbouring block.
+- **Per branch.** `Early-stage or growth-stage experience.` is covered by either
+  stage. When the alternatives rule cannot split a requirement, every qualifier
+  is required: `Series A or Series B experience.` stays uncovered by a block
+  naming one series, a known conservative false negative.
 
-### Application plan before drafting (#1304)
+### Coverage across revisions
 
-A run on author template `cli-author-v11` decides what the CV should lead with
-before the first draft. The plan step is bounded at three provider calls, in
-this order:
+After a revision, the orchestrator checks that covered requirements stay
+covered:
 
-1. The author model plans: the job's 3 to 5 ranked central themes, each linked
-   to requirement ids and to the approved evidence ids that best prove it; what
-   leads (the summary angle and 3 to 5 core-area items); and what to drop or
-   compress. A theme no approved evidence supports is a **gap** with no
-   evidence ids, never something to claim.
-2. The critic model reviews the plan for fit to the job and answers accept, or
-   revise with specific points.
-3. On revise, the author revises the plan once. There is no second review.
+- **`coverage-block-dropped`:** none of a covered requirement's cited blocks
+  survives the revision, by id or identical text. Rewording a covering block
+  also raises it, and a later critic judgement of covered clears it.
+- **`coverage-lost`:** a requirement covered in the previous round, on any
+  basis, is uncovered or only possibly covered after this round's critique,
+  unless the revision already reported it as dropped (#1861).
 
-The plan holds short user-visible text and ids, no reasoning, and no facts of
-its own. Validation (`validateApplicationPlan` in
-`packages/schemas/src/application-plan.ts`) rejects an evidence id the request's
-approved evidence lacks, an unknown requirement id, and a core area that serves
-a gap. A rejected first plan fails the step as an invalid response, which can be
-retried, and names the failed checks as codes and paths. A rejected revision
-does not: the plan is guidance, so the reviewed plan stands and the revision's
-step record keeps the failed checks (`rejectedDiagnostics`). Evidence is sent
-under the same short aliases as drafting.
+Both warnings are content-free and name the requirement id.
 
-`packages/orchestrator/src/application-plan.ts` runs the step through the
-`ApplicationPlanner` port; `packages/application/src/application-plan-agent.ts`
-implements it with the run's author and critic models. Each call is persisted
-on the run snapshot (`applicationPlan`) when it completes, so a resumed run
-continues mid-plan without repeating a call, and its cost is added to the run
-cost, which the cost budget is checked against before each call and before
-the draft. Each call also receives what the run may still spend, so a call
-whose estimated worst cost would pass the limit is refused before it is sent. Runs on earlier templates do not plan and resume unchanged, and
-`applicationPlan: false` in the run options turns the step off for tests.
+### When a coverage miss blocks approval
 
-The reviewed plan goes to the author as guidance on every round: `cli-author-v11`
-states that it is not evidence, that grounding applies to the draft as before, and
-that a candidate direction outranks it. Earlier versions never receive it. The
-`cli-critic-v5` emphasis review takes its central themes from the plan instead of
-deriving them from the job (`emphasisPlanThemeSourceInstructions` replaces
-`emphasisThemeSourceInstructions`), and reports a plan gap as
-`emphasis-theme-gap`. The plan is recorded in run history as a
-`run.application-plan` event and shown in **Run details** as "Application plan".
+A token-match miss on a critical requirement blocks approval only when the
+critic also reports the gap: an uncovered verdict, an `emphasis-theme-gap`
+finding, or its own coverage finding about it (#1789). Emphasis advice
+(`emphasis-theme-buried`, `emphasis-order`, `emphasis-padding`) says the
+requirement is supported, so it never confirms a gap (#1872). Otherwise the
+miss stays a warning.
 
-### Fuller bullets and labelled Core areas (#1338)
+## How the critic reviews a draft
 
-Author `cli-author-v12` keeps v11 and asks for 3 to 5 substantive bullets per
-role, each combining what was done, how, and the scope or result (about 30 to 60
-words), labelled Core areas lines whose label words appear in cited evidence,
-a few compact certification lines, and complete statements only. The guidance
-never overrides grounding, required sections or the writing policy. Resumed v11
-and earlier runs keep their exact prompt. Deterministic validation reports a
-bullet that opens with a lowercase letter (other than a known name such as `iOS`
-or `npm`) or ends on a dangling connector as an `editorial-fragment` warning, so
-the critic and readiness steps see it. New runs use v14 (below), whose v13 base
-supersedes v12's bullet guidance; the fragment check still applies.
+Each round, the critic model makes two kinds of call: an omission check, then
+the critique. Both return structured findings, never a rewritten CV, and the
+critic execution record sums the tokens and cost of every call.
 
-### Context paragraphs and labelled lines (#1341)
+```mermaid
+flowchart LR
+  draft[Draft CV] --> check["Omission check<br/>slices of up to 32 chunks"]
+  draft --> critique["Critique<br/>claims, editorial, emphasis"]
+  check --> findings[Structured findings]
+  critique --> findings
+  findings --> gate{Any blocking<br/>finding?}
+  gate -->|yes| revise[Revision round]
+  gate -->|no| ready[Awaiting approval]
+```
 
-Author `cli-author-v13` supersedes v12's bullet guidance: it is v11 plus a block
-that replaces it. Bullet markers should sit several lines apart, so short bullets
-are never stacked. The author writes:
+### The critique
 
-- **Per role or project:** a role line paragraph, a 1 to 3 line context paragraph
-  (what it was, scope, team, stack), then 2 to 4 bullets of about 3 to 4 lines
-  (roughly 45 to 70 words). Older roles get 0 to 2 bullets.
-- **Whole CV:** about 12 to 20 bullets, never more than 4 in a row.
-- **Core areas, Skills, Education and Certifications:** `Label: items` paragraphs
-  grouped by theme, never bullets. Label words must appear in cited evidence.
+The critique reviews the draft three ways:
 
-The guidance never overrides grounding, required sections or the writing policy.
-Resumed v12 and earlier runs keep their exact prompt. Deterministic validation
-adds a `dense-bullet-series` quality warning, one per run of consecutive bullets,
-anchored to its first block. It fires for more than 4 bullets in a row, a section
-of 4 or more one-line bullets, and adjacent bullets where either has under about
-30 words. Its message asks the author to expand a short item into one complete
-statement of one achievement, or move it into the context paragraph, and never
-to join separate facts with semicolons (#1874). A bullet that does join two
-statements of three or more words with a semicolon gets an `editorial-fragment`
-warning.
+| Review | What it asks | Finding codes |
+| --- | --- | --- |
+| Claims | Is each claim supported by its cited evidence, with the right attribution, work maturity and credential scope? Does the CV omit a dated employment gap the sources state? | Factuality findings; a coverage warning with the source id for an omitted gap |
+| Editorial | Is the CV ready to send? | `editorial-source-note`, `editorial-fragment`, `editorial-negative-aside`, `editorial-missing-evidence` |
+| Emphasis | Does the CV lead with the job's central themes? | `emphasis-theme-buried`, `emphasis-padding`, `emphasis-order`, `emphasis-theme-gap` |
 
-### Writing to the page target (#1364)
+The editorial codes mean:
 
-Author `cli-author-v14` is v13 plus length guidance keyed on the writing policy's
-`Page target`. A two-page target, or none, keeps v13's counts. A one-page CV is a
-shorter text, not the same text printed smaller:
+- `editorial-source-note`: a copied source note, commentary about the sources or
+  the job search, or third-person narration about the candidate;
+- `editorial-fragment`: a fragment or semicolon-stitched evidence quotes;
+- `editorial-negative-aside`: an aside that undercuts an accomplishment instead
+  of stating a real limit once;
+- `editorial-missing-evidence`: a requirement a retrieved chunk clearly supports
+  but the CV does not show, with the chunk id.
 
-- **Summary:** 2 to 3 lines.
-- **Bullets:** only for the 2 or 3 roles or projects most relevant to the job,
-  at most 3 each and about 6 to 9 in total, each about 2 to 3 lines.
-- **Other roles:** the role line and a one-line context paragraph. Every role
-  keeps its title, employer and dates.
-- **Labelled paragraphs:** 2 or 3 in Core areas, one or two lines each for
-  Skills, Education and Certifications.
+The emphasis codes each name one move and the theme or requirement it serves:
 
-Resumed v13 and earlier runs keep their exact prompt. When an export names no
-template, a one-page run is drawn with Compact and any other with Modern, so the
-layout matches the length the author wrote to.
+- `emphasis-theme-buried`: expand a supported central theme, or move it into the
+  summary or core areas;
+- `emphasis-padding`: compress or drop content the job does not ask for;
+- `emphasis-order`: move supported, relevant content earlier;
+- `emphasis-theme-gap`: a central theme the evidence does not support, reported
+  as a gap, never as a move.
 
-### Each fact stated once (#1859, #1860)
+Rules that apply to the whole critique:
 
-Deterministic validation adds one `repeated-fact` quality warning per fact the
-draft states in more than one section, naming each section ("the same fact is
-stated in Summary, Core areas and Experience"). Two substantive claims in
-different sections state the same fact when the shorter one has at least four
-content words and the longer one holds at least 80% of them, after dropping
-function words and plural or verb endings. Exact copies stay with the existing
-duplicate claim check. The warning never blocks approval.
+- **Never beyond the evidence.** The critic never asks for content the evidence
+  does not support, uses no fixed technology list or outside verification, and
+  never infers a gap from the spacing between roles or turns "no listed
+  software work" into unemployment.
+- **Emphasis findings are warnings.** The one exception is
+  `emphasis-theme-buried`, an error when the job's top-priority theme is missing
+  from the summary and core areas and the evidence supports it. The critic
+  contract downgrades any other emphasis error to a warning.
+- **Themes come from the plan,** or from the job's requirements and
+  responsibilities weighted by priority and repetition when there is no plan.
+- **Evidence arrives as a compact table** (`reference-table-v2`, #1986). A claim
+  whose evidence is a retrieved chunk's whole text, or at least 40 characters
+  with a line locator, cites the chunk id (`ref-N`) instead of repeating the
+  text, so the source is never sent twice.
 
-Author `cli-author-v15` (#1860) is v14 plus guidance that gives each part of
-the CV its own job:
+Accepted findings reach the author through the adjudicated revision, so a move
+the author makes is still bound by the grounding rules.
 
-- **Experience and Projects** carry the detail of each fact.
-- **Summary** condenses the candidate in new words and never restates a bullet.
-- **Core areas** group evidence from across roles under one theme the job asks
-  for; a theme with a single example is left to Experience.
+### The omission check
 
-A revising author already receives the draft's findings. v15 tells it to keep a
-`repeated-fact` finding's fact in one section and remove or rewrite the other
-occurrences, unless the person rejected that finding in the adjudication plan.
-Resumed v14 and earlier runs keep their exact prompt.
+The omission check finds supported accomplishments that the CV leaves out or
+reduces to a bare mention (`critic-omission-check.ts`, instructions
+`omission-check-v2`).
 
-Author `cli-author-v16` (#1875) is v15 plus guidance against the
-over-compression the 0.7.0 walk showed:
+- **What it reads:** every retrieved chunk, in slices of at most 32, one guarded
+  call per slice, with the CV's text (sections in order, bullets marked), every
+  supported theme and the plan's cuts.
+- **What counts:** an accomplishment from a chunk the plan cites for a theme, or
+  from any other chunk when the check names the theme it serves.
+- **What it returns:** at most twelve `coverage-omitted-accomplishment` errors
+  per round, each with a short quote, the chunk id, the role, the theme and one
+  move. They are merged once per chunk and accomplishment, replace any the
+  critique reports, and each one blocks.
+- **What it never asks for:** what the plan cuts, what the job does not ask for,
+  or what the evidence does not state.
 
-- **One statement per bullet.** Each bullet states one achievement, and
-  separate facts are never joined with semicolons.
-- **Summary.** Two to three sentences: the role and level the evidence
-  supports, the strongest proof, and the candidate's focus.
-- **Facts stay in their role.** Core areas may name a theme Experience proves,
-  but a role's achievements and leadership stay in its entry, and each Core
-  areas label names the content it heads.
-- **Placeholder header.** When the evidence holds no name or contact details,
-  the header shows `[Your name]`, `[Email]`, `[Phone]` and `[City]` as
-  missing-data notices with no claims. Claim coverage accepts them only in a
-  header section, and no value is ever invented.
+A blocking omission makes the round revise. One the author does not fix within
+a revision pauses the run as a persisting finding instead of looping. On the
+web, open omission warnings read "supported accomplishments left out".
 
-Resumed v15 and earlier runs keep their exact prompt.
+The check runs before the critique, so a critique the guard then refuses still
+carries the check's cost, and a refusal part-way carries what earlier slices
+billed. A run with no candidate chunks skips the check.
 
-Author `cli-author-v17` (#1971) is v16 plus guidance for a full first draft. On
-the 2026-10-29 re-score, v16 drafts were shorter than the candidates' own CVs
-and recalled under 60% of their accomplishments, and the output-budget sentence
-asked for shorter wording.
+### Critic prompt versions
 
-- **Full two-page length.** With a two-page or no page target, about 16 to 20
-  bullets and roughly 1,400 to 1,700 words, the upper end of the counts above.
-  The one-page counts are unchanged.
-- **Accomplishments over wording.** When the evidence holds more job-relevant
-  achievements than fit, the author keeps the achievements and cuts detail.
-- **Only CV text.** No copied working notes, reviewer comments or third-person
-  narration, no statement about work not done, and no repeated sentence.
-- **Budget sentence.** It asks the author to avoid redundancy but never to drop
-  supported accomplishments to save tokens.
+New runs use `cli-critic-v10`. A resumed run keeps the prompt and omission check
+it started with.
 
-Resumed v16 and earlier runs keep their exact prompt.
+| Version | What it added | Issue |
+| --- | --- | --- |
+| v1, v2 | Claim review | |
+| v3 | Dated employment gaps in the claim review | |
+| v4 | Editorial review | |
+| v5 | Job emphasis review | |
+| v6 | Compact evidence table | #1986 |
+| v7 | Omission review inside the critique | #2026 |
+| v8 | Omission review focused on theme-cited chunks | #2031 |
+| v9 | Omission check as its own call, over theme-cited chunks | #2039 |
+| v10 | Check over every retrieved chunk; every omission blocks | #2046 |
 
-### CV shape warnings (#1862)
+## Deterministic quality warnings
 
-Two format checks catch a CV that is not ready to send even when every claim
-is grounded. Letters and application answers are not checked.
+Validators that need no model add these findings. They never block approval
+unless the table says so.
 
-- **`missing-cv-header`.** A CV with an experience section but no header, or an
-  empty one, has no name or contact line. The evidence may not state them, so
-  a warning asks the candidate to add them before sending. A header that
-  still shows v16's placeholders gets one finding per block naming them
-  (#1878). During the loop it is a warning, since the author cannot know the
-  candidate's details; at approval it is an error (#1902), so the candidate
-  replaces the placeholders with a review edit or overrides with a reason.
-  The export still prints a `Header warning:` line for an overridden one.
-- **`unlabelled-skills-line`.** In a Skills section that has `Label: items`
-  lines, each line without a label is reported, so the section reads
-  consistently.
+| Code | Raised when |
+| --- | --- |
+| Duplicate checks | A block or claim is duplicated, or a phrase of three or more words repeats back to back in one block, which usually means overlapping quotes were stitched |
+| `editorial-source-note` | A block calls the candidate "he", "she" or "the candidate", or says "labelled as such", so the warning does not depend on the critic |
+| `editorial-fragment` | A bullet opens with a lowercase letter (except a known name such as `iOS` or `npm`), ends on a dangling connector, or joins two statements of three or more words with a semicolon |
+| `dense-bullet-series` | More than 4 bullets in a row, a section of 4 or more one-line bullets, or adjacent bullets where either has under about 30 words; one warning per run of bullets, asking to expand an item or move it into the context paragraph, never to join facts with semicolons (#1874) |
+| `repeated-fact` | The same fact is in more than one section: the shorter of two claims has at least four content words and the longer holds at least 80% of them, after dropping function words and endings (#1859) |
+| `missing-cv-header` | A CV with an experience section has no header or an empty one, or the header still shows placeholders (one finding per block, #1878). A warning during the loop, an **error at approval** (#1902): the candidate replaces the placeholders or overrides with a reason, and the export prints a `Header warning:` line |
+| `unlabelled-skills-line` | A Skills section has `Label: items` lines and a line without a label |
 
-### Stop and pause on findings (#1113)
+The CV shape checks (`missing-cv-header`, `unlabelled-skills-line`, #1862) do
+not apply to letters or application answers.
 
-The `stable-convergence` score-delta rule is unchanged and still stops a run
-whose scores stop moving. Two rules read the blocking findings instead, using
-the exact `findingIdentity` from the previous section. They live in
-`packages/orchestrator/src/consensus-stop.ts` and run after each critic pass.
+## Revisions
 
-- **`consensus-ready`**: the draft is ready (no blocking finding, rubric met)
-  and the blocking findings of the previous round are resolved. A ready draft
-  with nothing resolved keeps the plain `ready` reason.
-- **`persisting-findings`**: a blocking finding with the same identity blocked
-  two consecutive rounds. The run pauses for the candidate, autopilot included,
-  and the pause event records the identities in `persistingFindings`.
+A revision applies the findings the candidate or autopilot accepted, keeps the
+rejected ones visible, and proves structurally what changed.
 
-After an adjudicated revision only accepted blocking findings count, so a
-recurrence the candidate rejected is a preserved disagreement and never pauses.
-Without adjudication, as in autopilot rounds, the previous round's blocking
-identities (kept on `latestEvaluation.blockingFindingIdentities`) are compared
-with this round's. The candidate's decision sticks: an identity the candidate
-rejected, overrode or deferred in the review never pauses again, in that round
-or later. Only accepted or undecided findings do. The run store lists the
-recorded finding decisions (`RunStore.listFindingDecisions`), and
-`latestEvaluation.blockingFindingRefs` maps each identity to the review's
-finding id so a decision can be matched to it. Identities use positional block keys, so inserting a block
-can turn one finding into a resolved-plus-new pair. That near-miss does not
-match and never pauses. Round, cost and time limits apply as before. The final
-reason is stored on `latestEvaluation.stopReason` for the finding-based pauses
-and on the stopping decision's `stopReason` for the rest (ready, stable scores,
-round limit, budget, a stop by the person). Autopilot's conflict pause replaces
-the evaluation's reason in the run event and is kept on the snapshot as
-`autopilotPause`, from which the review state marks the approval readiness with
-`autopilot-conflict`. The decision's reason crosses to the shared screens on the
-approval readiness, and the run details drawer words every reason in plain
-language (`packages/ui/src/stop-reason.ts`).
+```mermaid
+flowchart LR
+  report["Readiness report<br/>(findings)"] --> plan["Adjudication plan<br/>accept, reject or nuance"]
+  plan --> patch["Author patch<br/>block edits"]
+  patch --> apply["Apply locally,<br/>then grounding checks"]
+  apply -->|rejected| full["Full-proposal<br/>revision"]
+  apply --> trace["Revision trace<br/>diff and attribution"]
+  full --> trace
+  trace --> next["Next critic pass<br/>classifies findings"]
+```
 
-### Application-readiness stopping decision boundary
+### Adjudication plan
 
-`packages/schemas` owns the strict, versioned application-readiness stopping
-decision contract. It binds one #71 readiness report, an optional latest #72
-revision trace, the exact artifact and context identities, artifact creation
-and parent-version chronology, canonical per-dimension agreements,
-content-free deterministic checks, blockers, limitations, embedded loop
-context, and derived stop fields. Human approval remains a required literal in
-the contract; application readiness never means that approval was given.
+`packages/schemas` owns the strict, versioned adjudication plan. It binds one
+explicit `accept`, `reject` or `nuance` decision and a short rationale to every
+finding of one readiness report, keeps only the finding metadata audit needs,
+and derives whether a revision is required or a disagreement must stay visible.
 
-The pure `evaluateApplicationReadinessStoppingDecision` helper in
-`packages/evaluations` validates the artifact, report, and trace, reruns local
-deterministic validation, and applies conservative readiness blockers and
-bounded stop-reason precedence. It stores no diagnostic messages, source
-excerpts, provider payloads, or hidden reasoning in its deterministic
-projection.
+`buildAuthorAdjudicationPlan` (`packages/orchestrator`) checks the report and
+artifact identity, the target references, that every finding has a decision,
+and the report order.
 
-The #73 runtime boundary assembles a fresh current-artifact report at human
-approval, persists the readiness decision and an exact artifact checksum
-binding, clears that binding on revision or artifact replacement, and requires
-the same application-ready binding before export. Older snapshots may omit
-these optional fields and fail closed at export until a new approval records
-them. Provider, CLI, and desktop presentation remain owned by their respective
-boundaries; export invokes the rendering-QA contract after this binding passes.
+### Targeted revisions
 
-### Review edits at approval (#1876)
+A revision answers with block-level edits instead of a whole new proposal
+(#1112). A full rewrite costs output tokens, can change blocks nobody flagged,
+and can drop a line that covered a requirement. First drafts and retries after
+a rejection still use the full proposal.
 
-The candidate's review edits reach the approved and exported CV. `approve`
-takes the latest edit per block and, when any changes a block's text, builds
-one new artifact version from the reviewed one:
+- **The patch** is `{edits: [...]}`: each edit replaces, inserts or deletes one
+  block, carries the complete new block for a replace or insert, and names the
+  `findingIds` it addresses. Edits use the section and block ids of the
+  `currentArtifact` the author received, which are unambiguous because a patch
+  applies only to that exact artifact.
+- **Applying.** The patch is expanded locally into a complete proposal: blocks no
+  edit names are copied with their claims and evidence. The result goes through
+  the same citation completion, grounding and validation as any proposal, and a
+  deleted covering block still raises `coverage-block-dropped`.
+- **Fallback.** Malformed JSON, an unknown block, section or finding id, two edits
+  to one block, a section left empty, an unmappable evidence reference, or a
+  result grounding would shorten rejects the patch. The agent then asks for a
+  full-proposal revision in the same attempt and sums both calls' tokens and
+  cost.
+
+The mode is stored on the revision execution as `revisionMode`: `patch`, `full`
+or `patch-fallback`.
+
+### Revision trace
+
+`diffArtifacts` and `traceAdjudicatedRevision` in `packages/artifacts` build the
+trace. It needs a distinct next artifact version linked to its parent, records
+claim, section and artifact diff ids, and marks an accepted effect verified only
+when the diff proves it.
+
+- **Missing effects.** Evidence, requirement and rubric effects stay missing
+  unless an explicit, bounded override records a rationale. A trace is valid
+  only when no accepted effect is missing.
+- **Overrides.** A direct effect wins and stays `verified` even with an override.
+  Duplicate, unknown, malformed and non-accepted overrides fail validation.
+- **Disagreements.** Rejected and nuanced findings stay `disagreement-preserved`.
+- **Structure, not resolution.** Verification records structural changes only,
+  and never exposes a `resolved` flag; only the next critic pass judges that.
+
+The orchestrator's `requestAdjudicatedRevision` carrier saves the exact report,
+plan, overrides and derived trace on the run snapshot, and passes it only to the
+matching revision. The author adapter sends that content-safe carrier with
+instructions to apply accepted findings, keep rejected or nuanced disagreements,
+and keep the grounding safeguards. Legacy revision requests stay separate.
+Invalid provider lineage fails closed without a trace, and no raw prompts, responses or hidden reasoning are stored.
+
+### Attribution
+
+A version 2 trace carries `attribution`: every changed block (by positional
+`blockKey`) with the accepted findings that targeted it, the accepted findings
+no changed block could be tied to, and a `findingIdentity` for every finding
+(#1108). Version 1 traces have no attribution and still load and replay.
+
+- **Patch revisions** take attribution from each edit's `findingIds`
+  (`source: "edits"`). A replayed execution keeps its stored attribution,
+  because the edits are not stored.
+- **Full rewrites** derive it from the block diff and each finding's target: a
+  claim finding maps to its block, a section finding to every changed block of
+  that section.
+
+### Finding identity and classification
+
+Ids are minted per execution and change on every revision, so findings are
+matched by `findingIdentity`: `normalizedCode|targetKind|locator`.
+
+- **Code:** lower-cased, with punctuation runs collapsed to `-`.
+- **Locator:** a claim's block is `<sectionKind>#<n>/b<i>` (the n-th section of
+  that kind, the i-th block), a section is `<sectionKind>#<n>`, requirement,
+  evidence and rubric targets keep their stable ids, and the artifact is
+  `artifact`.
+- **Ignored:** messages and severity, so near-duplicates in one block collapse.
+
+After the critic reviews the revised artifact, the orchestrator stores a
+content-free `findingClassification`:
+
+| Class | Meaning |
+| --- | --- |
+| `persisting` | An accepted finding whose identity the pass raises again |
+| `resolved` | An accepted finding the pass does not raise again |
+| `new` | A finding that matches no adjudicated finding |
+| Not classified | A recurring rejected or nuanced finding, which is a preserved disagreement |
+
+The key is positional and code-based, so a reworded code, or a revision that
+inserts or reorders blocks, turns a real match into one `resolved` plus one
+`new`.
+
+## When the loop stops
+
+The orchestrator stops at the configured round, cost or time limit, when quality
+is stable, when the draft is ready, or when the candidate reviews early. It never
+loops to optimize a subjective score. The default author and critic come from
+different companies, and both model versions are recorded in run history.
+
+### Stop rules
+
+The rules run after each critic pass, in
+`packages/orchestrator/src/consensus-stop.ts` (#1113):
+
+| Reason | When |
+| --- | --- |
+| `consensus-ready` | No blocking finding, the rubric is met, and the previous round's blocking findings are resolved |
+| `ready` | Ready, with nothing resolved this round |
+| `stable-convergence` | Scores stop moving between rounds |
+| `persisting-findings` | A blocking finding with the same identity blocked two rounds in a row; the run pauses for the candidate, autopilot included, and records the identities in `persistingFindings` |
+| Limits | The round, cost or time limit, or a stop by the person |
+
+Which findings count:
+
+- **After an adjudicated revision,** only accepted blocking findings count, so a
+  recurrence the candidate rejected never pauses.
+- **Without adjudication,** as in autopilot rounds, the previous round's blocking
+  identities (`latestEvaluation.blockingFindingIdentities`) are compared with
+  this round's.
+- **The candidate's decision sticks.** An identity the candidate rejected,
+  overrode or deferred never pauses again; only accepted or undecided findings
+  do. `RunStore.listFindingDecisions` lists the decisions, and
+  `latestEvaluation.blockingFindingRefs` maps each identity to the review's
+  finding id.
+- **Near misses never pause.** Inserting a block can turn one finding into a
+  resolved-plus-new pair, which does not match.
+
+The finding-based reason is stored on `latestEvaluation.stopReason`, and the
+others on the stopping decision's `stopReason`. The run details drawer words
+every reason in plain language (`packages/ui/src/stop-reason.ts`).
+
+### Autopilot
+
+With the off-by-default workspace autopilot, the loop keeps revising through
+blocking findings and stable scores until the round limit. It pauses earlier
+only when the draft is ready, a blocking finding persists, or on a conflict: a
+disputed claim or a blocking factuality finding.
+
+The conflict pause replaces the evaluation's reason in the run event and is
+kept on the snapshot as `autopilotPause`, from which the review state marks
+approval readiness with `autopilot-conflict`.
+
+### Readiness report
+
+`packages/schemas` owns the strict, versioned `independentReadinessReport`. It
+records the context and artifact identity, the independent-review record, input
+completeness, all seven rubric dimensions, and the deterministic and critic
+findings with their provenance.
+
+The assembler in `packages/evaluations` orders the findings, assigns their
+origin, validates the report, and returns an immutable projection with no
+provider payloads or hidden reasoning.
+
+### Stopping decision
+
+`packages/schemas` also owns the application-readiness stopping decision. It
+binds one readiness report, an optional latest revision trace, the exact
+artifact and context identities, the artifact's version chronology,
+per-dimension agreements, content-free deterministic checks, blockers,
+limitations, loop context and the derived stop fields.
+
+`evaluateApplicationReadinessStoppingDecision` (`packages/evaluations`) validates
+the artifact, report and trace, reruns deterministic validation, and applies
+conservative blockers and stop-reason precedence. It stores no messages, source
+excerpts, payloads or reasoning.
+
+Human approval stays a required literal in the contract: application-ready
+never means approved.
+
+## Approval and review edits
+
+At approval, the application assembles a fresh report for the current artifact,
+saves the readiness decision with an exact artifact checksum binding, and
+requires that same binding before export. A revision or replaced artifact
+clears the binding. Older snapshots without it fail closed at export until a
+new approval records it.
+
+The candidate's review edits reach the approved CV (#1876). When any edit
+changes a block's text, `approve` takes the latest edit per block and builds one
+new artifact version:
 
 - each edited block carries the new text, with one `edit` decision per block;
-- claims in an edited block keep their evidence links but drop to
-  `unverified`, and a block's only claim takes the new text;
+- claims in an edited block keep their evidence links but become `unverified`,
+  and a block's only claim takes the new text;
 - final checks run again on that version, so a fixed placeholder clears its
   check and a new unsupported figure blocks approval unless overridden.
 
-Approval binds that exact version and export renders it. A blocked approval
-with edits saves nothing, since the version exists only once approved, and
-fails with `edits_readiness_blocked` naming the checks. The
-critic does not review the edits; the current round's critique still counts as
-the review of the parent version. The edited version's finding ids are scoped
-to that parent, so the decisions recorded in the review still show after
-approval (#1929).
+Approval binds that exact version, and export renders it. A blocked approval
+with edits saves nothing and fails with `edits_readiness_blocked`, naming the
+checks.
 
-### Rendering and rendering-QA boundary (#74)
+The critic does not review the edits; the round's critique still counts as the
+review of the parent version. The edited version's finding ids are scoped to
+that parent, so recorded decisions still show after approval (#1929).
 
-`packages/rendering` owns two controlled A4 layout profiles:
-`compact-one-page` and `standard-two-page` (the default). The selected profile
-is recorded with the source-content and rendered-byte checksums, and is applied
-consistently to the minimal HTML, PDF, and DOCX implementations. Content is
-never truncated, reordered, summarized, or rewritten to satisfy a page target;
-an overflowing PDF is a deterministic QA failure signal.
+## Rendering and export checks
 
-`standard-two-page` matches a hand-made CV's density: 9 pt body at 11 pt
-leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side margins and 10 mm top and bottom margins,
-wrapped to the real line width. About 2,000 words of a typical CV fit on two
-pages. The PDF embeds Carlito, the Calibri-metric-compatible font, in full as a
-Unicode font, so any character Carlito has a glyph for is drawn and reads back
-as written; the DOCX names Calibri with the same exact leading. Exports record the layout as
-`cv-controlled-v4`, which adds role context lines, bold labels and compact
-lists. Records written as `cv-controlled-v3` (role headers), `cv-controlled-v2`
-(before role headers) or `cv-controlled-v1` (the earlier, looser layout) still
-parse.
+`packages/rendering` draws an approved artifact as Markdown, DOCX or PDF. It
+never truncates, reorders, summarizes or rewrites content to meet a page
+target; an overflowing PDF is a QA signal instead.
+
+```mermaid
+flowchart LR
+  approved["Approved artifact<br/>(exact version)"] --> template["Template<br/>Modern, Classic, Compact"]
+  template --> profile["Layout profile<br/>one or two pages"]
+  profile --> md[Markdown]
+  profile --> docx[DOCX]
+  profile --> pdf["PDF<br/>printed or built-in"]
+  md & docx & pdf --> qa{"Rendering QA"}
+  qa -->|content or layout failure| refuse[Nothing written]
+  qa -->|passes, or page fit only| write["File written,<br/>length warning if needed"]
+```
+
+### Layout profiles
+
+| Profile | Used by | Look |
+| --- | --- | --- |
+| `standard-two-page` (default) | Classic, Modern | 9 pt body at 11 pt leading, 10.5 pt bold headings with a rule, a 16 pt title, 12 mm side and 10 mm top and bottom margins; about 2,000 words fit on two pages |
+| `compact-one-page` | Compact | One-page density, unembedded Helvetica in the PDF |
+
+The profile is recorded with the source-content and rendered-byte checksums
+and applied the same way to HTML, PDF and DOCX.
+
+- **Fonts.** The two-page PDF embeds Carlito, the Calibri-metric-compatible font,
+  in full as a Unicode font, so every character it has a glyph for reads back as
+  written. The DOCX names Calibri with the same leading. Carlito Regular and
+  Bold are vendored unmodified (SIL OFL 1.1) as a generated, compressed
+  TypeScript module, so neither the CLI nor the desktop needs a file lookup; a
+  two-page PDF is about 570 kB. Wrapping and length use the font's real advance
+  widths. Source, checksums, licence and regeneration steps are in
+  `packages/rendering/fonts/carlito/NOTICE.md`.
+- **Layout version.** Exports record `cv-controlled-v4` (role context lines, bold
+  labels, compact lists). Records written as `v3` (role headers), `v2` or `v1`
+  still parse.
+
+### How the layout reads structure
 
 The layout reads structure from the blocks without editing their text:
 
-- **Headline.** A header's first block written as `Name | contact details`
-  draws the name alone at the name size and the rest as a contact line, when
-  the part before the first `|` reads as a name and the rest holds an email, a
-  phone number or a profile address (`header-lines.ts`, #1931).
-- **Role context.** In Experience and Projects, a paragraph with a ` | `
-  segment is a role header when bullets or a plain paragraph follow it. A plain
-  paragraph directly after it is a context line and stays regular. A paragraph
-  directly followed by bullets remains a role header.
-- **Labels.** A paragraph or bullet that opens with a short `Label:` followed by a space (at most
-  five words and 40 characters, with a letter, and not a URL scheme or a time)
-  draws the label in bold and the rest regular.
-- **Compact lists.** A run of three or more consecutive bullets that each fit on
-  one line is drawn as one wrapped paragraph with the items joined by ` · ` and
-  no bullet glyphs (`minCompactListItems` in `compact-list.ts`). Runs with a
-  two-line bullet stay bullets.
+- **Headline.** A header's first block written as `Name | contact details` draws
+  the name alone at the name size and the rest as a contact line, when the part
+  before the first `|` reads as a name and the rest holds an email, phone or
+  profile address (`header-lines.ts`, #1931).
+- **Role headers.** In Experience and Projects, a paragraph directly followed by
+  bullets, or with a ` | ` segment and followed by a plain paragraph, is a role
+  header (`role-header.ts`). It is bold with extra space before it, except under
+  a section heading. A trailing month-year or year range is right-aligned on the
+  same line, and a line too long to share its row with the dates falls back to
+  plain bold.
+- **Context lines.** A plain paragraph directly after a role header is a context
+  line and stays regular.
+- **Labels.** A paragraph or bullet opening with a short `Label:` and a space (at
+  most five words and 40 characters, with a letter, not a URL scheme or a time)
+  draws the label bold.
+- **Compact lists.** Three or more consecutive one-line bullets are drawn as one
+  wrapped paragraph joined by ` · ` (`minCompactListItems` in
+  `compact-list.ts`). A run with a two-line bullet stays bullets.
 
 The PDF tags label, compact and title lines with marked content, and the DOCX
-uses a `CompactList` style, so the inspectors split a compact paragraph back
-into its bullets, rejoin labels, and read a headline that wraps at the name
-size as one title (#1929). Content-integrity and block-order checks are
-unchanged.
+uses a `CompactList` style, so the inspectors split compact paragraphs back into
+bullets, rejoin labels, and read a wrapped headline as one title (#1929).
 
-The PDF font is a profile property (`typography.pdfFont`). Carlito Regular and
-Bold are vendored unmodified (SIL OFL 1.1) as a generated, Flate-compressed
-TypeScript module, so the CLI and the bundled desktop app need no file lookup;
-a two-page PDF is about 570 kB. Wrapping and the length estimate measure with
-the font's own advance widths. `compact-one-page` keeps the unembedded
-Helvetica. The font source, pinned checksums, licence, and regeneration steps
-are in `packages/rendering/fonts/carlito/NOTICE.md`.
+Role headers use PDF font resource `F3`, a second name for the bold face of `F2`
+on the same embedded file, so the inspectors read them as body text, not
+sections. The ` | ` before a right-aligned date is not drawn; the inspectors
+restore it, so content integrity compares role lines like any paragraph.
 
-#### Printed PDFs (#1362)
+### Templates
 
-`renderPrintHtml` (`packages/rendering/src/print-html.ts`) turns an artifact into one
-self-contained A4 HTML document for the selected template. It embeds Carlito and marks every
-visible block with `data-dl-unit`, whose text content is exactly the block's text. A bullet is a
-real `•` in a hanging indent. There is no letter-spacing; Modern's uppercase headings are a CSS case
-transform, so the reported units keep the artifact's text. Keep rules are CSS `break-*` properties.
+A rendering template is validated data (`renderingTemplateSchema`,
+`@draft-loop/schemas/rendering-template`): margins and page target, font sizes
+and line height, spacing, heading rule and case, name and body alignment, the
+role context-line style and an optional accent colour. Every value is bounded,
+and enums accept only what the renderer draws.
 
-The desktop host passes a `PdfPrinter` with PDF exports
-(`apps/desktop/src/electron/pdf-printer.ts`). It loads the HTML in a hidden, sandboxed window on an
-in-memory session that refuses every other request, collects the marked units, and prints with
-`printToPDF` (CSS page size, tagged PDF). `exportApprovedRun` then builds the export from those
-bytes with `renderedPrintedPdf`. QA (`buildPrintedPdfRenderingQa`) compares the reported units
-with the artifact in place of reading text back from the bytes, and takes the page count from the
-PDF. An export that fails QA writes nothing. Without a printer, as in the CLI, a PDF is drawn by
-the built-in writer.
+| Template | Profile | Notes |
+| --- | --- | --- |
+| `modern` | `standard-two-page` | The export default. Left-aligned name, uppercase headings and role dates in a teal accent, justified text, labelled paragraphs with a hanging indent, an italic (slanted Carlito) context line under each role (#1329) |
+| `classic` | `standard-two-page` | The renderer's fallback when no template is named |
+| `compact` | `compact-one-page` | Chosen by default for a one-page run |
 
-#### Rendering templates (#1328)
+`profileFromTemplate` (`templates.ts`) derives the profile all formats share.
+Settings a template does not carry (font names, wrapping caps, preview spacing,
+title and heading leading) are fixed per page target, except that the title line
+grows to fit a larger name. `renderArtifact` takes an optional `templateId` and
+still accepts `layoutProfile`; naming both requires that they agree.
 
-A rendering template is validated data (`renderingTemplateSchema`, exposed as
-`@draft-loop/schemas/rendering-template`): page margins and page target, font
-sizes and line height, spacing, heading rule and case, name alignment, body
-alignment, the role context-line style and an optional accent colour. Every value
-is bounded, and the enums accept only what the renderer draws today.
+Every output draws the template's options (the printed PDF and DOCX since #1412,
+the built-in PDF writer since #1791):
 
-`packages/rendering/src/templates.ts` holds the built-ins. `classic` (the
-renderer's fallback when no template is named) and `modern` (the export default)
-produce the `standard-two-page` profile and `compact`
-produces `compact-one-page`. `profileFromTemplate` derives the profile every
-output format shares; settings a template does not carry (font names, wrapping
-caps, preview spacing, title and heading leading) are fixed per page target for
-the `sans` family, except that the title line grows to fit a larger name. `renderArtifact` takes an optional `templateId` and still accepts
-`layoutProfile`; naming both requires that they agree.
+- **DOCX:** paragraph styles carry the look: `Title` alignment, `caps` and the
+  accent on `Heading1`, justified `Normal`, a `RoleContext` style and a
+  `Labelled` style with a hanging indent. Classic and Compact DOCX bytes are
+  unchanged.
+- **Built-in PDF writer:** name alignment, fill colours for the name, contact
+  line, headings and role dates, the rule colour, justified lines, and the
+  context line slanted and grey. Capitalised headings carry their written text
+  as `/ActualText`.
 
-Modern (#1329) follows the owner's hand-made reference CV: a left-aligned name,
-uppercase headings and role dates in a teal accent, justified text, labelled
-paragraphs with a hanging indent, and an italic context line under each role
-(the engine slants regular Carlito; no italic face is embedded).
+In both, the text stays as written, so QA reads the same words as from Classic.
+The template's id and version are on `RenderedDocument.metadata.renderingTemplate`
+and in the export payload as `renderingTemplate`; the QA report keeps only the
+layout profile.
 
-Every output draws these options: the printed desktop PDF and the DOCX since #1412, the built-in PDF writer since #1791.
+**Choosing a template.** The person picks it at export (#1330):
+`ExportCommand.templateId`, `export --template <id>` in the CLI, or the desktop
+`export` action's `template` field, which the bridge accepts only for built-in
+ids. The desktop remembers the choice per application in `localStorage`
+(`apps/desktop/src/export-template.ts`). A chosen template's page target
+replaces the writing policy's in the length warning.
 
-- **DOCX.** It uses the template's own profile (`profileFromTemplate`), so
-  Modern's margins and sizes too. The look lives in paragraph styles: the
-  `Title` alignment, `caps` and the accent colour on `Heading1`, `both`
-  justification on `Normal`, a `RoleContext` style for the italic line under a
-  role, and a `Labelled` style with a hanging indent. The text stays as
-  written, so rendering QA reads the same words as from Classic. Classic and
-  Compact DOCX bytes are unchanged.
-- **Built-in PDF writer.** It also uses the template's own profile. It draws
-  the name's alignment, fill colours for the name, contact line, headings and
-  role dates, the rule colour, justified body lines (word spacing), and the
-  context line slanted and greyed. Capitalised headings carry their written
-  text as `/ActualText`, which both PDF readers in `packages/rendering` use,
-  so rendering QA reads the same words as from Classic.
+### Printed PDFs
 
-The id and version of the template are on `RenderedDocument.metadata.renderingTemplate`
-and in the export payload as `renderingTemplate`. The rendering-QA report keeps
-only the layout profile.
+On the desktop, PDFs are printed from HTML (#1362):
 
-The person picks the template at export (#1330): `ExportCommand.templateId`,
-`export --template <id>` in the CLI, and the `template` field of the desktop
-`export` action, which the bridge allowlist accepts only for built-in ids. The
-desktop remembers the choice per application in `localStorage`, keyed by the
-application's first run (`apps/desktop/src/export-template.ts`). A chosen
-template's page target replaces the writing policy's in the length warning.
+1. `renderPrintHtml` (`print-html.ts`) builds one self-contained A4 HTML document
+   for the template. It embeds Carlito and marks every visible block with
+   `data-dl-unit`, whose text is exactly the block's text. Bullets are a real `•`
+   in a hanging indent, uppercase headings are a CSS transform, and keep rules
+   are CSS `break-*` properties.
+2. The desktop's `PdfPrinter` (`apps/desktop/src/electron/pdf-printer.ts`) loads
+   it in a hidden, sandboxed window on an in-memory session that refuses every
+   other request, collects the marked units, and prints with `printToPDF`.
+3. `exportApprovedRun` builds the export from those bytes (`renderedPrintedPdf`).
+   `buildPrintedPdfRenderingQa` compares the reported units with the artifact
+   and takes the page count from the PDF.
 
-#### Role headers
+An export that fails QA writes nothing. Without a printer, as in the CLI, the
+built-in writer draws the PDF.
 
-In an Experience or Projects section, a paragraph directly followed by bullets
-is a role header (`role` layout block, `packages/rendering/src/role-header.ts`).
-It is drawn bold with extra space before it, except directly under a section
-heading (`roleBeforePt`; bullets follow each other with no extra gap). If its last
-` | ` segment is a month-year or year date range, that segment is right-aligned
-on the same baseline: a right tab stop in the DOCX, flex alignment in the HTML
-preview. A left part too long for the line wraps, and a line that cannot share
-its row with the dates falls back to plain bold. The block text is never edited.
+### Rendering QA
 
-The PDF draws role headers in font resource `F3`, a second name for the bold
-face of `F2` that reuses the same embedded font file. The inspectors read `F2`
-runs as headings and `F3` runs as body text, so role headers are not counted as
-sections. The layout does not draw the ` | ` before a right-aligned date; the
-PDF and DOCX inspectors restore it when they recover the text (same baseline, or
-a bare tab), so content integrity compares role lines like any paragraph.
+`buildRenderingQaReport` produces a strict, immutable, content-free report after
+approval and before any file is written, and saves it with the export history.
+It covers visible-content integrity, section and block order, active-content
+signatures and PDF page counts. Markdown uses deterministic QA; PDF and DOCX use
+controlled byte inspectors.
 
-`buildRenderingQaReport` produces a strict, immutable, content-free report of
-exact visible-content integrity, section/block order, active-content signatures,
-and inspectable PDF page counts. The application builds this report after exact
-approval and before writing any export, and persists it with export history.
-Markdown uses deterministic QA; PDF and DOCX use the named controlled byte
-inspectors, which recover text and report bounded page/layout failures.
+| Failure | Result |
+| --- | --- |
+| Content integrity, active content, clipped text, blank page, orphaned section start | The export stops before any file is written |
+| Page fit only (PDF) | The file is written, the report keeps `passed: false`, and one `Length warning:` line gives the real page count |
 
-Content-integrity, active-content, clipped-text, blank-page, and orphan-section
-failures stop the export before any file is written. A PDF that fails only page
-fit is still written: its stored report keeps `passed: false`, and the export
-writes one `Length warning:` line with the real page count, as DOCX and
-Markdown do from their length estimate.
+DOCX and Markdown write the same length warning from their length estimate.
 
-The PDF inspector checks page targets, blank pages, text coordinates (each run measured with the PDF font's real advance widths against the right margin), and
-orphaned section starts where a page boundary makes them determinable. The DOCX
-inspector checks OOXML text order, explicit page breaks, package integrity, and
-relationship targets. OOXML bytes cannot establish true office pagination or
-visual clipping, so that limitation remains explicit; this is not exhaustive
-cross-viewer certification. Structured links and images remain unsupported by
-the current artifact model.
+- **The PDF inspector** checks page targets, blank pages, text coordinates (each
+  run measured with the font's real widths against the right margin) and
+  orphaned section starts where page boundaries show them.
+- **The DOCX inspector** checks OOXML text order, explicit page breaks, package
+  integrity and relationship targets. OOXML cannot establish true office
+  pagination or clipping, so that limit stays explicit; this is not
+  cross-viewer certification.
+
+Structured links and images are not supported by the current artifact model.
