@@ -13,8 +13,9 @@ notes and list their titles, and every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
-A real Claude Code session was walked through this setup on 2026-11-04; the
-[walk record](../evaluation/work-journal-walk.md) lists what passed and the
+Real Claude Code sessions walked this setup on 2026-11-04: the
+[work journal walk](../evaluation/work-journal-walk.md) and the
+[agent token walk](../evaluation/agent-token-walk.md) list what passed and the
 open defects.
 
 ## Set it up
