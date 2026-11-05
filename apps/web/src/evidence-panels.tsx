@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
+import { CareerInterviewSection } from "./career-interview.js";
 import { ConsentStep } from "./consent.js";
 import { PrivateSections } from "./private-sections.js";
 import { useRecordId } from "./record-context.js";
@@ -190,7 +191,7 @@ export function EvidenceFileChecks({ client, revision, groups, problem }: Eviden
 
 /**
  * The panels below the knowledge panel over one reading: file checks, private sections, and the
- * work journal where the server serves it.
+ * work journal and the career interview where the server serves them.
  */
 export function EvidenceSections({ client, revision, workJournal }: EvidenceSectionsProps) {
   const { groups, problem } = useSelectedBases(client, revision);
@@ -200,6 +201,7 @@ export function EvidenceSections({ client, revision, workJournal }: EvidenceSect
       <EvidenceFileChecks client={client} revision={revision} groups={groups} problem={problem} />
       <PrivateSections client={client} bases={bases} />
       {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
+      {workJournal === true ? <CareerInterviewSection client={client} bases={bases} /> : null}
     </>
   );
 }
@@ -207,6 +209,9 @@ export function EvidenceSections({ client, revision, workJournal }: EvidenceSect
 export interface EvidenceSectionsProps {
   readonly client: ApiClient;
   readonly revision: number;
-  /** Shows the work journal review; the server serves it only with the owner token for now. */
+  /**
+   * Shows the work journal review and the career interview; the web shows them only with the
+   * owner token for now.
+   */
   readonly workJournal?: boolean;
 }
