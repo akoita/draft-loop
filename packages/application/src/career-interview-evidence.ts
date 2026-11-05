@@ -42,6 +42,15 @@ export function careerInterviewSourceHeading(
   return `Career interview ${session.id} topic ${topicIndex + 1}`;
 }
 
+/** How a marked candidate turn reads in the transcript evidence. */
+export const careerInterviewMarkLabels = {
+  skipped: "(skipped this question)",
+  unknown: "(said they did not know)",
+} as const satisfies Record<
+  NonNullable<CareerInterviewSessionTopic["turns"][number]["mark"]>,
+  string
+>;
+
 export function renderCareerInterviewMarkdown(
   session: Pick<CareerInterviewSession, "id">,
   topicIndex: number,
@@ -50,11 +59,13 @@ export function renderCareerInterviewMarkdown(
   if (topic.summary === undefined) {
     throw new Error("Only a topic with a confirmed summary becomes evidence.");
   }
-  const words = topic.turns
-    .filter((turn) => turn.mark === undefined && turn.text !== "")
-    .map(
-      (turn) => `- ${turn.role === "candidate" ? "Candidate" : "Interviewer"}: ${plain(turn.text)}`,
-    );
+  const words = topic.turns.flatMap((turn) => {
+    const speaker = turn.role === "candidate" ? "Candidate" : "Interviewer";
+    // A marked turn stays, labelled, so the next answer never reads as a reply to its question
+    // (#2256). The label is fixed text: no candidate words are invented.
+    if (turn.mark !== undefined) return [`- ${speaker}: ${careerInterviewMarkLabels[turn.mark]}`];
+    return turn.text === "" ? [] : [`- ${speaker}: ${plain(turn.text)}`];
+  });
   const sections = [
     `# ${careerInterviewSourceHeading(session, topicIndex)}`,
     "Candidate-provided evidence: a topic from a guided career interview, summarised and confirmed by the candidate.",
