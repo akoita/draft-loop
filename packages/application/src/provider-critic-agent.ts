@@ -13,6 +13,7 @@ import {
   type ModelResponse,
 } from "@draft-loop/providers";
 
+import { mapWithBoundedConcurrency } from "./bounded-concurrency.js";
 import { guardCallCost } from "./call-cost-guard.js";
 import { withCandidateDirection } from "./candidate-direction.js";
 import * as criticPrompt from "./critic-adjudication.js";
@@ -45,6 +46,9 @@ import {
 import * as providerArtifactInput from "./provider-artifact-input.js";
 import { responseExecution } from "./response-execution.js";
 import { criticOutputBudget } from "./run-model-profiles.js";
+
+/** How many omission check slices run at once: enough to cut the wait, few enough for rate limits. */
+export const omissionCheckConcurrency = 4;
 
 export interface ProviderCriticAgentDependencies {
   readonly context: ContextSnapshot;
@@ -170,29 +174,34 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
         }
         return error;
       };
-      const checked: (readonly OmissionCheckOmission[])[] = [];
-      for (const slice of slices) {
-        let checkResponse: ModelResponse<JsonObject>;
-        try {
-          checkResponse = await adapter.execute({
-            contextSnapshotId: context.id,
-            model: context.modelConfiguration.critic,
-            systemPrompt: omissionCheckSystemPrompt,
-            input: JSON.parse(JSON.stringify(slice)) as JsonObject,
-            outputSchema: omissionCheckOutputSchema,
-            outputName: "omission_check",
-            maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
-            dataPolicy: deps.dataPolicy(deps.criticCompany),
-            ...(signal === undefined ? {} : { signal }),
-          });
-        } catch (error) {
-          throw withBill(error);
-        }
-        billed = addBilledUsage(billed, {
-          usage: checkResponse.usage,
-          cost: checkResponse.cost,
-        });
-        checked.push(parseOmissionCheck(checkResponse.output, slice));
+      // The slices are independent, so a few run at once (#2233); the guard reserves each call's
+      // worst cost before sending it, so calls in flight together still fit the run's budget.
+      let checked: (readonly OmissionCheckOmission[])[];
+      try {
+        checked = await mapWithBoundedConcurrency(
+          slices,
+          omissionCheckConcurrency,
+          async (slice) => {
+            const checkResponse = await adapter.execute({
+              contextSnapshotId: context.id,
+              model: context.modelConfiguration.critic,
+              systemPrompt: omissionCheckSystemPrompt,
+              input: JSON.parse(JSON.stringify(slice)) as JsonObject,
+              outputSchema: omissionCheckOutputSchema,
+              outputName: "omission_check",
+              maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
+              dataPolicy: deps.dataPolicy(deps.criticCompany),
+              ...(signal === undefined ? {} : { signal }),
+            });
+            billed = addBilledUsage(billed, {
+              usage: checkResponse.usage,
+              cost: checkResponse.cost,
+            });
+            return parseOmissionCheck(checkResponse.output, slice);
+          },
+        );
+      } catch (error) {
+        throw withBill(error);
       }
       let response: ModelResponse<JsonObject>;
       try {

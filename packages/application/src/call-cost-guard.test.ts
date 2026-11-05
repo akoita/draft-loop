@@ -104,4 +104,60 @@ describe("call cost guard", () => {
 
     expect(adapter.execute).toHaveBeenCalledTimes(1);
   });
+  describe("calls in flight together (#2233)", () => {
+    /** An adapter whose calls stay open until released, billing `estimatedUsd` each. */
+    function gatedAdapter(estimatedUsd: number, fail = false) {
+      const releases: (() => void)[] = [];
+      let running = 0;
+      let peak = 0;
+      const execute = vi.fn(async () => {
+        running += 1;
+        peak = Math.max(peak, running);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        running -= 1;
+        if (fail) throw new Error("provider failed");
+        return { output: {}, cost: { estimatedUsd } } as unknown as ModelResponse<JsonObject>;
+      });
+      const drain = async () => {
+        for (let turn = 0; turn < 50; turn += 1) {
+          releases.shift()?.();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      };
+      return { execute, drain, peak: () => peak };
+    }
+
+    it("reserves each call's worst cost, and a call that does not fit waits instead of failing", async () => {
+      // Worst cost 0.204 each: two fit in 0.5 at once; the third waits for one to bill 0.05.
+      const adapter = gatedAdapter(0.05);
+      const guarded = guardCallCost(adapter, 0.5);
+      const calls = Promise.all([1, 2, 3].map(() => guarded.execute(modelRequest())));
+      await adapter.drain();
+      await expect(calls).resolves.toHaveLength(3);
+      expect(adapter.peak()).toBe(2);
+      expect(adapter.execute).toHaveBeenCalledTimes(3);
+    });
+
+    it("still refuses a call that would not fit once every call in flight has billed", async () => {
+      const adapter = gatedAdapter(0.2);
+      const guarded = guardCallCost(adapter, 0.45);
+      const calls = Promise.allSettled([1, 2, 3].map(() => guarded.execute(modelRequest())));
+      await adapter.drain();
+      const outcomes = await calls;
+      expect(outcomes.map(({ status }) => status)).toEqual(["fulfilled", "fulfilled", "rejected"]);
+      expect((outcomes[2] as PromiseRejectedResult).reason).toBeInstanceOf(CallCostBudgetError);
+    });
+
+    it("releases the reservation of a call that fails", async () => {
+      const failing = gatedAdapter(0, true);
+      const guarded = guardCallCost(failing, 0.3);
+      const first = guarded.execute(modelRequest()).catch((error: unknown) => error);
+      await failing.drain();
+      expect(await first).toBeInstanceOf(Error);
+      const second = guarded.execute(modelRequest()).catch((error: unknown) => error);
+      await failing.drain();
+      expect(failing.execute).toHaveBeenCalledTimes(2);
+      expect(await second).not.toBeInstanceOf(CallCostBudgetError);
+    });
+  });
 });
