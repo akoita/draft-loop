@@ -17,7 +17,9 @@ export function contentSecurityPolicy(auth: ApiAuthOptions = { mode: "owner" }) 
     useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      // The speech worker compiles the ONNX runtime's WebAssembly (#2200); this allows only that,
+      // never string evaluation.
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
       styleSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'"],
