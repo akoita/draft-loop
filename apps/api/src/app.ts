@@ -68,6 +68,7 @@ import { type ApiAuthOptions, registerRequestAuthentication } from "./request-au
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
+import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
@@ -146,6 +147,8 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
+  /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
+  readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
   readonly localModels?: readonly string[];
 }
@@ -547,6 +550,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (options.tenants?.operatorFor !== undefined) {
     registerOperatorPlanRoutes(app, { operatorFor: options.tenants.operatorFor });
   }
+  registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 
   return app;

@@ -5425,6 +5425,62 @@
           "rules"
         ]
       },
+      "SpeechModelManifestInput": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether this server holds the pinned files and serves them."
+          },
+          "model": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "dtype": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string",
+            "description": "The path the files are served under, ending in a slash."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "number"
+                },
+                "sha256": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "sizeBytes",
+                "sha256"
+              ]
+            }
+          }
+        },
+        "required": [
+          "available",
+          "model",
+          "revision",
+          "dtype",
+          "license",
+          "base",
+          "files"
+        ]
+      },
       "UsageLineInput": {
         "type": "object",
         "properties": {
@@ -11235,6 +11291,64 @@
           "version",
           "createdAt",
           "rules"
+        ],
+        "additionalProperties": false
+      },
+      "SpeechModelManifest": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether this server holds the pinned files and serves them."
+          },
+          "model": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "dtype": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string",
+            "description": "The path the files are served under, ending in a slash."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "number"
+                },
+                "sha256": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "sizeBytes",
+                "sha256"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "available",
+          "model",
+          "revision",
+          "dtype",
+          "license",
+          "base",
+          "files"
         ],
         "additionalProperties": false
       },
@@ -21766,6 +21880,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/speech-models/manifest.json": {
+      "get": {
+        "summary": "Describe the speech model this server serves",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeechModelManifest"
                 }
               }
             }

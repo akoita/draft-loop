@@ -21,6 +21,9 @@ RUN chmod -R a+rX,go-w /app
 # on demand, so its native binaries, most of the graph's size, are left out.
 RUN pnpm install --frozen-lockfile --prod --filter "@draft-loop/api..." \
     && rm -rf node_modules/onnxruntime-node
+# The pinned speech model the web screen runs in the browser (#2199), fetched once at build and
+# checked file by file against its SHA-256; the api serves it from its own origin.
+RUN /app/node_modules/.bin/tsx packages/application/src/speech-model-install-command.ts /app/speech-models
 
 # Web stage: the screen's static files, built with its development dependencies.
 FROM node:24.22.1-bookworm-slim AS web
@@ -37,7 +40,8 @@ RUN pnpm install --frozen-lockfile --filter "@draft-loop/web..." \
 FROM node:24.22.1-bookworm-slim
 
 ENV NODE_ENV=production \
-    DRAFT_LOOP_WEB_ROOT=/app/apps/web/dist
+    DRAFT_LOOP_WEB_ROOT=/app/apps/web/dist \
+    DRAFT_LOOP_SPEECH_MODEL_DIR=/app/speech-models
 COPY --from=dependencies /app /app
 COPY --from=web /app/apps/web/dist /app/apps/web/dist
 
