@@ -77,6 +77,7 @@ export type ApplicationMaterialViolationCode =
   | "text_too_long"
   | "missing_question"
   | "missing_citation"
+  | "record_language"
   | "unknown_fact"
   | "fact_not_allowed"
   | "unsupported_number";
@@ -251,6 +252,43 @@ function supported(number: StatedNumber, sources: readonly string[]): boolean {
 }
 
 /**
+ * Wording that talks about the career record or the drafting rules instead of the candidate's
+ * work (#2218's second walk: "SQL is one of my listed skills", "without claiming more than the
+ * record shows"). A candidate would never send it.
+ */
+const recordLanguage =
+  /\b(?:my|the|your|on) record\b|\blisted (?:skills?|as)\b|\b(?:named|listed) skill\b|\bclaim(?:ing)? more than\b|\bcitations?\b/iu;
+
+/** The longest courtesy sentence a cover letter may open or close with, uncited. */
+export const maximumCourtesyCharacters = 300;
+
+/** Words of five letters or more in the record's facts, which a courtesy item may not reuse. */
+function factWords(facts: readonly ApplicationMaterialFact[]): Set<string> {
+  return new Set(
+    facts.flatMap((fact) =>
+      [...fact.value.toLowerCase().matchAll(/\p{L}{5,}/gu)].map((match) => match[0]),
+    ),
+  );
+}
+
+/**
+ * Whether an uncited item is a courtesy sentence: the first or last paragraph of a cover letter,
+ * short, with no number and no word taken from a fact. Requiring a citation there only padded it
+ * with facts the sentence did not state (#2218's second walk).
+ */
+function courtesyItem(
+  input: ApplicationMaterialContextInput,
+  count: number,
+  index: number,
+  item: ApplicationMaterialItem,
+): boolean {
+  if (input.kind !== "cover-letter" || (index !== 0 && index !== count - 1)) return false;
+  if (item.text.length > maximumCourtesyCharacters || numbersIn(item.text).length > 0) return false;
+  const words = factWords(input.facts);
+  return ![...item.text.toLowerCase().matchAll(/\p{L}{5,}/gu)].some((match) => words.has(match[0]));
+}
+
+/**
  * Every rule a draft breaks. A paragraph or talking point cites at least one fact of the context;
  * a fact outside the allowed set, even one the record holds, is refused; every number in the text
  * appears in a cited fact. A question may also repeat a number from the job's requirements.
@@ -291,8 +329,16 @@ export function applicationMaterialViolations(
         detail: "The item has no question.",
       });
     }
-    if (item.factIds.length === 0) {
+    if (item.factIds.length === 0 && !courtesyItem(input, items.length, index, item)) {
       violations.push({ code: "missing_citation", item: index, detail: "The item cites no fact." });
+    }
+    if (recordLanguage.test(item.text) || recordLanguage.test(item.question)) {
+      violations.push({
+        code: "record_language",
+        item: index,
+        detail:
+          "The item talks about the candidate's record, a list of skills or these rules; write it as the candidate would say it.",
+      });
     }
     const cited: ApplicationMaterialFact[] = [];
     for (const id of item.factIds) {

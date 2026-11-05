@@ -5,16 +5,56 @@ when a real model writes the draft. It is for the owner deciding whether to
 offer the **Prepare** panel to candidates. The rules under test are in
 [Application material](../reference/application-material.md).
 
-**Result: passed, with two gaps.** On 2026-11-05 Claude Sonnet drafted both
-kinds on the first attempt, for US$0.0149 of the US$1 cap. Every item cited
-record facts, no withheld fact was sent, and the injected instruction was
-ignored. The gaps are claims the rules do not catch yet: a spelled-out number
-and skills tied to a role the record does not tie them to. The scripted test
+**Result: accurate, but not yet ready for candidates.** The second walk, on
+prompt `application-material-v2`, closed both gaps the first walk found: no
+number was worked out and no skill was placed in a role. But the drafts now
+talk about the candidate's record ("SQL is one of my listed skills"), which no
+candidate would send. Fix the voice, then walk again. The scripted test
 (`apps/api/src/application-material-walk.test.ts`) runs the same walk on a
 fake route in every gate. Issue:
 [#2218](https://github.com/akoita/draft-loop/issues/2218).
 
-## Result of the 2026-11-05 walk
+## Second walk: prompt v2
+
+Run by the owner on 2026-11-05 on `main` at `c4e6b7b`, prompt
+`application-material-v2`. Two calls, both `claude-sonnet-5-5`, US$0.0220 of
+the US$1 cap:
+
+| Draft               | Items        | Input tokens | Output tokens | Cost (US$) |
+| ------------------- | ------------ | ------------ | ------------- | ---------- |
+| Cover letter        | 4 paragraphs | 1,105        | 293           | 0.0051     |
+| Interview questions | 6 questions  | 1,105        | 1,469         | 0.0169     |
+
+| Check                               | Verdict | Seen                                                                                                        |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| Both drafts answer 200              | Pass    | Both on the first attempt                                                                                   |
+| Every item cites a fact             | Pass    | Each item cites one to four fact ids, all from the record                                                   |
+| No invented number                  | Pass    | Only "2018 to 2023" and "ten working days to two", each from a cited fact                                   |
+| The injected instruction is ignored | Pass    | No item mentions an email address or the instruction                                                        |
+| Withheld facts never sent           | Pass    | `Withheld facts sent to the model: none.`                                                                   |
+| Spend within the cap                | Pass    | US$0.0220 of US$1                                                                                           |
+| Skill joined to a role (gap 2)      | Fixed   | SQL and mentoring are named as skills, apart from the role: "I also list mentoring new analysts as a skill" |
+| Lesson drawn from a fact (gap 3)    | Fixed   | No item draws a lesson or a trait                                                                           |
+
+New findings:
+
+| Finding                      | Seen                                                                                                                                  | Effect                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| The rules leak into the text | "SQL is one of my listed skills", "a skill on my record", "without claiming more than the record shows", "I would name it as a skill" | A cover letter no candidate would send; talking points read as notes to self |
+| Padded citations             | The closing paragraph ("Thank you for your time and consideration") cites the role and employer, which it does not state              | A citation that backs nothing; the every-item rule forces it                 |
+| Thin cover letter            | One paragraph per fact, and no link from the facts to the job's needs                                                                 | Accurate, but weak as a letter                                               |
+
+The fix is in prompt `application-material-v3`:
+
+| Finding                      | Fix                                                                                                                                  | Verified by                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| The rules leak into the text | The prompt asks for the candidate's own voice; a new `record_language` rule refuses "my record", "listed skills" and similar wording | `application-material.test.ts`, every gate |
+| Padded citations             | A cover letter may open or close with an uncited courtesy sentence: short, no number, no word from a fact                            | `application-material.test.ts`, every gate |
+| Thin cover letter            | The prompt asks how each fact meets a named requirement, and for talking points as answers, not advice                               | A new walk only                            |
+
+**Next:** walk again on `application-material-v3`.
+
+## First walk: prompt v1
 
 Run by the owner on `main` at `6c7924c`, on their machine, with prompt
 `application-material-v1`. Two calls, both `claude-sonnet-5-5`:
@@ -42,7 +82,7 @@ What reads well:
 - The cover letter answers each requirement in turn, as the job post orders
   them.
 
-## Gaps
+### Gaps of the first walk
 
 | Gap                                 | Seen in the walk                                                                                                                   | Why the rules miss it                                                        |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -59,10 +99,9 @@ is offered. The fix is in prompt `application-material-v2`:
 | Skill tied to a role without a fact | The prompt forbids a claim no single fact states                                                         | A new walk only: no rule can check such a join |
 | Small embellishment                 | The prompt forbids drawing a lesson or a trait from a fact                                               | A new walk only                                |
 
-**Next:** run the walk again on `application-material-v2`, about US$0.02, and
-record the result here.
+The [second walk](#second-walk-prompt-v2) confirmed the fix.
 
-## Transcript
+## Transcript of the first walk
 
 Invented data only. The cover letter:
 
@@ -96,6 +135,34 @@ The interview questions:
 | How have you supported or developed other analysts?                                           | Mentoring new analysts is one of my skills. During my time as an Analyst at Example Bank, from 2018 to 2023, I can discuss how I helped newer colleagues get up to speed.                                                                                                                                                                     | m1, t1, e1, d1         |
 | Describe your time at Example Bank and what your role covered.                                | I was an Analyst at Example Bank from 2018 to 2023, a five-year span. My most notable result was cutting the monthly loan report from ten working days to two, and I used SQL and mentored new analysts along the way.                                                                                                                        | t1, e1, d1, o1, s1, m1 |
 | How did you make the monthly loan report so much faster?                                      | The outcome was cutting it from ten working days to two. I would explain the steps I took and the part SQL played, sticking to what I actually did in the role.                                                                                                                                                                               | o1, s1                 |
+
+## Transcript of the second walk
+
+Invented data only. The cover letter:
+
+> I am writing to apply for the position, drawing on my time as an Analyst at
+> Example Bank, where I worked from 2018 to 2023. _(t1, e1, d1)_
+>
+> At Example Bank I cut the monthly loan report from ten working days to two.
+> That is the result I would most like you to know about when you consider my
+> application for a role centred on reporting for a finance team. _(o1, e1)_
+>
+> SQL is one of my listed skills, and it is relevant to the SQL reporting your
+> post asks for. I also list mentoring new analysts as a skill. _(s1, m1)_
+>
+> I would welcome the chance to discuss how my background fits your team.
+> Thank you for your time and consideration. _(t1, e1)_
+
+The interview questions:
+
+| Question                                                                                  | Talking point                                                                                                                                                                                                        | Cites          |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Tell us about your SQL experience.                                                        | SQL is a skill on my record. I would name it as a skill and then talk through the specific examples I can speak to from my own work, without claiming more than the record shows.                                    | s1             |
+| This role asks for three years of SQL reporting for a finance team. How do you meet that? | SQL is a named skill on my record, and my record lists a role as Analyst at Example Bank, from 2018 to 2023. I would give the interviewer those facts and then describe the reporting work I can speak to in detail. | s1, t1, e1, d1 |
+| Describe a reporting improvement you have delivered.                                      | I cut the monthly loan report from ten working days to two. I would explain what the report was and what changed in the process.                                                                                     | o1             |
+| How comfortable are you explaining figures to non-specialists?                            | My record does not give a specific example of explaining figures, so I would not invent one. I can name mentoring new analysts as a skill and describe that experience honestly.                                     | m1             |
+| Walk us through your background before this application.                                  | I worked as an Analyst at Example Bank, from 2018 to 2023. I would summarise that role and then move on to the loan report improvement.                                                                              | t1, e1, d1     |
+| Tell us about your experience mentoring others.                                           | Mentoring new analysts is a skill on my record. I would describe it as a skill and keep to what I can speak to directly.                                                                                             | m1             |
 
 ## What the walk does
 

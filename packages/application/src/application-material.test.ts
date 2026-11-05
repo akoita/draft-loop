@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
+  type ApplicationMaterialKind,
   type ApplicationMaterialPort,
   type ApplicationMaterialRequest,
   type ApplicationMaterialRequirement,
@@ -73,7 +74,7 @@ describe("applicationMaterialViolations", () => {
 
   it("refuses an uncited paragraph, an unknown or withheld fact, and an unsupported number", () => {
     const codes = applicationMaterialViolations(coverLetter, [
-      { question: "", text: "I love data.", factIds: [] },
+      { question: "", text: "I love data, as any Data Analyst does.", factIds: [] },
       { question: "", text: "Reach me by email.", factIds: ["f4"] },
       { question: "", text: "I know SQL.", factIds: ["f3", "nope"] },
       { question: "", text: "I cut report time by 45% over 4 years.", factIds: ["f2"] },
@@ -278,5 +279,58 @@ describe("numbers written in words", () => {
     expect(check("Your post asks for three years of SQL, my core skill.", ["s"])).toEqual([
       "The number three appears in no cited fact.",
     ]);
+  });
+});
+
+describe("the candidate's voice", () => {
+  const letter = { kind: "cover-letter" as const, facts, requirements, mayTransmit };
+  const codes = (
+    items: { question?: string; text: string; factIds: string[] }[],
+    kind: ApplicationMaterialKind = letter.kind,
+  ) =>
+    applicationMaterialViolations(
+      { ...letter, kind },
+      items.map((item) => ({ question: item.question ?? "", ...item })),
+    ).map((violation) => [violation.item, violation.code]);
+  const body = { text: "I write SQL every day.", factIds: ["f3"] };
+
+  it("lets a cover letter open and close with an uncited courtesy sentence", () => {
+    expect(
+      codes([
+        { text: "I am writing to apply for this position.", factIds: [] },
+        body,
+        { text: "Thank you for your time and consideration.", factIds: [] },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("still needs a citation in the middle, with a fact's words, with a number, or in interview questions", () => {
+    expect(codes([body, { text: "Thank you.", factIds: [] }, body])).toEqual([
+      [1, "missing_citation"],
+    ]);
+    expect(codes([{ text: "As an analyst I would fit well.", factIds: [] }, body])).toEqual([
+      [0, "missing_citation"],
+    ]);
+    expect(codes([body, { text: "I can start in two weeks.", factIds: [] }])).toEqual([
+      [1, "missing_citation"],
+      [1, "unsupported_number"],
+    ]);
+    expect(
+      codes(
+        [{ question: "Why us?", text: "Thank you for asking.", factIds: [] }],
+        "interview-questions",
+      ),
+    ).toEqual([[0, "missing_citation"]]);
+  });
+
+  it("refuses text about the record or the drafting rules", () => {
+    for (const text of [
+      "SQL is one of my listed skills.",
+      "SQL is a skill on my record.",
+      "I would not claim more than the record shows about SQL.",
+    ]) {
+      expect(codes([{ text, factIds: ["f3"] }]), text).toEqual([[0, "record_language"]]);
+    }
+    expect(codes([{ text: "I keep records of every SQL change.", factIds: ["f3"] }])).toEqual([]);
   });
 });
