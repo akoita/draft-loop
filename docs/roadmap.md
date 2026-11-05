@@ -421,6 +421,15 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   shares an installed stack's data, the API limits request rates, the owner
   token can be replaced, and the desktop hands a remembered token only to a
   server that proves it holds it; `server-v0.16.0` goes to staging.
+- **Learn your writing preferences from review**
+  ([milestone 74](https://github.com/akoita/draft-loop/milestone/74), #2249–#2253,
+  #2256, #2257, #2265, #1102, admitted 2026-11-05) makes memory explicit in
+  the [memory model](architecture/memory.md) and its domain catalog. DraftLoop
+  now suggests a writing preference when review choices repeat, and the person
+  accepts or dismisses it on Home, in the API or with `draft-loop preferences`.
+  It also keeps skipped interview answers in transcript evidence and adds a
+  content-free [tracing port](architecture/runtime-and-trust.md#run-traces). No
+  paid model run.
 
 ### Next — Guided career interview
 
@@ -520,11 +529,14 @@ join only within one role. Four capped
 fourth, on prompt `application-material-v4`, passed every check. Drafts are not
 stored.
 
+**Next:** usage level, in
+[milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or
+section says where it may be used: CV, interview only, or never said. This is
+separate from the tiers that control what reaches a provider, and interview
+questions will use only interview-allowed facts.
+
 The rest waits for CV quality parity (#1309):
 
-- **Usage level.** Each fact or section says where it may be used: CV,
-  interview only, or never said. This is separate from the tiers that control
-  what reaches a provider.
 - **Agent channel first.** An approved-facts read tool on the local MCP
   server (#1403) lets a candidate prepare inside Claude or another agent. It
   needs an amendment to ADR 0011 D17, because today's tools cover CV runs only.
@@ -611,6 +623,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-05 | Admitted two sprints with no paid model run. [Milestone 74](https://github.com/akoita/draft-loop/milestone/74) (#2249–#2253, #2256, #2257, #2265, #1102): the memory model, preferences suggested from review choices, interview transcript turns and a tracing port. [Milestone 75](https://github.com/akoita/draft-loop/milestone/75) (#2258–#2264, #1103): usage level on facts, pull request import, stored spans and retryable agent-channel errors. | The owner asked for the next milestones, each mixing a user-facing feature with platform work. Usage level and pull request import build features; they claim nothing about CV quality, so they do not wait for #1309. |
 | 2026-11-05 | Renamed the current stage from Local-first final to CV quality parity: its gate (#1309) is now the quality check before production. Closed the local-first release (#1308) as superseded by the v0.9.0 desktop client, closed the done interview rollup (#1030) and the desktop-only sensitivity issues (#874, #886, #894, #897), and closed the deferred milestone 32, leaving its other issues in the backlog.                                                                                                                                                      | The roadmap names the gate that still blocks production instead of a retired local-first release.                                                                                                                                                                                                                                                                                                                                                             |
 | 2026-11-05 | Admitted the Prepare an application sprint ([milestone 73](https://github.com/akoita/draft-loop/milestone/73), #2215–#2218): a Prepare panel drafts a cover letter or interview questions from the career record, each item citing facts, with consent, screening and a US$0.50 cap per request. Four capped [walks](evaluation/application-material-walk.md), US$0.089 in all, tightened the prompt to `application-material-v4`: numbers in words, joins only within one role, the candidate's own voice.                                                           | The owner asked for a user-facing feature each sprint. It reuses the career record and the interview's Claude route; it does not claim CV quality, so it does not wait for #1309.                                                                                                                                                                                                                                                                             |
 | 2026-11-05 | Tightened the critic before the next #1307 scoring run, with no paid model run: findings name their claim, section or requirement (`cli-critic-v11`, #2232), the omission check's slices run four at a time (#2233), and one malformed finding no longer discards a critique (#2234).                                                                                                                                                                                                                                                                                 | Targeted revisions can reach the block a critic finding names; the r12 run after the 2026-11-14 credit measures the effect.                                                                                                                                                                                                                                                                                                                                   |
