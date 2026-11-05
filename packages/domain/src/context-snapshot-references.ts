@@ -1,3 +1,4 @@
+// Owns memory kind `working-context`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import type {
   CanonicalCandidateProfileReference,
   CanonicalCandidateProfileReferenceInput,

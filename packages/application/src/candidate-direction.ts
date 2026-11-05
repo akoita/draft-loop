@@ -1,3 +1,4 @@
+// Owns memory kind `candidate-direction`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import type { ContextSnapshot } from "@draft-loop/domain";
 import { type CandidateDirection, normalizeCandidateDirectionText } from "@draft-loop/orchestrator";
 

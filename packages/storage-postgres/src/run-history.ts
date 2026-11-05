@@ -1,3 +1,4 @@
+// Owns memory kind `run-history`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import type {
   AuditEventInput,
   DecisionRecord,
