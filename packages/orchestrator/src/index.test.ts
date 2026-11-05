@@ -24,12 +24,14 @@ import {
   type CoverageJudgementPlan,
   type CoverageJudgementPlanner,
   type Critique,
+  createMemoryRunTracer,
   createOrchestrationEngine,
   createStorageRunStore,
   type ExecutionRecord,
   hasCompletedIndependentCritique,
   InMemoryRunStore,
   type RunSnapshot,
+  type RunTracer,
   resolveSnapshotPayload,
 } from "./index.js";
 
@@ -191,6 +193,7 @@ function engineFixture(
     readonly store?: InMemoryRunStore;
     readonly now?: () => string;
     readonly coverageJudgement?: CoverageJudgementPlanner;
+    readonly tracer?: RunTracer;
     readonly retrieval?: {
       readonly queryEvidence: (
         query: string,
@@ -213,6 +216,7 @@ function engineFixture(
     now: options.now ?? (() => timestamp),
     ...(options.coverageJudgement ? { coverageJudgement: options.coverageJudgement } : {}),
     ...(options.retrieval ? { retrieval: options.retrieval as never } : {}),
+    ...(options.tracer ? { tracer: options.tracer } : {}),
   });
   return { engine, author, critic, store };
 }
@@ -841,6 +845,72 @@ describe("durable orchestration", () => {
       ]),
     );
     expect(JSON.stringify(completed)).not.toContain("private provider output-token details");
+  });
+
+  it("traces a run as content-free spans per advance, attempt and retrieval (#1102)", async () => {
+    const tracer = createMemoryRunTracer();
+    let attempts = 0;
+    const { engine } = engineFixture({
+      tracer,
+      retrieval: { queryEvidence: async () => [] },
+      author: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("candidate secret text"), {
+            code: "invalid-response",
+            retryable: false,
+            failureStage: "output-token-budget-exceeded",
+          });
+        }
+        return execution(artifact(attempts), "anthropic", "author-test");
+      },
+    });
+
+    await engine.start(request());
+    await engine.requestRevision("run-1");
+    await engine.resume("run-1", { context: context() });
+
+    const tree = tracer.spans().map(({ id, parentId, name, attributes, status }) => ({
+      id,
+      parentId,
+      name,
+      step: attributes["draftloop.step"],
+      attempt: attributes["draftloop.attempt"],
+      status,
+    }));
+    const agents = tree.filter((span) => span.name === "invoke_agent");
+    expect(agents.map(({ step, attempt, status }) => [step, attempt, status])).toEqual([
+      ["author", 1, "error"],
+      ["author", 2, "ok"],
+      ["critic", 1, "ok"],
+      ["revision", 1, "ok"],
+      ["critic", 1, "ok"],
+    ]);
+    const workflows = tree.filter((span) => span.name === "invoke_workflow");
+    expect(workflows).toHaveLength(2);
+    expect(workflows.every((span) => span.parentId === null && span.status === "ok")).toBe(true);
+    expect(agents.every((span) => workflows.some((w) => w.id === span.parentId))).toBe(true);
+    const retrievals = tree.filter((span) => span.name === "retrieve_evidence");
+    expect(retrievals.map((span) => agents.some((a) => a.id === span.parentId))).toEqual(
+      agents.map(() => true),
+    );
+
+    const failed = tracer.spans().find((span) => span.status === "error");
+    expect(failed?.attributes).toMatchObject({
+      "error.type": "invalid-response",
+      "draftloop.failure_stage": "output-token-budget-exceeded",
+    });
+    const completed = tracer
+      .spans()
+      .find((span) => span.attributes["draftloop.step"] === "author" && span.status === "ok");
+    expect(completed?.attributes).toMatchObject({
+      "gen_ai.provider.name": "anthropic",
+      "gen_ai.request.model": "author-test",
+      "gen_ai.usage.input_tokens": 10,
+      "gen_ai.usage.output_tokens": 20,
+      "draftloop.estimated_usd": 0.01,
+    });
+    expect(JSON.stringify(tracer.spans())).not.toContain("candidate secret text");
   });
 
   it("normalizes and persists a repeated output-token budget failure for a safe retry", async () => {

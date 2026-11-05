@@ -121,6 +121,12 @@ import {
   slimSnapshotPayload,
   slimSnapshotWritesDefault,
 } from "./run-snapshot-slim.js";
+import {
+  executionSpanAttributes,
+  noopRunTracer,
+  type RunSpan,
+  type RunTracer,
+} from "./run-tracing.js";
 import { RunTransitionError } from "./run-transition-error.js";
 import { hasUnpricedMeteredCall, meteredCalls } from "./unpriced-cost.js";
 
@@ -151,6 +157,17 @@ export {
 export { COVERAGE_LOST_CODE, lostCoverageFindings } from "./lost-coverage.js";
 export { type RetrievedEvidenceRef, retrievedEvidenceRefs } from "./retrieved-evidence-refs.js";
 export type { RevisionRequirementCoverage } from "./revision-coverage.js";
+export {
+  contentFreeSpanAttributes,
+  createMemoryRunTracer,
+  genAiSemanticConventionsVersion,
+  noopRunTracer,
+  type RecordedRunSpan,
+  type RunSpan,
+  type RunSpanAttributes,
+  type RunSpanName,
+  type RunTracer,
+} from "./run-tracing.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type ExecutionStatus = "completed" | "failed";
@@ -590,6 +607,8 @@ export interface OrchestrationEngineOptions {
   readonly coverageJudgement?: CoverageJudgementPlanner;
   /** Plans the application before the first draft; absent keeps the run as it is without a plan. */
   readonly planner?: ApplicationPlanner;
+  /** Receives content-free spans per run, attempt and retrieval (#1102); records nothing when absent. */
+  readonly tracer?: RunTracer;
 }
 
 export interface StorageRunStore extends RunStore {}
@@ -1511,6 +1530,7 @@ export function createOrchestrationEngine(
   options: OrchestrationEngineOptions,
 ): OrchestrationEngine & OrchestrationPort {
   const clock = options.now ?? (() => new Date().toISOString());
+  const tracer = options.tracer ?? noopRunTracer;
   const contextsByRunId = new Map<string, ContextSnapshot>();
 
   const save = async (snapshot: RunSnapshot): Promise<RunSnapshot> => {
@@ -1761,6 +1781,7 @@ export function createOrchestrationEngine(
     context: ContextSnapshot,
     signal?: AbortSignal,
     retryFeedback?: AuthorRetryFeedback,
+    workflowSpan?: RunSpan,
   ): Promise<RunSnapshot> => {
     let snapshot = initialSnapshot;
     if (snapshot.currentStep === null) return snapshot;
@@ -1908,11 +1929,30 @@ export function createOrchestrationEngine(
     }
     const id = executionId(snapshot.runId, snapshot.round, step, attempt);
     await emit(snapshot, "step.started", { step, executionId: id });
+    const agentSpan = tracer.startSpan(
+      "invoke_agent",
+      {
+        "gen_ai.operation.name": "invoke_agent",
+        "draftloop.run.id": snapshot.runId,
+        "draftloop.round": snapshot.round,
+        "draftloop.step": step,
+        "draftloop.attempt": attempt,
+      },
+      workflowSpan,
+    );
     let completedExecutionSaved = false;
     try {
       if (step === "critic" && snapshot.artifact === null) {
         throw new Error("critic requires an artifact");
       }
+      const retrievalSpan =
+        options.retrieval === undefined
+          ? undefined
+          : tracer.startSpan(
+              "retrieve_evidence",
+              { "draftloop.run.id": snapshot.runId },
+              agentSpan,
+            );
       const retrievedEvidence = options.retrieval
         ? await options.retrieval
             .queryEvidence(
@@ -1920,10 +1960,17 @@ export function createOrchestrationEngine(
               { workspaceId: snapshot.workspaceId },
             )
             .catch((error: unknown) => {
-              if (context.candidateKnowledgeSelection !== undefined) throw error;
+              if (context.candidateKnowledgeSelection !== undefined) {
+                retrievalSpan?.end("error");
+                throw error;
+              }
               return [];
             })
         : undefined;
+      retrievalSpan?.setAttributes({
+        "draftloop.retrieved_chunks": retrievedEvidence?.length ?? 0,
+      });
+      retrievalSpan?.end("ok");
 
       const planner = options.planner;
       if (planner?.applies(context) === true && needsApplicationPlan(snapshot)) {
@@ -1945,7 +1992,10 @@ export function createOrchestrationEngine(
         });
         snapshot = planned.snapshot;
         const planReason = planned.exhausted ?? budgetReason(snapshot, clock());
-        if (planReason !== undefined) return exhaust(snapshot, planReason, clock());
+        if (planReason !== undefined) {
+          agentSpan.end("error");
+          return exhaust(snapshot, planReason, clock());
+        }
       }
       const applicationPlan =
         snapshot.applicationPlan === undefined || snapshot.applicationPlan === null
@@ -2066,6 +2116,8 @@ export function createOrchestrationEngine(
       };
       await options.store.saveExecution(record);
       completedExecutionSaved = true;
+      agentSpan.setAttributes(executionSpanAttributes(record));
+      agentSpan.end("ok");
       const updated = {
         ...snapshot,
         executionHistory: [...snapshot.executionHistory, record],
@@ -2101,7 +2153,10 @@ export function createOrchestrationEngine(
       if (completedExecutionSaved) throw error;
       // A call refused before it started billed nothing: the run stops on its budget.
       const refusedForCost = callCostBudgetReason(error);
-      if (refusedForCost !== undefined) return exhaust(snapshot, refusedForCost, clock());
+      if (refusedForCost !== undefined) {
+        agentSpan.end("error");
+        return exhaust(snapshot, refusedForCost, clock());
+      }
       const failureNow = clock();
       // A failed plan review names the critic's model but stays a failure of this author step.
       const roleFailure = providerFailure(
@@ -2121,7 +2176,11 @@ export function createOrchestrationEngine(
       );
       const failedCall = failedProviderCall(error, roleFailure);
       const failure: RunError = { ...roleFailure, step, failedCall };
-      if (failure.code === "usage-limit") return pauseForUsageLimit(snapshot, failure, failureNow);
+      if (failure.code === "usage-limit") {
+        agentSpan.setAttributes({ "error.type": failure.code });
+        agentSpan.end("error");
+        return pauseForUsageLimit(snapshot, failure, failureNow);
+      }
       // A rejected response was still billed; the run's cost and its cost limit count it.
       const billedCost = failedAttemptCost(error);
       const failedExecution: ExecutionRecord = {
@@ -2147,6 +2206,14 @@ export function createOrchestrationEngine(
         failedCall,
       };
       await options.store.saveExecution(failedExecution);
+      agentSpan.setAttributes({
+        ...executionSpanAttributes(failedExecution),
+        "error.type": failure.code,
+        ...(failure.failureStage === undefined
+          ? {}
+          : { "draftloop.failure_stage": failure.failureStage }),
+      });
+      agentSpan.end("error");
       return recordFailure(
         {
           ...snapshot,
@@ -2382,6 +2449,27 @@ export function createOrchestrationEngine(
       current = retried.snapshot;
       retryFeedback = retried.feedback;
     }
+    const workflowSpan = tracer.startSpan("invoke_workflow", {
+      "gen_ai.operation.name": "invoke_workflow",
+      "draftloop.run.id": current.runId,
+    });
+    try {
+      return await advanceSteps(current, context, retryFeedback, workflowSpan, signal);
+    } catch (error) {
+      workflowSpan.end("error");
+      throw error;
+    }
+  };
+
+  const advanceSteps = async (
+    start: RunSnapshot,
+    context: ContextSnapshot,
+    firstRetryFeedback: AuthorRetryFeedback | undefined,
+    workflowSpan: RunSpan,
+    signal?: AbortSignal,
+  ): Promise<RunSnapshot> => {
+    let current = start;
+    let retryFeedback = firstRetryFeedback;
     for (;;) {
       while (
         current.currentStep !== null &&
@@ -2395,7 +2483,7 @@ export function createOrchestrationEngine(
             ? retryFeedback
             : undefined;
         try {
-          current = await executeStep(current, context, signal, stepRetryFeedback);
+          current = await executeStep(current, context, signal, stepRetryFeedback, workflowSpan);
         } finally {
           retryFeedback = undefined;
         }
@@ -2416,6 +2504,8 @@ export function createOrchestrationEngine(
       current = retried.snapshot;
       retryFeedback = retried.feedback;
     }
+    workflowSpan.setAttributes({ "draftloop.round": current.round });
+    workflowSpan.end(current.state === "provider-error" ? "error" : "ok");
     return immutable(current);
   };
 
