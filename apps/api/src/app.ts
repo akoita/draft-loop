@@ -31,6 +31,10 @@ import { registerApplicationLifecycleRoutes } from "./application-lifecycle-rout
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
+import {
+  type CareerInterviewParts,
+  registerCareerInterviewRoutes,
+} from "./career-interview-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -125,6 +129,8 @@ export interface ApiOptions {
     readonly workJournal?: WorkJournalService;
     /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
     readonly sourceEvidenceKinds?: SourceEvidenceKinds;
+    /** The guided career interview (#1030); without it those routes are not served. */
+    readonly careerInterview?: CareerInterviewParts;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -471,6 +477,26 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
+        ...(knowledgeIntake === undefined ||
+        application.sensitivityRules === undefined ||
+        application.sourceEvidenceKinds === undefined
+          ? {}
+          : {
+              knowledge: {
+                intake: knowledgeIntake,
+                rules: application.sensitivityRules,
+                evidenceKinds: application.sourceEvidenceKinds,
+              },
+            }),
+        ...(screening === undefined ? {} : { screening }),
+      });
+    }
+    if (application.careerInterview !== undefined) {
+      registerCareerInterviewRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        interview: application.careerInterview,
+        ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(knowledgeIntake === undefined ||
         application.sensitivityRules === undefined ||
         application.sourceEvidenceKinds === undefined

@@ -38,6 +38,7 @@ export type TenantApplication = Required<
     | "jobPageFetcher"
     | "workJournal"
     | "sourceEvidenceKinds"
+    | "careerInterview"
   >
 > &
   Pick<
@@ -48,6 +49,7 @@ export type TenantApplication = Required<
     | "profileDerivations"
     | "workJournal"
     | "sourceEvidenceKinds"
+    | "careerInterview"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -252,6 +254,20 @@ export function registerTenantApplications(
       if (kinds === undefined) throw new TenantContextMissingError();
       return kinds;
     }),
+    // Read per request: the tenant's sessions, and the deployment's Claude route and ceiling.
+    careerInterview: {
+      sessions: forwarding(() => {
+        const interview = current().careerInterview;
+        if (interview === undefined) throw new TenantContextMissingError();
+        return interview.sessions;
+      }),
+      get route() {
+        return current().careerInterview?.route;
+      },
+      get allowProviderData() {
+        return current().careerInterview?.allowProviderData ?? false;
+      },
+    },
     ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };
 }
