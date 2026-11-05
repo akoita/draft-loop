@@ -34,7 +34,11 @@ flowchart LR
 
 Each paragraph, or each question with its talking point, must pass all rules:
 
-- It cites at least one fact id.
+- It cites at least one fact id. The one exception is a cover letter's first
+  or last paragraph when it is a courtesy sentence: at most 300 characters,
+  no number, and no word of five letters or more taken from a fact.
+- It speaks as the candidate. Text about "my record", "listed skills",
+  "citations" or claiming "more than" the record is `record_language`.
 - Every cited id is a fact in the context. An id the record holds but the
   candidate did not allow is `fact_not_allowed`; any other is `unknown_fact`.
 - Every number in the text appears in a cited fact, in digits or in words:
@@ -84,7 +88,6 @@ rest of the page keeps working. The panel lives in
 
 The [application material walk](../evaluation/application-material-walk.md)
 drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
-runs only with the owner's go. Its 2026-11-05 run passed with two gaps: a number
-written in words, now refused by the number rule, and a skill joined to a role,
-which prompt `application-material-v2` forbids. No rule can check such a join,
-so the walk is how it is verified.
+runs only with the owner's go. Its second run, on prompt
+`application-material-v2`, made no unsupported claim but wrote about "my
+record" in the candidate's voice; a voice fix is next.
