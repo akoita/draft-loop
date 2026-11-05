@@ -1,6 +1,7 @@
 /**
  * Agent tokens (#2147, #2158): credentials a coding agent holds instead of the owner token. Each
- * one reaches only the work journal of one workspace and can be revoked on its own. A store keeps
+ * one reaches only the work journal of one workspace, expires, and can be revoked on its own (the
+ * audit in `docs/security/agent-token-audit.md`). A store keeps
  * only a SHA-256 hash of the secret, never the secret itself. This module holds the port and an
  * in-memory implementation for tests and single-process stacks; Postgres implements it too.
  */
@@ -13,6 +14,8 @@ export interface AgentTokenRecord {
   /** Who holds it, such as "Claude Code on my laptop"; 1 to 120 characters. */
   readonly label: string;
   readonly createdAt: string;
+  /** When the token stops working; after `createdAt`, at most a year later. */
+  readonly expiresAt: string;
   readonly revokedAt?: string;
 }
 
@@ -42,6 +45,27 @@ export class AgentTokenStoreError extends Error {
   }
 }
 
+/** How long a token lives when its issuer names no lifetime, and the longest it may live. */
+export const defaultAgentTokenLifetimeDays = 90;
+export const maximumAgentTokenLifetimeDays = 365;
+/** The most tokens one workspace may hold that are neither revoked nor expired. */
+export const maximumActiveAgentTokens = 20;
+
+const dayMs = 86_400_000;
+
+/**
+ * When a token stored before tokens expired stops working: the default lifetime after it was
+ * issued (#2147's tokens carry no expiry of their own).
+ */
+export function legacyAgentTokenExpiry(createdAt: string): string {
+  return new Date(Date.parse(createdAt) + defaultAgentTokenLifetimeDays * dayMs).toISOString();
+}
+
+/** Whether a token still works at `at`: neither revoked nor past its expiry. */
+export function isAgentTokenActive(token: AgentTokenRecord, at: Date): boolean {
+  return token.revokedAt === undefined && Date.parse(token.expiresAt) > at.getTime();
+}
+
 const idPattern = /^dlat_[A-Za-z0-9_-]{8,64}$/u;
 const hashPattern = /^[0-9a-f]{64}$/u;
 
@@ -56,6 +80,9 @@ export function requireAgentTokenInsert(token: AgentTokenInsert): AgentTokenInse
     label.length < 1 ||
     label.length > 120 ||
     Number.isNaN(Date.parse(token.createdAt)) ||
+    !(Date.parse(token.expiresAt) > Date.parse(token.createdAt)) ||
+    Date.parse(token.expiresAt) - Date.parse(token.createdAt) >
+      maximumAgentTokenLifetimeDays * dayMs ||
     token.revokedAt !== undefined
   ) {
     throw new AgentTokenStoreError("invalid_token", "The agent token is malformed.");

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
+import { type AgentTokenStore, isAgentTokenActive } from "@draft-loop/storage/agent-tokens";
 import type { FastifyRequest } from "fastify";
 
 /**
@@ -39,15 +39,19 @@ export type AgentAuthentication =
   | { readonly outcome: "agent"; readonly id: string; readonly workspaceId: string }
   | { readonly outcome: "unauthenticated"; readonly reason: string };
 
-/** Looks a presented agent token up by its hash; a revoked or unknown one is refused. */
+/** Looks a presented agent token up by its hash; a revoked, expired or unknown one is refused. */
 export async function authenticateAgentToken(
   store: AgentTokenStore,
   token: string,
+  now: Date = new Date(),
 ): Promise<AgentAuthentication> {
   const found = await store.findByHash(agentTokenHash(token));
   if (found === undefined) return { outcome: "unauthenticated", reason: "unknown agent token" };
   if (found.revokedAt !== undefined) {
     return { outcome: "unauthenticated", reason: "revoked agent token" };
+  }
+  if (!isAgentTokenActive(found, now)) {
+    return { outcome: "unauthenticated", reason: "expired agent token" };
   }
   return { outcome: "agent", id: found.id, workspaceId: found.workspaceId };
 }

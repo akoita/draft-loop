@@ -83,8 +83,10 @@ Windows.
 
 ### Revoke an agent token
 
-The owner lists and revokes agent tokens through the API; a revoked token is
-refused at once and the others keep working:
+An agent token expires 90 days after it is issued; run `init` again to issue
+a new one. A workspace holds at most 20 active tokens. The owner lists and
+revokes agent tokens through the API; a revoked token is refused at once and
+the others keep working:
 
 ```text
 export DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)"
@@ -92,8 +94,9 @@ curl -s -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" http://127.0.0.1:808
 curl -s -X DELETE -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" http://127.0.0.1:8080/v1/workspaces/owner/agent-tokens/dlat_ID
 ```
 
-Replace `dlat_ID` with the id the list shows. Run `init` again to issue a new
-one.
+Replace `dlat_ID` with the id the list shows; `active` is false once a token
+is revoked or expired. Run `init` again to issue a new one. The
+[agent token audit](../security/agent-token-audit.md) lists every rule.
 
 ### The `/log-work` skill and the Stop hook
 

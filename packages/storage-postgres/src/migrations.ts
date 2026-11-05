@@ -1,3 +1,4 @@
+import { agentTokenExpiryMigration } from "./agent-token-expiry-migration.js";
 import { agentTokensMigration } from "./agent-tokens-migration.js";
 import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import { careerInterviewMigration } from "./career-interview-migration.js";
@@ -789,6 +790,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   sourceEvidenceKindsMigration,
   agentTokensMigration,
   careerInterviewMigration,
+  agentTokenExpiryMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

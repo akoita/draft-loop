@@ -1,10 +1,15 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
 import { createWorkJournalService } from "@draft-loop/application/work-journal";
-import { createMemoryAgentTokenStore } from "@draft-loop/storage/agent-tokens";
+import {
+  type AgentTokenStore,
+  createMemoryAgentTokenStore,
+  maximumActiveAgentTokens,
+} from "@draft-loop/storage/agent-tokens";
 import { createMemoryWorkJournalNoteStore } from "@draft-loop/storage/work-journal-notes";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { agentTokenHash } from "./agent-token-auth.js";
 import { buildApi } from "./app.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -33,11 +38,16 @@ const service = {
 } as unknown as ApplicationService;
 
 let app: FastifyInstance;
+let store: AgentTokenStore;
+let logs: string[];
 
 beforeEach(async () => {
+  store = createMemoryAgentTokenStore();
+  logs = [];
   app = await buildApi({
     ownerToken,
-    agentTokens: createMemoryAgentTokenStore(),
+    logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
+    agentTokens: store,
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -63,12 +73,15 @@ afterEach(async () => {
   await app.close();
 });
 
-async function issue(label = "Claude Code"): Promise<{ id: string; token: string }> {
+async function issue(
+  label = "Claude Code",
+  expiresInDays?: number,
+): Promise<{ id: string; token: string; created_at: string; expires_at: string }> {
   const issued = await app.inject({
     method: "POST",
     url: tokens,
     headers: owner,
-    payload: { label },
+    payload: { label, ...(expiresInDays === undefined ? {} : { expires_in_days: expiresInDays }) },
   });
   expect(issued.statusCode).toBe(201);
   return issued.json();
@@ -79,11 +92,21 @@ describe("agent tokens", () => {
     const issued = await issue();
     expect(issued.token).toMatch(/^dlagent_[A-Za-z0-9_-]{43}$/u);
     expect(issued.id).toMatch(/^dlat_/u);
+    // 90 days by default.
+    expect(Date.parse(issued.expires_at) - Date.parse(issued.created_at)).toBe(90 * 86_400_000);
 
     const listed = await app.inject({ method: "GET", url: tokens, headers: owner });
     expect(listed.statusCode).toBe(200);
     expect(listed.json()).toEqual({
-      tokens: [{ id: issued.id, label: "Claude Code", created_at: expect.any(String) }],
+      tokens: [
+        {
+          id: issued.id,
+          label: "Claude Code",
+          created_at: issued.created_at,
+          expires_at: issued.expires_at,
+          active: true,
+        },
+      ],
     });
     expect(listed.body).not.toContain(issued.token);
 
@@ -193,7 +216,7 @@ describe("agent tokens", () => {
     expect(listedTokens).toEqual(
       expect.arrayContaining([
         expect.not.objectContaining({ id: first.id }),
-        expect.objectContaining({ id: first.id, revoked_at: expect.any(String) }),
+        expect.objectContaining({ id: first.id, revoked_at: expect.any(String), active: false }),
       ]),
     );
   });
@@ -205,5 +228,72 @@ describe("agent tokens", () => {
       headers: { authorization: `Bearer dlagent_${"x".repeat(43)}` },
     });
     expect(unknown.statusCode).toBe(401);
+  });
+
+  it("live for the days asked, at most a year, and are refused once expired", async () => {
+    const week = await issue("Short", 7);
+    expect(Date.parse(week.expires_at) - Date.parse(week.created_at)).toBe(7 * 86_400_000);
+    for (const days of [0, 366]) {
+      const refused = await app.inject({
+        method: "POST",
+        url: tokens,
+        headers: owner,
+        payload: { label: "Too long", expires_in_days: days },
+      });
+      expect(refused.statusCode, `${days} days`).toBe(400);
+    }
+
+    // A token issued long ago whose expiry has passed, as the store would hold it.
+    const secret = `dlagent_${"e".repeat(43)}`;
+    await store.insert({
+      id: "dlat_expired0001",
+      workspaceId: "owner",
+      label: "Expired",
+      createdAt: "2025-01-01T00:00:00.000Z",
+      expiresAt: "2025-02-01T00:00:00.000Z",
+      secretHash: agentTokenHash(secret),
+    });
+    const expired = await app.inject({
+      method: "GET",
+      url: notes,
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    expect(expired.statusCode).toBe(401);
+    expect(logs.join("\n")).toContain("expired agent token");
+    const listed = (await app.inject({ method: "GET", url: tokens, headers: owner })).json();
+    expect(listed.tokens).toContainEqual(
+      expect.objectContaining({ id: "dlat_expired0001", active: false }),
+    );
+  });
+
+  it(`cap a workspace at ${maximumActiveAgentTokens} active tokens; a revoked one frees a place`, async () => {
+    const issued = [];
+    for (let index = 0; index < maximumActiveAgentTokens; index += 1) {
+      issued.push(await issue(`Agent ${index}`));
+    }
+    const over = await app.inject({
+      method: "POST",
+      url: tokens,
+      headers: owner,
+      payload: { label: "One too many" },
+    });
+    expect(over.statusCode).toBe(409);
+    expect(over.json().error.code).toBe("agent_token_limit");
+    await app.inject({ method: "DELETE", url: `${tokens}/${issued[0]?.id}`, headers: owner });
+    await issue("Replacement");
+  });
+
+  it("log each accepted request with the token's id, never its secret", async () => {
+    const { id, token } = await issue();
+    const listed = await app.inject({
+      method: "GET",
+      url: notes,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(listed.statusCode).toBe(200);
+    const accepted = logs.filter((line) => line.includes("agent token accepted"));
+    expect(accepted).toHaveLength(1);
+    expect(accepted[0]).toContain(id);
+    expect(logs.join("\n")).not.toContain(token);
   });
 });

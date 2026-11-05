@@ -604,14 +604,24 @@
           "created_at": {
             "type": "string"
           },
+          "expires_at": {
+            "type": "string",
+            "description": "When the token stops working."
+          },
           "revoked_at": {
             "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "False once the token is revoked or expired."
           }
         },
         "required": [
           "id",
           "label",
-          "created_at"
+          "created_at",
+          "expires_at",
+          "active"
         ]
       },
       "IssuedAgentTokenInput": {
@@ -626,8 +636,16 @@
           "created_at": {
             "type": "string"
           },
+          "expires_at": {
+            "type": "string",
+            "description": "When the token stops working."
+          },
           "revoked_at": {
             "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "False once the token is revoked or expired."
           },
           "token": {
             "type": "string",
@@ -638,6 +656,8 @@
           "id",
           "label",
           "created_at",
+          "expires_at",
+          "active",
           "token"
         ]
       },
@@ -7056,14 +7076,24 @@
           "created_at": {
             "type": "string"
           },
+          "expires_at": {
+            "type": "string",
+            "description": "When the token stops working."
+          },
           "revoked_at": {
             "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "False once the token is revoked or expired."
           }
         },
         "required": [
           "id",
           "label",
-          "created_at"
+          "created_at",
+          "expires_at",
+          "active"
         ],
         "additionalProperties": false
       },
@@ -7079,8 +7109,16 @@
           "created_at": {
             "type": "string"
           },
+          "expires_at": {
+            "type": "string",
+            "description": "When the token stops working."
+          },
           "revoked_at": {
             "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "False once the token is revoked or expired."
           },
           "token": {
             "type": "string",
@@ -7091,6 +7129,8 @@
           "id",
           "label",
           "created_at",
+          "expires_at",
+          "active",
           "token"
         ],
         "additionalProperties": false
@@ -20695,7 +20735,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for a coding agent that reaches only this workspace's work journal intake (record_work) and title listing (list_work). The secret is in this answer only.",
+        "description": "A token for a coding agent that reaches only this workspace's work journal intake (record_work) and title listing (list_work). It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -20708,6 +20748,12 @@
                     "minLength": 1,
                     "maxLength": 120,
                     "description": "Who holds it, such as the agent's name."
+                  },
+                  "expires_in_days": {
+                    "description": "Days until the token stops working; 90 by default.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
                   }
                 },
                 "required": [
@@ -20759,12 +20805,22 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       },
       "get": {
         "summary": "List agent tokens",
-        "description": "The workspace's agent tokens, newest first, without their secrets.",
+        "description": "The workspace's agent tokens, newest first, without their secrets; `active` is false once one is revoked or expired.",
         "parameters": [
           {
             "schema": {
@@ -20818,6 +20874,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -20861,6 +20927,16 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Default Response",
             "content": {
               "application/json": {
