@@ -329,27 +329,45 @@ describe("critique parsing", () => {
     expect(critique).not.toHaveProperty("coverageJudgements");
   });
 
-  it("still rejects invalid findings as before", () => {
+  it("still rejects a missing findings list, and a list with no valid finding", () => {
     const withJudgements = { coverageJudgements: [judgement] };
     expect(() => parseCritique({ ...withJudgements } as never)).toThrow(CliUserError);
     expect(() => parseCritique({ findings: "x", ...withJudgements } as never)).toThrow(
       "invalid findings list",
     );
-    expect(() => parseCritique({ findings: [1], ...withJudgements } as never)).toThrow(
-      "invalid finding.",
-    );
     expect(() =>
-      parseCritique({ findings: [{ ...finding, id: " " }], ...withJudgements } as never),
-    ).toThrow("incomplete finding");
-    expect(() =>
-      parseCritique({
-        findings: [{ ...finding, message: "x".repeat(maximumCritiqueMessageCharacters + 1) }],
-      } as never),
-    ).toThrow("excessively long");
-    expect(() =>
-      parseCritique({
-        findings: Array.from({ length: maximumCritiqueFindings + 1 }, () => finding),
-      } as never),
-    ).toThrow("too many findings");
+      parseCritique({ findings: [1, { ...finding, id: " " }], ...withJudgements } as never),
+    ).toThrow("no valid finding");
+  });
+
+  it("drops a malformed finding and keeps the others (#2234)", () => {
+    const critique = parseCritique({
+      findings: [1, null, { ...finding, id: " " }, { ...finding, message: 3 }, finding],
+    } as never);
+
+    expect(critique.findings).toEqual([finding]);
+  });
+
+  it("cuts a message over the limit instead of refusing the critique (#2234)", () => {
+    const words = "word ".repeat(maximumCritiqueMessageCharacters);
+    const critique = parseCritique({ findings: [{ ...finding, message: words }] } as never);
+    const message = critique.findings[0]?.message ?? "";
+
+    expect(message.length).toBeLessThanOrEqual(maximumCritiqueMessageCharacters);
+    expect(message.endsWith("word…")).toBe(true);
+  });
+
+  it("keeps errors first when the list is over the cap (#2234)", () => {
+    const warnings = Array.from({ length: maximumCritiqueFindings }, (_, index) => ({
+      ...finding,
+      id: `w${index}`,
+      severity: "warning",
+    }));
+    const error = { ...finding, id: "e1", severity: "error" };
+    const critique = parseCritique({ findings: [...warnings, error] } as never);
+
+    expect(critique.findings).toHaveLength(maximumCritiqueFindings);
+    expect(critique.findings[0]?.id).toBe("e1");
+    expect(critique.findings.at(-1)?.id).toBe(`w${maximumCritiqueFindings - 2}`);
   });
 });

@@ -707,6 +707,10 @@ Rules that apply to the whole critique:
   `emphasis-theme-buried`, an error when the job's top-priority theme is missing
   from the summary and core areas and the evidence supports it. The critic
   contract downgrades any other emphasis error to a warning.
+- **A format slip costs one finding, not the critique.** The contract cuts a
+  message over 400 characters, drops a malformed finding, and keeps errors
+  first when the list passes 16. It refuses the critique only when no finding
+  is valid.
 - **Themes come from the plan,** or from the job's requirements and
   responsibilities weighted by priority and repetition when there is no plan.
 - **Evidence arrives as a compact table** (`reference-table-v2`, #1986). A claim
