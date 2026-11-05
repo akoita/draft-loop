@@ -19,9 +19,10 @@ import * as criticPrompt from "./critic-adjudication.js";
 import { withApplicationPlan } from "./critic-application-plan.js";
 import {
   criticCoverageJudgementParts,
-  critiqueOutputSchemaWithCoverageJudgements,
+  critiqueOutputSchemaFor,
   invalidCritiqueError,
   parseCritique,
+  withResolvableFindingTargets,
 } from "./critic-critique-contract.js";
 import { capBlockingOmissions, isOmissionFindingCode } from "./critic-omission.js";
 import {
@@ -114,7 +115,7 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
           systemPrompt: prefix.systemPrompt,
           callInstructions: criticCallInstructions(judgesCoverage, candidateDirection),
           stableInputMembers: criticStableInputMembers,
-          outputSchemas: criticRunOutputSchemas(),
+          outputSchemas: criticRunOutputSchemas(promptVersion),
         },
         input: JSON.parse(
           JSON.stringify({
@@ -133,7 +134,7 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
             ...judgement.input,
           }),
         ) as JsonObject,
-        outputSchema: critiqueOutputSchemaWithCoverageJudgements,
+        outputSchema: critiqueOutputSchemaFor(promptVersion),
         outputName: "draft_critique",
         maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
         dataPolicy: deps.dataPolicy(deps.criticCompany),
@@ -204,7 +205,11 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
         // A critique that judged no coverage still returns the shared format's empty list.
         const { coverageJudgements: _unrequested, ...findingsOnly } = response.output;
         const output = judgesCoverage ? response.output : findingsOnly;
-        critique = parseCritique(output, judgement.instructionsVersion);
+        critique = withResolvableFindingTargets(
+          parseCritique(output, judgement.instructionsVersion),
+          artifact,
+          context,
+        );
       } catch {
         throw invalidCritiqueError(response);
       }

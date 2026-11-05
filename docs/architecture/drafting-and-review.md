@@ -745,7 +745,7 @@ billed. A run with no candidate chunks skips the check.
 
 ### Critic prompt versions
 
-New runs use `cli-critic-v10`. A resumed run keeps the prompt and omission check
+New runs use `cli-critic-v11`. A resumed run keeps the prompt and omission check
 it started with.
 
 | Version | What it added | Issue |
@@ -759,6 +759,7 @@ it started with.
 | v8 | Omission review focused on theme-cited chunks | #2031 |
 | v9 | Omission check as its own call, over theme-cited chunks | #2039 |
 | v10 | Check over every retrieved chunk; every omission blocks | #2046 |
+| v11 | Each finding names its claim, section or requirement in its own fields, so a revision can target it | #2232 |
 
 ## Deterministic quality warnings
 

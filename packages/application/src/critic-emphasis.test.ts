@@ -31,7 +31,7 @@ describe("critic prompt v5", () => {
     const v4 = createCriticAdjudicationPrompt("cli-critic-v4");
     const v5 = createCriticAdjudicationPrompt("cli-critic-v5");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v10");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v11");
     expect(v4).not.toContain("emphasis");
     expect(v4).toContain("This source-to-CV completeness check and the editorial missing-evidence");
     expect(v5).not.toBe(v4);
