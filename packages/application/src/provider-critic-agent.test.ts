@@ -518,12 +518,17 @@ describe("omission check over every chunk (critic v10, #2046)", () => {
       expect(billed).toMatchObject({ usage: bill(billedCalls).usage });
       expect(billed?.cost.estimatedUsd).toBeCloseTo(bill(billedCalls).cost.estimatedUsd);
     }
-    // A refusal of the first slice billed nothing.
+    // The slices run together (#2233): when the first is refused, the second is already in
+    // flight, and what it billed still reaches the error; the critique is never sent.
     const requests: ModelRequest<JsonObject>[] = [];
     const error = await slicedCritic(requests, (call) => call === 1)
       .execute({ ...critique(1), retrievedEvidence: many, applicationPlan: plan } as never)
       .catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(CallCostBudgetError);
-    expect((error as { billed?: unknown }).billed).toBeUndefined();
+    expect(requests.map(({ outputName }) => outputName)).toEqual([
+      "omission_check",
+      "omission_check",
+    ]);
+    expect((error as { billed?: unknown }).billed).toMatchObject({ usage: bill(1).usage });
   });
 });

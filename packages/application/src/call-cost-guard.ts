@@ -58,6 +58,12 @@ export function worstCallCostUsd(request: ModelRequest<JsonObject>): number | un
  * Refuses, before it is sent, any call whose worst cost would pass what the run may still spend,
  * counting the calls this adapter already made. A model without a catalog price passes: the run's
  * own check stops it after that call, since its cost cannot be counted.
+ *
+ * Each call reserves its worst cost while it is in flight and settles to its billed cost when it
+ * answers, so calls sent together cannot each spend the same remainder (#2233). A call that fails
+ * releases its reservation, as a sequential failure counted nothing. A call that does not fit while
+ * others are in flight waits for them to settle and is priced again, so running calls together
+ * never refuses a call that running them one by one would have sent.
  */
 export function guardCallCost<Executor extends ModelExecutor>(
   adapter: Executor,
@@ -65,13 +71,33 @@ export function guardCallCost<Executor extends ModelExecutor>(
 ): ModelExecutor {
   if (remainingCostUsd === undefined) return adapter;
   let remaining = remainingCostUsd;
+  const inFlight = new Set<Promise<void>>();
   return {
     execute: async (request) => {
       const worst = worstCallCostUsd(request);
+      // A call that only fits once the calls in flight settle waits for them instead of failing.
+      while (worst !== undefined && worst > remaining && inFlight.size > 0) {
+        await Promise.race(inFlight);
+      }
       if (worst !== undefined && worst > remaining) throw new CallCostBudgetError(worst, remaining);
-      const response = await adapter.execute(request);
-      remaining -= response.cost.estimatedUsd ?? 0;
-      return response;
+      const reserved = worst ?? 0;
+      remaining -= reserved;
+      const call = adapter.execute(request);
+      const settled = call.then(
+        () => undefined,
+        () => undefined,
+      );
+      inFlight.add(settled);
+      try {
+        const response = await call;
+        remaining += reserved - (response.cost.estimatedUsd ?? 0);
+        return response;
+      } catch (error) {
+        remaining += reserved;
+        throw error;
+      } finally {
+        inFlight.delete(settled);
+      }
     },
   };
 }

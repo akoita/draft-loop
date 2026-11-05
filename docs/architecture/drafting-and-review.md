@@ -740,7 +740,9 @@ a revision pauses the run as a persisting finding instead of looping. On the
 web, open omission warnings read "supported accomplishments left out".
 
 The check runs before the critique, so a critique the guard then refuses still
-carries the check's cost, and a refusal part-way carries what earlier slices
+carries the check's cost. Up to four slices run at once. The cost guard reserves
+each call's worst cost while it is in flight, and a slice that does not fit
+waits for the others to bill. A refusal part-way carries what the other slices
 billed. A run with no candidate chunks skips the check.
 
 ### Critic prompt versions
