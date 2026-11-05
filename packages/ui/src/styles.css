@@ -9152,3 +9152,24 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   gap: 0.35rem;
   margin: 0.5rem 0;
 }
+
+/* Suggested writing preferences under Workspace settings (#2265). */
+.preference-suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preference-suggestion-list > li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.preference-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

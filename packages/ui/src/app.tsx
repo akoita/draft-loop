@@ -37,7 +37,7 @@ import {
   profileView,
   type WorkspaceView,
 } from "./home-model.js";
-import { HostApplicationPanel } from "./host-panels.js";
+import { HostApplicationPanel, HostWorkspaceSettings } from "./host-panels.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
 import { KeptPage } from "./kept-page.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
@@ -2966,6 +2966,7 @@ export function App({
                   />
                 )}
               </div>
+              <HostWorkspaceSettings />
               {providerAuthentication}
             </>
           }

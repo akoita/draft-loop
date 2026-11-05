@@ -26,6 +26,8 @@ export interface HostPanels {
   readonly homeEvidence?: (context: HomeEvidenceContext) => ReactNode;
   /** Shown under an application's header, such as drafting its cover letter (#2217). */
   readonly application?: (context: ApplicationPanelContext) => ReactNode;
+  /** Shown under Home's Workspace settings actions, such as suggested preferences (#2265). */
+  readonly workspaceSettings?: () => ReactNode;
 }
 
 /** What the host's panel on an application is given. */
@@ -70,4 +72,9 @@ export function HostHomeEvidence(context: HomeEvidenceContext) {
 /** The host's panel under an application's header; nothing without one. */
 export function HostApplicationPanel(context: ApplicationPanelContext) {
   return useContext(HostPanelsContext).application?.(context) ?? null;
+}
+
+/** The host's panel under Home's Workspace settings actions; nothing without one. */
+export function HostWorkspaceSettings() {
+  return useContext(HostPanelsContext).workspaceSettings?.() ?? null;
 }

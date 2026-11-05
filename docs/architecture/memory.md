@@ -95,8 +95,8 @@ flowchart LR
 ## Preferences learned from review
 
 Review choices become suggestions, and only an accepted suggestion changes
-the writing policy. The read model, the pattern finder and the API and CLI
-exist; the screen is planned. See
+the writing policy. Suggestions appear under Workspace settings on Home, on
+the web and the desktop client, and through the API and CLI. See
 [suggested preferences](../reference/cli-and-desktop.md#suggested-preferences).
 
 ```mermaid
@@ -113,7 +113,6 @@ flowchart LR
 The [agent memory rollup](https://github.com/akoita/draft-loop/issues/2248)
 holds the ordered issues. In short:
 
-- Suggested preferences have no screen yet; the API and CLI serve them.
 - The critic never learns its false positives (#2254).
 - The agent channel cannot search career evidence (#2255, deferred).
 - Past approved drafts are never recalled as examples; this waits for the
