@@ -177,6 +177,9 @@ API instance replays a key's first result for a day.
 - **A request that stopped without a result** frees its key after a two-minute
   lease.
 - **Cleanup.** Each new key removes up to 100 expired ones.
+- **A row whose parent is still being saved**, such as a finding decided as a
+  run reaches review, answers a retryable 409 `not_ready` with `Retry-After: 1`.
+  The log names the database constraint, never a value.
 
 ## Plans and credits for a run
 
