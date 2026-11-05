@@ -50,14 +50,17 @@ What reads well:
 | Skill tied to a role without a fact | "I used [SQL] across my five years as an Analyst at Example Bank"; mentoring placed "during my time as an Analyst at Example Bank" | SQL and mentoring are stand-alone skills; citing the role beside them passes |
 | Small embellishment                 | Mentoring "has taught me to break reporting work into clear steps"                                                                 | A cited fact backs the topic, not the lesson drawn from it                   |
 
-The first two can mislead a reader, so they should be fixed before the panel
-is offered. The proposed fix:
+The first two can mislead a reader, so they had to be fixed before the panel
+is offered. The fix is in prompt `application-material-v2`:
 
-- The number check also reads number words such as "five" or "a dozen".
-- The prompt forbids joining a skill to a role, or an outcome to a method,
-  unless one fact states the link.
+| Gap                                 | Fix                                                                                                      | Verified by                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Spelled-out number                  | The number rule reads number words ("five", "a dozen"); the prompt forbids numbers worked out from dates | `application-material.test.ts`, every gate     |
+| Skill tied to a role without a fact | The prompt forbids a claim no single fact states                                                         | A new walk only: no rule can check such a join |
+| Small embellishment                 | The prompt forbids drawing a lesson or a trait from a fact                                               | A new walk only                                |
 
-Run the walk again after the fix.
+**Next:** run the walk again on `application-material-v2`, about US$0.02, and
+record the result here.
 
 ## Transcript
 
