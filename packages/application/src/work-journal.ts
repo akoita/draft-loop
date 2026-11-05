@@ -1,3 +1,4 @@
+// Owns memory kind `pending-evidence`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import { randomBytes } from "node:crypto";
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { createRuleContentScreener } from "@draft-loop/ingestion/content-screening-rules";

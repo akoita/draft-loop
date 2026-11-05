@@ -1,3 +1,4 @@
+// Owns memory kind `candidate-facts`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import { type CandidateEvidenceKind, isCandidateEvidenceKind } from "./candidate-evidence-kind.js";
 import {
   type CandidateKnowledgeBaseId,

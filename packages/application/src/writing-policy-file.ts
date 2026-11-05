@@ -1,3 +1,4 @@
+// Owns memory kind `writing-policy`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { extname, resolve } from "node:path";

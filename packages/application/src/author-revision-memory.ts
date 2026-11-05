@@ -1,3 +1,4 @@
+// Owns memory kind `run-revision`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 /**
  * In-process memory of the last rejected author proposal per run and round.
  *

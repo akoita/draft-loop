@@ -1,3 +1,4 @@
+// Owns memory kind `evidence-retrieval`: see packages/domain/src/memory-model.ts and docs/architecture/memory.md.
 import { createHash, randomUUID } from "node:crypto";
 
 import type {
