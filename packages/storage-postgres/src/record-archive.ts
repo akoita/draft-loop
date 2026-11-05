@@ -212,6 +212,12 @@ const tableQueries: Readonly<
      ORDER BY forgotten_at, dedupe_key COLLATE "C"`,
     [s.workspaceId],
   ],
+  // Career interview sessions, keyed by the API's workspace id like the work journal.
+  career_interview_sessions: (s) => [
+    `SELECT * FROM career_interview_sessions WHERE workspace_id = $1
+     ORDER BY created_at, id COLLATE "C"`,
+    [s.workspaceId],
+  ],
 };
 
 /** One record's rows of each table that has any, without the tenant column. */

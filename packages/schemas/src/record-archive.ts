@@ -55,6 +55,7 @@ export const recordArchiveTables = [
   "work_journal_intake",
   "work_journal_notes",
   "work_journal_forgotten_keys",
+  "career_interview_sessions",
 ] as const;
 
 export type RecordArchiveTable = (typeof recordArchiveTables)[number];

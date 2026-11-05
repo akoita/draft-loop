@@ -40,6 +40,8 @@ once.
   notes in every status with their content, and the keys of discarded notes
   whose text was deleted after 30 days, kept so an agent does not record that
   work again.
+- **Career interview:** the record's interview sessions with their topics,
+  every turn the candidate and the interviewer wrote, and each summary.
 - **Knowledge:** knowledge bases with their sources, source versions and
   sensitivity rule versions. In sign-in mode these are the bases the record
   owns. In owner-token mode, which holds one workspace and organisation-wide
@@ -50,7 +52,7 @@ once.
 The screening tables, `content_screening_results` and
 `content_screening_releases`, and the work journal tables,
 `work_journal_intake`, `work_journal_notes` and `work_journal_forgotten_keys`,
-were added to v1 as more table files. Readers that skip table files they do not
+and `career_interview_sessions` were added to v1 as more table files. Readers that skip table files they do not
 know are unaffected, so the version stays 1.
 
 ## What it never holds
