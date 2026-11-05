@@ -569,6 +569,15 @@ export interface ApiSchemas {
     readonly periodStart: string;
     readonly assignedAt: string;
   };
+  "PreferenceSuggestion": {
+    readonly id: string;
+    readonly kind: "forbidden-term" | "section-order";
+    readonly term?: string;
+    readonly sectionOrder?: readonly (string)[];
+    readonly occurrences: number;
+    readonly applications: number;
+    readonly reason: string;
+  };
   "QuarantinedMaterial": {
     readonly resultId: string;
     readonly verdict: "clear" | "flagged" | "unscreened";
@@ -1193,6 +1202,32 @@ export interface ApiOperations {
     };
     readonly response: {
       readonly versions: readonly (ApiSchemas["WritingPolicyVersion"])[];
+    };
+  };
+  "GET /v1/workspaces/{workspaceId}/preference-suggestions": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly suggestions: readonly (ApiSchemas["PreferenceSuggestion"])[];
+    };
+  };
+  "POST /v1/workspaces/{workspaceId}/preference-suggestions/{suggestionId}/accept": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly suggestionId: string;
+    };
+    readonly response: {
+      readonly accepted: ApiSchemas["PreferenceSuggestion"];
+    };
+  };
+  "POST /v1/workspaces/{workspaceId}/preference-suggestions/{suggestionId}/dismiss": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly suggestionId: string;
+    };
+    readonly response: {
+      readonly dismissed: string;
     };
   };
   "GET /v1/workspaces/{workspaceId}/runs/estimate": {

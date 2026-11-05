@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
+import { createPreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { createWorkJournalService } from "@draft-loop/application/work-journal";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
@@ -71,12 +72,9 @@ export function composeHostedApplication(
 ): TenantApplication & { readonly budgetCeiling: RunBudgetCeiling } {
   const { storage, blobs, tenantId, budgetCeiling } = parts;
   const ports = hostedApplicationPorts({ storage, tenantId, blobs });
+  const settings = withRunBudgetDefaults(ports.settings, budgetCeiling);
   const service = createApplicationService(
-    createHostedApplicationDriver({
-      ...ports,
-      settings: withRunBudgetDefaults(ports.settings, budgetCeiling),
-      local: apiProviderOptions(),
-    }),
+    createHostedApplicationDriver({ ...ports, settings, local: apiProviderOptions() }),
   );
   return {
     service,
@@ -108,6 +106,11 @@ export function composeHostedApplication(
     }),
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
     workJournal: createWorkJournalService({ store: storage.workJournalNotes, tenantId }),
+    preferenceSuggestions: createPreferenceSuggestions({
+      storage: ports.storage,
+      settings,
+      service,
+    }),
     sourceEvidenceKinds: storage,
     careerInterview: {
       sessions: storage.careerInterviewSessions,

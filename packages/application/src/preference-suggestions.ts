@@ -5,8 +5,9 @@ import type { WorkspaceSettingsPort } from "@draft-loop/storage";
 import { CliUserError } from "./cli-user-error.js";
 import { defaultWritingPolicyContent } from "./default-writing-policy.js";
 import type { ApplicationService } from "./index.js";
-import type { StorageFactory } from "./local-storage-factory.js";
+import { type StorageFactory, storageFactory } from "./local-storage-factory.js";
 import { type ReviewSignals, readReviewSignals } from "./review-signals.js";
+import { workspaceSettings } from "./workspace-settings.js";
 
 /**
  * Preference suggestions (#2252): a deterministic pattern finder over review signals. Each
@@ -140,8 +141,10 @@ async function readDismissed(settings: WorkspaceSettingsPort, root: string): Pro
 }
 
 export interface PreferenceSuggestionsOptions {
-  readonly storage: StorageFactory;
-  readonly settings: WorkspaceSettingsPort;
+  /** The workspace histories; the local SQLite files when unset. */
+  readonly storage?: StorageFactory;
+  /** The workspace settings; the local `.draft-loop` files when unset. */
+  readonly settings?: WorkspaceSettingsPort;
   readonly service: Pick<
     ApplicationService,
     "readWorkspace" | "getWritingPolicy" | "configureWritingPolicy"
@@ -158,14 +161,16 @@ export interface PreferenceSuggestions {
 export function createPreferenceSuggestions(
   options: PreferenceSuggestionsOptions,
 ): PreferenceSuggestions {
-  const { storage, settings, service } = options;
+  const { service } = options;
+  const storage = () => options.storage ?? storageFactory();
+  const settings = () => options.settings ?? workspaceSettings();
 
   const readPolicy = async (root: string) =>
     (await service.getWritingPolicy?.({ root, includeContent: true }))?.policy;
 
   const list = async (root: string) => {
     const workspace = await service.readWorkspace(root);
-    const history = await storage.open(root);
+    const history = await storage().open(root);
     let signals: ReviewSignals;
     try {
       signals = await readReviewSignals(
@@ -181,7 +186,11 @@ export function createPreferenceSuggestions(
     } finally {
       await history.close();
     }
-    return suggestPreferences(signals, await readPolicy(root), await readDismissed(settings, root));
+    return suggestPreferences(
+      signals,
+      await readPolicy(root),
+      await readDismissed(settings(), root),
+    );
   };
 
   const find = async (root: string, id: string) => {
@@ -204,10 +213,10 @@ export function createPreferenceSuggestions(
     },
     dismiss: async (root, id) => {
       await find(root, id);
-      const dismissed = await readDismissed(settings, root);
+      const dismissed = await readDismissed(settings(), root);
       dismissed.add(id);
       const document: DismissalsDocument = { schemaVersion: 1, dismissed: [...dismissed].sort() };
-      await settings.write(root, dismissalsSetting, `${JSON.stringify(document, null, 2)}\n`);
+      await settings().write(root, dismissalsSetting, `${JSON.stringify(document, null, 2)}\n`);
     },
   };
 }
