@@ -5,12 +5,30 @@ This record says whether the guided career interview behaves like the
 writes the questions. It is for anyone deciding whether the interview is ready
 to put in front of a candidate.
 
-**Result: passed, with two gaps.** On an invented record, Claude Sonnet 5.5
+**Result: passed, with one gap.** On an invented record, Claude Sonnet 5.5
 proposed the right topics and asked one open question per turn. It suggested
 no number, accepted a skip and a "don't remember" without pressure, and
-closed with a summary in the candidate's own words. Seven calls cost
-US$0.035. Confirming the summary into evidence, and a run citing it, were not
-walked. Issue: [#2179](https://github.com/akoita/draft-loop/issues/2179).
+closed with a summary in the candidate's own words. A second walk on prompt
+`career-interview-v2` confirmed that summary into `transcript` evidence. A
+draft run citing it is not walked yet. Issues:
+[#2179](https://github.com/akoita/draft-loop/issues/2179),
+[#2203](https://github.com/akoita/draft-loop/issues/2203).
+
+## Second walk: v2 prompt and confirmation
+
+The same record and answers, on 2026-11-05 at `958df97`, capped at US$0.50.
+Seven calls cost US$0.029.
+
+| Check | Seen |
+| --- | --- |
+| Varied openings | No turn opens with "Thank you"; reflections use fresh, shorter words |
+| One question per turn | Every turn passed the rule check; one turn joins two asks with "and" under one question mark |
+| Confirmation | The topic closed and the publisher wrote one `text/markdown` source of kind `transcript` |
+| Unsupported assumption | After "don't remember", the model said detail "fades after a few years", which the candidate never said |
+
+The written source keeps the topic, the confirmed summary and the
+conversation. It leaves out the candidate's skipped and "don't remember"
+turns but keeps the interviewer's replies to them.
 
 ## Setup
 
@@ -44,13 +62,10 @@ That is a wording change for the prompt, not a rule failure.
 
 ## Gaps
 
-- **Confirmation not walked.** The walk ran without a knowledge store, so the
-  confirm step, which writes the `transcript` source, was left to the service
-  tests.
 - **Retrieval not shown.** No draft run cited the confirmed summary. That needs
   a paid run and waits for the next quality run (#1309).
 
-## Transcript
+## Transcript of the first walk
 
 Invented data only. Proposal:
 
@@ -110,4 +125,6 @@ DRAFT_LOOP_INTERVIEW_WALK_CAP_USD=1 DRAFT_LOOP_INTERVIEW_WALK_OUT=/tmp/career-in
 ```
 
 The last console line gives the call count, the spend and the transcript path.
+The walk confirms the summary into an in-memory knowledge base, so it writes
+nothing outside the transcript file.
 A non-200 answer stops the walk and prints the route's error.
