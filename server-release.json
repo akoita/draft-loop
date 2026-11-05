@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Self-hosted data protected, API edge hardened",
+  "releaseName": "Guided career interview",
   "stageIssue": 1359,
-  "milestone": 70,
-  "summary": "One sprint since server-v0.15.0 (milestone 70). A clone's pnpm self-hosted stack now runs as its own Compose project, draft-loop-dev, on port 8081, so branch code and its migrations never reach an installed stack's data (#2169). The server threat model's four gaps are closed: security headers are pinned by tests (#2144); the API limits requests per source address, with a much smaller budget for refused credentials, and answers 429 rate_limited (#2145); draft-loop-server token --rotate replaces the owner token, and the guides give the procedure (#2146); and the desktop client hands a remembered token only to a server that proves it holds it through POST /v1/auth/proof (#2148, #2172, #2173). draftloop-mcp init names the intake switch only when it is off (#2170).",
-  "knownLimitations": "Request limits are counted per API instance and, on a self-hosted stack, shared by every client on 127.0.0.1, so a misconfigured agent can lock the others out for a minute. The desktop part of #2148 reaches people with the next desktop release. The work journal and agent tokens are still served in owner-token mode only (#2079)."
+  "milestone": 71,
+  "summary": "One sprint since server-v0.16.0 (milestone 71). The guided career interview's text version: DraftLoop proposes topics the career record leaves untold, such as roles without an outcome, untold periods and themes, and skills target applications ask for (#2174). A coach-style interviewer, checked against the career interview method guide, talks one topic through at a time (#2188, #2176). Sessions are stored and resumable (#2175), and a summary becomes transcript evidence only once the candidate confirms it, with the tier they pick (#2177). The API serves it under /v1/workspaces/:id/career-interview (#2178), and the Career evidence page shows it (#2189). A capped walk on Claude Sonnet 5.5 cost US$0.035 (#2179).",
+  "knownLimitations": "The interview needs content screening in rules+model mode, because it uses that route to reach Claude, and recorded consent to send career material to Anthropic. The web shows it in owner-token mode only. Differences from the record are flagged only for role topics. No draft run has yet been shown citing a confirmed summary. Voice input comes in a later sprint."
 }

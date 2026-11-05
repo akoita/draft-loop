@@ -421,6 +421,26 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   token can be replaced, and the desktop hands a remembered token only to a
   server that proves it holds it; `server-v0.16.0` goes to staging.
 
+### Next — Guided career interview
+
+DraftLoop helps candidates tell their career story, not only accept files
+([#1030](https://github.com/akoita/draft-loop/issues/1030)). The text
+interview is built in
+[milestone 71](https://github.com/akoita/draft-loop/milestone/71), issues #2174
+to #2179 plus #2188 and #2189:
+
+- **Topics.** It proposes what the record leaves untold: roles without an
+  outcome, untold periods and themes, and skills target jobs ask for.
+- **Method.** A coach-style interviewer follows the
+  [method guide](reference/career-interview-method.md); each question is
+  checked against its rules before the candidate sees it.
+- **Evidence.** A summary becomes `transcript` evidence only once the
+  candidate confirms it, with the tier they pick.
+
+A [walk with Sonnet](evaluation/career-interview-walk.md) passed for
+US$0.035. Next: voice input with Whisper in the browser and Voxtral as the EU
+server fallback, then showing that a run cites a confirmed answer.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -429,22 +449,6 @@ critic agreement or the person's decision; pause and resume when a
 subscription session reaches its limit; a professional two-page DOCX/PDF
 export; and an observation across all four references. Issues are created
 after the #878 stage decision.
-
-### Later — Guided career interview
-
-DraftLoop should help candidates tell their career story, not only accept
-files ([#1030](https://github.com/akoita/draft-loop/issues/1030)):
-
-- **Questions.** It reads the career record and asks about gaps such as
-  dates, scope, outcomes and metrics. It asks a few questions per session,
-  over several sessions, at the candidate's pace.
-- **Evidence.** Each answer is saved as candidate-provided evidence, so facts
-  cite the candidate's own words.
-- **Voice.** Voice input uses local speech-to-text, so audio never leaves the
-  machine.
-
-This stage starts after Any-format career intake, because the interview
-needs the structured career record to know what to ask.
 
 ### Later — Harness observability and evaluation
 
@@ -588,6 +592,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-05 | Moved the guided career interview from Later to Next and built its text version ([milestone 71](https://github.com/akoita/draft-loop/milestone/71), #2174–#2179, #2188, #2189): topics proposed from the record, a coach-style interviewer checked against the [method guide](reference/career-interview-method.md), and confirmed summaries as `transcript` evidence. A capped [Sonnet walk](evaluation/career-interview-walk.md) cost US$0.035. | The owner asked for a user-facing feature each sprint (2026-11-04). It does not claim CV quality, so it does not wait for #1309; voice comes next. |
 | 2026-11-04 | Admitted the Protect self-hosted data and harden the API edge sprint ([milestone 70](https://github.com/akoita/draft-loop/milestone/70), #2144–#2146, #2148, #2169, #2170, #2172, #2173), with no paid model run: a clone's stack in its own Compose project, security headers pinned, request rate limits, owner token rotation and a token proof for the desktop.                                                                                                                                                                                                   | The server threat model has no open follow-up; no CV quality claim changes, and the #1309 exit still waits on #1307. Later sprints mix user-facing features with technical work.                                                                                                                                                                                                                                                                              |
 | 2026-11-04 | Admitted the Agent channel ready to use sprint ([milestone 69](https://github.com/akoita/draft-loop/milestone/69), #2149–#2151, #2158–#2161), with no paid model run: agent tokens that reach only the work journal, a working review link, waiting notes on Home and the CLI on the PATH.                                                                                                                                                                                                                                                                            | Coding agents no longer hold the owner token; no CV quality claim changes, and the #1309 exit still waits on #1307.                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-04 | Admitted the Harden what shipped sprint ([milestone 68](https://github.com/akoita/draft-loop/milestone/68), #2112, #2140–#2143), with no paid model run: the desktop acceptance beside a running server, the server threat model in two parts (closing #2135), a real Claude Code work journal walk and this roadmap review. The owner confirmed the Anthropic author and OpenAI critic as the default pair.                                                                                                                                                          | The server's known gaps are listed and filed before production; no CV quality claim changes, and the #1309 exit still waits on #1307.                                                                                                                                                                                                                                                                                                                         |
