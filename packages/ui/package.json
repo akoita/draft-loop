@@ -47,6 +47,10 @@
     "./*": {
       "types": "./src/*.ts",
       "import": "./src/*.ts"
+    },
+    "./preference-suggestions-panel": {
+      "types": "./src/preference-suggestions-panel.tsx",
+      "import": "./src/preference-suggestions-panel.tsx"
     }
   },
   "files": [

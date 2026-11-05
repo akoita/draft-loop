@@ -984,6 +984,9 @@ pnpm --filter @draft-loop/cli start preferences dismiss ./workspace preference-0
 - **Accept** adds the preference to the policy as a new version for future runs.
 - **Dismiss** keeps the policy as it is, and the suggestion is never offered
   again. Only its id is stored.
+- **On screen**, **Suggested preferences** under Home's Workspace settings
+  shows each suggestion with **Add to policy** and **Dismiss**, on the web and
+  the desktop client.
 - **Server.** The same suggestions are at
   `GET /v1/workspaces/{workspaceId}/preference-suggestions`, with `accept` and
   `dismiss` routes beside them.
