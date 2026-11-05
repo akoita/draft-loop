@@ -74,6 +74,11 @@ const listQuery = z.strictObject({
   project: z.string().trim().min(1).max(120).optional(),
   since: z.iso.datetime({ offset: true }).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
+  agent_token_id: z
+    .string()
+    .regex(/^dlat_[A-Za-z0-9_-]{8,64}$/u)
+    .optional()
+    .describe("Only the notes this agent token filed or amended, such as after revoking it."),
   fields: z
     .enum(["titles", "summary"])
     .optional()
@@ -184,13 +189,20 @@ export function registerWorkJournalRoutes(
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
       const key = request.headers["idempotency-key"];
-      const produce = () => journal.record(workspaceId, request.body);
+      const agentTokenId = request.agentToken?.id;
+      const produce = () => journal.record(workspaceId, request.body, { agentTokenId });
       const result =
         key === undefined
           ? await produce()
           : await idempotency.once(`work-journal:${workspaceId}`, key, request.body, produce);
       request.log.info(
-        { workspaceId, noteId: result.note_id, status: result.status, screening: result.screening },
+        {
+          workspaceId,
+          noteId: result.note_id,
+          status: result.status,
+          screening: result.screening,
+          agentTokenId,
+        },
         "work journal note recorded",
       );
       return reply.code(result.status === "pending" ? 201 : 200).send({
@@ -216,7 +228,8 @@ export function registerWorkJournalRoutes(
     async (request) => {
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
-      const { fields, ...listOptions } = request.query;
+      const { fields, agent_token_id: agentTokenId, ...rest } = request.query;
+      const listOptions = { ...rest, ...(agentTokenId === undefined ? {} : { agentTokenId }) };
       if (fields === "summary") return { full: await journal.listFull(workspaceId, listOptions) };
       return { notes: await journal.list(workspaceId, listOptions) };
     },

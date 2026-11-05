@@ -916,6 +916,8 @@ export interface ApiSchemas {
         readonly screened_at: string;
       };
       readonly edit_count: number;
+      readonly agent_token_id?: string;
+      readonly amended_by_agent_token_ids?: readonly (string)[];
       readonly created_at: string;
       readonly updated_at: string;
     })[];
@@ -1830,6 +1832,7 @@ export interface ApiOperations {
       readonly project?: string;
       readonly since?: string;
       readonly limit?: number;
+      readonly agent_token_id?: string;
       readonly fields?: "titles" | "summary";
     };
     readonly response: ApiSchemas["WorkJournalNoteList"];
@@ -1883,6 +1886,8 @@ export interface ApiOperations {
         readonly screened_at: string;
       };
       readonly edit_count: number;
+      readonly agent_token_id?: string;
+      readonly amended_by_agent_token_ids?: readonly (string)[];
       readonly created_at: string;
       readonly updated_at: string;
     };
@@ -1937,6 +1942,8 @@ export interface ApiOperations {
         readonly screened_at: string;
       };
       readonly edit_count: number;
+      readonly agent_token_id?: string;
+      readonly amended_by_agent_token_ids?: readonly (string)[];
       readonly created_at: string;
       readonly updated_at: string;
     };

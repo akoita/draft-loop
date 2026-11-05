@@ -50,8 +50,13 @@ export function createWorkJournalNoteStore(client: SqlSession): WorkJournalNoteS
         rows = await client.query(
           `UPDATE work_journal_notes
              SET status = $3, dedupe_key = $4, project = $5,
-                 note = jsonb_set(jsonb_set($6::jsonb, '{created_at}', to_jsonb(created_at)),
-                   '{tenant_id}', note -> 'tenant_id'),
+                 -- Creation time, tenant and filing agent token come from the stored note.
+                 note = CASE WHEN note ? 'agent_token_id'
+                   THEN jsonb_set(jsonb_set(jsonb_set($6::jsonb, '{created_at}', to_jsonb(created_at)),
+                     '{tenant_id}', note -> 'tenant_id'), '{agent_token_id}', note -> 'agent_token_id')
+                   ELSE jsonb_set(jsonb_set($6::jsonb, '{created_at}', to_jsonb(created_at)),
+                     '{tenant_id}', note -> 'tenant_id') - 'agent_token_id'
+                 END,
                  updated_at = $7
            WHERE workspace_id = $1 AND id = $2
            RETURNING id`,
@@ -97,16 +102,18 @@ export function createWorkJournalNoteStore(client: SqlSession): WorkJournalNoteS
         ? undefined
         : { kind: "forgotten", noteId: String(forgotten.note_id) };
     },
-    list: async ({ workspaceId, status, project, since, limit }) => {
+    list: async ({ workspaceId, status, project, since, agentTokenId, limit }) => {
       const rows = await client.query(
         `SELECT note FROM work_journal_notes
          WHERE workspace_id = $1
            AND ($2::text IS NULL OR status = $2)
            AND ($3::text IS NULL OR lower(project) = lower($3))
            AND ($4::text IS NULL OR created_at >= $4)
+           AND ($6::text IS NULL OR note ->> 'agent_token_id' = $6
+             OR COALESCE(note -> 'amended_by_agent_token_ids', '[]'::jsonb) ? $6)
          ORDER BY created_at DESC, id DESC
          LIMIT $5`,
-        [workspaceId, status ?? null, project ?? null, since ?? null, limit],
+        [workspaceId, status ?? null, project ?? null, since ?? null, limit, agentTokenId ?? null],
       );
       return rows.map(noteOf);
     },

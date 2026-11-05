@@ -33,6 +33,23 @@ export interface WorkJournalReviewNote {
   readonly possible_duplicate_of: readonly string[];
   readonly screening: { readonly verdict: "clear" | "flagged" | "unscreened" };
   readonly created_at: string;
+  /** The agent token that filed the note, when one did. */
+  readonly agent_token_id?: string | undefined;
+  /** The agent tokens that amended it since. */
+  readonly amended_by_agent_token_ids?: readonly string[] | undefined;
+}
+
+/** Which agent tokens sent a note, in words; null when the owner filed it. */
+export function workJournalProvenance(note: WorkJournalReviewNote): string | null {
+  const amending = (note.amended_by_agent_token_ids ?? []).filter(
+    (id) => id !== note.agent_token_id,
+  );
+  if (note.agent_token_id === undefined && amending.length === 0) return null;
+  const filed =
+    note.agent_token_id === undefined
+      ? "Filed without an agent token"
+      : `Filed by agent token ${note.agent_token_id}`;
+  return amending.length === 0 ? `${filed}.` : `${filed}; amended by ${amending.join(", ")}.`;
 }
 
 /** What the review sends to the API's review route. */

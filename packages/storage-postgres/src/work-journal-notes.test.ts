@@ -109,4 +109,35 @@ describe.runIf(connectionString !== undefined)("Postgres work journal notes", ()
       await drop();
     }
   });
+
+  it("keeps the filing agent token on replace and lists a token's notes", async () => {
+    const { openTenancy, drop } = await createTestSchema(url, "work_journal_tokens");
+    const tenancy = await openTenancy();
+    try {
+      const store = tenancy.forTenant("tenant-a").workJournalNotes;
+      const filed = stored("wjn_fixture0001", { agent_token_id: "dlat_fixtureAAAA" });
+      const owners = stored("wjn_fixture0002");
+      await store.insert(filed);
+      await store.insert(owners);
+
+      await store.replace({
+        ...filed,
+        agent_token_id: "dlat_fixtureCCCC",
+        amended_by_agent_token_ids: ["dlat_fixtureBBBB"],
+        updated_at: "2026-11-03T11:00:00.000Z",
+      });
+      await store.replace({ ...owners, agent_token_id: "dlat_fixtureCCCC" });
+      expect((await store.get("owner", filed.id))?.agent_token_id).toBe("dlat_fixtureAAAA");
+      expect((await store.get("owner", owners.id))?.agent_token_id).toBeUndefined();
+
+      const listed = async (agentTokenId: string) =>
+        (await store.list({ workspaceId: "owner", agentTokenId, limit: 10 })).map((n) => n.id);
+      expect(await listed("dlat_fixtureAAAA")).toEqual([filed.id]);
+      expect(await listed("dlat_fixtureBBBB")).toEqual([filed.id]);
+      expect(await listed("dlat_fixtureCCCC")).toEqual([]);
+    } finally {
+      await tenancy.close();
+      await drop();
+    }
+  });
 });

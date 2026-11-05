@@ -39,6 +39,8 @@ export interface WorkJournalNoteQuery {
   readonly project?: string;
   /** Notes created at or after this time. */
   readonly since?: string;
+  /** Notes this agent token filed or amended. */
+  readonly agentTokenId?: string;
   readonly limit: number;
 }
 
@@ -51,7 +53,10 @@ export interface WorkJournalIntake {
 export interface WorkJournalNoteStore {
   /** Stores a new note; refuses a dedupe key a non-discarded note already holds. */
   insert(note: WorkJournalStoredNote): Promise<void>;
-  /** Replaces a note's mutable state; its id, scope and creation time never change. */
+  /**
+   * Replaces a note's mutable state; its id, scope, creation time and filing agent token never
+   * change.
+   */
   replace(note: WorkJournalStoredNote): Promise<void>;
   get(workspaceId: string, id: string): Promise<WorkJournalStoredNote | undefined>;
   /** The newest note holding a key, discarded ones included, or the trace an aged one left. */
@@ -113,7 +118,13 @@ export function createMemoryWorkJournalNoteStore(): WorkJournalNoteStore {
       if (holder !== undefined && holder.id !== note.id) {
         throw new WorkJournalStoreError("duplicate_key", "A note already holds this key.");
       }
-      notes.set(note.id, { ...note, created_at: stored.created_at, tenant_id: stored.tenant_id });
+      const { agent_token_id: _ignored, ...rest } = note;
+      notes.set(note.id, {
+        ...rest,
+        created_at: stored.created_at,
+        tenant_id: stored.tenant_id,
+        ...(stored.agent_token_id === undefined ? {} : { agent_token_id: stored.agent_token_id }),
+      });
     },
     get: async (workspaceId, id) => {
       const note = notes.get(id);
@@ -125,7 +136,7 @@ export function createMemoryWorkJournalNoteStore(): WorkJournalNoteStore {
       const noteId = forgotten.get(key);
       return noteId === undefined ? undefined : { kind: "forgotten", noteId };
     },
-    list: async ({ workspaceId, status, project, since, limit }) =>
+    list: async ({ workspaceId, status, project, since, agentTokenId, limit }) =>
       all()
         .filter(
           (note) =>
@@ -133,7 +144,10 @@ export function createMemoryWorkJournalNoteStore(): WorkJournalNoteStore {
             (status === undefined || note.status === status) &&
             (project === undefined ||
               note.content.project.name.toLowerCase() === project.toLowerCase()) &&
-            (since === undefined || note.created_at >= since),
+            (since === undefined || note.created_at >= since) &&
+            (agentTokenId === undefined ||
+              note.agent_token_id === agentTokenId ||
+              (note.amended_by_agent_token_ids ?? []).includes(agentTokenId)),
         )
         .slice(0, limit),
     pending: async (workspaceId) =>

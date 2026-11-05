@@ -6,6 +6,7 @@ import {
   workJournalEditDraft,
   workJournalEditedContent,
   workJournalPeriod,
+  workJournalProvenance,
   workJournalRefusal,
   workJournalReviewItems,
   workJournalScreening,
@@ -144,5 +145,29 @@ describe("work journal panel", () => {
     expect(html).toContain("Screening held this note back.");
     expect(html).not.toContain('value="approve"');
     expect(html).toMatch(/checked="" value="edit"/u);
+  });
+});
+
+describe("work journal provenance", () => {
+  const base = {
+    id: "wjn_fixture0001",
+    status: "pending",
+    possible_duplicate_of: [],
+    screening: { verdict: "clear" },
+    created_at: "2026-11-03T10:00:00.000Z",
+  } as unknown as Parameters<typeof workJournalProvenance>[0];
+
+  it("names the filing and amending agent tokens, and nothing for an owner's note", () => {
+    expect(workJournalProvenance(base)).toBeNull();
+    expect(workJournalProvenance({ ...base, agent_token_id: "dlat_fixtureAAAA" })).toBe(
+      "Filed by agent token dlat_fixtureAAAA.",
+    );
+    expect(
+      workJournalProvenance({
+        ...base,
+        agent_token_id: "dlat_fixtureAAAA",
+        amended_by_agent_token_ids: ["dlat_fixtureAAAA", "dlat_fixtureBBBB"],
+      }),
+    ).toBe("Filed by agent token dlat_fixtureAAAA; amended by dlat_fixtureBBBB.");
   });
 });

@@ -216,9 +216,17 @@ export const workJournalApprovalSchema = z
   .strict();
 export type WorkJournalApproval = z.infer<typeof workJournalApprovalSchema>;
 
+/** An agent token's id, as the API issues it: never its secret. */
+export const workJournalAgentTokenIdSchema = z.string().regex(/^dlat_[A-Za-z0-9_-]{8,64}$/u);
+
+/** The most agent token ids a note keeps for its amendments; the newest are kept. */
+export const maximumWorkJournalAmendingTokens = 20;
+
 /**
  * A stored note. After an edit it holds the edited content only: the agent's original text is
- * not kept, and `edit_count` says that it changed.
+ * not kept, and `edit_count` says that it changed. `agent_token_id` names the agent token that
+ * filed it and never changes; `amended_by_agent_token_ids` lists the tokens that amended it, so
+ * the owner can find everything a leaked token touched (agent token audit, A-4).
  */
 export const workJournalStoredNoteSchema = z
   .object({
@@ -233,6 +241,11 @@ export const workJournalStoredNoteSchema = z
     approval: workJournalApprovalSchema.optional(),
     screening: workJournalScreeningSchema,
     edit_count: z.number().int().min(0),
+    agent_token_id: workJournalAgentTokenIdSchema.optional(),
+    amended_by_agent_token_ids: z
+      .array(workJournalAgentTokenIdSchema)
+      .max(maximumWorkJournalAmendingTokens)
+      .optional(),
     created_at: z.iso.datetime({ offset: true }),
     updated_at: z.iso.datetime({ offset: true }),
   })

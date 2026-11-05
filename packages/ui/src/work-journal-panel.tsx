@@ -10,6 +10,7 @@ import {
   workJournalEditDraft,
   workJournalEditedContent,
   workJournalPeriod,
+  workJournalProvenance,
   workJournalReviewItems,
   workJournalRoleLabel,
   workJournalScreening,
@@ -119,6 +120,7 @@ export function WorkJournalPanel({
 export function WorkJournalNoteDetails({ note }: { readonly note: WorkJournalReviewNote }) {
   const { content } = note;
   const screening = workJournalScreening(note.screening);
+  const provenance = workJournalProvenance(note);
   return (
     <div className="work-journal-note">
       <h3>{content.title}</h3>
@@ -132,6 +134,7 @@ export function WorkJournalNoteDetails({ note }: { readonly note: WorkJournalRev
         </span>
       </p>
       <p>{content.summary}</p>
+      {provenance === null ? null : <p className="muted">{provenance}</p>}
       <p className="muted">
         {content.technologies.join(", ")} ·{" "}
         {content.candidate_role.map(workJournalRoleLabel).join(", ")}

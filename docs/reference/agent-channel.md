@@ -95,7 +95,14 @@ curl -s -X DELETE -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" http://127
 ```
 
 Replace `dlat_ID` with the id the list shows; `active` is false once a token
-is revoked or expired. Run `init` again to issue a new one. The
+is revoked or expired. Each note names the agent token that filed it.
+To review everything one token filed or amended, such as after revoking it:
+
+```text
+curl -s -H "authorization: Bearer $DRAFT_LOOP_SERVER_TOKEN" "http://127.0.0.1:8080/v1/workspaces/owner/work-journal/notes?fields=summary&agent_token_id=dlat_ID"
+```
+
+Run `init` again to issue a new one. The
 [agent token audit](../security/agent-token-audit.md) lists every rule.
 
 ### The `/log-work` skill and the Stop hook
