@@ -45,6 +45,10 @@ interface ResponseBody {
   readonly exports: readonly { readonly id: string }[];
 }
 
+/** How long a run may take to reach review, and a test that waits for one. */
+const reviewWaitSeconds = 180;
+const reviewTimeoutMs = (reviewWaitSeconds + 30) * 1_000;
+
 describe.runIf(apiUrl !== undefined)("local server stack", () => {
   // Fresh ids each time, so the smoke runs again on a stack that keeps earlier data.
   const suffix = randomUUID().slice(0, 8);
@@ -64,10 +68,17 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
   };
   const send = (method: string, path: string, body: object, headers: HeadersInit = {}) =>
     request(path, { method, headers, body: JSON.stringify(body) });
-  /** Waits for the worker to bring a run to the person's review. */
+  /**
+   * Waits for the worker to bring a run to the person's review. A cold Cloud Run job has taken up
+   * to 125 seconds to start on staging (#2211), so the wait covers three minutes.
+   */
   const awaitReview = async (runId: string) => {
     let latest = (await request(`${workspacePath}/runs/${runId}`)).body;
-    for (let attempt = 0; attempt < 60 && latest.state !== "awaiting-approval"; attempt += 1) {
+    for (
+      let attempt = 0;
+      attempt < reviewWaitSeconds && latest.state !== "awaiting-approval";
+      attempt += 1
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 1_000));
       latest = (await request(`${workspacePath}/runs/${runId}`)).body;
     }
@@ -86,71 +97,77 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     expect((await fetch(`${apiUrl}${script}`)).status).toBe(200);
   });
 
-  it("sets up a workspace through the API and reads its run back once the worker has drafted it", async () => {
-    expect(await send("PUT", workspacePath, { fixtureMode: true })).toMatchObject({ status: 201 });
+  it(
+    "sets up a workspace through the API and reads its run back once the worker has drafted it",
+    async () => {
+      expect(await send("PUT", workspacePath, { fixtureMode: true })).toMatchObject({
+        status: 201,
+      });
 
-    const base = await send("POST", "/v1/knowledge-bases", { displayName: `Career ${suffix}` });
-    expect(base.status).toBe(201);
-    const upload = await request(`/v1/knowledge-bases/${base.body.id}/sources?name=career.md`, {
-      method: "POST",
-      headers: { "content-type": "text/markdown" },
-      body: career,
-    });
-    expect(upload.status).toBe(201);
-    expect(
-      await send("PUT", `${workspacePath}/knowledge-selection`, {
-        knowledgeBaseIds: [base.body.id],
-      }),
-    ).toMatchObject({ status: 200 });
+      const base = await send("POST", "/v1/knowledge-bases", { displayName: `Career ${suffix}` });
+      expect(base.status).toBe(201);
+      const upload = await request(`/v1/knowledge-bases/${base.body.id}/sources?name=career.md`, {
+        method: "POST",
+        headers: { "content-type": "text/markdown" },
+        body: career,
+      });
+      expect(upload.status).toBe(201);
+      expect(
+        await send("PUT", `${workspacePath}/knowledge-selection`, {
+          knowledgeBaseIds: [base.body.id],
+        }),
+      ).toMatchObject({ status: 200 });
 
-    const created = await send("POST", `${workspacePath}/opportunities`, {
-      sources: [
-        {
-          id: "posting",
-          kind: "pasted-content",
-          classification: "job-posting",
-          content: "Platform Engineer at Example Ledger: build TypeScript services.",
-        },
-      ],
-    });
-    expect(created.status).toBe(201);
-    const briefPath = `${workspacePath}/opportunities/${created.body.brief.id}`;
-    const edited = await send("PATCH", briefPath, {
-      expectedVersion: created.body.brief.version,
-      patch: {
-        role: { value: "Platform Engineer", sourceIds: ["posting"] },
-        requirements: [
+      const created = await send("POST", `${workspacePath}/opportunities`, {
+        sources: [
           {
-            id: "typescript-services",
-            text: "Build TypeScript services with deterministic testing",
-            priority: "critical",
-            sourceIds: ["posting"],
+            id: "posting",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "Platform Engineer at Example Ledger: build TypeScript services.",
           },
         ],
-      },
-    });
-    expect(edited.status).toBe(200);
-    const reviewed = await send("POST", `${briefPath}/review`, {
-      expectedVersion: edited.body.brief.version,
-    });
-    expect(reviewed.status).toBe(200);
+      });
+      expect(created.status).toBe(201);
+      const briefPath = `${workspacePath}/opportunities/${created.body.brief.id}`;
+      const edited = await send("PATCH", briefPath, {
+        expectedVersion: created.body.brief.version,
+        patch: {
+          role: { value: "Platform Engineer", sourceIds: ["posting"] },
+          requirements: [
+            {
+              id: "typescript-services",
+              text: "Build TypeScript services with deterministic testing",
+              priority: "critical",
+              sourceIds: ["posting"],
+            },
+          ],
+        },
+      });
+      expect(edited.status).toBe(200);
+      const reviewed = await send("POST", `${briefPath}/review`, {
+        expectedVersion: edited.body.brief.version,
+      });
+      expect(reviewed.status).toBe(200);
 
-    brief = { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version };
-    const begun = await send(
-      "POST",
-      `${workspacePath}/runs`,
-      { opportunityBrief: brief },
-      { "idempotency-key": `smoke-${suffix}` },
-    );
-    expect(begun.status).toBe(201);
-    firstRunId = begun.body.runId;
-    expect(await awaitReview(firstRunId)).toMatchObject({
-      runId: firstRunId,
-      state: "awaiting-approval",
-      hasDraft: true,
-      approval: "pending",
-    });
-  }, 120_000);
+      brief = { briefId: reviewed.body.brief.id, version: reviewed.body.brief.version };
+      const begun = await send(
+        "POST",
+        `${workspacePath}/runs`,
+        { opportunityBrief: brief },
+        { "idempotency-key": `smoke-${suffix}` },
+      );
+      expect(begun.status).toBe(201);
+      firstRunId = begun.body.runId;
+      expect(await awaitReview(firstRunId)).toMatchObject({
+        runId: firstRunId,
+        state: "awaiting-approval",
+        hasDraft: true,
+        approval: "pending",
+      });
+    },
+    reviewTimeoutMs,
+  );
 
   const settled = (severity: string) => (severity === "error" ? "overridden" : "accepted");
 
@@ -213,33 +230,39 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     await approveAndDownload(firstRunId);
   }, 60_000);
 
-  it("takes a second run through one revision round before exporting it", async () => {
-    const begun = await send(
-      "POST",
-      `${workspacePath}/runs`,
-      { opportunityBrief: brief },
-      { "idempotency-key": `smoke-revision-${suffix}` },
-    );
-    expect(begun.status).toBe(201);
-    const drafted = await awaitReview(begun.body.runId);
-    expect(drafted.state).toBe("awaiting-approval");
+  it(
+    "takes a second run through one revision round before exporting it",
+    async () => {
+      const begun = await send(
+        "POST",
+        `${workspacePath}/runs`,
+        { opportunityBrief: brief },
+        { "idempotency-key": `smoke-revision-${suffix}` },
+      );
+      expect(begun.status).toBe(201);
+      const drafted = await awaitReview(begun.body.runId);
+      expect(drafted.state).toBe("awaiting-approval");
 
-    const revision = await send(
-      "POST",
-      `${workspacePath}/runs/${begun.body.runId}/revision`,
-      { candidateDirection: "Lead with the TypeScript services." },
-      { "idempotency-key": `revision-${suffix}` },
-    );
-    expect(revision).toMatchObject({ status: 200, body: { state: "revising" } });
-    expect(await awaitReview(begun.body.runId)).toMatchObject({
-      state: "awaiting-approval",
-      round: drafted.round + 1,
-    });
-    expect((await request(`${workspacePath}/runs/${begun.body.runId}/review`)).body).toMatchObject({
-      candidateDirection: "Lead with the TypeScript services.",
-    });
-    await approveAndDownload(begun.body.runId);
-  }, 120_000);
+      const revision = await send(
+        "POST",
+        `${workspacePath}/runs/${begun.body.runId}/revision`,
+        { candidateDirection: "Lead with the TypeScript services." },
+        { "idempotency-key": `revision-${suffix}` },
+      );
+      expect(revision).toMatchObject({ status: 200, body: { state: "revising" } });
+      expect(await awaitReview(begun.body.runId)).toMatchObject({
+        state: "awaiting-approval",
+        round: drafted.round + 1,
+      });
+      expect(
+        (await request(`${workspacePath}/runs/${begun.body.runId}/review`)).body,
+      ).toMatchObject({
+        candidateDirection: "Lead with the TypeScript services.",
+      });
+      await approveAndDownload(begun.body.runId);
+    },
+    2 * reviewTimeoutMs,
+  );
 
   it.runIf(jobPageUrl !== undefined)(
     "reads an approved job page through the page fetcher",
