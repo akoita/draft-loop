@@ -178,15 +178,23 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     expect(review.status).toBe(200);
     expect(review.body.draft?.sections.length).toBeGreaterThan(0);
     for (const finding of review.body.findings) {
-      const decided = await send(
-        "PUT",
-        `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
-        // A blocking finding is overridden: accepting it would only ask for another round.
-        {
-          decision: settled(finding.severity),
-          rationale: "Checked against the source.",
-        },
-      );
+      const decide = () =>
+        send(
+          "PUT",
+          `${runPath}/findings/${encodeURIComponent(finding.id)}/decision`,
+          // A blocking finding is overridden: accepting it would only ask for another round.
+          {
+            decision: settled(finding.severity),
+            rationale: "Checked against the source.",
+          },
+        );
+      // A decision in the moment the run's draft history is still being saved answers a
+      // retryable 409 not_ready (#2210); one retry a second later must succeed.
+      let decided = await decide();
+      if (decided.status === 409 && decided.body.error?.code === "not_ready") {
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        decided = await decide();
+      }
       expect(decided.status).toBe(200);
     }
     const decided = await request(`${runPath}/review`);

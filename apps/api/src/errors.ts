@@ -380,6 +380,17 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     void reply.code(422).send(apiError("rejected", error.message));
     return;
   }
+  // A row whose parent is not saved yet, such as a finding decided in the moment between a run
+  // reaching review and its draft history being stored (#2210): retry shortly. The log names the
+  // constraint, never a value.
+  if (error.code === postgresForeignKeyViolation) {
+    request.log.warn({ err: { code: error.code, constraint: constraintOf(error) } }, "not ready");
+    void reply
+      .code(409)
+      .header("retry-after", "1")
+      .send(apiError("not_ready", "The run is still being saved; retry in a moment."));
+    return;
+  }
   const status = error.statusCode ?? 500;
   if (status >= 400 && status < 500) {
     // Fastify's own client errors, such as a body over the size limit or malformed JSON. Their
@@ -389,8 +400,19 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
       .send(apiError(clientErrorCode(error), "The request could not be processed."));
     return;
   }
-  request.log.error({ err: { type: error.name, code: error.code } }, "request failed");
+  request.log.error(
+    { err: { type: error.name, code: error.code, constraint: constraintOf(error) } },
+    "request failed",
+  );
   void reply.code(500).send(apiError("internal", "The server could not complete the request."));
+}
+
+const postgresForeignKeyViolation = "23503";
+
+/** A database error's constraint name, which names a schema object and never a value. */
+function constraintOf(error: FastifyError): string | undefined {
+  const constraint = (error as { constraint?: unknown }).constraint;
+  return typeof constraint === "string" ? constraint : undefined;
 }
 
 function clientErrorCode(error: FastifyError): string {
