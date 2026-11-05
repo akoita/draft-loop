@@ -6168,6 +6168,18 @@
                   "minimum": 0,
                   "maximum": 9007199254740991
                 },
+                "agent_token_id": {
+                  "type": "string",
+                  "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                },
+                "amended_by_agent_token_ids": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                  }
+                },
                 "created_at": {
                   "type": "string",
                   "format": "date-time",
@@ -12165,6 +12177,18 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "agent_token_id": {
+                  "type": "string",
+                  "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                },
+                "amended_by_agent_token_ids": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                  }
                 },
                 "created_at": {
                   "type": "string",
@@ -19328,6 +19352,16 @@
           {
             "schema": {
               "type": "string",
+              "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "query",
+            "name": "agent_token_id",
+            "required": false,
+            "description": "Only the notes this agent token filed or amended, such as after revoking it."
+          },
+          {
+            "schema": {
+              "type": "string",
               "enum": [
                 "titles",
                 "summary"
@@ -19745,6 +19779,18 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 9007199254740991
+                    },
+                    "agent_token_id": {
+                      "type": "string",
+                      "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                    },
+                    "amended_by_agent_token_ids": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                      }
                     },
                     "created_at": {
                       "type": "string",
@@ -20172,6 +20218,18 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 9007199254740991
+                    },
+                    "agent_token_id": {
+                      "type": "string",
+                      "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                    },
+                    "amended_by_agent_token_ids": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^dlat_[A-Za-z0-9_-]{8,64}$"
+                      }
                     },
                     "created_at": {
                       "type": "string",

@@ -168,7 +168,11 @@ describe("work journal publishing", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).not.toHaveProperty("review_url");
-    expect(journal.record).toHaveBeenCalledWith("workspace-1", { title: "Placeholder" });
+    expect(journal.record).toHaveBeenCalledWith(
+      "workspace-1",
+      { title: "Placeholder" },
+      { agentTokenId: undefined },
+    );
     expect(idempotency.once).not.toHaveBeenCalled();
   });
 

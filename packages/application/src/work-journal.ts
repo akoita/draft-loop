@@ -5,6 +5,7 @@ import {
   checkWorkJournalNoteContent,
   checkWorkJournalNoteInput,
   isLikelyWorkJournalDuplicate,
+  maximumWorkJournalAmendingTokens,
   type WorkJournalNoteContent,
   type WorkJournalNoteListItem,
   type WorkJournalNoteStatus,
@@ -113,7 +114,14 @@ export interface WorkJournalListOptions {
   readonly status?: WorkJournalNoteStatus | undefined;
   readonly project?: string | undefined;
   readonly since?: string | undefined;
+  /** Notes this agent token filed or amended. */
+  readonly agentTokenId?: string | undefined;
   readonly limit?: number | undefined;
+}
+
+/** Who sent a note: the agent token's id when an agent token did. */
+export interface WorkJournalRecordContext {
+  readonly agentTokenId?: string | undefined;
 }
 
 export interface WorkJournalLimits {
@@ -145,7 +153,11 @@ export interface WorkJournalServiceOptions {
 }
 
 export interface WorkJournalService {
-  record(workspaceId: string, input: unknown): Promise<WorkJournalRecordResult>;
+  record(
+    workspaceId: string,
+    input: unknown,
+    context?: WorkJournalRecordContext,
+  ): Promise<WorkJournalRecordResult>;
   list(workspaceId: string, options?: WorkJournalListOptions): Promise<WorkJournalNoteListItem[]>;
   /** Full notes for the candidate's review; never for the agent. */
   listFull(workspaceId: string, options?: WorkJournalListOptions): Promise<WorkJournalStoredNote[]>;
@@ -296,6 +308,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     workspaceId: string,
     id: string,
     content: WorkJournalNoteContent,
+    agentTokenId: string | undefined,
   ): Promise<WorkJournalRecordResult> => {
     const note = await store.get(workspaceId, id);
     if (note === undefined) {
@@ -306,11 +319,19 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     }
     const screening = await screen(content);
     const possible = await likelyDuplicates(workspaceId, content, id);
+    const amending =
+      agentTokenId === undefined
+        ? note.amended_by_agent_token_ids
+        : [
+            ...(note.amended_by_agent_token_ids ?? []).filter((each) => each !== agentTokenId),
+            agentTokenId,
+          ].slice(-maximumWorkJournalAmendingTokens);
     await store.replace({
       ...note,
       content,
       screening,
       possible_duplicate_of: possible,
+      ...(amending === undefined ? {} : { amended_by_agent_token_ids: amending }),
       updated_at: now(),
     });
     return {
@@ -328,11 +349,12 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
       ...(listOptions.status === undefined ? {} : { status: listOptions.status }),
       ...(listOptions.project === undefined ? {} : { project: listOptions.project }),
       ...(listOptions.since === undefined ? {} : { since: listOptions.since }),
+      ...(listOptions.agentTokenId === undefined ? {} : { agentTokenId: listOptions.agentTokenId }),
       limit: Math.min(Math.max(listOptions.limit ?? 20, 1), workJournalListMaximum),
     });
 
   return {
-    record: async (workspaceId, input) => {
+    record: async (workspaceId, input, context = {}) => {
       const checked = checkWorkJournalNoteInput(input);
       if (!checked.ok) {
         throw new WorkJournalError(checked.code, refusalMessages[checked.code], checked.fields);
@@ -346,7 +368,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
           message: "The note is valid; nothing was stored.",
         };
       }
-      if (amends !== undefined) return amend(workspaceId, amends, content);
+      if (amends !== undefined) return amend(workspaceId, amends, content, context.agentTokenId);
       await forgetOldDiscarded();
       const key = workJournalDedupeKey(checked.note);
       const holder = await store.holderOfKey(key);
@@ -383,6 +405,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
           possible_duplicate_of: possible,
           screening,
           edit_count: 0,
+          ...(context.agentTokenId === undefined ? {} : { agent_token_id: context.agentTokenId }),
           created_at: at,
           updated_at: at,
         });

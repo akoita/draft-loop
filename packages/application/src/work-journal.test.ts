@@ -280,3 +280,44 @@ describe("mergeWorkJournalContent", () => {
     expect(merged.summary).toBe("x".repeat(50));
   });
 });
+
+describe("work journal provenance", () => {
+  it("keeps the filing agent token, adds amending ones and filters by either", async () => {
+    const { journal, store } = setup();
+    await enabled(journal);
+    const filed = await journal.record("owner", note, { agentTokenId: "dlat_fixtureAAAA" });
+    const id = filed.note_id as string;
+    expect((await journal.get("owner", id)).agent_token_id).toBe("dlat_fixtureAAAA");
+
+    await journal.record(
+      "owner",
+      { ...note, summary: `${note.summary} Amended.`, amends: id },
+      { agentTokenId: "dlat_fixtureBBBB" },
+    );
+    const amended = await journal.get("owner", id);
+    expect(amended.agent_token_id).toBe("dlat_fixtureAAAA");
+    expect(amended.amended_by_agent_token_ids).toEqual(["dlat_fixtureBBBB"]);
+
+    await journal.record("owner", { ...note, title: "Owner filed", links: [] });
+    const byFiler = await journal.listFull("owner", { agentTokenId: "dlat_fixtureAAAA" });
+    const byAmender = await journal.listFull("owner", { agentTokenId: "dlat_fixtureBBBB" });
+    expect(byFiler.map((each) => each.id)).toEqual([id]);
+    expect(byAmender.map((each) => each.id)).toEqual([id]);
+    expect(await journal.listFull("owner", {})).toHaveLength(2);
+
+    // A replace cannot rewrite who filed the note.
+    await store.replace({ ...amended, agent_token_id: "dlat_fixtureCCCC" });
+    expect((await journal.get("owner", id)).agent_token_id).toBe("dlat_fixtureAAAA");
+    // Nor give an owner-filed note a filing token.
+    const owners = (await journal.listFull("owner", {})).find((each) => each.id !== id);
+    await store.replace({ ...(owners as typeof amended), agent_token_id: "dlat_fixtureCCCC" });
+    expect((await journal.get("owner", owners?.id as string)).agent_token_id).toBeUndefined();
+  });
+
+  it("keeps the agent's title listing free of token ids", async () => {
+    const { journal } = setup();
+    await enabled(journal);
+    await journal.record("owner", note, { agentTokenId: "dlat_fixtureAAAA" });
+    expect(JSON.stringify(await journal.list("owner"))).not.toContain("dlat_");
+  });
+});

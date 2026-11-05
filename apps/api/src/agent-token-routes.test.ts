@@ -297,3 +297,45 @@ describe("agent tokens", () => {
     expect(logs.join("\n")).not.toContain(token);
   });
 });
+
+describe("notes filed with agent tokens", () => {
+  it("name the token for the owner, who can list a token's notes after revoking it", async () => {
+    const first = await issue("Claude Code");
+    const second = await issue("Codex");
+    const recorded = await app.inject({
+      method: "POST",
+      url: notes,
+      headers: { authorization: `Bearer ${first.token}` },
+      payload: note,
+    });
+    expect(recorded.statusCode).toBe(201);
+    await app.inject({
+      method: "POST",
+      url: notes,
+      headers: { authorization: `Bearer ${second.token}` },
+      payload: { ...note, title: "Search for the Fernhill booking site", links: [] },
+    });
+    await app.inject({ method: "DELETE", url: `${tokens}/${first.id}`, headers: owner });
+
+    const full = await app.inject({
+      method: "GET",
+      url: `${notes}?fields=summary&agent_token_id=${first.id}`,
+      headers: owner,
+    });
+    expect(full.statusCode).toBe(200);
+    expect(full.json().full).toHaveLength(1);
+    expect(full.json().full[0]).toMatchObject({
+      agent_token_id: first.id,
+      content: { title: note.title },
+    });
+
+    const titles = await app.inject({
+      method: "GET",
+      url: notes,
+      headers: { authorization: `Bearer ${second.token}` },
+    });
+    expect(titles.statusCode).toBe(200);
+    expect(titles.body).not.toContain("dlat_");
+    expect(logs.join("\n")).toContain(`"agentTokenId":"${first.id}"`);
+  });
+});
