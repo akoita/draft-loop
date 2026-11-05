@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
+import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 
 import { ortRuntimeFile } from "./src/ort-runtime.js";
 
@@ -44,6 +44,9 @@ function ortRuntime(): Plugin {
 // serves the built screen.
 export default defineConfig({
   plugins: [react(), ortRuntime()],
+  // The runtime's extern-wasm build loads its files from `/ort/` alone, instead of also bundling
+  // a hashed copy of the 27 MB WebAssembly file into the assets.
+  resolve: { conditions: ["onnxruntime-web-use-extern-wasm", ...defaultClientConditions] },
   worker: { format: "es" },
   server: {
     proxy: {

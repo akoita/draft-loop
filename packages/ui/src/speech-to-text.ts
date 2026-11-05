@@ -72,3 +72,29 @@ export function createScriptedSpeechToText(transcripts: readonly string[]): Spee
     },
   };
 }
+
+/** One recording under way: stop it to get its samples, or cancel it to drop them. */
+export interface SpeechRecording {
+  /** Mono samples at {@link speechSampleRate}; the audio exists only in this array. */
+  stop(): Promise<Float32Array>;
+  cancel(): void;
+}
+
+export interface SpeechRecordOptions {
+  /** Called once the recording reaches its length limit; the screen then stops it. */
+  readonly onLimit: () => void;
+}
+
+/** The host's microphone. Starting asks the browser's permission the first time. */
+export interface SpeechRecorder {
+  start(options: SpeechRecordOptions): Promise<SpeechRecording>;
+}
+
+/** What a host gives a screen to take an answer by voice. */
+export interface SpeechInput {
+  readonly recorder: SpeechRecorder;
+  readonly engine: SpeechToTextEngine;
+  /** Whether voice input works here, such as whether the server has a model; true if absent. */
+  readonly available?: () => Promise<boolean>;
+  readonly language?: SpeechLanguage | undefined;
+}

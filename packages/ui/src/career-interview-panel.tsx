@@ -10,6 +10,8 @@ import {
   careerInterviewProgress,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
+import { SpeechButton } from "./speech-button.js";
+import { appendTranscript, type SpeechInput } from "./speech-to-text.js";
 
 /**
  * The guided career interview on the Career evidence page (#1030, #2189): DraftLoop offers topics
@@ -36,6 +38,8 @@ export interface CareerInterviewPanelProps {
   readonly onAction: (action: CareerInterviewAction) => Promise<string | undefined>;
   /** Summary statements that disagree with the record, for the topic waiting confirmation. */
   readonly loadConflicts: (topicKey: string) => Promise<readonly CareerInterviewConflictView[]>;
+  /** Voice input for answers, if the host offers it; the transcript lands in the answer box. */
+  readonly speech?: SpeechInput | undefined;
 }
 
 export function CareerInterviewPanel({
@@ -46,6 +50,7 @@ export function CareerInterviewPanel({
   onStart,
   onAction,
   loadConflicts,
+  speech,
 }: CareerInterviewPanelProps) {
   const id = useId();
   const [busy, setBusy] = useState(false);
@@ -100,6 +105,7 @@ export function CareerInterviewPanel({
             <Conversation
               topic={active}
               busy={busy}
+              speech={speech}
               onAction={(action) => run(() => onAction(action))}
             />
           )}
@@ -186,10 +192,12 @@ function Proposal({
 function Conversation({
   topic,
   busy,
+  speech,
   onAction,
 }: {
   readonly topic: CareerInterviewTopicView;
   readonly busy: boolean;
+  readonly speech: SpeechInput | undefined;
   readonly onAction: (action: CareerInterviewAction) => Promise<void>;
 }) {
   const id = useId();
@@ -225,6 +233,15 @@ function Conversation({
           rows={4}
           onChange={(event) => setAnswer(event.target.value)}
         />
+        {speech === undefined ? null : (
+          <p>
+            <SpeechButton
+              speech={speech}
+              disabled={busy}
+              onTranscript={(text) => setAnswer((existing) => appendTranscript(existing, text))}
+            />
+          </p>
+        )}
         <button type="submit" disabled={busy || answer.trim() === ""}>
           Send
         </button>{" "}
