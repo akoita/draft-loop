@@ -28,6 +28,7 @@ import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
+import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
@@ -511,6 +512,24 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
                 evidenceKinds: application.sourceEvidenceKinds,
               },
             }),
+        ...(screening === undefined ? {} : { screening }),
+      });
+    }
+    if (application.careerInterview !== undefined) {
+      // Drafting application material uses the career interview's Claude route and ceiling.
+      const interview = application.careerInterview;
+      registerApplicationMaterialRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        material: {
+          get route() {
+            return interview.route;
+          },
+          get allowProviderData() {
+            return interview.allowProviderData;
+          },
+        },
+        ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
       });
     }

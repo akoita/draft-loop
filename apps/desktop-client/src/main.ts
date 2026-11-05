@@ -24,6 +24,7 @@ import { createRememberedSignIns, type RememberedSignIns } from "./remembered-si
 import { type CheckFetch, checkServer, type ServerCheck } from "./server-check.js";
 import { createServerListStore } from "./servers.js";
 import { signInChannels } from "./sign-in-contract.js";
+import { createTokenOffers, type TokenOffers } from "./token-offer.js";
 import { type ProofFetch, serverHoldsToken } from "./token-proof.js";
 import { denyPermissions, guardContents } from "./window-security.js";
 import {
@@ -45,8 +46,16 @@ const configuredSessions = new Set<string>();
 /** Each server window's origin, by its web contents, so sign-in calls answer only that server. */
 const serverOrigins = new Map<number, string>();
 let signIns: RememberedSignIns | undefined;
-/** The remembered token each server window may read: set only after its server's proof. */
-const offeredTokens = new Map<number, string | null>();
+let tokenOffers: TokenOffers | undefined;
+
+/** The token each server window may read: set only after its server's proof, before each page. */
+function offers(): TokenOffers {
+  tokenOffers ??= createTokenOffers({
+    remembered: (origin) => rememberedSignIns().read(origin),
+    proves: (origin, token) => serverHoldsToken(origin, token, fetchForProof),
+  });
+  return tokenOffers;
+}
 
 function rememberedSignIns(): RememberedSignIns {
   signIns ??= createRememberedSignIns(app.getPath("userData"), {
@@ -64,11 +73,23 @@ function openExternal(url: string): void {
   void shell.openExternal(url);
 }
 
-function configureSession(partition: string): Electron.Session {
+function configureSession(partition: string, origin: string): Electron.Session {
   const serverSession = session.fromPartition(partition);
   if (configuredSessions.has(partition)) return serverSession;
   configuredSessions.add(partition);
   denyPermissions(serverSession);
+  // Every top-level page of the server, a reload included, waits for a fresh proof (#2148): a
+  // process that took the address after the window opened reads no remembered token.
+  serverSession.webRequest.onBeforeRequest({ urls: [`${origin}/*`] }, (details, callback) => {
+    const contentsId = details.webContentsId;
+    if (details.resourceType !== "mainFrame" || contentsId === undefined) {
+      callback({});
+      return;
+    }
+    void offers()
+      .prepare(contentsId, origin)
+      .finally(() => callback({}));
+  });
   serverSession.on("will-download", (_event, item) =>
     askWhereToSave(item, app.getPath("downloads")),
   );
@@ -141,7 +162,7 @@ function openPicker(): void {
 /** Opens one server's own web screen, in its own storage partition. */
 function openServer(origin: string, check: ServerCheck & { reachable: true }): void {
   const partition = partitionFor(origin);
-  configureSession(partition);
+  configureSession(partition, origin);
   const window = createWindow({ partition, preload: join(__dirname, "preload.js") });
   const scope: NavigationScope = {
     serverOrigin: origin,
@@ -152,7 +173,7 @@ function openServer(origin: string, check: ServerCheck & { reachable: true }): v
   serverOrigins.set(contentsId, origin);
   window.on("closed", () => {
     serverOrigins.delete(contentsId);
-    offeredTokens.delete(contentsId);
+    offers().closed(contentsId);
   });
   window.webContents.on("did-fail-load", (_event, errorCode, description, url, isMainFrame) => {
     // -3 is an aborted load, such as a navigation the guard stopped.
@@ -160,18 +181,9 @@ function openServer(origin: string, check: ServerCheck & { reachable: true }): v
     picker.setUnreachable(origin, `The page did not load (${description}).`);
     openPicker();
   });
-  void (async () => {
-    // The remembered token goes only to a server that proves it holds it (#2148); otherwise the
-    // person signs in again, and the token stays remembered for the real server.
-    const remembered = rememberedSignIns().read(origin);
-    offeredTokens.set(
-      contentsId,
-      remembered !== null && (await serverHoldsToken(origin, remembered, fetchForProof))
-        ? remembered
-        : null,
-    );
-    await window.loadURL(`${origin}/`);
-  })();
+  // The remembered token goes only to a server that proves it holds it (#2148), checked before
+  // each page loads; otherwise the person signs in again, and the token stays remembered.
+  void window.loadURL(`${origin}/`);
 }
 
 const fetchForCheck: CheckFetch = (url, init) => fetch(url, init);
@@ -302,20 +314,20 @@ function senderServer(event: Electron.IpcMainEvent): string | undefined {
 function registerSignInChannels(): void {
   ipcMain.on(signInChannels.read, (event) => {
     const origin = senderServer(event);
-    event.returnValue = origin === undefined ? null : (offeredTokens.get(event.sender.id) ?? null);
+    event.returnValue = origin === undefined ? null : offers().offered(event.sender.id);
   });
   ipcMain.on(signInChannels.remember, (event, token: unknown) => {
     const origin = senderServer(event);
     if (origin === undefined || typeof token !== "string") return;
     rememberedSignIns().remember(origin, token);
-    // The person signed in on this server themselves, so a reload of this window keeps it.
-    offeredTokens.set(event.sender.id, token);
+    // The person signed in on this server themselves; a reload offers it again after a proof.
+    offers().signedIn(event.sender.id, token);
   });
   ipcMain.on(signInChannels.forget, (event) => {
     const origin = senderServer(event);
     if (origin === undefined) return;
     rememberedSignIns().forget(origin);
-    offeredTokens.set(event.sender.id, null);
+    offers().forgotten(event.sender.id);
   });
 }
 

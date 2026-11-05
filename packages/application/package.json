@@ -58,6 +58,18 @@
     "./career-interview-service": {
       "types": "./src/career-interview-service.ts",
       "import": "./src/career-interview-service.ts"
+    },
+    "./application-material": {
+      "types": "./src/application-material.ts",
+      "import": "./src/application-material.ts"
+    },
+    "./application-material-model": {
+      "types": "./src/application-material-model.ts",
+      "import": "./src/application-material-model.ts"
+    },
+    "./call-cost-guard": {
+      "types": "./src/call-cost-guard.ts",
+      "import": "./src/call-cost-guard.ts"
     }
   },
   "files": [
