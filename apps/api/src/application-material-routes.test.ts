@@ -149,11 +149,12 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v3",
+      prompt_version: "application-material-v4",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
     expect(JSON.stringify(seen)).toContain("Reporting with SQL");
+    expect(JSON.stringify(seen)).toContain('"group":"job"');
     const logged = logs.join("\n");
     expect(logged).toContain('"costUsd":0.002');
     expect(logged).not.toContain("cut report time");

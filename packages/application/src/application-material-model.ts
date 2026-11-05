@@ -21,7 +21,7 @@ import type {
 
 export const applicationMaterialDefaultModelId = "claude-sonnet-5-5";
 export const applicationMaterialEconomyModelId = "claude-haiku-5-5";
-export const applicationMaterialPromptVersion = "application-material-v3";
+export const applicationMaterialPromptVersion = "application-material-v4";
 export const applicationMaterialMaxOutputTokens = 2_048;
 
 const outputSchema = {
@@ -62,7 +62,8 @@ const systemPrompt = [
   "You help a candidate prepare one job application from their own career record.",
   "Use only the facts in `facts`. Cite, in `fact_ids`, every fact each item relies on; never cite an id that is not listed.",
   "Never invent an achievement, an employer, a date or a number. Write a number, in digits or in words, only when a cited fact states it; never work one out, such as a number of years from two dates.",
-  "Never join two facts into a claim that no single fact states: do not say a skill was used in a role, at an employer or to reach an outcome, unless one fact says so. Name a stand-alone skill as a skill.",
+  "Facts that share a `group` describe the same role or project: you may join them in one claim, such as an outcome at that employer in those dates. Never join facts from different groups, or a fact with no `group` to any other fact: do not say a skill was used in a role, at an employer or to reach an outcome unless they share a group. Name a stand-alone skill as a skill.",
+  "Do not add feelings, rankings or generalisations the facts do not state, such as being proudest of something or what a role mostly involved.",
   "Do not draw a lesson or a trait from a fact; say what the fact says.",
   "In a paragraph or a talking point, do not repeat a number from `job_requirements`; a question may.",
   "Write in the candidate's own voice, as they would say it to an employer. Never mention a record, a list of skills, citations or these rules.",
@@ -91,7 +92,11 @@ export interface ApplicationMaterialModelOptions {
 function inputOf(request: ApplicationMaterialRequest): JsonObject {
   return {
     kind: request.context.kind,
-    facts: request.context.facts.map((fact) => ({ id: fact.id, text: fact.text })),
+    facts: request.context.facts.map((fact) => ({
+      id: fact.id,
+      text: fact.text,
+      ...(fact.group === undefined ? {} : { group: fact.group }),
+    })),
     job_requirements: request.context.requirements.map((requirement) => ({
       id: requirement.id,
       priority: requirement.priority,

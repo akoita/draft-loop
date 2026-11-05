@@ -107,6 +107,7 @@ async function careerFacts(
   return (newest?.profile.facts ?? []).map((fact) => ({
     id: fact.id,
     category: fact.category,
+    ...(fact.subjectId === undefined ? {} : { subjectId: fact.subjectId }),
     field: fact.field,
     value: fact.value,
   }));
