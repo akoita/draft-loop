@@ -50,6 +50,10 @@
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
+    },
+    "./career-interview": {
+      "types": "./src/career-interview.ts",
+      "import": "./src/career-interview.ts"
     }
   },
   "files": [

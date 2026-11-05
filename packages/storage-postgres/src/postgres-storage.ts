@@ -3,6 +3,7 @@ import { createAgentTokenStore } from "./agent-tokens.js";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
 import { createCandidateRecordAccess } from "./candidate-records.js";
+import { createCareerInterviewSessionStore } from "./career-interview-sessions.js";
 import { createConsentLedger } from "./consent-ledger.js";
 import { consentLedgerGrant } from "./consent-ledger-migration.js";
 import { createContentScreening } from "./content-screening.js";
@@ -140,6 +141,7 @@ function tenantStorage(client: SqlSession) {
     contentScreening: createContentScreening(client),
     workJournalNotes: createWorkJournalNoteStore(client),
     agentTokens: createAgentTokenStore(client),
+    careerInterviewSessions: createCareerInterviewSessionStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

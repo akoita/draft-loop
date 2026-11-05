@@ -286,6 +286,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO career_interview_sessions (tenant_id, id, workspace_id, status, session, created_at, updated_at)
+       VALUES ($1, 'cis_' || md5($1 || $2), $2, 'open', '{}', $3, $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
        VALUES ($1, 'runs:' || $2, 'key-1', $3, now() + interval '1 day'),
               ($1, 'exports:' || $2 || ':' || $4, 'key-1', $3, now() + interval '1 day')`,
