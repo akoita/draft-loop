@@ -12,7 +12,7 @@ import type {
   ModelResponse,
 } from "@draft-loop/providers";
 
-import type { CareerInterviewFact, CareerInterviewTopic } from "./career-interview-topics.js";
+import type { CareerInterviewFact } from "./career-interview-topics.js";
 
 /**
  * The guided career interview's model adapter (#2176): it phrases the interviewer's turns through
@@ -36,7 +36,7 @@ const maximumContextEntryCharacters = 300;
  * and length.
  */
 export function careerInterviewTopicContext(
-  topic: Pick<CareerInterviewTopic, "kind" | "reason" | "factIds">,
+  topic: { readonly kind: string; readonly reason: string; readonly factIds: readonly string[] },
   facts: readonly CareerInterviewFact[],
   mayTransmit: (fact: CareerInterviewFact) => boolean,
 ): CareerInterviewConversationTopic {
