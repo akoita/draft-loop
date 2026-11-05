@@ -157,8 +157,38 @@ describe("career interview evidence", () => {
     expect(markdown).toContain("I built \\*loan\\* reports.");
     expect(markdown).toContain("- Candidate: I built loan reports.");
     expect(markdown).toContain("- Interviewer: What changed?");
-    expect(markdown).not.toContain("skipped");
+    expect(markdown).toContain("- Candidate: (skipped this question)");
     expect(renderCareerInterviewMarkdown(session, 0, topic)).toBe(markdown);
+  });
+
+  it("keeps skipped and unknown answers in order, so each answer stays with its question", () => {
+    const marked = {
+      ...topic,
+      turns: [
+        { role: "interviewer", text: "Which tools?", at: "2026-11-05T09:00:00.000Z" },
+        { role: "candidate", text: "", mark: "unknown", at: "2026-11-05T09:01:00.000Z" },
+        { role: "interviewer", text: "What changed?", at: "2026-11-05T09:02:00.000Z" },
+        { role: "candidate", text: "I built loan reports.", at: "2026-11-05T09:03:00.000Z" },
+      ],
+    } as CareerInterviewSessionTopic;
+    expect(renderCareerInterviewMarkdown(session, 0, marked)).toContain(
+      [
+        "- Interviewer: Which tools?",
+        "- Candidate: (said they did not know)",
+        "- Interviewer: What changed?",
+        "- Candidate: I built loan reports.",
+      ].join("\n"),
+    );
+  });
+
+  it("renders a topic of only marked answers without inventing words", () => {
+    const onlyMarked = {
+      ...topic,
+      turns: [{ role: "candidate", text: "", mark: "skipped", at: "2026-11-05T09:00:00.000Z" }],
+    } as CareerInterviewSessionTopic;
+    const markdown = renderCareerInterviewMarkdown(session, 0, onlyMarked);
+    expect(markdown).toContain("## Conversation\n\n- Candidate: (skipped this question)\n");
+    expect(markdown).not.toContain("No words recorded.");
   });
 
   it("publishes once with the tier rule first and the transcript evidence kind", async () => {
