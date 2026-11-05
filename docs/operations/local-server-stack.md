@@ -292,6 +292,7 @@ check off.
 | ------------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                               | API, page fetcher | Listening port, default 8080                                                                                                  |
 | `DRAFT_LOOP_WEB_ROOT`                | API               | The built web screen's directory, served at `/`; the image sets it                                                            |
+| `DRAFT_LOOP_SPEECH_MODEL_DIR`        | API               | The pinned speech model's folder, served at `/speech-models/`; the image fetches and sets it. Fill it with `pnpm speech-model:install` |
 | `DRAFT_LOOP_PAGE_FETCHER_URL`        | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself                |
 | `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited` |
 | `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset        |

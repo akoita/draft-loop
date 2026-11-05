@@ -69,6 +69,7 @@ const app = await buildApi({
   },
   ...(directory === undefined ? {} : { directory }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
+  ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
 });
 

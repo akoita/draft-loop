@@ -23,6 +23,7 @@ export interface ApiConfig {
   readonly workerJob?: string;
   /** The built web screen's directory, served at `/`; the image sets it. */
   readonly webRoot?: string;
+  readonly speechModelRoot?: string;
   /** The separate page fetcher job pages are fetched through; the API fetches them itself when unset. */
   readonly pageFetcherUrl?: string;
   /** Requests and refused credentials per source address and minute (#2145). */
@@ -59,6 +60,10 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
   if (webRoot !== "" && !isAbsolute(webRoot)) {
     throw new ApiConfigError("DRAFT_LOOP_WEB_ROOT must be an absolute directory path.");
   }
+  const speechModelRoot = env.DRAFT_LOOP_SPEECH_MODEL_DIR ?? "";
+  if (speechModelRoot !== "" && !isAbsolute(speechModelRoot)) {
+    throw new ApiConfigError("DRAFT_LOOP_SPEECH_MODEL_DIR must be an absolute directory path.");
+  }
   const pageFetcherUrl = env.DRAFT_LOOP_PAGE_FETCHER_URL ?? "";
   if (pageFetcherUrl !== "" && !isServiceOrigin(pageFetcherUrl)) {
     throw new ApiConfigError(
@@ -84,6 +89,7 @@ export function readApiConfig(env: NodeJS.ProcessEnv): ApiConfig {
     },
     ...(workerJob === "" ? {} : { workerJob }),
     ...(webRoot === "" ? {} : { webRoot }),
+    ...(speechModelRoot === "" ? {} : { speechModelRoot }),
     ...(pageFetcherUrl === "" ? {} : { pageFetcherUrl }),
   };
 }

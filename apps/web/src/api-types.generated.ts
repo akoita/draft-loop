@@ -817,6 +817,19 @@ export interface ApiSchemas {
     readonly createdAt: string | null;
     readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
   };
+  "SpeechModelManifest": {
+    readonly available: boolean;
+    readonly model: string;
+    readonly revision: string;
+    readonly dtype: string;
+    readonly license: string;
+    readonly base: string;
+    readonly files: readonly ({
+      readonly path: string;
+      readonly sizeBytes: number;
+      readonly sha256: string;
+    })[];
+  };
   "UnscreenedMaterial": {
     readonly kind: "job-source";
     readonly briefId: string;
@@ -2099,6 +2112,9 @@ export interface ApiOperations {
       readonly organisationId: string;
     };
     readonly response: ApiSchemas["OrganisationCredits"];
+  };
+  "GET /speech-models/manifest.json": {
+    readonly response: ApiSchemas["SpeechModelManifest"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/from-file": {
     readonly path: {
