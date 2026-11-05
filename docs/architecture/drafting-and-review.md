@@ -8,7 +8,8 @@ It is written for contributors who change the author, the critic, the checks or
 the renderers. For the system map, read the [architecture overview](overview.md).
 Sources and profiles are in [Candidate evidence](candidate-evidence.md), and
 workflow states and provider controls are in
-[Runtime and trust](runtime-and-trust.md).
+[Runtime and trust](runtime-and-trust.md). What a run remembers between
+calls and rounds is in the [memory model](memory.md).
 
 ## Contents
 
