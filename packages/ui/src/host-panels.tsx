@@ -24,6 +24,13 @@ export interface HostPanels {
    * `openEvidence` opens the Career evidence page.
    */
   readonly homeEvidence?: (context: HomeEvidenceContext) => ReactNode;
+  /** Shown under an application's header, such as drafting its cover letter (#2217). */
+  readonly application?: (context: ApplicationPanelContext) => ReactNode;
+}
+
+/** What the host's panel on an application is given. */
+export interface ApplicationPanelContext {
+  readonly applicationId: string;
 }
 
 /** What the host's panel in Home's Career evidence card is given. */
@@ -58,4 +65,9 @@ export function HostStartDialog(context: StartDialogContext) {
 /** The host's panel in Home's Career evidence card; nothing without one. */
 export function HostHomeEvidence(context: HomeEvidenceContext) {
   return useContext(HostPanelsContext).homeEvidence?.(context) ?? null;
+}
+
+/** The host's panel under an application's header; nothing without one. */
+export function HostApplicationPanel(context: ApplicationPanelContext) {
+  return useContext(HostPanelsContext).application?.(context) ?? null;
 }

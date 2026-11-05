@@ -1,11 +1,13 @@
 // Packaged acceptance for the desktop client (ADR 0011, D9; issue #2093). It launches the
 // packaged client with a fresh profile against a scripted fake DraftLoop API on this computer
-// and checks the picker, the server window's isolation and navigation rules, and a relaunch.
+// and checks the picker, the server window's isolation and navigation rules, that a remembered
+// sign-in goes only to the server that proves it holds it (#2148), and a relaunch.
 // No provider, no real server and no candidate material are involved.
 //
 // Usage: node scripts/desktop-client-acceptance.mjs [packaged executable] [evidence.json]
 // Without an executable it uses the one `pnpm --filter @draft-loop/desktop-client package` wrote.
 /* global console, document, location, setTimeout, URL -- Node and the pages under test. */
+import { createHmac } from "node:crypto";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -23,11 +25,38 @@ const fakePage = `<!doctype html><title>DraftLoop acceptance server</title>
   document.body.dataset.host = desktop && desktop.host;
   document.body.dataset.node = typeof require + "," + typeof process;
   document.body.dataset.signin = desktop && desktop.signIn ? typeof desktop.signIn.remember : "none";
+  document.body.dataset.token = (desktop && desktop.signIn && desktop.signIn.rememberedToken) || "none";
 </script>`;
 
-function startFakeServer() {
-  const server = createServer((request, response) => {
-    if (request.url === "/v1/health") {
+/** The invented owner token the real fake server holds; no real server ever sees it. */
+export const acceptanceToken = "acceptance-owner-token-0123456789abcdef";
+
+/** The proof the API answers (`apps/api/src/owner-token-proof-routes.ts`). */
+export function acceptanceProof(token, challenge) {
+  return createHmac("sha256", token)
+    .update(`draft-loop owner token proof v1\n${challenge}`)
+    .digest("hex");
+}
+
+/**
+ * A scripted DraftLoop API on this computer. With `holdsToken` it answers the owner token proof;
+ * without it, it is the impostor of #2148: another process on the same address that does not
+ * hold the token. `seen` collects every request line, header and body, to show the token never
+ * reached it.
+ */
+export function startFakeServer({ holdsToken = true, port = 0, seen = [] } = {}) {
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    seen.push(`${request.method} ${request.url} ${JSON.stringify(request.headers)} ${body}`);
+    if (request.url === "/v1/auth/proof" && request.method === "POST" && holdsToken) {
+      const { challenge } = JSON.parse(body);
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ proof: acceptanceProof(acceptanceToken, challenge) }));
+    } else if (request.url === "/v1/auth/proof") {
+      response.statusCode = 404;
+      response.end();
+    } else if (request.url === "/v1/health") {
       response.setHeader("content-type", "application/json");
       response.end('{"status":"ok"}');
     } else if (request.url === "/v1/auth/config") {
@@ -39,8 +68,23 @@ function startFakeServer() {
     }
   });
   return new Promise((resolvePromise) => {
-    server.listen(0, "127.0.0.1", () => resolvePromise(server));
+    server.listen(port, "127.0.0.1", () => resolvePromise(server));
   });
+}
+
+/** Stops a fake server and frees its port at once, so another can listen on the same address. */
+export function stopFakeServer(server) {
+  return new Promise((resolvePromise) => {
+    server.close(() => resolvePromise());
+    server.closeAllConnections();
+  });
+}
+
+/** Reloads the server window and reads the token its page was offered. */
+async function offeredAfterReload(window) {
+  await window.reload();
+  await window.waitForSelector("#ready");
+  return window.evaluate(() => document.body.dataset.token);
 }
 
 /**
@@ -111,7 +155,8 @@ async function main() {
   const executablePath =
     executableArgument === undefined ? await findPackagedClient() : resolve(executableArgument);
   const checks = {};
-  const server = await startFakeServer();
+  let server = await startFakeServer();
+  const port = server.address().port;
   const origin = `http://127.0.0.1:${server.address().port}`;
   const profile = await mkdtemp(join(tmpdir(), "draftloop-client-acceptance-"));
   const userData = join(profile, "user-data");
@@ -148,6 +193,28 @@ async function main() {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
       return location.protocol === "http:";
     });
+
+    // The person signs in on the real server; a reload proves it again and offers the token.
+    checks.noTokenBeforeSignIn = body.token === "none";
+    await window.evaluate(
+      (token) => window.draftLoopDesktop.signIn.remember(token),
+      acceptanceToken,
+    );
+    checks.realServerGetsToken = (await offeredAfterReload(window)) === acceptanceToken;
+
+    // The real stack stops and another process answers on the same address (#2148).
+    await stopFakeServer(server);
+    const impostorSeen = [];
+    server = await startFakeServer({ holdsToken: false, port, seen: impostorSeen });
+    checks.impostorGetsNoToken =
+      (await offeredAfterReload(window)) === "none" &&
+      impostorSeen.length > 0 &&
+      impostorSeen.every((line) => !line.includes(acceptanceToken));
+
+    // The real stack returns: the next page load proves it and offers the token again.
+    await stopFakeServer(server);
+    server = await startFakeServer({ port });
+    checks.realServerGetsTokenBack = (await offeredAfterReload(window)) === acceptanceToken;
     await app.close();
 
     app = await launch(executablePath, userData);
@@ -155,7 +222,7 @@ async function main() {
     checks.relaunchOpensLastServer = new URL(window.url()).origin === origin;
     await app.close();
   } finally {
-    server.close();
+    await stopFakeServer(server);
     await rm(profile, { recursive: true, force: true });
   }
   const failed = Object.entries(checks).filter(([, passed]) => passed !== true);

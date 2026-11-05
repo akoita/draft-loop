@@ -82,6 +82,26 @@ export interface ApiSchemas {
     readonly text: string | null;
     readonly url: string | null;
   };
+  "ApplicationMaterialDraft": {
+    readonly kind: "cover-letter" | "interview-questions";
+    readonly items: readonly ({
+      readonly question: string;
+      readonly text: string;
+      readonly citations: readonly ({
+        readonly fact_id: string;
+        readonly text: string;
+      })[];
+    })[];
+    readonly model: {
+      readonly provider: string;
+      readonly model: string;
+    };
+    readonly prompt_version: string;
+    readonly cost_usd: number;
+  };
+  "ApplicationMaterialRequestInput": {
+    readonly kind: "cover-letter" | "interview-questions";
+  };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];
     readonly entitlements: {
@@ -1993,6 +2013,14 @@ export interface ApiOperations {
     };
     readonly body: ApiSchemas["CareerInterviewActionInput"];
     readonly response: ApiSchemas["CareerInterviewSessionView"];
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: ApiSchemas["ApplicationMaterialRequestInput"];
+    readonly response: ApiSchemas["ApplicationMaterialDraft"];
   };
   "POST /v1/workspaces/{workspaceId}/agent-tokens": {
     readonly path: {
