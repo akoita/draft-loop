@@ -21,6 +21,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         workspaceId: "owner",
         label: " Claude Code ",
         createdAt: "2026-11-04T10:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
         secretHash: hashA,
       });
       await storeA.insert({
@@ -28,6 +29,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         workspaceId: "owner",
         label: "Codex",
         createdAt: "2026-11-04T11:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
         secretHash: "b".repeat(64),
       });
       await expect(
@@ -36,6 +38,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
           workspaceId: "owner",
           label: "Copy",
           createdAt: "2026-11-04T12:00:00.000Z",
+          expiresAt: "2027-01-01T00:00:00.000Z",
           secretHash: hashA,
         }),
       ).rejects.toMatchObject({ code: "duplicate_token" });
@@ -45,6 +48,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         workspaceId: "owner",
         label: "Claude Code",
         createdAt: "2026-11-04T10:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
       });
       expect(await storeB.findByHash(hashA)).toBeUndefined();
       expect((await storeA.list("owner")).map((token) => token.id)).toEqual([

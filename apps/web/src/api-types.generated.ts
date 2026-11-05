@@ -5,7 +5,9 @@ export interface ApiSchemas {
     readonly id: string;
     readonly label: string;
     readonly created_at: string;
+    readonly expires_at: string;
     readonly revoked_at?: string;
+    readonly active: boolean;
   };
   "ApiError": {
     readonly error: {
@@ -324,7 +326,9 @@ export interface ApiSchemas {
     readonly id: string;
     readonly label: string;
     readonly created_at: string;
+    readonly expires_at: string;
     readonly revoked_at?: string;
+    readonly active: boolean;
     readonly token: string;
   };
   "KnowledgeBase": {
@@ -2017,6 +2021,7 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly label: string;
+      readonly expires_in_days?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
   };

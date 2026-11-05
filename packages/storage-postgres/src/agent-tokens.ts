@@ -2,6 +2,7 @@ import {
   type AgentTokenRecord,
   type AgentTokenStore,
   AgentTokenStoreError,
+  legacyAgentTokenExpiry,
   requireAgentTokenInsert,
 } from "@draft-loop/storage/agent-tokens";
 import type { SqlSession } from "./sql-client.js";
@@ -12,13 +13,18 @@ function recordOf(row: Record<string, unknown>): AgentTokenRecord {
     workspaceId: String(row.workspace_id),
     label: String(row.label),
     createdAt: String(row.created_at),
+    // A token stored before tokens expired lives the default lifetime from its issue.
+    expiresAt:
+      row.expires_at === null || row.expires_at === undefined
+        ? legacyAgentTokenExpiry(String(row.created_at))
+        : String(row.expires_at),
     ...(row.revoked_at === null || row.revoked_at === undefined
       ? {}
       : { revokedAt: String(row.revoked_at) }),
   };
 }
 
-const columns = "id, workspace_id, label, created_at, revoked_at";
+const columns = "id, workspace_id, label, created_at, expires_at, revoked_at";
 
 /** One tenant's agent tokens on Postgres; row-level security confines them to the tenant. */
 export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
@@ -27,9 +33,16 @@ export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
       const token = requireAgentTokenInsert(input);
       try {
         await client.query(
-          `INSERT INTO agent_tokens (id, workspace_id, label, secret_hash, created_at)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [token.id, token.workspaceId, token.label, token.secretHash, token.createdAt],
+          `INSERT INTO agent_tokens (id, workspace_id, label, secret_hash, created_at, expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            token.id,
+            token.workspaceId,
+            token.label,
+            token.secretHash,
+            token.createdAt,
+            token.expiresAt,
+          ],
         );
       } catch (error) {
         if ((error as { code?: unknown } | null)?.code === "23505") {

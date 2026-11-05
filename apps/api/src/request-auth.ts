@@ -171,11 +171,17 @@ export function registerRequestAuthentication(
             );
           return;
         }
-        // It acts in the owner's tenant, on the two work journal routes checked above only.
+        // It acts in the owner's tenant, on the two work journal routes checked above only. The
+        // line ties each accepted request to the token, so a leaked token's use can be traced.
+        request.log.info(
+          { agentTokenId: agent.id, method: request.method, route: request.routeOptions.url },
+          "agent token accepted",
+        );
         request.caller = { kind: "owner" };
         request.agentToken = { id: agent.id, workspaceId: agent.workspaceId };
         return;
       }
+      // The reason (unknown, revoked or expired) is logged below; the answer stays one 401.
       authentication = agent;
     }
     if (authentication.outcome === "authenticated") {
