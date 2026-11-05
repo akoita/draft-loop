@@ -44,3 +44,24 @@ Each paragraph, or each question with its talking point, must pass all rules:
 
 A record with no fact the draft may cite is refused before any model call
 (`no_facts`). The drafter never stores a draft.
+
+## The hosted route
+
+`POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material` with
+`{"kind": "cover-letter"}` or `{"kind": "interview-questions"}` returns the
+draft. Each item carries its citations as the record stores them. It follows
+the career interview's rules:
+
+| Answer                                              | When                                                                                      |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 200                                                 | A validated draft, its model, prompt version and recorded cost.                           |
+| 404 `not_found`                                     | The application does not exist.                                                           |
+| 503 `material_model_unavailable`                    | The server has no Claude route (screening is not `rules+model`) or refuses provider data. |
+| 403 `consent_required`                              | The record's consent does not name Anthropic.                                             |
+| 409 `material_quarantined` or `material_unscreened` | The newest brief's job source is quarantined or unscreened, as for a run.                 |
+| 409 `no_citable_facts`                              | The career record holds no fact the draft may cite.                                       |
+| 409 `cost_cap_reached`                              | The next call could pass the request's cap, US$0.50 by default.                           |
+| 422 `invalid_draft`                                 | Both drafts broke the rules above.                                                        |
+
+Each model call is logged with its model, tokens and cost, never the draft. The
+draft is not stored: download it or ask again.
