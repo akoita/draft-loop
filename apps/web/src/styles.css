@@ -373,3 +373,28 @@ button.small:where(:not(.shared-screens *)) {
   font-size: 0.85rem;
   padding: 0.15rem 0.6rem;
 }
+
+/* The prepare panel shows each citation beside its paragraph, stacked on a narrow screen. */
+.application-material .material-items {
+  padding-left: 1.25rem;
+}
+
+.application-material .material-item {
+  display: grid;
+  gap: 0.5rem 1.5rem;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  margin-bottom: 1rem;
+}
+
+.application-material .material-item aside {
+  border-left: 2px solid currentColor;
+  font-size: 0.875rem;
+  opacity: 0.8;
+  padding-left: 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  .application-material .material-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

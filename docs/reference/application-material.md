@@ -65,3 +65,16 @@ the career interview's rules:
 
 Each model call is logged with its model, tokens and cost, never the draft. The
 draft is not stored: download it or ask again.
+
+## The web panel
+
+Each application page on the web shows a **Prepare** panel under its header.
+The candidate picks a cover letter or interview questions and selects
+**Draft**. Before the first draft, the panel names what goes to Anthropic.
+
+Each paragraph or question shows its cited facts beside it. **Download
+Markdown** saves the draft with a `> Source:` line under each item. A refusal,
+such as a 503 from a server without a Claude route, shows in the panel; the
+rest of the page keeps working. The panel lives in
+`apps/web/src/application-material.tsx` and fills the shared screens'
+`application` host slot; a host that leaves the slot empty shows nothing new.
