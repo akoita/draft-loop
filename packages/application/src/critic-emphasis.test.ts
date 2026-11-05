@@ -153,6 +153,6 @@ describe("emphasis findings from the critic", () => {
       emphasisFinding({ id: `f${index}` }),
     );
 
-    expect(() => parseCritique({ findings })).toThrow("too many findings");
+    expect(parseCritique({ findings }).findings).toHaveLength(maximumCritiqueFindings);
   });
 });

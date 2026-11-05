@@ -25,6 +25,7 @@ import {
 } from "./critic-adjudication.js";
 import { normalizeEmphasisSeverity } from "./critic-emphasis.js";
 import { capBlockingOmissions } from "./critic-omission.js";
+import { keepWithinFindingLimit, truncateFindingMessage } from "./critique-repair.js";
 
 /** The most candidate blocks shown as hints for one coverage-judgement request. */
 export const maximumCoverageJudgementCandidateBlocks = 3;
@@ -232,46 +233,47 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
   const findings = value.findings;
   if (!Array.isArray(findings))
     throw new CliUserError("The critic returned an invalid findings list.");
-  if (findings.length > maximumCritiqueFindings) {
-    throw new CliUserError("The critic returned too many findings.");
-  }
   const coverageJudgements = parseCoverageJudgements(value.coverageJudgements);
-  return {
-    findings: capBlockingOmissions(
-      findings.map((finding) => {
-        if (typeof finding !== "object" || finding === null || Array.isArray(finding)) {
-          throw new CliUserError("The critic returned an invalid finding.");
-        }
-        const item = finding as Record<string, unknown>;
-        const required = ["id", "code", "category", "severity", "message"];
-        if (
-          required.some(
-            (key) => typeof item[key] !== "string" || (item[key] as string).trim() === "",
-          )
-        ) {
-          throw new CliUserError("The critic returned an incomplete finding.");
-        }
-        if ((item.message as string).length > maximumCritiqueMessageCharacters) {
-          throw new CliUserError("The critic returned an excessively long finding message.");
-        }
-        return normalizeEmphasisSeverity({
-          id: item.id as string,
-          code: item.code as string,
-          category: item.category as Critique["findings"][number]["category"],
-          severity: item.severity as Critique["findings"][number]["severity"],
-          message: item.message as string,
-          ...targetField("claimId", item.claimId),
-          ...targetField("sectionId", item.sectionId),
-          ...targetField("requirementId", item.requirementId),
-        });
+  // One malformed finding is dropped and a long message is cut (#2234); a critique whose every
+  // finding is malformed is refused, so a broken answer never reads as a clean draft.
+  const parsed = findings.flatMap((finding) => {
+    if (!isRecord(finding)) return [];
+    if (
+      requiredFindingFields.some(
+        (key) => typeof finding[key] !== "string" || (finding[key] as string).trim() === "",
+      )
+    ) {
+      return [];
+    }
+    return [
+      normalizeEmphasisSeverity({
+        id: finding.id as string,
+        code: finding.code as string,
+        category: finding.category as Critique["findings"][number]["category"],
+        severity: finding.severity as Critique["findings"][number]["severity"],
+        message: truncateFindingMessage(
+          finding.message as string,
+          maximumCritiqueMessageCharacters,
+        ),
+        ...targetField("claimId", finding.claimId),
+        ...targetField("sectionId", finding.sectionId),
+        ...targetField("requirementId", finding.requirementId),
       }),
-    ),
+    ];
+  });
+  if (findings.length > 0 && parsed.length === 0) {
+    throw new CliUserError("The critic returned no valid finding.");
+  }
+  return {
+    findings: capBlockingOmissions(keepWithinFindingLimit(parsed, maximumCritiqueFindings)),
     ...(coverageJudgements === undefined ? {} : { coverageJudgements }),
     ...(instructionsVersion === undefined
       ? {}
       : { coverageJudgementInstructionsVersion: instructionsVersion }),
   };
 }
+
+const requiredFindingFields = ["id", "code", "category", "severity", "message"] as const;
 
 /** What coverage-judgement requests add to a critic call; none leaves every part untouched. */
 export interface CriticCoverageJudgementParts {

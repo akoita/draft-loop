@@ -2622,7 +2622,7 @@ describe("local application driver", () => {
     }
   });
 
-  it("rejects an oversized user-session critique as a retryable provider response", async () => {
+  it("rejects a user-session critique with no valid finding as a retryable provider response", async () => {
     const root = await providerWorkspace("draft-loop-bounded-user-session-critique-");
     const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args) => {
       const outputPath = args[args.indexOf("--output-last-message") + 1];
@@ -2632,7 +2632,8 @@ describe("local application driver", () => {
         code: "quality",
         category: "quality",
         severity: "warning",
-        message: "Keep the finding concise.",
+        // Blank messages: every finding is malformed, so no finding survives (#2234).
+        message: " ",
       }));
       await writeFile(outputPath, JSON.stringify({ findings }), { mode: 0o600 });
       return {
