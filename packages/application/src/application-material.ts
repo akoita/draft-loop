@@ -11,6 +11,11 @@ export interface ApplicationMaterialFact {
   readonly category: string;
   readonly field: string;
   readonly value: string;
+  /**
+   * The role, project or other subject the fact belongs to. Facts that share one may be joined in
+   * one claim, such as an outcome at that employer; facts that do not, never.
+   */
+  readonly subjectId?: string | undefined;
 }
 
 /** A requirement from the application's job post: untrusted third-party text. */
@@ -26,7 +31,12 @@ export type ApplicationMaterialKind = (typeof applicationMaterialKinds)[number];
 /** What reaches the model: allowed facts and the application's requirements, bounded. */
 export interface ApplicationMaterialContext {
   readonly kind: ApplicationMaterialKind;
-  readonly facts: readonly { readonly id: string; readonly text: string }[];
+  readonly facts: readonly {
+    readonly id: string;
+    readonly text: string;
+    /** The fact's subject, shared by the facts of one role or project; absent for a lone fact. */
+    readonly group?: string;
+  }[];
   readonly requirements: readonly {
     readonly id: string;
     readonly text: string;
@@ -150,6 +160,9 @@ export function applicationMaterialContext(
     .map((fact) => ({
       id: fact.id,
       text: `${fact.category} ${fact.field}: ${fact.value}`.slice(0, maximumContextCharacters),
+      ...(fact.subjectId === undefined || fact.subjectId === ""
+        ? {}
+        : { group: fact.subjectId.slice(0, 64) }),
     }));
   const requirements = [...input.requirements]
     .sort((left, right) => priorityOrder[left.priority] - priorityOrder[right.priority])

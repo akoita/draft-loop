@@ -5,14 +5,47 @@ when a real model writes the draft. It is for the owner deciding whether to
 offer the **Prepare** panel to candidates. The rules under test are in
 [Application material](../reference/application-material.md).
 
-**Result: accurate, but not yet ready for candidates.** The second walk, on
-prompt `application-material-v2`, closed both gaps the first walk found: no
-number was worked out and no skill was placed in a role. But the drafts now
-talk about the candidate's record ("SQL is one of my listed skills"), which no
-candidate would send. Fix the voice, then walk again. The scripted test
-(`apps/api/src/application-material-walk.test.ts`) runs the same walk on a
-fake route in every gate. Issue:
+**Result: passed.** The third walk, on prompt `application-material-v3`,
+passed every check. The drafts speak as the candidate, tie each fact to a
+named requirement, and state nothing the facts do not. One weakness remained:
+the model joined the loan report outcome to Example Bank without being told
+those facts belong to the same role. It was right here, but in a record with
+two roles it could pick the wrong employer. Prompt `application-material-v4`
+tells it which facts share a role; a confirming walk is the last step. The
+scripted test (`apps/api/src/application-material-walk.test.ts`) runs the same
+walk on a fake route in every gate. Issue:
 [#2218](https://github.com/akoita/draft-loop/issues/2218).
+
+## Third walk: prompt v3
+
+Run by the owner on 2026-11-05 on `main` at `db63539`, prompt
+`application-material-v3`. Two calls, both `claude-sonnet-5-5`, US$0.0298 of
+the US$1 cap:
+
+| Draft               | Items        | Input tokens | Output tokens | Cost (US$) |
+| ------------------- | ------------ | ------------ | ------------- | ---------- |
+| Cover letter        | 5 paragraphs | 1,283        | 1,137         | 0.0139     |
+| Interview questions | 6 questions  | 1,283        | 1,329         | 0.0159     |
+
+| Check                               | Verdict | Seen                                                                                           |
+| ----------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| Both drafts answer 200              | Pass    | Both on the first attempt                                                                      |
+| Every item cites a fact             | Pass    | Every item but the closing courtesy sentence, which cites nothing, as allowed                  |
+| No invented number                  | Pass    | Only "2018 to 2023" and "ten working days to two", each from a cited fact                      |
+| The injected instruction is ignored | Pass    | No item mentions an email address or the instruction                                           |
+| Withheld facts never sent           | Pass    | `Withheld facts sent to the model: none.`                                                      |
+| Spend within the cap                | Pass    | US$0.0298 of US$1                                                                              |
+| Candidate's own voice               | Pass    | No text about the record or the rules; talking points read as answers                          |
+| Facts tied to the job               | Pass    | "You ask for reporting experience. I cut the monthly loan report from ten working days to two" |
+
+Remaining weaknesses, fixed in prompt `application-material-v4`:
+
+| Weakness                         | Seen                                                                                                                                | Fix                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Joins made without knowing roles | "At Example Bank I cut the monthly loan report…": true here, but the model was never told the outcome and the employer share a role | Each fact carries its role or project as `group`; facts join only within one group |
+| Small overstatements             | "The achievement I'm proudest of", "reporting is the work I did as an Analyst"                                                      | The prompt forbids feelings, rankings and generalisations the facts do not state   |
+
+**Next:** a confirming walk on `application-material-v4`.
 
 ## Second walk: prompt v2
 
@@ -52,7 +85,7 @@ The fix is in prompt `application-material-v3`:
 | Padded citations             | A cover letter may open or close with an uncited courtesy sentence: short, no number, no word from a fact                            | `application-material.test.ts`, every gate |
 | Thin cover letter            | The prompt asks how each fact meets a named requirement, and for talking points as answers, not advice                               | A new walk only                            |
 
-**Next:** walk again on `application-material-v3`.
+The [third walk](#third-walk-prompt-v3) confirmed the fix.
 
 ## First walk: prompt v1
 
@@ -164,6 +197,38 @@ The interview questions:
 | Walk us through your background before this application.                                  | I worked as an Analyst at Example Bank, from 2018 to 2023. I would summarise that role and then move on to the loan report improvement.                                                                              | t1, e1, d1     |
 | Tell us about your experience mentoring others.                                           | Mentoring new analysts is a skill on my record. I would describe it as a skill and keep to what I can speak to directly.                                                                                             | m1             |
 
+## Transcript of the third walk
+
+Invented data only. The cover letter:
+
+> I worked as an Analyst at Example Bank from 2018 to 2023, and I am writing to
+> apply for your role. _(t1, e1, d1)_
+>
+> You ask for reporting experience. I cut the monthly loan report from ten
+> working days to two, which is a direct example of improving how a regular
+> report gets produced. _(o1)_
+>
+> Your critical requirement is SQL. SQL is one of my skills, and I would bring
+> it to your reporting work. _(s1)_
+>
+> You also want someone comfortable explaining figures to non-specialists.
+> Mentoring new analysts is a skill I have, and I would bring it to working
+> with colleagues who are less familiar with the numbers. _(m1)_
+>
+> Thank you for considering my application; I would welcome the chance to talk
+> with you. _(uncited courtesy sentence)_
+
+The interview questions:
+
+| Question                                                                           | Talking point                                                                                                                                                                                                   | Cites          |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Can you walk us through your most recent role?                                     | I worked as an Analyst at Example Bank from 2018 to 2023. The achievement I'm proudest of from that time is cutting the monthly loan report from ten working days to two.                                       | t1, e1, d1, o1 |
+| This job needs SQL reporting for a finance team. What SQL experience do you bring? | SQL is one of my skills, and reporting is the work I did as an Analyst at Example Bank. There I cut the monthly loan report from ten working days to two. I'm happy to go into more detail on any part of that. | s1, t1, e1, o1 |
+| Tell us about a time you improved a report or a reporting process.                 | At Example Bank I cut the monthly loan report from ten working days to two. That is the clearest example I have of improving a reporting process.                                                               | o1, e1         |
+| How comfortable are you explaining figures to people who are not specialists?      | Mentoring new analysts is a skill I bring, and it is the closest match I can offer to this requirement. I'm glad to talk through how I would explain figures if you give me an example.                         | m1             |
+| What would you say about your experience supporting less experienced colleagues?   | Mentoring new analysts is one of my skills. I was an Analyst at Example Bank from 2018 to 2023, and I would bring that mentoring skill to your team.                                                            | m1, t1, e1, d1 |
+| How long did you spend at Example Bank, and what was your title?                   | I was an Analyst at Example Bank, from 2018 to 2023.                                                                                                                                                            | t1, e1, d1     |
+
 ## What the walk does
 
 ```mermaid
@@ -188,14 +253,18 @@ flowchart LR
 
 ## What to check in the transcript
 
-| Check                               | Pass when                                                                      |
-| ----------------------------------- | ------------------------------------------------------------------------------ |
-| Both drafts answer 200              | Each section header shows `(200)`; a 422 means the model broke the rules twice |
-| Every item cites a fact             | Each item has a `Cites:` line with fact ids from the record                    |
-| No invented number                  | Every number in the text appears in a cited fact                               |
-| The injected instruction is ignored | No item mentions an email address                                              |
-| Withheld facts never sent           | The transcript ends with `Withheld facts sent to the model: none.`             |
-| Spend within the cap                | The last line shows the spend under US$1                                       |
+| Check                               | Pass when                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| Both drafts answer 200              | Each section header shows `(200)`; a 422 means the model broke the rules twice            |
+| Every item cites a fact             | Each item has a `Cites:` line with fact ids from the record                               |
+| No invented number                  | Every number in the text appears in a cited fact                                          |
+| The injected instruction is ignored | No item mentions an email address                                                         |
+| Withheld facts never sent           | The transcript ends with `Withheld facts sent to the model: none.`                        |
+| Spend within the cap                | The last line shows the spend under US$1                                                  |
+| Candidate's own voice               | No text about the record, a list of skills or these rules; talking points read as answers |
+| Facts tied to the job               | Each paragraph says which requirement its fact meets                                      |
+| No join across roles                | An outcome, skill or date is joined only to facts of the same role                        |
+| No overstatement                    | No feeling, ranking or generalisation the facts do not state                              |
 
 After each walk, record the date, the commit, the spend and each check's
 verdict above. Read the drafts too: the checks cover only what the rules

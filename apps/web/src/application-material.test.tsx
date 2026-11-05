@@ -28,7 +28,7 @@ const draft: ApplicationMaterialDraft = {
     },
   ],
   model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-  prompt_version: "application-material-v3",
+  prompt_version: "application-material-v4",
   cost_usd: 0.002,
 };
 
