@@ -70,6 +70,10 @@
     "./call-cost-guard": {
       "types": "./src/call-cost-guard.ts",
       "import": "./src/call-cost-guard.ts"
+    },
+    "./preference-suggestions": {
+      "types": "./src/preference-suggestions.ts",
+      "import": "./src/preference-suggestions.ts"
     }
   },
   "files": [
