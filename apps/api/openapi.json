@@ -4981,6 +4981,55 @@
           "firstOwner"
         ]
       },
+      "PreferenceSuggestionInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "forbidden-term",
+              "section-order"
+            ]
+          },
+          "term": {
+            "description": "The word to forbid, for a forbidden-term suggestion.",
+            "type": "string"
+          },
+          "sectionOrder": {
+            "description": "The section kinds in order, for a section-order suggestion.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How many drafts showed the pattern."
+          },
+          "applications": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How many applications those drafts belong to."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why DraftLoop suggests it, in words the person can check."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurrences",
+          "applications",
+          "reason"
+        ]
+      },
       "RecordMemberInput": {
         "type": "object",
         "properties": {
@@ -10966,6 +11015,56 @@
         ],
         "additionalProperties": false
       },
+      "PreferenceSuggestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "forbidden-term",
+              "section-order"
+            ]
+          },
+          "term": {
+            "description": "The word to forbid, for a forbidden-term suggestion.",
+            "type": "string"
+          },
+          "sectionOrder": {
+            "description": "The section kinds in order, for a section-order suggestion.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occurrences": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How many drafts showed the pattern."
+          },
+          "applications": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How many applications those drafts belong to."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why DraftLoop suggests it, in words the person can check."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurrences",
+          "applications",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
       "RecordMember": {
         "type": "object",
         "properties": {
@@ -13878,6 +13977,221 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/preference-suggestions": {
+      "get": {
+        "summary": "List writing preferences suggested from review choices",
+        "description": "Patterns from the person's own review edits and approvals that the writing policy does not hold yet. Nothing changes until the person accepts one.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PreferenceSuggestion"
+                      }
+                    }
+                  },
+                  "required": [
+                    "suggestions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/preference-suggestions/{suggestionId}/accept": {
+      "post": {
+        "summary": "Accept a suggested writing preference",
+        "description": "Adds the preference to the writing policy as a new version, which the workspace's next runs follow.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^preference-[a-f0-9]{16}$"
+            },
+            "in": "path",
+            "name": "suggestionId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "$ref": "#/components/schemas/PreferenceSuggestion"
+                    }
+                  },
+                  "required": [
+                    "accepted"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/preference-suggestions/{suggestionId}/dismiss": {
+      "post": {
+        "summary": "Dismiss a suggested writing preference",
+        "description": "The suggestion is never offered again. The writing policy does not change.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^preference-[a-f0-9]{16}$"
+            },
+            "in": "path",
+            "name": "suggestionId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dismissed": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dismissed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Default Response",
             "content": {
               "application/json": {

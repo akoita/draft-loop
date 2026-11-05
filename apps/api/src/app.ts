@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   type UsageLine,
 } from "@draft-loop/application";
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
@@ -55,6 +56,7 @@ import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerOwnerTokenKnowledge } from "./owner-token-knowledge.js";
 import { registerOwnerTokenProofRoutes } from "./owner-token-proof-routes.js";
 import { createPlanLimits } from "./plan-limits.js";
+import { registerPreferenceSuggestionRoutes } from "./preference-suggestion-routes.js";
 import {
   noProfileDerivations,
   type ProfileDerivations,
@@ -133,6 +135,8 @@ export interface ApiOptions {
     readonly sourceEvidenceKinds?: SourceEvidenceKinds;
     /** The guided career interview (#1030); without it those routes are not served. */
     readonly careerInterview?: CareerInterviewParts;
+    /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
+    readonly preferenceSuggestions?: PreferenceSuggestions;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -391,6 +395,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
     });
+    if (application.preferenceSuggestions !== undefined) {
+      registerPreferenceSuggestionRoutes(app, {
+        suggestions: application.preferenceSuggestions,
+        workspaceRoot: application.workspaceRoot,
+      });
+    }
     registerRunEstimateRoute(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,

@@ -70,6 +70,7 @@ Most commands accept `--json` for machine-readable output.
 | `opportunity`                                   | Create, edit and review job briefs                                                                                                 | [Opportunity briefs](#opportunity-briefs)                                            |
 | `profile`                                       | Derive, edit and review candidate profiles                                                                                         | [Candidate profiles](#candidate-profiles)                                            |
 | `policy`                                        | Import and activate writing policies                                                                                               | [Writing policies](#writing-policies)                                                |
+| `preferences`                                   | List, accept or dismiss writing preferences suggested from your review choices                                                     | [Suggested preferences](#suggested-preferences)                                      |
 | `knowledge`                                     | Manage stores, knowledge bases, sources and sensitivity                                                                            | [Candidate knowledge bases](#candidate-knowledge-bases)                              |
 | `evidence mode`, `retrieval mode`, `embeddings` | Choose what a run receives and how it searches                                                                                     | [Evidence mode](#evidence-mode), [Retrieval mode](#retrieval-mode)                   |
 
@@ -964,6 +965,28 @@ policy as text, or the default when there is none. Selectors for tone,
 verbosity, page target and spelling locale rewrite the matching lines. Saving
 creates a new version for future runs, as `policy activate` does, and rejected
 text saves nothing.
+
+### Suggested preferences
+
+DraftLoop suggests a writing preference when your review choices repeat, and
+you decide. Nothing changes until you accept one, and no model is called.
+
+```sh
+pnpm --filter @draft-loop/cli start preferences list ./workspace
+pnpm --filter @draft-loop/cli start preferences accept ./workspace preference-0123456789abcdef
+pnpm --filter @draft-loop/cli start preferences dismiss ./workspace preference-0123456789abcdef
+```
+
+- **What is suggested.** A word you removed from at least 3 drafts across at
+  least 2 applications becomes a forbidden term. A section order you approved
+  as often becomes `Section order`.
+- **Why.** Each suggestion shows the pattern it comes from, so you can check it.
+- **Accept** adds the preference to the policy as a new version for future runs.
+- **Dismiss** keeps the policy as it is, and the suggestion is never offered
+  again. Only its id is stored.
+- **Server.** The same suggestions are at
+  `GET /v1/workspaces/{workspaceId}/preference-suggestions`, with `accept` and
+  `dismiss` routes beside them.
 
 An imported version can override the policy for one reviewed brief. The
 workspace policy is unchanged, and the run records both versions:

@@ -14,7 +14,7 @@ change both together.
 - [Rules](#rules)
 - [Memory kinds](#memory-kinds)
 - [Where each kind enters a run](#where-each-kind-enters-a-run)
-- [Planned: preferences learned from review](#planned-preferences-learned-from-review)
+- [Preferences learned from review](#preferences-learned-from-review)
 - [Gaps and plan](#gaps-and-plan)
 
 ## Rules
@@ -92,10 +92,12 @@ flowchart LR
   working --> history["run-history"]
 ```
 
-## Planned: preferences learned from review
+## Preferences learned from review
 
-This loop is a plan (#2248), not current behaviour. Review choices become
-suggestions, and only an accepted suggestion changes the writing policy.
+Review choices become suggestions, and only an accepted suggestion changes
+the writing policy. The read model, the pattern finder and the API and CLI
+exist; the screen is planned. See
+[suggested preferences](../reference/cli-and-desktop.md#suggested-preferences).
 
 ```mermaid
 flowchart LR
@@ -111,7 +113,7 @@ flowchart LR
 The [agent memory rollup](https://github.com/akoita/draft-loop/issues/2248)
 holds the ordered issues. In short:
 
-- Review choices never become reusable preferences yet (#2251–#2253).
+- Suggested preferences have no screen yet; the API and CLI serve them.
 - The critic never learns its false positives (#2254).
 - The agent channel cannot search career evidence (#2255, deferred).
 - Past approved drafts are never recalled as examples; this waits for the

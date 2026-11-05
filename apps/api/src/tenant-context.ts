@@ -1,8 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
+  CliUserError,
   defaultHostedKnowledgeSourceMaxBytes,
   type RunBudgetCeiling,
 } from "@draft-loop/application";
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { WorkJournalError, type WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
@@ -39,6 +41,7 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "preferenceSuggestions"
   >
 > &
   Pick<
@@ -50,6 +53,7 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "preferenceSuggestions"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -268,6 +272,20 @@ export function registerTenantApplications(
         return current().careerInterview?.allowProviderData ?? false;
       },
     },
+    // An application composed without suggestions has none waiting and refuses every decision.
+    preferenceSuggestions: forwarding(
+      () => current().preferenceSuggestions ?? noPreferenceSuggestions,
+    ),
     ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };
 }
+
+const noPreferenceSuggestions: PreferenceSuggestions = {
+  list: async () => [],
+  accept: async () => {
+    throw new CliUserError("No preference suggestion is waiting for a decision.");
+  },
+  dismiss: async () => {
+    throw new CliUserError("No preference suggestion is waiting for a decision.");
+  },
+};
