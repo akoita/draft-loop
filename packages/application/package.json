@@ -38,6 +38,10 @@
     "./work-journal-source": {
       "types": "./src/work-journal-source.ts",
       "import": "./src/work-journal-source.ts"
+    },
+    "./career-interview-topics": {
+      "types": "./src/career-interview-topics.ts",
+      "import": "./src/career-interview-topics.ts"
     }
   },
   "files": [
