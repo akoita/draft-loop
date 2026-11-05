@@ -56,6 +56,9 @@ contributors, maintainers, and operators to the current information they need.
 - **Operations:** `operations/` contains release, maintenance and local server procedures.
 - **Architecture decisions:** `adr/` records decisions that should remain
   durable even when implementation details change.
+- **Design proposals:** `design/` holds proposals for issues not yet built,
+  each with its options, recommendation, risks and test plan. Fold a proposal
+  into the architecture pages, or delete it, when its work ships.
 
 ## Maintenance
 
