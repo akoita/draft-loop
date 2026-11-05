@@ -327,6 +327,25 @@ the context snapshot.
   claims with those references: chunks sent, chunks cited, uncited ranks, and
   claims outside the retrieved set.
 
+### Run traces
+
+The engine can emit content-free spans through a tracing port
+(`packages/orchestrator/src/run-tracing.ts`). Without a tracer it records
+nothing.
+
+| Span | Opened for | Attributes |
+| --- | --- | --- |
+| `invoke_workflow` | Each advance of a run | Run id, last round |
+| `invoke_agent` | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type |
+| `retrieve_evidence` | Retrieval inside an attempt | Chunk count |
+
+- **Content-free.** Only listed attribute names are kept, and a string value
+  must be a short identifier, so a prompt or a draft sentence is dropped.
+- **Names.** Attributes follow the OpenTelemetry GenAI conventions where one
+  exists, pinned to one version.
+- **Plan.** Storing spans beside run history (#1103) and exporting them
+  locally (#1104) are planned.
+
 ## Clients and adapters
 
 Every client is an adapter over the shared application driver. The driver keeps
