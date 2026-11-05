@@ -91,5 +91,5 @@ rest of the page keeps working. The panel lives in
 
 The [application material walk](../evaluation/application-material-walk.md)
 drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
-runs only with the owner's go. Its third run, on prompt
-`application-material-v3`, passed every check.
+runs only with the owner's go. Its fourth run, on prompt
+`application-material-v4`, passed every check.
