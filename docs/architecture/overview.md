@@ -264,6 +264,7 @@ the [threat model](../security/threat-model.md) and
 | [Storage and tenancy](storage-and-tenancy.md) | Storage ports, local and hosted drivers, tenant isolation, blobs and run history |
 | [Candidate evidence](candidate-evidence.md) | Job briefs, writing policy, the portable CKB, career profiles and retrieval in runs |
 | [Drafting and review](drafting-and-review.md) | The evaluator–optimizer loop, grounding checks, critique, stopping decisions and rendering |
+| [Memory model](memory.md) | Every kind of memory a run uses, who writes and reads it, and the rules they follow |
 | [Runtime and trust](runtime-and-trust.md) | The author–critic loop, model profiles, workflow states, provider and export controls |
 | [Client-server delivery plan](client-server-delivery-plan.md) | How the hosted service is being delivered |
 

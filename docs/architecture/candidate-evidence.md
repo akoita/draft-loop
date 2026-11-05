@@ -10,6 +10,7 @@ Use the [architecture overview](overview.md) for the system map. Related pages:
 
 - [Drafting and review](drafting-and-review.md): the author, the critic and
   artifact quality
+- [Memory model](memory.md): every kind of memory a run uses and its rules
 - [Runtime and trust](runtime-and-trust.md): workflow, adapters, providers and
   exports
 - [CLI and desktop reference](../reference/cli-and-desktop.md): user commands
