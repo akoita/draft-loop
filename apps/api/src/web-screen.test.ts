@@ -36,7 +36,7 @@ describe("web screen", () => {
     expect(response.headers["cache-control"]).toBe("no-cache");
     expect(response.body).toBe(page);
     const policy = String(response.headers["content-security-policy"]);
-    expect(policy).toContain("script-src 'self'");
+    expect(policy).toContain("script-src 'self' 'wasm-unsafe-eval'");
     expect(policy).toContain("style-src 'self'");
     expect(policy).toContain("connect-src 'self'");
     expect(policy).toContain("frame-ancestors 'none'");
