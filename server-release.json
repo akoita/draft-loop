@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Answer the career interview by voice",
+  "releaseName": "Prepare an application: cover letter and interview questions",
   "stageIssue": 1359,
-  "milestone": 72,
-  "summary": "One sprint since the guided career interview (milestone 72). Candidates can answer the career interview by voice: Whisper base runs in the browser, so audio never leaves the device (#2200, #2201). The server serves the pinned model files from its own origin and refuses any file whose bytes differ from the pin (#2199). The record archive now holds career interview sessions (#2202). The interviewer varies how its turns open (career-interview-v2), and a capped walk confirmed a summary into transcript evidence (#2203).",
-  "knownLimitations": "Voice input runs on WebAssembly only, so an answer takes a few seconds to transcribe on a laptop, and the first use downloads about 80 MB of model files. French and English are the tested languages. The interview still needs content screening in rules+model mode and recorded consent to send career material to Anthropic, and the web shows it in owner-token mode only. No draft run has yet been shown citing a confirmed summary."
+  "milestone": 73,
+  "summary": "One sprint since voice answers in the career interview (milestone 72). Each application on the web has a Prepare panel that drafts a cover letter or a set of interview questions from the career record (#2215, #2216, #2217). Every paragraph or talking point shows the facts it cites, and the server refuses a draft that cites a withheld fact, states a number no cited fact holds, in digits or in words, or talks about the record instead of the candidate's work (#2242, #2243, #2244). Drafts download as Markdown and are not stored. Agent tokens now expire after 90 days by default, a workspace holds at most 20 active ones, and each work journal note names the token that filed it (#2229, #2231). The critic's findings name the claim, section or requirement they target (#2235).",
+  "knownLimitations": "Drafting needs content screening in rules+model mode, recorded consent to send career material to Anthropic, and a Claude route; without them the panel says why and the rest of the page works. One request may spend up to US$0.50. A draft can still hold a mild inference, such as a trait drawn from a skill, so the panel asks the candidate to check each sentence against its sources. The skill-to-role rule is in the prompt and is verified by walks, not by a deterministic check."
 }
