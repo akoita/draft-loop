@@ -83,4 +83,5 @@ rest of the page keeps working. The panel lives in
 
 The [application material walk](../evaluation/application-material-walk.md)
 drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
-runs only with the owner's go.
+runs only with the owner's go. Its 2026-11-05 run passed with two gaps: a number
+written in words, and a skill joined to a role, both of which these rules miss.
