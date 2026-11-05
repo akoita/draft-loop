@@ -95,6 +95,18 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Set this topic aside");
     expect(html).toContain("Questions written by claude-sonnet-5-5 (anthropic).");
     expect(html).toContain("0 of 1 topics finished");
+    expect(html).not.toContain("Answer by voice");
+  });
+
+  it("offers voice input beside the answer when the host provides it", () => {
+    const html = render({
+      session: openSession,
+      speech: {
+        recorder: { start: async () => ({ stop: async () => new Float32Array(0), cancel() {} }) },
+        engine: { transcribe: async () => "" },
+      },
+    });
+    expect(html).toContain("Answer by voice");
   });
 
   it("shows the summary to edit, where it goes and who may read it", () => {

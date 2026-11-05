@@ -5,10 +5,13 @@ import type {
 } from "@draft-loop/ui/career-interview-model";
 import { careerInterviewRefusal } from "@draft-loop/ui/career-interview-model";
 import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
+import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
 import { useCallback, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { createMicrophoneRecorder, microphoneSupported } from "./microphone.js";
 import { useRecordId } from "./record-context.js";
+import { createWhisperSpeechToText, speechModelAvailable } from "./whisper-speech.js";
 
 /**
  * The web host's career interview (#2189): starts or resumes the record's conversation through
@@ -45,6 +48,20 @@ export function careerInterviewSessionView(
     })),
     model: read.model,
   };
+}
+
+// One engine for the page, so the model loads once however often the panel renders.
+let pageSpeech: SpeechInput | undefined;
+
+/** Voice input on this page: Whisper in the browser, offered when the server serves its model. */
+export function webSpeechInput(): SpeechInput | undefined {
+  if (!microphoneSupported()) return undefined;
+  pageSpeech ??= {
+    recorder: createMicrophoneRecorder(),
+    engine: createWhisperSpeechToText(),
+    available: speechModelAvailable,
+  };
+  return pageSpeech;
 }
 
 export function CareerInterviewSection({ client, bases }: CareerInterviewSectionProps) {
@@ -112,6 +129,7 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
         }
       }}
       loadConflicts={loadConflicts}
+      speech={webSpeechInput()}
     />
   );
 }

@@ -24,6 +24,15 @@ const defaultManifest = async () => {
   return (await response.json()) as { available: boolean } & WhisperModelRef;
 };
 
+/** Whether the server serves a speech model, read without downloading any of it. */
+export async function speechModelAvailable(): Promise<boolean> {
+  try {
+    return (await defaultManifest()).available;
+  } catch {
+    return false;
+  }
+}
+
 const defaultWorker = (): WhisperWorkerLike =>
   new Worker(new URL("./whisper-worker.ts", import.meta.url), { type: "module" });
 
