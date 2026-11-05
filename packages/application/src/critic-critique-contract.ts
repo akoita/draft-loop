@@ -18,6 +18,7 @@ import {
 import { CliUserError } from "./cli-user-error.js";
 import {
   coverageJudgementInstructionsVersion,
+  criticReportsFindingTargets,
   maximumCritiqueFindings,
   maximumCritiqueMessageCharacters,
   withCoverageJudgementInstructions,
@@ -63,6 +64,40 @@ export const critiqueOutputSchema: JsonObject = {
 };
 
 /**
+ * The critique schema whose findings carry their target (#2232). Every target field is required
+ * and an empty string means "none", so providers' strict modes accept the schema without nullable
+ * types; the parser drops an empty or unknown id.
+ */
+const findingTargetFields = ["claimId", "sectionId", "requirementId"] as const;
+
+export const targetedCritiqueOutputSchema: JsonObject = withFindingTargets(critiqueOutputSchema);
+
+function withFindingTargets(schema: JsonObject): JsonObject {
+  const properties = schema.properties as JsonObject;
+  const findings = properties.findings as JsonObject;
+  const items = findings.items as JsonObject;
+  return {
+    ...schema,
+    properties: {
+      ...properties,
+      findings: {
+        ...findings,
+        items: {
+          ...items,
+          properties: {
+            ...(items.properties as JsonObject),
+            claimId: { type: "string" },
+            sectionId: { type: "string" },
+            requirementId: { type: "string" },
+          },
+          required: [...(items.required as readonly string[]), ...findingTargetFields],
+        },
+      },
+    },
+  };
+}
+
+/**
  * The critique schema plus `coverageJudgements`. Every property is required and objects are
  * closed so providers' strict structured-output modes accept it; an empty array is allowed.
  */
@@ -92,6 +127,52 @@ export const critiqueOutputSchemaWithCoverageJudgements: JsonObject = {
   },
   required: ["findings", "coverageJudgements"],
 };
+
+/** The targeted critique schema plus `coverageJudgements`, for a version that reports targets. */
+export const targetedCritiqueOutputSchemaWithCoverageJudgements: JsonObject = withFindingTargets(
+  critiqueOutputSchemaWithCoverageJudgements,
+);
+
+/** The `draft_critique` output schema a critic prompt version asks for. */
+export function critiqueOutputSchemaFor(templateVersion: string): JsonObject {
+  return criticReportsFindingTargets(templateVersion)
+    ? targetedCritiqueOutputSchemaWithCoverageJudgements
+    : critiqueOutputSchemaWithCoverageJudgements;
+}
+
+/**
+ * Keep only the finding targets the reviewed artifact and the job actually have. A target the
+ * critic names but the artifact lacks would make the readiness report refuse the round, so it is
+ * dropped and the finding falls back to the next target, or to the whole artifact.
+ */
+export function withResolvableFindingTargets<T extends Critique>(
+  critique: T,
+  artifact: Pick<DraftArtifact, "claims" | "sections">,
+  context: Pick<ContextSnapshot, "requirements">,
+): T {
+  const targeted = critique.findings.some(
+    ({ claimId, sectionId, requirementId }) =>
+      claimId !== undefined || sectionId !== undefined || requirementId !== undefined,
+  );
+  if (!targeted) return critique;
+  const claims = new Set<string>(artifact.claims.map(({ id }) => id));
+  const sections = new Set<string>(artifact.sections.map(({ id }) => id));
+  const requirements = new Set<string>(context.requirements.map(({ id }) => id));
+  return {
+    ...critique,
+    findings: critique.findings.map((finding) => {
+      const { claimId, sectionId, requirementId, ...rest } = finding;
+      return {
+        ...rest,
+        ...(claimId !== undefined && claims.has(claimId) ? { claimId } : {}),
+        ...(sectionId !== undefined && sections.has(sectionId) ? { sectionId } : {}),
+        ...(requirementId !== undefined && requirements.has(requirementId)
+          ? { requirementId }
+          : {}),
+      };
+    }),
+  };
+}
 
 export function invalidCritiqueError(response: ModelResponse<JsonObject>): ProviderAdapterError {
   return new ProviderAdapterError(
@@ -138,6 +219,15 @@ function parseCoverageJudgements(value: unknown): readonly CoverageJudgement[] |
   return judgements;
 }
 
+/** A target id the critic gave, trimmed; an empty string is the schema's "none". */
+function targetField<Key extends (typeof findingTargetFields)[number]>(
+  key: Key,
+  value: unknown,
+): Partial<Record<Key, string>> {
+  if (typeof value !== "string" || value.trim() === "") return {};
+  return { [key]: value.trim() } as Partial<Record<Key, string>>;
+}
+
 export function parseCritique(value: JsonObject, instructionsVersion?: string): CriticCritique {
   const findings = value.findings;
   if (!Array.isArray(findings))
@@ -170,9 +260,9 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
           category: item.category as Critique["findings"][number]["category"],
           severity: item.severity as Critique["findings"][number]["severity"],
           message: item.message as string,
-          ...(typeof item.claimId === "string" ? { claimId: item.claimId } : {}),
-          ...(typeof item.sectionId === "string" ? { sectionId: item.sectionId } : {}),
-          ...(typeof item.requirementId === "string" ? { requirementId: item.requirementId } : {}),
+          ...targetField("claimId", item.claimId),
+          ...targetField("sectionId", item.sectionId),
+          ...targetField("requirementId", item.requirementId),
         });
       }),
     ),

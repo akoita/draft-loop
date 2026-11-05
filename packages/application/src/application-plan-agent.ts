@@ -150,7 +150,9 @@ export function createProviderApplicationPlanner(
         outputSchemas:
           role === "author"
             ? authorRunOutputSchemas(request.context, aliasNames)
-            : criticRunOutputSchemas(),
+            : criticRunOutputSchemas(
+                request.context.modelConfiguration.critic.promptTemplateVersion,
+              ),
         ...(role === "author" ? { lifetime: authorPromptCacheLifetime } : {}),
       },
       input: toModel({ ...prefix.input, ...callInput }),

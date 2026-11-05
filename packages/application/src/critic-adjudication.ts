@@ -47,6 +47,24 @@ const explicitEmploymentGapReviewInstructionsV7 = explicitEmploymentGapReviewIns
 const editorialReviewInstructions =
   " Also review the CV as an editor deciding whether it is ready to send. Report each of these as a quality warning whose message quotes the exact offending text (at most 80 characters) and names its section: a copied source note, meta-commentary about sources, documents, repositories or the job search, or third-person narration about the candidate (code editorial-source-note); a sentence fragment, or evidence quotes stitched together with semicolons instead of written as a sentence (code editorial-fragment); a negative aside that undercuts an accomplishment instead of stating a real limit once in the candidate's voice (code editorial-negative-aside). Then compare the job's requirements with retrievedEvidence: when a retrieved chunk clearly supports a requirement or responsibility the CV does not show, report a quality warning naming the requirement and the retrievedEvidence ID (code editorial-missing-evidence). Do not report wording preferences, and never ask for content the evidence does not support.";
 
+/** Replace one passage of a pinned prompt, failing loudly when the passage is gone. */
+function replacePassage(prompt: string, passage: string, replacement: string): string {
+  if (!prompt.includes(passage)) {
+    throw new Error(`Critic prompt passage not found: "${passage.slice(0, 60)}".`);
+  }
+  return prompt.replace(passage, replacement);
+}
+
+const findingIdsInMessagePassage =
+  "Use the existing structured finding fields only; include the affected claim ID and cited evidence reference ID(s) in the message when available, without inventing identifiers or repeating long excerpts.";
+
+/**
+ * v11 asks for the finding's target in its own fields instead of its message, so a revision can
+ * reach the claim, section or requirement the finding is about (#2232).
+ */
+const findingTargetInstructions =
+  "Give each finding its target in its own fields: claimId is the id of the artifact claim it concerns, sectionId the id of the artifact section when it concerns a section rather than one claim, and requirementId the id of the job requirement a coverage finding concerns. Copy each id exactly as the input gives it, and leave a field as an empty string when it does not apply; never invent an identifier. Name cited evidence reference ID(s) in the message when available, without repeating long excerpts.";
+
 function criticOutputInstructions(): string {
   return ` Do not rewrite content. Do not repeat deterministicFindings; return only distinct issues that require additional independent judgment. Return no more than ${maximumCritiqueFindings} findings, ordered with errors before warnings, and keep each message to ${maximumCritiqueMessageCharacters} characters or fewer. Return concise structured findings only.`;
 }
@@ -86,6 +104,14 @@ export function createCriticAdjudicationPrompt(templateVersion: string): string 
   if (templateVersion === "cli-critic-v9" || templateVersion === "cli-critic-v10") {
     return createCriticAdjudicationPrompt("cli-critic-v6");
   }
+  // v11 keeps v10 and asks for each finding's target in its own fields (#2232).
+  if (templateVersion === "cli-critic-v11") {
+    return replacePassage(
+      createCriticAdjudicationPrompt("cli-critic-v6"),
+      findingIdsInMessagePassage,
+      findingTargetInstructions,
+    );
+  }
   throw new Error(`Unsupported critic prompt template version "${templateVersion}".`);
 }
 
@@ -95,7 +121,13 @@ const compactEvidenceTableVersions: ReadonlySet<string> = new Set([
   "cli-critic-v8",
   "cli-critic-v9",
   "cli-critic-v10",
+  "cli-critic-v11",
 ]);
+
+/** Whether a critic prompt version asks for each finding's target in its own fields. */
+export function criticReportsFindingTargets(templateVersion: string): boolean {
+  return templateVersion === "cli-critic-v11";
+}
 
 /** Whether a critic prompt version reads the compact evidence table. */
 export function criticReadsCompactEvidenceTable(templateVersion: string): boolean {

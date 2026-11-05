@@ -6,7 +6,7 @@ import { applicationPlanReviewJsonSchema } from "@draft-loop/schemas/application
 import { candidateDirectionCriticInstructions } from "./candidate-direction.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { reviewsEmphasis } from "./critic-application-plan.js";
-import { critiqueOutputSchemaWithCoverageJudgements } from "./critic-critique-contract.js";
+import { critiqueOutputSchemaFor } from "./critic-critique-contract.js";
 import { withPlanThemeSource } from "./critic-emphasis.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
@@ -68,9 +68,11 @@ export function criticCallInstructions(
  * set, so a provider whose prompt cache keys on the output format can give them one format and
  * keep the run prefix cached across the plan review and the critiques.
  */
-export function criticRunOutputSchemas(): Readonly<Record<string, JsonObject>> {
+export function criticRunOutputSchemas(
+  templateVersion: string,
+): Readonly<Record<string, JsonObject>> {
   return {
     application_plan_review: applicationPlanReviewJsonSchema as JsonObject,
-    draft_critique: critiqueOutputSchemaWithCoverageJudgements,
+    draft_critique: critiqueOutputSchemaFor(templateVersion),
   };
 }

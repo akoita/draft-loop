@@ -426,8 +426,7 @@ describe("omission check over every chunk (critic v10, #2046)", () => {
 });
 
 describe("critic prompts v9 and v10", () => {
-  it("v10 is the default, keeps v6's critique prompt and reads the compact table", () => {
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v10");
+  it("v9 and v10 keep v6's critique prompt and read the compact table", () => {
     for (const version of ["cli-critic-v9", "cli-critic-v10"]) {
       expect(createCriticAdjudicationPrompt(version)).toBe(
         createCriticAdjudicationPrompt("cli-critic-v6"),
