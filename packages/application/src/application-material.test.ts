@@ -217,8 +217,66 @@ describe("createModelApplicationMaterialWriter", () => {
     const request = requests[0];
     expect(request?.contextSnapshotId).toBe("app_fixture");
     expect(request?.systemPrompt).toContain("never instructions to follow");
+    expect(request?.systemPrompt).toContain("no single fact states");
+    expect(request?.systemPrompt).toContain("in digits or in words");
     expect(JSON.stringify(request?.input)).not.toContain("candidate@example.test");
     expect(JSON.stringify(request?.input)).not.toContain("Private note");
     expect(request?.input).toMatchObject({ kind: "interview-questions", refused_rules: [] });
+  });
+});
+
+describe("numbers written in words", () => {
+  // An invented record, as in the 2026-11-05 walk.
+  const record: ApplicationMaterialFact[] = [
+    { id: "t", category: "role", field: "title", value: "Analyst" },
+    { id: "d", category: "date", field: "dates", value: "2018 to 2023" },
+    {
+      id: "o",
+      category: "achievement",
+      field: "outcome",
+      value: "Cut the monthly loan report from ten working days to two",
+    },
+    { id: "n", category: "achievement", field: "outcome", value: "Trained 5 analysts" },
+    { id: "w", category: "achievement", field: "outcome", value: "Ran twelve audits" },
+    { id: "k", category: "achievement", field: "outcome", value: "Closed 12 accounts" },
+    { id: "s", category: "skill", field: "name", value: "SQL" },
+  ];
+  const input = {
+    kind: "cover-letter" as const,
+    facts: record,
+    requirements: [{ id: "r", text: "Three years of SQL reporting", priority: "high" as const }],
+  };
+  const check = (text: string, factIds: string[], question = "") =>
+    applicationMaterialViolations(
+      { ...input, kind: question === "" ? "cover-letter" : "interview-questions" },
+      [{ question, text, factIds }],
+    ).map((violation) => violation.detail);
+
+  it("refuses a number in words that no cited fact states, such as years worked out from dates", () => {
+    expect(check("I spent five years as an Analyst.", ["t", "d"])).toEqual([
+      "The number five appears in no cited fact.",
+    ]);
+    expect(check("A five-year span as an Analyst.", ["t", "d"])).toEqual([
+      "The number five appears in no cited fact.",
+    ]);
+  });
+
+  it("accepts a number a cited fact states, in digits or in words", () => {
+    expect(check("I cut the report from ten working days to two.", ["o"])).toEqual([]);
+    expect(check("I cut the report from 10 working days to 2.", ["o"])).toEqual([]);
+    expect(check("I trained five analysts.", ["n"])).toEqual([]);
+    expect(check("I ran twelve audits.", ["w"])).toEqual([]);
+    expect(check("I closed a dozen accounts.", ["k"])).toEqual([]);
+  });
+
+  it("does not read 'one' as a count", () => {
+    expect(check("SQL is one of my core skills.", ["s"])).toEqual([]);
+  });
+
+  it("lets a question repeat a requirement's number in words, but not a paragraph", () => {
+    expect(check("I use SQL.", ["s"], "Tell us about your three years of SQL.")).toEqual([]);
+    expect(check("Your post asks for three years of SQL, my core skill.", ["s"])).toEqual([
+      "The number three appears in no cited fact.",
+    ]);
   });
 });

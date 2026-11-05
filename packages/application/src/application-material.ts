@@ -163,17 +163,91 @@ export function applicationMaterialContext(
 
 const numberPattern = /\d+(?:[.,]\d+)*/gu;
 
-function numbersIn(text: string): string[] {
-  return [...text.matchAll(numberPattern)].map((match) => match[0]);
+/**
+ * Number words a draft could state a quantity with (#2218's walk: "five years" passed a
+ * digits-only check). "One" is left out: it reads as a pronoun ("one of my skills") far more
+ * often than as a count.
+ */
+const numberWords: Readonly<Record<string, number>> = {
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+  hundred: 100,
+  thousand: 1_000,
+  million: 1_000_000,
+  billion: 1_000_000_000,
+  dozen: 12,
+};
+const wordForNumber = new Map(
+  Object.entries(numberWords).map(([word, value]) => [value, word] as const),
+);
+
+/** A quantity stated in a draft: as written, and as a digit string when it is a word. */
+interface StatedNumber {
+  readonly written: string;
+  readonly digits: string;
 }
 
-/** Whether a number stated in the draft appears, as a whole number, in one of the sources. */
-function supported(number: string, sources: readonly string[]): boolean {
+function numbersIn(text: string): StatedNumber[] {
+  const digits = [...text.matchAll(numberPattern)].map((match) => ({
+    written: match[0],
+    digits: match[0],
+  }));
+  const words = [...text.toLowerCase().matchAll(/\p{L}+/gu)].flatMap((match) => {
+    const value = numberWords[match[0]];
+    return value === undefined ? [] : [{ written: match[0], digits: String(value) }];
+  });
+  return [...digits, ...words];
+}
+
+function digitsIn(source: string, number: string): boolean {
   const pattern = new RegExp(
     `(?<![\\d.,])${number.replace(/[.,]/gu, "[.,]")}(?![\\d]|[.,]\\d)`,
     "u",
   );
-  return sources.some((source) => pattern.test(source));
+  return pattern.test(source);
+}
+
+function wordIn(source: string, word: string): boolean {
+  return new RegExp(`(?<!\\p{L})${word}(?!\\p{L})`, "iu").test(source);
+}
+
+/**
+ * Whether a number stated in the draft appears in one of the sources, as a whole number in
+ * digits or in words: "five" is supported by "5" or "five", and "10" by "10" or "ten".
+ */
+function supported(number: StatedNumber, sources: readonly string[]): boolean {
+  const word = wordForNumber.get(Number(number.digits));
+  const written = /^\p{L}+$/u.test(number.written) ? number.written : undefined;
+  return sources.some(
+    (source) =>
+      digitsIn(source, number.digits) ||
+      (written !== undefined && wordIn(source, written)) ||
+      (word !== undefined && wordIn(source, word)),
+  );
 }
 
 /**
@@ -244,7 +318,7 @@ export function applicationMaterialViolations(
         violations.push({
           code: "unsupported_number",
           item: index,
-          detail: `The number ${number} appears in no cited fact.`,
+          detail: `The number ${number.written} appears in no cited fact.`,
         });
       }
     }
@@ -253,7 +327,7 @@ export function applicationMaterialViolations(
         violations.push({
           code: "unsupported_number",
           item: index,
-          detail: `The number ${number} in the question appears in no cited fact or requirement.`,
+          detail: `The number ${number.written} in the question appears in no cited fact or requirement.`,
         });
       }
     }
