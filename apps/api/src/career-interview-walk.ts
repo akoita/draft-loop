@@ -1,6 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
-import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
+import {
+  type AddedHostedKnowledgeSource,
+  type ApplicationService,
+  type HostedKnowledgeIntake,
+  type HostedSensitivityRules,
+  WorkspaceNotFoundError,
+} from "@draft-loop/application";
 import { type AnthropicRouteBuilder, createDirectAnthropicRoute } from "@draft-loop/model-gateway";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
@@ -8,9 +14,9 @@ import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-le
 import { buildApi } from "./app.js";
 
 /**
- * The career interview's validation walk (#2179): one conversation through the API's own routes,
- * with the real Claude API and an invented career record and invented answers. It never runs in
- * CI. It stops before a call once the spend reaches the cap, prints models, tokens and costs,
+ * The career interview's validation walk (#2179, #2203): one conversation through the API's own
+ * routes, with the real Claude API and an invented career record and invented answers, ending with
+ * the candidate confirming the summary into an in-memory knowledge base. It never runs in CI. It stops before a call once the spend reaches the cap, prints models, tokens and costs,
  * never the key, and writes the transcript to the file named by
  * DRAFT_LOOP_INTERVIEW_WALK_OUT (default career-interview-walk.md).
  */
@@ -88,6 +94,52 @@ const consent = {
   },
 } as unknown as ConsentState;
 
+// The knowledge base a confirmed summary goes to, in memory: what the publisher writes is kept so
+// the transcript can show the source, its evidence kind and its sensitivity rules.
+const walkBaseId = "kb_walk";
+const published: { name: string; mediaType: string; text: string; kind?: string }[] = [];
+const ruleIds: string[] = [];
+const knowledgeIntake = {
+  maxSourceBytes: 1_000_000,
+  addFileSource: async (command) => {
+    published.push({
+      name: command.displayName,
+      mediaType: command.mediaType,
+      text: new TextDecoder().decode(command.bytes),
+    });
+    const id = `src_walk_${published.length}`;
+    return {
+      created: true,
+      source: { id, knowledgeBaseId: command.knowledgeBaseId, displayName: command.displayName },
+      latestVersion: { id: `${id}_v1`, mediaType: command.mediaType },
+    } as unknown as AddedHostedKnowledgeSource;
+  },
+} as HostedKnowledgeIntake;
+const rulesView = () => ({
+  knowledgeBaseId: walkBaseId,
+  version: ruleIds.length,
+  checksum: null,
+  createdAt: null,
+  rules: ruleIds.map((id) => ({ id })),
+});
+const sensitivityRules = {
+  list: async () => rulesView(),
+  add: async (_base: string, _rule: unknown, id?: string) => {
+    ruleIds.push(id ?? `rule_${ruleIds.length + 1}`);
+    return rulesView();
+  },
+} as unknown as HostedSensitivityRules;
+const sourceEvidenceKinds = {
+  appendCandidateKnowledgeSourceEvidenceKindOverride: async (
+    _base: string,
+    _source: string,
+    override: { kind: string },
+  ) => {
+    const last = published.at(-1);
+    if (last !== undefined) last.kind = override.kind;
+  },
+};
+
 let spentUsd = 0;
 const calls: string[] = [];
 const direct = createDirectAnthropicRoute({
@@ -120,6 +172,9 @@ const app = await buildApi({
     budgetCeiling: { maxRounds: 1, maxCostUsd: capUsd, maxDurationMs: 600_000 },
     monthUsage: async () => [],
     consents: { current: async () => consent } as unknown as ConsentLedger,
+    knowledgeIntake,
+    sensitivityRules,
+    sourceEvidenceKinds: sourceEvidenceKinds as never,
     careerInterview: {
       sessions: createMemoryCareerInterviewSessionStore(),
       allowProviderData: true,
@@ -176,6 +231,28 @@ try {
     lines.push(`- **${speaker}:** ${turn.mark === undefined ? turn.text : `(${turn.mark})`}`);
   }
   lines.push("", "## Summary for confirmation", "", topic?.summary ?? "(none)");
+  if (topic?.status === "summarised") {
+    const confirmed = await call(`${sessions}/${id}/actions`, {
+      action: "confirm",
+      topic_key: key,
+      knowledge_base_id: walkBaseId,
+      tier: "normal",
+    });
+    const after = (confirmed.session.topics as Topic[]).find((each) => each.key === key);
+    const source = published.at(-1);
+    lines.push(
+      "",
+      "## Confirmed into evidence",
+      "",
+      `Topic status: ${after?.status}. Source: ${confirmed.published_source_id ?? "(none)"}, kind ${source?.kind ?? "(none)"}, ${source?.mediaType ?? "-"}, ${ruleIds.length} sensitivity rules.`,
+      "",
+      "```text",
+      source?.text.trimEnd() ?? "(nothing written)",
+      "```",
+    );
+  } else {
+    lines.push("", "## Confirmed into evidence", "", "Not reached: the topic was not summarised.");
+  }
   const model = current.session.model;
   lines.push(
     "",

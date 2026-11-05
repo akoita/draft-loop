@@ -24,7 +24,7 @@ import type { CareerInterviewFact } from "./career-interview-topics.js";
 /** The interview's default and economy models; the host maps them to a route. */
 export const careerInterviewDefaultModelId = "claude-sonnet-5-5";
 export const careerInterviewEconomyModelId = "claude-haiku-5-5";
-export const careerInterviewPromptVersion = "career-interview-v1";
+export const careerInterviewPromptVersion = "career-interview-v2";
 
 /** The most record entries one topic sends, and the longest any of them may be. */
 export const maximumCareerInterviewContextEntries = 12;

@@ -88,6 +88,10 @@ The follow-ups draw out situation, action and result (the STAR or CAR shape).
 The interviewer stops following up when the story has them, or when the
 candidate does not know or does not want to say more.
 
+Turns should sound like a person, not a form. The interviewer varies how each
+turn opens and does not start every turn with thanks. A reflection restates
+the point in fresh, shorter words, not the candidate's sentence word for word.
+
 ## Hard moments
 
 Career breaks, layoffs, illness, caring for family and conflict at work need

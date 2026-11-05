@@ -23,6 +23,7 @@ describe("career interview method prompt", () => {
     expect(prompt).toContain("never ask for the reason");
     expect(prompt).toContain("Never suggest a number");
     expect(prompt).toContain("confirm or correct");
+    expect(prompt).toContain("vary how each turn opens");
   });
 });
 
