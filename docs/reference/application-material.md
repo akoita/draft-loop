@@ -78,3 +78,9 @@ such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
 `apps/web/src/application-material.tsx` and fills the shared screens'
 `application` host slot; a host that leaves the slot empty shows nothing new.
+
+## Validation walk
+
+The [application material walk](../evaluation/application-material-walk.md)
+drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
+runs only with the owner's go.
