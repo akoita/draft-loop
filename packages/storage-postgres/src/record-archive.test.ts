@@ -305,6 +305,17 @@ async function seedRecord(
      VALUES ($1, $2, $3, $4)`,
     [`forgotten-${marker}`, `wjn_gone-${run}`, workspaceId, at],
   );
+  // A career interview session, keyed by the API's workspace id.
+  await q(
+    `INSERT INTO career_interview_sessions (id, workspace_id, status, session, created_at, updated_at)
+     VALUES ($1, $2, 'open', $3::jsonb, $4, $4)`,
+    [
+      `cis_session-${run}`,
+      workspaceId,
+      JSON.stringify({ topics: [{ reason: `A fictional untold period for ${marker}.` }] }),
+      at,
+    ],
+  );
   // Never archived: command results and the tenant's store list.
   await q(
     `INSERT INTO idempotency_keys (scope, key, fingerprint, result_json, expires_at)
