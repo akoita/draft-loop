@@ -1978,85 +1978,6 @@
           "url"
         ]
       },
-      "OpportunityVersionsInput": {
-        "type": "object",
-        "properties": {
-          "versions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "version": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "status": {
-                  "type": "string"
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "reviewedAt": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "version",
-                "status",
-                "createdAt",
-                "reviewedAt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "versions"
-        ]
-      },
-      "AuthConfigInput": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "owner"
-              }
-            },
-            "required": [
-              "mode"
-            ],
-            "description": "Sign in with the deployment's owner token."
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "oidc"
-              },
-              "issuer": {
-                "type": "string",
-                "description": "The identity provider's issuer."
-              },
-              "clientId": {
-                "type": "string",
-                "description": "The web screen's public client id at that provider."
-              }
-            },
-            "required": [
-              "mode",
-              "issuer",
-              "clientId"
-            ],
-            "description": "Sign in through the identity provider, with the authorization code and PKCE."
-          }
-        ]
-      },
       "ConsentEntryInput": {
         "type": "object",
         "properties": {
@@ -2186,6 +2107,182 @@
         "required": [
           "current",
           "history"
+        ]
+      },
+      "ApplicationMaterialRequestInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraftInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The paragraph, or the talking point for the question."
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fact_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fact_id",
+                      "text"
+                    ]
+                  },
+                  "description": "The career record facts the item relies on, as the candidate stored them."
+                }
+              },
+              "required": [
+                "question",
+                "text",
+                "citations"
+              ]
+            }
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          "prompt_version": {
+            "type": "string"
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "The provider cost recorded for this draft's calls."
+          }
+        },
+        "required": [
+          "kind",
+          "items",
+          "model",
+          "prompt_version",
+          "cost_usd"
+        ]
+      },
+      "OpportunityVersionsInput": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "reviewedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "version",
+                "status",
+                "createdAt",
+                "reviewedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "versions"
+        ]
+      },
+      "AuthConfigInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "owner"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "description": "Sign in with the deployment's owner token."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "oidc"
+              },
+              "issuer": {
+                "type": "string",
+                "description": "The identity provider's issuer."
+              },
+              "clientId": {
+                "type": "string",
+                "description": "The web screen's public client id at that provider."
+              }
+            },
+            "required": [
+              "mode",
+              "issuer",
+              "clientId"
+            ],
+            "description": "Sign in through the identity provider, with the authorization code and PKCE."
+          }
         ]
       },
       "CareerInterviewActionInput": {
@@ -8440,89 +8537,6 @@
         ],
         "additionalProperties": false
       },
-      "OpportunityVersions": {
-        "type": "object",
-        "properties": {
-          "versions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "version": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "status": {
-                  "type": "string"
-                },
-                "createdAt": {
-                  "type": "string"
-                },
-                "reviewedAt": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "version",
-                "status",
-                "createdAt",
-                "reviewedAt"
-              ],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": [
-          "versions"
-        ],
-        "additionalProperties": false
-      },
-      "AuthConfig": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "owner"
-              }
-            },
-            "required": [
-              "mode"
-            ],
-            "additionalProperties": false,
-            "description": "Sign in with the deployment's owner token."
-          },
-          {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "const": "oidc"
-              },
-              "issuer": {
-                "type": "string",
-                "description": "The identity provider's issuer."
-              },
-              "clientId": {
-                "type": "string",
-                "description": "The web screen's public client id at that provider."
-              }
-            },
-            "required": [
-              "mode",
-              "issuer",
-              "clientId"
-            ],
-            "additionalProperties": false,
-            "description": "Sign in through the identity provider, with the authorization code and PKCE."
-          }
-        ]
-      },
       "ConsentEntry": {
         "type": "object",
         "properties": {
@@ -8658,6 +8672,190 @@
           "history"
         ],
         "additionalProperties": false
+      },
+      "ApplicationMaterialRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraft": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The paragraph, or the talking point for the question."
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fact_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fact_id",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "The career record facts the item relies on, as the candidate stored them."
+                }
+              },
+              "required": [
+                "question",
+                "text",
+                "citations"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ],
+            "additionalProperties": false
+          },
+          "prompt_version": {
+            "type": "string"
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "The provider cost recorded for this draft's calls."
+          }
+        },
+        "required": [
+          "kind",
+          "items",
+          "model",
+          "prompt_version",
+          "cost_usd"
+        ],
+        "additionalProperties": false
+      },
+      "OpportunityVersions": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "reviewedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "version",
+                "status",
+                "createdAt",
+                "reviewedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "versions"
+        ],
+        "additionalProperties": false
+      },
+      "AuthConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "owner"
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false,
+            "description": "Sign in with the deployment's owner token."
+          },
+          {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "oidc"
+              },
+              "issuer": {
+                "type": "string",
+                "description": "The identity provider's issuer."
+              },
+              "clientId": {
+                "type": "string",
+                "description": "The web screen's public client id at that provider."
+              }
+            },
+            "required": [
+              "mode",
+              "issuer",
+              "clientId"
+            ],
+            "additionalProperties": false,
+            "description": "Sign in through the identity provider, with the authorization code and PKCE."
+          }
+        ]
       },
       "CareerInterviewAction": {
         "oneOf": [
@@ -20615,6 +20813,124 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CareerInterviewSessionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
+      "post": {
+        "summary": "Draft a cover letter or interview questions for an application",
+        "description": "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations; nothing is stored. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, and 409 cost_cap_reached when the next call could pass the request's cost cap.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationMaterialRequestInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraft"
                 }
               }
             }

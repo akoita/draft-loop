@@ -66,6 +66,10 @@
     "./application-material-model": {
       "types": "./src/application-material-model.ts",
       "import": "./src/application-material-model.ts"
+    },
+    "./call-cost-guard": {
+      "types": "./src/call-cost-guard.ts",
+      "import": "./src/call-cost-guard.ts"
     }
   },
   "files": [
