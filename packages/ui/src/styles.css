@@ -8192,6 +8192,41 @@ input[type="text"].workspace-title-input {
   text-decoration-color: currentColor;
 }
 
+/* A career page's pointer to the other page's job. */
+.career-signpost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.career-signpost-attention {
+  border-color: var(--amber-line);
+  background: var(--amber-wash);
+}
+
+.career-signpost-text {
+  flex: 1 1 18rem;
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.career-signpost-text strong {
+  color: var(--text-1);
+}
+
+.career-signpost-area {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
 /* The career pages' shared header: two numbered tabs, then a quiet link to Applications. */
 .career-tabs {
   display: flex;
@@ -8266,6 +8301,13 @@ button.career-tab .career-step-number {
 .career-tabs-applications:hover {
   color: var(--text-1);
   text-decoration-color: currentColor;
+}
+
+/* On a phone the two tabs fill the row; Back already leads out of the career pages. */
+@media (max-width: 520px) {
+  .career-tabs-applications {
+    display: none;
+  }
 }
 
 .career-page-intro {
