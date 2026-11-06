@@ -18,6 +18,9 @@ import {
   type WritingPolicyHistoryViewProps,
 } from "./writing-policy-history.js";
 
+/** A language tag, the same in every screen language, so it stays out of the catalog. */
+const spellingLocaleExample = "en-GB";
+
 const policyTooLargeMessage = "The writing policy is too large; use at most 64 KiB.";
 
 /** The size the application measures: the UTF-8 bytes of the text. */
@@ -243,7 +246,7 @@ export function WritingPolicyEditorView({
                 <span>{t`Spelling locale`}</span>
                 <input
                   type="text"
-                  placeholder={t`en-GB`}
+                  placeholder={spellingLocaleExample}
                   list={spellingLocaleListId}
                   value={values.spellingLocale ?? ""}
                   disabled={saving}

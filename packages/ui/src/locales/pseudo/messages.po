@@ -751,11 +751,6 @@ msgstr ""
 msgid "Basis for storing the material"
 msgstr ""
 
-#. placeholder {0}: options.token
-#: apps/web/src/api-client.ts
-msgid "Bearer {0}"
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "Before the first run"
 msgstr ""
@@ -1783,10 +1778,6 @@ msgstr ""
 
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
-msgstr ""
-
-#: packages/ui/src/writing-policy-editor.tsx
-msgid "en-GB"
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
@@ -4519,9 +4510,12 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#. placeholder {0}: mode === "update" ? "update" : "build"
 #: packages/ui/src/profile-status.ts
-msgid "Send my career evidence{sources} to {provider} to {0} the profile."
+msgid "Send my career evidence{sources} to {provider} to build the profile."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Send my career evidence{sources} to {provider} to update the profile."
 msgstr ""
 
 #: apps/web/src/private-sections.tsx

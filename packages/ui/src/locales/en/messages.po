@@ -751,11 +751,6 @@ msgstr "Back to writing"
 msgid "Basis for storing the material"
 msgstr "Basis for storing the material"
 
-#. placeholder {0}: options.token
-#: apps/web/src/api-client.ts
-msgid "Bearer {0}"
-msgstr "Bearer {0}"
-
 #: packages/ui/src/review.tsx
 msgid "Before the first run"
 msgstr "Before the first run"
@@ -1784,10 +1779,6 @@ msgstr "Empty: add a CV, portfolio, or other source"
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
-
-#: packages/ui/src/writing-policy-editor.tsx
-msgid "en-GB"
-msgstr "en-GB"
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "End live conversation"
@@ -4520,10 +4511,13 @@ msgstr "Semantic search: ready"
 msgid "Send"
 msgstr "Send"
 
-#. placeholder {0}: mode === "update" ? "update" : "build"
 #: packages/ui/src/profile-status.ts
-msgid "Send my career evidence{sources} to {provider} to {0} the profile."
-msgstr "Send my career evidence{sources} to {provider} to {0} the profile."
+msgid "Send my career evidence{sources} to {provider} to build the profile."
+msgstr "Send my career evidence{sources} to {provider} to build the profile."
+
+#: packages/ui/src/profile-status.ts
+msgid "Send my career evidence{sources} to {provider} to update the profile."
+msgstr "Send my career evidence{sources} to {provider} to update the profile."
 
 #: apps/web/src/private-sections.tsx
 msgid "Send only if allowed"
