@@ -58,12 +58,26 @@ Keys, tokens, passwords, connection strings, customer data, personal data or pri
 
 export const logNotableWorkPrompt = `Look at what was merged or released in this session. If any of it is notable work by the record rule of draftloop://work-journal/guide, call list_work for the project first, then record_work once per piece of work that is not already recorded. Ask the candidate when their role or the project's visibility is unclear. If nothing is notable, record nothing and say so.`;
 
-/** What the agent is told when a call fails: the code and one sentence, nothing else. */
+/**
+ * What the agent is told when a call fails: the code, one sentence, and whether trying again later
+ * can help (#2263). An unexpected failure inside this server is not retryable: the same call would
+ * fail the same way.
+ */
 function failure(error: unknown) {
   const refusal =
     error instanceof WorkJournalApiError
-      ? { code: error.code, message: error.message, fields: error.fields }
-      : { code: "internal_error", message: "The DraftLoop MCP server failed.", fields: [] };
+      ? {
+          code: error.code,
+          message: error.message,
+          fields: error.fields,
+          retryable: error.retryable,
+        }
+      : {
+          code: "internal_error",
+          message: "The DraftLoop MCP server failed.",
+          fields: [],
+          retryable: false,
+        };
   return {
     isError: true,
     content: [{ type: "text" as const, text: JSON.stringify({ error: refusal }) }],
