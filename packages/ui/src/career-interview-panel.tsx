@@ -296,6 +296,20 @@ function Proposal({
   );
 }
 
+function Turns({ turns }: { readonly turns: CareerInterviewTopicView["turns"] }) {
+  return turns.map((turn, index) => {
+    const { speaker, text } = careerInterviewTurnText(turn);
+    return (
+      // Turns are append-only, so their position is a stable key.
+      // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
+      <li key={index} className={`interview-turn interview-turn-${turn.role}`}>
+        <span className="interview-speaker">{speaker}</span>
+        {text}
+      </li>
+    );
+  });
+}
+
 /** Enter sends the answer; Shift+Enter, or Enter while composing a character, adds to it. */
 export function careerInterviewSendsOnKey(event: {
   readonly key: string;
@@ -330,17 +344,7 @@ function Conversation({
     <div className="interview-conversation">
       <h3>{topic.reason}</h3>
       <ol className="interview-turns" aria-label="Conversation">
-        {topic.turns.map((turn, index) => {
-          const { speaker, text } = careerInterviewTurnText(turn);
-          return (
-            // Turns are append-only, so their position is a stable key.
-            // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
-            <li key={index} className={`interview-turn interview-turn-${turn.role}`}>
-              <span className="interview-speaker">{speaker}</span>
-              {text}
-            </li>
-          );
-        })}
+        <Turns turns={topic.turns} />
         {pending?.kind === "interviewer" && pending.answer !== undefined ? (
           <li className="interview-turn interview-turn-candidate interview-turn-sending">
             <span className="interview-speaker">You</span>
@@ -349,6 +353,33 @@ function Conversation({
         ) : null}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
       </ol>
+      <fieldset className="interview-chips">
+        <legend className="sr-only">Quick replies</legend>
+        <button
+          type="button"
+          className="button button-quiet interview-chip"
+          disabled={busy}
+          onClick={() => void onAction({ action: "answer", topic_key: topic.key, mark: "skipped" })}
+        >
+          Skip this question
+        </button>
+        <button
+          type="button"
+          className="button button-quiet interview-chip"
+          disabled={busy}
+          onClick={() => void onAction({ action: "answer", topic_key: topic.key, mark: "unknown" })}
+        >
+          I don't remember
+        </button>
+        <button
+          type="button"
+          className="button button-quiet interview-chip"
+          disabled={busy}
+          onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
+        >
+          Set this topic aside
+        </button>
+      </fieldset>
       <form
         className="interview-composer"
         onSubmit={(event) => {
@@ -387,34 +418,6 @@ function Conversation({
             disabled={busy || answer.trim() === ""}
           >
             Send
-          </button>
-          <button
-            type="button"
-            className="button button-outline"
-            disabled={busy}
-            onClick={() =>
-              void onAction({ action: "answer", topic_key: topic.key, mark: "skipped" })
-            }
-          >
-            Skip this question
-          </button>
-          <button
-            type="button"
-            className="button button-outline"
-            disabled={busy}
-            onClick={() =>
-              void onAction({ action: "answer", topic_key: topic.key, mark: "unknown" })
-            }
-          >
-            I don't remember
-          </button>
-          <button
-            type="button"
-            className="button button-outline"
-            disabled={busy}
-            onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
-          >
-            Set this topic aside
           </button>
         </div>
       </form>
@@ -465,56 +468,67 @@ function SummaryReview({
             : { summary: summary.trim() }),
         });
       }}
+      className="interview-conversation"
     >
       <h3>{topic.reason}</h3>
-      <label htmlFor={`${id}-summary`}>Summary of what you said</label>
-      <textarea
-        id={`${id}-summary`}
-        value={summary}
-        rows={5}
-        maxLength={4_000}
-        onChange={(event) => setSummary(event.target.value)}
-      />
-      {conflicts.length === 0 ? null : (
-        <ul aria-label="Differences from your record">
-          {conflicts.map((conflict) => (
-            <li key={`${conflict.summaryValue}-${conflict.factValue}`}>
-              The summary says {conflict.summaryValue}; your record says {conflict.factValue}. Both
-              are kept; edit the summary if one is wrong.
-            </li>
+      <ol className="interview-turns" aria-label="Conversation">
+        <Turns turns={topic.turns} />
+      </ol>
+      <div className="interview-summary-card">
+        <label htmlFor={`${id}-summary`}>Summary of what you said</label>
+        <textarea
+          id={`${id}-summary`}
+          value={summary}
+          rows={5}
+          maxLength={4_000}
+          onChange={(event) => setSummary(event.target.value)}
+        />
+        {conflicts.length === 0 ? null : (
+          <ul aria-label="Differences from your record">
+            {conflicts.map((conflict) => (
+              <li key={`${conflict.summaryValue}-${conflict.factValue}`}>
+                The summary says {conflict.summaryValue}; your record says {conflict.factValue}.
+                Both are kept; edit the summary if one is wrong.
+              </li>
+            ))}
+          </ul>
+        )}
+        <label htmlFor={`${id}-base`}>Save to</label>
+        <select id={`${id}-base`} value={base} onChange={(event) => setBase(event.target.value)}>
+          {knowledgeBases.map((knowledgeBase) => (
+            <option key={knowledgeBase.id} value={knowledgeBase.id}>
+              {knowledgeBase.name}
+            </option>
           ))}
-        </ul>
-      )}
-      <label htmlFor={`${id}-base`}>Save to</label>
-      <select id={`${id}-base`} value={base} onChange={(event) => setBase(event.target.value)}>
-        {knowledgeBases.map((knowledgeBase) => (
-          <option key={knowledgeBase.id} value={knowledgeBase.id}>
-            {knowledgeBase.name}
-          </option>
-        ))}
-      </select>
-      <label htmlFor={`${id}-tier`}>Who may read it</label>
-      <select
-        id={`${id}-tier`}
-        value={tier}
-        onChange={(event) => setTier(event.target.value as CareerInterviewTier)}
-      >
-        <option value="normal">Models may use it in drafts</option>
-        <option value="sensitive">Sensitive: only with your consent</option>
-        <option value="never-share">Never share with a model</option>
-      </select>
-      <p>
-        <button type="submit" disabled={busy || base === "" || summary.trim() === ""}>
-          Confirm as evidence
-        </button>{" "}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
+        </select>
+        <label htmlFor={`${id}-tier`}>Who may read it</label>
+        <select
+          id={`${id}-tier`}
+          value={tier}
+          onChange={(event) => setTier(event.target.value as CareerInterviewTier)}
         >
-          Set aside
-        </button>
-      </p>
+          <option value="normal">Models may use it in drafts</option>
+          <option value="sensitive">Sensitive: only with your consent</option>
+          <option value="never-share">Never share with a model</option>
+        </select>
+        <div className="interview-actions">
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={busy || base === "" || summary.trim() === ""}
+          >
+            Confirm as evidence
+          </button>
+          <button
+            type="button"
+            className="button button-outline"
+            disabled={busy}
+            onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
+          >
+            Set aside
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

@@ -152,6 +152,28 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Answer by voice");
   });
 
+  it("offers quick replies as chips above the answer box", () => {
+    const html = render({ session: openSession });
+    expect(html).toContain("Quick replies");
+    expect(html.indexOf("interview-chip")).toBeLessThan(html.indexOf("Your answer"));
+  });
+
+  it("shows the summary as a card after the conversation it sums up", () => {
+    const html = render({
+      session: {
+        ...summarisedSession,
+        topics: summarisedSession.topics.map((topic) => ({
+          ...topic,
+          turns: [{ role: "interviewer" as const, text: "What did you learn that year?" }],
+        })),
+      },
+    });
+    expect(html).toContain("interview-summary-card");
+    expect(html.indexOf("What did you learn that year?")).toBeLessThan(
+      html.indexOf("Summary of what you said"),
+    );
+  });
+
   it("shows the summary to edit, where it goes and who may read it", () => {
     const html = render({ session: summarisedSession });
     expect(html).toContain("I retrained in 2016.");

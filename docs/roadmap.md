@@ -484,6 +484,13 @@ device. The archive now holds interview sessions, and the interviewer varies
 its openings. Next: showing that a run cites a confirmed answer. Voxtral as an
 EU server fallback waits until the browser model proves too slow.
 
+[Milestone 84](https://github.com/akoita/draft-loop/milestone/84) (#2337 to #2339)
+makes the interview read as a conversation: chat bubbles, a writing
+indicator while the interviewer replies, the session's topics beside the chat,
+quick replies as chips, and the summary as a card in the chat. A server with
+no interviewer model now says so before offering topics. A voice mode with
+one microphone and a live transcript is the planned next step.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -645,6 +652,7 @@ monthly while active development continues. A material change states what
 changed, why, and what moved out to make room. Every stage exit also produces a
 versioned release using [the release procedure](operations/releasing.md) only
 when its release criteria are satisfied. A stage ended with unmet criteria
+| 2026-11-06 | Admitted [milestone 84](https://github.com/akoita/draft-loop/milestone/84) (#2337–#2339): the career interview as a chat, quick replies, the summary as a card, and a notice when the server has no interviewer model. | The owner found the interview panel rustic and could not see that a conversation had started. No paid model run; voice mode follows. |
 records that negative decision explicitly and does not create a release.
 
 The entries below record material product and stage decisions. Git history and
