@@ -1349,8 +1349,11 @@ and exact-quote rules are the same for every kind.
   version.
 - **Service.** The code is `source-evidence-kind-service`.
 
-`knowledge source list` shows each source's `evidenceKind` and
-`evidenceKindOrigin` (`detected` or `user`).
+`knowledge source list` shows each source's `evidenceKind`,
+`evidenceKindOrigin` (`detected` or `user`) and `language`. The language is
+detected locally from the latest version's text each time, like the kind: an
+ISO 639-1 code such as `fr`, or `unknown` when the text is too short or mixed.
+`knowledge source kind` prints it too.
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge source kind \

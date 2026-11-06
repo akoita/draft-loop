@@ -4833,6 +4833,7 @@ describe("candidate knowledge source inspection CLI controls", () => {
         versionId: "version-b2",
         kind: "linkedin-export" as const,
         origin: "user" as const,
+        language: "fr",
       },
     ]);
     const cli = createCli({
@@ -4894,6 +4895,7 @@ describe("candidate knowledge source inspection CLI controls", () => {
           versionIdsTruncated: false,
           evidenceKind: "linkedin-export",
           evidenceKindOrigin: "user",
+          language: "fr",
         },
       ],
       sourcesTruncated: false,

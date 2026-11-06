@@ -102,6 +102,37 @@ describe("source evidence kind service", () => {
     expect(JSON.stringify(entries)).not.toContain("billing pipeline");
   });
 
+  it("detects each source's language from its latest text, and unknown when none leads", async () => {
+    const french = join(directory, "cv-fr.md");
+    await writeFile(
+      french,
+      [
+        "# Alex Exemple",
+        "## Expériences professionnelles",
+        "Ingénieur données chez une société fictive, de 2021 à 2023.",
+        "J'ai mené la migration de la chaîne de facturation pour les équipes et avec les clients.",
+        "## Formation",
+        "Master de l'université, avec une spécialité dans les données.",
+      ].join("\n"),
+      "utf8",
+    );
+    const frenchSourceId = (
+      await knowledge.importKnowledgeSourceFile({ storeRoot, knowledgeBaseId, sourcePath: french })
+    ).source.id;
+    const terse = join(directory, "skills.txt");
+    await writeFile(terse, "Python, SQL, Airflow\n", "utf8");
+    const terseSourceId = (
+      await knowledge.importKnowledgeSourceFile({ storeRoot, knowledgeBaseId, sourcePath: terse })
+    ).source.id;
+
+    await service.setSourceEvidenceKind({ ...base(), sourceId: frenchSourceId, kind: "cv" });
+    const entries = await kindsBySource();
+    expect(entries[cvSourceId]?.language).toBe("en");
+    // An override still reports the detected language.
+    expect(entries[frenchSourceId]).toMatchObject({ kind: "cv", origin: "user", language: "fr" });
+    expect(entries[terseSourceId]?.language).toBe("unknown");
+  });
+
   it("lets an override win, then returns to detection when cleared", async () => {
     const set = await service.setSourceEvidenceKind({
       ...base(),

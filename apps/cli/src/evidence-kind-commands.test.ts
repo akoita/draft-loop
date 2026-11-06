@@ -68,7 +68,7 @@ describe("knowledge source evidence kind commands", () => {
       ]);
 
       expect(await run("kind", storeRoot, knowledgeBaseId, sourceId, "notes")).toEqual([
-        `source ${sourceId} evidence kind: notes (set by you)`,
+        `source ${sourceId} evidence kind: notes (set by you); language: en`,
       ]);
       const [after] = await run("list", storeRoot, knowledgeBaseId);
       expect(JSON.parse(after ?? "").sources[0]).toMatchObject({
@@ -83,7 +83,7 @@ describe("knowledge source evidence kind commands", () => {
       const [shown] = await run("kind", storeRoot, knowledgeBaseId, sourceId);
       expect(shown).toMatch(
         new RegExp(
-          `^source ${sourceId} evidence kind: transcript \\(detected, confidence \\d\\.\\d\\d\\)$`,
+          `^source ${sourceId} evidence kind: transcript \\(detected, confidence \\d\\.\\d\\d\\); language: en$`,
         ),
       );
 
