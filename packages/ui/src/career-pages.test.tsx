@@ -118,15 +118,15 @@ describe("Career evidence page", () => {
         knowledge={knowledge}
       />,
     );
-    expect(page).toContain("<strong>Career evidence</strong>");
-    expect(page.indexOf("<strong>Career evidence</strong>")).toBeLessThan(
+    expect(page).toContain("<strong>Your documents</strong>");
+    expect(page.indexOf("<strong>Your documents</strong>")).toBeLessThan(
       page.indexOf("candidate-knowledge-heading"),
     );
 
     const application = renderToStaticMarkup(
       <ReviewWorkspace state={state} onAction={noop} onSelectFiles={noop} onAddUrl={noop} />,
     );
-    expect(application).not.toContain("<strong>Career evidence</strong>");
+    expect(application).not.toContain("<strong>Your documents</strong>");
   });
 
   it("renders the host's panels around the evidence, and nothing extra without them", () => {

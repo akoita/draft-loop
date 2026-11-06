@@ -150,7 +150,7 @@ export function CareerEvidenceCardView({
       ? "Add to legacy workspace evidence"
       : status.kind === "unsupported"
         ? "Add source files"
-        : "Add files";
+        : "Add documents";
   const urlCount = parseSourceUrls(url).length;
   // Legacy workspace evidence imports one URL per request; only a knowledge base takes several.
   const tooManyForLegacy = !inKnowledgeBase && urlCount > 1;
@@ -168,7 +168,7 @@ export function CareerEvidenceCardView({
           {ready ? "Ready" : "Required"}
         </span>
       </div>
-      <strong>Career evidence</strong>
+      <strong>Your documents</strong>
       {status.kind === "loading" ? (
         <span role="status">Checking the knowledge base…</span>
       ) : status.kind === "selected" ? (

@@ -362,7 +362,7 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain("Manage provider authentication");
     expect(html).not.toContain("Provider API key");
     expect(html).not.toContain("API key (");
-    expect(html).not.toContain("<strong>Career evidence</strong>");
+    expect(html).not.toContain("<strong>Your documents</strong>");
     expect(html).not.toContain("<strong>Provider authentication</strong>");
     expect(html).not.toContain('title="Provider authentication"');
     // The way to it is stated beside Start, and navigates Home.

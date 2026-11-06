@@ -65,7 +65,7 @@ describe("Career evidence setup card", () => {
     expect(html).not.toContain("9 source");
     expect(html).not.toContain("legacy");
     expect(html).toContain("setup-card-ready");
-    expect(html).toContain(">Add files<");
+    expect(html).toContain(">Add documents<");
     expect(html).toContain(">Review and fetch source URL<");
     expect(html).not.toContain("Semantic search");
   });
@@ -79,9 +79,11 @@ describe("Career evidence setup card", () => {
     expect(html.indexOf("</section>")).toBeLessThan(html.indexOf("</article>"));
   });
 
-  it("offers Add folder next to Add files only when evidence goes into a knowledge base", () => {
+  it("offers Add folder next to Add documents only when evidence goes into a knowledge base", () => {
     const withFolder = { onAddFolder: () => undefined };
-    expect(render(selected, withFolder)).toMatch(/>Add files<\/button><button[^>]*>Add folder</);
+    expect(render(selected, withFolder)).toMatch(
+      />Add documents<\/button><button[^>]*>Add folder</,
+    );
     expect(render(selected)).not.toContain(">Add folder<");
     expect(render({ kind: "none" }, withFolder)).not.toContain(">Add folder<");
     expect(render({ kind: "unsupported" }, withFolder)).not.toContain(">Add folder<");
@@ -91,9 +93,9 @@ describe("Career evidence setup card", () => {
     );
   });
 
-  it("hides the URL box when the host fetches no URL, keeping Add files", () => {
+  it("hides the URL box when the host fetches no URL, keeping Add documents", () => {
     const html = render(selected, { urlsOffered: false });
-    expect(html).toContain(">Add files<");
+    expect(html).toContain(">Add documents<");
     expect(html).not.toContain("Or provide public URLs");
     expect(html).not.toContain("Review and fetch source URL");
   });
@@ -149,7 +151,7 @@ describe("Career evidence setup card", () => {
   it("offers no add actions while the saved base cannot be opened", () => {
     const html = render({ kind: "unavailable" });
     expect(html).toContain("could not be opened");
-    expect(html).not.toContain("Add files");
+    expect(html).not.toContain("Add documents");
     expect(html).not.toContain("Review and fetch");
   });
 
@@ -180,7 +182,7 @@ describe("Career evidence setup card", () => {
         onAddLegacyUrl={() => undefined}
       />,
     );
-    expect(html).toContain("Career evidence");
+    expect(html).toContain("<strong>Your documents</strong>");
     expect(html).toContain("Add source files");
   });
 
