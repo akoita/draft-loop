@@ -32,6 +32,10 @@
       "types": "./src/workspace-setup.tsx",
       "import": "./src/workspace-setup.tsx"
     },
+    "./career-interview-live": {
+      "types": "./src/career-interview-live.tsx",
+      "import": "./src/career-interview-live.tsx"
+    },
     "./career-interview-panel": {
       "types": "./src/career-interview-panel.tsx",
       "import": "./src/career-interview-panel.tsx"

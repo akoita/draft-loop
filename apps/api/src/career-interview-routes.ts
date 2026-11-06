@@ -115,6 +115,11 @@ const sessionView = z
       .describe(
         "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable.",
       ),
+    live_voice_available: z
+      .boolean()
+      .describe(
+        "Whether this server offers the live voice conversation on an open topic, over the WebSocket at the session's /live path.",
+      ),
   })
   .meta({ id: "CareerInterviewSessionView" });
 
@@ -317,6 +322,8 @@ export function registerCareerInterviewRoutes(
     ),
     ...(published === undefined ? {} : { published_source_id: published }),
     interviewer_available: interview.route !== undefined && interview.allowProviderData,
+    live_voice_available:
+      options.live !== undefined && interview.route !== undefined && interview.allowProviderData,
   });
 
   const handled = async <T>(
