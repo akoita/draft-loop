@@ -2,6 +2,7 @@ import type { PickerOpenResult, PickerView } from "./picker-contract.js";
 import { parseServerAddress } from "./server-address.js";
 import type { ServerCheck } from "./server-check.js";
 import { type ServerListStore, withoutServer, withServer } from "./servers.js";
+import type { ShellLanguage } from "./shell-text.js";
 
 export interface PickerServiceDependencies {
   readonly store: ServerListStore;
@@ -10,6 +11,8 @@ export interface PickerServiceDependencies {
   openServer(origin: string, check: ServerCheck & { reachable: true }): void;
   /** Clears the server's storage partition. */
   clearServerData(origin: string): Promise<void>;
+  /** The language the picker writes in; English when left out. */
+  language?(): ShellLanguage;
 }
 
 /** The picker's actions, kept apart from Electron so they can be tested. */
@@ -18,6 +21,7 @@ export function createPickerService(dependencies: PickerServiceDependencies) {
   const view = (): PickerView => ({
     servers: dependencies.store.read().servers,
     unreachable,
+    ...(dependencies.language === undefined ? {} : { language: dependencies.language() }),
   });
   return {
     view,

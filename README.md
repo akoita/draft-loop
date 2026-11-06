@@ -53,6 +53,10 @@ The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
 candidate's source material into permission to invent facts.
 
+**Languages.** The screens are in English, and in French as a beta. Documents
+are written in English or French, with German, Spanish, Italian, Dutch and
+Portuguese as previews. See [Languages](docs/reference/languages.md).
+
 ## Quick install with Docker
 
 The self-hosted server needs only Docker with the Compose plugin: no clone, no
@@ -272,7 +276,7 @@ Runs read only the source versions a workspace selects; see
 
 - [Documentation map](docs/README.md) · [Roadmap and current status](docs/roadmap.md) · [Release history](https://github.com/akoita/draft-loop/releases)
 - [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
-- [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Hosted service](docs/architecture/hosted-service.md) · [Storage and tenancy](docs/architecture/storage-and-tenancy.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
+- [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Hosted service](docs/architecture/hosted-service.md) · [Storage and tenancy](docs/architecture/storage-and-tenancy.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md) · [Languages](docs/reference/languages.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md) · [Server threat model](docs/security/server-threat-model.md)
 - [Self-hosted server](docs/operations/self-hosted.md) · [Local server stack](docs/operations/local-server-stack.md) · [Client-server version (ADR 0011)](docs/adr/0011-client-server-version.md) · [Client-server delivery plan](docs/architecture/client-server-delivery-plan.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)

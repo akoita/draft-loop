@@ -11,11 +11,18 @@ export interface SaveableDownload {
  * leaves the save path unset, so Electron asks where to save it with the system Save dialog,
  * starting in the Downloads folder with the export's own name.
  */
-export function askWhereToSave(item: SaveableDownload, downloadsDirectory: string): void {
+export function askWhereToSave(
+  item: SaveableDownload,
+  downloadsDirectory: string,
+  labels: { readonly title: string; readonly buttonLabel: string } = {
+    title: "Save export",
+    buttonLabel: "Save",
+  },
+): void {
   const name = basename(item.getFilename()) || "draftloop-export";
   item.setSaveDialogOptions({
-    title: "Save export",
+    title: labels.title,
     defaultPath: join(downloadsDirectory, name),
-    buttonLabel: "Save",
+    buttonLabel: labels.buttonLabel,
   });
 }
