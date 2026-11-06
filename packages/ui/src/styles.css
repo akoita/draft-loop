@@ -10021,3 +10021,74 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .application-language .subtle {
   margin: 0;
 }
+
+/* The live voice conversation (#2362): an orb that breathes while listening and pulses while the
+   interviewer speaks, so the candidate always sees whose turn it is. */
+.interview-live {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--teal-line);
+  border-radius: 12px;
+  background: var(--teal-wash);
+}
+
+.interview-live-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-xs);
+}
+
+.interview-live-orb {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+
+.interview-live-listening .interview-live-orb {
+  animation: interview-live-breathe 2.4s ease-in-out infinite;
+}
+
+.interview-live-thinking .interview-live-orb {
+  opacity: 0.5;
+  animation: interview-live-breathe 1.2s ease-in-out infinite;
+}
+
+.interview-live-speaking .interview-live-orb {
+  animation: interview-live-pulse 0.8s ease-in-out infinite;
+}
+
+.interview-live-ended .interview-live-orb {
+  opacity: 0.3;
+}
+
+@keyframes interview-live-breathe {
+  0%,
+  100% {
+    transform: scale(0.85);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+}
+
+@keyframes interview-live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--teal-line);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interview-live .interview-live-orb {
+    animation: none;
+  }
+}

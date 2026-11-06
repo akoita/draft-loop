@@ -46,6 +46,11 @@ export class ApiRequestError extends Error {
 
 export interface ApiClient {
   call<K extends ApiOperation>(operation: K, input: ApiInput<K>): Promise<ApiResponse<K>>;
+  /**
+   * Opens a WebSocket on a route the OpenAPI document does not list, such as the live interview.
+   * A browser socket carries no headers, so the credential travels as a `bearer.` subprotocol.
+   */
+  openSocket?(path: string, input: CallInput, protocol: string): WebSocket;
 }
 
 export interface ApiClientOptions {
@@ -56,7 +61,7 @@ export interface ApiClientOptions {
   readonly fetch?: typeof fetch;
 }
 
-interface CallInput {
+export interface CallInput {
   readonly path?: Readonly<Record<string, string>>;
   readonly query?: Readonly<Record<string, string | number | undefined>>;
   readonly header?: Readonly<Record<string, string>>;
@@ -133,6 +138,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       const type = response.headers.get("content-type") ?? "";
       if (type.startsWith("application/json")) return (await response.json()) as never;
       return (await response.blob()) as never;
+    },
+    openSocket(path, input, protocol) {
+      const base = new URL(baseUrl === "" ? globalThis.location.href : baseUrl);
+      const url = new URL(operationUrl(path, input), base);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      const protocols =
+        options.token === undefined ? [protocol] : [protocol, `bearer.${options.token}`];
+      return new WebSocket(url, protocols);
     },
   };
 }
