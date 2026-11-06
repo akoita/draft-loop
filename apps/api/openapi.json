@@ -580,6 +580,19 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "params": {
+                "description": "Names and numbers the code's text needs, such as the resource not_found is about, so a screen can word the refusal in its own language. Never content.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
               }
             },
             "required": [
@@ -7345,6 +7358,19 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "params": {
+                "description": "Names and numbers the code's text needs, such as the resource not_found is about, so a screen can word the refusal in its own language. Never content.",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
               }
             },
             "required": [

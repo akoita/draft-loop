@@ -230,7 +230,11 @@ describe("consent routes", () => {
       headers: { "x-test-caller": "owner" },
     });
     expect(read.statusCode).toBe(404);
-    expect(read.json().error).toEqual({ code: "not_found", message: "No such workspace." });
+    expect(read.json().error).toEqual({
+      code: "not_found",
+      message: "No such workspace.",
+      params: { resource: "workspace" },
+    });
     const write = await server.inject({
       method: "POST",
       url: "/v1/workspaces/unknown/consents",

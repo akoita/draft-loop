@@ -180,7 +180,11 @@ describe("workspaces", () => {
     });
 
     expect(response.statusCode).toBe(404);
-    expect(response.json().error).toEqual({ code: "not_found", message: "No such workspace." });
+    expect(response.json().error).toEqual({
+      code: "not_found",
+      message: "No such workspace.",
+      params: { resource: "workspace" },
+    });
   });
 
   it("answers the service's user errors as refusals", async () => {

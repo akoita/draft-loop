@@ -80,6 +80,11 @@ the identity provider (authorization code with PKCE), and is kept in the tab.
   API fetches it once, when requirements are extracted.
 - **Review** happens on the shared review screen, with run details and the
   comparison between an application's runs.
+- **Refusals.** Every API refusal has a stable `code`, its English `message`
+  and, where the text needs them, `params` such as the resource `not_found` is
+  about. The screen words known codes in its own language
+  (`refusal-text.ts`) and shows the message for any other; the MCP server
+  shows the message.
 - **Exports** download under the name the review state shows
   (`@draft-loop/ui/export-file-name`), Modern unless another template is
   chosen.
