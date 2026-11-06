@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Learn your writing preferences from review",
+  "releaseName": "Find an application fast",
   "stageIssue": 1359,
-  "milestone": 74,
-  "summary": "One sprint since the Prepare panel (milestone 73). DraftLoop now notices what the candidate keeps changing in review and suggests it as a writing preference: a word removed from at least 3 drafts across at least 2 applications becomes a forbidden term, and a section order approved as often becomes the policy's order (#2251, #2252). Each suggestion shows its reason; accepting one saves a new writing-policy version, and dismissing one means it is never offered again (#2253, #2265). Suggestions appear under Workspace settings on Home, in the API and with `draft-loop preferences`. A new memory model page and domain catalog name every kind of memory a run uses (#2249, #2250). Skipped and unknown interview answers now stay in transcript evidence, so each answer stays with its question (#2256). The engine can emit content-free run spans through a tracing port (#1102).",
-  "knownLimitations": "Suggestions cover forbidden words and section order only; dismissed critic findings are counted but do not change the critic yet (#2254). Approval edits replace block text, so a section order suggestion comes from revisions the candidate steered, not from edits. Run spans are not stored or exported yet (#1103, #1104)."
+  "milestone": 76,
+  "summary": "One sprint since the writing preferences release (milestone 74). Home stays usable with many applications: above six, a toolbar searches application names (every word, ignoring case and accents), filters by status with a count on each chip, and sorts by last activity, name, date created or status (#2277, #2278). A List view shows one row per application with Open and a menu for Archive, Restore and Delete; archived applications follow the same search and view (#2278). View and sort are remembered on each device, never on the server (#2279). Screen change only: no API, storage or model change.",
+  "knownLimitations": "Applications cannot be grouped yet; one-level folders follow in milestone 77 (#2280-#2283). Cards keep their Archive and Delete buttons until the folders milestone adds Move to their menu. Search matches application names only, not job text."
 }
