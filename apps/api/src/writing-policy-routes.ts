@@ -19,6 +19,12 @@ const identifierSchema = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "Expected a safe identifier.");
 const workspaceParams = z.strictObject({ workspaceId: identifierSchema });
+const versionParams = workspaceParams.extend({
+  checksum: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/u, "Expected a lowercase SHA-256 checksum.")
+    .describe("The SHA-256 that names the version."),
+});
 
 const setWritingPolicyBody = z.strictObject({
   content: z
@@ -154,6 +160,32 @@ export function registerWritingPolicyRoutes(
         root: workspaceRoot(request.params.workspaceId),
       });
       return { versions: (versions ?? []).map(versionView) };
+    },
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/writing-policy/versions/:checksum",
+    {
+      schema: {
+        summary: "Read one writing policy version with its text",
+        description:
+          "Any version in the workspace's history, active or earlier, so an editor can show or restore it. Reading saves nothing.",
+        params: versionParams,
+        response: { 200: writingPolicySchema, 400: apiErrorSchema, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const view = await service.getWritingPolicy?.({
+        root: workspaceRoot(request.params.workspaceId),
+        checksum: request.params.checksum,
+        includeContent: true,
+      });
+      if (view?.policy === undefined) {
+        return reply
+          .code(404)
+          .send(apiError("not_found", "The workspace has no writing policy with that checksum."));
+      }
+      return { ...versionView(view), content: view.policy.content };
     },
   );
 }

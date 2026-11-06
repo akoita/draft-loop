@@ -983,6 +983,12 @@ verbosity, page target and spelling locale rewrite the matching lines. Saving
 creates a new version for future runs, as `policy activate` does, and rejected
 text saves nothing.
 
+**History** in the same dialog lists the saved versions, newest first, with
+the active one marked. Pick a version to read its text, with the lines that
+differ from the active version marked. **Restore as new version** puts that
+text in the editor; saving it makes a new version, and nothing is deleted.
+`policy list` and `policy show <checksum> --content` do the same from the CLI.
+
 ### Suggested preferences
 
 DraftLoop suggests a writing preference when your review choices repeat, and

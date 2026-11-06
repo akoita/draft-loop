@@ -1,6 +1,7 @@
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { maximumWritingPolicyContentBytes, type WritingPolicyReadResult } from "./bridge.js";
+import type { WritingPolicyVersionMetadata } from "./model.js";
 import { useModalFocusTrap } from "./review.js";
 import {
   type PolicySelectorDirective,
@@ -10,6 +11,11 @@ import {
   writingPolicyTones,
   writingPolicyVerbosityLevels,
 } from "./writing-policy-directives.js";
+import {
+  type PolicyVersionLoad,
+  WritingPolicyHistoryView,
+  type WritingPolicyHistoryViewProps,
+} from "./writing-policy-history.js";
 
 const policyTooLargeMessage = "The writing policy is too large; use at most 64 KiB.";
 
@@ -63,6 +69,8 @@ export interface WritingPolicyEditorViewProps {
   readonly loadMessage?: string | null;
   /** The whole policy text; the selectors are a view of it. */
   readonly text: string;
+  /** The saved text the editor loaded, which the history compares versions with. */
+  readonly activeContent?: string;
   /** True when the workspace has no saved policy and the text is the starting template. */
   readonly isDefaultTemplate: boolean;
   /** The saved version being edited, or null for the starting template. */
@@ -79,6 +87,11 @@ export interface WritingPolicyEditorViewProps {
   readonly onClose: () => void;
   readonly onRetry?: () => void;
   readonly dialogRef?: RefObject<HTMLDivElement | null>;
+  /** Earlier versions; the History tab shows only when there are some to read. */
+  readonly history?: Omit<WritingPolicyHistoryViewProps, "activeContent"> & {
+    readonly open: boolean;
+    readonly onOpenChange: (open: boolean) => void;
+  };
 }
 
 /** The writing policy editor dialog, driven entirely by its props. */
@@ -86,6 +99,7 @@ export function WritingPolicyEditorView({
   load,
   loadMessage = null,
   text,
+  activeContent = text,
   isDefaultTemplate,
   savedVersion,
   saveError = null,
@@ -97,6 +111,7 @@ export function WritingPolicyEditorView({
   onClose,
   onRetry,
   dialogRef,
+  history,
 }: WritingPolicyEditorViewProps) {
   const values = readPolicySelectorValues(text);
   const bytes = writingPolicyByteLength(text);
@@ -105,6 +120,8 @@ export function WritingPolicyEditorView({
   const canSave = ready && !saving && !overLimit && (dirty || isDefaultTemplate);
   const setDirective = (directive: PolicySelectorDirective, value: string | null) =>
     onTextChange(setPolicySelectorValue(text, directive, value));
+  const showHistory = ready && history !== undefined && history.versions.length > 0;
+  const historyOpen = showHistory && history.open;
   return (
     <div className="modal-backdrop">
       <div
@@ -154,7 +171,31 @@ export function WritingPolicyEditorView({
             </div>
           </>
         ) : null}
-        {ready ? (
+        {showHistory ? (
+          <div className="policy-editor-modes">
+            <button
+              className={`button ${historyOpen ? "button-quiet" : "button-outline"}`}
+              type="button"
+              aria-pressed={!historyOpen}
+              onClick={() => history.onOpenChange(false)}
+            >
+              Edit
+            </button>
+            <button
+              className={`button ${historyOpen ? "button-outline" : "button-quiet"}`}
+              type="button"
+              aria-pressed={historyOpen}
+              disabled={saving}
+              onClick={() => history.onOpenChange(true)}
+            >
+              {`History (${history.versions.length})`}
+            </button>
+          </div>
+        ) : null}
+        {historyOpen ? (
+          <WritingPolicyHistoryView {...history} activeContent={activeContent} />
+        ) : null}
+        {ready && !historyOpen ? (
           <form
             className="setup-form policy-editor"
             aria-label="Edit writing policy"
@@ -273,7 +314,10 @@ export function WritingPolicyEditorView({
 
 export interface WritingPolicyEditorProps {
   readonly workspaceId: string;
-  readonly readPolicy: (workspaceId: string) => Promise<WritingPolicyReadResult>;
+  /** Reads the active policy, or with a checksum that exact version from the history. */
+  readonly readPolicy: (workspaceId: string, checksum?: string) => Promise<WritingPolicyReadResult>;
+  /** The workspace's saved versions, oldest first; empty or absent hides the History tab. */
+  readonly history?: readonly WritingPolicyVersionMetadata[];
   /** Saves and activates the text; rejects with the application's message when it is invalid. */
   readonly savePolicy: (workspaceId: string, content: string) => Promise<void>;
   readonly onClose: () => void;
@@ -290,6 +334,7 @@ export function WritingPolicyEditor({
   readPolicy,
   savePolicy,
   onClose,
+  history = [],
 }: WritingPolicyEditorProps) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -297,6 +342,10 @@ export function WritingPolicyEditor({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [discardArmed, setDiscardArmed] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedChecksum, setSelectedChecksum] = useState<string | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<PolicyVersionLoad>({ status: "idle" });
+  const selectedRef = useRef<string | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const mounted = useRef(true);
   // The read is a port method that may be a new function each render; a re-render must
@@ -367,6 +416,27 @@ export function WritingPolicyEditor({
     );
   };
 
+  const selectVersion = (checksum: string) => {
+    selectedRef.current = checksum;
+    setSelectedChecksum(checksum);
+    setSelectedVersion({ status: "loading" });
+    readPolicyRef.current(workspaceId, checksum).then(
+      (result) => {
+        // A later pick wins over a slower earlier read.
+        if (!mounted.current || selectedRef.current !== checksum) return;
+        setSelectedVersion({ status: "ready", checksum, content: result.content });
+      },
+      (reason: unknown) => {
+        if (!mounted.current || selectedRef.current !== checksum) return;
+        setSelectedVersion({
+          status: "failed",
+          message:
+            reason instanceof Error ? reason.message : "The policy version could not be loaded.",
+        });
+      },
+    );
+  };
+
   return (
     <WritingPolicyEditorView
       load={loadState.status}
@@ -387,6 +457,22 @@ export function WritingPolicyEditor({
       onClose={requestClose}
       onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
       dialogRef={dialogRef}
+      activeContent={loaded?.content ?? text}
+      history={{
+        versions: loaded?.isDefaultTemplate === false ? history : [],
+        activeChecksum: loaded?.checksum ?? null,
+        selectedChecksum,
+        selected: selectedVersion,
+        open: historyOpen,
+        onOpenChange: setHistoryOpen,
+        onSelect: selectVersion,
+        onRestore: (content) => {
+          setText(content);
+          setDiscardArmed(false);
+          setSaveError(null);
+          setHistoryOpen(false);
+        },
+      }}
     />
   );
 }

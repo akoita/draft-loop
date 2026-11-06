@@ -1204,6 +1204,13 @@ export interface ApiOperations {
       readonly versions: readonly (ApiSchemas["WritingPolicyVersion"])[];
     };
   };
+  "GET /v1/workspaces/{workspaceId}/writing-policy/versions/{checksum}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly checksum: string;
+    };
+    readonly response: ApiSchemas["WritingPolicy"];
+  };
   "GET /v1/workspaces/{workspaceId}/preference-suggestions": {
     readonly path: {
       readonly workspaceId: string;

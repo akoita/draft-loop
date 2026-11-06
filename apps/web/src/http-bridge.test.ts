@@ -842,6 +842,48 @@ describe("the shared screens' commands over HTTP", () => {
     });
   });
 
+  it("reads an exact earlier policy version by checksum, never the template", async () => {
+    const earlier = {
+      checksum: "e".repeat(64),
+      version: `sha256:${"e".repeat(12)}`,
+      createdAt: "2026-10-22T08:00:00.000Z",
+      priorChecksum: null,
+      content: "# Writing policy\n\nAn earlier rule.",
+    };
+    const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}/writing-policy/versions/{checksum}": (input) => {
+        const { checksum } = (input as { path: { checksum: string } }).path;
+        if (checksum !== earlier.checksum) {
+          throw new ApiRequestError(404, "not_found", "No such version.");
+        }
+        return earlier;
+      },
+      "GET /v1/writing-policy-template": () => ({ content: "# Default CV writing policy\n" }),
+    });
+
+    const found = await port.execute({
+      type: "writing-policy.read",
+      input: { workspaceId, checksum: earlier.checksum },
+    });
+    const missing = await port.execute({
+      type: "writing-policy.read",
+      input: { workspaceId, checksum: "f".repeat(64) },
+    });
+
+    expect(found).toEqual({
+      ok: true,
+      value: {
+        workspaceId,
+        content: earlier.content,
+        version: earlier.version,
+        checksum: earlier.checksum,
+        isDefaultTemplate: false,
+      },
+    });
+    expect(missing).toMatchObject({ ok: false });
+    expect(calls.map((call) => call.operation)).not.toContain("GET /v1/writing-policy-template");
+  });
+
   it("opens the policy editor on the saved policy, or on the template when none is saved", async () => {
     const saved = {
       checksum: "c".repeat(64),

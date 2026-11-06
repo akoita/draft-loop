@@ -152,6 +152,45 @@ describe("writing policy routes", () => {
     });
   });
 
+  it("reads one version with its text by checksum, and 404s an unknown one", async () => {
+    const getWritingPolicy = vi.fn(async (command: { checksum?: string }) =>
+      command.checksum === active.checksum ? active : undefined,
+    );
+    await build({ getWritingPolicy });
+
+    const found = await app.inject({
+      method: "GET",
+      url: `${policyUrl}/versions/${active.checksum}`,
+      headers: { authorization },
+    });
+    const missing = await app.inject({
+      method: "GET",
+      url: `${policyUrl}/versions/${"d".repeat(64)}`,
+      headers: { authorization },
+    });
+    const malformed = await app.inject({
+      method: "GET",
+      url: `${policyUrl}/versions/not-a-checksum`,
+      headers: { authorization },
+    });
+
+    expect(found.statusCode).toBe(200);
+    expect(found.json()).toEqual({
+      checksum: active.checksum,
+      version: active.version,
+      createdAt: active.createdAt,
+      priorChecksum: null,
+      content,
+    });
+    expect(getWritingPolicy).toHaveBeenCalledWith({
+      root,
+      checksum: active.checksum,
+      includeContent: true,
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(malformed.statusCode).toBe(400);
+  });
+
   it("reads the template an editor starts from, saving nothing", async () => {
     const configureWritingPolicy = vi.fn();
     await build({ configureWritingPolicy });

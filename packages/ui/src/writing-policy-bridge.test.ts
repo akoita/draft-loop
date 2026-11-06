@@ -33,6 +33,22 @@ describe("writing policy bridge commands", () => {
     ).toEqual({ type: "writing-policy.read", input: { workspaceId: "ws-1" } });
   });
 
+  it("accepts a read of one exact version by checksum, and refuses a malformed checksum", () => {
+    const input = { workspaceId: "ws-1", checksum: "a".repeat(64) };
+    expect(validateBridgeCommand({ type: "writing-policy.read", input })).toEqual({
+      type: "writing-policy.read",
+      input,
+    });
+    for (const checksum of ["A".repeat(64), "a".repeat(63), 7]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "writing-policy.read",
+          input: { workspaceId: "ws-1", checksum },
+        }),
+      ).toThrow();
+    }
+  });
+
   it("accepts the real save payload with every key intact", () => {
     const input = { workspaceId: "ws-1", content: "Tone: warm\n\n- No em dashes.\n" };
     expect(validateBridgeCommand({ type: "writing-policy.save", input })).toEqual({

@@ -564,7 +564,15 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         };
       }
       case "writing-policy.read": {
-        const { workspaceId } = command.input;
+        const { workspaceId, checksum } = command.input;
+        if (checksum !== undefined) {
+          // An exact version from the history: a missing one is an error, never the template.
+          const version = await client.call(
+            "GET /v1/workspaces/{workspaceId}/writing-policy/versions/{checksum}",
+            { path: { workspaceId, checksum } },
+          );
+          return { workspaceId, ...pick(version), isDefaultTemplate: false };
+        }
         try {
           const active = await client.call("GET /v1/workspaces/{workspaceId}/writing-policy", {
             path: { workspaceId },
