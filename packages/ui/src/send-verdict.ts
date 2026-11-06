@@ -12,6 +12,7 @@ const editorialLabels = [
   ["editorial-negative-aside", "negative asides"],
   ["editorial-missing-evidence", "job-relevant evidence left out"],
   ["coverage-omitted-accomplishment", "supported accomplishments left out"],
+  ["language", "text in another language or against its conventions"],
 ] as const;
 
 export interface SendVerdict {

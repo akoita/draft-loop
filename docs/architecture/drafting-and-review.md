@@ -683,13 +683,19 @@ flowchart LR
 
 ### The critique
 
-The critique reviews the draft three ways:
+The critique reviews the draft three ways, and a fourth for a CV not in English:
 
 | Review | What it asks | Finding codes |
 | --- | --- | --- |
 | Claims | Is each claim supported by its cited evidence, with the right attribution, work maturity and credential scope? Does the CV omit a dated employment gap the sources state? | Factuality findings; a coverage warning with the source id for an omitted gap |
 | Editorial | Is the CV ready to send? | `editorial-source-note`, `editorial-fragment`, `editorial-negative-aside`, `editorial-missing-evidence` |
 | Emphasis | Does the CV lead with the job's central themes? | `emphasis-theme-buried`, `emphasis-padding`, `emphasis-order`, `emphasis-theme-gap` |
+| Language | For a CV not in English: is it all in its language, and does each translated claim stay within its source? | `language` (warning), `translation-fidelity` (factuality error) |
+
+The language review is added only for a document language other than English
+(#2319). It follows the run's cached prefix as a call instruction, so English
+runs keep `cli-critic-v11` unchanged. The critic reads each cited source in its
+own language, and the review shows sources as written.
 
 The editorial codes mean:
 
