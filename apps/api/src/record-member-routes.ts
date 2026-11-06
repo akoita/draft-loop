@@ -58,7 +58,7 @@ const managersOnly = apiError(
   "forbidden",
   "Only an organisation's owners and admins assign members to candidate records.",
 );
-const workspaceNotFound = apiError("not_found", "No such workspace.");
+const workspaceNotFound = apiError("not_found", "No such workspace.", { resource: "workspace" });
 const memberNotFound = apiError("member_not_found", "The organisation has no such member.");
 const notAssigned = apiError("not_found", "The member is not assigned to this candidate record.");
 

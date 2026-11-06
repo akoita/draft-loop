@@ -45,7 +45,9 @@ const unknownBase = {
 };
 const unknownWorkspace = {
   status: 404,
-  body: { error: { code: "not_found", message: "No such workspace." } },
+  body: {
+    error: { code: "not_found", message: "No such workspace.", params: { resource: "workspace" } },
+  },
 };
 
 function runtimeUrl(url: string): string {

@@ -39,7 +39,7 @@ const eraseBody = z.strictObject({
   confirm: z.string().max(128).describe("The workspace id again, typed back by the person."),
 });
 
-const notFound = apiError("not_found", "No such workspace.");
+const notFound = apiError("not_found", "No such workspace.", { resource: "workspace" });
 
 function workspaceIdOf(request: FastifyRequest): string | undefined {
   const params = request.params as { workspaceId?: unknown } | undefined;

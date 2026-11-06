@@ -246,7 +246,9 @@ export function registerWorkspaceRoutes(
     async (request, reply) => {
       const root = workspaceRoot(request.params.workspaceId);
       if (!(await workspaceExists(service, root))) {
-        return reply.code(404).send(apiError("not_found", "No such workspace."));
+        return reply
+          .code(404)
+          .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
       }
       const { author, critic, independenceOverrideRationale } = request.body;
       const undeclared = undeclaredLocalModel([author, critic], localModels);
@@ -281,14 +283,18 @@ export function registerWorkspaceRoutes(
     async (request, reply) => {
       const root = workspaceRoot(request.params.workspaceId);
       if (!(await workspaceExists(service, root))) {
-        return reply.code(404).send(apiError("not_found", "No such workspace."));
+        return reply
+          .code(404)
+          .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
       }
       const descriptor = await service.configureAutopilot?.(
         { root, enabled: request.body.enabled },
         silent,
       );
       if (descriptor === undefined) {
-        return reply.code(404).send(apiError("not_found", "No such workspace."));
+        return reply
+          .code(404)
+          .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
       }
       return workspaceView(request.params.workspaceId, descriptor);
     },
@@ -326,11 +332,15 @@ export function registerWorkspaceRoutes(
           .send(apiError("budget_above_ceiling", runBudgetCeilingMessage(violation)));
       }
       if (!(await workspaceExists(service, root))) {
-        return reply.code(404).send(apiError("not_found", "No such workspace."));
+        return reply
+          .code(404)
+          .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
       }
       const descriptor = await service.configureRunBudget?.({ root, ...budget }, silent);
       if (descriptor === undefined) {
-        return reply.code(404).send(apiError("not_found", "No such workspace."));
+        return reply
+          .code(404)
+          .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
       }
       return workspaceView(request.params.workspaceId, descriptor);
     },
