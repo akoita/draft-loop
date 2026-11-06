@@ -13,6 +13,7 @@ import {
   type ApplicationSummaryView,
   normalizeApplicationDisplayName,
 } from "./application-contract.js";
+import type { ApplicationFolderView } from "./application-folder-contract.js";
 import {
   type ApplicationImportNotice,
   applicationImportErrorNotice,
@@ -39,6 +40,22 @@ import {
   ApplicationsTable,
   ApplicationsToolbar,
 } from "./home-applications-view.js";
+import {
+  type FolderPreferences,
+  folderErrorMessage,
+  folderMoveNotice,
+  folderSections,
+  moveTargets,
+  noFolderLabel,
+  readFolderPreferences,
+  writeFolderPreferences,
+} from "./home-folder-model.js";
+import {
+  FolderBar,
+  FolderSectionHead,
+  type HomeFolderActions,
+  MoveToItems,
+} from "./home-folders.js";
 import {
   type ApplicationListQuery,
   applicationQueryNarrows,
@@ -246,6 +263,8 @@ export interface ApplicationCardActions {
   readonly confirmingDelete?: boolean;
   /** True while an action on this card, or anything else in the workspace, is running. */
   readonly busy?: boolean;
+  /** Move to entries for the card's "⋯" menu; absent on a host without folders. */
+  readonly moveTargets?: readonly { readonly label: string; readonly onMove: () => void }[];
 }
 
 export function ApplicationCard({
@@ -434,6 +453,14 @@ export function ApplicationCard({
               Delete
             </button>
           )}
+          {actions.moveTargets === undefined || actions.moveTargets.length === 0 ? null : (
+            <details className="applications-row-menu">
+              <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
+              <div className="applications-row-menu-items">
+                <MoveToItems name={application.name} targets={actions.moveTargets} busy={busy} />
+              </div>
+            </details>
+          )}
         </div>
       )}
     </li>
@@ -453,6 +480,8 @@ function ApplicationsList({
   initialShowArchived = false,
   initialQuery,
   initialView,
+  folders,
+  initialFolderPreferences,
 }: {
   readonly state: HomeApplicationsState;
   readonly now: Date;
@@ -470,8 +499,17 @@ function ApplicationsList({
   readonly initialShowArchived?: boolean;
   readonly initialQuery?: ApplicationListQuery;
   readonly initialView?: ApplicationListView;
+  readonly folders?: HomeFolderActions | undefined;
+  readonly initialFolderPreferences?: FolderPreferences | undefined;
 }) {
   const [showArchived, setShowArchived] = useState(initialShowArchived);
+  const [folderPreferences, setFolderPreferences] = useState(
+    () => initialFolderPreferences ?? readFolderPreferences(browserPreferenceStorage()),
+  );
+  const changeFolderPreferences = (next: FolderPreferences) => {
+    setFolderPreferences(next);
+    writeFolderPreferences(browserPreferenceStorage(), next);
+  };
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   // View and sort come back from this device; search and status filter start empty.
   const [stored] = useState(() => readApplicationListPreferences(browserPreferenceStorage()));
@@ -515,6 +553,14 @@ function ApplicationsList({
   const actionsFor = (application: ApplicationSummaryView): ApplicationCardActions => {
     const isArchived = application.archivedAt !== null;
     return {
+      ...(folders === undefined
+        ? {}
+        : {
+            moveTargets: moveTargets(application, folders.folders).map((target) => ({
+              label: target.label,
+              onMove: () => folders.onMove(application, target.folderId),
+            })),
+          }),
       busy: disabled || busyApplicationId !== null,
       confirmingDelete: confirmingId === application.id,
       ...(onArchive === undefined ? {} : { onArchive: () => onArchive(application, !isArchived) }),
@@ -569,6 +615,50 @@ function ApplicationsList({
     );
   const narrowedToNothing =
     applicationQueryNarrows(shownQuery) && active.length > 0 && shownActive.length === 0;
+  const grouped =
+    folders !== undefined && folders.folders.length > 0 && folderPreferences.grouping === "folders";
+  const toggleFolded = (key: string) =>
+    changeFolderPreferences({
+      ...folderPreferences,
+      folded: folderPreferences.folded.includes(key)
+        ? folderPreferences.folded.filter((folded) => folded !== key)
+        : [...folderPreferences.folded, key],
+    });
+  const activeGroups =
+    folders !== undefined && grouped
+      ? folderSections(shownActive, folders.folders, applicationQueryNarrows(shownQuery)).map(
+          (section) => {
+            const folded = folderPreferences.folded.includes(section.key);
+            const bodyId = `application-folder-body-${section.key}`;
+            return (
+              <section className="application-folder" key={section.key}>
+                <FolderSectionHead
+                  section={section}
+                  folded={folded}
+                  bodyId={bodyId}
+                  disabled={disabled}
+                  onToggle={() => toggleFolded(section.key)}
+                  onRename={folders.onRename}
+                  onDelete={folders.onDelete}
+                />
+                {folded ? null : (
+                  <div id={bodyId}>
+                    {section.applications.length === 0 ? (
+                      <p className="home-card-copy">
+                        Empty. Use Move to in an application's ⋯ menu to put it here.
+                      </p>
+                    ) : (
+                      group(section.applications, section.folder?.name ?? noFolderLabel)
+                    )}
+                  </div>
+                )}
+              </section>
+            );
+          },
+        )
+      : shownActive.length === 0
+        ? null
+        : group(shownActive, "Applications");
   return (
     <>
       {toolbar ? (
@@ -580,7 +670,16 @@ function ApplicationsList({
           onView={changeView}
         />
       ) : null}
-      {shownActive.length === 0 ? null : group(shownActive, "Applications")}
+      {folders === undefined ? null : (
+        <FolderBar
+          grouping={folderPreferences.grouping}
+          hasFolders={folders.folders.length > 0}
+          disabled={disabled}
+          onGrouping={(grouping) => changeFolderPreferences({ ...folderPreferences, grouping })}
+          onCreate={folders.onCreate}
+        />
+      )}
+      {activeGroups}
       {narrowedToNothing ? (
         <div className="empty-state home-empty-applications" role="status">
           <p>No application matches this search or filter.</p>
@@ -685,6 +784,10 @@ export interface HomeViewProps {
   readonly initialApplicationQuery?: ApplicationListQuery;
   /** Cards or List; the toolbar switches it once there are more than six applications. */
   readonly initialApplicationView?: ApplicationListView;
+  /** Folders and what Home can do with them; absent on a host without folders. */
+  readonly folders?: HomeFolderActions;
+  /** Grouping and folded sections to start with instead of this device's; for tests. */
+  readonly initialFolderPreferences?: FolderPreferences;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
@@ -718,6 +821,8 @@ export function HomeView({
   initialShowArchived = false,
   initialApplicationQuery,
   initialApplicationView,
+  folders,
+  initialFolderPreferences,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
@@ -866,6 +971,8 @@ export function HomeView({
               {...(initialApplicationView === undefined
                 ? {}
                 : { initialView: initialApplicationView })}
+              folders={folders}
+              initialFolderPreferences={initialFolderPreferences}
             />
           </section>
 
@@ -947,6 +1054,8 @@ export function HomeScreen({
   const deleteApplication = applicationCapabilities.deleteApplication;
   const renameApplication = applicationCapabilities.renameApplication;
   const createApplication = applicationCapabilities.createApplication;
+  const folderCapabilities = applicationCapabilities.applicationFolders;
+  const [folders, setFolders] = useState<readonly ApplicationFolderView[] | undefined>(undefined);
   const [creatingApplication, setCreatingApplication] = useState(false);
   const [busyApplicationId, setBusyApplicationId] = useState<string | null>(null);
   const [applicationNotice, setApplicationNotice] = useState<ApplicationActionNotice | null>(null);
@@ -1112,6 +1221,76 @@ export function HomeScreen({
     };
   }, [workspaceId, listApplications, applicationsRevision]);
 
+  // Folders are read with the list, so a move, create or delete shows in both at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `applicationsRevision` re-reads the folders after any change.
+  useEffect(() => {
+    if (folderCapabilities === undefined) {
+      setFolders(undefined);
+      return;
+    }
+    let active = true;
+    folderCapabilities
+      .listFolders(workspaceId)
+      .then((loaded) => {
+        if (active) setFolders(loaded);
+      })
+      .catch(() => {
+        // Without the folder list Home shows the flat list, as on a host without folders.
+        if (active) setFolders(undefined);
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspaceId, folderCapabilities, applicationsRevision]);
+
+  const folderActions: HomeFolderActions | undefined =
+    folderCapabilities === undefined || folders === undefined
+      ? undefined
+      : {
+          folders,
+          onCreate: async (name) => {
+            await folderCapabilities.createFolder(workspaceId, name);
+            setApplicationsRevision((revision) => revision + 1);
+          },
+          onRename: async (folder, name) => {
+            await folderCapabilities.renameFolder(workspaceId, folder.id, name);
+            setApplicationsRevision((revision) => revision + 1);
+          },
+          onDelete: async (folder) => {
+            await folderCapabilities.deleteFolder(workspaceId, folder.id);
+            setApplicationsRevision((revision) => revision + 1);
+          },
+          onMove: (application, folderId) => {
+            const run = importRun.current;
+            setBusyApplicationId(application.id);
+            setImportNotice(null);
+            setApplicationNotice(null);
+            folderCapabilities
+              .moveApplication(workspaceId, application.id, folderId)
+              .then(() => {
+                if (run !== importRun.current) return;
+                setApplicationNotice({
+                  kind: "success",
+                  message: folderMoveNotice(application, folderId, folders),
+                });
+                setApplicationsRevision((revision) => revision + 1);
+              })
+              .catch((error: unknown) => {
+                if (run !== importRun.current) return;
+                setApplicationNotice({
+                  kind: "error",
+                  message: folderErrorMessage(
+                    error,
+                    "The application could not be moved. Try again.",
+                  ),
+                });
+              })
+              .finally(() => {
+                if (run === importRun.current) setBusyApplicationId(null);
+              });
+          },
+        };
+
   const freshnessLine = profileFreshnessPresentation(profile, freshness);
   const canCreate = createApplication !== undefined && onApplicationCreated !== undefined;
   const homeView = (
@@ -1145,6 +1324,7 @@ export function HomeScreen({
       {...(onDeleteApplication === undefined ? {} : { onDeleteApplication })}
       busyApplicationId={busyApplicationId}
       applicationNotice={applicationNotice}
+      {...(folderActions === undefined ? {} : { folders: folderActions })}
       onOpenApplication={onOpenApplication}
       onManageProfile={onManageProfile}
       onManageEvidence={onManageEvidence}
@@ -1155,8 +1335,16 @@ export function HomeScreen({
     <>
       {homeView}
       <NewApplicationDialog
-        createApplication={(name, job) => createApplication(workspaceId, name, job)}
+        createApplication={async (name, job, folderId) => {
+          const created = await createApplication(workspaceId, name, job);
+          if (folderId === undefined || folderCapabilities === undefined) return created;
+          // The application exists either way; a failed move leaves it in no folder.
+          return folderCapabilities
+            .moveApplication(workspaceId, created.id, folderId)
+            .catch(() => created);
+        }}
         jobPagesAllowed={applicationCapabilities.jobPagesAllowed !== false}
+        {...(folders === undefined ? {} : { folders })}
         onCreated={(application) => {
           // Home lists the new application when the person comes back to it.
           setApplicationsRevision((revision) => revision + 1);

@@ -1,6 +1,10 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
 import {
+  type ApplicationFolderCapabilities,
+  createApplicationFolderCapabilities,
+} from "./application-folder-capabilities.js";
+import {
   type ApplicationJobResult,
   type BridgeCommand,
   type BridgeResult,
@@ -369,6 +373,8 @@ export interface DesktopApplicationCapabilities {
   ) => Promise<ApplicationSummaryView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (workspaceId: string, applicationId: string) => Promise<void>;
+  /** Folders that group applications on Home; absent on a host without them. */
+  readonly applicationFolders?: ApplicationFolderCapabilities;
   /** Sets the model pair one application's new runs use, or clears it with `null`. */
   readonly setApplicationModels?: (
     workspaceId: string,
@@ -511,6 +517,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     return load();
   };
   const refresh = async (): Promise<DesktopReviewState> => load();
+  const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   return {
     load,
     ...(capabilityPort.hasCapability("workspace.open") ||
@@ -681,6 +688,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ).application,
         }
       : {}),
+    ...(applicationFolders === undefined ? {} : { applicationFolders }),
     ...(capabilityPort.hasCapability("application.delete")
       ? {
           deleteApplication: async (workspaceId: string, applicationId: string) => {

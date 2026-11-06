@@ -4,6 +4,7 @@
  */
 import type { ReactNode } from "react";
 import type { ApplicationSummaryView } from "./application-contract.js";
+import { MoveToItems } from "./home-folders.js";
 import {
   type ApplicationListQuery,
   type ApplicationSortOrder,
@@ -109,6 +110,8 @@ export interface ApplicationRowActions {
   readonly onCancelDelete?: () => void;
   readonly confirmingDelete?: boolean;
   readonly busy?: boolean;
+  /** Move to entries for the "⋯" menu; absent on a host without folders. */
+  readonly moveTargets?: readonly { readonly label: string; readonly onMove: () => void }[];
 }
 
 export function ApplicationsTable({
@@ -181,7 +184,8 @@ function ApplicationRow({
   const archived = application.archivedAt !== null;
   const busy = actions.busy === true;
   const { onArchive, onRequestDelete, onConfirmDelete, onCancelDelete } = actions;
-  const hasMenu = onArchive !== undefined || onRequestDelete !== undefined;
+  const moves = actions.moveTargets ?? [];
+  const hasMenu = onArchive !== undefined || onRequestDelete !== undefined || moves.length > 0;
   return (
     <tr className={archived ? "applications-row applications-row-archived" : "applications-row"}>
       <td>
@@ -231,6 +235,7 @@ function ApplicationRow({
               <details className="applications-row-menu">
                 <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
                 <div className="applications-row-menu-items">
+                  <MoveToItems name={application.name} targets={moves} busy={busy} />
                   {onArchive === undefined ? null : (
                     <button
                       type="button"

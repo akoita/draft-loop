@@ -18,6 +18,7 @@ import {
   applicationNameMaxLength,
   applicationStatuses,
 } from "@draft-loop/domain/application";
+import { folderIdentifier } from "./application-folder-contract.js";
 
 export type { ApplicationJobSourceKind, ApplicationStatus };
 
@@ -42,6 +43,8 @@ export interface ApplicationSummaryView {
   readonly latestRunId: string | null;
   /** When the application was archived; null while it is on the main list. */
   readonly archivedAt: string | null;
+  /** The folder it sits in on Home; absent for no folder, or on a host without folders. */
+  readonly folderId?: string;
   /** The model pair this application uses instead of the workspace's; null uses the workspace's. */
   readonly modelProfiles: ApplicationModelProfilesView | null;
   /** False only for a default application the person has not named yet. */
@@ -274,6 +277,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "exportCount",
   "latestRunId",
   "archivedAt",
+  "folderId",
   "modelProfiles",
   "nameChosen",
   "suggestedName",
@@ -395,6 +399,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
   const exportCount = count(raw.exportCount);
   const latestRunId = raw.latestRunId === null ? null : identifier(raw.latestRunId);
   const archivedAt = raw.archivedAt === null ? null : timestamp(raw.archivedAt);
+  const folderId = raw.folderId === undefined ? undefined : folderIdentifier(raw.folderId);
+  if (raw.folderId !== undefined && folderId === undefined) return undefined;
   const modelProfiles =
     raw.modelProfiles === null ? null : normalizeApplicationModelProfiles(raw.modelProfiles);
   const suggestedName =
@@ -435,6 +441,7 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     exportCount,
     latestRunId,
     archivedAt,
+    ...(folderId === undefined ? {} : { folderId }),
     modelProfiles,
     nameChosen: raw.nameChosen,
     suggestedName,
