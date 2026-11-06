@@ -14,9 +14,11 @@ model provider.
 - **Stemming would not close that gap.** Same-language lexical recall is already
   complete on these requirements, and stemming cannot map a French word to an
   English one. No stemming issue is filed.
-- **Semantic and hybrid recall are pending a model run.** This container cannot
-  download the embedding model. Run the command in
-  [Reproduce](#reproduce) and fill the table below.
+- **Semantic and hybrid retrieval do cross languages.** With Granite 311M,
+  both find every piece of right evidence for every pair, so no pair drops
+  below its same-language baseline.
+- **Semantic alone is the more precise of the two.** Hybrid adds the lexical
+  hits, which brings in more unrelated chunks across languages.
 
 ## Fixture
 
@@ -42,14 +44,32 @@ same retrieval mode (`crossLanguageRecallMargin`).
 
 ## Recall
 
-Each mode returns at most three chunks per requirement.
+Each mode returns at most three chunks per requirement. Semantic and hybrid use
+Granite 311M at 768 dimensions with its pinned relevance floor, measured on
+x86-64 Linux (WSL2), CPU only, at about 10 ms per query.
 
 | Pair | Lexical (BM25) | Semantic, 311M | Hybrid, 311M |
 | --- | --- | --- | --- |
-| English evidence, English job | 1.00 | pending | pending |
-| French evidence, French job | 1.00 | pending | pending |
-| French evidence, English job | 0.40 | pending | pending |
-| English evidence, French job | 0.40 | pending | pending |
+| English evidence, English job | 1.00 | 1.00 | 1.00 |
+| French evidence, French job | 1.00 | 1.00 | 1.00 |
+| French evidence, English job | 0.40 | 1.00 | 1.00 |
+| English evidence, French job | 0.40 | 1.00 | 1.00 |
+
+## Precision
+
+Citation accuracy is the share of returned chunks that are right evidence.
+
+| Pair | Lexical (BM25) | Semantic, 311M | Hybrid, 311M |
+| --- | --- | --- | --- |
+| English evidence, English job | 0.88 | 1.00 | 0.88 |
+| French evidence, French job | 0.55 | 0.88 | 0.53 |
+| French evidence, English job | 0.33 | 0.72 | 0.53 |
+| English evidence, French job | 0.33 | 0.82 | 0.53 |
+
+No mode left a claim unsupported. The benchmark's requirement coverage counts
+shared words between a requirement and the returned chunks, so it cannot score
+a cross-language pair. It reads 0.30 and 0.40 there in every mode, and is left
+out of this note.
 
 The earlier [semantic retrieval comparison](semantic-retrieval-comparison.md)
 had four French and English cross-language cases among sixteen. Semantic
