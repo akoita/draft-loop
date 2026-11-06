@@ -46,7 +46,7 @@ describe("Career evidence card without a selected base", () => {
     expect(html).toContain("No career evidence yet");
     expect(html).toContain("creates a knowledge base for this workspace in");
     expect(html).toContain("DraftLoop application data");
-    expect(html).toContain(">Add files<");
+    expect(html).toContain(">Add documents<");
     expect(html).toContain(">Review and fetch source URL<");
     expect(html).not.toContain("legacy");
     expect(html).not.toContain("Import legacy evidence");
@@ -61,7 +61,7 @@ describe("Career evidence card without a selected base", () => {
     expect(html).toContain("Workspace evidence files: 3 files");
     expect(html).toContain("Runs use these files while no knowledge base is selected.");
     expect(html).not.toContain("No career evidence yet");
-    expect(html).toContain(">Add files<");
+    expect(html).toContain(">Add documents<");
     expect(html).not.toContain("legacy");
     expect(html).not.toContain("Import legacy evidence");
     expect(html).not.toContain("Keep using");
