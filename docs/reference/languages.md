@@ -28,11 +28,12 @@ keeps its own document language.
 
 Where the choice is kept:
 
-- **Web screen:** in this browser. Another browser starts from its own language.
+- **Signed in to the hosted service:** with your account, so every browser and
+  device switches to it after you sign in. This browser keeps it too.
+- **Owner token or self-hosted:** in this browser. Another browser starts from
+  its own language.
 - **Desktop app:** on this computer, for every server you open. The app's own
   menus, dialogs and server picker follow it too.
-- **Hosted service:** in the browser for now; saving it with your account is
-  [#2373](https://github.com/akoita/draft-loop/issues/2373).
 
 With nothing saved, DraftLoop uses the first browser or system language it has,
 and English otherwise.

@@ -59,6 +59,10 @@
       "types": "./src/tenant-directory.ts",
       "import": "./src/tenant-directory.ts"
     },
+    "./member-settings": {
+      "types": "./src/member-settings.ts",
+      "import": "./src/member-settings.ts"
+    },
     "./candidate-records": {
       "types": "./src/candidate-records.ts",
       "import": "./src/candidate-records.ts"

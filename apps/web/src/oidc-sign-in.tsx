@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { useEffect, useMemo, useState } from "react";
-
+import { AccountScreenLanguage } from "./account-screen-language.js";
 import type { ApiClient } from "./api-client.js";
 import { Shell } from "./app.js";
 import { readAuthorizationResponse } from "./oidc-model.js";
@@ -131,5 +131,9 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
       />
     );
 
-  return <Shell mode="sign-in" client={client.api} onSignOut={() => client.end(undefined, true)} />;
+  return (
+    <AccountScreenLanguage client={client.api}>
+      <Shell mode="sign-in" client={client.api} onSignOut={() => client.end(undefined, true)} />
+    </AccountScreenLanguage>
+  );
 }

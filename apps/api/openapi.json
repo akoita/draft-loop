@@ -4228,6 +4228,29 @@
           "createdAt"
         ]
       },
+      "MemberScreenLanguageInput": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "en",
+                  "fr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The member's saved screen language; null when they never chose one."
+          }
+        },
+        "required": [
+          "language"
+        ]
+      },
       "CatalogModelInput": {
         "type": "object",
         "properties": {
@@ -10399,6 +10422,30 @@
           "sizeBytes",
           "checksum",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "MemberScreenLanguage": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "en",
+                  "fr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The member's saved screen language; null when they never chose one."
+          }
+        },
+        "required": [
+          "language"
         ],
         "additionalProperties": false
       },
@@ -22719,6 +22766,113 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/screen-language": {
+      "get": {
+        "summary": "Read the caller's saved screen language",
+        "description": "Owner-token mode has no members, so the screen keeps the browser's saved choice: the route answers 404 there.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberScreenLanguage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save the caller's screen language for every browser and device",
+        "description": "Owner-token mode has no members, so the screen keeps the browser's saved choice: the route answers 404 there.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "fr"
+                    ]
+                  }
+                },
+                "required": [
+                  "language"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberScreenLanguage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

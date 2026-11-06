@@ -9,7 +9,7 @@
  */
 import { i18n, type Messages } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { createContext, type ReactNode, useContext, useEffect } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
 import { messages as englishMessages } from "./locales/en/messages.js";
 import { messages as frenchMessages } from "./locales/fr/messages.js";
 import { messages as pseudoMessages } from "./locales/pseudo/messages.js";
@@ -111,4 +111,32 @@ export function ScreensI18nProvider({
       </ScreenLocaleContext.Provider>
     </I18nProvider>
   );
+}
+
+/**
+ * Passes each choice the screens make on to `onChoose` as well, such as a signed-in member's saved
+ * setting on the server. A choice made outside it, such as applying that saved setting, is not.
+ */
+export function ScreenLanguageChoiceListener({
+  onChoose,
+  children,
+}: {
+  readonly onChoose: (language: ScreenLanguage) => void;
+  readonly children: ReactNode;
+}) {
+  const { locale, choose } = useScreenLocale();
+  const value = useMemo<ScreenLocaleChoice>(
+    () =>
+      choose === undefined
+        ? { locale }
+        : {
+            locale,
+            choose: (language) => {
+              choose(language);
+              onChoose(language);
+            },
+          },
+    [locale, choose, onChoose],
+  );
+  return <ScreenLocaleContext.Provider value={value}>{children}</ScreenLocaleContext.Provider>;
 }

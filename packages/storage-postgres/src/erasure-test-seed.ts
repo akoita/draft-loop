@@ -13,6 +13,7 @@ export const tenantWideTables = new Set([
   "schema_migrations",
   "organisations",
   "organisation_members",
+  "member_settings",
   "organisation_plans",
   "organisation_plan_history",
   "credit_balances",
@@ -34,6 +35,10 @@ export async function seedTenant(admin: SqlClient, tenant: string): Promise<void
     `INSERT INTO organisation_members (tenant_id, id, email, role, status)
      VALUES ($1, 'member-1', $2, 'owner', 'invited')`,
     [tenant, `member-1@${tenant}.example.test`],
+  );
+  await admin.query(
+    "INSERT INTO member_settings (tenant_id, member_id, screen_language) VALUES ($1, 'member-1', 'fr')",
+    [tenant],
   );
   for (const table of ["organisation_plans", "organisation_plan_history"]) {
     await admin.query(

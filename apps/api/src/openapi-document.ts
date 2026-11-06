@@ -6,6 +6,7 @@ import type {
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 
@@ -45,6 +46,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       }),
     },
     directory: {} as TenantDirectory,
+    memberSettings: {} as MemberSettingsStore,
   });
   try {
     await app.ready();

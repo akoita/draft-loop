@@ -69,7 +69,7 @@ const app = await buildApi({
       ? {}
       : { jobPageFetcher: hostedJobPageFetcher({ endpoint: config.pageFetcherUrl }) }),
   },
-  ...(directory === undefined ? {} : { directory }),
+  ...(directory === undefined ? {} : { directory, memberSettings: directory.memberSettings }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
