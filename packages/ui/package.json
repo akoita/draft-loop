@@ -28,6 +28,14 @@
       "import": "./src/start-checklist.tsx"
     },
     "./styles.css": "./src/styles.css",
+    "./lingui-macro": {
+      "types": "./lingui-macro.d.mts",
+      "import": "./lingui-macro.mjs"
+    },
+    "./i18n": {
+      "types": "./src/i18n.tsx",
+      "import": "./src/i18n.tsx"
+    },
     "./workspace-setup": {
       "types": "./src/workspace-setup.tsx",
       "import": "./src/workspace-setup.tsx"
@@ -68,6 +76,8 @@
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/providers": "workspace:*",
+    "@lingui/core": "6.10.1",
+    "@lingui/react": "6.10.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

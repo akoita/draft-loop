@@ -1,0 +1,34 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, describe, expect, it } from "vitest";
+import { ApplicationLanguageControl } from "./application-language.js";
+import {
+  activateScreenLocale,
+  isScreenLocale,
+  ScreensI18nProvider,
+  screenLocaleFromSearch,
+} from "./i18n.js";
+
+const control = (
+  <ApplicationLanguageControl language={null} disabled={false} onSave={async () => undefined} />
+);
+
+describe("the screens' locale", () => {
+  afterEach(() => activateScreenLocale("en"));
+
+  it("renders the English catalog by default and the pseudo-locale when the host asks", () => {
+    expect(renderToStaticMarkup(control)).toContain("Write its documents in");
+    const pseudo = renderToStaticMarkup(
+      <ScreensI18nProvider locale="pseudo">{control}</ScreensI18nProvider>,
+    );
+    expect(pseudo).not.toContain("Write its documents in");
+    expect(pseudo).toContain("Ŵŕĩţē ĩţś ďōćũḿēńţś ĩń");
+  });
+
+  it("takes the pseudo-locale from the address and anything else as English", () => {
+    expect(screenLocaleFromSearch("?locale=pseudo")).toBe("pseudo");
+    expect(screenLocaleFromSearch("?locale=xx")).toBe("en");
+    expect(screenLocaleFromSearch("")).toBe("en");
+    expect(isScreenLocale("en")).toBe(true);
+    expect(isScreenLocale("fr")).toBe(false);
+  });
+});

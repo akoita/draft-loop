@@ -1,3 +1,4 @@
+import { ScreensI18nProvider, screenLocaleFromSearch } from "@draft-loop/ui/i18n";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -17,6 +18,8 @@ const element = document.getElementById("root");
 if (element === null) throw new Error("The page has no root element.");
 const root = createRoot(element);
 const createClient = (token: string) => createApiClient({ token });
+// Development builds show the pseudo-locale with `?locale=pseudo`; a release shows English.
+const screenLocale = import.meta.env.DEV ? screenLocaleFromSearch(location.search) : "en";
 
 /** The screen's own address, where the identity provider returns after signing in and out. */
 const screenAddress = `${location.origin}/`;
@@ -57,8 +60,10 @@ createApiClient({})
   .then((screen) =>
     root.render(
       <StrictMode>
-        <NewReleaseWatch />
-        {screen}
+        <ScreensI18nProvider locale={screenLocale}>
+          <NewReleaseWatch />
+          {screen}
+        </ScreensI18nProvider>
       </StrictMode>,
     ),
   );

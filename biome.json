@@ -35,7 +35,8 @@
       "!coverage",
       "!pnpm-lock.yaml",
       "!apps/api/openapi.json",
-      "!apps/web/src/api-types.generated.ts"
+      "!apps/web/src/api-types.generated.ts",
+      "!packages/ui/src/locales/*/messages.ts"
     ]
   }
 }

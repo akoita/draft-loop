@@ -1,4 +1,6 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+// English is active before the first render; a host may switch it with ScreensI18nProvider.
+import "./i18n.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ApplicationModelProfilesView,

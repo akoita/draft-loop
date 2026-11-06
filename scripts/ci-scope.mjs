@@ -42,6 +42,7 @@ const runAllFiles = new Set([
   ".npmrc",
   "tsconfig.json",
   "vitest.config.mts",
+  "lingui.config.ts",
   "biome.json",
   "eslint.config.mjs",
   "prettier.config.mjs",

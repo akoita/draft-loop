@@ -13,6 +13,9 @@ const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const allowedRuntimeImports: readonly RegExp[] = [
   /^\.\/[a-z0-9-]+\.js$/u,
   /^react(?:-dom)?(?:\/.*)?$/u,
+  // The screens' translations (ADR 0012): browser-only runtime and the compiled catalogs.
+  /^@lingui\/(?:core|react)(?:\/macro)?$/u,
+  /^\.\/locales\/[a-z]+\/messages\.js$/u,
   /^@draft-loop\/domain(?:\/[a-z-]+)?$/u,
   /^@draft-loop\/application\/model-profile-(?:budget|catalog|selection)$/u,
   /^@draft-loop\/application\/model-profiles$/u,
