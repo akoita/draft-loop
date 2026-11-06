@@ -839,7 +839,14 @@ export function HomeView({
               <WorkspaceLocation current="Home" />
               {workspaceTitle}
             </div>
-            <div className="home-header-actions">{workspaceNavigation}</div>
+            <div className="home-header-actions">
+              {settings === undefined ? null : (
+                <button className="button button-outline" type="button" onClick={openHomeSettings}>
+                  Workspace settings
+                </button>
+              )}
+              {workspaceNavigation}
+            </div>
           </header>
 
           {errorMessage === null ? null : (
@@ -977,7 +984,12 @@ export function HomeView({
           </section>
 
           {settings === undefined ? null : (
-            <section className="panel home-settings" aria-labelledby="home-settings-title">
+            <section
+              id={homeSettingsId}
+              className="panel home-settings"
+              aria-labelledby="home-settings-title"
+              tabIndex={-1}
+            >
               <div className="home-section-head">
                 <h2 id="home-settings-title">Workspace settings</h2>
               </div>
@@ -988,6 +1000,15 @@ export function HomeView({
       </main>
     </div>
   );
+}
+
+const homeSettingsId = "home-settings";
+
+/** A long application list pushes Workspace settings far down, so the header keeps a way there. */
+function openHomeSettings(): void {
+  const section = document.getElementById(homeSettingsId);
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  section?.focus({ preventScroll: true });
 }
 
 // -- Container ------------------------------------------------------------------------------

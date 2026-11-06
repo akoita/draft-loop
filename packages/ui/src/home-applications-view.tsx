@@ -135,6 +135,14 @@ export function ApplicationsTable({
   return (
     <div className="applications-table-wrap">
       <table className="applications-table" aria-label={label}>
+        {/* Fixed column widths, so every folder's table lines up with the others. */}
+        <colgroup>
+          <col className="applications-col-name" />
+          <col className="applications-col-status" />
+          <col className="applications-col-activity" />
+          <col className="applications-col-runs" />
+          <col className="applications-col-actions" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">Name</th>
@@ -203,64 +211,66 @@ function ApplicationRow({
         {applicationActivityText(application.updatedAt, now).replace(/^Last activity /u, "")}
       </td>
       <td className="numeric">{application.runCount}</td>
-      <td className="applications-row-actions">
-        {actions.confirmingDelete === true ? (
-          <fieldset className="application-card-confirm">
-            <legend>{deleteConfirmation(application.name)}</legend>
-            <div className="application-card-actions">
+      <td>
+        <div className="applications-row-actions">
+          {actions.confirmingDelete === true ? (
+            <fieldset className="application-card-confirm">
+              <legend>{deleteConfirmation(application.name)}</legend>
+              <div className="application-card-actions">
+                <button
+                  className="button button-danger"
+                  type="button"
+                  disabled={busy}
+                  onClick={onConfirmDelete}
+                >
+                  Delete
+                </button>
+                <button className="button button-outline" type="button" onClick={onCancelDelete}>
+                  Cancel
+                </button>
+              </div>
+            </fieldset>
+          ) : (
+            <>
               <button
-                className="button button-danger"
+                className="button button-primary"
                 type="button"
-                disabled={busy}
-                onClick={onConfirmDelete}
+                aria-label={`Open ${application.name}`}
+                onClick={() => onOpen(application)}
               >
-                Delete
+                Open
               </button>
-              <button className="button button-outline" type="button" onClick={onCancelDelete}>
-                Cancel
-              </button>
-            </div>
-          </fieldset>
-        ) : (
-          <>
-            <button
-              className="button button-primary"
-              type="button"
-              aria-label={`Open ${application.name}`}
-              onClick={() => onOpen(application)}
-            >
-              Open
-            </button>
-            {hasMenu ? (
-              <details className="applications-row-menu">
-                <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
-                <div className="applications-row-menu-items">
-                  <MoveToItems name={application.name} targets={moves} busy={busy} />
-                  {onArchive === undefined ? null : (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
-                      onClick={onArchive}
-                    >
-                      {archived ? "Restore" : "Archive"}
-                    </button>
-                  )}
-                  {onRequestDelete === undefined ? null : (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      aria-label={`Delete ${application.name}`}
-                      onClick={onRequestDelete}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </details>
-            ) : null}
-          </>
-        )}
+              {hasMenu ? (
+                <details className="applications-row-menu">
+                  <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
+                  <div className="applications-row-menu-items">
+                    <MoveToItems name={application.name} targets={moves} busy={busy} />
+                    {onArchive === undefined ? null : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
+                        onClick={onArchive}
+                      >
+                        {archived ? "Restore" : "Archive"}
+                      </button>
+                    )}
+                    {onRequestDelete === undefined ? null : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`Delete ${application.name}`}
+                        onClick={onRequestDelete}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </details>
+              ) : null}
+            </>
+          )}
+        </div>
       </td>
     </tr>
   );

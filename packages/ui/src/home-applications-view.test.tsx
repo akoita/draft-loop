@@ -128,6 +128,15 @@ describe("applications List view", () => {
     expect(html).not.toContain('class="application-list"');
   });
 
+  it("gives every table the same fixed columns, so folder sections line up", () => {
+    const html = render(seven, { initialApplicationView: "list", initialShowArchived: true });
+    const colgroup =
+      '<colgroup><col class="applications-col-name"/><col class="applications-col-status"/>' +
+      '<col class="applications-col-activity"/><col class="applications-col-runs"/>' +
+      '<col class="applications-col-actions"/></colgroup>';
+    expect(html.split(colgroup).length - 1).toBe(2);
+  });
+
   it("falls back to Cards when the list is short", () => {
     const html = render(seven.slice(0, 3), { initialApplicationView: "list" });
     expect(html).not.toContain("applications-table");

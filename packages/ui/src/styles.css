@@ -8239,6 +8239,20 @@ input[type="text"].workspace-title-input {
   gap: var(--space-3);
 }
 
+/* The header's Workspace settings button scrolls here and focuses the section. */
+.home-settings {
+  scroll-margin-top: var(--space-4);
+}
+
+.home-settings:focus {
+  outline: none;
+}
+
+.home-settings:focus-visible {
+  outline: 2px solid var(--teal-line);
+  outline-offset: 2px;
+}
+
 .application-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
@@ -8543,13 +8557,42 @@ input[type="text"].application-card-name-input {
 }
 
 .applications-table-wrap {
-  overflow-x: auto;
+  /* Positioned, so the hidden "Actions" heading stays clipped when it scrolls. */
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Only narrow screens scroll the table sideways: a scrolling box would also clip the row menu. */
+@media (max-width: 800px) {
+  .applications-table-wrap {
+    overflow-x: auto;
+  }
 }
 
 .applications-table {
   width: 100%;
-  min-width: 560px;
+  /* Leaves the Name column about 10rem beside the fixed columns. */
+  min-width: 44rem;
   border-collapse: collapse;
+  /* Columns take their widths from the colgroup, not from each table's rows. */
+  table-layout: fixed;
+}
+
+.applications-col-status {
+  width: 9rem;
+}
+
+.applications-col-activity {
+  width: 9rem;
+}
+
+.applications-col-runs {
+  width: 4.5rem;
+}
+
+.applications-col-actions {
+  width: 11rem;
 }
 
 .applications-table th,
@@ -8574,6 +8617,8 @@ input[type="text"].application-card-name-input {
 }
 
 .applications-row-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   border: 0;
   padding: 0;
   background: none;
@@ -8651,6 +8696,7 @@ input[type="text"].application-card-name-input {
 
 .application-folder {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
