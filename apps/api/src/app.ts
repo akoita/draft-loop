@@ -27,6 +27,7 @@ import {
 import { type ZodType, z } from "zod";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
+import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
@@ -431,6 +432,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       options.localModels === undefined ? {} : { localModels: options.localModels },
     );
     registerApplicationLifecycleRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+    });
+    registerApplicationFolderRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
     });

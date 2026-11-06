@@ -446,16 +446,18 @@ of them through a revision round
 
 ### Job applications
 
-These routes live in `application-lifecycle-routes.ts`.
+These routes live in `application-lifecycle-routes.ts` and `application-folder-routes.ts`.
 
-| Route                                                              | What it does                                                                                                                                                                    |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /v1/workspaces/:id/applications`                             | Creates an application from a name and pasted job text, kept in its record, never in a file. Or from a job page address with `jobUrlApproved: true`, fetched later.             |
-| `GET .../applications/:applicationId/job`                          | Reads the job text back, or the address                                                                                                                                         |
-| `POST .../applications/from-file?name=<name>&fileName=<file name>` | Creates one from a PDF, DOCX, Markdown or text file sent as the raw body, within the evidence upload limit (`application-file-routes.ts`). Only the text is kept, as if pasted. |
-| `PATCH .../applications/:applicationId`                            | Renames, archives or restores. An unknown application answers 404.                                                                                                              |
-| `PUT .../models`                                                   | Sets or clears the application's own pair                                                                                                                                       |
-| `PUT .../chosen-run`                                               | Chooses the run whose draft it uses                                                                                                                                             |
+| Route                                                              | What it does                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/workspaces/:id/applications`                             | Creates an application from a name and pasted job text, kept in its record, never in a file. Or from a job page address with `jobUrlApproved: true`, fetched later. An optional `folderId` files it. |
+| `GET .../applications/:applicationId/job`                          | Reads the job text back, or the address                                                                                                                                                              |
+| `POST .../applications/from-file?name=<name>&fileName=<file name>` | Creates one from a PDF, DOCX, Markdown or text file sent as the raw body, within the evidence upload limit (`application-file-routes.ts`). Only the text is kept, as if pasted.                      |
+| `PATCH .../applications/:applicationId`                            | Renames, archives, restores, or moves it with `folderId` (`null` for no folder). An unknown application answers 404.                                                                                 |
+| `GET`, `POST .../application-folders`                              | Lists or creates the folders that group applications on Home: one level, one folder per application (`application-folder-routes.ts`). A taken name answers 422.                                      |
+| `PATCH`, `DELETE .../application-folders/:folderId`                | Renames a folder, or deletes it and puts its applications back in no folder. No application is deleted.                                                                                              |
+| `PUT .../models`                                                   | Sets or clears the application's own pair                                                                                                                                                            |
+| `PUT .../chosen-run`                                               | Chooses the run whose draft it uses                                                                                                                                                                  |
 
 **Fetching a job page.** The page is fetched once, when requirements are
 extracted, and the brief's `approved-url` source must match the approved

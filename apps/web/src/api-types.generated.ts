@@ -36,6 +36,7 @@ export interface ApiSchemas {
     readonly isDefault: boolean;
     readonly jobMissing: boolean;
     readonly archivedAt: string | null;
+    readonly folderId: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly briefs: readonly ({
@@ -66,6 +67,16 @@ export interface ApiSchemas {
         readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
       };
     } | null;
+  };
+  "ApplicationFolder": {
+    readonly id: string;
+    readonly name: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    readonly applicationCount: number;
+  };
+  "ApplicationFolderList": {
+    readonly folders: readonly (ApiSchemas["ApplicationFolder"])[];
   };
   "ApplicationImport": {
     readonly applicationId: string;
@@ -309,6 +320,10 @@ export interface ApiSchemas {
     readonly grantsRemaining: number;
     readonly remaining: number;
     readonly unlimited: boolean;
+  };
+  "DeletedApplicationFolder": {
+    readonly folderId: string;
+    readonly movedApplications: number;
   };
   "GrantedCredits": {
     readonly grant: {
@@ -1383,6 +1398,7 @@ export interface ApiOperations {
       readonly jobText?: string;
       readonly jobUrl?: string;
       readonly jobUrlApproved?: true;
+      readonly folderId?: string | null;
     };
     readonly response: ApiSchemas["Application"];
   };
@@ -1401,6 +1417,7 @@ export interface ApiOperations {
     readonly body: {
       readonly name?: string;
       readonly archived?: boolean;
+      readonly folderId?: string | null;
     };
     readonly response: ApiSchemas["Application"];
   };
@@ -1591,6 +1608,38 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly response: ApiSchemas["ApplicationJob"];
+  };
+  "GET /v1/workspaces/{workspaceId}/application-folders": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["ApplicationFolderList"];
+  };
+  "POST /v1/workspaces/{workspaceId}/application-folders": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly name: string;
+    };
+    readonly response: ApiSchemas["ApplicationFolder"];
+  };
+  "PATCH /v1/workspaces/{workspaceId}/application-folders/{folderId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly folderId: string;
+    };
+    readonly body: {
+      readonly name: string;
+    };
+    readonly response: ApiSchemas["ApplicationFolder"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/application-folders/{folderId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly folderId: string;
+    };
+    readonly response: ApiSchemas["DeletedApplicationFolder"];
   };
   "POST /v1/workspaces/{workspaceId}/application-imports": {
     readonly path: {

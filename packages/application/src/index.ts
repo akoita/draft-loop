@@ -24,6 +24,15 @@ import type {
   ImportApplicationBundleCommand,
   ImportApplicationBundleResult,
 } from "./application-bundle-import.js";
+import type {
+  ApplicationFolderView,
+  CreateApplicationFolderCommand,
+  DeleteApplicationFolderCommand,
+  DeleteApplicationFolderResult,
+  ListApplicationFoldersCommand,
+  MoveApplicationCommand,
+  RenameApplicationFolderCommand,
+} from "./application-folders.js";
 import type { RecordApplicationJobPageCommand } from "./application-job-page.js";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
 import type {
@@ -672,6 +681,22 @@ export interface ApplicationDriver {
   readonly renameApplication?: (command: RenameApplicationCommand) => Promise<ApplicationView>;
   /** Deletes a created application that holds no run, brief or export. */
   readonly deleteApplication?: (command: DeleteApplicationCommand) => Promise<void>;
+  /** Folders that group applications on Home; one level, one folder per application. */
+  readonly listApplicationFolders?: (
+    command: ListApplicationFoldersCommand,
+  ) => Promise<readonly ApplicationFolderView[]>;
+  readonly createApplicationFolder?: (
+    command: CreateApplicationFolderCommand,
+  ) => Promise<ApplicationFolderView>;
+  readonly renameApplicationFolder?: (
+    command: RenameApplicationFolderCommand,
+  ) => Promise<ApplicationFolderView>;
+  /** Deletes a folder; its applications stay, in no folder. */
+  readonly deleteApplicationFolder?: (
+    command: DeleteApplicationFolderCommand,
+  ) => Promise<DeleteApplicationFolderResult>;
+  /** Puts an application in a folder, or in none with a null folder id. */
+  readonly moveApplication?: (command: MoveApplicationCommand) => Promise<ApplicationView>;
   /** Sets or clears the model pair a created application's new runs use. */
   readonly setApplicationModels?: (
     command: SetApplicationModelsCommand,
@@ -921,6 +946,31 @@ export function createApplicationService(driver: ApplicationDriver): Application
         ...command,
         root: requireRoot(command.root),
       }),
+    listApplicationFolders: async (command) =>
+      requireApplicationApi(driver.listApplicationFolders)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    createApplicationFolder: async (command) =>
+      requireApplicationApi(driver.createApplicationFolder)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    renameApplicationFolder: async (command) =>
+      requireApplicationApi(driver.renameApplicationFolder)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    deleteApplicationFolder: async (command) =>
+      requireApplicationApi(driver.deleteApplicationFolder)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    moveApplication: async (command) =>
+      requireApplicationApi(driver.moveApplication)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
     setApplicationModels: async (command) =>
       requireApplicationApi(driver.setApplicationModels)({
         ...command,
@@ -945,6 +995,7 @@ export {
 } from "./application-brief-extraction.js";
 export * from "./application-bundle.js";
 export * from "./application-bundle-import.js";
+export * from "./application-folders.js";
 export {
   type RecordApplicationJobPageCommand,
   recordApplicationJobPage,
