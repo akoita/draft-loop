@@ -9,6 +9,8 @@
   "references": [
     { "path": "../domain" },
     { "path": "../embeddings" },
+    { "path": "../ingestion" },
+    { "path": "../providers" },
     { "path": "../schemas" },
     { "path": "../validation" }
   ]
