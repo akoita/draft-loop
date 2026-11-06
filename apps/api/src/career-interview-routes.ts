@@ -247,6 +247,7 @@ export function registerCareerInterviewRoutes(
           sensitiveDataAcknowledged: true,
         },
         sessionId,
+        language: (await service.readWorkspace(workspaceRoot(workspaceId))).language,
       }).reply(request);
     },
   });

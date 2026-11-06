@@ -241,6 +241,7 @@ export function registerApplicationMaterialRoutes(
           facts,
           requirements,
           ...(usage === undefined ? {} : { usage }),
+          language: application.language ?? workspace.language,
         });
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
         request.log.info(

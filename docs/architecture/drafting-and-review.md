@@ -290,6 +290,18 @@ context, never candidate facts. The author:
 
 A writing policy's section order or emphasis overrides this guidance.
 
+### Document language
+
+A run writes in its context's `language`: the application's own language, or
+the workspace's. For any language but English, each author call adds one
+sentence at the end of its own instructions, after the run-stable prefix. The
+sentence asks for the language's conventions, keeps names as the sources write
+them, and asks for faithful translation of facts from other languages. The
+cover letter, interview questions and career interviewer add the same
+sentence (`packages/application/src/document-language-instruction.ts`).
+English prompts are unchanged, so English runs keep their prompt versions and
+cached prefixes.
+
 ### Each part of the CV has one job
 
 - **Experience and Projects** carry the detail of each fact. A role's

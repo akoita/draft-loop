@@ -100,6 +100,20 @@ describe("createModelCareerInterviewer", () => {
     });
   });
 
+  it("asks in the workspace's language when it is not English", async () => {
+    const fake = executor([{ text: "Quelle était votre semaine type ?", summary: "" }]);
+    const port = createModelCareerInterviewer({
+      executor: fake,
+      model,
+      dataPolicy,
+      sessionId: "cis_fixture0003",
+      language: "fr",
+    });
+    const conversationTopic = careerInterviewTopicContext(topic, facts, () => true);
+    await nextCareerInterviewTurn(port, { topic: conversationTopic, turns: [] });
+    expect(fake.requests[0]?.systemPrompt).toContain("in French (fr)");
+  });
+
   it("returns the summary when the model closes the topic", async () => {
     const fake = executor([{ text: "Is this right?", summary: " You analysed loan data. " }]);
     const port = createModelCareerInterviewer({

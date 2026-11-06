@@ -29,6 +29,7 @@ import {
 } from "./author-run-prefix.js";
 import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
 import { guardCallCost } from "./call-cost-guard.js";
+import { withDocumentLanguage } from "./document-language-instruction.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import {
   evidenceReferenceTableInstructions,
@@ -134,10 +135,12 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         remainingCostUsd,
       );
       const callAuthor = async (
-        authorPrompt: AuthorAdjudicationPrompt,
+        prompt: AuthorAdjudicationPrompt,
         outputSchema: JsonObject,
         outputName: string,
       ): Promise<ModelResponse<JsonObject>> => {
+        // The language sentence ends the call's own instructions, after the run-stable prefix.
+        const authorPrompt = withAuthorDocumentLanguage(prompt, context.language);
         const {
           outputBudget,
           groundingGuide: promptGuide,
@@ -287,5 +290,19 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             }),
       };
     },
+  };
+}
+
+/** The author prompt with the document language's sentence at the end of its call instructions. */
+function withAuthorDocumentLanguage(
+  prompt: AuthorAdjudicationPrompt,
+  language: string,
+): AuthorAdjudicationPrompt {
+  const callInstructions = withDocumentLanguage(prompt.callInstructions, language);
+  if (callInstructions === prompt.callInstructions) return prompt;
+  return {
+    ...prompt,
+    systemPrompt: `${prompt.systemPrompt.slice(0, prompt.systemPrompt.length - prompt.callInstructions.length)}${callInstructions}`,
+    callInstructions,
   };
 }

@@ -223,6 +223,14 @@ describe("createModelApplicationMaterialWriter", () => {
     expect(JSON.stringify(request?.input)).not.toContain("candidate@example.test");
     expect(JSON.stringify(request?.input)).not.toContain("Private note");
     expect(request?.input).toMatchObject({ kind: "interview-questions", refused_rules: [] });
+    expect(request?.systemPrompt).not.toContain("conventions for dates");
+
+    await port.draft({
+      context: applicationMaterialContext({ ...coverLetter, language: "fr" }),
+      refusedRules: [],
+    });
+    expect(requests[1]?.systemPrompt).toContain("in French (fr)");
+    expect(requests[1]?.input).not.toHaveProperty("language");
   });
 });
 
