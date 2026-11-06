@@ -113,6 +113,10 @@ export const applicationViewSchema = z
       .boolean()
       .describe("True for the original application while its workspace has no job text."),
     archivedAt: z.string().nullable(),
+    folderId: z
+      .string()
+      .nullable()
+      .describe("The folder the application sits in on Home; null for no folder."),
     createdAt: z.string(),
     updatedAt: z.string(),
     briefs: z.array(
@@ -154,6 +158,7 @@ export function applicationView(view: ApplicationView): z.infer<typeof applicati
     isDefault: view.isDefault,
     jobMissing: view.jobMissing === true,
     archivedAt: view.archivedAt,
+    folderId: view.folderId ?? null,
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
     briefs: view.briefs.map(({ briefId, latestVersion, status, createdAt }) => ({

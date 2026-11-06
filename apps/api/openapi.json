@@ -1450,6 +1450,13 @@
               "null"
             ]
           },
+          "folderId": {
+            "description": "The folder the application sits in on Home; null for no folder.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "createdAt": {
             "type": "string"
           },
@@ -1619,6 +1626,7 @@
           "isDefault",
           "jobMissing",
           "archivedAt",
+          "folderId",
           "createdAt",
           "updatedAt",
           "briefs",
@@ -1914,6 +1922,68 @@
           "startedAt",
           "updatedAt",
           "lastError"
+        ]
+      },
+      "ApplicationFolderInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "applicationCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Applications in the folder, archived ones included."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt",
+          "applicationCount"
+        ]
+      },
+      "ApplicationFolderListInput": {
+        "type": "object",
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationFolderInput"
+            }
+          }
+        },
+        "required": [
+          "folders"
+        ]
+      },
+      "DeletedApplicationFolderInput": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string"
+          },
+          "movedApplications": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Applications that went back to no folder; none is deleted."
+          }
+        },
+        "required": [
+          "folderId",
+          "movedApplications"
         ]
       },
       "ApplicationImportInput": {
@@ -8074,6 +8144,13 @@
               "null"
             ]
           },
+          "folderId": {
+            "description": "The folder the application sits in on Home; null for no folder.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "createdAt": {
             "type": "string"
           },
@@ -8248,6 +8325,7 @@
           "isDefault",
           "jobMissing",
           "archivedAt",
+          "folderId",
           "createdAt",
           "updatedAt",
           "briefs",
@@ -8550,6 +8628,71 @@
           "startedAt",
           "updatedAt",
           "lastError"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationFolder": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "applicationCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Applications in the folder, archived ones included."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt",
+          "applicationCount"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationFolderList": {
+        "type": "object",
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationFolder"
+            }
+          }
+        },
+        "required": [
+          "folders"
+        ],
+        "additionalProperties": false
+      },
+      "DeletedApplicationFolder": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string"
+          },
+          "movedApplications": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Applications that went back to no folder; none is deleted."
+          }
+        },
+        "required": [
+          "folderId",
+          "movedApplications"
         ],
         "additionalProperties": false
       },
@@ -15405,6 +15548,18 @@
                     "enum": [
                       true
                     ]
+                  },
+                  "folderId": {
+                    "description": "The folder to put the new application in; absent or null for no folder.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^fld_[A-Za-z0-9_-]{8,64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -15537,7 +15692,7 @@
         }
       },
       "patch": {
-        "summary": "Rename, archive or restore a job application",
+        "summary": "Rename, archive, restore or move a job application",
         "requestBody": {
           "required": true,
           "content": {
@@ -15553,6 +15708,18 @@
                   "archived": {
                     "description": "True archives the application, false restores it.",
                     "type": "boolean"
+                  },
+                  "folderId": {
+                    "description": "Moves the application into this folder; null takes it out of any folder.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^fld_[A-Za-z0-9_-]{8,64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -17157,6 +17324,296 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApplicationJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/application-folders": {
+      "get": {
+        "summary": "List the folders that group a workspace's job applications",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationFolderList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a folder for job applications",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "1 to 60 characters, unique in the workspace ignoring case and accents.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationFolder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/application-folders/{folderId}": {
+      "patch": {
+        "summary": "Rename a folder of job applications",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "1 to 60 characters, unique in the workspace ignoring case and accents.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fld_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "folderId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationFolder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a folder; its job applications stay, in no folder",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fld_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "folderId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedApplicationFolder"
                 }
               }
             }

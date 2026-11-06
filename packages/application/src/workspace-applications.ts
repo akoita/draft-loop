@@ -17,17 +17,13 @@ import {
   applicationSchema,
 } from "@draft-loop/schemas/application";
 import type {
-  ClosableStoragePort,
-  OpportunityBriefStoragePort,
-  WorkspaceApplicationsStoragePort,
-  WorkspaceStoragePort,
-} from "@draft-loop/storage";
-import type {
   ApplicationBriefSummary,
   ApplicationExportSummary,
   ApplicationRunSummary,
   ApplicationStoragePort,
 } from "@draft-loop/storage/application-store";
+import { createApplicationFolderService, moveApplicationToFolder } from "./application-folders.js";
+import { type ApplicationHistory, historyExists, openHistory } from "./application-history.js";
 import { defaultApplicationName, suggestedApplicationName } from "./application-name.js";
 import {
   type CandidateProfileFreshnessSelection,
@@ -43,7 +39,6 @@ import {
 import { CliUserError } from "./cli-user-error.js";
 import { compactWorkspaceHistory } from "./history-compaction.js";
 import type { ApplicationDriver, CreateOpportunityCommand, StartRunCommand } from "./index.js";
-import { storageFactory } from "./local-storage-factory.js";
 import { applyModelProfileEffort } from "./model-profile-efforts.js";
 import { defaultModelProfileRegistry, type ModelProfileRegistry } from "./model-profiles.js";
 import {
@@ -77,6 +72,8 @@ export interface ApplicationView extends Application {
   readonly chosenRun: ApplicationChosenRun | null;
   /** True for a default application whose workspace has no job text, such as a new hosted one. */
   readonly jobMissing?: boolean;
+  /** The folder the application sits in on Home; null for "No folder". */
+  readonly folderId: string | null;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -182,21 +179,6 @@ interface WorkspaceIdentity {
   readonly jobDescriptionPath: string;
 }
 
-/** A hosted history always exists; a local one only once its file has been written. */
-async function historyExists(root: string): Promise<boolean> {
-  return (await storageFactory().hasHistory?.(root)) ?? true;
-}
-
-/** The parts of a workspace's history that its applications read and write. */
-type ApplicationHistory = WorkspaceStoragePort &
-  Pick<OpportunityBriefStoragePort, "getLatestOpportunityBrief"> &
-  WorkspaceApplicationsStoragePort &
-  ClosableStoragePort;
-
-async function openHistory(root: string): Promise<ApplicationHistory> {
-  return storageFactory().open(root);
-}
-
 function latestTimestamp(values: readonly string[]): string {
   return values.reduce((latest, value) =>
     Date.parse(value) > Date.parse(latest) ? value : latest,
@@ -226,6 +208,7 @@ async function describeApplication(
   },
 ): Promise<ApplicationView> {
   const archivedAt = (await applications.listArchived(workspaceId)).get(base.id) ?? null;
+  const folderId = (await applications.listFolderPlacements(workspaceId)).get(base.id) ?? null;
   const modelProfiles = base.isDefault
     ? null
     : ((await applications.getModelProfiles(workspaceId, base.id)) ?? null);
@@ -251,6 +234,7 @@ async function describeApplication(
     runs,
     exports,
     archivedAt,
+    folderId,
     modelProfiles,
     chosenRun: currentChosenRun(
       storedChoice,
@@ -315,6 +299,7 @@ async function describeDefaultApplication(
       runs: [],
       exports: [],
       archivedAt: null,
+      folderId: null,
       modelProfiles: null,
       chosenRun: null,
       nameChosen: false,
@@ -742,6 +727,7 @@ export function withWorkspaceApplications(
   dependencies: WorkspaceApplicationDependencies,
 ): ApplicationDriver {
   const service = createWorkspaceApplicationService(dependencies);
+  const folders = createApplicationFolderService(dependencies);
   /** A run of an application with its own pair uses that pair, whatever the caller named. */
   const withApplicationModels = async (command: StartRunCommand): Promise<StartRunCommand> => {
     const { applicationId } = command;
@@ -781,6 +767,12 @@ export function withWorkspaceApplications(
     archiveApplication: async (command) => service.archive(command),
     renameApplication: async (command) => service.rename(command),
     deleteApplication: async (command) => service.delete(command),
+    listApplicationFolders: async (command) => folders.listFolders(command),
+    createApplicationFolder: async (command) => folders.createFolder(command),
+    renameApplicationFolder: async (command) => folders.renameFolder(command),
+    deleteApplicationFolder: async (command) => folders.deleteFolder(command),
+    moveApplication: async (command) =>
+      moveApplicationToFolder(dependencies, (query) => service.get(query), command),
     importApplication: async (command: ImportApplicationCommand) => {
       const imported = await importApplicationFromWorkspace(command, dependencies);
       const application = await service.get({

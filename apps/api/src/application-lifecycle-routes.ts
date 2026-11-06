@@ -10,6 +10,7 @@ import {
   applicationNameSchema,
   applicationPastedJobMaxLength,
 } from "@draft-loop/schemas/application";
+import { applicationFolderPlacementSchema } from "@draft-loop/schemas/application-folder";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -51,6 +52,9 @@ const createApplicationBody = z
       .literal(true)
       .optional()
       .describe("The person's approval to fetch jobUrl, kept with the application."),
+    folderId: applicationFolderPlacementSchema
+      .optional()
+      .describe("The folder to put the new application in; absent or null for no folder."),
   })
   .refine((body) => (body.jobText === undefined) !== (body.jobUrl === undefined), {
     message: "Give the pasted job text or a job page address.",
@@ -63,10 +67,14 @@ const updateApplicationBody = z
   .strictObject({
     name: applicationNameSchema.optional(),
     archived: z.boolean().optional().describe("True archives the application, false restores it."),
+    folderId: applicationFolderPlacementSchema
+      .optional()
+      .describe("Moves the application into this folder; null takes it out of any folder."),
   })
-  .refine((body) => body.name !== undefined || body.archived !== undefined, {
-    message: "Give a name, archived, or both.",
-  });
+  .refine(
+    (body) => body.name !== undefined || body.archived !== undefined || body.folderId !== undefined,
+    { message: "Give a name, archived, a folderId, or any of them." },
+  );
 
 const modelProfileReference = z.strictObject({
   id: z.string().trim().min(1).max(200),
@@ -151,14 +159,32 @@ export function registerApplicationLifecycleRoutes(
       },
     },
     async (request, reply) => {
-      const created = await service.createApplication({
-        root: workspaceRoot(request.params.workspaceId),
+      const root = workspaceRoot(request.params.workspaceId);
+      const { folderId } = request.body;
+      // An unknown folder is refused before anything is created.
+      if (folderId !== undefined && folderId !== null) {
+        const folders = await offered(
+          service.listApplicationFolders,
+          "Application folders",
+        )({ root });
+        if (!folders.some((folder) => folder.id === folderId)) {
+          return reply.code(422).send(apiError("rejected", `Folder ${folderId} was not found.`));
+        }
+      }
+      let created = await service.createApplication({
+        root,
         name: request.body.name,
         jobSource:
           request.body.jobUrl === undefined
             ? { kind: "pasted-text", text: request.body.jobText ?? "" }
             : { kind: "approved-url", url: request.body.jobUrl, approved: true },
       });
+      if (folderId !== undefined && folderId !== null) {
+        created = await offered(
+          service.moveApplication,
+          "Moving an application",
+        )({ root, applicationId: created.id, folderId });
+      }
       return reply.code(201).send(applicationView(created));
     },
   );
@@ -167,7 +193,7 @@ export function registerApplicationLifecycleRoutes(
     "/v1/workspaces/:workspaceId/applications/:applicationId",
     {
       schema: {
-        summary: "Rename, archive or restore a job application",
+        summary: "Rename, archive, restore or move a job application",
         params: applicationParams,
         body: updateApplicationBody,
         response: { 200: applicationViewSchema, ...errorResponses },
@@ -193,6 +219,12 @@ export function registerApplicationLifecycleRoutes(
           applicationId,
           archived: request.body.archived,
         });
+      }
+      if (request.body.folderId !== undefined) {
+        view = await offered(
+          service.moveApplication,
+          "Moving an application",
+        )({ root, applicationId, folderId: request.body.folderId });
       }
       return applicationView(view);
     },
