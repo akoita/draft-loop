@@ -22,6 +22,8 @@ export function contentSecurityPolicy(auth: ApiAuthOptions = { mode: "owner" }) 
       scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
       styleSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "blob:"],
+      // The live interview plays each spoken question from an object URL (#2362).
+      mediaSrc: ["'self'", "blob:"],
       fontSrc: ["'self'"],
       connectSrc,
       objectSrc: ["'none'"],

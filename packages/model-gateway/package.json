@@ -21,6 +21,8 @@
     "@draft-loop/providers": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@google-cloud/secret-manager": "7.2.0",
+    "@google-cloud/speech": "8.2.0",
+    "@google-cloud/text-to-speech": "7.2.0",
     "openai": "7.45.1",
     "zod": "4.6.7"
   },

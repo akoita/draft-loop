@@ -206,6 +206,7 @@ export interface ApiSchemas {
     readonly proposal: string;
     readonly published_source_id?: string;
     readonly interviewer_available: boolean;
+    readonly live_voice_available: boolean;
   };
   "CareerProfile": {
     readonly workspaceId: string;
@@ -1935,7 +1936,7 @@ export interface ApiOperations {
       readonly kind: "material-storage" | "provider-transmission";
       readonly action: "granted" | "withdrawn";
       readonly basis: "candidate-consent" | "contract" | "legitimate-interest";
-      readonly providers?: readonly ("anthropic" | "openai")[];
+      readonly providers?: readonly ("anthropic" | "openai" | "google")[];
       readonly note?: string;
     };
     readonly response: ApiSchemas["ConsentEntry"];

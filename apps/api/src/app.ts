@@ -16,6 +16,7 @@ import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
+import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
 import type { FastifySerializerCompiler } from "fastify/types/schema.js";
 import {
@@ -35,6 +36,7 @@ import { registerApplicationMaterialRoutes } from "./application-material-routes
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
+import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
   type CareerInterviewParts,
   registerCareerInterviewRoutes,
@@ -161,6 +163,8 @@ export interface ApiOptions {
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
   readonly localModels?: readonly string[];
+  /** Speech for the live career interview (#2361); unset, the live route is not served. */
+  readonly liveSpeech?: LiveInterviewSpeech;
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
@@ -199,6 +203,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
 
   const auth: ApiAuthOptions = options.auth ?? { mode: "owner" };
   await app.register(helmet, { contentSecurityPolicy: contentSecurityPolicy(auth) });
+  // The live career interview streams audio both ways over one WebSocket per conversation.
+  if (options.liveSpeech !== undefined) {
+    await app.register(websocket, { options: { maxPayload: 1_048_576 } });
+  }
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
@@ -541,6 +549,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
               },
             }),
         ...(screening === undefined ? {} : { screening }),
+        ...(options.liveSpeech === undefined ? {} : { live: options.liveSpeech }),
       });
     }
     if (application.careerInterview !== undefined) {
