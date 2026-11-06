@@ -4,7 +4,9 @@ import type { KnowledgeStoreResult } from "./bridge.js";
 import {
   activeKnowledgeBases,
   KnowledgeBaseList,
+  KnowledgeInUseSummary,
   KnowledgeWorkspace,
+  knowledgeBaseInUse,
   SavedKnowledgeStatus,
   safeKnowledgeBaseDisplayName,
   savedKnowledgeUnavailableMessage,
@@ -261,7 +263,7 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).not.toContain("legacy");
   });
 
-  it("marks the bases the workspace already uses and disables their select button", () => {
+  it("marks the bases the workspace already uses with one chip and no select button", () => {
     const bases = [
       ...activeKnowledgeBases(store),
       {
@@ -273,14 +275,39 @@ describe("desktop candidate knowledge workspace", () => {
       },
     ];
     const html = renderList({ intake: true, bases, selected: ["active-2"] });
-    expect(html.match(/>In use</g)).toHaveLength(2);
+    expect(html.match(/>In use</g)).toHaveLength(1);
     expect(html.match(/<span class="meta-chip">In use<\/span>/g)).toHaveLength(1);
     expect(html.match(/>Use this knowledge base</g)).toHaveLength(1);
-    expect(html).toMatch(/class="button button-primary" disabled=""[^>]*>In use</);
 
     const none = renderList({ intake: true, bases });
     expect(none).not.toContain("In use");
     expect(none.match(/>Use this knowledge base</g)).toHaveLength(2);
+  });
+
+  it("folds to the active base in use in the open store, and to nothing otherwise", () => {
+    expect(knowledgeBaseInUse(store, { storeId: "store-1", ids: ["active-1"] })?.id).toBe(
+      "active-1",
+    );
+    expect(knowledgeBaseInUse(store, { storeId: "store-1", ids: ["archived-1"] })).toBeUndefined();
+    expect(knowledgeBaseInUse(store, { storeId: "store-2", ids: ["active-1"] })).toBeUndefined();
+    expect(knowledgeBaseInUse(store, null)).toBeUndefined();
+    expect(knowledgeBaseInUse(null, { storeId: "store-1", ids: ["active-1"] })).toBeUndefined();
+  });
+
+  it("shows the base in use on one line with a Change disclosure", () => {
+    const closed = renderToStaticMarkup(
+      <KnowledgeInUseSummary displayName="Career evidence" open={false} onToggle={noop} />,
+    );
+    expect(closed).toContain("Stored in knowledge base <strong>Career evidence</strong>");
+    expect(closed).toContain('<span class="meta-chip">In use</span>');
+    expect(closed).toMatch(
+      /aria-expanded="false" aria-controls="candidate-knowledge-change"[^>]*>Change</,
+    );
+    expect(
+      renderToStaticMarkup(
+        <KnowledgeInUseSummary displayName="Career evidence" open onToggle={noop} />,
+      ),
+    ).toContain('aria-expanded="true"');
   });
 
   it("explains an unavailable saved store and shows loading", () => {

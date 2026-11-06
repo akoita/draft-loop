@@ -4901,6 +4901,43 @@ input[type="text"].workspace-title-input {
   gap: var(--space-3);
 }
 
+/* The one-line summary of the base in use, with Change opening the rest of the section. */
+.knowledge-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.knowledge-change {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* The card's next step once a document is ready: the page's one primary action. */
+.career-next-step {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--teal-line);
+  border-radius: var(--radius-sm);
+  background: var(--teal-wash);
+}
+
+.career-next-step p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.career-next-step strong {
+  color: var(--text-1);
+}
+
 .knowledge-store-disclosure {
   display: grid;
   justify-items: start;

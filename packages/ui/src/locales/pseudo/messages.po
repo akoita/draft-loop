@@ -705,6 +705,10 @@ msgstr ""
 msgid "Add job description"
 msgstr ""
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Add more evidence at any time. None of the sections below is needed before Career profile."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Add or manage documents"
 msgstr ""
@@ -1177,6 +1181,10 @@ msgstr ""
 msgid "central themes"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Change"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
 msgstr ""
@@ -1500,6 +1508,10 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 msgid "contains"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Continue to Career profile"
 msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -3297,6 +3309,10 @@ msgstr ""
 msgid "Next-run model profiles"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Next: build your career profile"
+msgstr ""
+
 #. placeholder {0}: countedNouns.blockingFinding(revisionLeft ? undecided : blocking.length)
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: decide {0}"
@@ -3681,6 +3697,7 @@ msgstr ""
 msgid "Opening workspace…"
 msgstr ""
 
+#: apps/web/src/evidence-panels.tsx
 #: packages/ui/src/review.tsx
 msgid "Optional"
 msgstr ""
@@ -5184,6 +5201,10 @@ msgstr ""
 msgid "Store"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Stored in knowledge base"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Stored with the workspace rather than in a knowledge base."
 msgstr ""
@@ -6260,7 +6281,7 @@ msgid "Where the agreement is kept"
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx
-msgid "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
+msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -6438,6 +6459,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Your documents"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time."
 msgstr ""
 
 #: packages/ui/src/profile.tsx

@@ -3042,6 +3042,7 @@ export function App({
               }
               onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
               knowledgeBase={knowledgePanelFor(true)}
+              onOpenProfile={flowStepHandlers.profile}
             />
           }
           retrieval={retrievalPanel}

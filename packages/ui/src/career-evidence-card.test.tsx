@@ -126,6 +126,20 @@ describe("Career evidence setup card", () => {
     expect(html).toContain("Semantic search: model not installed");
   });
 
+  it("points to Career profile as the one next step once a document is ready", () => {
+    const html = render(selected, { onOpenProfile: () => undefined });
+    expect(html).toContain("Next: build your career profile");
+    expect(html).toMatch(/class="button button-primary"[^>]*>Continue to Career profile/);
+    expect(html.match(/button-primary/g)).toHaveLength(1);
+  });
+
+  it("offers no next step before a document is ready, while adding, or without a profile", () => {
+    const open = { onOpenProfile: () => undefined };
+    expect(render({ ...selected, sourceCount: 0 }, open)).not.toContain("Continue to Career");
+    expect(render(selected, { ...open, pending: true })).not.toContain("Continue to Career");
+    expect(render(selected)).not.toContain("Continue to Career");
+  });
+
   it("is required and invites a first source when the selected base is empty", () => {
     const html = render(
       { ...selected, sourceCount: 0 },

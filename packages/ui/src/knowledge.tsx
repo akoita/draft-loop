@@ -144,14 +144,14 @@ export function KnowledgeBaseList({
               {inUse ? <span className="meta-chip">{t`In use`}</span> : null}
             </div>
             <div className="knowledge-actions">
-              <button
-                type="button"
-                className="button button-primary"
-                disabled={disabled || inUse}
-                onClick={() => onSelect(storeId, knowledgeBase.id)}
-              >
-                {inUse ? t`In use` : t`Use this knowledge base`}
-              </button>
+              {inUse ? null : (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={disabled}
+                  onClick={() => onSelect(storeId, knowledgeBase.id)}
+                >{t`Use this knowledge base`}</button>
+              )}
               {showIntake && intakeSupported ? (
                 <>
                   <button
@@ -179,6 +179,47 @@ export function KnowledgeBaseList({
         <li className="knowledge-hint">{t`No active knowledge bases are available.`}</li>
       ) : null}
     </ul>
+  );
+}
+
+/** The active base the workspace uses in this store, if any; the embedded section folds to it. */
+export function knowledgeBaseInUse(
+  store: KnowledgeStoreResult | null,
+  selection: { readonly storeId: string; readonly ids: readonly string[] } | null,
+): KnowledgeBaseSummary | undefined {
+  if (store === null || selection === null || selection.storeId !== store.storeId) return undefined;
+  return activeKnowledgeBases(store).find((knowledgeBase) =>
+    selection.ids.includes(knowledgeBase.id),
+  );
+}
+
+/**
+ * The embedded section folded to one line: the base in use, and Change, which opens the list and
+ * the new-base form for the few who want a second base.
+ */
+export function KnowledgeInUseSummary({
+  displayName,
+  open,
+  onToggle,
+}: {
+  readonly displayName: string;
+  readonly open: boolean;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <div className="knowledge-summary">
+      <span>
+        {t`Stored in knowledge base`} <strong>{safeKnowledgeBaseDisplayName(displayName)}</strong>{" "}
+        <span className="meta-chip">{t`In use`}</span>
+      </span>
+      <button
+        type="button"
+        className="button button-quiet"
+        aria-expanded={open}
+        aria-controls="candidate-knowledge-change"
+        onClick={onToggle}
+      >{t`Change`}</button>
+    </div>
   );
 }
 
@@ -229,6 +270,10 @@ export function KnowledgeWorkspace({
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savedUnavailable, setSavedUnavailable] = useState(false);
   const [formToggled, setFormToggled] = useState<boolean | null>(null);
+  // The new-base form opens only when asked, never because the store form was.
+  const [baseFormToggled, setBaseFormToggled] = useState(false);
+  // An embedded section with a base in use folds to one line until the person asks to change it.
+  const [changeOpen, setChangeOpen] = useState(false);
   const loadCurrent = capabilities.getCurrentCandidateKnowledge;
   const loadCurrentRef = useRef(loadCurrent);
   loadCurrentRef.current = loadCurrent;
@@ -335,6 +380,8 @@ export function KnowledgeWorkspace({
     handledStoreFormRequest.current = storeFormRequest;
     focusNameWhenShown.current = true;
     setFormToggled(true);
+    setBaseFormToggled(true);
+    setChangeOpen(true);
   }, [storeFormRequest]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-runs when the form may have just appeared, to focus the name field once it exists
@@ -586,7 +633,9 @@ export function KnowledgeWorkspace({
       </div>
     </div>
   );
-  const baseFormOpen = knowledgeBases.length === 0 || (formToggled ?? false);
+  const baseFormOpen = knowledgeBases.length === 0 || baseFormToggled;
+  const inUseBase = embedded ? knowledgeBaseInUse(store, selection) : undefined;
+  const folded = inUseBase !== undefined && !changeOpen;
 
   return (
     <section
@@ -601,14 +650,13 @@ export function KnowledgeWorkspace({
           <h2 id="candidate-knowledge-heading" tabIndex={-1}>{t`Manage career evidence`}</h2>
         </div>
       )}
-      <p className="knowledge-copy">
-        {embedded
-          ? t`Where your evidence is kept. Choosing a different base replaces the one this workspace uses.`
-          : t`Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection.`}
-      </p>
-      {showAutoCreateHint({ hasStore: store !== null, autoCreateSupported, savedUnavailable }) ? (
-        <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
-      ) : null}
+      {inUseBase === undefined ? null : (
+        <KnowledgeInUseSummary
+          displayName={inUseBase.displayName}
+          open={changeOpen}
+          onToggle={() => setChangeOpen(!changeOpen)}
+        />
+      )}
       {pending ? (
         <p className="knowledge-status" role="status">{t`Updating candidate knowledge…`}</p>
       ) : null}
@@ -618,52 +666,68 @@ export function KnowledgeWorkspace({
           {message}
         </p>
       )}
-      {store === null ? null : (
-        <KnowledgeBaseList
-          storeId={store.storeId}
-          knowledgeBases={knowledgeBases}
-          disabled={controlsDisabled}
-          intakeSupported={intakeSupported}
-          showIntake={!embedded}
-          selectedKnowledgeBaseIds={
-            selection !== null && selection.storeId === store.storeId ? selection.ids : []
-          }
-          onSelect={selectKnowledgeBase}
-          onImport={importIntoKnowledgeBase}
-        />
-      )}
-      {ensureNamedBase === undefined ? null : knowledgeBases.length === 0 ? (
-        baseForm
-      ) : (
-        <div className="knowledge-store-disclosure">
-          <button
-            type="button"
-            className="button button-quiet"
-            aria-expanded={baseFormOpen}
-            aria-controls="candidate-knowledge-base-form"
-            onClick={() => setFormToggled(!baseFormOpen)}
-          >{t`New knowledge base`}</button>
-          <div id="candidate-knowledge-base-form" hidden={!baseFormOpen}>
-            {baseFormOpen ? baseForm : null}
-          </div>
-        </div>
-      )}
-      {!storesSwitchable ? null : formPresentation === "form" ? (
-        storeForm
-      ) : (
-        <div className="knowledge-store-disclosure">
-          <button
-            type="button"
-            className="button button-quiet"
-            aria-expanded={formOpen}
-            aria-controls="candidate-knowledge-store-form"
-            onClick={() => setFormToggled(!formOpen)}
-          >
-            {differentStoreDisclosureLabel}
-          </button>
-          <div id="candidate-knowledge-store-form" hidden={!formOpen}>
-            {formOpen ? storeForm : null}
-          </div>
+      {folded ? null : (
+        <div className="knowledge-change" id="candidate-knowledge-change">
+          <p className="knowledge-copy">
+            {embedded
+              ? t`Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses.`
+              : t`Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection.`}
+          </p>
+          {showAutoCreateHint({
+            hasStore: store !== null,
+            autoCreateSupported,
+            savedUnavailable,
+          }) ? (
+            <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
+          ) : null}
+          {store === null ? null : (
+            <KnowledgeBaseList
+              storeId={store.storeId}
+              knowledgeBases={knowledgeBases}
+              disabled={controlsDisabled}
+              intakeSupported={intakeSupported}
+              showIntake={!embedded}
+              selectedKnowledgeBaseIds={
+                selection !== null && selection.storeId === store.storeId ? selection.ids : []
+              }
+              onSelect={selectKnowledgeBase}
+              onImport={importIntoKnowledgeBase}
+            />
+          )}
+          {ensureNamedBase === undefined ? null : knowledgeBases.length === 0 ? (
+            baseForm
+          ) : (
+            <div className="knowledge-store-disclosure">
+              <button
+                type="button"
+                className="button button-quiet"
+                aria-expanded={baseFormOpen}
+                aria-controls="candidate-knowledge-base-form"
+                onClick={() => setBaseFormToggled(!baseFormOpen)}
+              >{t`New knowledge base`}</button>
+              <div id="candidate-knowledge-base-form" hidden={!baseFormOpen}>
+                {baseFormOpen ? baseForm : null}
+              </div>
+            </div>
+          )}
+          {!storesSwitchable ? null : formPresentation === "form" ? (
+            storeForm
+          ) : (
+            <div className="knowledge-store-disclosure">
+              <button
+                type="button"
+                className="button button-quiet"
+                aria-expanded={formOpen}
+                aria-controls="candidate-knowledge-store-form"
+                onClick={() => setFormToggled(!formOpen)}
+              >
+                {differentStoreDisclosureLabel}
+              </button>
+              <div id="candidate-knowledge-store-form" hidden={!formOpen}>
+                {formOpen ? storeForm : null}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>
