@@ -1022,6 +1022,14 @@ that parent, so recorded decisions still show after approval (#1929).
 never truncates, reorders, summarizes or rewrites content to meet a page
 target; an overflowing PDF is a QA signal instead.
 
+Headings, the document title and the `lang` of the HTML and DOCX follow the
+artifact's language. French is typeset at export: an ordinary space before
+`: ; ! ? »` or after `«` becomes a no-break space, so the mark never starts a
+line (`packages/rendering/src/language-conventions.ts`). The approved
+artifact and its checksum are unchanged. English and French are the supported
+languages; German, Spanish, Italian, Dutch and Portuguese are offered as
+previews.
+
 ```mermaid
 flowchart LR
   approved["Approved artifact<br/>(exact version)"] --> template["Template<br/>Modern, Classic, Compact"]

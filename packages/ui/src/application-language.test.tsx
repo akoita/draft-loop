@@ -81,3 +81,14 @@ describe("the application page's language", () => {
     expect(own).toMatch(/<option value="fr" selected="">French/u);
   });
 });
+
+describe("offered languages", () => {
+  it("offers English and French as supported and the others as previews", async () => {
+    const { workspaceSetupLanguages } = await import("./workspace-setup-model.js");
+    expect(workspaceSetupLanguages.slice(0, 3).map(({ label }) => label)).toEqual([
+      "English",
+      "French",
+      "German (preview)",
+    ]);
+  });
+});

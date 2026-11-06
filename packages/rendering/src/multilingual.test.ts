@@ -8,8 +8,10 @@ import {
   renderArtifact,
   renderHtml,
   renderMarkdown,
+  typesetText,
   validateAtsExtractability,
 } from "./index.js";
+import { renderPrintHtml } from "./print-html.js";
 
 const sampleFrenchCv: DraftArtifact = {
   schemaVersion: 1,
@@ -199,5 +201,44 @@ describe("Multilingual Templates & Localized Document Exports", () => {
       const extracted = extractTextFromRenderedDocument(rendered);
       expect(extracted).toContain("Systemarchitekt");
     }
+  });
+});
+
+describe("French typography at export (#2317)", () => {
+  const punctuated: DraftArtifact = {
+    ...sampleFrenchCv,
+    sections: sampleFrenchCv.sections.map((section, index) =>
+      index === 0
+        ? {
+            ...section,
+            blocks: section.blocks.map((block) => ({
+              ...block,
+              text: "Compétences clés : TypeScript ; voir « architecture » ! Site https://example.test/a",
+            })),
+          }
+        : section,
+    ),
+  };
+
+  it("holds French high punctuation and guillemets to their word", () => {
+    expect(typesetText("Langues : français ; anglais ?", "fr")).toBe(
+      "Langues\u00a0: français\u00a0; anglais\u00a0?",
+    );
+    expect(typesetText("« bonjour »", "fr")).toBe("«\u00a0bonjour\u00a0»");
+    expect(typesetText("https://example.test/a:b", "fr")).toBe("https://example.test/a:b");
+    expect(typesetText("Skills : TypeScript", "en")).toBe("Skills : TypeScript");
+  });
+
+  it("typesets every format of a French CV and keeps it extractable", () => {
+    const html = renderPrintHtml(punctuated);
+    expect(html).toContain("TypeScript\u00a0; voir «\u00a0architecture\u00a0»\u00a0!");
+    for (const format of ["markdown", "docx", "pdf"] as const) {
+      const rendered = renderArtifact(punctuated, format);
+      expect(rendered.metadata.format).toBe(format);
+      expect(validateAtsExtractability(rendered, punctuated).passed).toBe(true);
+    }
+    expect(extractTextFromRenderedDocument(renderArtifact(punctuated, "markdown"))).toContain(
+      "clés\u00a0:",
+    );
   });
 });

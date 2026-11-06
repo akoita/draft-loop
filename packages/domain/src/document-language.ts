@@ -8,18 +8,28 @@
 export interface DocumentLanguage {
   readonly code: string;
   readonly label: string;
+  /**
+   * True for a language whose prompts, checks and export are not yet built out: it still works,
+   * and the screens label it "preview" (#2317).
+   */
+  readonly preview: boolean;
 }
 
 /** The languages a workspace or an application can choose for its documents. */
 export const documentLanguages: readonly DocumentLanguage[] = [
-  { code: "en", label: "English" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "es", label: "Spanish" },
-  { code: "it", label: "Italian" },
-  { code: "nl", label: "Dutch" },
-  { code: "pt", label: "Portuguese" },
+  { code: "en", label: "English", preview: false },
+  { code: "fr", label: "French", preview: false },
+  { code: "de", label: "German", preview: true },
+  { code: "es", label: "Spanish", preview: true },
+  { code: "it", label: "Italian", preview: true },
+  { code: "nl", label: "Dutch", preview: true },
+  { code: "pt", label: "Portuguese", preview: true },
 ];
+
+/** The label a language choice shows: its name, marked when it is a preview. */
+export function documentLanguageChoiceLabel(language: DocumentLanguage): string {
+  return language.preview ? `${language.label} (preview)` : language.label;
+}
 
 export const documentLanguageCodes: readonly string[] = documentLanguages.map(({ code }) => code);
 
