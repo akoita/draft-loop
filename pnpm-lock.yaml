@@ -112,6 +112,9 @@ importers:
       '@fastify/swagger':
         specifier: 9.9.0
         version: 9.9.0
+      '@fastify/websocket':
+        specifier: 11.3.4
+        version: 11.3.4
       '@google-cloud/storage':
         specifier: 8.3.0
         version: 8.3.0
@@ -1041,6 +1044,9 @@ packages:
 
   '@fastify/swagger@9.9.0':
     resolution: {integrity: sha512-d21Im1l3KoF2kmzJHOYL50Erjhj1qUUudQsW9hzwYTE7likjvMx7AQKpClyZbdhrqGXbl+fU4dI2S7BaLpFIvw==}
+
+  '@fastify/websocket@11.3.4':
+    resolution: {integrity: sha512-firnJtEOv6pfdoXIzFDMbd+omgWwFNfLtdM8JejNFr/9lT/9DHkEhjTShuRFeE4phqrevD2B3JRW0v6uyzWhHQ==}
 
   '@google-cloud/cloud-sql-connector@1.12.0':
     resolution: {integrity: sha512-cUrI+6StY8F/dQB5Lujrl9TFYibDZGGWvPp1aHhvLn4btOlbflxdHoZ6NDWeWySCNtnOYhoiZNQfK4qPC5moBw==}
@@ -5318,6 +5324,15 @@ snapshots:
       yaml: 2.9.1
     transitivePeerDependencies:
       - supports-color
+
+  '@fastify/websocket@11.3.4':
+    dependencies:
+      duplexify: 4.1.3
+      fastify-plugin: 6.0.1
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@google-cloud/cloud-sql-connector@1.12.0':
     dependencies:

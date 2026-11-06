@@ -34,10 +34,12 @@ import {
   type ConsentState,
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
+import "@fastify/websocket";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { type LiveInterviewSpeech, runLiveInterview } from "./career-interview-live.js";
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiErrorSchema } from "./errors.js";
@@ -64,6 +66,8 @@ export interface CareerInterviewRoutesOptions {
     readonly evidenceKinds: SourceEvidenceKinds;
   };
   readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
+  /** Speech for the live conversation (#2361); without it the live route is not served. */
+  readonly live?: LiveInterviewSpeech;
 }
 
 const workspaceParams = z.strictObject({
@@ -154,6 +158,14 @@ class InterviewUnavailableError extends Error {
     super(message);
     this.code = code;
   }
+}
+
+/** Whether the record's consent lets material go to both companies, as one author/critic pair. */
+function permitsCompanies(state: ConsentState, first: string, second: string): boolean {
+  return permitsTransmission(state, {
+    author: { company: first as never },
+    critic: { company: second as never },
+  });
 }
 
 function permitsAnthropic(state: ConsentState): boolean {
@@ -475,6 +487,80 @@ export function registerCareerInterviewRoutes(
         "career interview action",
       );
       return reply.send(view(result.session, "published" in result ? result.published : undefined));
+    },
+  );
+
+  const live = options.live;
+  if (live === undefined) return;
+  app.get(
+    "/v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/live",
+    {
+      websocket: true,
+      schema: {
+        hide: true,
+        params: sessionParams,
+        querystring: z.strictObject({
+          topic_key: topicKey,
+          language: z.enum(["fr", "en"]).optional(),
+        }),
+      },
+    },
+    async (socket, request) => {
+      const { workspaceId, sessionId } = request.params as z.infer<typeof sessionParams>;
+      const query = request.query as { topic_key: string; language?: "fr" | "en" };
+      const refuse = (code: string, message: string) => {
+        socket.send(JSON.stringify({ type: "error", code, message }));
+        socket.close(1008, code);
+      };
+      await service.readWorkspace(workspaceRoot(workspaceId));
+      if (interview.route === undefined || !interview.allowProviderData) {
+        refuse(
+          "interview_model_unavailable",
+          "This server has no model route for the career interview.",
+        );
+        return;
+      }
+      const recordId = await consentRecordId(service, workspaceRoot, workspaceId);
+      const consent = consents === undefined ? undefined : await consents.current(recordId);
+      if (
+        consent === undefined ||
+        !permitsCompanies(consent, "anthropic", live.stt.identity.company)
+      ) {
+        refuse(
+          "consent_required",
+          `Allow sending career material to Anthropic and ${live.stt.identity.company} in this record's consent to talk live.`,
+        );
+        return;
+      }
+      const interviewService = serviceFor(workspaceId, request);
+      request.log.info({ workspaceId, sessionId }, "live career interview started");
+      await runLiveInterview({
+        socket,
+        speech: live,
+        language: query.language,
+        answer: async (text) => {
+          const session = await interviewService.answer(workspaceId, sessionId, query.topic_key, {
+            text,
+          });
+          const topic = session.topics.find((candidate) => candidate.key === query.topic_key);
+          const last = topic?.turns.at(-1);
+          const open = topic?.status === "open";
+          return {
+            view: view(session),
+            question: open && last?.role === "interviewer" ? last.text : undefined,
+            open,
+          };
+        },
+        refusal: (error) => {
+          if (error instanceof CareerInterviewError || error instanceof InterviewUnavailableError) {
+            return { code: error.code, message: error.message };
+          }
+          request.log.error({ err: error, workspaceId, sessionId }, "live career interview failed");
+          return { code: "live_failed", message: "The live conversation stopped. Try again." };
+        },
+        onEnd: (usage) =>
+          request.log.info({ workspaceId, sessionId, ...usage }, "live career interview ended"),
+      });
     },
   );
 }
