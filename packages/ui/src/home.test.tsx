@@ -266,6 +266,21 @@ describe("Home dashboard", () => {
     expect(html).toContain("Change models");
   });
 
+  it("keeps a header button to Workspace settings, which a long list pushes far down", () => {
+    expect(render()).not.toContain(
+      '<button class="button button-outline" type="button">Workspace settings</button>',
+    );
+    const html = render({ settings: <button type="button">Change models</button> });
+    const header = html.slice(
+      html.indexOf('class="home-header-actions"'),
+      html.indexOf("</header>"),
+    );
+    expect(header).toContain(">Workspace settings</button>");
+    expect(html).toContain(
+      '<section id="home-settings" class="panel home-settings" aria-labelledby="home-settings-title" tabindex="-1">',
+    );
+  });
+
   it("shows an error banner as an alert", () => {
     expect(render({ errorMessage: "The application could not be opened." })).toContain(
       'role="alert"',
