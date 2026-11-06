@@ -1,4 +1,3 @@
-import { t } from "@lingui/core/macro";
 /** Safe renderer projection of one persisted application-readiness decision. */
 export const approvalReadinessBlockerCodes = [
   "incomplete-report-inputs",
@@ -306,16 +305,16 @@ export function formatApprovalReadinessBlocker(blocker: ApprovalReadinessBlocker
     return `${dimension} score ${(blocker.score * 100).toFixed(0)}%; ${(blocker.threshold * 100).toFixed(0)}% required`;
   }
   if (blocker.code === "deterministic-error" && blocker.check !== undefined) {
-    return t`Validation check failed: ${approvalReadinessCheckLabels[blocker.check]}`;
+    return `Validation check failed: ${approvalReadinessCheckLabels[blocker.check]}`;
   }
   const labels: Record<ApprovalReadinessBlockerCode, string> = {
-    "incomplete-report-inputs": t`Readiness report inputs are incomplete`,
-    "independent-review-incomplete": t`Independent readiness review is incomplete`,
-    "deterministic-error": t`A deterministic validation check blocks readiness`,
-    "report-error": t`A readiness report finding blocks application readiness`,
-    "unmet-rubric-threshold": t`A rubric threshold is not met`,
-    "disputed-dimension": t`A readiness dimension remains disputed`,
-    "missing-revision-effect": t`A required revision effect is missing`,
+    "incomplete-report-inputs": "Readiness report inputs are incomplete",
+    "independent-review-incomplete": "Independent readiness review is incomplete",
+    "deterministic-error": "A deterministic validation check blocks readiness",
+    "report-error": "A readiness report finding blocks application readiness",
+    "unmet-rubric-threshold": "A rubric threshold is not met",
+    "disputed-dimension": "A readiness dimension remains disputed",
+    "missing-revision-effect": "A required revision effect is missing",
   };
   return labels[blocker.code];
 }

@@ -1,5 +1,4 @@
 import type { codexSessionModelUnsupportedDiagnosticCode as providerCode } from "@draft-loop/providers";
-import { t } from "@lingui/core/macro";
 
 import type { ProviderFailureDiagnostic, ProviderFailureView } from "./model.js";
 
@@ -28,7 +27,7 @@ export function providerSessionModelFeedback(input: ProviderSessionModelFeedback
         diagnostic.path === "model",
     )
   ) {
-    return t`This model is not supported by the Codex / ChatGPT session. Choose a model supported by your account, or explicitly switch OpenAI authentication to an API key and check model access.`;
+    return "This model is not supported by the Codex / ChatGPT session. Choose a model supported by your account, or explicitly switch OpenAI authentication to an API key and check model access.";
   }
   return input.fallbackExplanation;
 }
