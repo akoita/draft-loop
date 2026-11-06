@@ -1,0 +1,137 @@
+{
+  "description": "Invented bilingual evidence for one fictional candidate. Each chunk and each job requirement exists in English and French with the same meaning, so the four language pairs share ground truth.",
+  "corpus": [
+    {
+      "id": "team-lead",
+      "en": "Managed a team of seven engineers and ran monthly retrospectives.",
+      "fr": "Encadré une équipe de sept ingénieurs et animé les rétrospectives mensuelles."
+    },
+    {
+      "id": "cost-saving",
+      "en": "Reduced cloud infrastructure costs by 30 percent by removing idle servers.",
+      "fr": "Réduit de 30 pour cent les coûts d'infrastructure cloud en supprimant les serveurs inutilisés."
+    },
+    {
+      "id": "test-automation",
+      "en": "Introduced automated end-to-end tests that halved production regressions.",
+      "fr": "Mis en place des tests automatisés de bout en bout qui ont réduit de moitié les régressions en production."
+    },
+    {
+      "id": "migration",
+      "en": "Led the migration of a monolithic database to independent services.",
+      "fr": "Piloté la migration d'une base de données monolithique vers des services indépendants."
+    },
+    {
+      "id": "customer-workshops",
+      "en": "Ran workshops with customers to gather their needs and prioritise features.",
+      "fr": "Animé des ateliers avec les clients pour recueillir leurs besoins et prioriser les fonctionnalités."
+    },
+    {
+      "id": "incident",
+      "en": "Coordinated the response to a major outage and set up an on-call rotation.",
+      "fr": "Coordonné la réponse à une panne majeure et mis en place une astreinte tournante."
+    },
+    {
+      "id": "delivery-pipeline",
+      "en": "Built a continuous deployment pipeline that releases every merged change automatically.",
+      "fr": "Construit une chaîne de déploiement continu qui livre automatiquement chaque modification fusionnée."
+    },
+    {
+      "id": "mentoring",
+      "en": "Mentored three junior developers, two of whom were promoted within a year.",
+      "fr": "Accompagné trois développeurs juniors, dont deux ont été promus en moins d'un an."
+    },
+    {
+      "id": "security",
+      "en": "Fixed the injection vulnerabilities found during an external security audit.",
+      "fr": "Corrigé les failles d'injection relevées lors d'un audit de sécurité externe."
+    },
+    {
+      "id": "data-model",
+      "en": "Trained a model that predicts customer churn, used by the sales team every week.",
+      "fr": "Entraîné un modèle qui prédit le départ des clients, utilisé chaque semaine par l'équipe commerciale."
+    },
+    {
+      "id": "distractor-sport",
+      "en": "Captain of an amateur cycling team that won the regional cup.",
+      "fr": "Capitaine d'une équipe cycliste amateur qui a remporté la coupe régionale."
+    },
+    {
+      "id": "distractor-cooking",
+      "en": "Won a local cooking contest with a low-cost three-course menu.",
+      "fr": "Remporté un concours de cuisine local avec un menu en trois plats à petit budget."
+    },
+    {
+      "id": "distractor-music",
+      "en": "Plays the cello in a community orchestra and repairs old instruments.",
+      "fr": "Joue du violoncelle dans un orchestre associatif et répare de vieux instruments."
+    },
+    {
+      "id": "education",
+      "en": "Master's degree in computer science with a thesis on distributed systems.",
+      "fr": "Master en informatique avec un mémoire sur les systèmes distribués."
+    }
+  ],
+  "cases": [
+    {
+      "id": "people-management",
+      "en": "experience managing an engineering team",
+      "fr": "expérience de l'encadrement d'une équipe d'ingénieurs",
+      "groundTruthEvidenceIds": ["team-lead"]
+    },
+    {
+      "id": "cost-optimisation",
+      "en": "reducing cloud infrastructure costs",
+      "fr": "réduction des coûts d'infrastructure cloud",
+      "groundTruthEvidenceIds": ["cost-saving"]
+    },
+    {
+      "id": "quality-assurance",
+      "en": "automated testing to prevent regressions",
+      "fr": "tests automatisés pour éviter les régressions",
+      "groundTruthEvidenceIds": ["test-automation"]
+    },
+    {
+      "id": "service-migration",
+      "en": "migrating a monolith to services",
+      "fr": "migration d'un monolithe vers des services",
+      "groundTruthEvidenceIds": ["migration"]
+    },
+    {
+      "id": "customer-discovery",
+      "en": "running workshops to gather customer needs",
+      "fr": "animation d'ateliers pour recueillir les besoins des clients",
+      "groundTruthEvidenceIds": ["customer-workshops"]
+    },
+    {
+      "id": "incident-response",
+      "en": "handling production outages and on-call duty",
+      "fr": "gestion des pannes en production et des astreintes",
+      "groundTruthEvidenceIds": ["incident"]
+    },
+    {
+      "id": "continuous-delivery",
+      "en": "continuous deployment and release automation",
+      "fr": "déploiement continu et automatisation des livraisons",
+      "groundTruthEvidenceIds": ["delivery-pipeline"]
+    },
+    {
+      "id": "coaching",
+      "en": "mentoring junior developers",
+      "fr": "accompagnement de développeurs juniors",
+      "groundTruthEvidenceIds": ["mentoring"]
+    },
+    {
+      "id": "application-security",
+      "en": "fixing security vulnerabilities",
+      "fr": "correction des failles de sécurité",
+      "groundTruthEvidenceIds": ["security"]
+    },
+    {
+      "id": "predictive-modelling",
+      "en": "predicting customer churn with machine learning",
+      "fr": "prédiction du départ des clients par apprentissage automatique",
+      "groundTruthEvidenceIds": ["data-model"]
+    }
+  ]
+}
