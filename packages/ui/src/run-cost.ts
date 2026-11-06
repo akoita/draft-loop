@@ -1,3 +1,4 @@
+import { plural, t } from "@lingui/core/macro";
 import type { DesktopReviewState } from "./model.js";
 
 export interface RunCostLabel {
@@ -20,9 +21,12 @@ export function runCostLabel({ totalCostUsd, unpricedCallCount }: RunCost): RunC
   const total = `$${totalCostUsd.toFixed(3)}`;
   const unpriced = unpricedCallCount ?? 0;
   if (unpriced === 0) return { text: total };
-  const calls = unpriced === 1 ? "1 model call has" : `${unpriced} model calls have`;
-  const explanation = `${calls} no recorded price, from a subscription session or a model without catalog rates.`;
+  const explanation = plural(unpriced, {
+    one: "# model call has no recorded price, from a subscription session or a model without catalog rates.",
+    other:
+      "# model calls have no recorded price, from a subscription session or a model without catalog rates.",
+  });
   return totalCostUsd === 0
     ? { text: costNotRecorded, explanation }
-    : { text: `${total}+`, explanation: `${explanation} The total is a lower bound.` };
+    : { text: `${total}+`, explanation: `${explanation} ${t`The total is a lower bound.`}` };
 }

@@ -30,6 +30,7 @@ import {
 } from "./career-flow.js";
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { CompactHistoryAction } from "./compact-history.js";
+import { countedNouns } from "./counted-nouns.js";
 import { HomeScreen, WorkspaceBackButton } from "./home.js";
 import {
   applicationRunToOpen,
@@ -331,9 +332,18 @@ export function modelDiscoveryNote(
       if (discovery.models.length === 0) {
         return `${modelCompanyLabels[company]} listed no models. Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
       }
-      return `${discovery.models.length} model${discovery.models.length === 1 ? "" : "s"} listed ${
-        discovery.source === "cache" ? "from a recent lookup" : "by the provider"
-      }${discovery.truncated ? ", and the provider had more" : ""}. Choose “Other model…” to type one that is not listed.`;
+      {
+        const listed = countedNouns.model(discovery.models.length);
+        const lead =
+          discovery.source === "cache"
+            ? discovery.truncated
+              ? t`${listed} listed from a recent lookup, and the provider had more.`
+              : t`${listed} listed from a recent lookup.`
+            : discovery.truncated
+              ? t`${listed} listed by the provider, and the provider had more.`
+              : t`${listed} listed by the provider.`;
+        return `${lead} ${t`Choose “Other model…” to type one that is not listed.`}`;
+      }
   }
 }
 
@@ -402,8 +412,8 @@ export function filterModelOptions(
   );
   const options =
     keptSelected && !models.includes(selected) ? [...providerOptions, selected] : providerOptions;
-  const total = `${models.length} model${models.length === 1 ? "" : "s"}`;
-  const wayOut = `Clear the filter to see all ${total}, or choose “Other model…” to type an id.`;
+  const total = countedNouns.model(models.length);
+  const wayOut = t`Clear the filter to see all ${total}, or choose “Other model…” to type an id.`;
   if (matched.size === 0) {
     return {
       options,
@@ -414,7 +424,7 @@ export function filterModelOptions(
         : `No model id contains “${wanted}”. ${wayOut}`,
     };
   }
-  const shown = `Showing ${matched.size} of ${total} matching “${wanted}”`;
+  const shown = t`Showing ${matched.size} of ${total} matching “${wanted}”`;
   return {
     options,
     matched: matched.size,

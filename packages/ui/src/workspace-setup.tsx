@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
-
+import { countedNouns } from "./counted-nouns.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import {
   defaultWorkspaceSetupPresetId,
@@ -74,7 +74,7 @@ export function WorkspaceSetupScreen({
           <select value={maxRounds} onChange={(event) => setMaxRounds(Number(event.target.value))}>
             {workspaceSetupRoundLimits.map((rounds) => (
               <option key={rounds} value={rounds}>
-                {rounds === 1 ? t`1 round` : t`${rounds} rounds`}
+                {countedNouns.round(rounds)}
               </option>
             ))}
           </select>

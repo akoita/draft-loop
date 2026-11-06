@@ -1,4 +1,5 @@
 /** Pure display helpers that turn canonical profile keys into readable review text. */
+import { countedNouns } from "./counted-nouns.js";
 
 const issueCodeLabels: Readonly<Record<string, string>> = {
   "conflict-date": "Conflicting dates",
@@ -45,7 +46,7 @@ export function profileIssueCodeLabel(code: string): string {
 }
 
 export function sourceCountLabel(count: number): string {
-  return count === 1 ? "1 source" : `${count} sources`;
+  return countedNouns.source(count);
 }
 
 /** Shorten a value for inline display, appending an ellipsis when it is cut. */

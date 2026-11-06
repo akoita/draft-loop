@@ -2,6 +2,7 @@ import { listModelProfileCatalog } from "@draft-loop/application/model-profile-c
 import type { ModelProfileRegistry } from "@draft-loop/application/model-profiles";
 import type { AgentRole } from "@draft-loop/domain";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
+import { plural, t } from "@lingui/core/macro";
 import type { ModelCompany } from "./bridge.js";
 
 export interface RegisteredModelSuggestion {
@@ -36,10 +37,15 @@ function suggestionLabel(
     .map((tier) => `${tier[0]?.toUpperCase() ?? ""}${tier.slice(1)}`)
     .join(", ");
   const roleLabel = roles.map(readableRole).join(", ");
+  const roleName = readableRole(role);
   const roleStatus = roles.includes(role)
-    ? `registered for ${readableRole(role)}`
-    : `not registered for ${readableRole(role)}`;
-  return `${tierLabel} tier · ${roleLabel} profile${roles.length === 1 ? "" : "s"} · ${roleStatus}`;
+    ? t`registered for ${roleName}`
+    : t`not registered for ${roleName}`;
+  const profiles = plural(roles.length, {
+    one: `${roleLabel} profile`,
+    other: `${roleLabel} profiles`,
+  });
+  return t`${tierLabel} tier · ${profiles} · ${roleStatus}`;
 }
 
 /** Groups exact model IDs across profile versions without losing tier or role facts. */

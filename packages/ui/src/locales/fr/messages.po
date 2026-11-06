@@ -13,10 +13,9 @@ msgstr " — non respecté"
 msgid " — unsupported with current route"
 msgstr " — non pris en charge par la route actuelle"
 
-#. placeholder {0}: legacyCount === 1 ? "" : "s"
-#: packages/ui/src/career-evidence-card.tsx
-msgid " ({legacyCount} source{0})"
-msgstr " ({legacyCount} source{0})"
+#: apps/web/src/screening-model.ts
+msgid " and "
+msgstr " et "
 
 #. placeholder {0}: status.fileName
 #: packages/ui/src/run-comparison.tsx
@@ -108,10 +107,6 @@ msgstr ". La libération permet aux exécutions de l’utiliser. Elle ne couvre 
 msgid ". Saved preference:"
 msgstr ". Préférence enregistrée :"
 
-#: packages/ui/src/review.tsx
-msgid ". They remain visible after approval."
-msgstr ". Ils restent visibles après l’approbation."
-
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
 msgstr ". Il s’agit d’un exemple explicite, pas d’une prévision mesurée, d’un plafond strict ni d’une facture réelle. Le quota et les frais d’abonnement ne sont pas estimés."
@@ -165,6 +160,11 @@ msgstr "(révision épinglée"
 msgid "(reviewer), for at most"
 msgstr "(relecteur), pour au plus"
 
+#. placeholder {0}: countedNouns.source(sourceCount)
+#: packages/ui/src/profile-status.ts
+msgid "(up to {0})"
+msgstr "(jusqu’à {0})"
+
 #: packages/ui/src/review.tsx
 msgid "(writer) and"
 msgstr "(rédacteur) et"
@@ -173,18 +173,94 @@ msgstr "(rédacteur) et"
 msgid ") bound to brief"
 msgstr ") lié au brief"
 
-#. placeholder {0}: queueCounts.blocking
-#. placeholder {1}: queueCounts.warnings
-#. placeholder {2}: queueCounts.warnings === 1 ? "" : "s"
-#: packages/ui/src/review.tsx
-msgid "{0} blocking · {1} warning{2}"
-msgstr "{0} bloquant · {1} avertissement{2}"
+#. placeholder {0}: roles.length
+#: packages/ui/src/model-suggestions.tsx
+msgid "{0, plural, one {{roleLabel} profile} other {{roleLabel} profiles}}"
+msgstr "{0, plural, one {profil {roleLabel}} other {profils {roleLabel}}}"
+
+#. placeholder {0}: blocking.length
+#: packages/ui/src/review-footer.tsx
+msgid "{0, plural, one {# blocking finding needs a decision} other {# blocking findings need a decision}}"
+msgstr "{0, plural, one {# constat bloquant attend une décision} other {# constats bloquants attendent une décision}}"
 
 #. placeholder {0}: blockingFindings.length
-#. placeholder {1}: blockingFindings.length === 1 ? " remains" : "s remain"
 #: packages/ui/src/review.tsx
-msgid "{0} blocking finding{1} unresolved after approval."
-msgstr "{0} constat{1} bloquant non résolu après l’approbation."
+msgid "{0, plural, one {# blocking finding remains unresolved after approval.} other {# blocking findings remain unresolved after approval.}}"
+msgstr "{0, plural, one {# constat bloquant reste non résolu après l’approbation.} other {# constats bloquants restent non résolus après l’approbation.}}"
+
+#. placeholder {0}: blockingFindings.length
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {# blocking finding still needs a decision.} other {# blocking findings still need a decision.}}"
+msgstr "{0, plural, one {# constat bloquant attend encore une décision.} other {# constats bloquants attendent encore une décision.}}"
+
+#. placeholder {0}: input.blocking.length
+#: packages/ui/src/send-verdict.ts
+msgid "{0, plural, one {# blocking finding to resolve} other {# blocking findings to resolve}}"
+msgstr "{0, plural, one {# constat bloquant à résoudre} other {# constats bloquants à résoudre}}"
+
+#. placeholder {0}: counts.briefVersions
+#: packages/ui/src/application-import-model.ts
+msgid "{0, plural, one {# brief version} other {# brief versions}}"
+msgstr "{0, plural, one {# version du brief} other {# versions du brief}}"
+
+#. placeholder {0}: counts.exports
+#: packages/ui/src/application-import-model.ts
+msgid "{0, plural, one {# export} other {# exports}}"
+msgstr "{0, plural, one {# export} other {# exports}}"
+
+#. placeholder {0}: state.setup.selectedEvidenceChunkCount
+#. placeholder {1}: state.setup.selectedEvidenceSourceCount
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {# relevant excerpt} other {# relevant excerpts}} selected from {1, plural, one {# career-evidence source} other {# career-evidence sources}}"
+msgstr "{0, plural, one {# extrait pertinent sélectionné} other {# extraits pertinents sélectionnés}} dans {1, plural, one {# source d’éléments de parcours} other {# sources d’éléments de parcours}}"
+
+#. placeholder {0}: theme.proofCount
+#: packages/ui/src/run-details.tsx
+msgid "{0, plural, one {# supporting accomplishment} other {# supporting accomplishments}}"
+msgstr "{0, plural, one {# réalisation à l’appui} other {# réalisations à l’appui}}"
+
+#. placeholder {0}: warnings.length
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {# unresolved warning} other {# unresolved warnings}}"
+msgstr "{0, plural, one {# avertissement non résolu} other {# avertissements non résolus}}"
+
+#. placeholder {0}: warnings.length
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {Approval is available with # unresolved non-blocking warning. It remains visible after approval.} other {Approval is available with # unresolved non-blocking warnings. They remain visible after approval.}}"
+msgstr "{0, plural, one {L’approbation est possible avec # avertissement non bloquant non résolu. Il reste visible après l’approbation.} other {L’approbation est possible avec # avertissements non bloquants non résolus. Ils restent visibles après l’approbation.}}"
+
+#. placeholder {0}: edited.size
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {Approving makes v{version} with your # edit; the critic has not reviewed it.} other {Approving makes v{version} with your # edits; the critic has not reviewed them.}}"
+msgstr "{0, plural, one {Approuver crée la v{version} avec votre # modification ; le relecteur ne l’a pas relue.} other {Approuver crée la v{version} avec vos # modifications ; le relecteur ne les a pas relues.}}"
+
+#. placeholder {0}: state.setup.selectedEvidenceChunkCount
+#: packages/ui/src/review.tsx
+msgid "{0, plural, one {No lexical match; using # bounded fallback excerpt from career evidence} other {No lexical match; using # bounded fallback excerpts from career evidence}}"
+msgstr "{0, plural, one {Aucune correspondance lexicale ; # extrait de repli limité des éléments de parcours est utilisé} other {Aucune correspondance lexicale ; # extraits de repli limités des éléments de parcours sont utilisés}}"
+
+#. placeholder {0}: status.displayName
+#. placeholder {1}: countedNouns.source(status.sourceCount)
+#: packages/ui/src/career-evidence.ts
+msgid "{0} · {1}"
+msgstr "{0} · {1}"
+
+#. placeholder {0}: chunk(input.sentChunkCount)
+#. placeholder {1}: fact(input.sentFactCount)
+#: packages/ui/src/run-author-input-display.ts
+msgid "{0} and {1}"
+msgstr "{0} et {1}"
+
+#. placeholder {0}: queueCounts.blocking
+#. placeholder {1}: countedNouns.warning(queueCounts.warnings)
+#: packages/ui/src/review.tsx
+msgid "{0} blocking · {1}"
+msgstr "{0} bloquants · {1}"
+
+#. placeholder {0}: countedNouns.sourceFile(legacySourceCount)
+#: packages/ui/src/home-model.ts
+msgid "{0} in this workspace"
+msgstr "{0} dans cet espace de travail"
 
 #. placeholder {0}: draft.jobFile.name
 #: packages/ui/src/new-application-form.tsx
@@ -202,27 +278,186 @@ msgstr "{0} ms"
 msgid "{0} of {1}"
 msgstr "{0} sur {1}"
 
+#. placeholder {0}: requirements.covered
+#. placeholder {1}: responsibilities.covered
+#: packages/ui/src/coverage-kinds.ts
+msgid "{0} of {requirementTotal} covered · {1} of {responsibilityTotal} covered"
+msgstr "{0} sur {requirementTotal} couvertes · {1} sur {responsibilityTotal} couvertes"
+
 #. placeholder {0}: role === "author" ? "Author" : "Critic"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "{0} profile"
 msgstr "Profil {0}"
-
-#. placeholder {0}: state.setup.selectedEvidenceChunkCount
-#. placeholder {1}: state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"
-#. placeholder {2}: state.setup.selectedEvidenceSourceCount
-#. placeholder {3}: state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"
-#: packages/ui/src/review.tsx
-msgid "{0} relevant excerpt{1} selected from {2} career-evidence source{3}"
-msgstr "{0} extrait{1} pertinent sélectionné parmi {2} source{3} de parcours"
 
 #. placeholder {0}: phase.summary.responsibilityCount
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "{0} responsibilities"
 msgstr "{0} responsabilités"
 
+#. placeholder {0}: countedNouns.requirement(latest.requirementCount)
+#. placeholder {1}: latest.criticalCount
+#: packages/ui/src/start-requirements-model.ts
+msgid "{0}, {1} critical."
+msgstr "{0}, dont {1} critiques."
+
+#. placeholder {0}: countedNouns.source(readiness.sourceCount)
+#. placeholder {1}: readiness.readyCount
+#: packages/ui/src/career-evidence.ts
+msgid "{0}, {1} ready."
+msgstr "{0}, {1} prêtes."
+
+#: packages/ui/src/review-footer.tsx
+msgid "{accepted, plural, one {# accepted blocking finding needs a revision} other {# accepted blocking findings need a revision}}"
+msgstr "{accepted, plural, one {# constat bloquant accepté attend une révision} other {# constats bloquants acceptés attendent une révision}}"
+
+#. placeholder {0}: countedNouns.source(sources)
+#: packages/ui/src/career-evidence-card.tsx
+msgid "{chunks, plural, one {# relevant excerpt} other {# relevant excerpts}} selected from {0}"
+msgstr "{chunks, plural, one {# extrait pertinent sélectionné} other {# extraits pertinents sélectionnés}} dans {0}"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "{chunks, plural, one {No lexical match; # bounded fallback excerpt selected} other {No lexical match; # bounded fallback excerpts selected}}"
+msgstr "{chunks, plural, one {Aucune correspondance lexicale ; # extrait de repli limité sélectionné} other {Aucune correspondance lexicale ; # extraits de repli limités sélectionnés}}"
+
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "{chunks} from {sources}"
+msgstr "{chunks} issus de {sources}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# accepted blocking finding} other {# accepted blocking findings}}"
+msgstr "{count, plural, one {# constat bloquant accepté} other {# constats bloquants acceptés}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# blocking finding} other {# blocking findings}}"
+msgstr "{count, plural, one {# constat bloquant} other {# constats bloquants}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# chunk} other {# chunks}}"
+msgstr "{count, plural, one {# fragment} other {# fragments}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{count, plural, one {# credit} other {# credits}}"
+msgstr "{count, plural, one {# crédit} other {# crédits}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# day} other {# days}}"
+msgstr "{count, plural, one {# jour} other {# jours}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# excerpt} other {# excerpts}}"
+msgstr "{count, plural, one {# extrait} other {# extraits}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# fact} other {# facts}}"
+msgstr "{count, plural, one {# fait} other {# faits}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# file} other {# files}}"
+msgstr "{count, plural, one {# fichier} other {# fichiers}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# hour} other {# hours}}"
+msgstr "{count, plural, one {# heure} other {# heures}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# issue} other {# issues}}"
+msgstr "{count, plural, one {# problème} other {# problèmes}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# item} other {# items}}"
+msgstr "{count, plural, one {# élément} other {# éléments}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# minute} other {# minutes}}"
+msgstr "{count, plural, one {# minute} other {# minutes}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# model} other {# models}}"
+msgstr "{count, plural, one {# modèle} other {# modèles}}"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count, plural, one {# new source} other {# new sources}}"
+msgstr "{count, plural, one {# nouvelle source} other {# nouvelles sources}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# requirement} other {# requirements}}"
+msgstr "{count, plural, one {# exigence} other {# exigences}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# responsibility} other {# responsibilities}}"
+msgstr "{count, plural, one {# responsabilité} other {# responsabilités}}"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count, plural, one {# retired source} other {# retired sources}}"
+msgstr "{count, plural, one {# source retirée} other {# sources retirées}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# round} other {# rounds}}"
+msgstr "{count, plural, one {# tour} other {# tours}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# run} other {# runs}}"
+msgstr "{count, plural, one {# exécution} other {# exécutions}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# second} other {# seconds}}"
+msgstr "{count, plural, one {# seconde} other {# secondes}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# source file} other {# source files}}"
+msgstr "{count, plural, one {# fichier source} other {# fichiers sources}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# source} other {# sources}}"
+msgstr "{count, plural, one {# source} other {# sources}}"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count, plural, one {# updated source} other {# updated sources}}"
+msgstr "{count, plural, one {# source mise à jour} other {# sources mises à jour}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# warning} other {# warnings}}"
+msgstr "{count, plural, one {# avertissement} other {# avertissements}}"
+
+#: packages/ui/src/finding-decision-help.ts
+msgid "{count, plural, one {Includes # word-match coverage finding; accepting it asks the author to add the job's wording.} other {Includes # word-match coverage findings; accepting them asks the author to add the job's wording.}}"
+msgstr "{count, plural, one {Inclut # constat de couverture par mots-clés ; l’accepter demande au rédacteur de reprendre les termes de l’offre.} other {Inclut # constats de couverture par mots-clés ; les accepter demande au rédacteur de reprendre les termes de l’offre.}}"
+
+#: packages/ui/src/known-gaps.ts
+msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
+msgstr "{count, plural, one {Marquer # lacune confirmée comme connue} other {Marquer # lacunes confirmées comme connues}}"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count} new"
+msgstr "{count} nouvelles"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count} retired"
+msgstr "{count} retirées"
+
+#: packages/ui/src/profile-freshness.ts
+msgid "{count} updated"
+msgstr "{count} mises à jour"
+
+#: packages/ui/src/start-requirements-model.ts
+msgid "{counts} A draft cannot start a run until you review it."
+msgstr "{counts} Un brouillon ne peut pas lancer d’exécution tant que vous ne l’avez pas relu."
+
+#: packages/ui/src/start-requirements-model.ts
+msgid "{counts} Runs start from these requirements."
+msgstr "{counts} Les exécutions partent de ces exigences."
+
+#: packages/ui/src/review-panels.tsx
+msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
+msgstr "{hiddenCount, plural, one {Afficher # événement antérieur} other {Afficher # événements antérieurs}}"
+
 #: apps/web/src/records.tsx
 msgid "{id} (new, set it up when you open it)"
 msgstr "{id} (nouveau, configurez-le à l’ouverture)"
+
+#: apps/web/src/screening-model.ts
+msgid "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
+msgstr "{knowledge, plural, one {# source de connaissances} other {# sources de connaissances}}"
 
 #: packages/ui/src/app.tsx
 msgid "{label} company"
@@ -232,18 +467,54 @@ msgstr "Entreprise {label}"
 msgid "{label} model"
 msgstr "Modèle {label}"
 
-#. placeholder {0}: legacyCount === 1 ? "" : "s"
 #: packages/ui/src/career-evidence-card.tsx
-msgid "{legacyCount} source{0} ready"
-msgstr "{legacyCount} source{0} prête{0}"
+msgid "{legacyCount, plural, one {# source ready} other {# sources ready}}"
+msgstr "{legacyCount, plural, one {# source prête} other {# sources prêtes}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{limit, plural, one {Your plan allows # run a day, and today's is used. Try again later.} other {Your plan allows # runs a day, and today's are used. Try again later.}}"
+msgstr "{limit, plural, one {Votre offre permet # exécution par jour, et celle d’aujourd’hui est utilisée. Réessayez plus tard.} other {Votre offre permet # exécutions par jour, et celles d’aujourd’hui sont utilisées. Réessayez plus tard.}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{limit, plural, one {Your plan allows # run at the same time, and it is running. Wait for it to finish, then try again.} other {Your plan allows # runs at the same time, and they are running. Wait for one to finish, then try again.}}"
+msgstr "{limit, plural, one {Votre offre permet # exécution à la fois, et elle est en cours. Attendez qu’elle se termine, puis réessayez.} other {Votre offre permet # exécutions à la fois, et elles sont en cours. Attendez que l’une se termine, puis réessayez.}}"
+
+#: packages/ui/src/app.tsx
+msgid "{listed} listed by the provider, and the provider had more."
+msgstr "{listed} listés par le fournisseur, qui en avait davantage."
+
+#: packages/ui/src/app.tsx
+msgid "{listed} listed by the provider."
+msgstr "{listed} listés par le fournisseur."
+
+#: packages/ui/src/app.tsx
+msgid "{listed} listed from a recent lookup, and the provider had more."
+msgstr "{listed} listés d’après une consultation récente, et le fournisseur en avait davantage."
+
+#: packages/ui/src/app.tsx
+msgid "{listed} listed from a recent lookup."
+msgstr "{listed} listés d’après une consultation récente."
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "{matched} (not a valid choice)"
 msgstr "{matched} (choix non valide)"
 
+#: packages/ui/src/opportunity-brief-review-model.ts
+msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
+msgstr "{open, plural, one {Prenez d’abord acte du problème ouvert ou résolvez-le.} other {Prenez d’abord acte des # problèmes ouverts ou résolvez-les.}}"
+
 #: packages/ui/src/review.tsx
 msgid "{pendingBulkFindingCount} finding decisions"
 msgstr "{pendingBulkFindingCount} décisions sur des constats"
+
+#. placeholder {0}: countedNouns.responsibility(selection.responsibilityCount)
+#: packages/ui/src/start-requirements-model.ts
+msgid "{requirements} · {0}"
+msgstr "{requirements} · {0}"
+
+#: packages/ui/src/profile.tsx
+msgid "{reused, plural, one {Reused # unchanged source; extracted {extracted}.} other {Reused # unchanged sources; extracted {extracted}.}}"
+msgstr "{reused, plural, one {# source inchangée réutilisée ; {extracted} extraites.} other {# sources inchangées réutilisées ; {extracted} extraites.}}"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "{role} input tokens per call"
@@ -257,9 +528,21 @@ msgstr "Jetons de sortie par appel ({role})"
 msgid "{role} planned calls"
 msgstr "Appels prévus ({role})"
 
-#: packages/ui/src/workspace-setup.tsx
-msgid "{rounds} rounds"
-msgstr "{rounds} tours"
+#: packages/ui/src/model-suggestions.tsx
+msgid "{tierLabel} tier · {profiles} · {roleStatus}"
+msgstr "Niveau {tierLabel} · {profiles} · {roleStatus}"
+
+#: packages/ui/src/run-cost.ts
+msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
+msgstr "{unpriced, plural, one {# appel de modèle n’a pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.} other {# appels de modèle n’ont pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{value, plural, one {Your plan allows # candidate record, and it is in use.} other {Your plan allows # candidate records, and all are in use.}}"
+msgstr "{value, plural, one {Votre offre permet # dossier candidat, et il est utilisé.} other {Votre offre permet # dossiers candidats, et tous sont utilisés.}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
+msgstr "{value, plural, one {Votre offre permet # place, et elle est prise.} other {Votre offre permet # places, et toutes sont prises.}}"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
@@ -276,10 +559,6 @@ msgstr "↺ tour"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "1 responsibility"
 msgstr "1 responsabilité"
-
-#: packages/ui/src/workspace-setup.tsx
-msgid "1 round"
-msgstr "1 tour"
 
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
@@ -348,11 +627,6 @@ msgstr "Accepté · révision requise"
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Acknowledge"
 msgstr "Prendre acte"
-
-#. placeholder {0}: open === 1 ? "open issue" : `${open} open issues`
-#: packages/ui/src/opportunity-brief-review-model.ts
-msgid "Acknowledge or resolve the {0} first."
-msgstr "Prenez acte ou résolvez d’abord : {0}."
 
 #: packages/ui/src/review.tsx
 msgid "Acknowledge provider transmission"
@@ -449,7 +723,7 @@ msgstr "Ajoutez l’offre d’emploi visée."
 msgid "Add to policy"
 msgstr "Ajouter à la politique"
 
-#. placeholder {0}: plural(result.sourceCount, "source")
+#. placeholder {0}: countedNouns.source(result.sourceCount)
 #: packages/ui/src/career-evidence.ts
 msgid "Added {0} from the folder to {displayName}."
 msgstr "{0} du dossier ajouté(s) à {displayName}."
@@ -609,10 +883,6 @@ msgstr "approbation et export"
 #: packages/ui/src/review.tsx
 msgid "Approval and export are unavailable until the author produces a valid draft."
 msgstr "L’approbation et l’export sont indisponibles tant que le rédacteur n’a pas produit une ébauche valide."
-
-#: packages/ui/src/review.tsx
-msgid "Approval is available with"
-msgstr "L’approbation est possible avec"
 
 #: packages/ui/src/review.tsx
 msgid "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
@@ -953,6 +1223,10 @@ msgstr "Vérification…"
 msgid "Checksum"
 msgstr "Somme de contrôle"
 
+#: packages/ui/src/app.tsx
+msgid "Choose “Other model…” to type one that is not listed."
+msgstr "Choisissez « Autre modèle… » pour en saisir un qui n’est pas listé."
+
 #: packages/ui/src/review-footer.tsx
 msgid "Choose a destination in the Save As dialog; the approved artifact will be written after you confirm."
 msgstr "Choisissez un emplacement dans la boîte Enregistrer sous ; le document approuvé sera écrit après votre confirmation."
@@ -1069,6 +1343,10 @@ msgstr "Effacer les espaces de travail récents"
 #: packages/ui/src/home.tsx
 msgid "Clear search and filter"
 msgstr "Effacer la recherche et le filtre"
+
+#: packages/ui/src/app.tsx
+msgid "Clear the filter to see all {total}, or choose “Other model…” to type an id."
+msgstr "Effacez le filtre pour voir les {total}, ou choisissez « Autre modèle… » pour saisir un identifiant."
 
 #: packages/ui/src/review.tsx
 msgid "close"
@@ -1414,6 +1692,10 @@ msgstr "Supprimer « {name} » ? Cette action est irréversible."
 #: packages/ui/src/home.tsx
 msgid "Delete {0}"
 msgstr "Supprimer {0}"
+
+#: apps/web/src/credits-model.ts
+msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
+msgstr "Supprimez un dossier dont vous n’avez plus besoin, ou demandez au propriétaire une offre plus grande, avant d’en créer un autre."
 
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder"
@@ -1836,10 +2118,6 @@ msgstr "Les éléments seront indexés au démarrage de la relecture"
 msgid "Exactly what may be transmitted"
 msgstr "Ce qui peut être transmis, exactement"
 
-#: packages/ui/src/run-details.tsx
-msgid "excerpt"
-msgstr "extrait"
-
 #: packages/ui/src/profile.tsx
 msgid "Existing reviewed profiles"
 msgstr "Profils relus existants"
@@ -1992,10 +2270,6 @@ msgstr "Impossible d’enregistrer le mode d’authentification du fournisseur."
 msgid "Field"
 msgstr "Champ"
 
-#: packages/ui/src/career-evidence-card.tsx
-msgid "file"
-msgstr "fichier"
-
 #: packages/ui/src/knowledge.tsx
 msgid "File and directory intake is unavailable in this desktop host."
 msgstr "L’ajout de fichiers et de répertoires est indisponible dans cet hôte de bureau."
@@ -2114,9 +2388,10 @@ msgstr "Dossier"
 msgid "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
 msgstr "Formule : appels × (jetons d’entrée × tarif d’entrée + jetons de sortie × tarif de sortie) ÷ 1 000 000 ; rédacteur et relecteur s’additionnent. La part de sortie inclut les jetons de raisonnement facturables le cas échéant, sans modifier les contrôles d’exécution."
 
+#. placeholder {0}: countedNouns.source(state.setup.selectedEvidenceSourceCount)
 #: packages/ui/src/run-details.tsx
-msgid "from"
-msgstr "de"
+msgid "from {0}"
+msgstr "issus de {0}"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "From the job text"
@@ -2126,9 +2401,49 @@ msgstr "D’après le texte de l’offre"
 msgid "Full draft"
 msgstr "Ébauche complète"
 
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "full source"
+msgstr "source complète"
+
 #: packages/ui/src/review.tsx
 msgid "Full source"
 msgstr "Source complète"
+
+#: packages/ui/src/start-confirmation.tsx
+msgid "Full source · {chunks} (fits)"
+msgstr "Source complète · {chunks} (tient dans le budget)"
+
+#. placeholder {0}: countedNouns.source(sourceCount)
+#: packages/ui/src/start-confirmation.tsx
+msgid "Full source · {chunks} from {0} (fits)"
+msgstr "Source complète · {chunks} issus de {0} (tient dans le budget)"
+
+#. placeholder {0}: countedNouns.chunk(mode.chunkCount)
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "Full source did not fit the evidence budget ({0}), so retrieval was used"
+msgstr "La source complète ne tenait pas dans le budget de preuves ({0}) ; la recherche a donc été utilisée"
+
+#. placeholder {0}: countedNouns.chunk(chunkCount)
+#: packages/ui/src/start-confirmation.tsx
+msgid "Full source does not fit the budget for this pair ({0}); retrieval will be used"
+msgstr "La source complète ne tient pas dans le budget de cette paire ({0}) ; la recherche sera utilisée"
+
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "full source from {sources}"
+msgstr "source complète issue de {sources}"
+
+#. placeholder {0}: countedNouns.chunk(mode.chunkCount)
+#: packages/ui/src/run-details.tsx
+msgid "full source, {0}"
+msgstr "source complète, {0}"
+
+#: packages/ui/src/run-comparison-facts.ts
+msgid "full source, {chunks}"
+msgstr "source complète, {chunks}"
+
+#: packages/ui/src/run-comparison-facts.ts
+msgid "full source, {chunks} from {sources}"
+msgstr "source complète, {chunks} issus de {sources}"
 
 #: packages/ui/src/run-details.tsx
 msgid "Gaps: central themes your evidence does not support"
@@ -2348,11 +2663,6 @@ msgstr "dans"
 msgid "In use"
 msgstr "Utilisé"
 
-#. placeholder {0}: count === 1 ? "" : "s"
-#: packages/ui/src/finding-decision-help.ts
-msgid "Includes {count} word-match coverage finding{0}; accepting them asks the author to add the job's wording."
-msgstr "Comprend {count} constat{0} de couverture par mots ; les accepter demande au rédacteur d’ajouter la formulation de l’offre."
-
 #: packages/ui/src/app.tsx
 msgid "Independence override rationale"
 msgstr "Justification de la dérogation d’indépendance"
@@ -2541,9 +2851,9 @@ msgstr "Les grandes bases de connaissances sont traitées par parties, ce qui pe
 msgid "Last activity"
 msgstr "Dernière activité"
 
-#. placeholder {0}: plural(Math.floor(elapsed / day), "day")
-#. placeholder {0}: plural(Math.floor(elapsed / hour), "hour")
-#. placeholder {0}: plural(Math.floor(elapsed / minute), "minute")
+#. placeholder {0}: countedNouns.day(Math.floor(elapsed / day))
+#. placeholder {0}: countedNouns.hour(Math.floor(elapsed / hour))
+#. placeholder {0}: countedNouns.minute(Math.floor(elapsed / minute))
 #: packages/ui/src/home-model.ts
 msgid "Last activity {0} ago"
 msgstr "Dernière activité il y a {0}"
@@ -2698,11 +3008,6 @@ msgstr "Gérer les éléments de parcours"
 msgid "Manage provider authentication"
 msgstr "Gérer l’authentification des fournisseurs"
 
-#. placeholder {0}: count === 1 ? "1 confirmed gap" : `${count} confirmed gaps`
-#: packages/ui/src/known-gaps.ts
-msgid "Mark {0} as known"
-msgstr "Marquer {0} comme connu(s)"
-
 #: packages/ui/src/review.tsx
 msgid "Mark every word that changed since the previous version"
 msgstr "Marquer chaque mot modifié depuis la version précédente"
@@ -2730,6 +3035,10 @@ msgstr "Les lignes marquées diffèrent de la version active : + uniquement dans
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Marking reviewed…"
 msgstr "Marquage comme relu…"
+
+#: apps/web/src/screening-model.ts
+msgid "material the run would use"
+msgstr "des éléments que l’exécution utiliserait"
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
@@ -2904,7 +3213,7 @@ msgstr "À traiter"
 msgid "Needs review"
 msgstr "À relire"
 
-#. placeholder {0}: plural(issueCount, "issue")
+#. placeholder {0}: countedNouns.issue(issueCount)
 #: packages/ui/src/profile-status.ts
 msgid "Needs review: {0}"
 msgstr "À relire : {0}"
@@ -2983,6 +3292,11 @@ msgstr "Nouvel espace de travail"
 msgid "Next-run model profiles"
 msgstr "Profils de modèles de la prochaine exécution"
 
+#. placeholder {0}: countedNouns.blockingFinding(revisionLeft ? undecided : blocking.length)
+#: packages/ui/src/review-work-tabs.tsx
+msgid "Next: decide {0}"
+msgstr "Ensuite : décider de {0}"
+
 #: packages/ui/src/knowledge.tsx
 msgid "No active knowledge bases are available."
 msgstr "Aucune base de connaissances active n’est disponible."
@@ -3019,6 +3333,10 @@ msgstr "pas de plafond de coût"
 msgid "no duration cap"
 msgstr "pas de plafond de durée"
 
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "No eligible chunks for full source, so retrieval was used"
+msgstr "Aucun fragment éligible pour la source complète ; la recherche a donc été utilisée"
+
 #: packages/ui/src/profile.tsx
 msgid "No facts are recorded in this version."
 msgstr "Aucun fait n’est enregistré dans cette version."
@@ -3046,12 +3364,6 @@ msgstr "Aucun problème n’est enregistré dans cette version."
 #: packages/ui/src/career-evidence-card.tsx
 msgid "No knowledge base selected — runs will use legacy workspace evidence"
 msgstr "Aucune base de connaissances choisie — les exécutions utiliseront les éléments de l’ancien espace de travail"
-
-#. placeholder {0}: state.setup.selectedEvidenceChunkCount
-#. placeholder {1}: state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"
-#: packages/ui/src/review.tsx
-msgid "No lexical match; using {0} bounded fallback excerpt{1} from career evidence"
-msgstr "Aucune correspondance lexicale ; utilisation de {0} extrait{1} de repli limité des éléments de parcours"
 
 #: packages/ui/src/review.tsx
 msgid "No linked claim for this finding."
@@ -3100,6 +3412,11 @@ msgstr "Aucune règle : toutes les sections peuvent être utilisées."
 #: packages/ui/src/home-model.ts
 msgid "No runs yet"
 msgstr "Aucune exécution"
+
+#. placeholder {0}: countedNouns.requirement(unmatchedRequirements.length)
+#: packages/ui/src/run-author-input-display.ts
+msgid "No sent evidence for {0}"
+msgstr "Aucune preuve envoyée pour {0}"
 
 #: apps/web/src/refusal-text.ts
 msgid "No such job brief."
@@ -3169,6 +3486,10 @@ msgstr "Pas maintenant"
 msgid "Not recorded yet."
 msgstr "Pas encore enregistré."
 
+#: packages/ui/src/model-suggestions.tsx
+msgid "not registered for {roleName}"
+msgstr "non enregistré pour {roleName}"
+
 #: apps/web/src/screening-model.ts
 msgid "Not screened"
 msgstr "Non filtré"
@@ -3212,6 +3533,17 @@ msgstr "Rien n’a été enregistré. Réessayez."
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "of"
 msgstr "sur"
+
+#. placeholder {0}: chunk(knowledgeChunkCount)
+#: packages/ui/src/run-author-input-display.ts
+msgid "of {0}"
+msgstr "sur {0}"
+
+#. placeholder {0}: chunk(knowledgeChunkCount)
+#. placeholder {1}: fact(knowledgeFactCount)
+#: packages/ui/src/run-author-input-display.ts
+msgid "of {0} and {1}"
+msgstr "sur {0} et {1}"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "One"
@@ -3383,6 +3715,12 @@ msgstr "Pas à jour par rapport à vos éléments"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Output tokens per call"
 msgstr "Jetons de sortie par appel"
+
+#. placeholder {0}: countedNouns.requirement(tallies.requirements.total)
+#. placeholder {1}: countedNouns.responsibility(tallies.responsibilities.total)
+#: packages/ui/src/coverage-kinds.ts
+msgid "over {0}, not the {1}"
+msgstr "sur {0}, pas sur les {1}"
 
 #: packages/ui/src/review.tsx
 msgid "override"
@@ -3636,6 +3974,10 @@ msgstr "Lire l’ébauche telle quelle, sans marques de modification"
 msgid "Read the job"
 msgstr "Lire l’offre"
 
+#: packages/ui/src/career-evidence.ts
+msgid "Readiness could not be checked."
+msgstr "L’état de préparation n’a pas pu être vérifié."
+
 #. placeholder {0}: result.readyCount
 #. placeholder {1}: result.blockedCount
 #. placeholder {2}: result.sourceCount
@@ -3772,6 +4114,10 @@ msgstr "Enregistrement… dites votre réponse."
 msgid "Refresh"
 msgstr "Actualiser"
 
+#: packages/ui/src/model-suggestions.tsx
+msgid "registered for {roleName}"
+msgstr "enregistré pour {roleName}"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Reinstall model"
 msgstr "Réinstaller le modèle"
@@ -3814,6 +4160,10 @@ msgstr "Retirer {0} des espaces de travail récents"
 #: apps/web/src/records.tsx
 msgid "Remove {0} from this record"
 msgstr "Retirer {0} de ce dossier"
+
+#: apps/web/src/credits-model.ts
+msgid "Remove a member, or ask the owner for a bigger plan, before inviting someone."
+msgstr "Retirez un membre, ou demandez au propriétaire une offre plus grande, avant d’inviter quelqu’un."
 
 #: packages/ui/src/profile.tsx
 msgid "Remove fact"
@@ -3873,6 +4223,10 @@ msgstr "Renommez le fichier sans barres obliques ni caractères de contrôle."
 msgid "Rename workspace {name}"
 msgstr "Renommer l’espace de travail {name}"
 
+#: packages/ui/src/career-evidence.ts
+msgid "Reopen the workspace to refresh the review."
+msgstr "Rouvrez l’espace de travail pour actualiser la relecture."
+
 #: packages/ui/src/application-steps.tsx
 msgid "Replace job description"
 msgstr "Remplacer l’offre d’emploi"
@@ -3885,11 +4239,10 @@ msgstr "Remplacer la politique"
 msgid "Replace the job description"
 msgstr "Remplacer l’offre d’emploi"
 
-#. placeholder {0}: acceptedBlockingFindings.length
-#. placeholder {1}: acceptedBlockingFindings.length === 1 ? "" : "s"
+#. placeholder {0}: countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)
 #: packages/ui/src/review.tsx
-msgid "Request a revision for {0} accepted blocking finding{1}, or reject or override the finding if it does not apply."
-msgstr "Demandez une révision pour {0} constat{1} bloquant accepté, ou rejetez le constat ou dérogez-y s’il ne s’applique pas."
+msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
+msgstr "Demandez une révision pour {0}, ou rejetez ou levez le constat s’il ne s’applique pas."
 
 #: packages/ui/src/review-footer.tsx
 msgid "Request revision"
@@ -3987,11 +4340,10 @@ msgstr "Résolvez les problèmes du brouillon ou prenez-en acte, puis enregistre
 msgid "Resolve or acknowledge each open issue, save, then mark the profile reviewed."
 msgstr "Résolvez chaque problème ouvert ou prenez-en acte, enregistrez, puis marquez le profil comme relu."
 
-#. placeholder {0}: blockingFindings.length
-#. placeholder {1}: blockingFindings.length === 1 ? "" : "s"
+#. placeholder {0}: countedNouns.blockingFinding(blockingFindings.length)
 #: packages/ui/src/review.tsx
-msgid "Resolve or override {0} blocking finding{1} before approval."
-msgstr "Résolvez {0} constat{1} bloquant ou dérogez-y avant l’approbation."
+msgid "Resolve or override {0} before approval."
+msgstr "Résolvez ou levez {0} avant l’approbation."
 
 #: packages/ui/src/profile.tsx
 msgid "Resolved"
@@ -4047,6 +4399,14 @@ msgstr "Reprenez la relecture pour que le relecteur puisse la vérifier. L’app
 msgid "Retention preference"
 msgstr "Préférence de conservation"
 
+#: packages/ui/src/run-comparison-facts.ts
+msgid "retrieval (full source of {chunks} did not fit)"
+msgstr "recherche (la source complète de {chunks} ne tenait pas)"
+
+#: packages/ui/src/run-comparison-facts.ts
+msgid "retrieval (no full-source chunks)"
+msgstr "recherche (aucun fragment de source complète)"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Retrieval mode"
 msgstr "Mode de recherche"
@@ -4054,6 +4414,26 @@ msgstr "Mode de recherche"
 #: packages/ui/src/review.tsx
 msgid "Retrieval readiness is unavailable"
 msgstr "L’état de préparation de la recherche est indisponible"
+
+#: packages/ui/src/run-comparison-facts.ts
+msgid "retrieval, {chunks}"
+msgstr "recherche, {chunks}"
+
+#: packages/ui/src/run-comparison-facts.ts
+msgid "retrieval, {chunks} from {sources}"
+msgstr "recherche, {chunks} issus de {sources}"
+
+#: packages/ui/src/run-details.tsx
+msgid "retrieval, {counted}"
+msgstr "recherche, {counted}"
+
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "retrieval; full source did not fit"
+msgstr "recherche ; la source complète ne tenait pas"
+
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "retrieval; no full-source chunks"
+msgstr "recherche ; aucun fragment de source complète"
 
 #. placeholder {0}: state.providerFailure.step
 #: packages/ui/src/review.tsx
@@ -4313,12 +4693,6 @@ msgstr "Les exécutions utilisent ces fichiers tant qu’aucune base de connaiss
 #: packages/ui/src/model-profile-details.tsx
 msgid "Runtime controls"
 msgstr "Contrôles d’exécution"
-
-#: packages/ui/src/career-evidence-card.tsx
-#: packages/ui/src/review.tsx
-#: packages/ui/src/run-details.tsx
-msgid "s"
-msgstr "s"
 
 #: apps/web/src/private-sections.tsx
 msgid "Salary"
@@ -4583,11 +4957,6 @@ msgstr "Afficher"
 msgid "Show {0}"
 msgstr "Afficher {0}"
 
-#. placeholder {0}: hiddenCount === 1 ? "" : "s"
-#: packages/ui/src/review-panels.tsx
-msgid "Show {hiddenCount} earlier event{0}"
-msgstr "Afficher {hiddenCount} événement{0} antérieur{0}"
-
 #: packages/ui/src/coverage-panel.tsx
 msgid "show all"
 msgstr "tout afficher"
@@ -4620,6 +4989,11 @@ msgstr "Afficher la ligne de l’ébauche d’où vient cette affirmation"
 #: packages/ui/src/coverage-panel.tsx
 msgid "Show this block in the draft"
 msgstr "Afficher ce bloc dans l’ébauche"
+
+#. placeholder {0}: matched.size
+#: packages/ui/src/app.tsx
+msgid "Showing {0} of {total} matching “{wanted}”"
+msgstr "{0} sur {total} correspondant à « {wanted} »"
 
 #: packages/ui/src/review.tsx
 msgid "shown"
@@ -4673,10 +5047,6 @@ msgstr "Annonce sur les réseaux sociaux"
 #: packages/ui/src/home-applications-view.tsx
 msgid "Sort"
 msgstr "Trier"
-
-#: packages/ui/src/run-details.tsx
-msgid "source"
-msgstr "source"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
@@ -4836,10 +5206,6 @@ msgstr "Résumé à conserver"
 #: packages/ui/src/model-profile-details.tsx
 msgid "Supported with the configured authentication route"
 msgstr "Pris en charge avec la route d’authentification configurée"
-
-#: packages/ui/src/run-details.tsx
-msgid "supporting accomplishment"
-msgstr "réalisation à l’appui"
 
 #: packages/ui/src/run-comparison.tsx
 msgid "Swap sides"
@@ -5093,6 +5459,10 @@ msgid "The interviewer is writing…"
 msgstr "L’intervieweur écrit…"
 
 #: apps/web/src/screening-model.ts
+msgid "the job brief"
+msgstr "le brief du poste"
+
+#: apps/web/src/screening-model.ts
 msgid "The job brief"
 msgstr "Le brief de l’offre"
 
@@ -5310,6 +5680,10 @@ msgstr "Le résumé indique"
 msgid "The token endpoint answered {0}."
 msgstr "Le point d’accès des jetons a répondu {0}."
 
+#: packages/ui/src/run-cost.ts
+msgid "The total is a lower bound."
+msgstr "Le total est une borne inférieure."
+
 #: apps/web/src/http-bridge.ts
 msgid "The workspace has no default application."
 msgstr "L’espace de travail n’a pas de candidature par défaut."
@@ -5461,7 +5835,7 @@ msgstr "Cette exécution demande plus de crédits"
 msgid "This run uses {0}."
 msgstr "Cette exécution utilise {0}."
 
-#. placeholder {0}: parts.length > 0 ? parts.join(" and ") : "material the run would use"
+#. placeholder {0}: parts.length > 0 ? parts.join(t` and `) : t`material the run would use`
 #: apps/web/src/screening-model.ts
 msgid "This run was not started. Injection screening quarantined {0}. Release it, or replace it, then start the run again."
 msgstr "Cette exécution n’a pas été lancée. Le filtrage des injections a mis en quarantaine : {0}. Libérez-le ou remplacez-le, puis relancez l’exécution."
@@ -5603,10 +5977,6 @@ msgstr "Crédits illimités"
 msgid "Unlisted source"
 msgstr "Source non listée"
 
-#: packages/ui/src/review.tsx
-msgid "unresolved non-blocking warning"
-msgstr "avertissement non bloquant non résolu"
-
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
 msgstr "Non pris en charge"
@@ -5732,7 +6102,7 @@ msgid "Used for applications"
 msgstr "Utilisé pour les candidatures"
 
 #. placeholder {0}: selection.version
-#. placeholder {1}: plural(selection.requirementCount, "requirement")
+#. placeholder {1}: countedNouns.requirement(selection.requirementCount)
 #. placeholder {2}: selection.criticalCount
 #: packages/ui/src/start-requirements-model.ts
 msgid "Using reviewed requirements: brief v{0} · {1} · {2} critical{responsibilities}"
@@ -5921,9 +6291,10 @@ msgstr "Traitement…"
 msgid "Workspace activity"
 msgstr "Activité de l’espace de travail"
 
+#. placeholder {0}: countedNouns.file(legacyCount)
 #: packages/ui/src/career-evidence-card.tsx
-msgid "Workspace evidence files:"
-msgstr "Fichiers d’éléments de l’espace de travail :"
+msgid "Workspace evidence files: {0}"
+msgstr "Fichiers de preuves de l’espace de travail : {0}"
 
 #: packages/ui/src/home.tsx
 msgid "Workspace location"
@@ -6075,26 +6446,6 @@ msgstr "Votre organisation n’a pas encore d’offre."
 #: apps/web/src/credits-model.ts
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Votre organisation n’a pas encore d’offre. Demandez au propriétaire d’en choisir une."
-
-#. placeholder {0}: plural(limit, "run", "runs")
-#: apps/web/src/credits-model.ts
-msgid "Your plan allows {0} a day, and today's are used. Try again later."
-msgstr "Votre offre autorise {0} par jour, et celles d’aujourd’hui sont utilisées. Réessayez plus tard."
-
-#. placeholder {0}: plural(limit, "run", "runs")
-#: apps/web/src/credits-model.ts
-msgid "Your plan allows {0} at the same time, and they are running. Wait for one to finish, then try again."
-msgstr "Votre offre autorise {0} simultanément, et elles sont en cours. Attendez qu’une se termine, puis réessayez."
-
-#. placeholder {0}: plural(value, "candidate record", "candidate records")
-#: apps/web/src/credits-model.ts
-msgid "Your plan allows {0}, and all are in use."
-msgstr "Votre offre autorise {0}, et tous sont utilisés."
-
-#. placeholder {0}: plural(value, "seat", "seats")
-#: apps/web/src/credits-model.ts
-msgid "Your plan allows {0}, and all are taken."
-msgstr "Votre offre autorise {0}, et toutes sont prises."
 
 #. placeholder {0}: models.toLowerCase()
 #: apps/web/src/credits-model.ts

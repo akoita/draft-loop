@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { canManageMembers } from "./records-model.js";
 
@@ -116,14 +116,14 @@ export function quarantineRefusal(error: unknown): QuarantineRefusal | undefined
   const job = items.filter((item) => item.kind === "job-source").length;
   const knowledge = items.length - job;
   const parts = [
-    ...(job > 0 ? ["the job brief"] : []),
+    ...(job > 0 ? [t`the job brief`] : []),
     ...(knowledge > 0
-      ? [knowledge === 1 ? "1 knowledge source" : `${knowledge} knowledge sources`]
+      ? [plural(knowledge, { one: "# knowledge source", other: "# knowledge sources" })]
       : []),
   ];
   return {
     message: t`This run was not started. Injection screening quarantined ${
-      parts.length > 0 ? parts.join(" and ") : "material the run would use"
+      parts.length > 0 ? parts.join(t` and `) : t`material the run would use`
     }. Release it, or replace it, then start the run again.`,
     items,
   };

@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import type { OpportunityLatestBrief } from "./bridge.js";
+import { countedNouns } from "./counted-nouns.js";
 
 /** The reviewed brief a run would start from: the latest version, reviewed and selected. */
 export interface ReviewedRequirementsSelection {
@@ -13,10 +14,6 @@ export interface ReviewedRequirementsSelection {
 
 /** DOM id of the extraction control on setup card 01, so the start blocker can scroll to it. */
 export const jobRequirementsExtractionId = "job-requirements-extraction";
-
-function plural(count: number, noun: string, nouns = `${noun}s`): string {
-  return `${count} ${count === 1 ? noun : nouns}`;
-}
 
 /**
  * The reviewed brief the host will bind when a run starts, or `null`. It must be the workspace's
@@ -53,10 +50,10 @@ export function reviewedRequirementsSelection(
 export function reviewedRequirementsCounts(
   selection: Pick<ReviewedRequirementsSelection, "requirementCount" | "responsibilityCount">,
 ): string {
-  const requirements = plural(selection.requirementCount, "requirement");
+  const requirements = countedNouns.requirement(selection.requirementCount);
   return selection.responsibilityCount === 0
     ? requirements
-    : `${requirements} · ${plural(selection.responsibilityCount, "responsibility", "responsibilities")}`;
+    : t`${requirements} · ${countedNouns.responsibility(selection.responsibilityCount)}`;
 }
 
 /** "Using reviewed requirements: brief v3 · 18 requirements · 4 critical · 5 responsibilities" */
@@ -64,8 +61,8 @@ export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelecti
   const responsibilities =
     selection.responsibilityCount === 0
       ? ""
-      : ` · ${plural(selection.responsibilityCount, "responsibility", "responsibilities")}`;
-  return t`Using reviewed requirements: brief v${selection.version} · ${plural(selection.requirementCount, "requirement")} · ${selection.criticalCount} critical${responsibilities}`;
+      : ` · ${countedNouns.responsibility(selection.responsibilityCount)}`;
+  return t`Using reviewed requirements: brief v${selection.version} · ${countedNouns.requirement(selection.requirementCount)} · ${selection.criticalCount} critical${responsibilities}`;
 }
 
 export const rawJobDescriptionLabel =
@@ -194,10 +191,10 @@ export function latestBriefNote(latest: OpportunityLatestBrief): string {
   if (extractionPending(latest)) return pendingExtractionNote;
   if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote;
   if (isEmptyDraftBrief(latest)) return `${noRequirementsFoundTitle}. ${noRequirementsFoundNote}`;
-  const counts = `${plural(latest.requirementCount, "requirement")}, ${latest.criticalCount} critical.`;
+  const counts = t`${countedNouns.requirement(latest.requirementCount)}, ${latest.criticalCount} critical.`;
   return latest.status === "draft"
-    ? `${counts} A draft cannot start a run until you review it.`
-    : `${counts} Runs start from these requirements.`;
+    ? t`${counts} A draft cannot start a run until you review it.`
+    : t`${counts} Runs start from these requirements.`;
 }
 
 /**

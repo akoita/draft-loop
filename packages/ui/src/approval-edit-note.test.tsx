@@ -27,7 +27,7 @@ describe("the candidate's edits at approval", () => {
 
     expect(approvalEditNote(fixture.artifact, new Set())).toBeNull();
     expect(approvalEditNote(edited.artifact, new Set())).toBe(
-      `Approving makes v${version + 1} with your 1 edit; the critic has not reviewed them.`,
+      `Approving makes v${version + 1} with your 1 edit; the critic has not reviewed it.`,
     );
     const firstId = edited.artifact.sections[0]?.blocks[0]?.id ?? "";
     expect(approvalEditNote(edited.artifact, new Set([firstId, "another-block"]))).toBe(

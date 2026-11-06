@@ -4,6 +4,7 @@ import type {
   KnowledgeReadinessResult,
   KnowledgeUrlImportResult,
 } from "./bridge.js";
+import { countedNouns } from "./counted-nouns.js";
 import type { KnowledgeIntakeResult } from "./knowledge-intake.js";
 import type {
   DesktopKnowledgeCapabilities,
@@ -118,14 +119,10 @@ export function careerEvidenceReady(
     : status.kind !== "unavailable" && workspaceEvidenceSourceCount > 0;
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 export function careerEvidenceSourcesText(
   status: Extract<CareerEvidenceStatus, { kind: "selected" }>,
 ): string {
-  return `${status.displayName} · ${plural(status.sourceCount, "source")}`;
+  return t`${status.displayName} · ${countedNouns.source(status.sourceCount)}`;
 }
 
 export function careerEvidenceReadinessText(
@@ -156,7 +153,7 @@ function careerEvidenceAddLead(
 
 /** Says how many of the folder's files reached the base, and when the import stopped early. */
 function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
-  const lead = t`Added ${plural(result.sourceCount, "source")} from the folder to ${displayName}.`;
+  const lead = t`Added ${countedNouns.source(result.sourceCount)} from the folder to ${displayName}.`;
   return result.status === "partial" ? `${lead} Some files could not be imported.` : lead;
 }
 
@@ -230,8 +227,8 @@ export async function addCareerEvidence(input: {
   const lead = careerEvidenceAddLead(result, input.displayName);
   const counts =
     readiness === null
-      ? " Readiness could not be checked."
-      : ` ${plural(readiness.sourceCount, "source")}, ${readiness.readyCount} ready.`;
-  const reopen = refreshFailed ? " Reopen the workspace to refresh the review." : "";
+      ? ` ${t`Readiness could not be checked.`}`
+      : ` ${t`${countedNouns.source(readiness.sourceCount)}, ${readiness.readyCount} ready.`}`;
+  const reopen = refreshFailed ? ` ${t`Reopen the workspace to refresh the review.`}` : "";
   return { status: "added", message: `${lead}${counts}${reopen}` };
 }

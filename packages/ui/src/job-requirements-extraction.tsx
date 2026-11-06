@@ -9,6 +9,7 @@ import {
   type OpportunityRecordResult,
   opportunityExtractionCancelledMessage,
 } from "./bridge.js";
+import { countedNouns } from "./counted-nouns.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";
@@ -84,10 +85,6 @@ export function summarizeJobRequirements(record: OpportunityRecordResult): JobRe
     responsibilityCount: record.responsibilities.length,
     issues: record.issues.filter((issue) => issue.status === "open"),
   };
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function issueLabel(issue: OpportunityIssueResult): string {
@@ -334,7 +331,7 @@ export function JobRequirementsExtractionView({
             <div>
               <dt>{t`Extracted`}</dt>
               <dd>
-                {plural(phase.summary.requirementCount, "requirement")},{" "}
+                {countedNouns.requirement(phase.summary.requirementCount)},{" "}
                 {phase.summary.responsibilityCount === 1
                   ? t`1 responsibility`
                   : t`${phase.summary.responsibilityCount} responsibilities`}

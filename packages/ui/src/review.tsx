@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import {
   type CSSProperties,
   type ReactNode,
@@ -23,6 +23,7 @@ import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-
 import { approvalReadinessForArtifact, approvalReadinessGuidance } from "./approval-readiness.js";
 import { AutopilotToggle } from "./autopilot-toggle.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
+import { countedNouns } from "./counted-nouns.js";
 import { RequirementCoveragePanel } from "./coverage-panel.js";
 import { savingEditsBlocker, useDraftEditBuffer } from "./draft-edit-buffer.js";
 import { BlockRedline, type DraftBlockPair, pairDraftSections } from "./draft-redline.js";
@@ -140,7 +141,8 @@ import {
   RunTrustWarning,
   runDetailsSummary,
 } from "./run-details.js";
-import { type RunEvidenceModeView, runEvidenceModeDisplay } from "./run-evidence-mode.js";
+import type { RunEvidenceModeView } from "./run-evidence-mode.js";
+import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, SidePanelToggle, useSidePanelWidth } from "./side-panel-width.js";
@@ -743,7 +745,7 @@ function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
 
 function retryWaitLabel(waitMs: number): string {
   const seconds = Math.max(1, Math.ceil(waitMs / 1_000));
-  return `${seconds} second${seconds === 1 ? "" : "s"}`;
+  return countedNouns.second(seconds);
 }
 
 /**
@@ -943,8 +945,11 @@ export function approvalEditNote(
   for (const section of artifact.sections)
     for (const block of section.blocks) if (block.edited === true) edited.add(block.id);
   if (edited.size === 0) return null;
-  const edits = `your ${edited.size} edit${edited.size === 1 ? "" : "s"}`;
-  return `Approving makes v${artifact.version + 1} with ${edits}; the critic has not reviewed them.`;
+  const version = artifact.version + 1;
+  return plural(edited.size, {
+    one: `Approving makes v${version} with your # edit; the critic has not reviewed it.`,
+    other: `Approving makes v${version} with your # edits; the critic has not reviewed them.`,
+  });
 }
 
 export function ReviewWorkspace({
@@ -1128,9 +1133,12 @@ export function ReviewWorkspace({
               : state.state === "provider-error"
                 ? "Provider recovery remains before approval"
                 : findingSummary.status === "blocked"
-                  ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+                  ? countedNouns.blockingFinding(blockingFindings.length)
                   : findingSummary.status === "warnings"
-                    ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+                    ? plural(warnings.length, {
+                        one: "# unresolved warning",
+                        other: "# unresolved warnings",
+                      })
                     : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
@@ -1895,7 +1903,10 @@ export function ReviewWorkspace({
         : !state.reviewComplete
           ? "Independent critique has not completed."
           : blockingFindings.length > 0
-            ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " still needs" : "s still need"} a decision.`
+            ? plural(blockingFindings.length, {
+                one: "# blocking finding still needs a decision.",
+                other: "# blocking findings still need a decision.",
+              })
             : state.state !== "awaiting-approval"
               ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
               : pendingActionReason,
@@ -3109,9 +3120,13 @@ export function ReviewWorkspace({
                   {evidenceMode !== undefined
                     ? evidenceMode.stripStatus
                     : state.setup.retrievalStatus === "matched"
-                      ? t`${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                      ? t`${plural(state.setup.selectedEvidenceChunkCount, { one: "# relevant excerpt", other: "# relevant excerpts" })} selected from ${plural(state.setup.selectedEvidenceSourceCount, { one: "# career-evidence source", other: "# career-evidence sources" })}`
                       : state.setup.retrievalStatus === "fallback"
-                        ? t`No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
+                        ? plural(state.setup.selectedEvidenceChunkCount, {
+                            one: "No lexical match; using # bounded fallback excerpt from career evidence",
+                            other:
+                              "No lexical match; using # bounded fallback excerpts from career evidence",
+                          })
                         : state.setup.retrievalStatus === "not-indexed"
                           ? notIndexedRetrievalText(state)
                           : state.setup.retrievalStatus === "no-query"
@@ -3515,7 +3530,7 @@ export function ReviewWorkspace({
                       ? t`Not evaluated`
                       : queueCounts.needsAction === 0
                         ? t`All resolved`
-                        : t`${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
+                        : t`${queueCounts.blocking} blocking · ${countedNouns.warning(queueCounts.warnings)}`}
                   </span>
                 </div>
                 <fieldset className="finding-filters">
@@ -3940,10 +3955,13 @@ export function ReviewWorkspace({
               ) : blockingFindings.length > 0 ? (
                 <p className="warning-copy">
                   {state.approval === "approved"
-                    ? t`${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`
+                    ? plural(blockingFindings.length, {
+                        one: "# blocking finding remains unresolved after approval.",
+                        other: "# blocking findings remain unresolved after approval.",
+                      })
                     : acceptedBlockingFindings.length > 0
-                      ? t`Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
-                      : t`Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
+                      ? t`Request a revision for ${countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)}, or reject or override the finding if it does not apply.`
+                      : t`Resolve or override ${countedNouns.blockingFinding(blockingFindings.length)} before approval.`}
                 </p>
               ) : knownGapOverride !== null && state.approval !== "approved" ? (
                 <p className="warning-copy">{t`The final CV checks fail only on the gaps you marked as known. Approving records your reasons as the override.`}</p>
@@ -3965,10 +3983,11 @@ export function ReviewWorkspace({
                 </div>
               ) : warnings.length > 0 ? (
                 <p className="warning-copy">
-                  {t`Approval is available with`} {warnings.length}{" "}
-                  {t`unresolved non-blocking warning`}
-                  {warnings.length === 1 ? "" : t`s`}
-                  {t`. They remain visible after approval.`}
+                  {plural(warnings.length, {
+                    one: "Approval is available with # unresolved non-blocking warning. It remains visible after approval.",
+                    other:
+                      "Approval is available with # unresolved non-blocking warnings. They remain visible after approval.",
+                  })}
                 </p>
               ) : state.state === "provider-error" ? (
                 <p className="warning-copy">{t`No unresolved blocking findings; provider recovery remains before approval.`}</p>

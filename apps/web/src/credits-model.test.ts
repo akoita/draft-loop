@@ -189,7 +189,7 @@ describe("plan refusal messages", () => {
       "Your plan allows 2 runs at the same time, and they are running. Wait for one to finish, then try again.",
     );
     expect(planRefusalMessage(refusal(429, "run_cap_reached", { cap: "per_day", limit: 1 }))).toBe(
-      "Your plan allows 1 run a day, and today's are used. Try again later.",
+      "Your plan allows 1 run a day, and today's is used. Try again later.",
     );
     expect(planRefusalMessage(refusal(429, "run_cap_reached", { cap: "per_day" }))).toBe(
       "Your plan's runs for today are used. Try again later.",
@@ -207,7 +207,7 @@ describe("plan refusal messages", () => {
         refusal(409, "plan_limit_reached", { limit: "candidateRecords", value: 1 }),
       ),
     ).toBe(
-      "Your plan allows 1 candidate record, and all are in use. Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.",
+      "Your plan allows 1 candidate record, and it is in use. Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.",
     );
     expect(planRefusalMessage(refusal(409, "plan_limit_reached"))).toContain("limit is reached");
   });
