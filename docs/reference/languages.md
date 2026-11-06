@@ -14,9 +14,9 @@ interview questions.
 | German, Spanish, Italian, Dutch, Portuguese | Not offered | Preview: drafts work, but prompts, checks and export are not tuned yet |
 
 **Beta** means every screen message has a French translation, but it has not
-had a professional review. Some counted words ("3 runs") and language names
-still show in English; [#2372](https://github.com/akoita/draft-loop/issues/2372)
-tracks them. Legal pages stay in English.
+had a professional review. Counted words ("3 runs") take each language's
+plural forms. A few status lines and the document language names still show in
+English. Legal pages stay in English.
 
 ## Choose the screen language
 

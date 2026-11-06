@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 /**
  * Run provenance in a drawer: the review header summarises the run in one line, and **Run
  * details** opens a drawer from the right with the rest.
@@ -18,6 +18,7 @@ import { t } from "@lingui/core/macro";
  */
 
 import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
+import { countedNouns } from "./counted-nouns.js";
 import { formatDateTime } from "./locale-format.js";
 import {
   type DesktopReviewState,
@@ -38,17 +39,13 @@ import {
   reviewInProgress,
 } from "./review-run-status.js";
 import { runApplicationPlanDisplay } from "./run-application-plan.js";
-import { runAuthorInputDisplay } from "./run-author-input.js";
-import { runEvidenceModeDisplay } from "./run-evidence-mode.js";
+import { runAuthorInputDisplay } from "./run-author-input-display.js";
+import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 import { plainStopReason } from "./stop-reason.js";
 
 /** The time a direction was given, in the reader's locale; the recorded text when unreadable. */
 function formatDirectionTime(createdAt: string): string {
   return formatDateTime(createdAt) ?? createdAt;
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /** A model's short name for the header line: "Opus 5.5" rather than "claude-opus-5-5". */
@@ -99,13 +96,14 @@ type RunDetailsSummaryInput = Pick<
 function evidenceSummary(state: RunDetailsSummaryInput): string {
   const mode = state.evidenceMode;
   if (mode?.requestedMode === "full-source" && mode.effectiveMode === "full-source") {
-    return `full source, ${plural(mode.chunkCount, "chunk")}`;
+    return t`full source, ${countedNouns.chunk(mode.chunkCount)}`;
   }
-  const fallback = runEvidenceModeDisplay(mode)?.kind === "fallback" ? "retrieval, " : "";
-  if (state.setup.retrievalStatus === "not-indexed") {
-    return `${fallback}${plural(state.setup.evidenceSourceCount, "source")}`;
-  }
-  return `${fallback}${plural(state.setup.selectedEvidenceChunkCount, "excerpt")}`;
+  const fallback = runEvidenceModeDisplay(mode)?.kind === "fallback";
+  const counted =
+    state.setup.retrievalStatus === "not-indexed"
+      ? countedNouns.source(state.setup.evidenceSourceCount)
+      : countedNouns.excerpt(state.setup.selectedEvidenceChunkCount);
+  return fallback ? t`retrieval, ${counted}` : counted;
 }
 
 /**
@@ -351,24 +349,19 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           // Setup has not searched the evidence yet, so there are no excerpt counts to show.
           <>
             <strong className="numeric">
-              {state.setup.evidenceSourceCount} {t`source`}
-              {state.setup.evidenceSourceCount === 1 ? "" : t`s`}
+              {countedNouns.source(state.setup.evidenceSourceCount)}
             </strong>
             <span>{notIndexedRetrievalText(state)}</span>
           </>
         ) : (
           <>
             <strong className="numeric">
-              {state.setup.selectedEvidenceChunkCount} {t`excerpt`}
-              {state.setup.selectedEvidenceChunkCount === 1 ? "" : t`s`}
+              {countedNouns.excerpt(state.setup.selectedEvidenceChunkCount)}
             </strong>
             {evidenceMode?.kind === "fallback" ? (
               <span>{evidenceMode.panelDetail}</span>
             ) : (
-              <span>
-                {t`from`} {state.setup.selectedEvidenceSourceCount} {t`source`}
-                {state.setup.selectedEvidenceSourceCount === 1 ? "" : t`s`}
-              </span>
+              <span>{t`from ${countedNouns.source(state.setup.selectedEvidenceSourceCount)}`}</span>
             )}
           </>
         )}
@@ -408,8 +401,10 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
               <li key={theme.title}>
                 <strong>{theme.title}</strong> <span>{theme.rationale}</span>{" "}
                 <span className="numeric">
-                  {theme.proofCount} {t`supporting accomplishment`}
-                  {theme.proofCount === 1 ? "" : t`s`}
+                  {plural(theme.proofCount, {
+                    one: "# supporting accomplishment",
+                    other: "# supporting accomplishments",
+                  })}
                 </span>
               </li>
             ))}

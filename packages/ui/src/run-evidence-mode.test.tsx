@@ -3,11 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
-import {
-  normalizeRunEvidenceMode,
-  type RunEvidenceModeView,
-  runEvidenceModeDisplay,
-} from "./run-evidence-mode.js";
+import { normalizeRunEvidenceMode, type RunEvidenceModeView } from "./run-evidence-mode.js";
+import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 
 const fullSource: RunEvidenceModeView = {
   requestedMode: "full-source",

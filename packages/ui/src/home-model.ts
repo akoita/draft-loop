@@ -12,6 +12,7 @@ import {
   careerEvidenceReadinessText,
   careerEvidenceSourcesText,
 } from "./career-evidence.js";
+import { countedNouns } from "./counted-nouns.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
@@ -210,10 +211,6 @@ export interface HomeEvidencePresentation {
   readonly action: string;
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 export function evidencePresentation(
   status: CareerEvidenceStatus,
   legacySourceCount: number,
@@ -255,7 +252,7 @@ export function evidencePresentation(
         return {
           chip: t`Ready`,
           tone: "ready",
-          headline: `${plural(legacySourceCount, "source file")} in this workspace`,
+          headline: t`${countedNouns.sourceFile(legacySourceCount)} in this workspace`,
           detail: t`Stored with the workspace rather than in a knowledge base.`,
           empty: false,
           action: t`Add or manage documents`,
@@ -307,7 +304,7 @@ export function applicationStatusTone(status: ApplicationStatus): HomeTone {
 }
 
 export function applicationRunText(runCount: number): string {
-  return runCount === 0 ? t`No runs yet` : plural(runCount, "run");
+  return runCount === 0 ? t`No runs yet` : countedNouns.run(runCount);
 }
 
 /**
@@ -347,9 +344,11 @@ export function applicationActivityText(updatedAt: string, now: Date): string {
   if (!Number.isFinite(time) || time <= 0) return t`Last activity unknown`;
   const elapsed = now.getTime() - time;
   if (elapsed < minute) return t`Last activity just now`;
-  if (elapsed < hour) return t`Last activity ${plural(Math.floor(elapsed / minute), "minute")} ago`;
-  if (elapsed < day) return t`Last activity ${plural(Math.floor(elapsed / hour), "hour")} ago`;
-  if (elapsed < 30 * day) return t`Last activity ${plural(Math.floor(elapsed / day), "day")} ago`;
+  if (elapsed < hour)
+    return t`Last activity ${countedNouns.minute(Math.floor(elapsed / minute))} ago`;
+  if (elapsed < day) return t`Last activity ${countedNouns.hour(Math.floor(elapsed / hour))} ago`;
+  if (elapsed < 30 * day)
+    return t`Last activity ${countedNouns.day(Math.floor(elapsed / day))} ago`;
   return t`Last activity on ${new Date(updatedAt).toISOString().slice(0, 10)}`;
 }
 

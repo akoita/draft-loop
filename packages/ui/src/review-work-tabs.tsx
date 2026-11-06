@@ -14,6 +14,7 @@ import { t } from "@lingui/core/macro";
 
 import { type JSX, type KeyboardEvent, useCallback, useRef, useState } from "react";
 import type { ApprovalReadiness, ApprovalReadinessBlocker } from "./approval-readiness.js";
+import { countedNouns } from "./counted-nouns.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
 import {
@@ -36,10 +37,6 @@ const reviewWorkTabIds: readonly ReviewWorkTabId[] = Object.freeze([
   "coverage",
   "job",
 ] as const);
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
 
 /** A final-check blocker as short as the "Next:" line needs, e.g. "relevance 22%". */
 function shortReadinessBlocker(blocker: ApprovalReadinessBlocker): string {
@@ -89,7 +86,7 @@ export function nextStepLine(
       const { blocking } = reviewFindingSummary(state);
       const undecided = blocking.filter((finding) => finding.decision !== "accepted").length;
       if (revisionLeft && undecided === 0) return "Next: request a revision";
-      return `Next: decide ${plural(revisionLeft ? undecided : blocking.length, "blocking finding")}`;
+      return t`Next: decide ${countedNouns.blockingFinding(revisionLeft ? undecided : blocking.length)}`;
     }
     case "final-checks": {
       // Identical blockers count once, so "and N more" names distinct checks.

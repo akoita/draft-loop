@@ -11,6 +11,7 @@ import { t } from "@lingui/core/macro";
  * record reads "not recorded".
  */
 import { meanReadinessScore } from "./application-run-list.js";
+import { countedNouns } from "./counted-nouns.js";
 import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
 import { type DesktopReviewState, isUnresolvedFinding } from "./model.js";
 import { coverageTally } from "./review-work-tabs.js";
@@ -80,10 +81,6 @@ type RunState = Pick<
   | "runInputs"
 >;
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 function modelOf(state: RunState, role: "author" | "critic"): string {
   const recorded = recordedRunModels(state);
   const model = recorded?.[role] ?? "";
@@ -120,17 +117,20 @@ function costOf(state: RunState): string {
 function evidenceOf(state: RunState): string {
   const mode = state.evidenceMode;
   if (mode === undefined || mode === null) return notRecorded;
+  const chunks = countedNouns.chunk(mode.chunkCount);
   const sources =
-    mode.sourceCount === undefined ? "" : ` from ${plural(mode.sourceCount, "source")}`;
+    mode.sourceCount === undefined ? undefined : countedNouns.source(mode.sourceCount);
   if (mode.effectiveMode === "full-source") {
-    return `full source, ${plural(mode.chunkCount, "chunk")}${sources}`;
+    return sources === undefined
+      ? t`full source, ${chunks}`
+      : t`full source, ${chunks} from ${sources}`;
   }
   if (mode.requestedMode === "full-source") {
     return mode.fallbackReason === "no-eligible-chunks"
-      ? "retrieval (no full-source chunks)"
-      : `retrieval (full source of ${plural(mode.chunkCount, "chunk")} did not fit)`;
+      ? t`retrieval (no full-source chunks)`
+      : t`retrieval (full source of ${chunks} did not fit)`;
   }
-  return `retrieval, ${plural(mode.chunkCount, "chunk")}${sources}`;
+  return sources === undefined ? t`retrieval, ${chunks}` : t`retrieval, ${chunks} from ${sources}`;
 }
 
 /** The writing policy in force for the run: its version and checksum, or none. */

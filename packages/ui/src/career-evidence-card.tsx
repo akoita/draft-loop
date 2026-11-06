@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   addCareerEvidence,
@@ -18,6 +18,7 @@ import {
   noSelectionMode,
   supportsAutomaticKnowledgeBase,
 } from "./career-evidence-setup.js";
+import { countedNouns } from "./counted-nouns.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import type { WorkspaceReadiness } from "./model.js";
@@ -61,9 +62,12 @@ export function legacyRetrievalText(
   const sources = setup.selectedEvidenceSourceCount;
   switch (setup.retrievalStatus) {
     case "matched":
-      return `${chunks} relevant excerpt${chunks === 1 ? "" : "s"} selected from ${sources} source${sources === 1 ? "" : "s"}`;
+      return t`${plural(chunks, { one: "# relevant excerpt", other: "# relevant excerpts" })} selected from ${countedNouns.source(sources)}`;
     case "fallback":
-      return `No lexical match; ${chunks} bounded fallback excerpt${chunks === 1 ? "" : "s"} selected`;
+      return plural(chunks, {
+        one: "No lexical match; # bounded fallback excerpt selected",
+        other: "No lexical match; # bounded fallback excerpts selected",
+      });
     case "no-query":
       return "The job description has no searchable role terms";
     case "unavailable":
@@ -189,10 +193,7 @@ export function CareerEvidenceCardView({
         <span role="status">{t`The selected knowledge base could not be opened. Open its store in the Knowledge base section below.`}</span>
       ) : status.kind === "none" && mode === "first-add" && legacyCount > 0 ? (
         <>
-          <span>
-            {t`Workspace evidence files:`} {legacyCount} {t`file`}
-            {legacyCount === 1 ? "" : t`s`}
-          </span>
+          <span>{t`Workspace evidence files: ${countedNouns.file(legacyCount)}`}</span>
           <span className="setup-retrieval-status setup-card-line" role="status">
             {t`Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in`}{" "}
             {defaultKnowledgeStoreDestinationLabel}
@@ -222,7 +223,7 @@ export function CareerEvidenceCardView({
         <>
           <span role="status">
             {t`No knowledge base selected — runs will use legacy workspace evidence`}
-            {legacyCount > 0 ? t` (${legacyCount} source${legacyCount === 1 ? "" : "s"})` : ""}.
+            {legacyCount > 0 ? ` (${countedNouns.source(legacyCount)})` : ""}.
           </span>
           <button
             className="button button-primary"
@@ -236,7 +237,7 @@ export function CareerEvidenceCardView({
           <span>
             {legacyCount === 0
               ? t`Add a CV, portfolio, or other source`
-              : t`${legacyCount} source${legacyCount === 1 ? "" : "s"} ready`}
+              : plural(legacyCount, { one: "# source ready", other: "# sources ready" })}
           </span>
           {legacyCount > 0 ? (
             <span className="setup-retrieval-status" role="status">

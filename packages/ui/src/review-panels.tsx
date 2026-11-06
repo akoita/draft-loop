@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 /**
  * Review panel disclosure and the run timeline.
  *
@@ -213,7 +213,7 @@ export function RunTimeline({
         >
           {showEarlier
             ? t`Show only recent events`
-            : t`Show ${hiddenCount} earlier event${hiddenCount === 1 ? "" : "s"}`}
+            : plural(hiddenCount, { one: "Show # earlier event", other: "Show # earlier events" })}
         </button>
       ) : null}
       <ol className="event-list">

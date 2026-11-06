@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { ReviewFinding } from "./model.js";
 import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
@@ -38,7 +38,10 @@ export function sendVerdict(input: {
   const reasons: string[] = [];
   if (input.blocking.length > 0) {
     reasons.push(
-      `${input.blocking.length} blocking finding${input.blocking.length === 1 ? "" : "s"} to resolve`,
+      plural(input.blocking.length, {
+        one: "# blocking finding to resolve",
+        other: "# blocking findings to resolve",
+      }),
     );
   }
   if (input.readiness?.applicationReady === false) {

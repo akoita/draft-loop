@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 /**
  * The review's footer: the approval gate in one place, always at the window's bottom edge.
  *
@@ -17,6 +17,7 @@ import {
   type ApprovalReadinessBlocker,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
+import { countedNouns } from "./counted-nouns.js";
 import { relevanceScope } from "./coverage-kinds.js";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import {
@@ -119,10 +120,6 @@ export function compactReadinessBlockerGroup(
   return `${label[0]?.toLowerCase() ?? ""}${label.slice(1)}`;
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 /**
  * The footer's one-line blocker for the current draft. It reads the same decisions the gate
  * enforces: the draft, the run's progress, blocking findings, the final CV checks, and the send
@@ -187,8 +184,14 @@ export function footerBlocker(
     const accepted = blocking.filter((finding) => finding.decision === "accepted").length;
     const text =
       revisionLeft && accepted === blocking.length
-        ? `${plural(accepted, "accepted blocking finding")} ${accepted === 1 ? "needs" : "need"} a revision`
-        : `${plural(blocking.length, "blocking finding")} ${blocking.length === 1 ? "needs" : "need"} a decision`;
+        ? plural(accepted, {
+            one: "# accepted blocking finding needs a revision",
+            other: "# accepted blocking findings need a revision",
+          })
+        : plural(blocking.length, {
+            one: "# blocking finding needs a decision",
+            other: "# blocking findings need a decision",
+          });
     // The run paused because the same finding came back; say so until the reviewer decides it.
     const undecided = blocking.some((finding) => finding.decision === "pending");
     if (undecided && state.evaluation.stopReason === "persisting-findings") {

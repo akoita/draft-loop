@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import type {
   OpportunityEditInput,
   OpportunityEditPatch,
@@ -241,7 +241,10 @@ export function reviewBlockers(record: OpportunityRecordResult): readonly string
   const open = record.issues.filter((issue) => issue.status === "open").length;
   if (open > 0) {
     blockers.push(
-      t`Acknowledge or resolve the ${open === 1 ? "open issue" : `${open} open issues`} first.`,
+      plural(open, {
+        one: "Acknowledge or resolve the open issue first.",
+        other: "Acknowledge or resolve the # open issues first.",
+      }),
     );
   }
   return blockers;

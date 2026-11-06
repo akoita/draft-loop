@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 /**
  * Coverage counted apart for a reviewed brief's requirements and its responsibilities.
  *
@@ -6,6 +8,7 @@
  * requirements and hides which number relevance comes from.
  */
 
+import { countedNouns } from "./counted-nouns.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 
 export interface CoverageKindTally {
@@ -34,14 +37,12 @@ export function coverageKindTallies(coverage: ReviewCoverageView): CoverageKindT
   return { requirements: tally(requirements), responsibilities: tally(responsibilities) };
 }
 
-function plural(count: number, noun: string, nouns: string): string {
-  return `${count} ${count === 1 ? noun : nouns}`;
-}
-
 /** "0 of 9 requirements covered · 2 of 4 responsibilities covered" */
 export function coverageKindsSummary(tallies: CoverageKindTallies): string {
   const { requirements, responsibilities } = tallies;
-  return `${requirements.covered} of ${plural(requirements.total, "requirement", "requirements")} covered · ${responsibilities.covered} of ${plural(responsibilities.total, "responsibility", "responsibilities")} covered`;
+  const requirementTotal = countedNouns.requirement(requirements.total);
+  const responsibilityTotal = countedNouns.responsibility(responsibilities.total);
+  return t`${requirements.covered} of ${requirementTotal} covered · ${responsibilities.covered} of ${responsibilityTotal} covered`;
 }
 
 /** "over 9 requirements": what relevance is scored on, for a run that also checked responsibilities. */
@@ -50,5 +51,5 @@ export function relevanceScope(coverage: ReviewCoverageView | null | undefined):
   const tallies = coverageKindTallies(coverage);
   return tallies === null
     ? null
-    : `over ${plural(tallies.requirements.total, "requirement", "requirements")}, not the ${plural(tallies.responsibilities.total, "responsibility", "responsibilities")}`;
+    : t`over ${countedNouns.requirement(tallies.requirements.total)}, not the ${countedNouns.responsibility(tallies.responsibilities.total)}`;
 }

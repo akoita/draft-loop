@@ -8,6 +8,7 @@ import type {
   CanonicalCandidateProfileIssueResult,
   CanonicalCandidateProfileRecordResult,
 } from "./bridge.js";
+import { countedNouns } from "./counted-nouns.js";
 import { canReviewCanonicalCandidateProfile } from "./profile-outcome.js";
 import { humanizeProfileFieldLabel } from "./profile-presentation.js";
 
@@ -41,11 +42,11 @@ export function profileFactCategoriesStartOpen(factCount: number): boolean {
 }
 
 export function factCountLabel(count: number): string {
-  return count === 1 ? "1 fact" : `${count} facts`;
+  return countedNouns.fact(count);
 }
 
 export function issueCountLabel(count: number): string {
-  return count === 1 ? "1 issue" : `${count} issues`;
+  return countedNouns.issue(count);
 }
 
 /** Match the readable label or the value, ignoring case and surrounding whitespace in the query. */

@@ -12,7 +12,8 @@ import {
   revisionDirectionsUnavailableNote,
   sendRevisionRequest,
 } from "./revision-direction.js";
-import { normalizeRunAuthorInput, runAuthorInputDisplay } from "./run-author-input.js";
+import { normalizeRunAuthorInput } from "./run-author-input.js";
+import { runAuthorInputDisplay } from "./run-author-input-display.js";
 
 const noop = (): void => undefined;
 

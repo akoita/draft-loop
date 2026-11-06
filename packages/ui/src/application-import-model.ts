@@ -1,9 +1,10 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 /**
  * Wording for importing another workspace as an application (ADR 0010). Pure, so every state of
  * the Home action is testable without a DOM.
  */
 import type { ApplicationImportCounts } from "./application-contract.js";
+import { countedNouns } from "./counted-nouns.js";
 
 export type ApplicationImportNotice =
   | { readonly kind: "success"; readonly message: string }
@@ -18,15 +19,11 @@ export const applicationImportExplanation =
 export const applicationImportFailureFallback =
   "The workspace could not be imported. Try again, or choose a different workspace.";
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 export function applicationImportCountsText(counts: ApplicationImportCounts): string {
   const parts = [
-    plural(counts.runs, "run", "runs"),
-    plural(counts.briefVersions, "brief version", "brief versions"),
-    plural(counts.exports, "export", "exports"),
+    countedNouns.run(counts.runs),
+    plural(counts.briefVersions, { one: "# brief version", other: "# brief versions" }),
+    plural(counts.exports, { one: "# export", other: "# exports" }),
   ];
   const text = t`Imported ${parts.join(", ")}.`;
   if (counts.skippedExports === 0) return text;

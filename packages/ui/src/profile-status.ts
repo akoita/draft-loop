@@ -8,6 +8,7 @@ import { t } from "@lingui/core/macro";
  * primary action.
  */
 import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
+import { countedNouns } from "./counted-nouns.js";
 import { profileFreshnessChangeText } from "./profile-freshness.js";
 import type { ProfileFreshnessResult } from "./profile-freshness-contract.js";
 import type { CanonicalCandidateProfileOutcome } from "./profile-outcome.js";
@@ -38,10 +39,6 @@ export interface ProfileStatusInput {
   readonly version: number | null;
   /** Freshness of the loaded reviewed version; ignored for every other status. */
   readonly freshness?: ProfileFreshnessResult | undefined;
-}
-
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function openIssueCount(issues: readonly CanonicalCandidateProfileIssueResult[]): number {
@@ -95,7 +92,8 @@ export function projectProfileStatus({
         kind: "needs-review",
         issueCount,
         primaryAction: "review",
-        label: issueCount === 0 ? t`Needs review` : t`Needs review: ${plural(issueCount, "issue")}`,
+        label:
+          issueCount === 0 ? t`Needs review` : t`Needs review: ${countedNouns.issue(issueCount)}`,
         detail:
           issueCount === 0
             ? t`Save your issue decisions, then mark the profile reviewed.`
@@ -175,7 +173,7 @@ export function profileApprovalText({
   const sources =
     sourceCount === undefined || !Number.isSafeInteger(sourceCount) || sourceCount < 0
       ? ""
-      : ` (up to ${plural(sourceCount, "source")})`;
+      : ` ${t`(up to ${countedNouns.source(sourceCount)})`}`;
   const provider =
     providerName === undefined || providerName.trim() === ""
       ? "the configured provider"

@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 /**
  * Pure model for the profile freshness line on the Home Career profile card (ADR 0010).
  *
@@ -20,10 +20,6 @@ export interface ProfileFreshnessPresentation {
   readonly action?: string;
 }
 
-function sources(count: number): string {
-  return count === 1 ? "source" : "sources";
-}
-
 /** "2 new, 1 updated source": each kind of change in the order a person scans for it. */
 export function profileFreshnessChangeText(
   result: Pick<
@@ -31,14 +27,29 @@ export function profileFreshnessChangeText(
     "newSourceCount" | "changedSourceCount" | "removedSourceCount"
   >,
 ): string {
+  // The last part carries the noun: "2 new, 1 updated source".
   const parts = [
-    { count: result.newSourceCount, label: "new" },
-    { count: result.changedSourceCount, label: "updated" },
-    { count: result.removedSourceCount, label: "retired" },
+    {
+      count: result.newSourceCount,
+      short: (count: number) => t`${count} new`,
+      full: (count: number) => plural(count, { one: "# new source", other: "# new sources" }),
+    },
+    {
+      count: result.changedSourceCount,
+      short: (count: number) => t`${count} updated`,
+      full: (count: number) =>
+        plural(count, { one: "# updated source", other: "# updated sources" }),
+    },
+    {
+      count: result.removedSourceCount,
+      short: (count: number) => t`${count} retired`,
+      full: (count: number) =>
+        plural(count, { one: "# retired source", other: "# retired sources" }),
+    },
   ].filter((part) => part.count > 0);
-  const last = parts[parts.length - 1];
-  if (last === undefined) return "";
-  return `${parts.map((part) => `${part.count} ${part.label}`).join(", ")} ${sources(last.count)}`;
+  return parts
+    .map((part, index) => (index === parts.length - 1 ? part.full : part.short)(part.count))
+    .join(", ");
 }
 
 /**

@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import type { FindingDecision, ReviewFinding } from "./model.js";
 
 /** The four decisions a person can record on a finding. */
@@ -110,5 +110,9 @@ export function bulkBlockingSkipNote(
 export function bulkWordMatchWarning(shown: readonly ReviewFinding[]): string | null {
   const count = shown.filter(isWordMatchCoverageWarning).length;
   if (count === 0) return null;
-  return t`Includes ${count} word-match coverage finding${count === 1 ? "" : "s"}; accepting them asks the author to add the job's wording.`;
+  return plural(count, {
+    one: "Includes # word-match coverage finding; accepting it asks the author to add the job's wording.",
+    other:
+      "Includes # word-match coverage findings; accepting them asks the author to add the job's wording.",
+  });
 }

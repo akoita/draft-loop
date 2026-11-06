@@ -1,5 +1,5 @@
 import { formatDate } from "@draft-loop/ui/locale-format";
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { describeActionError } from "./consent-model.js";
 
@@ -20,13 +20,9 @@ export type EstimateState =
   | { readonly kind: "failed"; readonly message: string }
   | { readonly kind: "ready"; readonly estimate: RunEstimate };
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 /** An amount of credits, such as `1 credit` or `12 credits`. */
 export function creditCount(count: number): string {
-  return plural(count, "credit", "credits");
+  return plural(count, { one: "# credit", other: "# credits" });
 }
 
 /** Reads the organisation's balance; the route answers 404 in owner-token mode. */
@@ -169,19 +165,41 @@ function runCapMessage(details: ApiRequestError["details"]): string {
   if (details?.cap === "per_day")
     return limit === undefined
       ? t`Your plan's runs for today are used. Try again later.`
-      : t`Your plan allows ${plural(limit, "run", "runs")} a day, and today's are used. Try again later.`;
+      : plural(limit, {
+          one: "Your plan allows # run a day, and today's is used. Try again later.",
+          other: "Your plan allows # runs a day, and today's are used. Try again later.",
+        });
   return limit === undefined
     ? t`Your plan's limit on runs at the same time is reached. Wait for a run to finish, then try again.`
-    : t`Your plan allows ${plural(limit, "run", "runs")} at the same time, and they are running. Wait for one to finish, then try again.`;
+    : plural(limit, {
+        one: "Your plan allows # run at the same time, and it is running. Wait for it to finish, then try again.",
+        other:
+          "Your plan allows # runs at the same time, and they are running. Wait for one to finish, then try again.",
+      });
 }
 
 function planLimitMessage(details: ApiRequestError["details"]): string {
   const value = details?.value;
   if (details?.limit === "seats") {
-    return `${value === undefined ? t`All the seats in your plan are taken.` : t`Your plan allows ${plural(value, "seat", "seats")}, and all are taken.`} Remove a member, or ask the owner for a bigger plan, before inviting someone.`;
+    const lead =
+      value === undefined
+        ? t`All the seats in your plan are taken.`
+        : plural(value, {
+            one: "Your plan allows # seat, and it is taken.",
+            other: "Your plan allows # seats, and all are taken.",
+          });
+    return `${lead} ${t`Remove a member, or ask the owner for a bigger plan, before inviting someone.`}`;
   }
-  if (details?.limit === "candidateRecords")
-    return `${value === undefined ? t`All the candidate records in your plan are in use.` : t`Your plan allows ${plural(value, "candidate record", "candidate records")}, and all are in use.`} Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.`;
+  if (details?.limit === "candidateRecords") {
+    const lead =
+      value === undefined
+        ? t`All the candidate records in your plan are in use.`
+        : plural(value, {
+            one: "Your plan allows # candidate record, and it is in use.",
+            other: "Your plan allows # candidate records, and all are in use.",
+          });
+    return `${lead} ${t`Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.`}`;
+  }
   return t`Your plan's limit is reached. Ask the owner for a bigger plan.`;
 }
 

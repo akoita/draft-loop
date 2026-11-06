@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import { countedNouns } from "./counted-nouns.js";
 import { formatLimitDuration } from "./execution-limits.js";
 import { HostStartDialog } from "./host-panels.js";
 import { localWriterWarningFor } from "./local-writer-warning.js";
@@ -140,10 +141,6 @@ function routeLabel(state: DesktopReviewState, company: string): string | null {
   return sessionRouteLabels[provider];
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 /** The requirements line when the person chose the raw job description explicitly. */
 export const chosenRawJobDescriptionValue =
   "Raw job description, chosen under Advanced (coverage scoring is less reliable)";
@@ -167,13 +164,15 @@ export function evidencePreviewValue(preview: StartEvidencePreview): string {
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } = preview.preview;
   if (requestedMode === "retrieval") return "Retrieval";
   if (effectiveMode === "full-source") {
-    const from = sourceCount === undefined ? "" : ` from ${plural(sourceCount, "source")}`;
-    return `Full source · ${plural(chunkCount, "chunk")}${from} (fits)`;
+    const chunks = countedNouns.chunk(chunkCount);
+    return sourceCount === undefined
+      ? t`Full source · ${chunks} (fits)`
+      : t`Full source · ${chunks} from ${countedNouns.source(sourceCount)} (fits)`;
   }
   if (fallbackReason === "no-eligible-chunks") {
     return "Full source has no eligible chunks; retrieval will be used";
   }
-  return `Full source does not fit the budget for this pair (${plural(chunkCount, "chunk")}); retrieval will be used`;
+  return t`Full source does not fit the budget for this pair (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
 }
 
 /**
@@ -325,7 +324,7 @@ export function startConfirmationSummary(
   }
   settings.push({
     label: "Round limit",
-    value: plural(state.providerTransmissionPreflight.budget.maxRounds, "round"),
+    value: countedNouns.round(state.providerTransmissionPreflight.budget.maxRounds),
   });
   const callLimit = callLimitValue(state);
   if (callLimit !== null) settings.push({ label: "Call limit", value: callLimit });

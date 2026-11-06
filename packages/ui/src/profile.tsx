@@ -4,7 +4,7 @@ import type {
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalCandidateProfileFactResult,
@@ -273,7 +273,10 @@ export function ProfileOutcomeFeedback({
 
 /** One content-free line telling how a generation split unchanged and re-extracted sources. */
 export function profileSourceReuseSummary(reused: number, extracted: number): string {
-  return `Reused ${reused} unchanged source${reused === 1 ? "" : "s"}; extracted ${extracted}.`;
+  return plural(reused, {
+    one: `Reused # unchanged source; extracted ${extracted}.`,
+    other: `Reused # unchanged sources; extracted ${extracted}.`,
+  });
 }
 
 function latestVersionOf(
