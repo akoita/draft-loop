@@ -111,7 +111,9 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
         resourceId: workspaceId,
       });
     }
-    await reply.code(404).send(apiError("not_found", "No such workspace."));
+    await reply
+      .code(404)
+      .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
     return reply;
   });
 
