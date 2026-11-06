@@ -235,6 +235,58 @@ describe("application lifecycle", () => {
     expect(setApplicationModels).toHaveBeenCalledTimes(1);
   });
 
+  it("sets and clears the document language, and refuses a language not offered", async () => {
+    const setApplicationLanguage = vi.fn(
+      async ({ language }: { readonly language: string | null }) => ({ ...created, language }),
+    );
+    await build({ getApplication: async () => created, setApplicationLanguage });
+
+    const set = await app.inject({
+      method: "PUT",
+      url: `${base}/app-platform/language`,
+      headers: { authorization },
+      payload: { language: "fr" },
+    });
+    const cleared = await app.inject({
+      method: "PUT",
+      url: `${base}/app-platform/language`,
+      headers: { authorization },
+      payload: { language: null },
+    });
+    const unknown = await app.inject({
+      method: "PUT",
+      url: `${base}/app-platform/language`,
+      headers: { authorization },
+      payload: { language: "xx" },
+    });
+
+    expect(set.json().language).toBe("fr");
+    expect(cleared.json().language).toBeNull();
+    expect(unknown.statusCode).toBe(400);
+    expect(setApplicationLanguage).toHaveBeenCalledTimes(2);
+    expect(setApplicationLanguage).toHaveBeenCalledWith({
+      root,
+      applicationId: "app-platform",
+      language: "fr",
+    });
+  });
+
+  it("creates an application in its own document language", async () => {
+    const createApplication = vi.fn(async () => ({ ...created, language: "fr" }));
+    await build({ createApplication });
+
+    const response = await app.inject({
+      method: "POST",
+      url: base,
+      headers: { authorization },
+      payload: { name: "Poste synthétique", jobText: "Ingénieur plateforme", language: "fr" },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().language).toBe("fr");
+    expect(createApplication).toHaveBeenCalledWith(expect.objectContaining({ language: "fr" }));
+  });
+
   it("chooses an application's run with an optional reason", async () => {
     const chooseApplicationRun = vi.fn(async () => ({
       ...created,

@@ -9759,3 +9759,33 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .profile-usage-error {
   color: var(--red);
 }
+
+/* An application's document language (#2315): the select, and the job posting's own language. */
+.document-language-select {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.document-language-select select {
+  max-width: 100%;
+  font-weight: 400;
+}
+
+.job-language-proposal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 400;
+}
+
+.application-language {
+  display: grid;
+  gap: var(--space-1);
+  margin-block: var(--space-3);
+}
+
+.application-language .subtle {
+  margin: 0;
+}

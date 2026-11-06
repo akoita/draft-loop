@@ -76,6 +76,7 @@ import type {
   ImportedApplicationView,
   ListApplicationsCommand,
   RenameApplicationCommand,
+  SetApplicationLanguageCommand,
   SetApplicationModelsCommand,
 } from "./workspace-applications.js";
 
@@ -701,6 +702,10 @@ export interface ApplicationDriver {
   readonly setApplicationModels?: (
     command: SetApplicationModelsCommand,
   ) => Promise<ApplicationView>;
+  /** Sets or clears the document language a created application's new runs write in. */
+  readonly setApplicationLanguage?: (
+    command: SetApplicationLanguageCommand,
+  ) => Promise<ApplicationView>;
   /** Uses one of an application's runs for approval and export; records why, when given. */
   readonly chooseApplicationRun?: (
     command: ChooseApplicationRunCommand,
@@ -973,6 +978,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       }),
     setApplicationModels: async (command) =>
       requireApplicationApi(driver.setApplicationModels)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
+    setApplicationLanguage: async (command) =>
+      requireApplicationApi(driver.setApplicationLanguage)({
         ...command,
         root: requireRoot(command.root),
       }),

@@ -59,6 +59,7 @@ export const hostedBridgeCapabilities = [
   "application.archive",
   "application.rename",
   "application.set-models",
+  "application.set-language",
   "application.choose-run",
   "application.move",
   ...hostedApplicationFolderCapabilities,
@@ -155,6 +156,7 @@ export function applicationSummary(application: Application): ApplicationSummary
     nameChosen: application.nameChosen,
     suggestedName: application.suggestedName,
     ...(chosenRun === undefined ? {} : { chosenRun }),
+    ...(application.language === null ? {} : { language: application.language }),
   };
 }
 
@@ -350,6 +352,14 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
                     },
             },
           },
+        );
+        return record(workspaceId, updated);
+      }
+      case "application.set-language": {
+        const { workspaceId, applicationId, language } = command.input;
+        const updated = await client.call(
+          "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/language",
+          { path: { workspaceId, applicationId }, body: { language } },
         );
         return record(workspaceId, updated);
       }

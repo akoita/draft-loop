@@ -1616,6 +1616,13 @@
               }
             ],
             "description": "The application's own model pair; null uses the workspace's."
+          },
+          "language": {
+            "description": "The application's own document language; null uses the workspace's.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1635,7 +1642,8 @@
           "jobSourceKind",
           "suggestedName",
           "exportCount",
-          "modelProfiles"
+          "modelProfiles",
+          "language"
         ]
       },
       "RunInput": {
@@ -8369,6 +8377,13 @@
               }
             ],
             "description": "The application's own model pair; null uses the workspace's."
+          },
+          "language": {
+            "description": "The application's own document language; null uses the workspace's.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -8388,7 +8403,8 @@
           "jobSourceKind",
           "suggestedName",
           "exportCount",
-          "modelProfiles"
+          "modelProfiles",
+          "language"
         ],
         "additionalProperties": false
       },
@@ -15899,6 +15915,10 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "language": {
+                    "description": "The language its documents are written in; absent uses the workspace's.",
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -17471,6 +17491,97 @@
                 },
                 "required": [
                   "modelProfiles"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Application"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/language": {
+      "put": {
+        "summary": "Set or clear a job application's document language",
+        "description": "The language the application's new runs write its CV, cover letter and interview questions in. The default application always uses the workspace's language.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "description": "The language for this application's new runs; null uses the workspace's again.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "language"
                 ],
                 "additionalProperties": false
               }

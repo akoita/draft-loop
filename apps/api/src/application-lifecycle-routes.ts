@@ -11,6 +11,7 @@ import {
   applicationPastedJobMaxLength,
 } from "@draft-loop/schemas/application";
 import { applicationFolderPlacementSchema } from "@draft-loop/schemas/application-folder";
+import { documentLanguageCodeSchema } from "@draft-loop/schemas/application-language";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -55,6 +56,9 @@ const createApplicationBody = z
     folderId: applicationFolderPlacementSchema
       .optional()
       .describe("The folder to put the new application in; absent or null for no folder."),
+    language: documentLanguageCodeSchema
+      .optional()
+      .describe("The language its documents are written in; absent uses the workspace's."),
   })
   .refine((body) => (body.jobText === undefined) !== (body.jobUrl === undefined), {
     message: "Give the pasted job text or a job page address.",
@@ -89,6 +93,12 @@ const setModelsBody = z.strictObject({
     .strictObject({ author: modelProfileReference, critic: modelProfileReference })
     .nullable()
     .describe("The pair for this application's new runs; null uses the workspace's pair again."),
+});
+
+const setLanguageBody = z.strictObject({
+  language: documentLanguageCodeSchema
+    .nullable()
+    .describe("The language for this application's new runs; null uses the workspace's again."),
 });
 
 const chooseRunBody = z.strictObject({
@@ -178,6 +188,7 @@ export function registerApplicationLifecycleRoutes(
           request.body.jobUrl === undefined
             ? { kind: "pasted-text", text: request.body.jobText ?? "" }
             : { kind: "approved-url", url: request.body.jobUrl, approved: true },
+        ...(request.body.language === undefined ? {} : { language: request.body.language }),
       });
       if (folderId !== undefined && folderId !== null) {
         created = await offered(
@@ -253,6 +264,34 @@ export function registerApplicationLifecycleRoutes(
           root: workspaceRoot(workspaceId),
           applicationId,
           modelProfiles: request.body.modelProfiles,
+        }),
+      );
+    },
+  );
+
+  app.put(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/language",
+    {
+      schema: {
+        summary: "Set or clear a job application's document language",
+        description:
+          "The language the application's new runs write its CV, cover letter and interview questions in. The default application always uses the workspace's language.",
+        params: applicationParams,
+        body: setLanguageBody,
+        response: { 200: applicationViewSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId } = request.params;
+      if ((await existing(workspaceId, applicationId, reply)) === undefined) return reply;
+      return applicationView(
+        await offered(
+          service.setApplicationLanguage,
+          "Choosing an application's language",
+        )({
+          root: workspaceRoot(workspaceId),
+          applicationId,
+          language: request.body.language,
         }),
       );
     },

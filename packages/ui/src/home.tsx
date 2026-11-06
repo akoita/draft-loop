@@ -1043,6 +1043,7 @@ export function HomeScreen({
   const deleteApplication = applicationCapabilities.deleteApplication;
   const renameApplication = applicationCapabilities.renameApplication;
   const createApplication = applicationCapabilities.createApplication;
+  const setApplicationLanguage = applicationCapabilities.setApplicationLanguage;
   const folderCapabilities = applicationCapabilities.applicationFolders;
   const [folders, setFolders] = useState<readonly ApplicationFolderView[] | undefined>(undefined);
   const [creatingApplication, setCreatingApplication] = useState(false);
@@ -1324,14 +1325,21 @@ export function HomeScreen({
     <>
       {homeView}
       <NewApplicationDialog
-        createApplication={async (name, job, folderId) => {
-          const created = await createApplication(workspaceId, name, job);
+        createApplication={async (name, job, folderId, language) => {
+          let created = await createApplication(workspaceId, name, job);
+          // The application exists either way; a failed language change leaves the workspace's.
+          if (language !== undefined && setApplicationLanguage !== undefined) {
+            created = await setApplicationLanguage(workspaceId, created.id, language).catch(
+              () => created,
+            );
+          }
           if (folderId === undefined || folderCapabilities === undefined) return created;
-          // The application exists either way; a failed move leaves it in no folder.
+          // A failed move leaves it in no folder.
           return folderCapabilities
             .moveApplication(workspaceId, created.id, folderId)
             .catch(() => created);
         }}
+        languageChoice={setApplicationLanguage !== undefined}
         jobPagesAllowed={applicationCapabilities.jobPagesAllowed !== false}
         {...(folders === undefined ? {} : { folders })}
         onCreated={(application) => {

@@ -75,6 +75,15 @@ export const workspaceSettingsContracts: readonly StorageContract<WorkspaceSetti
       expect(await settings.remove(workspace, "fact-usage.json")).toBe(true);
     },
   },
+  {
+    name: "workspace settings: application languages round trip",
+    check: async ({ settings, workspaces: [workspace] }) => {
+      const content = '{"schemaVersion":1,"languages":{"application-1":"fr"}}\n';
+      await settings.write(workspace, "application-languages.json", content);
+      expect(await settings.read(workspace, "application-languages.json")).toBe(content);
+      expect(await settings.remove(workspace, "application-languages.json")).toBe(true);
+    },
+  },
 ];
 
 /** Runs every workspace settings contract against a fresh, empty store each. */

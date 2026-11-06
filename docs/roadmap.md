@@ -484,6 +484,26 @@ device. The archive now holds interview sessions, and the interviewer varies
 its openings. Next: showing that a run cites a confirmed answer. Voxtral as an
 EU server fallback waits until the browser model proves too slow.
 
+### Next — Multi-language support
+
+A candidate gets French CVs, cover letters and interview questions from French
+or English evidence, then uses the screens in French
+([rollup #2336](https://github.com/akoita/draft-loop/issues/2336)). English
+stays the source language.
+
+| Milestone                                                    | Outcome                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| [79](https://github.com/akoita/draft-loop/milestone/79)      | Documents in the application's language, French first, with its checks   |
+| [80](https://github.com/akoita/draft-loop/milestone/80)      | Every screen string goes through Lingui; nothing visible changes         |
+| [81](https://github.com/akoita/draft-loop/milestone/81)      | Screens in French, with a language switch                                |
+| [82](https://github.com/akoita/draft-loop/milestone/82)      | French evidence recognised and retrieved for English and French jobs     |
+| [83](https://github.com/akoita/draft-loop/milestone/83)      | French quality scored against the English rubric (#583)                  |
+
+Each application can choose its document language; it defaults to the
+workspace's, and New application proposes the pasted job's own language.
+French is labelled beta until milestone 83 records a result that meets the
+English bar.
+
 ### Next — Manual parity: review and export
 
 An editorial critic that judges fit, missing strongest evidence, register and
@@ -577,8 +597,8 @@ admitted.
 
 ### Later — Controlled expansion
 
-Multilingual templates, encrypted sync, and coach review remain gated by the
-CV workflow. Cover letters are drafted by the Prepare panel (milestone 73,
+Encrypted sync and coach review remain gated by the CV workflow;
+multilingual support moved to [Next](#next--multi-language-support). Cover letters are drafted by the Prepare panel (milestone 73,
 under Interview preparation), and application answers move there too.
 Two items have their own rollups:
 

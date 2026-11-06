@@ -64,6 +64,7 @@ export const hostedDriverMethods = [
   "deleteApplicationFolder",
   "moveApplication",
   "setApplicationModels",
+  "setApplicationLanguage",
   "chooseApplicationRun",
   "begin",
   "start",

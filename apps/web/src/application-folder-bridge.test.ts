@@ -30,6 +30,7 @@ const moved: ApiSchemas["Application"] = {
   suggestedName: null,
   exportCount: 0,
   modelProfiles: null,
+  language: null,
 };
 
 function portOver(handlers: Readonly<Record<string, (input: Record<string, unknown>) => unknown>>) {

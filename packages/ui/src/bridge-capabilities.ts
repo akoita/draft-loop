@@ -20,6 +20,7 @@ export const bridgeCapabilities = [
   "application.rename",
   "application.delete",
   "application.set-models",
+  "application.set-language",
   "application.choose-run",
   "application.move",
   "application-folder.list",

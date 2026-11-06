@@ -4,6 +4,7 @@ import type {
   ApplicationModelProfilesView,
   ApplicationSummaryView,
 } from "./application-contract.js";
+import { ApplicationLanguageControl } from "./application-language.js";
 import {
   ApplicationModelPairControl,
   workspacePairSides,
@@ -1892,6 +1893,19 @@ export function App({
     }
   };
 
+  /** Sets or clears the loaded application's own language; rejects with the message to show. */
+  const setLoadedApplicationLanguage = async (
+    applicationId: string,
+    language: string | null,
+  ): Promise<void> => {
+    const setLanguage = activePort.setApplicationLanguage;
+    if (state === null || setLanguage === undefined) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    const updated = await setLanguage(workspaceId, applicationId, language);
+    if (isCurrentWorkspaceContext(workspaceId, generation)) rememberApplicationPair(updated);
+  };
+
   /** The pair the next run uses: the loaded application's own, or the workspace's. */
   const runPairSummary = (current: DesktopReviewState) => (
     <WorkspaceModelSummary
@@ -2832,6 +2846,21 @@ export function App({
                       }
                       disabled={disabled || busy}
                       onSave={(pair) => setLoadedApplicationModels(application.applicationId, pair)}
+                    />
+                  ),
+                }),
+            ...(activePort.setApplicationLanguage === undefined ||
+            applicationSummaries[application.applicationId]?.isDefault !== false
+              ? {}
+              : {
+                  documentLanguageChoice: (disabled: boolean) => (
+                    <ApplicationLanguageControl
+                      key={application.applicationId}
+                      language={applicationSummaries[application.applicationId]?.language ?? null}
+                      disabled={disabled || busy}
+                      onSave={(language) =>
+                        setLoadedApplicationLanguage(application.applicationId, language)
+                      }
                     />
                   ),
                 }),

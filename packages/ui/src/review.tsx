@@ -248,6 +248,8 @@ interface ReviewWorkspaceProps {
    * while a start is pending or an earlier run is open.
    */
   readonly modelPairChoice?: (disabled: boolean) => ReactNode;
+  /** The application's own document language, shown after its model pair; held like it. */
+  readonly documentLanguageChoice?: (disabled: boolean) => ReactNode;
   /** The flow strip linking the workspace's other pages, shown above the header. */
   readonly pageNavigation?: ReactNode;
   /** A notice under the run header, such as the request to name the application. */
@@ -973,6 +975,7 @@ export function ReviewWorkspace({
   providerSignInReadiness,
   setupSummary,
   modelPairChoice,
+  documentLanguageChoice,
   startApplicationId = null,
   pageNavigation,
   headerNotice,
@@ -2697,6 +2700,9 @@ export function ReviewWorkspace({
                       review: (
                         <>
                           {modelPairChoice?.(
+                            readOnly || pendingStart !== null || pendingReviewAction !== null,
+                          )}
+                          {documentLanguageChoice?.(
                             readOnly || pendingStart !== null || pendingReviewAction !== null,
                           )}
                           {renderProviderTransmissionPreflight(true)}

@@ -146,6 +146,10 @@ export const applicationViewSchema = z
       })
       .nullable()
       .describe("The application's own model pair; null uses the workspace's."),
+    language: z
+      .string()
+      .nullable()
+      .describe("The application's own document language; null uses the workspace's."),
   })
   .meta({ id: "Application" });
 
@@ -178,6 +182,7 @@ export function applicationView(view: ApplicationView): z.infer<typeof applicati
     suggestedName: view.suggestedName,
     exportCount: view.exports.length,
     modelProfiles: view.modelProfiles,
+    language: view.language ?? null,
   };
 }
 

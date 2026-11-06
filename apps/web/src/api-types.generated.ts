@@ -67,6 +67,7 @@ export interface ApiSchemas {
         readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
       };
     } | null;
+    readonly language: string | null;
   };
   "ApplicationFolder": {
     readonly id: string;
@@ -1435,6 +1436,7 @@ export interface ApiOperations {
       readonly jobUrl?: string;
       readonly jobUrlApproved?: true;
       readonly folderId?: string | null;
+      readonly language?: string;
     };
     readonly response: ApiSchemas["Application"];
   };
@@ -1624,6 +1626,16 @@ export interface ApiOperations {
           readonly effort?: "low" | "medium" | "high" | "xhigh" | "max";
         };
       } | null;
+    };
+    readonly response: ApiSchemas["Application"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/applications/{applicationId}/language": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly language: string | null;
     };
     readonly response: ApiSchemas["Application"];
   };

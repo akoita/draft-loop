@@ -7,6 +7,7 @@ import {
   deriveApplicationStatus,
   normalizeApplicationName,
 } from "@draft-loop/domain/application";
+import { isDocumentLanguage } from "@draft-loop/domain/document-language";
 import {
   type Application,
   type ApplicationJobSource,
@@ -24,6 +25,12 @@ import type {
 } from "@draft-loop/storage/application-store";
 import { createApplicationFolderService, moveApplicationToFolder } from "./application-folders.js";
 import { type ApplicationHistory, historyExists, openHistory } from "./application-history.js";
+import {
+  applicationLanguage,
+  readApplicationLanguages,
+  setApplicationLanguage,
+  withApplicationLanguage,
+} from "./application-language.js";
 import { defaultApplicationName, suggestedApplicationName } from "./application-name.js";
 import {
   type CandidateProfileFreshnessSelection,
@@ -74,6 +81,8 @@ export interface ApplicationView extends Application {
   readonly jobMissing?: boolean;
   /** The folder the application sits in on Home; null for "No folder". */
   readonly folderId: string | null;
+  /** The language its documents are written in instead of the workspace's; null uses that. */
+  readonly language: string | null;
 }
 
 /** An application created by importing another workspace, with what the import copied. */
@@ -93,6 +102,8 @@ export interface CreateApplicationCommand {
   readonly jobSource: ApplicationJobSourceInput;
   readonly id?: string;
   readonly createdAt?: string;
+  /** The language its documents are written in; absent uses the workspace's. */
+  readonly language?: string;
 }
 
 export interface ListApplicationsCommand {
@@ -130,6 +141,13 @@ export interface SetApplicationModelsCommand {
   readonly modelProfiles: ApplicationModelProfiles | null;
 }
 
+export interface SetApplicationLanguageCommand {
+  readonly root: string;
+  readonly applicationId: string;
+  /** The language for this application's new runs, or null to use the workspace's again. */
+  readonly language: string | null;
+}
+
 export interface WorkspaceApplicationService {
   readonly create: (command: CreateApplicationCommand) => Promise<ApplicationView>;
   /** The default application first, then created applications, oldest first. */
@@ -146,6 +164,7 @@ export interface WorkspaceApplicationService {
   readonly delete: (command: DeleteApplicationCommand) => Promise<void>;
   /** Sets or clears the model pair a created application's new runs use; resolves with it. */
   readonly setModels: (command: SetApplicationModelsCommand) => Promise<ApplicationView>;
+  readonly setLanguage: (command: SetApplicationLanguageCommand) => Promise<ApplicationView>;
   /**
    * Uses one of the application's runs for approval and export, with an optional reason, and
    * records the choice in the audit trail; resolves with the application. No run is deleted.
@@ -236,6 +255,7 @@ async function describeApplication(
     archivedAt,
     folderId,
     modelProfiles,
+    language: null,
     chosenRun: currentChosenRun(
       storedChoice,
       runs.map((run) => run.id),
@@ -301,6 +321,7 @@ async function describeDefaultApplication(
       archivedAt: null,
       folderId: null,
       modelProfiles: null,
+      language: null,
       chosenRun: null,
       nameChosen: false,
       suggestedName: null,
@@ -419,10 +440,13 @@ export function createWorkspaceApplicationService(
     const storage = await openHistory(root);
     try {
       const stored = await storage.applications.listApplications(workspace.id);
+      const languages = await readApplicationLanguages(root);
       const views = [await describeDefaultApplication(root, workspace, storage)];
       for (const record of stored) {
         const view = await describeStoredApplication(storage, workspace.id, record.id);
-        if (view !== undefined) views.push(view);
+        if (view !== undefined) {
+          views.push({ ...view, language: applicationLanguage(languages, view.id) });
+        }
       }
       return views;
     } finally {
@@ -438,7 +462,10 @@ export function createWorkspaceApplicationService(
     if (!(await historyExists(root))) return undefined;
     const storage = await openHistory(root);
     try {
-      return await describeStoredApplication(storage, workspace.id, applicationId);
+      const view = await describeStoredApplication(storage, workspace.id, applicationId);
+      if (view === undefined) return undefined;
+      const languages = await readApplicationLanguages(root);
+      return { ...view, language: applicationLanguage(languages, view.id) };
     } finally {
       await storage.close();
     }
@@ -552,6 +579,19 @@ export function createWorkspaceApplicationService(
       if (view === undefined) throw new CliUserError("The application could not be read back.");
       return view;
     },
+    setLanguage: async ({ root: rootInput, applicationId, language }) => {
+      const root = resolve(rootInput);
+      if (
+        applicationId !== defaultApplicationId &&
+        (await get({ root, applicationId })) === undefined
+      ) {
+        throw new CliUserError(`Application ${applicationId} was not found.`);
+      }
+      await setApplicationLanguage(root, applicationId, language);
+      const view = await get({ root, applicationId });
+      if (view === undefined) throw new CliUserError("The application could not be read back.");
+      return view;
+    },
     delete: async ({ root: rootInput, applicationId }) => {
       const root = resolve(rootInput);
       if (applicationId === defaultApplicationId) {
@@ -598,6 +638,11 @@ export function createWorkspaceApplicationService(
       if (id === defaultApplicationId || !applicationIdSchema.safeParse(id).success) {
         throw new CliUserError("The application id is reserved or not a safe identifier.");
       }
+      if (command.language !== undefined && !isDocumentLanguage(command.language)) {
+        throw new CliUserError(
+          `${command.language} is not a language DraftLoop can write documents in.`,
+        );
+      }
       const createdAt = command.createdAt ?? clock();
       const storage = await openHistory(root);
       let storedFile: string | undefined;
@@ -623,9 +668,12 @@ export function createWorkspaceApplicationService(
           createdAt,
         });
         storedFile = undefined;
+        if (command.language !== undefined) {
+          await setApplicationLanguage(root, id, command.language);
+        }
         const view = await describeStoredApplication(storage, workspace.id, id);
         if (view === undefined) throw new CliUserError("The application could not be read back.");
-        return view;
+        return { ...view, language: command.language ?? null };
       } catch (error) {
         if (storedFile !== undefined)
           await rm(dirname(storedFile), { recursive: true, force: true });
@@ -641,8 +689,10 @@ export function createWorkspaceApplicationService(
 export interface RunApplication {
   /** Absent for the default application, which is never bound. */
   readonly applicationId?: string;
-  /** The workspace configuration with this application's job description substituted. */
-  readonly withJob: <Config extends { readonly jobDescriptionPath: string }>(
+  /** The workspace configuration with this application's job description and language. */
+  readonly withJob: <
+    Config extends { readonly jobDescriptionPath: string; readonly language: string },
+  >(
     config: Config,
   ) => Config;
   readonly bind: (
@@ -701,10 +751,14 @@ export async function resolveRunApplication(
         : source.kind === "local-file"
           ? source.path
           : undefined;
+    const language = applicationLanguage(await readApplicationLanguages(root), requested);
     return {
       applicationId: requested,
       withJob: (config) =>
-        jobDescriptionPath === undefined ? config : { ...config, jobDescriptionPath },
+        withApplicationLanguage(
+          jobDescriptionPath === undefined ? config : { ...config, jobDescriptionPath },
+          language,
+        ),
       bind: async (target, workspaceId, runId) =>
         target.applications.bindRun({
           workspaceId,
@@ -755,6 +809,7 @@ export function withWorkspaceApplications(
     start: async (command, io) =>
       clearChoiceFor(command, await driver.start(await withApplicationModels(command), io)),
     setApplicationModels: async (command) => service.setModels(command),
+    setApplicationLanguage: async (command) => service.setLanguage(command),
     chooseApplicationRun: async (command) =>
       service.chooseRun(command, async (runId) => {
         const snapshot = await driver.status({ root: command.root, runId });

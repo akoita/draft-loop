@@ -62,6 +62,10 @@
     "./career-interview": {
       "types": "./src/career-interview.ts",
       "import": "./src/career-interview.ts"
+    },
+    "./application-language": {
+      "types": "./src/application-language.ts",
+      "import": "./src/application-language.ts"
     }
   },
   "files": [

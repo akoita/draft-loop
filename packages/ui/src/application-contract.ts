@@ -18,6 +18,7 @@ import {
   applicationNameMaxLength,
   applicationStatuses,
 } from "@draft-loop/domain/application";
+import { isDocumentLanguage } from "@draft-loop/domain/document-language";
 import { folderIdentifier } from "./application-folder-contract.js";
 
 export type { ApplicationJobSourceKind, ApplicationStatus };
@@ -53,6 +54,8 @@ export interface ApplicationSummaryView {
   readonly suggestedName: string | null;
   /** The run whose draft the person chose for approval and export; absent uses the latest run. */
   readonly chosenRun?: ApplicationChosenRunView;
+  /** The language its documents are written in instead of the workspace's; absent uses that. */
+  readonly language?: string;
 }
 
 /** The run an application uses, and its number among the runs (oldest = 1). */
@@ -93,6 +96,13 @@ export interface ApplicationSetModelsInput {
   readonly workspaceId: string;
   readonly applicationId: string;
   readonly modelProfiles: ApplicationModelProfilesView | null;
+}
+
+/** Sets the language one application's new runs write in, or clears it with `null`. */
+export interface ApplicationSetLanguageInput {
+  readonly workspaceId: string;
+  readonly applicationId: string;
+  readonly language: string | null;
 }
 
 export interface ApplicationListInput {
@@ -217,6 +227,11 @@ export const applicationSetModelsKeys = exactKeys<ApplicationSetModelsInput>()([
   "applicationId",
   "modelProfiles",
 ]);
+export const applicationSetLanguageKeys = exactKeys<ApplicationSetLanguageInput>()([
+  "workspaceId",
+  "applicationId",
+  "language",
+]);
 export const applicationChooseRunKeys = exactKeys<ApplicationChooseRunInput>()([
   "workspaceId",
   "applicationId",
@@ -282,6 +297,7 @@ const summaryKeys = exactKeys<ApplicationSummaryView>()([
   "nameChosen",
   "suggestedName",
   "chosenRun",
+  "language",
 ]);
 const listResultKeys = exactKeys<ApplicationListResult>()(["workspaceId", "applications"]);
 const recordResultKeys = exactKeys<ApplicationRecordResult>()(["workspaceId", "application"]);
@@ -407,6 +423,8 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     raw.suggestedName === null ? null : normalizeApplicationDisplayName(raw.suggestedName);
   const chosenRun = raw.chosenRun === undefined ? undefined : normalizeChosenRun(raw.chosenRun);
   if (raw.chosenRun !== undefined && chosenRun === undefined) return undefined;
+  const language = raw.language === undefined ? undefined : documentLanguageCode(raw.language);
+  if (raw.language !== undefined && language === undefined) return undefined;
   if (
     id === undefined ||
     name === undefined ||
@@ -446,7 +464,13 @@ export function normalizeApplicationSummary(value: unknown): ApplicationSummaryV
     nameChosen: raw.nameChosen,
     suggestedName,
     ...(chosenRun === undefined ? {} : { chosenRun }),
+    ...(language === undefined ? {} : { language }),
   };
+}
+
+/** An offered document language code, or `undefined`. */
+export function documentLanguageCode(value: unknown): string | undefined {
+  return typeof value === "string" && isDocumentLanguage(value) ? value : undefined;
 }
 
 export function normalizeApplicationListResult(value: unknown): ApplicationListResult | undefined {

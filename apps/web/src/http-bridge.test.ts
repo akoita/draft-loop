@@ -26,6 +26,7 @@ const defaultApplication: ApiSchemas["Application"] = {
   suggestedName: null,
   exportCount: 0,
   modelProfiles: null,
+  language: null,
 };
 
 const ledgerApplication: ApiSchemas["Application"] = {
