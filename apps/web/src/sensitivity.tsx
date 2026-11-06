@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import {
+  allowRepositoryRequest,
   defaultRuleForm,
   type RuleForm,
   ruleRequest,
@@ -17,6 +18,8 @@ export interface SensitivityRulesState {
   readonly setForm: (form: RuleForm) => void;
   readonly add: () => Promise<void>;
   readonly remove: (ruleId: string) => Promise<boolean>;
+  /** Lowers an imported pull request repository to normal: adds "Always allow", then removes its default. */
+  readonly allowRepository: (rule: SensitivityRule) => Promise<boolean>;
 }
 
 /** Reads a knowledge base's sensitivity rules, and adds or removes one, each a new version. */
@@ -80,5 +83,18 @@ export function useSensitivityRules(
       }),
     );
 
-  return { rules, form, problems, busy, setForm, add, remove };
+  async function allowRepository(rule: SensitivityRule) {
+    const body = allowRepositoryRequest(rule);
+    if (body === undefined) return false;
+    // The allow rule comes first, so the repository is never left without a rule of its own.
+    const allowed = await change(() =>
+      client.call("POST /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules", {
+        path: { knowledgeBaseId },
+        body,
+      }),
+    );
+    return allowed && (await remove(rule.id));
+  }
+
+  return { rules, form, problems, busy, setForm, add, remove, allowRepository };
 }

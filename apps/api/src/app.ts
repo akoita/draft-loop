@@ -488,6 +488,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         intake: application.knowledgeIntake,
         ...(knowledgeOwnership === undefined ? {} : { ownership: knowledgeOwnership }),
         ...(screening === undefined ? {} : { screening }),
+        ...(application.sensitivityRules === undefined
+          ? {}
+          : { sensitivityRules: application.sensitivityRules }),
       });
     }
     if (application.sensitivityRules !== undefined) {

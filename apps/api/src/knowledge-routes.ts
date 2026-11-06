@@ -1,6 +1,8 @@
 import {
+  applyPullRequestSensitivityDefaults,
   type HostedKnowledgeIntake,
   type HostedKnowledgeSourceView,
+  type HostedSensitivityRules,
   hostedKnowledgeSourceMediaTypes,
   normalizeHostedUpload,
 } from "@draft-loop/application";
@@ -25,6 +27,8 @@ export interface KnowledgeRoutesOptions {
   readonly ownership?: KnowledgeOwnership;
   /** Injection screening of each stored upload; without it uploads are not screened. */
   readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
+  /** The base's sensitivity rules; an imported pull request list adds its defaults (#2262). */
+  readonly sensitivityRules?: Pick<HostedSensitivityRules, "list" | "add">;
 }
 
 const identifierSchema = z
@@ -232,7 +236,7 @@ export function registerKnowledgeRoutes(
         }
         const declared = (request.headers["content-type"] ?? "").split(";")[0]?.trim() ?? "";
         // A pull request list becomes the Markdown it is stored, and screened, as (#2261).
-        const { mediaType, bytes } = normalizeHostedUpload({
+        const { mediaType, bytes, pullRequestRepositories } = normalizeHostedUpload({
           mediaType: declared.toLowerCase(),
           bytes: new Uint8Array(request.body),
         });
@@ -242,6 +246,14 @@ export function registerKnowledgeRoutes(
           mediaType,
           bytes,
         });
+        // Before any run can use it: each imported repository starts sensitive.
+        if (pullRequestRepositories !== undefined && options.sensitivityRules !== undefined) {
+          await applyPullRequestSensitivityDefaults(
+            options.sensitivityRules,
+            request.params.knowledgeBaseId,
+            pullRequestRepositories,
+          );
+        }
         // After the file is stored, so its ids exist; a screener's failure is the result's
         // verdict, never the upload's.
         const screened = await screening?.screenUpload(request, {

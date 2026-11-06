@@ -917,6 +917,12 @@ Then add `pull-requests.json` on **Career evidence**. A CSV with the columns
   repository, with its date and link, so a fact drawn from it cites it.
 - **Refused otherwise.** A JSON or CSV file that is not a pull request list
   answers "must be a pull request list".
+- **Held back by default.** Each repository gets a rule under **Private
+  sections**: "Send only if the workspace allows: sections under Pull
+  requests › owner/name". Its pull requests reach a model only when the
+  workspace allows sensitive material.
+- **Allow one repository.** **Allow this repository** replaces its rule with
+  "Always allow". A later import of that repository keeps your choice.
 - **Check what you share.** Review the file before you add it: a private
   repository's titles and descriptions may be confidential.
 

@@ -309,6 +309,8 @@ export function createHostedKnowledgeIntake(
 export interface HostedUpload {
   readonly mediaType: string;
   readonly bytes: Uint8Array;
+  /** For a pull request list, its repositories, which start `sensitive` (#2262). */
+  readonly pullRequestRepositories?: readonly string[];
 }
 
 /**
@@ -329,5 +331,6 @@ export function normalizeHostedUpload(upload: HostedUpload): HostedUpload {
   return {
     mediaType: "text/markdown",
     bytes: new Uint8Array(Buffer.from(pullRequestListMarkdown(list), "utf8")),
+    pullRequestRepositories: [...new Set(list.map((entry) => entry.repository))].sort(),
   };
 }
