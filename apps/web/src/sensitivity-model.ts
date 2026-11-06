@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApiSchemas } from "./api-client.js";
 
 export type SensitivityRule = ApiSchemas["SensitivityRule"];
@@ -23,9 +24,9 @@ export const defaultRuleForm: RuleForm = {
  */
 export function ruleSentence(rule: SensitivityRule): string {
   const lead: Readonly<Record<RuleTier, string>> = {
-    "never-share": "Never send",
-    sensitive: "Send only if the workspace allows:",
-    normal: "Always allow",
+    "never-share": t`Never send`,
+    sensitive: t`Send only if the workspace allows:`,
+    normal: t`Always allow`,
   };
   const sections =
     rule.match.kind === "heading-contains"
@@ -62,17 +63,17 @@ export function ruleRequest(
 ): { readonly body: AddRuleBody } | { readonly problem: string } {
   if (form.kind === "heading-contains") {
     const text = form.heading.trim();
-    if (text === "") return { problem: "Name the heading text the rule matches." };
-    if (text.length > 200) return { problem: "Keep the heading text to 200 characters or fewer." };
+    if (text === "") return { problem: t`Name the heading text the rule matches.` };
+    if (text.length > 200) return { problem: t`Keep the heading text to 200 characters or fewer.` };
     return { body: { tier: form.tier, match: { kind: "heading-contains", text } } };
   }
   const path = form.heading
     .split(">")
     .map((heading) => heading.trim())
     .filter((heading) => heading !== "");
-  if (path.length === 0) return { problem: "Name the headings, from the top level down." };
-  if (path.length > 12) return { problem: "A heading path has at most 12 headings." };
+  if (path.length === 0) return { problem: t`Name the headings, from the top level down.` };
+  if (path.length > 12) return { problem: t`A heading path has at most 12 headings.` };
   if (path.some((heading) => heading.length > 200))
-    return { problem: "Keep each heading to 200 characters or fewer." };
+    return { problem: t`Keep each heading to 200 characters or fewer.` };
   return { body: { tier: form.tier, match: { kind: "heading-path", path } } };
 }

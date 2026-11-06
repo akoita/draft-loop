@@ -1,4 +1,5 @@
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
+import { t } from "@lingui/core/macro";
 
 export interface ReviewedCanonicalCandidateProfileSummary {
   readonly profileId: string;
@@ -47,7 +48,7 @@ export class ProfileCatalogValidationError extends Error {
   readonly code = "invalid-input" as const;
 
   constructor() {
-    super("The reviewed profile catalog payload is invalid.");
+    super(t`The reviewed profile catalog payload is invalid.`);
     this.name = "ProfileCatalogValidationError";
   }
 }

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, describeError } from "./api-client.js";
@@ -143,7 +144,7 @@ export function ReleaseControl({
           setOpen(true);
         }}
       >
-        Release {subject}
+        {t`Release`} {subject}
       </button>
       {open ? (
         <ReleaseDialog
@@ -207,13 +208,15 @@ export function ReleaseDialog({
       }}
     >
       <form onSubmit={submit}>
-        <h3 id={`${id}-title`}>Release {subject}</h3>
+        <h3 id={`${id}-title`}>
+          {t`Release`} {subject}
+        </h3>
         <p>
-          Screening held this text back
-          {signals === "" ? "" : ` (${signals})`}. Releasing lets runs use it. The release covers
-          this screening result only and is recorded with your name and your reason.
+          {t`Screening held this text back`}
+          {signals === "" ? "" : ` (${signals})`}
+          {t`. Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason.`}
         </p>
-        <label htmlFor={`${id}-reason`}>Reason for releasing</label>
+        <label htmlFor={`${id}-reason`}>{t`Reason for releasing`}</label>
         <textarea
           id={`${id}-reason`}
           value={reason}
@@ -223,8 +226,8 @@ export function ReleaseDialog({
           onChange={(event) => setReason(event.target.value)}
         />
         <p id={`${id}-hint`} className="muted">
-          Required, up to {maximumReleaseReasonLength} characters. Say why the text is safe; do not
-          paste the text itself.
+          {t`Required, up to`} {maximumReleaseReasonLength}{" "}
+          {t`characters. Say why the text is safe; do not paste the text itself.`}
         </p>
         {problem === undefined ? null : (
           <p className="problem" role="alert">
@@ -233,11 +236,9 @@ export function ReleaseDialog({
         )}
         <div className="actions">
           <button type="submit" disabled={busy}>
-            {busy ? "Releasing…" : "Release"}
+            {busy ? t`Releasing…` : t`Release`}
           </button>
-          <button type="button" className="secondary" onClick={onCancel}>
-            Cancel
-          </button>
+          <button type="button" className="secondary" onClick={onCancel}>{t`Cancel`}</button>
         </div>
       </form>
     </dialog>
@@ -304,7 +305,7 @@ export function QuarantineList({
               <strong>{materialName(item)}</strong>{" "}
               {done ? (
                 <span className="screening screening-released">
-                  <span className="screening-label">Released</span>
+                  <span className="screening-label">{t`Released`}</span>
                 </span>
               ) : (
                 <>
@@ -325,12 +326,9 @@ export function QuarantineList({
         })}
       </ul>
       {allReleased ? (
-        <p role="status">Everything is released. Start the run again.</p>
+        <p role="status">{t`Everything is released. Start the run again.`}</p>
       ) : canRelease ? null : (
-        <p className="muted">
-          Only owners and admins of your organisation release quarantined material. Ask one of them,
-          or replace the material.
-        </p>
+        <p className="muted">{t`Only owners and admins of your organisation release quarantined material. Ask one of them, or replace the material.`}</p>
       )}
     </div>
   );

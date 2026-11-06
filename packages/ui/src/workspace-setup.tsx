@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
 
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
@@ -55,13 +56,11 @@ export function WorkspaceSetupScreen({
   return (
     <main className="workspace-setup">
       <form className="panel workspace-setup-card" onSubmit={submit}>
-        <p className="eyebrow">New workspace</p>
-        <h1>Set up your workspace</h1>
-        <p className="workspace-setup-intro">
-          Choose how your CVs are written. You can change the models later from Home.
-        </p>
+        <p className="eyebrow">{t`New workspace`}</p>
+        <h1>{t`Set up your workspace`}</h1>
+        <p className="workspace-setup-intro">{t`Choose how your CVs are written. You can change the models later from Home.`}</p>
         <label className="workspace-setup-field">
-          <span>CV language</span>
+          <span>{t`CV language`}</span>
           <select value={language} onChange={(event) => setLanguage(event.target.value)}>
             {workspaceSetupLanguages.map(({ code, label }) => (
               <option key={code} value={code}>
@@ -71,17 +70,17 @@ export function WorkspaceSetupScreen({
           </select>
         </label>
         <label className="workspace-setup-field">
-          <span>Rounds at most</span>
+          <span>{t`Rounds at most`}</span>
           <select value={maxRounds} onChange={(event) => setMaxRounds(Number(event.target.value))}>
             {workspaceSetupRoundLimits.map((rounds) => (
               <option key={rounds} value={rounds}>
-                {rounds === 1 ? "1 round" : `${rounds} rounds`}
+                {rounds === 1 ? t`1 round` : t`${rounds} rounds`}
               </option>
             ))}
           </select>
         </label>
         <fieldset className="workspace-setup-presets">
-          <legend>Models</legend>
+          <legend>{t`Models`}</legend>
           {presets.map((option) => (
             <label key={option.id} className="workspace-setup-preset">
               <input
@@ -94,7 +93,7 @@ export function WorkspaceSetupScreen({
               <span>
                 <strong>{option.label}</strong>
                 <span className="workspace-setup-preset-models">
-                  Writer {modelLine(option.author)} · Reviewer {modelLine(option.critic)}
+                  {t`Writer`} {modelLine(option.author)} {t`· Reviewer`} {modelLine(option.critic)}
                 </span>
               </span>
             </label>
@@ -106,7 +105,7 @@ export function WorkspaceSetupScreen({
             checked={fixtureMode}
             onChange={(event) => setFixtureMode(event.target.checked)}
           />
-          <span>Demo mode: runs use fixtures and call no model</span>
+          <span>{t`Demo mode: runs use fixtures and call no model`}</span>
         </label>
         {problem === null ? null : (
           <p className="setup-blocker" role="alert">
@@ -118,7 +117,7 @@ export function WorkspaceSetupScreen({
           type="submit"
           disabled={busy || preset === undefined}
         >
-          {busy ? "Creating…" : "Create workspace"}
+          {busy ? t`Creating…` : t`Create workspace`}
         </button>
       </form>
     </main>

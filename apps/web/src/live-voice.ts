@@ -2,6 +2,7 @@ import type {
   CareerInterviewLiveCall,
   CareerInterviewLiveEvents,
 } from "@draft-loop/ui/career-interview-live";
+import { t } from "@lingui/core/macro";
 
 /**
  * The web host's live voice conversation (#2362): the microphone streams 16 kHz PCM to the API's
@@ -131,7 +132,7 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
     () => {
       events.onRefusal(
         "microphone_unavailable",
-        "The browser did not allow the microphone. Allow it for this page, or keep writing your answers.",
+        t`The browser did not allow the microphone. Allow it for this page, or keep writing your answers.`,
       );
       if (socket.readyState === openState) socket.send(JSON.stringify({ type: "stop" }));
       socket.close();

@@ -7,6 +7,7 @@ import type {
 import { careerInterviewRefusal } from "@draft-loop/ui/career-interview-model";
 import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
 import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
+import { t } from "@lingui/core/macro";
 import { useCallback, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
@@ -91,7 +92,7 @@ function liveVoice(
   const openSocket = client.openSocket?.bind(client);
   if (openSocket === undefined || !liveVoiceSupported()) return undefined;
   return {
-    listener: "Google Cloud in the EU",
+    listener: t`Google Cloud in the EU`,
     start: (topicKey, events) =>
       startLiveVoiceCall({
         socket: openSocket(
@@ -130,7 +131,7 @@ export async function allowLiveListener(
         ? [...new Set([...current.providers, listener])].filter(isConsentProvider).sort()
         : [];
     if (providers.length === 0) {
-      return "Record the permission to send material to model providers on the consent step first.";
+      return t`Record the permission to send material to model providers on the consent step first.`;
     }
     await client.call("POST /v1/workspaces/{workspaceId}/consents", {
       path: { workspaceId },

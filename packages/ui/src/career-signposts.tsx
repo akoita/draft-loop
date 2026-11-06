@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type DragEvent, type ReactNode, useState } from "react";
 
 /** What each career page says about the other's job, so a person in the wrong place finds the right one. */
@@ -103,7 +104,7 @@ export function ProfileSignpostArea({
     // A labelled region, so the drag handlers sit on a named element; dropping is pointer-only.
     <section
       className="career-signpost-area"
-      aria-label="Career profile"
+      aria-label={t`Career profile`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}

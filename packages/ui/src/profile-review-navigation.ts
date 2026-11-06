@@ -2,6 +2,7 @@ import type {
   CanonicalCandidateProfileFactCategory,
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
+import { t } from "@lingui/core/macro";
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
@@ -111,9 +112,9 @@ export function profileReviewBlockedReason({
 }): string | null {
   if (busy) return null;
   if (editable && canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues)) return null;
-  if (record.status === "reviewed") return "This version is already reviewed.";
-  if (!editable) return "Only the latest draft can be marked reviewed.";
-  if (record.facts.length === 0 || draftFacts.length === 0) return "There are no facts to review.";
+  if (record.status === "reviewed") return t`This version is already reviewed.`;
+  if (!editable) return t`Only the latest draft can be marked reviewed.`;
+  if (record.facts.length === 0 || draftFacts.length === 0) return t`There are no facts to review.`;
   const draftOpen = openIssueCount(draftIssues);
   if (draftOpen > 0) {
     return draftOpen === 1
@@ -121,7 +122,7 @@ export function profileReviewBlockedReason({
       : `${draftOpen} issues are still open. Acknowledge or resolve them, then save.`;
   }
   if (openIssueCount(record.issues) > 0) {
-    return "Save your issue decisions before marking the draft reviewed.";
+    return t`Save your issue decisions before marking the draft reviewed.`;
   }
   return null;
 }

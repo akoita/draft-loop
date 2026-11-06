@@ -10,6 +10,7 @@ import {
   type CandidateEvidenceKind,
   candidateEvidenceKinds,
 } from "@draft-loop/domain/candidate-evidence-kind";
+import { t } from "@lingui/core/macro";
 
 export type { CandidateEvidenceKind } from "@draft-loop/domain/candidate-evidence-kind";
 export { candidateEvidenceKinds } from "@draft-loop/domain/candidate-evidence-kind";
@@ -202,17 +203,17 @@ export function evidenceKindLabel(kind: CandidateEvidenceKind): string {
     case "cv":
       return "CV";
     case "linkedin-export":
-      return "LinkedIn export";
+      return t`LinkedIn export`;
     case "performance-review":
-      return "Performance review";
+      return t`Performance review`;
     case "notes":
-      return "Notes";
+      return t`Notes`;
     case "transcript":
-      return "Transcript";
+      return t`Transcript`;
     case "work-journal":
-      return "Work journal";
+      return t`Work journal`;
     case "other":
-      return "Other";
+      return t`Other`;
   }
 }
 

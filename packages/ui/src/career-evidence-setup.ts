@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   addCareerEvidence,
   type CareerEvidenceAddOutcome,
@@ -27,15 +28,15 @@ export function noSelectionMode(automatic: boolean): NoSelectionMode {
 
 function createdNotice(displayName: string, created: boolean): string {
   return created
-    ? `Created knowledge base “${displayName}” in ${defaultKnowledgeStoreDestinationLabel} and selected it for this workspace.`
-    : `Selected knowledge base “${displayName}” for this workspace.`;
+    ? t`Created knowledge base “${displayName}” in ${defaultKnowledgeStoreDestinationLabel} and selected it for this workspace.`
+    : t`Selected knowledge base “${displayName}” for this workspace.`;
 }
 
 function requireAutomatic(capabilities: CareerEvidenceCapabilities) {
   const ensure = capabilities.ensureDefaultCandidateKnowledgeBase;
   const select = capabilities.selectCandidateKnowledgeBase;
   if (ensure === undefined || select === undefined) {
-    throw new Error("Creating a knowledge base is unavailable");
+    throw new Error(t`Creating a knowledge base is unavailable`);
   }
   return { ensure, select };
 }

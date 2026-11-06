@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   addCareerEvidence,
@@ -165,12 +166,12 @@ export function CareerEvidenceCardView({
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
         <span className={`setup-state${ready ? " setup-state-ready" : ""}`}>
-          {ready ? "Ready" : "Required"}
+          {ready ? t`Ready` : t`Required`}
         </span>
       </div>
-      <strong>Your documents</strong>
+      <strong>{t`Your documents`}</strong>
       {status.kind === "loading" ? (
-        <span role="status">Checking the knowledge base…</span>
+        <span role="status">{t`Checking the knowledge base…`}</span>
       ) : status.kind === "selected" ? (
         <>
           <span>{careerEvidenceSourcesText(status)}</span>
@@ -185,65 +186,57 @@ export function CareerEvidenceCardView({
           )}
         </>
       ) : status.kind === "unavailable" ? (
-        <span role="status">
-          The selected knowledge base could not be opened. Open its store in the Knowledge base
-          section below.
-        </span>
+        <span role="status">{t`The selected knowledge base could not be opened. Open its store in the Knowledge base section below.`}</span>
       ) : status.kind === "none" && mode === "first-add" && legacyCount > 0 ? (
         <>
           <span>
-            Workspace evidence files: {legacyCount} file{legacyCount === 1 ? "" : "s"}
+            {t`Workspace evidence files:`} {legacyCount} {t`file`}
+            {legacyCount === 1 ? "" : t`s`}
           </span>
           <span className="setup-retrieval-status setup-card-line" role="status">
-            Runs use these files while no knowledge base is selected. Adding a source creates a
-            knowledge base for this workspace in {defaultKnowledgeStoreDestinationLabel}; runs then
-            use it instead, and these files are not copied into it.
+            {t`Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in`}{" "}
+            {defaultKnowledgeStoreDestinationLabel}
+            {t`; runs then use it instead, and these files are not copied into it.`}
           </span>
           <button
             className="button button-quiet"
             type="button"
             disabled={blocked}
             onClick={onChooseKnowledgeBase}
-          >
-            Create or choose a knowledge base
-          </button>
+          >{t`Create or choose a knowledge base`}</button>
         </>
       ) : status.kind === "none" && mode === "first-add" ? (
         <>
           <span role="status">
-            No career evidence yet. Adding the first source creates a knowledge base for this
-            workspace in {defaultKnowledgeStoreDestinationLabel}.
+            {t`No career evidence yet. Adding the first source creates a knowledge base for this workspace in`}{" "}
+            {defaultKnowledgeStoreDestinationLabel}.
           </span>
           <button
             className="button button-quiet"
             type="button"
             disabled={blocked}
             onClick={onChooseKnowledgeBase}
-          >
-            Create or choose a knowledge base
-          </button>
+          >{t`Create or choose a knowledge base`}</button>
         </>
       ) : status.kind === "none" ? (
         <>
           <span role="status">
-            No knowledge base selected — runs will use legacy workspace evidence
-            {legacyCount > 0 ? ` (${legacyCount} source${legacyCount === 1 ? "" : "s"})` : ""}.
+            {t`No knowledge base selected — runs will use legacy workspace evidence`}
+            {legacyCount > 0 ? t` (${legacyCount} source${legacyCount === 1 ? "" : "s"})` : ""}.
           </span>
           <button
             className="button button-primary"
             type="button"
             disabled={blocked}
             onClick={onChooseKnowledgeBase}
-          >
-            Create or choose a knowledge base
-          </button>
+          >{t`Create or choose a knowledge base`}</button>
         </>
       ) : (
         <>
           <span>
             {legacyCount === 0
-              ? "Add a CV, portfolio, or other source"
-              : `${legacyCount} source${legacyCount === 1 ? "" : "s"} ready`}
+              ? t`Add a CV, portfolio, or other source`
+              : t`${legacyCount} source${legacyCount === 1 ? "" : "s"} ready`}
           </span>
           {legacyCount > 0 ? (
             <span className="setup-retrieval-status" role="status">
@@ -278,22 +271,21 @@ export function CareerEvidenceCardView({
               type="button"
               disabled={addDisabled}
               onClick={onAddFolder}
-            >
-              Add folder
-            </button>
+            >{t`Add folder`}</button>
           ) : null}
           {urlsOffered ? (
             <>
               <label className="url-input-label">
-                <span>Or provide public URLs, one per line</span>
+                <span>{t`Or provide public URLs, one per line`}</span>
                 <textarea
                   className="url-input"
                   rows={3}
-                  placeholder={"https://github.com/…\nhttps://www.linkedin.com/in/…"}
+                  placeholder={t`https://github.com/…
+https://www.linkedin.com/in/…`}
                   value={url}
                   onChange={(event) => onUrlChange(event.target.value)}
                   aria-label={
-                    inKnowledgeBase ? "Career evidence URLs" : "Legacy workspace evidence URLs"
+                    inKnowledgeBase ? t`Career evidence URLs` : t`Legacy workspace evidence URLs`
                   }
                 />
               </label>

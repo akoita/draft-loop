@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Usage level controls on the career profile (#2259): where each fact may be used, on a CV, only
  * in interview, or never. A fact with no level of its own follows its section, and a section with
@@ -85,9 +86,9 @@ export function SectionUsageSelect({
   const level = controls.view.sections[category] ?? "cv";
   return (
     <label className="profile-usage profile-usage-section">
-      <span>Section usage</span>
+      <span>{t`Section usage`}</span>
       <select
-        aria-label={`Usage for ${label} section`}
+        aria-label={t`Usage for ${label} section`}
         value={level}
         disabled={controls.pending}
         onChange={(event) => {
@@ -123,9 +124,9 @@ export function FactUsageSelect({
   );
   return (
     <label className={`profile-usage profile-usage-${effective}`}>
-      <span className="sr-only">Usage</span>
+      <span className="sr-only">{t`Usage`}</span>
       <select
-        aria-label={`Usage for ${label}`}
+        aria-label={t`Usage for ${label}`}
         value={own ?? ""}
         disabled={controls.pending}
         onChange={(event) => {
@@ -137,7 +138,10 @@ export function FactUsageSelect({
           });
         }}
       >
-        <option value="">Like section ({factUsageLevelLabels[inherited]})</option>
+        <option value="">
+          {t`Like section (`}
+          {factUsageLevelLabels[inherited]})
+        </option>
         {levels.map((option) => (
           <option key={option} value={option}>
             {factUsageLevelLabels[option]}

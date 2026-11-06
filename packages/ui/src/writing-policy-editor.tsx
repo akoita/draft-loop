@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type RefObject, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { maximumWritingPolicyContentBytes, type WritingPolicyReadResult } from "./bridge.js";
@@ -138,30 +139,28 @@ export function WritingPolicyEditorView({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">DraftLoop / Writing policy</p>
-            <h2 id="writing-policy-dialog-title">Edit writing policy</h2>
+            <p className="eyebrow">{t`DraftLoop / Writing policy`}</p>
+            <h2 id="writing-policy-dialog-title">{t`Edit writing policy`}</h2>
           </div>
           <button className="button button-quiet" type="button" onClick={onClose}>
-            {discardArmed ? "Discard changes" : "Close"}
+            {discardArmed ? t`Discard changes` : t`Close`}
             <kbd>Esc</kbd>
           </button>
         </div>
         <p className="modal-copy" id="writing-policy-dialog-copy">
           {isDefaultTemplate
-            ? "This workspace has no writing policy yet. The text below is the starting template; saving creates the first version and applies it to future runs."
+            ? t`This workspace has no writing policy yet. The text below is the starting template; saving creates the first version and applies it to future runs.`
             : savedVersion === null
-              ? "Saving creates a new version and applies it to future runs."
-              : `Editing version ${savedVersion}. Saving creates a new version and applies it to future runs; earlier versions stay in the history.`}
+              ? t`Saving creates a new version and applies it to future runs.`
+              : t`Editing version ${savedVersion}. Saving creates a new version and applies it to future runs; earlier versions stay in the history.`}
         </p>
         {load === "loading" ? (
-          <p className="setup-note" role="status">
-            Loading the writing policy…
-          </p>
+          <p className="setup-note" role="status">{t`Loading the writing policy…`}</p>
         ) : null}
         {load === "failed" ? (
           <>
             <p className="setup-blocker" role="alert">
-              {loadMessage ?? "The writing policy could not be loaded."}
+              {loadMessage ?? t`The writing policy could not be loaded.`}
             </p>
             <div className="approval-actions">
               <button
@@ -169,9 +168,7 @@ export function WritingPolicyEditorView({
                 type="button"
                 disabled={onRetry === undefined}
                 onClick={() => onRetry?.()}
-              >
-                Try again
-              </button>
+              >{t`Try again`}</button>
             </div>
           </>
         ) : null}
@@ -182,9 +179,7 @@ export function WritingPolicyEditorView({
               type="button"
               aria-pressed={!historyOpen}
               onClick={() => history.onOpenChange(false)}
-            >
-              Edit
-            </button>
+            >{t`Edit`}</button>
             <button
               className={`button ${historyOpen ? "button-outline" : "button-quiet"}`}
               type="button"
@@ -192,7 +187,7 @@ export function WritingPolicyEditorView({
               disabled={saving}
               onClick={() => history.onOpenChange(true)}
             >
-              {`History (${history.versions.length})`}
+              {t`History (${history.versions.length})`}
             </button>
           </div>
         ) : null}
@@ -202,7 +197,7 @@ export function WritingPolicyEditorView({
         {ready && !historyOpen ? (
           <form
             className="setup-form policy-editor"
-            aria-label="Edit writing policy"
+            aria-label={t`Edit writing policy`}
             onSubmit={(event) => {
               event.preventDefault();
               if (canSave) onSave();
@@ -231,9 +226,9 @@ export function WritingPolicyEditorView({
                         )
                       }
                     >
-                      <option value="">Not set</option>
+                      <option value="">{t`Not set`}</option>
                       {unrecognised ? (
-                        <option value={matched}>{`${matched} (not a valid choice)`}</option>
+                        <option value={matched}>{t`${matched} (not a valid choice)`}</option>
                       ) : null}
                       {field.options.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -245,10 +240,10 @@ export function WritingPolicyEditorView({
                 );
               })}
               <label className="setup-field">
-                <span>Spelling locale</span>
+                <span>{t`Spelling locale`}</span>
                 <input
                   type="text"
-                  placeholder="en-GB"
+                  placeholder={t`en-GB`}
                   list={spellingLocaleListId}
                   value={values.spellingLocale ?? ""}
                   disabled={saving}
@@ -267,20 +262,21 @@ export function WritingPolicyEditorView({
               </label>
             </div>
             <label className="setup-field">
-              <span>Policy text</span>
+              <span>{t`Policy text`}</span>
               <textarea
                 className="policy-editor-text"
                 spellCheck={false}
                 value={text}
                 disabled={saving}
-                aria-label="Policy text"
+                aria-label={t`Policy text`}
                 aria-describedby="writing-policy-text-note"
                 onChange={(event) => onTextChange(event.target.value)}
               />
               <span className="setup-note" id="writing-policy-text-note">
-                One <code>Name: value</code> line per directive, then free-text rules. The selectors
-                above edit these lines; you can also edit them here. {formatKibibytes(bytes)} of{" "}
-                {formatKibibytes(maximumWritingPolicyContentBytes)}.
+                {t`One`} <code>Name: value</code>{" "}
+                {t`line per directive, then free-text rules. The selectors above edit these lines; you can also edit them here.`}{" "}
+                {formatKibibytes(bytes)} {t`of`} {formatKibibytes(maximumWritingPolicyContentBytes)}
+                .
               </span>
             </label>
             {overLimit ? (
@@ -294,26 +290,25 @@ export function WritingPolicyEditorView({
               </p>
             )}
             {discardArmed ? (
-              <p className="setup-note" role="status">
-                You have unsaved changes. Choose Discard changes to close without saving.
-              </p>
+              <p
+                className="setup-note"
+                role="status"
+              >{t`You have unsaved changes. Choose Discard changes to close without saving.`}</p>
             ) : null}
             <div className="approval-actions">
               <button className="button button-primary" type="submit" disabled={!canSave}>
                 {saving
-                  ? "Saving…"
+                  ? t`Saving…`
                   : isDefaultTemplate
-                    ? "Save as first version"
-                    : "Save new version"}
+                    ? t`Save as first version`
+                    : t`Save new version`}
               </button>
               <button
                 className="button button-quiet"
                 type="button"
                 disabled={saving}
                 onClick={onClose}
-              >
-                Cancel
-              </button>
+              >{t`Cancel`}</button>
             </div>
           </form>
         ) : null}
@@ -505,9 +500,7 @@ export function WritingPolicyEditAction({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(true)}
-      >
-        Edit policy
-      </button>
+      >{t`Edit policy`}</button>
       {/* Portalled out of the setup card so no ancestor's layout can contain the fixed backdrop. */}
       {open && typeof document !== "undefined"
         ? createPortal(<WritingPolicyEditor {...editor} onClose={close} />, document.body)

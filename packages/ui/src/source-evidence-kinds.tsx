@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import type { DesktopKnowledgeCapabilities } from "./native.js";
 import {
@@ -38,10 +39,10 @@ export interface SourceEvidenceKindListProps {
 /** Each source with its evidence kind, where it came from, and a select to correct it. */
 export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvidenceKindListProps) {
   if (state.status === "loading") {
-    return <span className="setup-card-line">Reading what each source is…</span>;
+    return <span className="setup-card-line">{t`Reading what each source is…`}</span>;
   }
   if (state.status === "unavailable") {
-    return <span className="setup-card-line">What each source is could not be read.</span>;
+    return <span className="setup-card-line">{t`What each source is could not be read.`}</span>;
   }
   if (state.sources.length === 0) return null;
   return (
@@ -49,7 +50,10 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
       className="setup-details evidence-kinds"
       open={state.sources.length <= openListMaximum}
     >
-      <summary>What each source is ({state.sources.length})</summary>
+      <summary>
+        {t`What each source is (`}
+        {state.sources.length})
+      </summary>
       <ul className="evidence-kind-list">
         {state.sources.map((source) => {
           const saving = state.savingSourceId === source.sourceId;
@@ -60,7 +64,7 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
                 {source.displayName}
               </span>
               <select
-                aria-label={`Evidence kind of ${source.displayName}`}
+                aria-label={t`Evidence kind of ${source.displayName}`}
                 value={source.kind}
                 disabled={locked}
                 onChange={(event) => {
@@ -77,7 +81,7 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
                 ))}
               </select>
               <span className="evidence-kind-origin">
-                {saving ? "saving…" : evidenceKindOriginLabel(source.origin)}
+                {saving ? t`saving…` : evidenceKindOriginLabel(source.origin)}
                 {source.origin === "user" && !saving ? (
                   <>
                     {" · "}
@@ -86,9 +90,7 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
                       type="button"
                       disabled={locked}
                       onClick={() => onChange(source.sourceId, null)}
-                    >
-                      use detected
-                    </button>
+                    >{t`use detected`}</button>
                   </>
                 ) : null}
               </span>
@@ -97,7 +99,7 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
         })}
       </ul>
       {state.truncated ? (
-        <span className="evidence-kind-origin">Only the first sources are listed.</span>
+        <span className="evidence-kind-origin">{t`Only the first sources are listed.`}</span>
       ) : null}
       {state.error === null ? null : (
         <span className="evidence-kind-origin" role="alert">

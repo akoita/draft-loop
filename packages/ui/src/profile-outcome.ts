@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   type CanonicalCandidateProfileFactResult,
   type CanonicalCandidateProfileIssueResult,
@@ -117,7 +118,7 @@ export function projectCanonicalCandidateProfileOutcome(
   if (recordedExtractionFailure(record)) {
     return {
       kind: "extraction-failure",
-      message: "Profile generation saved no facts. Review the recorded cause before retrying.",
+      message: t`Profile generation saved no facts. Review the recorded cause before retrying.`,
       failureReasons: safeFailureReasons(record.issues),
       retry: true,
     };
@@ -126,8 +127,7 @@ export function projectCanonicalCandidateProfileOutcome(
   if (record.facts.length === 0 || draftFacts.length === 0) {
     return {
       kind: "empty",
-      message:
-        "This profile version has no facts to review. Check the selected career evidence before retrying.",
+      message: t`This profile version has no facts to review. Check the selected career evidence before retrying.`,
       failureReasons: safeFailureReasons(record.issues),
       retry: record.facts.length === 0,
     };
@@ -140,7 +140,7 @@ export function projectCanonicalCandidateProfileOutcome(
   ) {
     return {
       kind: "reviewed",
-      message: `Reviewed profile version ${record.version} is loaded and selected.`,
+      message: t`Reviewed profile version ${record.version} is loaded and selected.`,
       failureReasons: [],
       retry: false,
     };
@@ -149,7 +149,7 @@ export function projectCanonicalCandidateProfileOutcome(
   if (hasOpenIssues(record.issues) || hasOpenIssues(draftIssues)) {
     return {
       kind: "blocked",
-      message: "Resolve or acknowledge draft issues and save the issue decisions before review.",
+      message: t`Resolve or acknowledge draft issues and save the issue decisions before review.`,
       failureReasons: [],
       retry: false,
     };
@@ -157,7 +157,7 @@ export function projectCanonicalCandidateProfileOutcome(
 
   return {
     kind: "draft-review",
-    message: `Draft profile version ${record.version} is saved and requires human review.`,
+    message: t`Draft profile version ${record.version} is saved and requires human review.`,
     failureReasons: [],
     retry: false,
   };

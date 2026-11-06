@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Pure model for the profile freshness line on the Home Career profile card (ADR 0010).
  *
@@ -51,9 +52,9 @@ export function profileFreshnessPresentation(
   switch (profile.kind) {
     // The card's own button already says Generate or Review here, so no inline action.
     case "none":
-      return { tone: "attention", text: "Not generated yet" };
+      return { tone: "attention", text: t`Not generated yet` };
     case "draft":
-      return { tone: "attention", text: `Draft version ${profile.version} awaiting your review` };
+      return { tone: "attention", text: t`Draft version ${profile.version} awaiting your review` };
     case "reviewed":
       break;
     default:
@@ -62,18 +63,18 @@ export function profileFreshnessPresentation(
   if (freshness === undefined) return undefined;
   switch (freshness.state) {
     case "up-to-date":
-      return { tone: "ready", text: "Up to date with your career evidence" };
+      return { tone: "ready", text: t`Up to date with your career evidence` };
     case "update-available":
       return {
         tone: "attention",
-        text: `Career evidence changed: ${profileFreshnessChangeText(freshness)}`,
-        action: "Update profile",
+        text: t`Career evidence changed: ${profileFreshnessChangeText(freshness)}`,
+        action: t`Update profile`,
       };
     case "review-pending":
       return {
         tone: "attention",
-        text: `Draft version ${freshness.version ?? profile.version} awaiting your review`,
-        action: "Review",
+        text: t`Draft version ${freshness.version ?? profile.version} awaiting your review`,
+        action: t`Review`,
       };
     default:
       return undefined;

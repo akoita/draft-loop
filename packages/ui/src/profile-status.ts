@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Pure model for the status that leads the Career profile page (issue #1090).
  *
@@ -61,17 +62,16 @@ export function projectProfileStatus({
         kind: "none",
         issueCount: 0,
         primaryAction: "generate",
-        label: "No profile yet",
-        detail:
-          "Generate a profile from your career evidence. You review it once before applications use it.",
+        label: t`No profile yet`,
+        detail: t`Generate a profile from your career evidence. You review it once before applications use it.`,
       };
     case "extraction-failure":
       return {
         kind: "none",
         issueCount: 0,
         primaryAction: "generate",
-        label: "Generation failed",
-        detail: "The last attempt saved no facts. Fix the cause below, then try again.",
+        label: t`Generation failed`,
+        detail: t`The last attempt saved no facts. Fix the cause below, then try again.`,
       };
     case "empty":
       return outcome.retry
@@ -79,15 +79,15 @@ export function projectProfileStatus({
             kind: "none",
             issueCount: 0,
             primaryAction: "generate",
-            label: "No facts found",
-            detail: "This version has no facts. Check your career evidence, then try again.",
+            label: t`No facts found`,
+            detail: t`This version has no facts. Check your career evidence, then try again.`,
           }
         : {
             kind: "needs-review",
             issueCount: openIssueCount(draftIssues),
             primaryAction: "review",
-            label: "Needs review",
-            detail: "Every fact was removed from this draft. Restore at least one before saving.",
+            label: t`Needs review`,
+            detail: t`Every fact was removed from this draft. Restore at least one before saving.`,
           };
     case "blocked": {
       const issueCount = openIssueCount(draftIssues);
@@ -95,11 +95,11 @@ export function projectProfileStatus({
         kind: "needs-review",
         issueCount,
         primaryAction: "review",
-        label: issueCount === 0 ? "Needs review" : `Needs review: ${plural(issueCount, "issue")}`,
+        label: issueCount === 0 ? t`Needs review` : t`Needs review: ${plural(issueCount, "issue")}`,
         detail:
           issueCount === 0
-            ? "Save your issue decisions, then mark the profile reviewed."
-            : "Resolve or acknowledge each open issue, save, then mark the profile reviewed.",
+            ? t`Save your issue decisions, then mark the profile reviewed.`
+            : t`Resolve or acknowledge each open issue, save, then mark the profile reviewed.`,
       };
     }
     case "draft-review":
@@ -107,8 +107,8 @@ export function projectProfileStatus({
         kind: "needs-review",
         issueCount: 0,
         primaryAction: "review",
-        label: "Needs review",
-        detail: "Check the facts below, then mark the profile reviewed so applications can use it.",
+        label: t`Needs review`,
+        detail: t`Check the facts below, then mark the profile reviewed so applications can use it.`,
       };
     case "reviewed":
       break;
@@ -119,22 +119,22 @@ export function projectProfileStatus({
       kind: "out-of-date",
       issueCount: 0,
       primaryAction: "update",
-      label: "Out of date with your evidence",
+      label: t`Out of date with your evidence`,
       detail:
         changes === ""
-          ? "Your career evidence changed since this profile was reviewed."
-          : `Your career evidence changed since this profile was reviewed: ${changes}.`,
+          ? t`Your career evidence changed since this profile was reviewed.`
+          : t`Your career evidence changed since this profile was reviewed: ${changes}.`,
     };
   }
   return {
     kind: "ready",
     issueCount: 0,
     primaryAction: null,
-    label: "Ready",
+    label: t`Ready`,
     detail:
       version === null
-        ? "This reviewed profile is used for new applications."
-        : `Reviewed version ${version} is used for new applications.`,
+        ? t`This reviewed profile is used for new applications.`
+        : t`Reviewed version ${version} is used for new applications.`,
   };
 }
 
@@ -142,11 +142,11 @@ export function projectProfileStatus({
 export function profilePrimaryActionLabel(status: ProfileStatus): string | null {
   switch (status.primaryAction) {
     case "review":
-      return status.issueCount > 0 ? "Review issues" : "Review profile";
+      return status.issueCount > 0 ? t`Review issues` : t`Review profile`;
     case "update":
-      return "Update profile";
+      return t`Update profile`;
     case "generate":
-      return "Generate profile";
+      return t`Generate profile`;
     case null:
       return null;
   }
@@ -170,7 +170,7 @@ export function profileApprovalText({
   fixtureMode = false,
 }: ProfileApprovalTextInput): string {
   if (fixtureMode) {
-    return `${mode === "update" ? "Update" : "Build"} the profile from my career evidence with local fixtures. Nothing is sent to a provider.`;
+    return `${mode === "update" ? t`Update` : t`Build`} the profile from my career evidence with local fixtures. Nothing is sent to a provider.`;
   }
   const sources =
     sourceCount === undefined || !Number.isSafeInteger(sourceCount) || sourceCount < 0
@@ -180,5 +180,5 @@ export function profileApprovalText({
     providerName === undefined || providerName.trim() === ""
       ? "the configured provider"
       : providerName.trim();
-  return `Send my career evidence${sources} to ${provider} to ${mode === "update" ? "update" : "build"} the profile.`;
+  return t`Send my career evidence${sources} to ${provider} to ${mode === "update" ? "update" : "build"} the profile.`;
 }

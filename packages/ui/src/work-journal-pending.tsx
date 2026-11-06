@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Home's reminder of work journal notes that wait for review (#2151). A note from a coding agent
  * waits at the bottom of the Career evidence page, so Home says how many wait and links there.
@@ -29,9 +30,11 @@ export function WorkJournalPending({ count, onOpen }: WorkJournalPendingProps) {
   return (
     <p className="home-card-copy work-journal-pending">
       {text}{" "}
-      <button className="button button-quiet" type="button" onClick={onOpen}>
-        Review notes
-      </button>
+      <button
+        className="button button-quiet"
+        type="button"
+        onClick={onOpen}
+      >{t`Review notes`}</button>
     </p>
   );
 }

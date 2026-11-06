@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useMemo, useRef, useState } from "react";
 import type { CredentialTestProvider, CredentialTestResult } from "./bridge.js";
 import { formatTime } from "./locale-format.js";
@@ -79,9 +80,10 @@ function checkedAtText(checkedAt: string): string {
 export function CredentialTestLine({ state }: { readonly state: CredentialTestState }) {
   if (state.status === "testing") {
     return (
-      <p className="credential-test-result credential-test-unknown" role="status">
-        Testing the key with the provider…
-      </p>
+      <p
+        className="credential-test-result credential-test-unknown"
+        role="status"
+      >{t`Testing the key with the provider…`}</p>
     );
   }
   const { label, detail, tone } =
@@ -91,7 +93,7 @@ export function CredentialTestLine({ state }: { readonly state: CredentialTestSt
   const checkedAt = state.status === "done" ? state.result.checkedAt : state.checkedAt;
   return (
     <p className={`credential-test-result credential-test-${tone}`} role="status">
-      <strong>{label}.</strong> {detail} Checked at{" "}
+      <strong>{label}.</strong> {detail} {t`Checked at`}{" "}
       <time dateTime={checkedAt}>{checkedAtText(checkedAt)}</time>.
     </p>
   );

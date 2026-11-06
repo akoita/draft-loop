@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { CareerFlowStep } from "./career-flow.js";
 
 type CareerPage = Extract<CareerFlowStep, "evidence" | "profile">;
@@ -26,7 +27,7 @@ export function CareerPageTabs({
 }) {
   const openApplications = onOpen.applications;
   return (
-    <nav className="career-tabs" aria-label="Your career">
+    <nav className="career-tabs" aria-label={t`Your career`}>
       <ul className="career-tabs-list">
         {tabs.map(({ page, number, label }) => {
           const open = onOpen[page];
@@ -55,9 +56,11 @@ export function CareerPageTabs({
         })}
       </ul>
       {openApplications === undefined ? null : (
-        <button className="career-tabs-applications" type="button" onClick={openApplications}>
-          Applications
-        </button>
+        <button
+          className="career-tabs-applications"
+          type="button"
+          onClick={openApplications}
+        >{t`Applications`}</button>
       )}
     </nav>
   );

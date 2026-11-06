@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 
 import { careerInterviewRefusal } from "./career-interview-model.js";
@@ -46,15 +47,15 @@ export interface CareerInterviewLiveVoice {
 export function careerInterviewLiveStateLabel(state: CareerInterviewLiveState): string {
   switch (state) {
     case "connecting":
-      return "Connecting…";
+      return t`Connecting…`;
     case "listening":
-      return "Listening. Pause when you are done, or press Done speaking.";
+      return t`Listening. Pause when you are done, or press Done speaking.`;
     case "thinking":
-      return "The interviewer is thinking…";
+      return t`The interviewer is thinking…`;
     case "speaking":
-      return "The interviewer is speaking.";
+      return t`The interviewer is speaking.`;
     case "ended":
-      return "The live conversation ended.";
+      return t`The live conversation ended.`;
   }
 }
 
@@ -62,11 +63,11 @@ export function careerInterviewLiveStateLabel(state: CareerInterviewLiveState): 
 export function careerInterviewLiveRefusal(code: string, message: string, listener: string) {
   switch (code) {
     case "consent_required":
-      return `Talking live sends your voice to ${listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers.`;
+      return t`Talking live sends your voice to ${listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers.`;
     case "live_limit_reached":
-      return "This live conversation reached its time limit. Start it again to go on.";
+      return t`This live conversation reached its time limit. Start it again to go on.`;
     case "live_failed":
-      return "The live conversation stopped. Try again, or keep writing your answers.";
+      return t`The live conversation stopped. Try again, or keep writing your answers.`;
     default:
       return careerInterviewRefusal(code, message);
   }
@@ -118,7 +119,7 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
       </div>
       {heard === "" ? null : (
         <p className="interview-turn interview-turn-candidate interview-turn-sending">
-          <span className="interview-speaker">You</span>
+          <span className="interview-speaker">{t`You`}</span>
           {heard}
         </p>
       )}
@@ -141,9 +142,7 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
                 else setRefusal({ code: "allow_failed", message: problem });
               });
             }}
-          >
-            Allow {voice.listener} to hear my voice
-          </button>
+          >{t`Allow ${voice.listener} to hear my voice`}</button>
         ) : null}
         {live && state === "listening" ? (
           <button
@@ -151,18 +150,14 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
             className="button button-primary"
             disabled={heard === ""}
             onClick={() => call.current?.endTurn()}
-          >
-            Done speaking
-          </button>
+          >{t`Done speaking`}</button>
         ) : null}
         {live && state === "speaking" ? (
           <button
             type="button"
             className="button button-outline"
             onClick={() => call.current?.skipQuestion()}
-          >
-            Answer now
-          </button>
+          >{t`Answer now`}</button>
         ) : null}
         <button
           type="button"
@@ -172,7 +167,7 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
             onClose();
           }}
         >
-          {live ? "End live conversation" : "Back to writing"}
+          {live ? t`End live conversation` : t`Back to writing`}
         </button>
       </div>
     </div>

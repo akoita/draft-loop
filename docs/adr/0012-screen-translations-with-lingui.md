@@ -53,5 +53,11 @@ plugin no longer runs Babel.
 - A new screen string goes through `t`, then `pnpm i18n:extract` and
   `pnpm i18n:compile`. `pnpm i18n:check` fails when the catalogs or the
   compiled files are stale.
+- `packages/ui/src/screen-strings.test.ts` refuses literal JSX text and
+  `aria-label`, `title`, `placeholder` or `alt` text in `packages/ui` and
+  `apps/web`. Text inside `code`, `kbd`, `pre` and `samp` stays verbatim.
+- Sentences that screen models build in TypeScript also use `t` inside the
+  function that builds them, never at module level, so a locale switch reaches
+  them.
 - Documents are not translated by this layer: their language is the
   application's document language, written by the author.
