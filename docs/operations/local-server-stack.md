@@ -378,6 +378,17 @@ writer or reviewer. Another local name is refused with `model_not_offered`. A
 workspace never names an endpoint. Local models are unpriced and have not
 passed the quality gate.
 
+### Live speech
+
+The live voice interview streams through Google Cloud speech in the EU
+([voice input](../reference/voice-input.md#live-conversation)).
+
+| Variable                       | Read by | Meaning                                                                 |
+| ------------------------------ | ------- | ----------------------------------------------------------------------- |
+| `DRAFT_LOOP_LIVE_SPEECH`       | API     | `off` (default) or `google`; any other value fails at start             |
+| `DRAFT_LOOP_SPEECH_PROJECT_ID` | API     | The Google Cloud project; required for `google`                         |
+| `DRAFT_LOOP_SPEECH_KEY_FILE`   | API     | A service account key for speech alone; unset, the API's own identity   |
+
 ### The screener's route
 
 The API calls a model only for `DRAFT_LOOP_SCREENING=rules+model`, using Claude

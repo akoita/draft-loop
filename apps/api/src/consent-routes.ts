@@ -37,8 +37,11 @@ const basisSchema = z.enum([
   "contract",
   "legitimate-interest",
 ] satisfies ConsentBasis[]);
-/** The companies the model gateway routes, as workspaces name their models. */
-const providerSchema = z.enum(["anthropic", "openai"]);
+/**
+ * The companies the model gateway routes, as workspaces name their models, and Google Cloud, which
+ * hears the candidate's voice in the live career interview (#2362).
+ */
+const providerSchema = z.enum(["anthropic", "openai", "google"]);
 
 const recorderSchema = z
   .discriminatedUnion("kind", [
