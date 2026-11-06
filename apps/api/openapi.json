@@ -2754,12 +2754,17 @@
           "interviewer_available": {
             "type": "boolean",
             "description": "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable."
+          },
+          "live_voice_available": {
+            "type": "boolean",
+            "description": "Whether this server offers the live voice conversation on an open topic, over the WebSocket at the session's /live path."
           }
         },
         "required": [
           "session",
           "proposal",
-          "interviewer_available"
+          "interviewer_available",
+          "live_voice_available"
         ]
       },
       "CareerInterviewConflictsInput": {
@@ -9564,12 +9569,17 @@
           "interviewer_available": {
             "type": "boolean",
             "description": "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable."
+          },
+          "live_voice_available": {
+            "type": "boolean",
+            "description": "Whether this server offers the live voice conversation on an open topic, over the WebSocket at the session's /live path."
           }
         },
         "required": [
           "session",
           "proposal",
-          "interviewer_available"
+          "interviewer_available",
+          "live_voice_available"
         ],
         "additionalProperties": false
       },
@@ -20256,7 +20266,8 @@
                       "type": "string",
                       "enum": [
                         "anthropic",
-                        "openai"
+                        "openai",
+                        "google"
                       ]
                     }
                   },

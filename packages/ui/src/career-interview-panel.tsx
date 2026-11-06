@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 
+import { CareerInterviewLiveBar, type CareerInterviewLiveVoice } from "./career-interview-live.js";
 import {
   type CareerInterviewAction,
   type CareerInterviewConflictView,
@@ -41,6 +42,8 @@ export interface CareerInterviewPanelProps {
   readonly loadConflicts: (topicKey: string) => Promise<readonly CareerInterviewConflictView[]>;
   /** Voice input for answers, if the host offers it; the transcript lands in the answer box. */
   readonly speech?: SpeechInput | undefined;
+  /** The live voice conversation, if the host offers it; shown when the server does too. */
+  readonly live?: CareerInterviewLiveVoice | undefined;
 }
 
 export function CareerInterviewPanel({
@@ -52,6 +55,7 @@ export function CareerInterviewPanel({
   onAction,
   loadConflicts,
   speech,
+  live,
 }: CareerInterviewPanelProps) {
   const id = useId();
   const [pending, setPending] = useState<CareerInterviewPending | undefined>(undefined);
@@ -131,7 +135,13 @@ export function CareerInterviewPanel({
                 onAction={act}
               />
             ) : (
-              <Conversation topic={active} pending={pending} speech={speech} onAction={act} />
+              <Conversation
+                topic={active}
+                pending={pending}
+                speech={speech}
+                live={session.liveVoiceAvailable === true ? live : undefined}
+                onAction={act}
+              />
             )}
             {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
             <div className="interview-footer">
@@ -323,15 +333,18 @@ function Conversation({
   topic,
   pending,
   speech,
+  live,
   onAction,
 }: {
   readonly topic: CareerInterviewTopicView;
   readonly pending: CareerInterviewPending | undefined;
   readonly speech: SpeechInput | undefined;
+  readonly live: CareerInterviewLiveVoice | undefined;
   readonly onAction: (action: CareerInterviewAction) => Promise<boolean>;
 }) {
   const id = useId();
   const [answer, setAnswer] = useState("");
+  const [talking, setTalking] = useState(false);
   const busy = pending !== undefined;
   const send = () => {
     const text = answer.trim();
@@ -353,6 +366,52 @@ function Conversation({
         ) : null}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
       </ol>
+      {live !== undefined && talking ? (
+        <CareerInterviewLiveBar
+          topicKey={topic.key}
+          voice={live}
+          onClose={() => setTalking(false)}
+        />
+      ) : (
+        <WrittenAnswer
+          id={id}
+          topic={topic}
+          busy={busy}
+          answer={answer}
+          setAnswer={setAnswer}
+          send={send}
+          speech={speech}
+          onTalkLive={live === undefined ? undefined : () => setTalking(true)}
+          onAction={onAction}
+        />
+      )}
+    </div>
+  );
+}
+
+function WrittenAnswer({
+  id,
+  topic,
+  busy,
+  answer,
+  setAnswer,
+  send,
+  speech,
+  onTalkLive,
+  onAction,
+}: {
+  readonly id: string;
+  readonly topic: CareerInterviewTopicView;
+  readonly busy: boolean;
+  readonly answer: string;
+  readonly setAnswer: (update: (existing: string) => string) => void;
+  readonly send: () => void;
+  readonly speech: SpeechInput | undefined;
+  readonly onTalkLive: (() => void) | undefined;
+  readonly onAction: (action: CareerInterviewAction) => Promise<boolean>;
+}) {
+  return (
+    <>
       <fieldset className="interview-chips">
         <legend className="sr-only">Quick replies</legend>
         <button
@@ -394,7 +453,10 @@ function Conversation({
           maxLength={4_000}
           rows={3}
           placeholder="Write your answer. Enter sends, Shift+Enter starts a new line."
-          onChange={(event) => setAnswer(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value;
+            setAnswer(() => value);
+          }}
           onKeyDown={(event) => {
             if (
               !careerInterviewSendsOnKey({ ...event, isComposing: event.nativeEvent.isComposing })
@@ -405,6 +467,16 @@ function Conversation({
           }}
         />
         <div className="interview-actions">
+          {onTalkLive === undefined ? null : (
+            <button
+              type="button"
+              className="button button-outline interview-talk-live"
+              disabled={busy}
+              onClick={onTalkLive}
+            >
+              Talk live
+            </button>
+          )}
           {speech === undefined ? null : (
             <SpeechButton
               speech={speech}
@@ -421,7 +493,7 @@ function Conversation({
           </button>
         </div>
       </form>
-    </div>
+    </>
   );
 }
 
