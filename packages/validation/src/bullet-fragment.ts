@@ -40,6 +40,19 @@ export interface BulletFragment {
   readonly end: number;
 }
 
+/**
+ * The closing a fragment ends on: a comma or semicolon in any language, or a connector in a
+ * language with a list (#2320). Another language checks the punctuation only.
+ */
+function danglingClosingFor(language: string): RegExp {
+  const code = language.trim().toLowerCase().split("-")[0];
+  if (code === "en") return /(?:[,;]|(?<![\p{L}\p{N}])(?:and|or|with|of|to)\.?)$/iu;
+  if (code === "fr") {
+    return /(?:[,;]|(?<![\p{L}\p{N}])(?:et|ou|avec|de|du|des|pour|à|au|aux)\.?)$/iu;
+  }
+  return /[,;]$/u;
+}
+
 function startsAsKnownName(text: string): boolean {
   const token = /^[\p{L}\p{N}][\p{L}\p{N}._+#-]*/u.exec(text)?.[0] ?? "";
   // A lowercase token holding an uppercase letter or a digit is a product or tool name (iOS, k8s).
@@ -53,7 +66,7 @@ function startsAsKnownName(text: string): boolean {
  * semicolon, or it joins separate statements with a semicolon. A complete statement starts with a
  * capital letter or an action verb, ends whole and states one fact.
  */
-export function findBulletFragment(text: string): BulletFragment | undefined {
+export function findBulletFragment(text: string, language = "en"): BulletFragment | undefined {
   const lead = text.length - text.trimStart().length;
   const body = text.trim();
   if (body === "") return undefined;
@@ -63,7 +76,7 @@ export function findBulletFragment(text: string): BulletFragment | undefined {
     return { reason: "lowercase-start", quote: text.slice(lead, end), start: lead, end };
   }
 
-  const closing = /(?:[,;]|(?<![\p{L}\p{N}])(?:and|or|with|of|to)\.?)$/iu.exec(body);
+  const closing = danglingClosingFor(language).exec(body);
   if (closing !== null) {
     const start = lead + closing.index;
     const end = lead + body.length;

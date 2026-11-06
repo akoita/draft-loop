@@ -278,6 +278,15 @@ describe("numbers written in words", () => {
     expect(check("I closed a dozen accounts.", ["k"])).toEqual([]);
   });
 
+  it("reads French number words the same way (#2320)", () => {
+    expect(check("J'ai passé cinq ans comme Analyst.", ["t", "d"])).toEqual([
+      "The number cinq appears in no cited fact.",
+    ]);
+    expect(check("J'ai formé cinq analystes.", ["n"])).toEqual([]);
+    expect(check("J'ai mené douze audits.", ["k"])).toEqual([]);
+    expect(check("J'ai réduit le rapport de dix jours à deux.", ["o"])).toEqual([]);
+  });
+
   it("does not read 'one' as a count", () => {
     expect(check("SQL is one of my core skills.", ["s"])).toEqual([]);
   });

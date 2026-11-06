@@ -1075,7 +1075,8 @@ pnpm --filter @draft-loop/cli start policy show <checksum> ./workspace --content
 
 **On screen**, **Edit policy** in Home's Workspace settings opens the active
 policy as text, or the default when there is none. Selectors for tone,
-verbosity, page target and spelling locale rewrite the matching lines. Saving
+verbosity, page target and spelling locale rewrite the matching lines. The
+spelling locale field suggests `en-GB`, `en-US`, `fr-FR` and `fr-CA`. Saving
 creates a new version for future runs, as `policy activate` does, and rejected
 text saves nothing.
 

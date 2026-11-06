@@ -38,3 +38,21 @@ describe("candidate narration", () => {
     }
   });
 });
+
+describe("findCandidateNarration in French (#2320)", () => {
+  it("flags French third-person narration about the candidate", () => {
+    expect(
+      findCandidateNarration("Il a dirigé la migration vers Kubernetes.", "fr")?.quote,
+    ).toMatch(/^Il a/u);
+    expect(findCandidateNarration("Le candidat a conduit trois audits.", "fr")).toBeDefined();
+    expect(findCandidateNarration("Elle était responsable du budget.", "fr")).toBeDefined();
+  });
+
+  it("leaves French candidate-voice prose, possessives and other languages alone", () => {
+    expect(
+      findCandidateNarration("Dirigé la migration et son plan de reprise d'activité.", "fr"),
+    ).toBeUndefined();
+    expect(findCandidateNarration("He led the migration.", "fr")).toBeUndefined();
+    expect(findCandidateNarration("Er leitete die Migration.", "de")).toBeUndefined();
+  });
+});

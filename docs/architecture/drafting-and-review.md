@@ -302,6 +302,11 @@ sentence (`packages/application/src/document-language-instruction.ts`).
 English prompts are unchanged, so English runs keep their prompt versions and
 cached prefixes.
 
+The deterministic writing checks follow the draft's language. Third-person
+narration and bullets left on a connector are checked in English and French;
+other languages check only trailing punctuation. Numbers written in French
+words ("cinq ans") must be supported by a cited fact, as English ones are.
+
 ### Each part of the CV has one job
 
 - **Experience and Projects** carry the detail of each fact. A role's
