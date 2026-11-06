@@ -794,6 +794,7 @@ unless the table says so.
 | `repeated-fact` | The same fact is in more than one section: the shorter of two claims has at least four content words and the longer holds at least 80% of them, after dropping function words and endings (#1859) |
 | `missing-cv-header` | A CV with an experience section has no header or an empty one, or the header still shows placeholders (one finding per block, #1878). A warning during the loop, an **error at approval** (#1902): the candidate replaces the placeholders or overrides with a reason, and the export prints a `Header warning:` line |
 | `unlabelled-skills-line` | A Skills section has `Label: items` lines and a line without a label |
+| `wrong-language` | A section of 80 or more characters clearly reads as another language than the artifact's `language`, by an offline function-word guess (#2318). An **error** when the whole draft's prose reads as that other language, a warning for a stray section; the header and short sections such as skill lists are left alone |
 
 The CV shape checks (`missing-cv-header`, `unlabelled-skills-line`, #1862) do
 not apply to letters or application answers.

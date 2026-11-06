@@ -12,6 +12,7 @@ import { bulletFragmentMessages, findBulletFragment } from "./bullet-fragment.js
 import { findBulletSeries } from "./bullet-series.js";
 import { findCandidateNarration } from "./candidate-narration.js";
 import { findCvShapeIssues } from "./cv-shape.js";
+import { checkDocumentLanguage, wrongLanguageMessage } from "./document-language.js";
 import { findRepeatedFacts } from "./repeated-fact.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
@@ -91,7 +92,8 @@ export type DeterministicValidationCode =
   | "writing-policy-forbidden-term"
   | "writing-policy-section-order"
   | "uncovered-requirement"
-  | "explicit-gap";
+  | "explicit-gap"
+  | "wrong-language";
 
 export interface ValidationIssue {
   readonly code: string;
@@ -576,6 +578,25 @@ export function validateDraftArtifact(
         });
       }
     }
+  }
+
+  const language = checkDocumentLanguage(artifact);
+  if (language.wholeDraft && language.draftLanguage !== undefined) {
+    addIssue(issues, {
+      code: "wrong-language",
+      category: "quality",
+      severity: "error",
+      message: `the draft ${wrongLanguageMessage(language.expected, language.draftLanguage)}`,
+    });
+  }
+  for (const section of language.sections) {
+    addIssue(issues, {
+      code: "wrong-language",
+      category: "quality",
+      severity: "warning",
+      message: `section ${wrongLanguageMessage(language.expected, section.detected)}`,
+      sectionId: section.sectionId,
+    });
   }
 
   for (const section of artifact.sections) {
