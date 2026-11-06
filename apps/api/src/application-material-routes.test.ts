@@ -1,4 +1,5 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
+import { type FactUsageSettings, factUsageKey } from "@draft-loop/application/fact-usage";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
@@ -85,7 +86,11 @@ function scriptedRoute(outputs: readonly object[], seen: unknown[]): AnthropicRo
 let app: FastifyInstance;
 let logs: string[];
 
-async function build(options: { route?: AnthropicRouteBuilder; consent?: ConsentState }) {
+async function build(options: {
+  route?: AnthropicRouteBuilder;
+  consent?: ConsentState;
+  usage?: FactUsageSettings;
+}) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
   app = await buildApi({
@@ -98,6 +103,14 @@ async function build(options: { route?: AnthropicRouteBuilder; consent?: Consent
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
       consents,
+      ...(options.usage === undefined
+        ? {}
+        : {
+            factUsage: {
+              read: async () => options.usage as FactUsageSettings,
+              change: async () => options.usage as FactUsageSettings,
+            },
+          }),
       careerInterview: {
         sessions: createMemoryCareerInterviewSessionStore(),
         allowProviderData: true,
@@ -158,6 +171,27 @@ describe("application material route", () => {
     const logged = logs.join("\n");
     expect(logged).toContain('"costUsd":0.002');
     expect(logged).not.toContain("cut report time");
+  });
+
+  it("never sends the model a fact marked never-say", async () => {
+    const seen: unknown[] = [];
+    const outcome = profile.facts[1] as { category: "achievement"; field: string; value: string };
+    await build({
+      consent: granted,
+      usage: { schemaVersion: 1, sections: {}, facts: { [factUsageKey(outcome)]: "never-say" } },
+      route: scriptedRoute(
+        [
+          {
+            items: [{ question: "Your role?", text: "I work as a Data Analyst.", fact_ids: ["t"] }],
+          },
+        ],
+        seen,
+      ),
+    });
+    const response = await draft("interview-questions");
+    expect(response.statusCode).toBe(200);
+    expect(JSON.stringify(seen)).not.toContain("Cut report time");
+    expect(JSON.stringify(response.json())).not.toContain("Cut report time");
   });
 
   it("answers 503 without a Claude route and 403 without consent", async () => {

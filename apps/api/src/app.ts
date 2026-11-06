@@ -556,6 +556,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         },
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {

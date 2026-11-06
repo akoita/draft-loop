@@ -904,11 +904,15 @@ A host without a profile workflow shows no Career profile tab or signpost.
 On the Career profile, each fact and each section has a **usage level**. It
 is separate from sensitivity, which decides what may reach a model provider.
 
-| Level            | Shown as         | Used on                          |
-| ---------------- | ---------------- | -------------------------------- |
-| `cv`             | CV and interview | CVs and interview preparation    |
-| `interview-only` | Interview only   | Interview preparation, never CVs |
-| `never-say`      | Never say        | No output                        |
+| Level            | Shown as         | Cover letters and CVs | Interview questions |
+| ---------------- | ---------------- | --------------------- | ------------------- |
+| `cv`             | CV and interview | Yes                   | Yes                 |
+| `interview-only` | Interview only   | No                    | Yes                 |
+| `never-say`      | Never say        | No                    | No                  |
+
+Cover letters and interview questions on the **Prepare** panel follow these
+levels. CV runs do not yet; that is
+[#2304](https://github.com/akoita/draft-loop/issues/2304).
 
 - **Unset is `cv`.** Nothing changes until you mark a fact or section.
 - **A fact's own level wins.** "Like section" follows the section's level.
