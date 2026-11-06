@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 
+import { linguiMacro } from "./packages/ui/lingui-macro.mjs";
+
 const testExclusions = [
   "**/node_modules/**",
   "**/dist/**",
@@ -13,7 +15,11 @@ const loadSensitiveIntegrationFiles = [
 ];
 
 export default defineConfig({
+  // The shared screens' Lingui macros compile to catalog lookups, as in the web build (#2321).
+  plugins: [linguiMacro()],
   test: {
+    // English is active before any screen test renders, as the hosts activate it at startup.
+    setupFiles: ["./packages/ui/src/i18n-test-setup.ts"],
     // Agent tooling creates git worktrees under `.claude/worktrees/`. Vitest
     // does not read `.gitignore`, so without this it collects test files from
     // those checkouts, which have no installed dependencies, and `pnpm test`

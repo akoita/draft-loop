@@ -63,6 +63,9 @@ jobs:
       - name: Lint
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm lint
+      - name: Check the screen catalogs
+        if: needs.scope.outputs.docs_only != 'true'
+        run: pnpm i18n:check
       - name: Typecheck
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm typecheck

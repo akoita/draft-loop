@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
+import { linguiMacro } from "@draft-loop/ui/lingui-macro";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 
@@ -43,7 +44,7 @@ function ortRuntime(): Plugin {
 // `pnpm dev` proxies the API so the screen and `/v1` share an origin, as they do when the API
 // serves the built screen.
 export default defineConfig({
-  plugins: [react(), ortRuntime()],
+  plugins: [linguiMacro(), react(), ortRuntime()],
   // The runtime's extern-wasm build loads its files from `/ort/` alone, instead of also bundling
   // a hashed copy of the 27 MB WebAssembly file into the assets.
   resolve: { conditions: ["onnxruntime-web-use-extern-wasm", ...defaultClientConditions] },

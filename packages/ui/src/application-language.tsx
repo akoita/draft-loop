@@ -5,6 +5,7 @@ import {
   documentLanguages,
   isDocumentLanguage,
 } from "@draft-loop/domain/document-language";
+import { t } from "@lingui/core/macro";
 import { useId, useState } from "react";
 
 /** The select value that keeps the workspace's language. */
@@ -34,14 +35,14 @@ export function DocumentLanguageSelect({ value, disabled, onChange }: DocumentLa
   const id = useId();
   return (
     <span className="document-language-select">
-      <label htmlFor={id}>Write its documents in</label>
+      <label htmlFor={id}>{t`Write its documents in`}</label>
       <select
         id={id}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value={workspaceLanguageValue}>The workspace&apos;s language</option>
+        <option value={workspaceLanguageValue}>{t`The workspace's language`}</option>
         {documentLanguages.map((language) => (
           <option key={language.code} value={language.code}>
             {documentLanguageChoiceLabel(language)}
@@ -63,9 +64,9 @@ export function JobLanguageProposal({ language, disabled, onAccept }: JobLanguag
   const label = documentLanguageLabel(language);
   return (
     <p className="job-language-proposal" role="status">
-      This job posting looks {label}.{" "}
+      {t`This job posting looks ${label}.`}{" "}
       <button className="button button-quiet" type="button" disabled={disabled} onClick={onAccept}>
-        Write in {label}
+        {t`Write in ${label}`}
       </button>
     </p>
   );
@@ -97,7 +98,7 @@ export function ApplicationLanguageControl({
       setError(
         reason instanceof Error && reason.message.trim() !== ""
           ? reason.message
-          : "The language could not be saved.",
+          : t`The language could not be saved.`,
       );
     }
     setSaving(false);
@@ -110,7 +111,7 @@ export function ApplicationLanguageControl({
         onChange={(value) => void choose(value)}
       />
       <p className="subtle">
-        The CV, cover letter and interview questions of new runs use this language.
+        {t`The CV, cover letter and interview questions of new runs use this language.`}
       </p>
       {error === null ? null : (
         <p className="setup-blocker" role="alert">
