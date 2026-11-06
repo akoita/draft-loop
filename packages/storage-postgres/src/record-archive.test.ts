@@ -155,6 +155,16 @@ async function seedRecord(
     [w, run, `Clearer for ${marker}`, at],
   );
   await q(
+    `INSERT INTO application_folders (workspace_id, folder_id, name, name_key, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $5)`,
+    [w, `fld_${marker}`, `Folder ${marker}`, `folder ${marker}`.toLowerCase(), at],
+  );
+  await q(
+    `INSERT INTO application_folder_placements (workspace_id, application_id, folder_id, placed_at)
+     VALUES ($1, 'application', $2, $3)`,
+    [w, `fld_${marker}`, at],
+  );
+  await q(
     `INSERT INTO run_snapshots (id, workspace_id, run_id, context_snapshot_id, state, round, budget_json,
        approval, total_cost_usd, started_at, updated_at, payload_json, record_checksum)
      VALUES ($1, $2, $3, $4, 'approved', 1, '{}', 'approved', 0.5, $5, $5, $6, $7)`,

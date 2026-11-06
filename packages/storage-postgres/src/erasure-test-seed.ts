@@ -249,6 +249,16 @@ export async function seedRecord(
       [tenant, history, run, at],
     ],
     [
+      `INSERT INTO application_folders (tenant_id, workspace_id, folder_id, name, name_key, created_at, updated_at)
+       VALUES ($1, $2, 'fld_fictional1', 'Fictional folder', 'fictional folder', $3, $3)`,
+      [tenant, history, at],
+    ],
+    [
+      `INSERT INTO application_folder_placements (tenant_id, workspace_id, application_id, folder_id, placed_at)
+       VALUES ($1, $2, 'application-1', 'fld_fictional1', $3)`,
+      [tenant, history, at],
+    ],
+    [
       `INSERT INTO candidate_knowledge_retrieval_traces (tenant_id, workspace_id, trace_id, schema_version, operation_id, purpose, query_checksum, payload_json, payload_checksum, created_at)
        VALUES ($1, $2, 'trace-1', 1, 'operation-1', 'critic-review', $3, '{}', $3, $4)`,
       [tenant, history, checksum, at],

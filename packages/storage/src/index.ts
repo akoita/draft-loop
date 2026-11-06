@@ -334,7 +334,7 @@ import type {
   WorkspaceRestoreOptions,
 } from "./ports/workspace.js";
 
-export const storageSchemaVersion = 37 as const;
+export const storageSchemaVersion = 38 as const;
 
 interface Migration {
   readonly version: number;

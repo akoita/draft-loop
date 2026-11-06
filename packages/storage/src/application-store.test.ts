@@ -94,7 +94,7 @@ describe("application storage", () => {
     legacy.close();
 
     storage = new SqliteStorage(filename);
-    expect(storage.appliedMigrationVersions().at(-1)).toBe(37);
+    expect(storage.appliedMigrationVersions().at(-1)).toBe(38);
     expect((await storage.getWorkspace(workspaceId))?.createdAt).toBe(createdAt);
     expect(await storage.applications.listApplications(workspaceId)).toEqual([]);
     expect(await storage.applications.listRuns(workspaceId, "default")).toEqual([]);
