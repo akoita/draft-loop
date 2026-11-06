@@ -197,6 +197,10 @@ export function EvidenceSections({ client, revision, workJournal }: EvidenceSect
   return (
     <>
       <EvidenceFileChecks client={client} revision={revision} groups={groups} problem={problem} />
+      <div className="evidence-optional">
+        <p className="eyebrow">{t`Optional`}</p>
+        <p>{t`Add more evidence at any time. None of the sections below is needed before Career profile.`}</p>
+      </div>
       <PrivateSections client={client} bases={bases} />
       {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
       {workJournal === true ? <CareerInterviewSection client={client} bases={bases} /> : null}

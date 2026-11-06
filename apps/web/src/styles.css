@@ -398,3 +398,14 @@ button.small:where(:not(.shared-screens *)) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Marks the Career evidence page's extra sections as optional, so the next step stays Career profile. */
+.evidence-optional {
+  border-top: 1px dashed currentColor;
+  opacity: 0.85;
+  padding-top: 0.75rem;
+}
+
+.evidence-optional p {
+  margin: 0.25rem 0 0;
+}

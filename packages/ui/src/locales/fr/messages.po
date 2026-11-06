@@ -699,6 +699,10 @@ msgstr "Ajouter un dossier"
 msgid "Add job description"
 msgstr "Ajouter l’offre d’emploi"
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Add more evidence at any time. None of the sections below is needed before Career profile."
+msgstr "Ajoutez d’autres éléments quand vous voulez. Aucune des sections ci-dessous n’est nécessaire avant le Profil professionnel."
+
 #: packages/ui/src/home-model.ts
 msgid "Add or manage documents"
 msgstr "Ajouter ou gérer des documents"
@@ -1171,6 +1175,10 @@ msgstr "Version du profil professionnel"
 msgid "central themes"
 msgstr "thèmes centraux"
 
+#: packages/ui/src/knowledge.tsx
+msgid "Change"
+msgstr "Changer"
+
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
 msgstr "Changer les modèles"
@@ -1495,6 +1503,10 @@ msgstr "Connexion…"
 #: apps/web/src/private-sections.tsx
 msgid "contains"
 msgstr "contient"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Continue to Career profile"
+msgstr "Continuer vers le Profil professionnel"
 
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Continue where you left off, or pick another workspace. "
@@ -3292,6 +3304,10 @@ msgstr "Nouvel espace de travail"
 msgid "Next-run model profiles"
 msgstr "Profils de modèles de la prochaine exécution"
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Next: build your career profile"
+msgstr "Étape suivante : construire votre profil professionnel"
+
 #. placeholder {0}: countedNouns.blockingFinding(revisionLeft ? undecided : blocking.length)
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: decide {0}"
@@ -3676,6 +3692,7 @@ msgstr "L’ouverture d’un espace de travail est indisponible dans cet hôte."
 msgid "Opening workspace…"
 msgstr "Ouverture de l’espace de travail…"
 
+#: apps/web/src/evidence-panels.tsx
 #: packages/ui/src/review.tsx
 msgid "Optional"
 msgstr "Facultatif"
@@ -5179,6 +5196,10 @@ msgstr "Arrêt…"
 msgid "Store"
 msgstr "Stockage"
 
+#: packages/ui/src/knowledge.tsx
+msgid "Stored in knowledge base"
+msgstr "Conservé dans la base de connaissances"
+
 #: packages/ui/src/home-model.ts
 msgid "Stored with the workspace rather than in a knowledge base."
 msgstr "Enregistré avec l’espace de travail plutôt que dans une base de connaissances."
@@ -6255,8 +6276,8 @@ msgid "Where the agreement is kept"
 msgstr "Où l’accord est conservé"
 
 #: packages/ui/src/knowledge.tsx
-msgid "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
-msgstr "Où vos éléments sont conservés. Choisir une autre base remplace celle qu’utilise cet espace de travail."
+msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
+msgstr "Où vos éléments sont conservés. Une seule suffit le plus souvent ; choisir une autre base remplace celle qu’utilise cet espace de travail."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Who may read it"
@@ -6434,6 +6455,10 @@ msgstr "Vos consignes pour ce tour"
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Your documents"
 msgstr "Vos documents"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time."
+msgstr "Vos documents sont enregistrés. DraftLoop les lit et liste les faits trouvés pour que vous les vérifiiez. Vous pouvez ajouter d’autres documents quand vous voulez."
 
 #: packages/ui/src/profile.tsx
 msgid "Your facts"

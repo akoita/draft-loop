@@ -119,6 +119,21 @@ export interface CareerEvidenceCardViewProps {
   readonly automatic?: boolean;
   /** Each source's evidence kind, when the host reports them for the selected base. */
   readonly evidenceKinds?: Omit<SourceEvidenceKindListProps, "disabled">;
+  /** Opens Career profile, the next step once a document is ready; absent without a profile. */
+  readonly onOpenProfile?: () => void;
+}
+
+/** The card's next step once a document is ready. */
+export function CareerEvidenceNextStep({ onOpenProfile }: { readonly onOpenProfile: () => void }) {
+  return (
+    <aside className="career-next-step" aria-labelledby="career-next-step-heading">
+      <strong id="career-next-step-heading">{t`Next: build your career profile`}</strong>
+      <p>{t`Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time.`}</p>
+      <button className="button button-primary" type="button" onClick={onOpenProfile}>
+        {t`Continue to Career profile`} <span aria-hidden="true">→</span>
+      </button>
+    </aside>
+  );
 }
 
 export function CareerEvidenceCardView({
@@ -140,6 +155,7 @@ export function CareerEvidenceCardView({
   automatic = false,
   knowledgeBase = null,
   evidenceKinds,
+  onOpenProfile,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -302,6 +318,9 @@ https://www.linkedin.com/in/…`}
           ) : null}
         </>
       ) : null}
+      {ready && !pending && onOpenProfile !== undefined ? (
+        <CareerEvidenceNextStep onOpenProfile={onOpenProfile} />
+      ) : null}
       {knowledgeBase}
     </article>
   );
@@ -314,6 +333,8 @@ export interface CareerEvidenceCardProps {
   readonly onAddLegacyUrl?: ((url: string) => void) | undefined;
   /** The Knowledge base section shown at the bottom of the card. */
   readonly knowledgeBase?: ReactNode;
+  /** Opens Career profile, the next step once a document is ready. */
+  readonly onOpenProfile?: (() => void) | undefined;
 }
 
 function failureText(reason: unknown): string {
@@ -329,6 +350,7 @@ export function CareerEvidenceCard({
   onSelectLegacyFiles,
   onAddLegacyUrl,
   knowledgeBase,
+  onOpenProfile,
 }: CareerEvidenceCardProps) {
   const capabilities = knowledge?.capabilities;
   const supported = capabilities !== undefined && supportsCareerEvidence(capabilities);
@@ -533,6 +555,7 @@ export function CareerEvidenceCard({
         ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
         : {})}
       knowledgeBase={knowledgeBase}
+      {...(onOpenProfile === undefined ? {} : { onOpenProfile })}
       {...(evidenceKinds.state === null
         ? {}
         : { evidenceKinds: { state: evidenceKinds.state, onChange: evidenceKinds.change } })}
