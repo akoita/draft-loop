@@ -104,15 +104,16 @@ The images read the settings listed in
 [the local server stack](local-server-stack.md#configuration). A deployment
 sets them from its infrastructure and differs from the local stack here:
 
-| Setting                                               | Deployment value and why                                                                                                          |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `DRAFT_LOOP_GCS_ENDPOINT`                             | Unset, so blobs go to Cloud Storage                                                                                               |
-| `DRAFT_LOOP_CLOUD_SQL_INSTANCE`                       | Set, so services use the Cloud SQL connector with no runtime password; IAM users go in `DRAFT_LOOP_RUNTIME_MEMBERS`               |
-| `DRAFT_LOOP_WORKER_MODE`, `DRAFT_LOOP_WORKER_JOB`     | `drain` on the worker; the API names the job and starts it after each queued run. Its identity needs permission to run the job    |
-| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes | Set on the worker. The API reads the flag too, as the ceiling above consent for model screening                                   |
-| `DRAFT_LOOP_AUTH_MODE=oidc`                           | In sign-in mode, the same on API and worker. The worker then always checks consent and refuses `DRAFT_LOOP_REQUIRE_CONSENT=false` |
-| `DRAFT_LOOP_SCREENING`                                | The same value on API and worker, so material with no stored result is held by one and refused by the other                       |
-| `DRAFT_LOOP_PAGE_FETCHER_URL`                         | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                |
+| Setting                                                 | Deployment value and why                                                                                                                                                     |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_GCS_ENDPOINT`                               | Unset, so blobs go to Cloud Storage                                                                                                                                          |
+| `DRAFT_LOOP_CLOUD_SQL_INSTANCE`                         | Set, so services use the Cloud SQL connector with no runtime password; IAM users go in `DRAFT_LOOP_RUNTIME_MEMBERS`                                                          |
+| `DRAFT_LOOP_WORKER_MODE`, `DRAFT_LOOP_WORKER_JOB`       | `drain` on the worker; the API names the job and starts it after each queued run. Its identity needs permission to run the job                                               |
+| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes   | Set on the worker. The API reads the flag too, as the ceiling above consent for model screening                                                                              |
+| `DRAFT_LOOP_AUTH_MODE=oidc`                             | In sign-in mode, the same on API and worker. The worker then always checks consent and refuses `DRAFT_LOOP_REQUIRE_CONSENT=false`                                            |
+| `DRAFT_LOOP_SCREENING`                                  | The same value on API and worker, so material with no stored result is held by one and refused by the other                                                                  |
+| `DRAFT_LOOP_PAGE_FETCHER_URL`                           | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                                                           |
+| `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models)) |
 
 A Cloud Scheduler sweep starts the worker job every 10 minutes for retries and
 resumed runs.

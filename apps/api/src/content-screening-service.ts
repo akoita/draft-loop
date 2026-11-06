@@ -12,6 +12,7 @@ import {
   createFileCredentialResolver,
   createHostedAnthropicRoute,
   createHostedContentScreener,
+  type DecisionScreeningShadow,
   type HostedContentScreenerOptions,
   type ModelScreeningUsage,
 } from "@draft-loop/model-gateway";
@@ -48,6 +49,11 @@ export interface ContentScreeningSetup {
    * its own model on it.
    */
   readonly claudeRoute?: AnthropicRouteBuilder;
+  /**
+   * The screening shadow (#2247), when on: it reads each public job page after the screening and
+   * only logs. It never sees a candidate source and never changes a verdict.
+   */
+  readonly shadow?: DecisionScreeningShadow;
   readonly now?: () => string;
 }
 
@@ -207,6 +213,17 @@ export function createHostedContentScreening(
           : await screenWith(screeners, { text: input.text, kind: input.kind }, setup.now);
       const stored = await store.recordResult(input.subject, result);
       logQuarantine(input.log, tenantId, stored);
+      if (setup.shadow !== undefined && input.kind === "job-source" && input.text !== undefined) {
+        // Not awaited: the shadow only logs, so it adds no latency and cannot fail the intake.
+        void setup.shadow.observe({
+          text: input.text,
+          tenantId,
+          resultId: stored.id,
+          verdict: stored.result.verdict,
+          signals: stored.result.signals,
+          log: input.log,
+        });
+      }
       return stored;
     },
   };

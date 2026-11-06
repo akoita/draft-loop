@@ -1,4 +1,5 @@
 export * from "./content-screener.js";
+export * from "./decision-screening-shadow.js";
 export * from "./file-credentials.js";
 export * from "./google-speech.js";
 export * from "./hosted-routes.js";

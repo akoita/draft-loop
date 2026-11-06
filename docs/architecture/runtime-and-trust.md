@@ -313,22 +313,22 @@ the context snapshot.
 
 `@draft-loop/providers/decisions` asks a fast judgment model small closed
 questions about one input. It writes no text: the caller's code makes the
-decision from the answers. Nothing calls it yet; the first planned uses are in
-[#2247](https://github.com/akoita/draft-loop/issues/2247).
+decision from the answers. Its one caller is the screening shadow below; the
+planned uses are in [#2247](https://github.com/akoita/draft-loop/issues/2247).
 
-| Question  | Answer                                                    |
-| --------- | --------------------------------------------------------- |
-| Predicate | Probability that a statement holds                        |
+| Question  | Answer                                                     |
+| --------- | ---------------------------------------------------------- |
+| Predicate | Probability that a statement holds                         |
 | Choice    | One option of 2 to 255, with a distribution and confidence |
-| Score     | A point on 2 to 10 ordered levels, with a distribution    |
+| Score     | A point on 2 to 10 ordered levels, with a distribution     |
 
 `createDecisionModel` picks the vendor; Jev is the default.
 
-| Vendor                 | Wire format                                  | Auth                    |
-| ---------------------- | -------------------------------------------- | ----------------------- |
-| `typesafe-jev`         | System One, `POST /v1/systemone`             | API key                 |
-| `openai-decisions`     | `POST /v1/decisions`                         | API key                 |
-| `microsoft-decision-1` | System One on a Foundry resource endpoint    | Entra ID token callback |
+| Vendor                 | Wire format                               | Auth                    |
+| ---------------------- | ----------------------------------------- | ----------------------- |
+| `typesafe-jev`         | System One, `POST /v1/systemone`          | API key                 |
+| `openai-decisions`     | `POST /v1/decisions`                      | API key                 |
+| `microsoft-decision-1` | System One on a Foundry resource endpoint | Entra ID token callback |
 
 - **Policy first.** Each call needs a decision data policy naming the allowed
   vendors. A missing approval, an unlisted vendor or unacknowledged sensitive
@@ -346,8 +346,34 @@ decision from the answers. Nothing calls it yet; the first planned uses are in
   needs `DRAFT_LOOP_JEV_API_KEY`, refuses to start above its cap
   (`DRAFT_LOOP_DECISION_SHADOW_MAX_USD`, default $0.50), and sends no candidate
   material.
+- **Screening shadow.** With `DRAFT_LOOP_SCREENING_SHADOW=jev` (default
+  `off`), the API sends each public job page to Jev after the screening has
+  stored its verdict. It asks the same judgments as the shadow test, at a 0.7
+  threshold, and logs one content-free line per page.
 - **Data location.** Jev runs in the US, with zero retention on enterprise
-  plans only. On the hosted service it must not receive candidate material.
+  plans only. On the hosted service it must not receive candidate material, so
+  the shadow never reads a candidate source.
+
+```mermaid
+flowchart LR
+  page[Public job page] --> rules[Screening: rules, or rules + Haiku]
+  rules --> store[(Stored verdict, quarantine)]
+  rules -. job pages only, not awaited .-> jev[Jev shadow at 0.7]
+  jev --> log[Log line: verdict, Jev signals, agreement, cost]
+```
+
+The shadow never changes a verdict, a stored result or quarantine:
+
+| Setting                                     | Effect                                                     |
+| ------------------------------------------- | ---------------------------------------------------------- |
+| `DRAFT_LOOP_SCREENING_SHADOW`               | `off` (default) or `jev`; an unknown value stops the start |
+| `DRAFT_LOOP_JEV_API_KEY`                    | Required with `jev`; from Secret Manager when hosted       |
+| `DRAFT_LOOP_SCREENING_SHADOW_MAX_DAILY_USD` | Daily spend cap, default $0.10; calls stop for the UTC day |
+
+A page is cut at 60,000 characters, a call times out after 2 seconds, and a
+failure is logged by its code. To compare, filter the API logs on the message
+`content screening shadow` and read `agreement`: `model-only` lines are the
+pages Jev flagged and the screening did not.
 
 ### Recorded usage and evidence
 
@@ -373,11 +399,11 @@ The engine can emit content-free spans through a tracing port
 (`packages/orchestrator/src/run-tracing.ts`). Without a tracer it records
 nothing.
 
-| Span | Opened for | Attributes |
-| --- | --- | --- |
-| `invoke_workflow` | Each advance of a run | Run id, last round |
-| `invoke_agent` | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type |
-| `retrieve_evidence` | Retrieval inside an attempt | Chunk count |
+| Span                | Opened for                              | Attributes                                                                |
+| ------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| `invoke_workflow`   | Each advance of a run                   | Run id, last round                                                        |
+| `invoke_agent`      | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type |
+| `retrieve_evidence` | Retrieval inside an attempt             | Chunk count                                                               |
 
 - **Content-free.** Only listed attribute names are kept, and a string value
   must be a short identifier, so a prompt or a draft sentence is dropped.
