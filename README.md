@@ -59,14 +59,16 @@ The self-hosted server needs only Docker with the Compose plugin: no clone, no
 Node and no build. Its images are published on GitHub Container Registry with
 each `server-v*` release on the [releases page](https://github.com/akoita/draft-loop/releases).
 
-On Linux or macOS, download the install script and install a release. Set
-`VERSION` to the newest `server-v*` release, without the `server-v` prefix:
+On Linux or macOS, download the install script and install the newest
+release:
 
 ```sh
-VERSION=0.15.0
 curl -fsSL -o /tmp/draft-loop-server https://raw.githubusercontent.com/akoita/draft-loop/main/deploy/local/bin/draft-loop-server
-bash /tmp/draft-loop-server install "$VERSION"
+bash /tmp/draft-loop-server install
 ```
+
+The script looks up the newest `server-v*` release itself. To pin one, name its
+version without the `server-v` prefix, such as `install 0.19.0`.
 
 Then add your keys and start the stack:
 
@@ -82,8 +84,8 @@ Then add your keys and start the stack:
 
 On Windows, download `draft-loop-server.ps1` from the same
 [`deploy/local/bin`](deploy/local/bin) folder and run
-`.\draft-loop-server.ps1 install 0.15.0` in PowerShell, with the newest
-version; the other commands are the same. The [self-hosted server](docs/operations/self-hosted.md) guide covers
+`.\draft-loop-server.ps1 install` in PowerShell; the other commands are the
+same. The [self-hosted server](docs/operations/self-hosted.md) guide covers
 settings, upgrades, backup and restore, privacy, and moving a desktop
 workspace to the server.
 

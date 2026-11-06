@@ -33,8 +33,10 @@ macOS, `draft-loop-server.ps1` for Windows PowerShell) to a temporary place,
 not your home folder, where `install` creates the `draft-loop-server` folder.
 The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 
-1. Run `draft-loop-server install 0.15.0`. It downloads that release's stack
-   into `~/draft-loop-server`, or into the folder you name after the version.
+1. Run `draft-loop-server install`. It looks up the newest `server-v*`
+   release and downloads its stack into `~/draft-loop-server`. To pin a
+   release, name it, such as `install 0.19.0`; to use another folder, name it
+   after the version or after `latest`.
 2. Put each key in its own file in the folder's `keys/`: `anthropic_api_key`
    and `openai_api_key`.
 3. Run `~/draft-loop-server/bin/draft-loop-server up`. The first start pulls
@@ -47,8 +49,8 @@ The [README](../../README.md#quick-install-with-docker) has the commands. Then:
 The installed folder holds its own copy of the script. A downloaded copy outside
 any stack, such as `/tmp/draft-loop-server`, works on `~/draft-loop-server`; set
 `DRAFT_LOOP_SERVER_HOME` to name another folder. The other commands are
-`down`, `status`, `logs [service]` and `upgrade <version>`, which switches to a
-newer release, keeps your keys and settings, and restarts the stack. Later
+`down`, `status`, `logs [service]` and `upgrade [version]`, which switches to a
+newer release (the newest one when you name none), keeps your keys and settings, and restarts the stack. Later
 starts keep the generated secrets, run any new database migrations and copy the
 current key files again.
 
@@ -264,7 +266,8 @@ now, so the web shows it only on a server signed in with it.
 
 ## Update and erase
 
-- To update an installed folder, run `draft-loop-server upgrade <version>`.
+- To update an installed folder, run `draft-loop-server upgrade`, or
+  `upgrade <version>` to pick a release.
   In a clone, pull and run `pnpm self-hosted:up`. Either way the migrations run
   before the API and the worker start.
 - To erase everything, run
