@@ -325,6 +325,10 @@ export interface ApiSchemas {
     readonly folderId: string;
     readonly movedApplications: number;
   };
+  "FactUsage": {
+    readonly sections: Record<string, never>;
+    readonly facts: Record<string, never>;
+  };
   "GrantedCredits": {
     readonly grant: {
       readonly sequence: number;
@@ -1250,6 +1254,31 @@ export interface ApiOperations {
     };
     readonly response: {
       readonly dismissed: string;
+    };
+  };
+  "GET /v1/workspaces/{workspaceId}/fact-usage": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly usage: ApiSchemas["FactUsage"];
+    };
+  };
+  "PUT /v1/workspaces/{workspaceId}/fact-usage": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly kind: "section";
+      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+      readonly level: "cv" | "interview-only" | "never-say" | null;
+    } | {
+      readonly kind: "fact";
+      readonly key: string;
+      readonly level: "cv" | "interview-only" | "never-say" | null;
+    };
+    readonly response: {
+      readonly usage: ApiSchemas["FactUsage"];
     };
   };
   "GET /v1/workspaces/{workspaceId}/runs/estimate": {

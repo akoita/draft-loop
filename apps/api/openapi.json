@@ -5051,6 +5051,60 @@
           "firstOwner"
         ]
       },
+      "FactUsageInput": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "contact",
+                "role",
+                "employer",
+                "date",
+                "achievement",
+                "project",
+                "skill",
+                "certification",
+                "education",
+                "language",
+                "approved-link"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on a whole section, by fact category."
+          },
+          "facts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
+          }
+        },
+        "required": [
+          "sections",
+          "facts"
+        ]
+      },
       "PreferenceSuggestionInput": {
         "type": "object",
         "properties": {
@@ -11158,6 +11212,61 @@
         ],
         "additionalProperties": false
       },
+      "FactUsage": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "contact",
+                "role",
+                "employer",
+                "date",
+                "achievement",
+                "project",
+                "skill",
+                "certification",
+                "education",
+                "language",
+                "approved-link"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on a whole section, by fact category."
+          },
+          "facts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
+          }
+        },
+        "required": [
+          "sections",
+          "facts"
+        ],
+        "additionalProperties": false
+      },
       "PreferenceSuggestion": {
         "type": "object",
         "properties": {
@@ -14367,6 +14476,236 @@
                   },
                   "required": [
                     "dismissed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/fact-usage": {
+      "get": {
+        "summary": "Read where career facts may be used",
+        "description": "The usage levels set on sections and facts. A fact with no level of its own takes its section's, and otherwise may be used on a CV.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usage": {
+                      "$ref": "#/components/schemas/FactUsage"
+                    }
+                  },
+                  "required": [
+                    "usage"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set or clear one usage level",
+        "description": "Sets the level of one section or one fact, or clears it with `null`. Answers with every level after the change.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "section"
+                        ]
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "identity",
+                          "contact",
+                          "role",
+                          "employer",
+                          "date",
+                          "achievement",
+                          "project",
+                          "skill",
+                          "certification",
+                          "education",
+                          "language",
+                          "approved-link"
+                        ]
+                      },
+                      "level": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "cv",
+                              "interview-only",
+                              "never-say"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "category",
+                      "level"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "fact"
+                        ]
+                      },
+                      "key": {
+                        "type": "string",
+                        "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                      },
+                      "level": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "cv",
+                              "interview-only",
+                              "never-say"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "key",
+                      "level"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usage": {
+                      "$ref": "#/components/schemas/FactUsage"
+                    }
+                  },
+                  "required": [
+                    "usage"
                   ],
                   "additionalProperties": false
                 }

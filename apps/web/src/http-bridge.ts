@@ -24,6 +24,11 @@ import {
 } from "./application-folder-bridge.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
+  createFactUsageAnswers,
+  hostedFactUsageCapabilities,
+  isFactUsageCommand,
+} from "./fact-usage-bridge.js";
+import {
   createKnowledgeAnswers,
   hostedKnowledgeCapabilities,
   isKnowledgeCommand,
@@ -57,6 +62,7 @@ export const hostedBridgeCapabilities = [
   "application.choose-run",
   "application.move",
   ...hostedApplicationFolderCapabilities,
+  ...hostedFactUsageCapabilities,
   ...hostedKnowledgeCapabilities,
   "opportunity.create",
   "opportunity.get",
@@ -200,6 +206,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
   const answerProfile = createProfileAnswers(client);
   const answerFolder = createApplicationFolderAnswers(client);
+  const answerFactUsage = createFactUsageAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
   /** The run as the server projects it, with the owner token's fixed workspace named in words. */
@@ -246,6 +253,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isKnowledgeCommand(command)) return answerKnowledge(command);
     if (isProfileCommand(command)) return answerProfile(command);
     if (isApplicationFolderCommand(command)) return answerFolder(command);
+    if (isFactUsageCommand(command)) return answerFactUsage(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;

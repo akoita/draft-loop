@@ -9729,3 +9729,33 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+/* Usage level on the career profile (#2259). */
+.profile-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.profile-usage select {
+  max-width: 14rem;
+}
+
+.profile-usage-section {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.profile-usage-never-say select {
+  border-color: var(--red-line);
+}
+
+.profile-usage-note {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--text-3);
+  font-size: 0.85rem;
+}
+
+.profile-usage-error {
+  color: var(--red);
+}

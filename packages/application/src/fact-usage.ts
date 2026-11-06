@@ -50,3 +50,25 @@ export async function changeFactUsage(
   await settings.write(root, factUsageSetting, `${JSON.stringify(checked.data)}\n`);
   return checked.data as FactUsageSettings;
 }
+
+/** The usage levels of a driver's workspaces, over its settings port. */
+export interface FactUsageService {
+  readonly read: (root: string) => Promise<FactUsageSettings>;
+  readonly change: (root: string, change: FactUsageChange) => Promise<FactUsageSettings>;
+}
+
+export function createFactUsageService(settings?: WorkspaceSettingsPort): FactUsageService {
+  const port = () => settings ?? workspaceSettings();
+  return {
+    read: (root) => readFactUsage(root, port()),
+    change: (root, change) => changeFactUsage(root, change, port()),
+  };
+}
+
+export {
+  type FactUsageLevel,
+  type FactUsageSettings,
+  factUsageKey,
+  filterFactsForUsage,
+  resolveFactUsage,
+} from "@draft-loop/domain/fact-usage";
