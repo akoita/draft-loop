@@ -254,6 +254,36 @@ describe("source uploads", () => {
     expect(addFileSource).not.toHaveBeenCalled();
   });
 
+  it("stores a pull request list as Markdown, one heading per pull request", async () => {
+    const addFileSource = vi.fn(async () => ({ ...sourceView, created: true }));
+    await build({ addFileSource });
+    // An invented export, in the shape gh prints.
+    const list = [
+      {
+        title: "Cache rendered invoices",
+        body: "Cut render time.",
+        closedAt: "2026-09-14T10:00:00Z",
+        url: "https://github.com/example-org/billing/pull/42",
+        repository: { nameWithOwner: "example-org/billing" },
+      },
+    ];
+
+    const response = await upload(
+      JSON.stringify(list),
+      "application/json",
+      "/v1/knowledge-bases/base-1/sources?name=prs.json",
+    );
+
+    expect(response.statusCode).toBe(201);
+    const call = addFileSource.mock.calls[0] as unknown as [
+      { mediaType: string; bytes: Uint8Array },
+    ];
+    expect(call[0].mediaType).toBe("text/markdown");
+    const markdown = Buffer.from(call[0].bytes).toString("utf8");
+    expect(markdown).toContain("## example-org/billing\n\n### Cache rendered invoices");
+    expect(markdown).toContain("- Link: https://github.com/example-org/billing/pull/42");
+  });
+
   it("refuses a file over the limit with 413", async () => {
     const addFileSource = vi.fn();
     await build({ addFileSource }, 16);

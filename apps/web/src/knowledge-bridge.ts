@@ -4,8 +4,8 @@ import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.j
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
   acceptedSourceFiles,
+  evidenceMediaType,
   sourceFileProblem,
-  sourceMediaType,
   uploadErrorMessage,
 } from "./sources-model.js";
 
@@ -124,7 +124,7 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         if (file === undefined) {
           throw new Refusal("permission-denied", "Candidate knowledge file import was cancelled.");
         }
-        const contentType = sourceMediaType(file.name);
+        const contentType = evidenceMediaType(file.name);
         const problem = sourceFileProblem(file);
         if (problem !== undefined || contentType === undefined) return refuse(problem ?? file.name);
         const sources = () =>

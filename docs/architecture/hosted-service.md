@@ -508,7 +508,8 @@ Sources reach a hosted store through `createHostedKnowledgeIntake` in
 
 - **One store per tenant.** It is created with the first knowledge base, since
   bases belong to the tenant.
-- **Files.** PDF, DOCX, Markdown or text, at most 10 MiB by default
+- **Files.** PDF, DOCX, Markdown or text, or a pull request list as JSON or
+  CSV, at most 10 MiB by default
   (`DRAFT_LOOP_MAX_SOURCE_BYTES`).
 - **No parsing to store.** The type is checked by signature only (ADR 0011,
   D11). The worker extracts text from the stored bytes, and the API reads the
@@ -521,7 +522,7 @@ Sources reach a hosted store through `createHostedKnowledgeIntake` in
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | `POST /v1/knowledge-bases`, `GET`                                             | Creates a base, or lists them                                                                                                                                                              | none                                                                   |
 | `GET /v1/knowledge-bases/:id/sources`                                         | Lists sources with the latest file's name, media type, size, checksum and date, never content                                                                                              | none                                                                   |
-| `POST /v1/knowledge-bases/:id/sources?name=<file name>`                       | Uploads one file as the raw body, with its media type as `Content-Type`. The answer carries its `screening`. The same bytes again answer 200 with the existing source, so a retry is safe. | Another type answers 415. Over the limit answers 413.                  |
+| `POST /v1/knowledge-bases/:id/sources?name=<file name>`                       | Uploads one file as the raw body, with its media type as `Content-Type`. A JSON or CSV pull request list is stored as Markdown, one heading per pull request (`normalizeHostedUpload`). The answer carries its `screening`. The same bytes again answer 200 with the existing source, so a retry is safe. | Another type answers 415. Over the limit answers 413.                  |
 | `GET /v1/knowledge-bases/:id/sensitivity-rules`, `POST`, `DELETE .../:ruleId` | Lists, adds or removes a rule that marks sections under a heading as `sensitive` or `never-share`. Each change saves a new list version, and runs withhold the marked sections.            | A duplicate rule answers 422                                           |
 | `PUT /v1/workspaces/:id/knowledge-selection`                                  | Selects the bases a workspace's runs use, by id. The API names the tenant's store itself, and the workspace view lists `knowledgeBaseIds`.                                                 | An unknown base answers 404. Several bases need `combinationApproved`. |
 | `GET /v1/workspaces/:id/fact-usage`, `PUT`                                    | Reads or sets where career facts may be used: `cv`, `interview-only` or `never-say`, by section (fact category) or by fact usage key, never fact text. `null` clears a level; unset reads as `cv` (`fact-usage-routes.ts`). | Fact text as a key, or an unknown level, answers 400                   |

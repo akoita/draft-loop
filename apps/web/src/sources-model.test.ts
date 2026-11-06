@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiRequestError } from "./api-client.js";
 import {
+  evidenceMediaType,
   formatBytes,
   selectionRequest,
   sourceFileProblem,
@@ -22,10 +23,18 @@ describe("source files", () => {
     expect(sourceMediaType(name)).toBe(type);
   });
 
+  it("uploads a pull request list as JSON or CSV career evidence, never as a job file", () => {
+    expect(evidenceMediaType("prs.json")).toBe("application/json");
+    expect(evidenceMediaType("prs.CSV")).toBe("text/csv");
+    expect(evidenceMediaType("notes.md")).toBe("text/markdown");
+    expect(sourceMediaType("prs.json")).toBeUndefined();
+    expect(sourceFileProblem({ name: "prs.csv", size: 10 })).toBeUndefined();
+  });
+
   it("refuses files the API would refuse before sending them", () => {
     expect(sourceFileProblem({ name: "notes.md", size: 10 })).toBeUndefined();
     expect(sourceFileProblem({ name: "slides.pptx", size: 10 })).toBe(
-      "slides.pptx: DraftLoop takes PDF, DOCX, Markdown and text files.",
+      "slides.pptx: DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.",
     );
     expect(sourceFileProblem({ name: "empty.txt", size: 0 })).toBe("empty.txt is empty.");
     expect(sourceFileProblem({ name: `${"a".repeat(200)}.md`, size: 1 })).toMatch(/200 characters/);
@@ -41,7 +50,7 @@ describe("source files", () => {
         new ApiRequestError(415, "unsupported_media_type", "The bytes are not a PDF."),
       ),
     ).toBe(
-      "fake.pdf: DraftLoop takes PDF, DOCX, Markdown and text files. The bytes are not a PDF.",
+      "fake.pdf: DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV. The bytes are not a PDF.",
     );
     expect(uploadErrorMessage("a.md", new ApiRequestError(404, "not_found", "No such base."))).toBe(
       "a.md: No such base.",

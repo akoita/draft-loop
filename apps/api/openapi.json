@@ -19666,7 +19666,7 @@
       },
       "post": {
         "summary": "Upload a candidate source file",
-        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.",
+        "description": "Send the file itself as the request body, with its media type as the Content-Type: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/markdown, text/plain, application/json, text/csv. A JSON or CSV file must be a pull request list the person exported (title, body, closedAt, url and repository per entry, as `gh search prs --json` prints); it is stored as Markdown with one heading per pull request. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.",
         "requestBody": {
           "required": true,
           "content": {
@@ -19689,6 +19689,18 @@
               }
             },
             "text/plain": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "text/csv": {
               "schema": {
                 "type": "string",
                 "format": "binary"
