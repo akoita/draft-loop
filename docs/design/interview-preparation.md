@@ -55,8 +55,9 @@ Rules:
   every provider and from the MCP server whatever its usage level.
 - Usage applies per fact or per section (a fact category). It is stored as
   the `fact-usage.json` workspace setting, which holds keys, never fact text.
-- CV drafting ignores `interview-only` and `never-say` facts: the CV path filters on
-  `cv` exactly as today after the filter exists.
+- Interview questions use `cv` and `interview-only` facts; a cover letter, read
+  like the CV, uses `cv` facts only. CV runs follow in
+  [#2304](https://github.com/akoita/draft-loop/issues/2304).
 
 `never-say` is a usage value for the first step (owner decision). A free-text
 "never say" list of phrases and topics may follow, since a phrase is not

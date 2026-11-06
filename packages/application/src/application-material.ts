@@ -5,6 +5,17 @@
  * fact the candidate did not allow or states a number no cited fact holds. It never stores a draft.
  */
 
+import {
+  type CanonicalCandidateProfileFactCategory,
+  canonicalCandidateProfileFactCategories,
+} from "@draft-loop/domain";
+import {
+  type FactUsagePurpose,
+  type FactUsageSettings,
+  factUsageAllows,
+  resolveFactUsage,
+} from "@draft-loop/domain/fact-usage";
+
 /** The parts of a canonical profile fact the drafter reads. */
 export interface ApplicationMaterialFact {
   readonly id: string;
@@ -135,13 +146,40 @@ export interface ApplicationMaterialContextInput {
   readonly requirements: readonly ApplicationMaterialRequirement[];
   /** The host's sensitivity rules: whether a fact may reach the provider. */
   readonly mayTransmit?: (fact: ApplicationMaterialFact) => boolean;
+  /** Where each fact may be used (#2260); every fact is `cv` when unset. */
+  readonly usage?: FactUsageSettings;
 }
 
-/** Whether the candidate allowed a fact to reach the model: never identity or contact. */
+/**
+ * What each kind of material uses facts for: interview questions are interview preparation, and a
+ * cover letter is written application material, read like the CV.
+ */
+export const applicationMaterialUsagePurpose: Readonly<
+  Record<ApplicationMaterialKind, FactUsagePurpose>
+> = { "cover-letter": "cv", "interview-questions": "interview" };
+
+function usageAllows(input: ApplicationMaterialContextInput, fact: ApplicationMaterialFact) {
+  if (input.usage === undefined) return true;
+  if (!(canonicalCandidateProfileFactCategories as readonly string[]).includes(fact.category)) {
+    return true;
+  }
+  const level = resolveFactUsage(input.usage, {
+    category: fact.category as CanonicalCandidateProfileFactCategory,
+    field: fact.field,
+    value: fact.value,
+  });
+  return factUsageAllows(level, applicationMaterialUsagePurpose[input.kind]);
+}
+
+/**
+ * Whether the candidate allowed a fact to reach the model: never identity or contact, never a fact
+ * the sensitivity rules withhold, and never one whose usage level excludes this kind of material.
+ */
 function allowedFact(input: ApplicationMaterialContextInput, fact: ApplicationMaterialFact) {
   return (
     !withheldApplicationMaterialCategories.has(fact.category) &&
-    (input.mayTransmit === undefined || input.mayTransmit(fact))
+    (input.mayTransmit === undefined || input.mayTransmit(fact)) &&
+    usageAllows(input, fact)
   );
 }
 

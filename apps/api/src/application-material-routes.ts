@@ -12,6 +12,7 @@ import {
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
+import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
@@ -44,6 +45,8 @@ export interface ApplicationMaterialRoutesOptions {
   readonly material: ApplicationMaterialParts;
   readonly consents?: ConsentLedger;
   readonly screening?: Pick<ContentScreeningHooks, "assertRunMaterialClear">;
+  /** Where each fact may be used (#2260); without it every fact may be used, as before. */
+  readonly factUsage?: Pick<FactUsageService, "read">;
 }
 
 /** The default cap on one request: two Sonnet calls with a full context stay well below it. */
@@ -195,6 +198,7 @@ export function registerApplicationMaterialRoutes(
         priority: requirement.priority,
       }));
       const facts = await careerFacts(service, root);
+      const usage = await options.factUsage?.read(root);
 
       let spentUsd = 0;
       const routed = material.route({
@@ -236,6 +240,7 @@ export function registerApplicationMaterialRoutes(
           kind: request.body.kind,
           facts,
           requirements,
+          ...(usage === undefined ? {} : { usage }),
         });
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
         request.log.info(
