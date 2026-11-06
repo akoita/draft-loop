@@ -1,4 +1,5 @@
 import { formatDateTime, formatList } from "@draft-loop/ui/locale-format";
+import { t } from "@lingui/core/macro";
 import { type ApiInput, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 
 export type ConsentEntry = ApiSchemas["ConsentEntry"];
@@ -85,18 +86,18 @@ export function grantRequest(
 ): { readonly body: ConsentBody } | { readonly problem: string } {
   const note = input.note?.trim() ?? "";
   if (note.length > maximumConsentNoteLength)
-    return { problem: `Keep the note to ${maximumConsentNoteLength} characters.` };
+    return { problem: t`Keep the note to ${maximumConsentNoteLength} characters.` };
   const noted = note === "" ? {} : { note };
   if (kind === "material-storage") {
     if (input.basis === undefined || !consentBases[kind].includes(input.basis))
-      return { problem: "Choose the basis for storing the candidate's material." };
+      return { problem: t`Choose the basis for storing the candidate's material.` };
     return { body: { kind, action: "granted", basis: input.basis, ...noted } };
   }
   const providers = [...new Set(input.providers ?? [])].sort();
   if (providers.length === 0)
-    return { problem: "Set up the workspace's author and critic models first." };
+    return { problem: t`Set up the workspace's author and critic models first.` };
   if (input.confirmed !== true)
-    return { problem: "Confirm that the candidate agreed to send their material." };
+    return { problem: t`Confirm that the candidate agreed to send their material.` };
   return {
     body: { kind, action: "granted", basis: "candidate-consent", providers, ...noted },
   };
@@ -109,7 +110,7 @@ export function withdrawRequest(
 ): { readonly body: ConsentBody } | { readonly problem: string } {
   const current = consents.current[kind];
   if (current === null || current.action !== "granted")
-    return { problem: "There is no consent to withdraw." };
+    return { problem: t`There is no consent to withdraw.` };
   return { body: { kind, action: "withdrawn", basis: current.basis } };
 }
 
@@ -136,12 +137,12 @@ export function transmissionBlockedReason(
   consents: Consents | undefined,
   providers: readonly ConsentProvider[],
 ): string | null {
-  if (consents === undefined) return "Checking the candidate's consent to send material…";
+  if (consents === undefined) return t`Checking the candidate's consent to send material…`;
   if (!isGranted(consents, "provider-transmission"))
-    return `Record the candidate's consent to send material to ${providerList(providers)} first.`;
+    return t`Record the candidate's consent to send material to ${providerList(providers)} first.`;
   const missing = unconsentedProviders(consents, providers);
   if (missing.length === 0) return null;
-  return `The candidate's consent does not name ${providerList(missing)}. Withdraw it and record it again for ${providerList(providers)}.`;
+  return t`The candidate's consent does not name ${providerList(missing)}. Withdraw it and record it again for ${providerList(providers)}.`;
 }
 
 /** A recording time as people read it, in UTC. */
@@ -159,16 +160,16 @@ function recorderLabel(entry: ConsentEntry): string {
 /** One line on a kind's current state, such as `Granted on 24 Oct 2026, 09:00 UTC: …`. */
 export function consentSummary(consents: Consents, kind: ConsentKind, locale?: string): string {
   const current = consents.current[kind];
-  if (current === null) return "Not recorded yet.";
+  if (current === null) return t`Not recorded yet.`;
   const when = formatRecordedAt(current.recordedAt, locale);
-  if (current.action === "withdrawn") return `Withdrawn on ${when}.`;
+  if (current.action === "withdrawn") return t`Withdrawn on ${when}.`;
   const providers = current.providers.length === 0 ? "" : ` for ${providerList(current.providers)}`;
-  return `Granted on ${when}${providers}. Basis: ${basisLabel(current.basis).toLowerCase()}.`;
+  return t`Granted on ${when}${providers}. Basis: ${basisLabel(current.basis).toLowerCase()}.`;
 }
 
 /** One history line: when, what, the basis and who recorded it, never an internal id. */
 export function historyLine(entry: ConsentEntry, locale?: string): string {
-  const action = entry.action === "granted" ? "Granted" : "Withdrawn";
+  const action = entry.action === "granted" ? t`Granted` : t`Withdrawn`;
   const providers = entry.providers.length === 0 ? "" : ` (${providerList(entry.providers)})`;
   const note = entry.note === undefined ? "" : ` Note: ${entry.note}`;
   return (

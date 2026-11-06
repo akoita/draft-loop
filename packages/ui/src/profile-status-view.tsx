@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The status-first top of the Career profile page and the version facts kept under Details
  * (issue #1090). The status model itself lives in `profile-status.ts`.
@@ -31,16 +32,18 @@ export function ProfileStatusSummary({
   return (
     <div className="profile-status-summary">
       <div className="section-heading compact">
-        <h2 id={titleId}>Your career profile</h2>
-        {selected ? <span className="state-pill state-approved">Used for applications</span> : null}
+        <h2 id={titleId}>{t`Your career profile`}</h2>
+        {selected ? (
+          <span className="state-pill state-approved">{t`Used for applications`}</span>
+        ) : null}
       </div>
       <p
         className={`profile-status-line profile-status-${loading ? "loading" : status.kind}`}
         data-status={loading ? "loading" : status.kind}
       >
         <strong className="profile-status-label">
-          <span className="sr-only">Status: </span>
-          {loading ? "Loading your profile…" : status.label}
+          <span className="sr-only">{t`Status:`} </span>
+          {loading ? t`Loading your profile…` : status.label}
         </strong>
         {loading ? null : <span className="profile-status-detail">{status.detail}</span>}
       </p>
@@ -98,19 +101,19 @@ export function ProfileGenerationAction({
       >
         {busy
           ? generating
-            ? "Generating…"
-            : "Working…"
+            ? t`Generating…`
+            : t`Working…`
           : outcome.retry
-            ? "Retry profile generation"
+            ? t`Retry profile generation`
             : mode === "update"
-              ? "Update profile"
-              : "Generate profile"}
+              ? t`Update profile`
+              : t`Generate profile`}
       </button>
       {!busy && profileIdValid && !providerTransmissionApproved ? (
         <p className="profile-approval-hint">
           {outcome.retry
-            ? "Tick the approval box to enable Retry."
-            : `Tick the approval box to ${verb}.`}
+            ? t`Tick the approval box to enable Retry.`
+            : t`Tick the approval box to ${verb}.`}
         </p>
       ) : null}
     </div>
@@ -135,7 +138,7 @@ export function ProfileFullExtractionOption({
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
-      <span>Re-extract all sources</span>
+      <span>{t`Re-extract all sources`}</span>
     </label>
   );
 }
@@ -157,38 +160,38 @@ export function ProfileVersionDetails({
     <>
       <dl className="profile-metadata">
         <div>
-          <dt>Version</dt>
+          <dt>{t`Version`}</dt>
           <dd>{record.version}</dd>
         </div>
         <div>
-          <dt>Parent</dt>
+          <dt>{t`Parent`}</dt>
           <dd>{record.parentVersion === null ? "—" : record.parentVersion}</dd>
         </div>
         <div>
-          <dt>Status</dt>
+          <dt>{t`Status`}</dt>
           <dd>{record.status}</dd>
         </div>
         <div>
-          <dt>Created</dt>
+          <dt>{t`Created`}</dt>
           <dd>{record.createdAt}</dd>
         </div>
         <div>
-          <dt>Updated</dt>
+          <dt>{t`Updated`}</dt>
           <dd>{record.updatedAt}</dd>
         </div>
         <div>
-          <dt>Reviewed</dt>
+          <dt>{t`Reviewed`}</dt>
           <dd>{record.reviewedAt ?? "—"}</dd>
         </div>
         <div>
-          <dt>Checksum</dt>
+          <dt>{t`Checksum`}</dt>
           <dd title={record.checksum}>{shortChecksum(record.checksum)}</dd>
         </div>
       </dl>
       {historical ? (
-        <p className="profile-note">Earlier versions cannot be edited.</p>
+        <p className="profile-note">{t`Earlier versions cannot be edited.`}</p>
       ) : record.status === "reviewed" ? (
-        <p className="profile-note">Reviewed versions cannot be edited.</p>
+        <p className="profile-note">{t`Reviewed versions cannot be edited.`}</p>
       ) : null}
     </>
   );
@@ -209,16 +212,16 @@ export function ProfileVersionHistory({
   if (history.length === 0) return null;
   return (
     <label className="profile-history-label">
-      <span>Version history</span>
+      <span>{t`Version history`}</span>
       <select
-        aria-label="Profile version"
+        aria-label={t`Profile version`}
         value={version ?? ""}
         disabled={disabled}
         onChange={(event) => onChoose(Number(event.target.value))}
       >
         {history.map((entry) => (
           <option key={entry.version} value={entry.version}>
-            Version {entry.version} · {entry.status}
+            {t`Version`} {entry.version} · {entry.status}
           </option>
         ))}
       </select>

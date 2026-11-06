@@ -15,6 +15,7 @@ import {
   projectLatestOpportunity,
   projectOpportunityRecord,
 } from "@draft-loop/ui/opportunity-projection";
+import { t } from "@lingui/core/macro";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import {
@@ -114,7 +115,7 @@ const pick = ({ content, version, checksum }: ApiSchemas["WritingPolicy"]) => ({
 const hostedCompany = (company: string): "anthropic" | "openai" | "local" =>
   company === "anthropic" || company === "openai" || company === "local"
     ? company
-    : refuse("This service runs Anthropic, OpenAI and its own local models only.");
+    : refuse(t`This service runs Anthropic, OpenAI and its own local models only.`);
 
 function errorCode(status: number): BridgeErrorCode {
   if (status === 404) return "not-found";
@@ -194,7 +195,7 @@ function reviewedBrief(application: Application) {
  */
 function hostedSource(source: OpportunityCreateSource) {
   if (source.kind === "pasted-content" || source.kind === "candidate-input") return source;
-  return refuse("The hosted service takes a job as the application's own job or pasted text.");
+  return refuse(t`The hosted service takes a job as the application's own job or pasted text.`);
 }
 
 /**
@@ -235,7 +236,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const scopedApplication = async (workspaceId: string, applicationId: string | undefined) => {
     if (applicationId !== undefined) return application(workspaceId, applicationId);
     const fallback = (await applications(workspaceId)).find(({ isDefault }) => isDefault);
-    return fallback ?? refuse("The workspace has no default application.");
+    return fallback ?? refuse(t`The workspace has no default application.`);
   };
   const brief = (workspaceId: string, briefId: string, version?: number) =>
     client.call("GET /v1/workspaces/{workspaceId}/opportunities/{briefId}", {
@@ -297,7 +298,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         if (jobFile !== undefined) {
           const contentType = sourceMediaType(jobFile.name);
           if (contentType === undefined) {
-            return refuse("Attach a PDF, DOCX, Markdown or plain text file.");
+            return refuse(t`Attach a PDF, DOCX, Markdown or plain text file.`);
           }
           // The API reads the file's text and keeps it as pasted text; the file is not stored.
           const created = await client.call(
@@ -311,7 +312,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           );
           return record(workspaceId, created);
         }
-        if (jobText === undefined) return refuse("Paste the job description first.");
+        if (jobText === undefined) return refuse(t`Paste the job description first.`);
         const created = await client.call("POST /v1/workspaces/{workspaceId}/applications", {
           path: { workspaceId },
           body: { name, jobText },
@@ -400,7 +401,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
             });
             continue;
           }
-          if (job.text === null) return refuse("Paste this application's job description first.");
+          if (job.text === null) return refuse(t`Paste this application's job description first.`);
           sources.push({
             id: source.id,
             kind: "pasted-content" as const,
@@ -482,7 +483,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "run.start": {
         const { workspaceId, applicationId, opportunityBrief, candidateProfile } = command.input;
         if (command.input.writingPolicyOverrideChecksum !== undefined) {
-          return refuse("A one-run writing policy cannot be used on the hosted service yet.");
+          return refuse(t`A one-run writing policy cannot be used on the hosted service yet.`);
         }
         const begun = await client.call("POST /v1/workspaces/{workspaceId}/runs", {
           path: { workspaceId },
@@ -519,7 +520,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "models.list": {
         const { provider } = command.input;
         if (provider !== "anthropic" && provider !== "openai" && provider !== "local") {
-          return refuse("This service runs Anthropic, OpenAI and its own local models only.");
+          return refuse(t`This service runs Anthropic, OpenAI and its own local models only.`);
         }
         const catalog = await client.call("GET /v1/model-catalog", {});
         // Local models are the ones the deployment declares on its own endpoint.
@@ -559,14 +560,14 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         const { workspaceId, independenceOverrideRationale } = command.input;
         if (command.input.localEndpoint !== undefined) {
           return refuse(
-            "Local models run on this service's own endpoint; leave the address empty.",
+            t`Local models run on this service's own endpoint; leave the address empty.`,
           );
         }
         if (
           command.input.authorLineage !== undefined ||
           command.input.criticLineage !== undefined
         ) {
-          return refuse("The hosted service derives each model's lineage itself.");
+          return refuse(t`The hosted service derives each model's lineage itself.`);
         }
         const changed = await client.call("PATCH /v1/workspaces/{workspaceId}/models", {
           path: { workspaceId },
@@ -644,14 +645,14 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           });
         }
         if (action.pageTarget !== undefined) {
-          return refuse("Set the draft's length in the writing policy on the hosted service.");
+          return refuse(t`Set the draft's length in the writing policy on the hosted service.`);
         }
         if (action.requirementsSource === "job-description") {
-          return refuse("The hosted service starts a run from the reviewed requirements.");
+          return refuse(t`The hosted service starts a run from the reviewed requirements.`);
         }
         const scoped = await scopedApplication(workspaceId, command.input.applicationId);
         const opportunityBrief =
-          reviewedBrief(scoped) ?? refuse("Review this application's requirements first.");
+          reviewedBrief(scoped) ?? refuse(t`Review this application's requirements first.`);
         const { modelProfiles, candidateProfile } = action;
         await client.call("POST /v1/workspaces/{workspaceId}/runs", {
           path: { workspaceId },
@@ -679,7 +680,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       default:
         throw new Refusal(
           "capability-unavailable",
-          "This is not available on the hosted service yet.",
+          t`This is not available on the hosted service yet.`,
         );
     }
   }

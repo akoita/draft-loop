@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
@@ -22,15 +23,15 @@ export interface OidcSignInProps {
 export function OidcSignIn({ notice, busy = false, onSignIn }: OidcSignInProps) {
   return (
     <main className="sign-in">
-      <h1>DraftLoop</h1>
-      <p>Sign in with your organisation account. You stay signed in until you close this tab.</p>
+      <h1>{t`DraftLoop`}</h1>
+      <p>{t`Sign in with your organisation account. You stay signed in until you close this tab.`}</p>
       {notice === undefined ? null : (
         <p className="notice" role="status">
           {notice}
         </p>
       )}
       <button type="button" disabled={busy} onClick={onSignIn}>
-        {busy ? "Signing in" : "Sign in"}
+        {busy ? t`Signing in` : t`Sign in`}
       </button>
     </main>
   );

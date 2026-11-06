@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError } from "./api-client.js";
 import {
   authorizationUrl,
@@ -114,7 +115,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
         const response = await options.fetch(discoveryUrl(options.issuer), {
           headers: { accept: "application/json" },
         });
-        if (!response.ok) throw new Error(`Discovery answered ${response.status}.`);
+        if (!response.ok) throw new Error(t`Discovery answered ${response.status}.`);
         return parseDiscovery(await response.json(), options.issuer);
       })();
       endpoints = pending;
@@ -136,7 +137,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       },
       body: body.toString(),
     });
-    if (!response.ok) throw new Error(`The token endpoint answered ${response.status}.`);
+    if (!response.ok) throw new Error(t`The token endpoint answered ${response.status}.`);
     const tokens = parseTokenResponse(await response.json(), options.now(), previousRefreshToken);
     tokenStore.write(JSON.stringify(tokens));
     return tokens;
@@ -211,7 +212,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
         const pending = (async () => {
           const refreshToken = storedTokens()?.refreshToken;
           try {
-            if (refreshToken === undefined) throw new Error("No refresh token is stored.");
+            if (refreshToken === undefined) throw new Error(t`No refresh token is stored.`);
             const tokens = await requestTokens(
               refreshBody({ clientId: options.clientId, refreshToken }),
               refreshToken,

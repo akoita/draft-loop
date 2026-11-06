@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
 
 import { ownerTokenProblem } from "./session.js";
@@ -23,17 +24,15 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
 
   return (
     <main className="sign-in">
-      <h1>DraftLoop</h1>
-      <p>
-        Sign in with the owner token of this deployment. It stays in this tab until you close it.
-      </p>
+      <h1>{t`DraftLoop`}</h1>
+      <p>{t`Sign in with the owner token of this deployment. It stays in this tab until you close it.`}</p>
       {notice === undefined ? null : (
         <p className="notice" role="status">
           {notice}
         </p>
       )}
       <form onSubmit={submit}>
-        <label htmlFor="owner-token">Owner token</label>
+        <label htmlFor="owner-token">{t`Owner token`}</label>
         <input
           id="owner-token"
           type="password"
@@ -46,7 +45,7 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
             {problem}
           </p>
         )}
-        <button type="submit">Sign in</button>
+        <button type="submit">{t`Sign in`}</button>
       </form>
     </main>
   );
@@ -56,10 +55,11 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
 export function ServiceUnreachable() {
   return (
     <main className="sign-in">
-      <h1>DraftLoop</h1>
-      <p className="problem" role="alert">
-        The service cannot be reached. Check your connection and reload the page.
-      </p>
+      <h1>{t`DraftLoop`}</h1>
+      <p
+        className="problem"
+        role="alert"
+      >{t`The service cannot be reached. Check your connection and reload the page.`}</p>
     </main>
   );
 }

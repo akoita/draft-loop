@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
@@ -88,29 +89,22 @@ export function RecordActionsPanel({
 
   return (
     <details className="panel record-actions">
-      <summary>Export or delete this record</summary>
-      <p className="muted">
-        The archive holds everything stored for this record: its material, runs, drafts, exports,
-        consent history and audit trail.
-      </p>
-      <button type="button" disabled={busy} onClick={onExport}>
-        Export everything
-      </button>
+      <summary>{t`Export or delete this record`}</summary>
+      <p className="muted">{t`The archive holds everything stored for this record: its material, runs, drafts, exports, consent history and audit trail.`}</p>
+      <button type="button" disabled={busy} onClick={onExport}>{t`Export everything`}</button>
       <form className="inline-form" onSubmit={remove}>
-        <p className="notice">
-          Deleting removes this record and everything stored for it, for good. It cannot be undone.
-          Export everything first if you need a copy.
-        </p>
-        <label htmlFor="delete-record-confirm">Type the record id, {recordId}, to confirm</label>
+        <p className="notice">{t`Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy.`}</p>
+        <label htmlFor="delete-record-confirm">
+          {t`Type the record id,`} {recordId}
+          {t`, to confirm`}
+        </label>
         <input
           id="delete-record-confirm"
           value={typed}
           autoComplete="off"
           onChange={(event) => setTyped(event.target.value)}
         />
-        <button type="submit" className="danger" disabled={busy}>
-          Delete record
-        </button>
+        <button type="submit" className="danger" disabled={busy}>{t`Delete record`}</button>
       </form>
       {messages.map((message) => (
         <p key={message} className="problem" role="alert">

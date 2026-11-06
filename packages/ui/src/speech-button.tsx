@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -115,9 +116,11 @@ export function SpeechButton({ speech, disabled = false, onTranscript }: SpeechB
     <span className="speech-input">
       {state.step === "recording" ? (
         <>
-          <button type="button" aria-pressed="true" onClick={() => void finish(state.recording)}>
-            Stop and transcribe
-          </button>{" "}
+          <button
+            type="button"
+            aria-pressed="true"
+            onClick={() => void finish(state.recording)}
+          >{t`Stop and transcribe`}</button>{" "}
           <button
             type="button"
             onClick={() => {
@@ -125,21 +128,21 @@ export function SpeechButton({ speech, disabled = false, onTranscript }: SpeechB
               state.recording.cancel();
               setState({ step: "idle" });
             }}
-          >
-            Discard recording
-          </button>{" "}
-          <span role="status">Recording… speak your answer.</span>
+          >{t`Discard recording`}</button>{" "}
+          <span role="status">{t`Recording… speak your answer.`}</span>
         </>
       ) : state.step === "transcribing" ? (
         <span role="status">
           {state.loaded === undefined || state.loaded >= 1
-            ? "Turning your words into text on this device…"
-            : `Getting voice input ready (${Math.round(state.loaded * 100)}%)…`}
+            ? t`Turning your words into text on this device…`
+            : t`Getting voice input ready (${Math.round(state.loaded * 100)}%)…`}
         </span>
       ) : (
-        <button type="button" disabled={disabled} onClick={() => void start()}>
-          Answer by voice
-        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => void start()}
+        >{t`Answer by voice`}</button>
       )}
       {problem === undefined ? null : <span role="alert"> {problem}</span>}
     </span>

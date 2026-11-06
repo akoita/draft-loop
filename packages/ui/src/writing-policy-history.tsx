@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { formatDateTime } from "./locale-format.js";
 import type { WritingPolicyVersionMetadata } from "./model.js";
 
@@ -91,7 +92,7 @@ export function WritingPolicyHistoryView({
   const changed = lines.filter((line) => line.kind !== "same").length;
   return (
     <div className="policy-history">
-      <ul className="policy-history-list" aria-label="Writing policy versions">
+      <ul className="policy-history-list" aria-label={t`Writing policy versions`}>
         {newestFirst.map((entry) => (
           <li key={entry.checksum}>
             <button
@@ -103,19 +104,17 @@ export function WritingPolicyHistoryView({
               <span className="policy-history-version">{entry.version}</span>
               <span className="policy-history-date">{formatCreatedAt(entry.createdAt)}</span>
               {entry.checksum === activeChecksum ? (
-                <span className="policy-history-active">Active</span>
+                <span className="policy-history-active">{t`Active`}</span>
               ) : null}
             </button>
           </li>
         ))}
       </ul>
       {selectedChecksum === null ? (
-        <p className="setup-note">Pick a version to read its text.</p>
+        <p className="setup-note">{t`Pick a version to read its text.`}</p>
       ) : null}
       {selectedChecksum !== null && selected.status === "loading" ? (
-        <p className="setup-note" role="status">
-          Loading the version…
-        </p>
+        <p className="setup-note" role="status">{t`Loading the version…`}</p>
       ) : null}
       {selectedChecksum !== null && selected.status === "failed" ? (
         <p className="setup-blocker" role="alert">
@@ -126,10 +125,10 @@ export function WritingPolicyHistoryView({
         <>
           <p className="setup-note" role="status">
             {isActive
-              ? "This is the active version future runs use."
+              ? t`This is the active version future runs use.`
               : changed === 0
-                ? "Same text as the active version."
-                : "Marked lines differ from the active version: + only in this version, − only in the active one."}
+                ? t`Same text as the active version.`
+                : t`Marked lines differ from the active version: + only in this version, − only in the active one.`}
           </p>
           <pre className="policy-history-text">
             {lines.map((line, index) => (
@@ -151,13 +150,8 @@ export function WritingPolicyHistoryView({
               type="button"
               disabled={isActive || changed === 0}
               onClick={() => onRestore(selected.content)}
-            >
-              Restore as new version
-            </button>
-            <span className="setup-note">
-              Restoring puts this text in the editor; saving makes it a new version. Nothing is
-              deleted.
-            </span>
+            >{t`Restore as new version`}</button>
+            <span className="setup-note">{t`Restoring puts this text in the editor; saving makes it a new version. Nothing is deleted.`}</span>
           </div>
         </>
       ) : null}

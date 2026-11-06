@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The guided career interview's view model (#1030, #2189): the shapes the screen reads, the words
  * for each turn and each refusal. The host fills them from its API; nothing here calls a server.
@@ -62,9 +63,9 @@ export function careerInterviewTurnText(turn: CareerInterviewTurnView): {
   readonly speaker: string;
   readonly text: string;
 } {
-  const speaker = turn.role === "interviewer" ? "Interviewer" : "You";
-  if (turn.mark === "skipped") return { speaker, text: "Skipped this question." };
-  if (turn.mark === "unknown") return { speaker, text: "Did not remember." };
+  const speaker = turn.role === "interviewer" ? t`Interviewer` : "You";
+  if (turn.mark === "skipped") return { speaker, text: t`Skipped this question.` };
+  if (turn.mark === "unknown") return { speaker, text: t`Did not remember.` };
   return { speaker, text: turn.text };
 }
 

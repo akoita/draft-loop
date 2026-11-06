@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
 import { supportsAutomaticKnowledgeBase } from "./career-evidence-setup.js";
@@ -132,15 +133,15 @@ export function KnowledgeBaseList({
   onImport,
 }: KnowledgeBaseListProps) {
   return (
-    <ul className="knowledge-base-list" aria-label="Available candidate knowledge bases">
+    <ul className="knowledge-base-list" aria-label={t`Available candidate knowledge bases`}>
       {knowledgeBases.map((knowledgeBase) => {
         const inUse = selectedKnowledgeBaseIds.includes(knowledgeBase.id);
         return (
           <li className="knowledge-base-card" key={knowledgeBase.id}>
             <div className="knowledge-base-header">
               <strong>{safeKnowledgeBaseDisplayName(knowledgeBase.displayName)}</strong>
-              {knowledgeBase.isDefault ? <span className="meta-chip">Default</span> : null}
-              {inUse ? <span className="meta-chip">In use</span> : null}
+              {knowledgeBase.isDefault ? <span className="meta-chip">{t`Default`}</span> : null}
+              {inUse ? <span className="meta-chip">{t`In use`}</span> : null}
             </div>
             <div className="knowledge-actions">
               <button
@@ -149,7 +150,7 @@ export function KnowledgeBaseList({
                 disabled={disabled || inUse}
                 onClick={() => onSelect(storeId, knowledgeBase.id)}
               >
-                {inUse ? "In use" : "Use this knowledge base"}
+                {inUse ? t`In use` : t`Use this knowledge base`}
               </button>
               {showIntake && intakeSupported ? (
                 <>
@@ -158,30 +159,24 @@ export function KnowledgeBaseList({
                     className="button button-outline"
                     disabled={disabled}
                     onClick={() => onImport(storeId, knowledgeBase.id, "file")}
-                  >
-                    Add file
-                  </button>
+                  >{t`Add file`}</button>
                   <button
                     type="button"
                     className="button button-outline"
                     disabled={disabled}
                     onClick={() => onImport(storeId, knowledgeBase.id, "directory")}
-                  >
-                    Add directory
-                  </button>
+                  >{t`Add directory`}</button>
                 </>
               ) : null}
             </div>
             {!showIntake || intakeSupported ? null : (
-              <p className="knowledge-hint">
-                File and directory intake is unavailable in this desktop host.
-              </p>
+              <p className="knowledge-hint">{t`File and directory intake is unavailable in this desktop host.`}</p>
             )}
           </li>
         );
       })}
       {knowledgeBases.length === 0 ? (
-        <li className="knowledge-hint">No active knowledge bases are available.</li>
+        <li className="knowledge-hint">{t`No active knowledge bases are available.`}</li>
       ) : null}
     </ul>
   );
@@ -198,11 +193,7 @@ export function SavedKnowledgeStatus({
   readonly unavailable: boolean;
 }) {
   if (loading) {
-    return (
-      <p className="knowledge-status" role="status">
-        Loading saved knowledge…
-      </p>
-    );
+    return <p className="knowledge-status" role="status">{t`Loading saved knowledge…`}</p>;
   }
   if (unavailable) {
     return (
@@ -520,10 +511,8 @@ export function KnowledgeWorkspace({
     if (embedded) return null;
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
-        <h2 id="candidate-knowledge-heading" tabIndex={-1}>
-          Career evidence
-        </h2>
-        <p>Knowledge-store selection is unavailable in this desktop host.</p>
+        <h2 id="candidate-knowledge-heading" tabIndex={-1}>{t`Career evidence`}</h2>
+        <p>{t`Knowledge-store selection is unavailable in this desktop host.`}</p>
       </section>
     );
   }
@@ -542,7 +531,7 @@ export function KnowledgeWorkspace({
   const storeForm = (
     <div className="knowledge-store-row">
       <label className="setup-field" htmlFor="candidate-knowledge-name">
-        <span>New store folder name</span>
+        <span>{t`New store folder name`}</span>
         <input
           id="candidate-knowledge-name"
           type="text"
@@ -560,17 +549,13 @@ export function KnowledgeWorkspace({
           className="button button-primary"
           disabled={controlsDisabled}
           onClick={createStore}
-        >
-          Create knowledge store
-        </button>
+        >{t`Create knowledge store`}</button>
         <button
           type="button"
           className="button button-outline"
           disabled={controlsDisabled}
           onClick={openStore}
-        >
-          Open knowledge store
-        </button>
+        >{t`Open knowledge store`}</button>
       </div>
     </div>
   );
@@ -578,7 +563,7 @@ export function KnowledgeWorkspace({
   const baseForm = (
     <div className="knowledge-store-row">
       <label className="setup-field" htmlFor="candidate-knowledge-name">
-        <span>New knowledge base name</span>
+        <span>{t`New knowledge base name`}</span>
         <input
           id="candidate-knowledge-name"
           type="text"
@@ -597,9 +582,7 @@ export function KnowledgeWorkspace({
           className="button button-primary"
           disabled={controlsDisabled}
           onClick={createKnowledgeBase}
-        >
-          Create knowledge base
-        </button>
+        >{t`Create knowledge base`}</button>
       </div>
     </div>
   );
@@ -611,29 +594,23 @@ export function KnowledgeWorkspace({
       aria-labelledby="candidate-knowledge-heading"
     >
       {embedded ? (
-        <h3 id="candidate-knowledge-heading" tabIndex={-1}>
-          Knowledge base
-        </h3>
+        <h3 id="candidate-knowledge-heading" tabIndex={-1}>{t`Knowledge base`}</h3>
       ) : (
         <div>
-          <p className="eyebrow">Career evidence</p>
-          <h2 id="candidate-knowledge-heading" tabIndex={-1}>
-            Manage career evidence
-          </h2>
+          <p className="eyebrow">{t`Career evidence`}</p>
+          <h2 id="candidate-knowledge-heading" tabIndex={-1}>{t`Manage career evidence`}</h2>
         </div>
       )}
       <p className="knowledge-copy">
         {embedded
-          ? "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
-          : "Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection."}
+          ? t`Where your evidence is kept. Choosing a different base replaces the one this workspace uses.`
+          : t`Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection.`}
       </p>
       {showAutoCreateHint({ hasStore: store !== null, autoCreateSupported, savedUnavailable }) ? (
         <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
       ) : null}
       {pending ? (
-        <p className="knowledge-status" role="status">
-          Updating candidate knowledge…
-        </p>
+        <p className="knowledge-status" role="status">{t`Updating candidate knowledge…`}</p>
       ) : null}
       <SavedKnowledgeStatus loading={loadingSaved} unavailable={savedUnavailable} />
       {message === null ? null : (
@@ -665,9 +642,7 @@ export function KnowledgeWorkspace({
             aria-expanded={baseFormOpen}
             aria-controls="candidate-knowledge-base-form"
             onClick={() => setFormToggled(!baseFormOpen)}
-          >
-            New knowledge base
-          </button>
+          >{t`New knowledge base`}</button>
           <div id="candidate-knowledge-base-form" hidden={!baseFormOpen}>
             {baseFormOpen ? baseForm : null}
           </div>

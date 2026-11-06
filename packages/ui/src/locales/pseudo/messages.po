@@ -19,6 +19,11 @@ msgstr ""
 msgid " — unsupported with current route"
 msgstr ""
 
+#. placeholder {0}: legacyCount === 1 ? "" : "s"
+#: packages/ui/src/career-evidence-card.tsx
+msgid " ({legacyCount} source{0})"
+msgstr ""
+
 #. placeholder {0}: status.fileName
 #: packages/ui/src/run-comparison.tsx
 msgid " as {0}"
@@ -40,6 +45,14 @@ msgstr ""
 msgid ", show in the draft"
 msgstr ""
 
+#: packages/ui/src/provider-authentication.tsx
+msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key."
+msgstr ""
+
+#: apps/web/src/record-actions.tsx
+msgid ", to confirm"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid ", underlined text only in"
 msgstr ""
@@ -53,12 +66,24 @@ msgstr ""
 msgid "; output"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "; runs then use it instead, and these files are not copied into it."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "; your record says"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid ": struck text is only in"
 msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid ". Approving checks the edited version again; a check that still fails then needs an override."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid ". Both are kept; edit the summary if one is wrong."
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -81,12 +106,24 @@ msgstr ""
 msgid ". Other applications use the workspace's pair."
 msgstr ""
 
+#: apps/web/src/screening.tsx
+msgid ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid ". Saved preference:"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid ". They remain visible after approval."
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid ". Withdraw it and record it again for"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -102,8 +139,16 @@ msgstr ""
 msgid "· Official"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "· Reviewer"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "· sensitive material"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "· v"
 msgstr ""
 
 #: packages/ui/src/run-draft-choice.tsx
@@ -157,6 +202,12 @@ msgstr ""
 msgid "{0} ms"
 msgstr ""
 
+#. placeholder {0}: view.facts.length
+#. placeholder {1}: factCountLabel(view.totalCount)
+#: packages/ui/src/profile.tsx
+msgid "{0} of {1}"
+msgstr ""
+
 #. placeholder {0}: role === "author" ? "Author" : "Critic"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "{0} profile"
@@ -175,12 +226,25 @@ msgstr ""
 msgid "{0} responsibilities"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "{id} (new, set it up when you open it)"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "{label} company"
 msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "{label} model"
+msgstr ""
+
+#. placeholder {0}: legacyCount === 1 ? "" : "s"
+#: packages/ui/src/career-evidence-card.tsx
+msgid "{legacyCount} source{0} ready"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "{matched} (not a valid choice)"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -199,6 +263,10 @@ msgstr ""
 msgid "{role} planned calls"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "{rounds} rounds"
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr ""
@@ -215,6 +283,10 @@ msgstr ""
 msgid "1 responsibility"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "1 round"
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
 msgstr ""
@@ -227,6 +299,10 @@ msgstr ""
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr ""
 
+#: apps/web/src/sensitivity-model.ts
+msgid "A heading path has at most 12 headings."
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default."
 msgstr ""
@@ -237,6 +313,14 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "A new review adds another run with the models set for new runs. This run, its approval and its export are kept."
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "A newer screening result replaced this one. Reload to see the current status."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "A one-run writing policy cannot be used on the hosted service yet."
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
@@ -275,6 +359,10 @@ msgstr ""
 msgid "accept"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Accept notes from coding agents"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Accepted · no revision left"
 msgstr ""
@@ -300,6 +388,7 @@ msgstr ""
 msgid "Acknowledge provider transmission above."
 msgstr ""
 
+#: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
 msgid "Acknowledged"
 msgstr ""
@@ -317,7 +406,12 @@ msgid "Actions"
 msgstr ""
 
 #: packages/ui/src/review.tsx
+#: packages/ui/src/writing-policy-history.tsx
 msgid "Active"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Active now:"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -328,12 +422,28 @@ msgstr ""
 msgid "Add a CV, portfolio or other source so DraftLoop can quote you accurately."
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Add a CV, portfolio, or other source"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Add career evidence"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Add directory"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Add explicit rules for both author and critic"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Add file"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Add folder"
 msgstr ""
 
 #: packages/ui/src/application-steps.tsx
@@ -343,6 +453,10 @@ msgstr ""
 
 #: packages/ui/src/home-model.ts
 msgid "Add or manage documents"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Add rule"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -359,6 +473,19 @@ msgstr ""
 
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Add to policy"
+msgstr ""
+
+#. placeholder {0}: plural(result.sourceCount, "source")
+#: packages/ui/src/career-evidence.ts
+msgid "Added {0} from the folder to {displayName}."
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Added a new version of that file to {displayName}."
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Added to {displayName}."
 msgstr ""
 
 #: packages/ui/src/start-requirements.tsx
@@ -381,12 +508,68 @@ msgstr ""
 msgid "All resolved"
 msgstr ""
 
+#: apps/web/src/credits-model.ts
+msgid "All the candidate records in your plan are in use."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "All the seats in your plan are taken."
+msgstr ""
+
+#. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
+#: apps/web/src/private-sections.tsx
+msgid "Allow pull requests from {0}"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Allow this repository"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Already in {displayName}."
+msgstr ""
+
+#: apps/web/src/sensitivity-model.ts
+msgid "Always allow"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "and everything stored for it were deleted."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "and its completed Round"
+msgstr ""
+
+#: packages/ui/src/speech-button.tsx
+msgid "Answer by voice"
+msgstr ""
+
+#. placeholder {0}: describeMode("Anthropic", anthropicMode)
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Anthropic {0}"
+msgstr ""
+
+#. placeholder {0}: describeMode("Anthropic", anthropicMode)
+#. placeholder {1}: describeMode( "OpenAI", openaiMode, )
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Anthropic {0} & OpenAI {1} configured"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Anthropic & OpenAI API keys configured"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "API key"
 msgstr ""
 
 #: packages/ui/src/application-name.tsx
@@ -398,6 +581,7 @@ msgstr ""
 msgid "Application plan"
 msgstr ""
 
+#: packages/ui/src/career-page-tabs.tsx
 #: packages/ui/src/home.tsx
 msgid "Applications"
 msgstr ""
@@ -500,6 +684,18 @@ msgstr ""
 msgid "Assessed by"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Assign"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Assign a member"
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "Attach a PDF, DOCX, Markdown or plain text file."
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Author"
@@ -541,6 +737,14 @@ msgstr ""
 msgid "Autopilot: run all"
 msgstr ""
 
+#: packages/ui/src/provider-authentication.tsx
+msgid "available"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Available candidate knowledge bases"
+msgstr ""
+
 #. placeholder {0}: back.label
 #: packages/ui/src/home.tsx
 msgid "Back to {0}"
@@ -548,6 +752,10 @@ msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "Basis for storing the material"
 msgstr ""
 
 #. placeholder {0}: options.token
@@ -600,6 +808,14 @@ msgstr ""
 msgid "Bring your career evidence into the loop"
 msgstr ""
 
+#: packages/ui/src/profile-status.ts
+msgid "Build"
+msgstr ""
+
+#: packages/ui/src/career-panel.tsx
+msgid "builds"
+msgstr ""
+
 #. placeholder {0}: first.detail ?? first.label
 #. placeholder {0}: unmet.map((condition) => condition.detail ?? condition.label).join(" ")
 #: packages/ui/src/start-checklist-model.ts
@@ -607,6 +823,7 @@ msgstr ""
 msgid "Can't start yet: {0}"
 msgstr ""
 
+#: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 #: packages/ui/src/home-applications-view.tsx
@@ -621,6 +838,7 @@ msgstr ""
 #: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/workspace-navigation.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Cancel"
 msgstr ""
 
@@ -636,19 +854,55 @@ msgstr ""
 msgid "Cancel extraction"
 msgstr ""
 
+#: packages/ui/src/profile-generation-progress.tsx
+msgid "Cancel generation"
+msgstr ""
+
+#: packages/ui/src/profile-generation-progress.tsx
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Cancelling…"
 msgstr ""
 
+#: apps/web/src/knowledge-bridge.ts
+msgid "Candidate knowledge file import was cancelled."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Candidate record"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
 #: packages/ui/src/page-navigation.ts
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Career evidence"
+msgstr ""
+
+#. placeholder {0}: profileFreshnessChangeText(freshness)
+#: packages/ui/src/profile-freshness.ts
+msgid "Career evidence changed: {0}"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Career evidence intake is unavailable"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Career evidence URLs"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Career evidence:"
 msgstr ""
 
+#: packages/ui/src/career-flow.tsx
+msgid "Career flow"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Career interview"
+msgstr ""
+
+#: packages/ui/src/career-signposts.tsx
 #: packages/ui/src/page-navigation.ts
 msgid "Career profile"
 msgstr ""
@@ -677,16 +931,44 @@ msgstr ""
 msgid "Changes only"
 msgstr ""
 
+#: apps/web/src/screening.tsx
+msgid "characters. Say why the text is safe; do not paste the text itself."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Check that the selected career evidence includes the facts you need, then retry. Retrying sends your selected career evidence again and may use provider credits."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Check the facts below, then mark the profile reviewed so applications can use it."
+msgstr ""
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Check what the run will use. No provider call is made until you start."
+msgstr ""
+
+#: packages/ui/src/provider-key-test.tsx
+msgid "Checked at"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
 msgid "Checking"
 msgstr ""
 
+#: apps/web/src/consent-model.ts
+msgid "Checking the candidate's consent to send material…"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Checking the knowledge base…"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Checking…"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Checksum"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -701,8 +983,20 @@ msgstr ""
 msgid "Choose a name"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval applies to this name only."
+msgstr ""
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Choose a profile"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Choose a reviewed profile…"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Choose a saved profile…"
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx
@@ -713,8 +1007,16 @@ msgstr ""
 msgid "Choose another name"
 msgstr ""
 
+#: apps/web/src/sources-model.ts
+msgid "Choose at least one knowledge base."
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Choose how this workspace searches your candidate knowledge. Semantic and hybrid modes use a small model that runs on this computer; the model is downloaded only after you approve it."
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Choose how your CVs are written. You can change the models later from Home."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -729,8 +1031,20 @@ msgstr ""
 msgid "Choose profile"
 msgstr ""
 
+#: apps/web/src/consent-model.ts
+msgid "Choose the basis for storing the candidate's material."
+msgstr ""
+
+#: packages/ui/src/work-journal-model.ts
+msgid "Choose what the candidate did."
+msgstr ""
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Choose which models write and review your next runs. Changing this does not affect runs already in progress. Sending candidate material still asks for your approval each time."
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it does not change the current host."
 msgstr ""
 
 #: packages/ui/src/run-draft-choice.tsx
@@ -746,6 +1060,10 @@ msgstr ""
 msgid "chosen earlier run"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "CKB"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "claim to source inspection"
 msgstr ""
@@ -756,6 +1074,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Claims and career evidence"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Claude session"
 msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -771,8 +1093,14 @@ msgid "close"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Close"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Close and reopen DraftLoop to apply it; the active host remains unchanged until then."
 msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
@@ -785,6 +1113,22 @@ msgstr ""
 
 #: packages/ui/src/workspace-navigation.tsx
 msgid "Close workspace"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Codex session"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Codex session:"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Collapse all"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -855,16 +1199,45 @@ msgstr ""
 msgid "Compress"
 msgstr ""
 
+#. placeholder {0}: missing.join(" and ")
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Configure {0} for live review"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Configure provider authentication for live review"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Configured model pair"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Confirm as evidence"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Confirm download"
 msgstr ""
 
+#: apps/web/src/sources-model.ts
+msgid "Confirm that runs may combine these knowledge bases."
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Confirm that the candidate agreed to send their material."
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "contains"
+msgstr ""
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Continue where you left off, or pick another workspace. "
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Conversation"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -896,16 +1269,46 @@ msgstr ""
 msgid "Create application"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Create knowledge base"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Create knowledge store"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Create or choose a knowledge base"
+msgstr ""
+
 #: packages/ui/src/workspace-creation.tsx
 msgid "Create or open a review workspace"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Create record"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Create workspace"
 msgstr ""
 
+#: packages/ui/src/profile-status-view.tsx
+msgid "Created"
+msgstr ""
+
+#: packages/ui/src/career-evidence-setup.ts
+msgid "Created knowledge base “{displayName}” in {defaultKnowledgeStoreDestinationLabel} and selected it for this workspace."
+msgstr ""
+
+#: packages/ui/src/career-evidence-setup.ts
+msgid "Creating a knowledge base is unavailable"
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Creating…"
 msgstr ""
 
@@ -978,6 +1381,10 @@ msgstr ""
 msgid "Custom profile pair"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "CV language"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Data class"
 msgstr ""
@@ -992,6 +1399,14 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Decision for"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "DeepInfra API key"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Default"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1023,6 +1438,10 @@ msgstr ""
 msgid "Delete folder {0}"
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "Delete record"
+msgstr ""
+
 #. placeholder {0}: folder.name
 #: packages/ui/src/home-folder-model.ts
 msgid "Delete the folder “{0}”? {what} No application is deleted."
@@ -1030,6 +1449,18 @@ msgstr ""
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Deleted \"{name}\"."
+msgstr ""
+
+#: apps/web/src/record-actions.tsx
+msgid "Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy."
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Demo mode (no provider authentication required)"
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Demo mode: runs use fixtures and call no model"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1046,12 +1477,21 @@ msgstr ""
 
 #: packages/ui/src/model-editor-summary.tsx
 #: packages/ui/src/model-profile-picker.tsx
+#: packages/ui/src/profile.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Details"
 msgstr ""
 
 #: packages/ui/src/model-preset-cards.tsx
 msgid "Development"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Did not remember."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Differences from your record"
 msgstr ""
 
 #. placeholder {0}: left.text
@@ -1069,7 +1509,17 @@ msgid "Disagreement ·"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Discard changes"
+msgstr ""
+
+#: packages/ui/src/speech-button.tsx
+msgid "Discard recording"
+msgstr ""
+
+#. placeholder {0}: response.status
+#: apps/web/src/oidc-session.ts
+msgid "Discovery answered {0}."
 msgstr ""
 
 #: apps/web/src/shared-screens.tsx
@@ -1135,6 +1585,11 @@ msgstr ""
 msgid "Draft for this application"
 msgstr ""
 
+#. placeholder {0}: record.version
+#: packages/ui/src/profile-outcome.ts
+msgid "Draft profile version {0} is saved and requires human review."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Draft under review"
 msgstr ""
@@ -1142,6 +1597,12 @@ msgstr ""
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Draft v{0}"
+msgstr ""
+
+#. placeholder {0}: freshness.version ?? profile.version
+#. placeholder {0}: profile.version
+#: packages/ui/src/profile-freshness.ts
+msgid "Draft version {0} awaiting your review"
 msgstr ""
 
 #. placeholder {0}: artifact.version
@@ -1166,12 +1627,26 @@ msgstr ""
 msgid "Drafting…"
 msgstr ""
 
+#: apps/web/src/oidc-sign-in.tsx
+#: apps/web/src/sign-in.tsx
 #: packages/ui/src/app.tsx
 msgid "DraftLoop"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "DraftLoop / Opportunity brief"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "DraftLoop / Provider authentication"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "DraftLoop / Writing policy"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model."
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -1191,6 +1666,10 @@ msgstr ""
 #. placeholder {0}: state.providerFailure.step
 #: packages/ui/src/review.tsx
 msgid "DraftLoop retries the {0} automatically."
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -1214,6 +1693,14 @@ msgstr ""
 msgid "e.g. lead with tokenisation; drop certification dates"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "e.g. senior-data-engineer-cv"
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
+msgstr ""
+
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
 msgid "Each value is what that run recorded."
@@ -1223,7 +1710,12 @@ msgstr ""
 msgid "earlier run"
 msgstr ""
 
+#: packages/ui/src/profile-status-view.tsx
+msgid "Earlier versions cannot be edited."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Edit"
 msgstr ""
 
@@ -1235,6 +1727,14 @@ msgstr ""
 msgid "Edit {sectionTitle} text"
 msgstr ""
 
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Edit policy"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Edit writing policy"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "edited"
 msgstr ""
@@ -1242,6 +1742,10 @@ msgstr ""
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Editing reviewed version {0}. Saving creates a new draft; this reviewed version stays unchanged and must be reviewed again before a run uses the new one."
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Editing version {savedVersion}. Saving creates a new version and applies it to future runs; earlier versions stay in the history."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1256,6 +1760,10 @@ msgstr ""
 msgid "effort"
 msgstr ""
 
+#: packages/ui/src/profile-generation-progress.tsx
+msgid "Elapsed"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Employer"
 msgstr ""
@@ -1268,8 +1776,16 @@ msgstr ""
 msgid "Empty"
 msgstr ""
 
+#: packages/ui/src/career-evidence.ts
+msgid "Empty: add a CV, portfolio, or other source"
+msgstr ""
+
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "en-GB"
 msgstr ""
 
 #: packages/ui/src/workspace-model-settings.ts
@@ -1289,8 +1805,25 @@ msgstr ""
 msgid "Every application is archived. Start a new application, or restore one below."
 msgstr ""
 
+#: packages/ui/src/profile-status.ts
+msgid "Every fact was removed from this draft. Restore at least one before saving."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Every member of your organisation is assigned to this record."
+msgstr ""
+
+#: apps/web/src/screening.tsx
+msgid "Everything is released. Start the run again."
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "Evidence"
+msgstr ""
+
+#. placeholder {0}: source.displayName
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "Evidence kind of {0}"
 msgstr ""
 
 #: packages/ui/src/run-comparison-facts.ts
@@ -1317,8 +1850,16 @@ msgstr ""
 msgid "excerpt"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Existing reviewed profiles"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Existing run records stay unchanged. New runs will use the saved model pair."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Expand all"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -1347,12 +1888,20 @@ msgstr ""
 msgid "Export comparison"
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "Export everything"
+msgstr ""
+
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
 msgid "Export locally"
+msgstr ""
+
+#: apps/web/src/record-actions.tsx
+msgid "Export or delete this record"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -1421,8 +1970,65 @@ msgstr ""
 msgid "Fact"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "facts"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Facts by category"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Facts:"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Failed"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-actions.ts
+msgid "Failed to remove API key."
+msgstr ""
+
+#: packages/ui/src/provider-authentication-actions.ts
+msgid "Failed to save API key."
+msgstr ""
+
+#: packages/ui/src/provider-authentication-actions.ts
+msgid "Failed to save provider authentication mode."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Field"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "file"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "File and directory intake is unavailable in this desktop host."
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "File checks"
+msgstr ""
+
+#: packages/ui/src/knowledge-intake.ts
+msgid "File import complete. A career-evidence source was added."
+msgstr ""
+
+#: packages/ui/src/knowledge-intake.ts
+msgid "File import complete. An existing career-evidence source was reused."
+msgstr ""
+
+#. placeholder {0}: note.agent_token_id
+#: packages/ui/src/work-journal-model.ts
+msgid "Filed by agent token {0}"
+msgstr ""
+
+#: packages/ui/src/work-journal-model.ts
+msgid "Filed without an agent token"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -1437,12 +2043,20 @@ msgstr ""
 msgid "Filter {label} models"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Filter by label or value"
+msgstr ""
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "Filter by status"
 msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Filter commands"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Filter facts"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1489,8 +2103,17 @@ msgstr ""
 msgid "First run"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Fix the cause above, then retry. Retrying sends your selected career evidence again and may use provider credits. Renaming the profile does not help."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Fix this, then resume the review, or stop it without losing history."
+msgstr ""
+
+#. placeholder {0}: signals || "injection"
+#: apps/web/src/screening-model.ts
+msgid "Flagged for {0}; an owner or admin released it."
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
@@ -1526,7 +2149,13 @@ msgstr ""
 msgid "Gaps: central themes your evidence does not support"
 msgstr ""
 
+#: packages/ui/src/profile-status.ts
+msgid "Generate a profile from your career evidence. You review it once before applications use it."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/profile-status-view.tsx
+#: packages/ui/src/profile-status.ts
 msgid "Generate profile"
 msgstr ""
 
@@ -1534,9 +2163,30 @@ msgstr ""
 msgid "Generate your career profile once from your career evidence. Every application reuses it."
 msgstr ""
 
+#: packages/ui/src/profile-generation-progress.tsx
+msgid "Generating profile."
+msgstr ""
+
+#: packages/ui/src/profile-generation-progress.tsx
+msgid "Generating profile…"
+msgstr ""
+
 #. placeholder {0}: status.version
 #: packages/ui/src/home-model.ts
 msgid "Generating version {0} saved no facts. Check your career evidence, then try again."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Generating…"
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Generation failed"
+msgstr ""
+
+#. placeholder {0}: Math.round(state.loaded * 100)
+#: packages/ui/src/speech-button.tsx
+msgid "Getting voice input ready ({0}%)…"
 msgstr ""
 
 #. placeholder {0}: application.suggestedName
@@ -1548,8 +2198,45 @@ msgstr ""
 msgid "Give it a name you will recognise, such as the role and the company."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "Give the new record an id."
+msgstr ""
+
+#: packages/ui/src/work-journal-model.ts
+msgid "Give the note a title."
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Google Gemini API key"
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Granted"
+msgstr ""
+
+#. placeholder {0}: basisLabel(current.basis).toLowerCase()
+#: apps/web/src/consent-model.ts
+msgid "Granted on {when}{providers}. Basis: {0}."
+msgstr ""
+
 #: packages/ui/src/home-folders.tsx
 msgid "Group applications"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Heading text"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Headings, top level first, separated by >"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Health > Notes"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Hide"
 msgstr ""
 
 #. placeholder {0}: label.toLowerCase()
@@ -1561,12 +2248,25 @@ msgstr ""
 msgid "Hide archived"
 msgstr ""
 
+#: apps/web/src/consent.tsx
+msgid "History ("
+msgstr ""
+
+#. placeholder {0}: history.versions.length
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "History ({0})"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "History:"
 msgstr ""
 
 #: packages/ui/src/page-navigation.ts
 msgid "Home"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "How the heading matches"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -1585,12 +2285,21 @@ msgstr ""
 msgid "https://…"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "https://github.com/…\n"
+"https://www.linkedin.com/in/…"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Hugging Face,"
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "I don't remember"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1628,6 +2337,11 @@ msgstr ""
 msgid "Imported {0}."
 msgstr ""
 
+#: packages/ui/src/career-evidence.ts
+#: packages/ui/src/knowledge-intake.ts
+msgid "Imported source result did not match the selected knowledge base"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Importing an opportunity override does not change the global policy."
 msgstr ""
@@ -1638,6 +2352,10 @@ msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "in"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "In use"
 msgstr ""
 
 #. placeholder {0}: count === 1 ? "" : "s"
@@ -1677,12 +2395,21 @@ msgstr ""
 msgid "Install model"
 msgstr ""
 
+#: packages/ui/src/provider-authentication.tsx
+msgid "Install the Codex CLI, run"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Installed"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Installing"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Interviewer"
 msgstr ""
 
 #: packages/ui/src/recent-workspaces.ts
@@ -1711,6 +2438,14 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "is under"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Issues by severity and status"
 msgstr ""
 
 #: packages/ui/src/home-folder-model.ts
@@ -1771,12 +2506,49 @@ msgstr ""
 msgid "Keep “"
 msgstr ""
 
+#: packages/ui/src/work-journal-model.ts
+msgid "Keep a summary of the work."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
 msgstr ""
 
+#: apps/web/src/sensitivity-model.ts
+msgid "Keep each heading to 200 characters or fewer."
+msgstr ""
+
+#: apps/web/src/sensitivity-model.ts
+msgid "Keep the heading text to 200 characters or fewer."
+msgstr ""
+
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Keep the model pairing rationale under 500 characters without control characters."
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Keep the note to {maximumConsentNoteLength} characters."
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "Keep the reason to {maximumReleaseReasonLength} characters or fewer."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Kind"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Knowledge base"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Knowledge-store selection is unavailable in this desktop host."
+msgstr ""
+
+#: packages/ui/src/profile-generation-progress.tsx
+msgid "Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open."
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -1816,6 +2588,10 @@ msgstr ""
 msgid "latest"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Legacy workspace evidence URLs"
+msgstr ""
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Length"
 msgstr ""
@@ -1824,8 +2600,32 @@ msgstr ""
 msgid "License"
 msgstr ""
 
+#: packages/ui/src/profile-fact-usage.tsx
+msgid "Like section ("
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Likely the same work:"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "line per directive, then free-text rules. The selectors above edit these lines; you can also edit them here."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "LinkedIn export"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Links and technologies are combined and the period widened."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Load latest"
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -1840,16 +2640,44 @@ msgstr ""
 msgid "Loading recent workspaces…"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Loading reviewed profiles…"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Loading saved knowledge…"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Loading the brief…"
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Loading the version…"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Loading the writing policy…"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Loading your profile…"
 msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Local model server"
 msgstr ""
 
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Local model server (no provider key required)"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Local model server address"
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "Local models run on this service's own endpoint; leave the address empty."
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -1860,8 +2688,24 @@ msgstr ""
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Looking through your record…"
+msgstr ""
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Manage"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic and OpenAI also support provider-managed sessions; app keys override their API-key environment variables."
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Manage career evidence"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Manage provider authentication"
 msgstr ""
 
 #. placeholder {0}: count === 1 ? "1 confirmed gap" : `${count} confirmed gaps`
@@ -1873,12 +2717,24 @@ msgstr ""
 msgid "Mark every word that changed since the previous version"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Mark latest draft reviewed"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Mark reviewed"
 msgstr ""
 
 #: apps/web/src/run-model.ts
 msgid "Mark the job brief reviewed before starting a run."
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Marked lines differ from the active version: + only in this version, − only in the active one."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -1906,8 +2762,24 @@ msgstr ""
 msgid "mean score"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Members can be assigned once the record is set up."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Members of this record"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Merge into"
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Metadata review"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Mistral API key"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -1951,7 +2823,12 @@ msgid "model/pricing documentation"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Models"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Models may use it in drafts"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
@@ -2000,8 +2877,20 @@ msgstr ""
 msgid "Name an author model and a critic model before saving model settings."
 msgstr ""
 
+#: packages/ui/src/work-journal-model.ts
+msgid "Name at least one technology."
+msgstr ""
+
 #: packages/ui/src/home.tsx
 msgid "Name it"
+msgstr ""
+
+#: apps/web/src/sensitivity-model.ts
+msgid "Name the heading text the rule matches."
+msgstr ""
+
+#: apps/web/src/sensitivity-model.ts
+msgid "Name the headings, from the top level down."
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
@@ -2017,6 +2906,15 @@ msgstr ""
 msgid "Needs attention"
 msgstr ""
 
+#: packages/ui/src/profile-status.ts
+msgid "Needs review"
+msgstr ""
+
+#. placeholder {0}: plural(issueCount, "issue")
+#: packages/ui/src/profile-status.ts
+msgid "Needs review: {0}"
+msgstr ""
+
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Neither run used a career profile version"
 msgstr ""
@@ -2027,6 +2925,15 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Never included"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+#: apps/web/src/sensitivity-model.ts
+msgid "Never send"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Never share with a model"
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -2050,6 +2957,18 @@ msgstr ""
 msgid "New folder"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "New knowledge base"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "New knowledge base name"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "New record id"
+msgstr ""
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "New runs use the workspace's current models."
 msgstr ""
@@ -2058,8 +2977,20 @@ msgstr ""
 msgid "New runs use:"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "New store folder name"
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "New workspace"
+msgstr ""
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Next-run model profiles"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "No active knowledge bases are available."
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -2070,8 +3001,16 @@ msgstr ""
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "No career evidence yet. Adding the first source creates a knowledge base for this workspace in"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2090,8 +3029,32 @@ msgstr ""
 msgid "No eligible chunks for full source, so retrieval was used"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "No facts are recorded in this version."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "No facts found"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "No facts match this filter."
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "No files in the selected knowledge bases yet."
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "No issues are recorded in this version."
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "No knowledge base selected — runs will use legacy workspace evidence"
 msgstr ""
 
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
@@ -2104,8 +3067,20 @@ msgstr ""
 msgid "No linked claim for this finding."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "No member is assigned to this record."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "No network transmission"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "No notes wait for review."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "No profile yet"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -2116,8 +3091,20 @@ msgstr ""
 msgid "No recent workspaces yet."
 msgstr ""
 
+#: apps/web/src/oidc-session.ts
+msgid "No refresh token is stored."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "No required sections"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "No reviewed profiles are available in this workspace."
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "No rules: every section can be used."
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -2161,12 +3148,20 @@ msgstr ""
 msgid "Not checked"
 msgstr ""
 
+#: packages/ui/src/provider-authentication.tsx
+msgid "not detected"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Not evaluated"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Not found in the job description"
+msgstr ""
+
+#: packages/ui/src/profile-freshness.ts
+msgid "Not generated yet"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -2181,8 +3176,36 @@ msgstr ""
 msgid "Not named in the job posting"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Not now"
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Not recorded yet."
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "Not screened"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "Not screened; an owner or admin released it."
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Not set"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "Note (optional)"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Notes"
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
@@ -2193,21 +3216,48 @@ msgstr ""
 msgid "Nothing leaves this workspace."
 msgstr ""
 
+#: apps/web/src/microphone.ts
+msgid "Nothing was recorded. Try again."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/semantic-retrieval.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "of"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "One"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "One page or two is saved as your writing policy's page target, and the draft is written to it."
 msgstr ""
 
+#: apps/web/src/screening-model.ts
+msgid "Only owners and admins of your organisation can release quarantined material."
+msgstr ""
+
+#: apps/web/src/screening.tsx
+msgid "Only owners and admins of your organisation release quarantined material. Ask one of them, or replace the material."
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Only that page's text is sent. Your career evidence is not sent. Nothing is fetched or sent until you choose Extract."
 msgstr ""
 
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "Only the first sources are listed."
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Only the job description is sent. Your career evidence is not sent. Nothing is sent until you choose Extract."
+msgstr ""
+
+#: packages/ui/src/profile-review-navigation.ts
+msgid "Only the latest draft can be marked reviewed."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2216,6 +3266,7 @@ msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home.tsx
+#: packages/ui/src/profile.tsx
 msgid "Open"
 msgstr ""
 
@@ -2233,6 +3284,10 @@ msgstr ""
 msgid "Open a workspace to continue"
 msgstr ""
 
+#: packages/ui/src/native.ts
+msgid "Open an application before choosing one of its runs."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Open career evidence to choose or repair it."
 msgstr ""
@@ -2243,6 +3298,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Open issues ("
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Open knowledge store"
 msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
@@ -2279,6 +3338,15 @@ msgstr ""
 msgid "Open workspace"
 msgstr ""
 
+#. placeholder {0}: describeMode("OpenAI", openaiMode)
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "OpenAI {0}"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "OpenAI authentication"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Opening"
 msgstr ""
@@ -2299,8 +3367,20 @@ msgstr ""
 msgid "Or provide a public URL"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Or provide public URLs, one per line"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Or something else you would like to talk about"
+msgstr ""
+
 #: packages/ui/src/home.tsx
 msgid "Original workspace job"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Other"
 msgstr ""
 
 #: packages/ui/src/application-model-pair.tsx
@@ -2309,6 +3389,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Other model…"
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Out of date with your evidence"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -2341,6 +3425,18 @@ msgstr ""
 msgid "Override rationale for {0}"
 msgstr ""
 
+#: apps/web/src/sign-in.tsx
+msgid "Owner token"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Owners and admins of your organisation assign members."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Parent"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "part of a model id"
 msgstr ""
@@ -2349,8 +3445,32 @@ msgstr ""
 msgid "Paste the job description"
 msgstr ""
 
+#: apps/web/src/http-bridge.ts
+msgid "Paste the job description first."
+msgstr ""
+
+#: apps/web/src/session.ts
+msgid "Paste the owner token."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "Paste this application's job description first."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Pause for now"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Performance review"
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Pick a version to read its text."
 msgstr ""
 
 #: packages/ui/src/model-preset-cards.tsx
@@ -2367,6 +3487,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Policy fingerprint"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Policy text"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -2409,6 +3533,14 @@ msgstr ""
 msgid "Priority"
 msgstr ""
 
+#: apps/web/src/private-sections.tsx
+msgid "Private sections"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Private: its repository and links are never sent"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Problem"
 msgstr ""
@@ -2417,8 +3549,36 @@ msgstr ""
 msgid "profile"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Profile generation failed. No facts were saved."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Profile generation result"
+msgstr ""
+
+#: packages/ui/src/profile-outcome.ts
+msgid "Profile generation saved no facts. Review the recorded cause before retrying."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Profile name"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Profile version"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Project visibility"
+msgstr ""
+
 #: packages/ui/src/model-profile-details.tsx
 msgid "Provider and model"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Provider authentication"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2437,6 +3597,10 @@ msgstr ""
 msgid "Provider transmission preflight"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Public"
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Public standard uncached text API list rates in USD"
 msgstr ""
@@ -2451,6 +3615,28 @@ msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "Quality unvalidated; account availability unchecked"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+#: packages/ui/src/work-journal-model.ts
+msgid "Quarantined: flagged"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+#: packages/ui/src/work-journal-model.ts
+msgid "Quarantined: not screened"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Questions written by"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Quick replies"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Re-extract all sources"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2469,8 +3655,19 @@ msgstr ""
 msgid "Readiness report inputs are incomplete"
 msgstr ""
 
+#. placeholder {0}: result.readyCount
+#. placeholder {1}: result.blockedCount
+#. placeholder {2}: result.sourceCount
+#: packages/ui/src/knowledge-intake.ts
+msgid "Readiness: {0} ready, {1} blocked of {2} sources.{stateNote}"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Reading career evidence…"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "Reading the candidate's consents…"
 msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
@@ -2485,15 +3682,46 @@ msgstr ""
 msgid "Reading the job page…"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Reading the record's members…"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Reading the rules…"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Reading the saved career profile…"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Reading the work journal…"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "Reading what each source is…"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Reading your candidate records…"
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Reading your files…"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Reading your knowledge bases…"
 msgstr ""
 
 #: apps/web/src/workspace.tsx
 msgid "Reading your workspace…"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+#: packages/ui/src/career-evidence.ts
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/profile-status.ts
 #: packages/ui/src/review.tsx
 msgid "Ready"
 msgstr ""
@@ -2522,6 +3750,10 @@ msgstr ""
 msgid "Reason for approving past final CV checks"
 msgstr ""
 
+#: apps/web/src/screening.tsx
+msgid "Reason for releasing"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "reasoning"
 msgstr ""
@@ -2530,8 +3762,33 @@ msgstr ""
 msgid "Recent workspaces"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Record"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "Record consent"
+msgstr ""
+
+#. placeholder {0}: providerList(providers)
+#: apps/web/src/consent-model.ts
+msgid "Record the candidate's consent to send material to {0} first."
+msgstr ""
+
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Record why one lineage on both sides is acceptable before saving model settings."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Recorded cause"
+msgstr ""
+
+#: packages/ui/src/speech-button.tsx
+msgid "Recording… speak your answer."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Refresh"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -2542,10 +3799,27 @@ msgstr ""
 msgid "reject"
 msgstr ""
 
+#: apps/web/src/screening.tsx
+msgid "Release"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+#: apps/web/src/screening.tsx
+msgid "Released"
+msgstr ""
+
+#: apps/web/src/screening.tsx
+msgid "Releasing…"
+msgstr ""
+
 #: apps/web/src/new-release.tsx
 msgid "Reload"
 msgstr ""
 
+#: apps/web/src/private-sections.tsx
+#: apps/web/src/records.tsx
+#: packages/ui/src/profile.tsx
+#: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Remove"
 msgstr ""
@@ -2553,6 +3827,15 @@ msgstr ""
 #. placeholder {0}: workspace.name
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Remove {0} from recent workspaces"
+msgstr ""
+
+#. placeholder {0}: member.email
+#: apps/web/src/records.tsx
+msgid "Remove {0} from this record"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Remove fact"
 msgstr ""
 
 #: packages/ui/src/home-folder-model.ts
@@ -2565,6 +3848,11 @@ msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Remove model"
+msgstr ""
+
+#. placeholder {0}: ruleSentence(rule)
+#: apps/web/src/private-sections.tsx
+msgid "Remove rule: {0}"
 msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -2590,6 +3878,14 @@ msgstr ""
 #. placeholder {0}: folder.name
 #: packages/ui/src/home-folders.tsx
 msgid "Rename folder {0}"
+msgstr ""
+
+#: apps/web/src/sources-model.ts
+msgid "Rename the file to 200 characters or fewer."
+msgstr ""
+
+#: apps/web/src/sources-model.ts
+msgid "Rename the file without slashes or control characters."
 msgstr ""
 
 #: packages/ui/src/workspace-title.tsx
@@ -2622,6 +3918,7 @@ msgstr ""
 msgid "Request revision (Alt+R)"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/review.tsx
 msgid "Required"
 msgstr ""
@@ -2633,6 +3930,10 @@ msgstr ""
 #. placeholder {0}: state.setup.requiredSections.join(", ")
 #: packages/ui/src/review.tsx
 msgid "Required sections: {0}"
+msgstr ""
+
+#: apps/web/src/screening.tsx
+msgid "Required, up to"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2697,10 +3998,22 @@ msgstr ""
 msgid "Resize the compare columns"
 msgstr ""
 
+#: packages/ui/src/profile-outcome.ts
+msgid "Resolve or acknowledge draft issues and save the issue decisions before review."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Resolve or acknowledge each open issue, save, then mark the profile reviewed."
+msgstr ""
+
 #. placeholder {0}: blockingFindings.length
 #. placeholder {1}: blockingFindings.length === 1 ? "" : "s"
 #: packages/ui/src/review.tsx
 msgid "Resolve or override {0} blocking finding{1} before approval."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Resolved"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2721,12 +4034,20 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Restore as new version"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Restore requirement {position}"
 msgstr ""
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Restored \"{name}\"."
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Restoring puts this text in the editor; saving makes it a new version. Nothing is deleted."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2772,6 +4093,10 @@ msgstr ""
 msgid "Retry profile check"
 msgstr ""
 
+#: packages/ui/src/profile-status-view.tsx
+msgid "Retry profile generation"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Return to review"
 msgstr ""
@@ -2780,12 +4105,25 @@ msgstr ""
 msgid "Return to reviewed Round"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Reusable career evidence, kept separate from application material. Choosing a base replaces this workspace’s current knowledge selection."
+msgstr ""
+
+#: packages/ui/src/profile-freshness.ts
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Review"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Review an opportunity before importing an override."
 msgstr ""
 
 #: packages/ui/src/application-steps.tsx
 msgid "Review and fetch job URL"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Review blockers"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2804,7 +4142,16 @@ msgstr ""
 msgid "Review in progress · nothing to do yet"
 msgstr ""
 
+#: packages/ui/src/profile-status.ts
+msgid "Review issues"
+msgstr ""
+
+#: packages/ui/src/work-journal-pending.tsx
+msgid "Review notes"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/profile-status.ts
 msgid "Review profile"
 msgstr ""
 
@@ -2825,11 +4172,16 @@ msgstr ""
 msgid "Review the requirements before importing an override."
 msgstr ""
 
+#: apps/web/src/http-bridge.ts
+msgid "Review this application's requirements first."
+msgstr ""
+
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Review work"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/profile-status-view.tsx
 msgid "Reviewed"
 msgstr ""
 
@@ -2839,6 +4191,11 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Reviewed career profile selected"
+msgstr ""
+
+#. placeholder {0}: record.version
+#: packages/ui/src/profile-outcome.ts
+msgid "Reviewed profile version {0} is loaded and selected."
 msgstr ""
 
 #. placeholder {0}: record.version
@@ -2853,6 +4210,14 @@ msgstr ""
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Reviewed version {0}. It is read-only; a run can use it. Edit creates a new draft you review again."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Reviewed version {version} is used for new applications."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Reviewed versions cannot be edited."
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -2890,6 +4255,10 @@ msgstr ""
 msgid "rounds ·"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "Rounds at most"
+msgstr ""
+
 #: packages/ui/src/autopilot-toggle.tsx
 msgid "rounds without stopping"
 msgstr ""
@@ -2900,6 +4269,10 @@ msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "Route support"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Rules apply once a knowledge base is chosen."
 msgstr ""
 
 #: packages/ui/src/run-switcher.tsx
@@ -2947,17 +4320,43 @@ msgstr ""
 msgid "Runs"
 msgstr ""
 
+#. placeholder {0}: providerList(providers)
+#: apps/web/src/consent.tsx
+msgid "Runs send the approved parts of the candidate's material to {0} to draft and review the CV. The providers do not keep it."
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in"
+msgstr ""
+
 #: packages/ui/src/model-profile-details.tsx
 msgid "Runtime controls"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "s"
 msgstr ""
 
+#: apps/web/src/private-sections.tsx
+msgid "Salary"
+msgstr ""
+
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Same {noun}"
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Same text as the active version."
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Save"
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Save as first version"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2968,12 +4367,32 @@ msgstr ""
 msgid "Save changes"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Save draft edits"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Save models"
 msgstr ""
 
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Save new version"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Save override"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Save to"
+msgstr ""
+
+#: packages/ui/src/profile-review-navigation.ts
+msgid "Save your issue decisions before marking the draft reviewed."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Save your issue decisions, then mark the profile reviewed."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -2982,6 +4401,14 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Saved as your own entry, never as something the job posting says."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Saved profile issue guidance"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Saved profiles"
 msgstr ""
 
 #: packages/ui/src/workspace-navigation.tsx
@@ -2996,6 +4423,14 @@ msgstr ""
 msgid "Saving"
 msgstr ""
 
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Saving creates a new version and applies it to future runs."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Saving profile…"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "Saving the comparison…"
 msgstr ""
@@ -3004,8 +4439,28 @@ msgstr ""
 msgid "Saving the model pair…"
 msgstr ""
 
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "saving…"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Saving…"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+#: packages/ui/src/work-journal-model.ts
+msgid "Screened: clear"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Screening held this note back. Edit it so it screens clear, or discard it."
+msgstr ""
+
+#: apps/web/src/screening.tsx
+msgid "Screening held this text back"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -3020,8 +4475,20 @@ msgstr ""
 msgid "Search commands…"
 msgstr ""
 
+#: packages/ui/src/profile-fact-usage.tsx
+msgid "Section usage"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "sections whose heading"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "See exactly what is sent"
+msgstr ""
+
+#: packages/ui/src/career-evidence-setup.ts
+msgid "Selected knowledge base “{displayName}” for this workspace."
 msgstr ""
 
 #: packages/ui/src/application-steps.tsx
@@ -3033,12 +4500,90 @@ msgstr ""
 msgid "Semantic retrieval"
 msgstr ""
 
+#: packages/ui/src/career-evidence.ts
+msgid "Semantic search: model installing"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Semantic search: model needs reinstalling"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Semantic search: model not installed"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Semantic search: not supported on this computer"
+msgstr ""
+
+#: packages/ui/src/career-evidence.ts
+msgid "Semantic search: ready"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Send"
+msgstr ""
+
+#. placeholder {0}: mode === "update" ? "update" : "build"
+#: packages/ui/src/profile-status.ts
+msgid "Send my career evidence{sources} to {provider} to {0} the profile."
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Send only if allowed"
+msgstr ""
+
+#: apps/web/src/sensitivity-model.ts
+msgid "Send only if the workspace allows:"
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Send the job description to the writing model?"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Sensitive: only with your consent"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Sensitivity"
+msgstr ""
+
+#: packages/ui/src/profile-issue-bulk-status.tsx
+msgid "Set all"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Set aside"
+msgstr ""
+
+#. placeholder {0}: issues.length
+#: packages/ui/src/profile-issue-bulk-status.tsx
+msgid "Set status for all {0} {severity} issues"
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "Set the draft's length in the writing policy on the hosted service."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Set this topic aside"
+msgstr ""
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Set up a review workspace"
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Set up the workspace's author and critic models first."
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Set up your workspace"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Show"
 msgstr ""
 
 #. placeholder {0}: label.toLowerCase()
@@ -3092,8 +4637,21 @@ msgstr ""
 msgid "Side panel {width} pixels wide"
 msgstr ""
 
+#: apps/web/src/oidc-sign-in.tsx
+#: apps/web/src/sign-in.tsx
+msgid "Sign in"
+msgstr ""
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Sign in on Home, under Workspace settings."
+msgstr ""
+
+#: apps/web/src/sign-in.tsx
+msgid "Sign in with the owner token of this deployment. It stays in this tab until you close it."
+msgstr ""
+
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in with your organisation account. You stay signed in until you close this tab."
 msgstr ""
 
 #: apps/web/src/shell-actions.tsx
@@ -3102,6 +4660,18 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Sign-in is on Home, under Workspace settings."
+msgstr ""
+
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Signing in"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Skip this question"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Skipped this question."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -3117,8 +4687,13 @@ msgid "source"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Source"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Source compatibility is checked again before starting a review."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3137,12 +4712,20 @@ msgstr ""
 msgid "Sources — claim traceability"
 msgstr ""
 
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "Spelling locale"
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Start a conversation"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -3183,7 +4766,18 @@ msgid "Starting review… Elapsed"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/profile-status-view.tsx
+#: packages/ui/src/profile.tsx
 msgid "Status"
+msgstr ""
+
+#. placeholder {0}: issue.id
+#: packages/ui/src/profile.tsx
+msgid "Status for issue {0}"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Status:"
 msgstr ""
 
 #. placeholder {0}: revision.direction.length === 0 ? "" : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
@@ -3195,6 +4789,10 @@ msgstr ""
 msgid "step where it stopped."
 msgstr ""
 
+#: packages/ui/src/speech-button.tsx
+msgid "Stop and transcribe"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Stop review"
 msgstr ""
@@ -3203,12 +4801,24 @@ msgstr ""
 msgid "Stop run"
 msgstr ""
 
+#: apps/web/src/record-actions-model.ts
+msgid "Stop the run first. A run on this record is queued or running: pause it or stop it for good in its review, then delete the record."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Stopping…"
 msgstr ""
 
+#: packages/ui/src/profile.tsx
+msgid "Store"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Stored with the workspace rather than in a knowledge base."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "subject"
 msgstr ""
 
 #: packages/ui/src/preference-suggestions-panel.tsx
@@ -3217,6 +4827,18 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Summary"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Summary of what you said"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Summary to keep"
 msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
@@ -3236,6 +4858,18 @@ msgstr ""
 msgid "Swap sides: show {0} on the left"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Talk about this"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Talk about this instead"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Target job description"
 msgstr ""
@@ -3244,8 +4878,28 @@ msgstr ""
 msgid "Target job description URL"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Technologies, separated by commas"
+msgstr ""
+
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Test key"
+msgstr ""
+
+#: packages/ui/src/provider-key-test.tsx
+msgid "Testing the key with the provider…"
+msgstr ""
+
+#: apps/web/src/knowledge-bridge.ts
+msgid "That knowledge store is not on this service."
+msgstr ""
+
+#: apps/web/src/records-model.ts
+msgid "That record exists already. Choose it in the list."
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -3267,6 +4921,10 @@ msgstr ""
 
 #: packages/ui/src/home.tsx
 msgid "The applications could not be read. Close and reopen the workspace to try again."
+msgstr ""
+
+#: apps/web/src/record-actions.tsx
+msgid "The archive holds everything stored for this record: its material, runs, drafts, exports, consent history and audit trail."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -3300,12 +4958,42 @@ msgstr ""
 msgid "The brief has no role."
 msgstr ""
 
+#: apps/web/src/consent.tsx
+msgid "The candidate agreed that runs send their material to"
+msgstr ""
+
+#: apps/web/src/profile-bridge.ts
+msgid "The candidate's consent does not cover sending this evidence to the workspace's providers."
+msgstr ""
+
+#. placeholder {0}: providerList(missing)
+#. placeholder {1}: providerList(providers)
+#: apps/web/src/consent-model.ts
+msgid "The candidate's consent does not name {0}. Withdraw it and record it again for {1}."
+msgstr ""
+
+#: apps/web/src/profile-bridge.ts
+msgid "The career profile could not be derived."
+msgstr ""
+
+#: apps/web/src/profile-bridge.ts
+msgid "The career profile could not be derived. Try again."
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "The comparison could not be saved:"
 msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "The configured policy cannot be read; replace it before starting"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "The consent does not name"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "The credit estimate could not be read."
 msgstr ""
 
 #: packages/ui/src/review-run-status.ts
@@ -3344,12 +5032,56 @@ msgstr ""
 msgid "The final CV checks fail only on the gaps you marked as known. Approving records your reasons as the override."
 msgstr ""
 
+#: packages/ui/src/career-evidence.ts
+msgid "The folder has no supported files to add."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "The hosted service derives each model's lineage itself."
+msgstr ""
+
 #: apps/web/src/workspace-model.ts
 msgid "The hosted service runs Anthropic and OpenAI models only."
 msgstr ""
 
+#: apps/web/src/http-bridge.ts
+msgid "The hosted service starts a run from the reviewed requirements."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "The hosted service takes a job as the application's own job or pasted text."
+msgstr ""
+
+#: apps/web/src/oidc-model.ts
+msgid "The identity provider did not say when the token expires."
+msgstr ""
+
+#: apps/web/src/oidc-model.ts
+msgid "The identity provider names another issuer."
+msgstr ""
+
+#: apps/web/src/oidc-model.ts
+msgid "The identity provider publishes no usable sign-in endpoints."
+msgstr ""
+
+#: apps/web/src/oidc-model.ts
+msgid "The identity provider sent a token the API does not take."
+msgstr ""
+
+#: apps/web/src/oidc-model.ts
+msgid "The identity provider sent no access token."
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "The interviewer is writing…"
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "The job brief"
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
@@ -3372,8 +5104,18 @@ msgstr ""
 msgid "The job this draft is written for, under the Job tab. A different job needs a new application."
 msgstr ""
 
+#. placeholder {0}: material.sourceId
+#. placeholder {1}: material.knowledgeBaseId
+#: apps/web/src/screening-model.ts
+msgid "The knowledge source {0} in {1}"
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "The language could not be saved."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -3425,6 +5167,18 @@ msgstr ""
 msgid "The opportunity service returned invalid sources."
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "The other note's"
+msgstr ""
+
+#: apps/web/src/session.ts
+msgid "The owner token has no spaces or line breaks."
+msgstr ""
+
+#: apps/web/src/session.ts
+msgid "The owner token is at least {ownerTokenMinimumLength} characters long."
+msgstr ""
+
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
 msgstr ""
@@ -3436,6 +5190,10 @@ msgstr ""
 
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "The profile pair could not be applied. Your draft is unchanged."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "The record"
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
@@ -3470,6 +5228,10 @@ msgstr ""
 msgid "The review stopped before the critic checked it. Start a new review to get a critiqued draft you can approve or export."
 msgstr ""
 
+#: packages/ui/src/profile-catalog.ts
+msgid "The reviewed profile catalog payload is invalid."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason."
 msgstr ""
@@ -3495,8 +5257,20 @@ msgstr ""
 msgid "The saved profile pair could not be read, so it is not shown. Apply a pair again or check the workspace."
 msgstr ""
 
+#: apps/web/src/screening-model.ts
+msgid "The screener could not read it. Run is refused until it is released or replaced."
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "The selected knowledge base could not be opened. Open its store in the Knowledge base section below."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "The selected knowledge base could not be read"
+msgstr ""
+
+#: apps/web/src/sign-in.tsx
+msgid "The service cannot be reached. Check your connection and reload the page."
 msgstr ""
 
 #: apps/web/src/shell-actions.tsx
@@ -3507,12 +5281,50 @@ msgstr ""
 msgid "The service could not be reached. Check your connection and try again."
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "The summary says"
+msgstr ""
+
+#. placeholder {0}: response.status
+#: apps/web/src/oidc-session.ts
+msgid "The token endpoint answered {0}."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "The workspace has no default application."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "The workspace's language"
 msgstr ""
 
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "The writing policy could not be loaded."
+msgstr ""
+
+#: packages/ui/src/profile-review-navigation.ts
+msgid "There are no facts to review."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "There are not enough credits left for this run."
+msgstr ""
+
+#. placeholder {0}: creditCount(balance.remaining)
+#: apps/web/src/credits-model.ts
+msgid "There are not enough credits left for this run. You have {0}."
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "There is no consent to withdraw."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "There is no previous version to compare with."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "These models"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
@@ -3535,6 +5347,10 @@ msgstr ""
 msgid "This brief has no responsibilities."
 msgstr ""
 
+#: apps/web/src/profile-bridge.ts
+msgid "This candidate record was erased."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "This claim is not linked to the candidate materials supplied to DraftLoop."
 msgstr ""
@@ -3551,8 +5367,16 @@ msgstr ""
 msgid "This is a draft: it has not been reviewed and cannot start a run yet."
 msgstr ""
 
+#: apps/web/src/http-bridge.ts
+msgid "This is not available on the hosted service yet."
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "This is recorded with every run of the workspace and shown at the approval gate."
+msgstr ""
+
+#: packages/ui/src/writing-policy-history.tsx
+msgid "This is the active version future runs use."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3563,12 +5387,32 @@ msgstr ""
 msgid "This job posting looks {label}."
 msgstr ""
 
+#: packages/ui/src/provider-session-model-feedback.ts
+msgid "This model is not supported by the Codex / ChatGPT session. Choose a model supported by your account, or explicitly switch OpenAI authentication to an API key and check model access."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "This note's"
+msgstr ""
+
+#: packages/ui/src/profile-outcome.ts
+msgid "This profile version has no facts to review. Check the selected career evidence before retrying."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "This profile version has no facts."
+msgstr ""
+
 #: apps/web/src/review-actions.ts
 msgid "This recovery is not available on the hosted service yet. Stop the run and start a new one."
 msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "This review was interrupted when the previous app session ended. Resume it to continue from the durable step, or stop it without losing history."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "This reviewed profile is used for new applications."
 msgstr ""
 
 #: packages/ui/src/compact-history.tsx
@@ -3583,8 +5427,63 @@ msgstr ""
 msgid "This run is read-only."
 msgstr ""
 
+#. placeholder {0}: creditCount(details.estimate)
+#: apps/web/src/credits-model.ts
+msgid "This run needs {0}"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "This run needs more credits"
+msgstr ""
+
+#. placeholder {0}: creditCount(estimate.credits)
+#: apps/web/src/credits-model.ts
+msgid "This run uses {0}."
+msgstr ""
+
+#. placeholder {0}: parts.length > 0 ? parts.join(" and ") : "material the run would use"
+#: apps/web/src/screening-model.ts
+msgid "This run was not started. Injection screening quarantined {0}. Release it, or replace it, then start the run again."
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "This screening result was not found on this record. Reload the page and try again."
+msgstr ""
+
+#: apps/web/src/http-bridge.ts
+msgid "This service runs Anthropic, OpenAI and its own local models only."
+msgstr ""
+
+#: apps/web/src/screening-model.ts
+msgid "This text was screened clear, so there is nothing to release."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "This version has no facts. Check your career evidence, then try again."
+msgstr ""
+
+#: packages/ui/src/profile-review-navigation.ts
+msgid "This version is already reviewed."
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "This version of DraftLoop cannot manage a career profile."
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "This version records a failed generation; its cause is shown above."
+msgstr ""
+
+#: packages/ui/src/writing-policy-editor.tsx
+msgid "This workspace has no writing policy yet. The text below is the starting template; saving creates the first version and applies it to future runs."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Tick the approval box to {verb}."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Tick the approval box to enable Retry."
 msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
@@ -3593,6 +5492,10 @@ msgstr ""
 
 #: packages/ui/src/review-panels.tsx
 msgid "times"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Title"
 msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
@@ -3608,8 +5511,20 @@ msgstr ""
 msgid "Took \"{0}\" out of its folder."
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "topics finished in this conversation."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Topics in this conversation"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Traceability"
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Transcript"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -3623,12 +5538,25 @@ msgstr ""
 #: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "Try again"
 msgstr ""
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
+msgstr ""
+
+#: packages/ui/src/speech-button.tsx
+msgid "Turning your words into text on this device…"
+msgstr ""
+
+#: apps/web/src/record-actions.tsx
+msgid "Type the record id,"
+msgstr ""
+
+#: apps/web/src/record-actions-model.ts
+msgid "Type the record id, {workspaceId}, exactly to delete it."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3643,6 +5571,14 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Unknown: treated as private"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Unlimited credits"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Unlisted source"
 msgstr ""
@@ -3653,6 +5589,10 @@ msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
+msgstr ""
+
+#: packages/ui/src/provider-authentication-summary.ts
+msgid "Unsupported provider route"
 msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
@@ -3667,8 +5607,42 @@ msgstr ""
 msgid "Unvalidated"
 msgstr ""
 
+#: packages/ui/src/profile-freshness.ts
+msgid "Up to date with your career evidence"
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Update"
+msgstr ""
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Update in Career profile"
+msgstr ""
+
+#: packages/ui/src/profile-freshness.ts
+#: packages/ui/src/profile-status-view.tsx
+#: packages/ui/src/profile-status.ts
+msgid "Update profile"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Updated"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Updating candidate knowledge…"
+msgstr ""
+
+#: packages/ui/src/profile-fact-usage.tsx
+msgid "Usage"
+msgstr ""
+
+#: packages/ui/src/profile-fact-usage.tsx
+msgid "Usage for {label}"
+msgstr ""
+
+#: packages/ui/src/profile-fact-usage.tsx
+msgid "Usage for {label} section"
 msgstr ""
 
 #. placeholder {0}: providerName(usageLimit.provider)
@@ -3692,6 +5666,18 @@ msgstr ""
 msgid "Use a local server address on this machine, such as http://127.0.0.1:11434/v1."
 msgstr ""
 
+#: packages/ui/src/provider-authentication.tsx
+msgid "Use an OpenAI API key with direct API billing."
+msgstr ""
+
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "use detected"
+msgstr ""
+
+#: packages/ui/src/provider-authentication.tsx
+msgid "Use the local Codex CLI session with subscription billing."
+msgstr ""
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Use the raw job description instead"
 msgstr ""
@@ -3705,12 +5691,24 @@ msgstr ""
 msgid "Use the reviewed requirements instead"
 msgstr ""
 
+#: packages/ui/src/knowledge.tsx
+msgid "Use this knowledge base"
+msgstr ""
+
 #: packages/ui/src/run-draft-choice.tsx
 msgid "Use this run's draft"
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit."
+msgstr ""
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Use workspace models"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Used for applications"
 msgstr ""
 
 #. placeholder {0}: selection.version
@@ -3751,10 +5749,17 @@ msgstr ""
 msgid "validation status"
 msgstr ""
 
+#. placeholder {0}: fact.id
+#: packages/ui/src/profile.tsx
+msgid "Value for fact {0}"
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "version"
 msgstr ""
 
+#: packages/ui/src/profile-status-view.tsx
+#: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
 msgid "Version"
 msgstr ""
@@ -3777,6 +5782,10 @@ msgstr ""
 #. placeholder {0}: input.candidateProfile.version
 #: packages/ui/src/start-checklist-model.ts
 msgid "Version {0}."
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Version history"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -3820,6 +5829,14 @@ msgstr ""
 msgid "What each run recorded"
 msgstr ""
 
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "What each source is ("
+msgstr ""
+
+#: packages/ui/src/source-evidence-kinds.tsx
+msgid "What each source is could not be read."
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "What is cut"
 msgstr ""
@@ -3828,8 +5845,28 @@ msgstr ""
 msgid "What leads"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "What the candidate did"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "What the critic asked to change"
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "What to do with matching sections"
+msgstr ""
+
+#: apps/web/src/consent.tsx
+msgid "Where the agreement is kept"
+msgstr ""
+
+#: packages/ui/src/knowledge.tsx
+msgid "Where your evidence is kept. Choosing a different base replaces the one this workspace uses."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Who may read it"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -3844,8 +5881,33 @@ msgstr ""
 msgid "with…"
 msgstr ""
 
+#: apps/web/src/consent.tsx
+msgid "Withdraw consent"
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Withdrawn"
+msgstr ""
+
+#: apps/web/src/consent-model.ts
+msgid "Withdrawn on {when}."
+msgstr ""
+
+#: packages/ui/src/source-evidence-kind-contract.ts
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Work journal"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Working…"
+msgstr ""
+
 #: packages/ui/src/workspace-activity.tsx
 msgid "Workspace activity"
+msgstr ""
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Workspace evidence files:"
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -3892,8 +5954,20 @@ msgstr ""
 msgid "Write its documents in"
 msgstr ""
 
+#: apps/web/src/screening-model.ts
+msgid "Write why this text is safe to use."
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Write your answer. Enter sends, Shift+Enter starts a new line."
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "writer"
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Writer"
 msgstr ""
 
 #: packages/ui/src/application-model-pair.tsx
@@ -3911,11 +5985,20 @@ msgstr ""
 msgid "Writing policy needs attention: it cannot be read."
 msgstr ""
 
+#: packages/ui/src/writing-policy-history.tsx
+msgid "Writing policy versions"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "You"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
+#: packages/ui/src/writing-policy-editor.tsx
 msgid "You have unsaved changes. Choose Discard changes to close without saving."
 msgstr ""
 
@@ -3923,8 +6006,29 @@ msgstr ""
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Your answer"
+msgstr ""
+
+#: packages/ui/src/career-page-tabs.tsx
+#: packages/ui/src/career-panel.tsx
+msgid "Your career"
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Your career evidence changed since this profile was reviewed: {changes}."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Your career evidence changed since this profile was reviewed."
+msgstr ""
+
 #: packages/ui/src/review-run-status.ts
 msgid "Your career evidence is indexed and searched as the review runs"
+msgstr ""
+
+#: packages/ui/src/profile-status-view.tsx
+msgid "Your career profile"
 msgstr ""
 
 #: packages/ui/src/footer-running-round.tsx
@@ -3932,8 +6036,69 @@ msgstr ""
 msgid "Your directions for this round"
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Your documents"
+msgstr ""
+
+#: packages/ui/src/profile.tsx
+msgid "Your facts"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Your instructions"
+msgstr ""
+
+#: apps/web/src/records-model.ts
+msgid "Your organisation has no candidate record yet. Create the first one."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your organisation has no plan yet."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your organisation has no plan yet. Ask the owner to choose one."
+msgstr ""
+
+#. placeholder {0}: plural(limit, "run", "runs")
+#: apps/web/src/credits-model.ts
+msgid "Your plan allows {0} a day, and today's are used. Try again later."
+msgstr ""
+
+#. placeholder {0}: plural(limit, "run", "runs")
+#: apps/web/src/credits-model.ts
+msgid "Your plan allows {0} at the same time, and they are running. Wait for one to finish, then try again."
+msgstr ""
+
+#. placeholder {0}: plural(value, "candidate record", "candidate records")
+#: apps/web/src/credits-model.ts
+msgid "Your plan allows {0}, and all are in use."
+msgstr ""
+
+#. placeholder {0}: plural(value, "seat", "seats")
+#: apps/web/src/credits-model.ts
+msgid "Your plan allows {0}, and all are taken."
+msgstr ""
+
+#. placeholder {0}: models.toLowerCase()
+#: apps/web/src/credits-model.ts
+msgid "Your plan does not include {0}{who}. Choose another preset or model."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your plan has unlimited credits."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your plan's limit is reached. Ask the owner for a bigger plan."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your plan's limit on runs at the same time is reached. Wait for a run to finish, then try again."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "Your plan's runs for today are used. Try again later."
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx

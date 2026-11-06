@@ -5,6 +5,7 @@ import {
 import { projectReviewedCanonicalCandidateProfileCatalog } from "@draft-loop/ui/profile-catalog-projection";
 import { projectProfileFreshness } from "@draft-loop/ui/profile-freshness-projection";
 import { projectCanonicalCandidateProfileRecord } from "@draft-loop/ui/profile-projection";
+import { t } from "@lingui/core/macro";
 
 import { type ApiClient, type ApiInput, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { refuse } from "./bridge-refusal.js";
@@ -43,14 +44,14 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 function derivationFailure(state: ApiSchemas["CareerProfileDerivation"]): never {
   if (state.status === "cancelled")
     return refuse(canonicalCandidateProfileGenerationCancelledMessage);
-  if (state.status !== "failed") return refuse("The career profile could not be derived.");
+  if (state.status !== "failed") return refuse(t`The career profile could not be derived.`);
   if (state.reason === "consent-required") {
     return refuse(
-      "The candidate's consent does not cover sending this evidence to the workspace's providers.",
+      t`The candidate's consent does not cover sending this evidence to the workspace's providers.`,
     );
   }
-  if (state.reason === "record-erased") return refuse("This candidate record was erased.");
-  return refuse(state.message ?? "The career profile could not be derived. Try again.");
+  if (state.reason === "record-erased") return refuse(t`This candidate record was erased.`);
+  return refuse(state.message ?? t`The career profile could not be derived. Try again.`);
 }
 
 /**

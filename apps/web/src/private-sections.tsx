@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { FormEvent, ReactNode } from "react";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
@@ -22,15 +23,12 @@ export interface PrivateSectionsPanelProps {
 export function PrivateSectionsPanel({ bases, rulesFor }: PrivateSectionsPanelProps) {
   return (
     <section className="panel host-panel" aria-labelledby="private-sections-heading">
-      <h2 id="private-sections-heading">Private sections</h2>
-      <p className="muted">
-        Mark Markdown sections by their heading. Never-send sections never reach a model;
-        only-if-allowed sections stay out unless the workspace allows sensitive material.
-      </p>
+      <h2 id="private-sections-heading">{t`Private sections`}</h2>
+      <p className="muted">{t`Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material.`}</p>
       {bases === undefined ? (
-        <p role="status">Reading your knowledge bases…</p>
+        <p role="status">{t`Reading your knowledge bases…`}</p>
       ) : bases.length === 0 ? (
-        <p className="muted">Rules apply once a knowledge base is chosen.</p>
+        <p className="muted">{t`Rules apply once a knowledge base is chosen.`}</p>
       ) : (
         bases.map((base) => (
           <div key={base.id}>
@@ -74,9 +72,9 @@ export function BaseRules(props: BaseRulesProps) {
         </p>
       ))}
       {rules === undefined ? (
-        <p role="status">Reading the rules…</p>
+        <p role="status">{t`Reading the rules…`}</p>
       ) : rules.length === 0 ? (
-        <p className="muted">No rules: every section can be used.</p>
+        <p className="muted">{t`No rules: every section can be used.`}</p>
       ) : (
         <ul className="sources">
           {rules.map((rule) => (
@@ -86,11 +84,9 @@ export function BaseRules(props: BaseRulesProps) {
                 type="button"
                 className="secondary"
                 disabled={busy}
-                aria-label={`Remove rule: ${ruleSentence(rule)}`}
+                aria-label={t`Remove rule: ${ruleSentence(rule)}`}
                 onClick={() => props.onRemove(rule.id)}
-              >
-                Remove
-              </button>
+              >{t`Remove`}</button>
               {props.onAllowRepository === undefined ||
               pullRequestRepositoryOfRule(rule) === undefined ? null : (
                 <>
@@ -99,11 +95,9 @@ export function BaseRules(props: BaseRulesProps) {
                     type="button"
                     className="secondary"
                     disabled={busy}
-                    aria-label={`Allow pull requests from ${pullRequestRepositoryOfRule(rule)}`}
+                    aria-label={t`Allow pull requests from ${pullRequestRepositoryOfRule(rule) ?? ""}`}
                     onClick={() => props.onAllowRepository?.(rule)}
-                  >
-                    Allow this repository
-                  </button>
+                  >{t`Allow this repository`}</button>
                 </>
               )}
             </li>
@@ -112,36 +106,34 @@ export function BaseRules(props: BaseRulesProps) {
       )}
       <form onSubmit={submit} className="rule-form">
         <select
-          aria-label="What to do with matching sections"
+          aria-label={t`What to do with matching sections`}
           value={form.tier}
           onChange={(event) => set({ tier: event.target.value as RuleForm["tier"] })}
         >
-          <option value="never-share">Never send</option>
-          <option value="sensitive">Send only if allowed</option>
+          <option value="never-share">{t`Never send`}</option>
+          <option value="sensitive">{t`Send only if allowed`}</option>
         </select>{" "}
-        sections whose heading{" "}
+        {t`sections whose heading`}{" "}
         <select
-          aria-label="How the heading matches"
+          aria-label={t`How the heading matches`}
           value={form.kind}
           onChange={(event) => set({ kind: event.target.value as RuleForm["kind"] })}
         >
-          <option value="heading-contains">contains</option>
-          <option value="heading-path">is under</option>
+          <option value="heading-contains">{t`contains`}</option>
+          <option value="heading-path">{t`is under`}</option>
         </select>{" "}
         <input
           id={`rule-heading-${knowledgeBaseId}`}
           aria-label={
             form.kind === "heading-contains"
-              ? "Heading text"
-              : "Headings, top level first, separated by >"
+              ? t`Heading text`
+              : t`Headings, top level first, separated by >`
           }
-          placeholder={form.kind === "heading-contains" ? "Salary" : "Health > Notes"}
+          placeholder={form.kind === "heading-contains" ? t`Salary` : t`Health > Notes`}
           value={form.heading}
           onChange={(event) => set({ heading: event.target.value })}
         />{" "}
-        <button type="submit" disabled={busy}>
-          Add rule
-        </button>
+        <button type="submit" disabled={busy}>{t`Add rule`}</button>
       </form>
     </div>
   );

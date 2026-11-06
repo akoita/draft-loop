@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useId, useState } from "react";
 import { workJournalPanelId } from "./shared-link.js";
 import {
@@ -70,11 +71,8 @@ export function WorkJournalPanel({
       className="panel host-panel work-journal"
       aria-labelledby={`${id}-heading`}
     >
-      <h2 id={`${id}-heading`}>Work journal</h2>
-      <p className="muted">
-        Coding agents can record notable work you shipped. Each note waits here; only the notes you
-        approve become career evidence.
-      </p>
+      <h2 id={`${id}-heading`}>{t`Work journal`}</h2>
+      <p className="muted">{t`Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence.`}</p>
       <label className="checkbox">
         <input
           type="checkbox"
@@ -82,7 +80,7 @@ export function WorkJournalPanel({
           disabled={intake === undefined || saving}
           onChange={(event) => void toggle(event.target.checked)}
         />{" "}
-        Accept notes from coding agents
+        {t`Accept notes from coding agents`}
       </label>
       {intakeProblem === undefined ? null : (
         <p className="problem" role="alert">
@@ -96,10 +94,10 @@ export function WorkJournalPanel({
       )}
       {items === undefined ? (
         problem === undefined ? (
-          <p role="status">Reading the work journal…</p>
+          <p role="status">{t`Reading the work journal…`}</p>
         ) : null
       ) : items.length === 0 ? (
-        <p className="muted">No notes wait for review.</p>
+        <p className="muted">{t`No notes wait for review.`}</p>
       ) : (
         <ul className="work-journal-notes">
           {items.map((item) => (
@@ -245,18 +243,16 @@ export function WorkJournalReviewCard({
         <WorkJournalNoteDetails note={note} />
         {duplicates.map((duplicate) => (
           <div key={duplicate.id} className="work-journal-duplicate">
-            <p className="muted">Likely the same work:</p>
+            <p className="muted">{t`Likely the same work:`}</p>
             <WorkJournalNoteDetails note={duplicate} />
           </div>
         ))}
       </div>
       {held ? (
-        <p className="muted">
-          Screening held this note back. Edit it so it screens clear, or discard it.
-        </p>
+        <p className="muted">{t`Screening held this note back. Edit it so it screens clear, or discard it.`}</p>
       ) : null}
       <fieldset className="work-journal-actions">
-        <legend>Review</legend>
+        <legend>{t`Review`}</legend>
         {modes.map((value) => (
           <label key={value} className="radio">
             <input
@@ -275,7 +271,7 @@ export function WorkJournalReviewCard({
       </fieldset>
       {current === "approve" ? (
         <div className="work-journal-form">
-          <label htmlFor={`${id}-base`}>Knowledge base</label>
+          <label htmlFor={`${id}-base`}>{t`Knowledge base`}</label>
           <select
             id={`${id}-base`}
             value={knowledgeBaseId}
@@ -287,7 +283,7 @@ export function WorkJournalReviewCard({
               </option>
             ))}
           </select>
-          <label htmlFor={`${id}-tier`}>Sensitivity</label>
+          <label htmlFor={`${id}-tier`}>{t`Sensitivity`}</label>
           <select
             id={`${id}-tier`}
             value={tier}
@@ -303,7 +299,7 @@ export function WorkJournalReviewCard({
       ) : null}
       {current === "merge" ? (
         <div className="work-journal-form">
-          <label htmlFor={`${id}-into`}>Merge into</label>
+          <label htmlFor={`${id}-into`}>{t`Merge into`}</label>
           <select id={`${id}-into`} value={into} onChange={(event) => setInto(event.target.value)}>
             {duplicates.map((duplicate) => (
               <option key={duplicate.id} value={duplicate.id}>
@@ -311,16 +307,16 @@ export function WorkJournalReviewCard({
               </option>
             ))}
           </select>
-          <label htmlFor={`${id}-summary`}>Summary to keep</label>
+          <label htmlFor={`${id}-summary`}>{t`Summary to keep`}</label>
           <select
             id={`${id}-summary`}
             value={keepSummary}
             onChange={(event) => setKeepSummary(event.target.value as "into" | "this")}
           >
-            <option value="into">The other note's</option>
-            <option value="this">This note's</option>
+            <option value="into">{t`The other note's`}</option>
+            <option value="this">{t`This note's`}</option>
           </select>
-          <p className="muted">Links and technologies are combined and the period widened.</p>
+          <p className="muted">{t`Links and technologies are combined and the period widened.`}</p>
         </div>
       ) : null}
       {current === "edit" ? (
@@ -333,7 +329,7 @@ export function WorkJournalReviewCard({
       )}
       <div className="actions">
         <button type="button" disabled={busy} onClick={submit}>
-          {busy ? "Saving…" : submitLabels[current]}
+          {busy ? t`Saving…` : submitLabels[current]}
         </button>
       </div>
     </article>
@@ -363,26 +359,26 @@ interface WorkJournalEditFormProps {
 function WorkJournalEditForm({ id, draft, onChange }: WorkJournalEditFormProps) {
   return (
     <div className="work-journal-form">
-      <label htmlFor={`${id}-title`}>Title</label>
+      <label htmlFor={`${id}-title`}>{t`Title`}</label>
       <input
         id={`${id}-title`}
         value={draft.title}
         onChange={(event) => onChange({ ...draft, title: event.target.value })}
       />
-      <label htmlFor={`${id}-text`}>Summary</label>
+      <label htmlFor={`${id}-text`}>{t`Summary`}</label>
       <textarea
         id={`${id}-text`}
         value={draft.summary}
         onChange={(event) => onChange({ ...draft, summary: event.target.value })}
       />
-      <label htmlFor={`${id}-technologies`}>Technologies, separated by commas</label>
+      <label htmlFor={`${id}-technologies`}>{t`Technologies, separated by commas`}</label>
       <input
         id={`${id}-technologies`}
         value={draft.technologies}
         onChange={(event) => onChange({ ...draft, technologies: event.target.value })}
       />
       <fieldset>
-        <legend>What the candidate did</legend>
+        <legend>{t`What the candidate did`}</legend>
         {roles.map((role) => (
           <label key={role} className="checkbox">
             <input
@@ -401,7 +397,7 @@ function WorkJournalEditForm({ id, draft, onChange }: WorkJournalEditFormProps) 
           </label>
         ))}
       </fieldset>
-      <label htmlFor={`${id}-visibility`}>Project visibility</label>
+      <label htmlFor={`${id}-visibility`}>{t`Project visibility`}</label>
       <select
         id={`${id}-visibility`}
         value={draft.visibility}
@@ -412,9 +408,9 @@ function WorkJournalEditForm({ id, draft, onChange }: WorkJournalEditFormProps) 
           })
         }
       >
-        <option value="private">Private: its repository and links are never sent</option>
-        <option value="unknown">Unknown: treated as private</option>
-        <option value="public">Public</option>
+        <option value="private">{t`Private: its repository and links are never sent`}</option>
+        <option value="unknown">{t`Unknown: treated as private`}</option>
+        <option value="public">{t`Public`}</option>
       </select>
     </div>
   );

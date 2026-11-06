@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -126,30 +127,28 @@ export function CredentialRow({
           aria-pressed={revealed}
           onClick={() => onReveal(!revealed)}
         >
-          {revealed ? "Hide" : "Show"}
+          {revealed ? t`Hide` : t`Show`}
         </button>
         <button
           className="button button-primary"
           type="button"
           disabled={value.trim() === ""}
           onClick={onSave}
-        >
-          Save
-        </button>
+        >{t`Save`}</button>
         {testable ? (
           <button
             className="button button-outline"
             type="button"
             disabled={value.trim() !== "" || keyTest.state?.status === "testing"}
             onClick={keyTest.onTest}
-          >
-            Test key
-          </button>
+          >{t`Test key`}</button>
         ) : null}
         {status.source === "app" ? (
-          <button className="button button-danger" type="button" onClick={onRemove}>
-            Remove
-          </button>
+          <button
+            className="button button-danger"
+            type="button"
+            onClick={onRemove}
+          >{t`Remove`}</button>
         ) : null}
       </div>
       {testable && keyTest.state !== undefined ? (
@@ -178,11 +177,11 @@ export function ProviderAuthenticationMode({
   const modeChoiceDisabled = status.environmentOverride || onChange === undefined;
   return (
     <fieldset className="provider-auth-mode" aria-describedby="provider-auth-mode-copy">
-      <legend>OpenAI authentication</legend>
-      <p className="credential-mode-copy" id="provider-auth-mode-copy">
-        Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it
-        does not change the current host.
-      </p>
+      <legend>{t`OpenAI authentication`}</legend>
+      <p
+        className="credential-mode-copy"
+        id="provider-auth-mode-copy"
+      >{t`Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it does not change the current host.`}</p>
       <label className="provider-auth-choice">
         <input
           type="radio"
@@ -194,7 +193,7 @@ export function ProviderAuthenticationMode({
         />
         <span>
           <strong>{providerAuthModeLabels["api-key"]}</strong>
-          <small>Use an OpenAI API key with direct API billing.</small>
+          <small>{t`Use an OpenAI API key with direct API billing.`}</small>
         </span>
       </label>
       <label className="provider-auth-choice">
@@ -208,31 +207,33 @@ export function ProviderAuthenticationMode({
         />
         <span>
           <strong>{providerAuthModeLabels["user-session"]}</strong>
-          <small>Use the local Codex CLI session with subscription billing.</small>
+          <small>{t`Use the local Codex CLI session with subscription billing.`}</small>
         </span>
       </label>
       <p className="credential-mode-status" role="status">
-        Active now: {modeLabel}. Saved preference: {providerAuthModeLabels[status.preferredMode]}.
+        {t`Active now:`} {modeLabel}
+        {t`. Saved preference:`} {providerAuthModeLabels[status.preferredMode]}.
       </p>
       {status.restartRequired ? (
-        <p className="credential-mode-pending" role="status">
-          Close and reopen DraftLoop to apply it; the active host remains unchanged until then.
-        </p>
+        <p
+          className="credential-mode-pending"
+          role="status"
+        >{t`Close and reopen DraftLoop to apply it; the active host remains unchanged until then.`}</p>
       ) : null}
       {status.environmentOverride ? (
-        <p className="credential-mode-warning" role="alert">
-          An environment override controls this mode. Unset the provider auth override and restart
-          DraftLoop before changing the saved preference.
-        </p>
+        <p
+          className="credential-mode-warning"
+          role="alert"
+        >{t`An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference.`}</p>
       ) : null}
       {status.activeMode === "user-session" ? (
         <div className="credential-session-guidance">
           <strong>
-            Codex session: {credentialStatus.configured ? "available" : "not detected"}
+            {t`Codex session:`} {credentialStatus.configured ? t`available` : t`not detected`}
           </strong>
           <p>
-            Install the Codex CLI, run <code>codex login</code>, then close and reopen DraftLoop.
-            DraftLoop does not copy subscription credentials into an API key.
+            {t`Install the Codex CLI, run`} <code>codex login</code>
+            {t`, then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key.`}
           </p>
         </div>
       ) : null}
@@ -346,19 +347,18 @@ export function ProviderAuthenticationView({
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">DraftLoop / Provider authentication</p>
-            <h2 id="settings-dialog-title">Provider authentication</h2>
+            <p className="eyebrow">{t`DraftLoop / Provider authentication`}</p>
+            <h2 id="settings-dialog-title">{t`Provider authentication`}</h2>
           </div>
           <button className="button button-quiet" type="button" onClick={onClose}>
-            Close
+            {t`Close`}
             <kbd>Esc</kbd>
           </button>
         </div>
-        <p className="modal-copy" id="settings-dialog-copy">
-          Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic
-          and OpenAI also support provider-managed sessions; app keys override their API-key
-          environment variables.
-        </p>
+        <p
+          className="modal-copy"
+          id="settings-dialog-copy"
+        >{t`Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic and OpenAI also support provider-managed sessions; app keys override their API-key environment variables.`}</p>
         {feedback ? (
           <div className="feedback-banner" role="status">
             <p>{feedback}</p>
@@ -475,16 +475,18 @@ export function ProviderAuthentication({
   if (getCredentialStatus === undefined && onSetCredential === undefined) return null;
 
   return (
-    <section className="provider-authentication" aria-label="Provider authentication">
+    <section className="provider-authentication" aria-label={t`Provider authentication`}>
       <div className="provider-authentication-head">
-        <strong>Provider authentication</strong>
+        <strong>{t`Provider authentication`}</strong>
         {summary === null ? null : (
           <span className="provider-authentication-summary">{summary}</span>
         )}
       </div>
-      <button className="button button-outline" type="button" onClick={() => setOpen(true)}>
-        Manage provider authentication
-      </button>
+      <button
+        className="button button-outline"
+        type="button"
+        onClick={() => setOpen(true)}
+      >{t`Manage provider authentication`}</button>
       {/* Portalled out of Home so no ancestor's layout can contain the fixed backdrop. */}
       {open && typeof document !== "undefined"
         ? createPortal(

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { canManageMembers } from "./records-model.js";
 
@@ -49,33 +50,33 @@ export function quarantinedStatus(material: QuarantinedMaterial): ScreeningStatu
 /** How a status reads on a source or a brief; no status means nothing was screened. */
 export function screeningBadge(status: ScreeningStatus | undefined): Badge {
   if (status === undefined)
-    return { kind: "none", label: "Not screened", detail: "", quarantined: false };
+    return { kind: "none", label: t`Not screened`, detail: "", quarantined: false };
   const signals = signalNames(status.signals);
   if (status.release !== undefined && !status.quarantined)
     return {
       kind: "released",
-      label: "Released",
+      label: t`Released`,
       detail:
         status.verdict === "flagged"
-          ? `Flagged for ${signals || "injection"}; an owner or admin released it.`
-          : "Not screened; an owner or admin released it.",
+          ? t`Flagged for ${signals || "injection"}; an owner or admin released it.`
+          : t`Not screened; an owner or admin released it.`,
       quarantined: false,
     };
   switch (status.verdict) {
     case "clear":
-      return { kind: "clear", label: "Screened: clear", detail: "", quarantined: false };
+      return { kind: "clear", label: t`Screened: clear`, detail: "", quarantined: false };
     case "flagged":
       return {
         kind: "flagged",
-        label: "Quarantined: flagged",
+        label: t`Quarantined: flagged`,
         detail: signals,
         quarantined: status.quarantined,
       };
     case "unscreened":
       return {
         kind: "unscreened",
-        label: "Quarantined: not screened",
-        detail: "The screener could not read it. Run is refused until it is released or replaced.",
+        label: t`Quarantined: not screened`,
+        detail: t`The screener could not read it. Run is refused until it is released or replaced.`,
         quarantined: status.quarantined,
       };
   }
@@ -98,8 +99,8 @@ export function sourceStatus(
 /** What a piece of material is called where the screen has only its ids. */
 export function materialName(material: QuarantinedMaterial): string {
   return material.kind === "job-source"
-    ? "The job brief"
-    : `The knowledge source ${material.sourceId} in ${material.knowledgeBaseId}`;
+    ? t`The job brief`
+    : t`The knowledge source ${material.sourceId} in ${material.knowledgeBaseId}`;
 }
 
 export interface QuarantineRefusal {
@@ -121,7 +122,7 @@ export function quarantineRefusal(error: unknown): QuarantineRefusal | undefined
       : []),
   ];
   return {
-    message: `This run was not started. Injection screening quarantined ${
+    message: t`This run was not started. Injection screening quarantined ${
       parts.length > 0 ? parts.join(" and ") : "material the run would use"
     }. Release it, or replace it, then start the run again.`,
     items,
@@ -142,9 +143,9 @@ export function releaseRequest(
     }
   | { readonly problem: string } {
   const trimmed = reason.trim();
-  if (trimmed.length === 0) return { problem: "Write why this text is safe to use." };
+  if (trimmed.length === 0) return { problem: t`Write why this text is safe to use.` };
   if (trimmed.length > maximumReleaseReasonLength)
-    return { problem: `Keep the reason to ${maximumReleaseReasonLength} characters or fewer.` };
+    return { problem: t`Keep the reason to ${maximumReleaseReasonLength} characters or fewer.` };
   return { request: { path: { workspaceId, resultId }, body: { reason: trimmed } } };
 }
 
@@ -152,13 +153,13 @@ export function releaseRequest(
 export function releaseRefusal(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.status === 403)
-      return "Only owners and admins of your organisation can release quarantined material.";
+      return t`Only owners and admins of your organisation can release quarantined material.`;
     if (error.status === 404)
-      return "This screening result was not found on this record. Reload the page and try again.";
+      return t`This screening result was not found on this record. Reload the page and try again.`;
     if (error.status === 409 && error.code === "result_superseded")
-      return "A newer screening result replaced this one. Reload to see the current status.";
+      return t`A newer screening result replaced this one. Reload to see the current status.`;
     if (error.status === 409 && error.code === "not_releasable")
-      return "This text was screened clear, so there is nothing to release.";
+      return t`This text was screened clear, so there is nothing to release.`;
   }
   return describeError(error);
 }

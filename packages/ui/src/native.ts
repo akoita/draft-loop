@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 import type { ApplicationImportResult, ApplicationSummaryView } from "./application-contract.js";
 import {
   type ApplicationFolderCapabilities,
@@ -595,7 +596,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ? {
                 chooseRun: async (workspaceId: string, selected: string, reason: string | null) => {
                   if (applicationId === undefined) {
-                    throw new Error("Open an application before choosing one of its runs.");
+                    throw new Error(t`Open an application before choosing one of its runs.`);
                   }
                   unwrap(
                     await capabilityPort.execute({

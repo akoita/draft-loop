@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Sign-in through the identity provider (ADR 0011, D6): OAuth 2 authorization code with PKCE (S256)
  * as a public client. These functions build and check what goes to and comes back from the
@@ -72,10 +73,10 @@ function isEndpoint(value: unknown, issuer: string): value is string {
 /** Reads the endpoints from a discovery document, refusing one that names another issuer. */
 export function parseDiscovery(document: unknown, issuer: string): ProviderEndpoints {
   const fields = (document ?? {}) as Record<string, unknown>;
-  if (fields.issuer !== issuer) throw new Error("The identity provider names another issuer.");
+  if (fields.issuer !== issuer) throw new Error(t`The identity provider names another issuer.`);
   const { authorization_endpoint: authorize, token_endpoint: token } = fields;
   if (!isEndpoint(authorize, issuer) || !isEndpoint(token, issuer))
-    throw new Error("The identity provider publishes no usable sign-in endpoints.");
+    throw new Error(t`The identity provider publishes no usable sign-in endpoints.`);
   const endSession = fields.end_session_endpoint;
   return {
     authorizationEndpoint: authorize,
@@ -169,11 +170,11 @@ export function parseTokenResponse(
     refresh_token: refreshToken,
   } = fields;
   if (typeof accessToken !== "string" || accessToken === "")
-    throw new Error("The identity provider sent no access token.");
+    throw new Error(t`The identity provider sent no access token.`);
   if (typeof tokenType === "string" && tokenType.toLowerCase() !== "bearer")
-    throw new Error("The identity provider sent a token the API does not take.");
+    throw new Error(t`The identity provider sent a token the API does not take.`);
   if (typeof expiresIn !== "number" || !Number.isFinite(expiresIn) || expiresIn <= 0)
-    throw new Error("The identity provider did not say when the token expires.");
+    throw new Error(t`The identity provider did not say when the token expires.`);
   const kept =
     typeof refreshToken === "string" && refreshToken !== "" ? refreshToken : previousRefreshToken;
   return {

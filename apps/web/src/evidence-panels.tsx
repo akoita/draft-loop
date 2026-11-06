@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
@@ -58,11 +59,8 @@ export function FileChecksPanel({
   const files = groups?.flatMap((group) => group.sources) ?? [];
   return (
     <section className="panel host-panel" aria-labelledby="file-checks-heading">
-      <h2 id="file-checks-heading">File checks</h2>
-      <p className="muted">
-        Each file is checked for hidden instructions before runs use it. Quarantined files wait
-        until an owner or admin releases them.
-      </p>
+      <h2 id="file-checks-heading">{t`File checks`}</h2>
+      <p className="muted">{t`Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them.`}</p>
       {problem === undefined ? null : (
         <p className="problem" role="alert">
           {problem}
@@ -71,10 +69,10 @@ export function FileChecksPanel({
       {screeningProblem === undefined ? null : <p className="muted">{screeningProblem}</p>}
       {groups === undefined ? (
         problem === undefined ? (
-          <p role="status">Reading your files…</p>
+          <p role="status">{t`Reading your files…`}</p>
         ) : null
       ) : files.length === 0 ? (
-        <p className="muted">No files in the selected knowledge bases yet.</p>
+        <p className="muted">{t`No files in the selected knowledge bases yet.`}</p>
       ) : (
         groups.map(({ base, sources }) =>
           sources.length === 0 ? null : (

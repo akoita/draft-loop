@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
@@ -119,7 +120,7 @@ export function ConsentView({
   const { consents, messages, busy, providers } = state;
   if (consents === undefined)
     return messages.length === 0 ? (
-      <p role="status">Reading the candidate's consents…</p>
+      <p role="status">{t`Reading the candidate's consents…`}</p>
     ) : (
       <Alerts messages={messages} />
     );
@@ -194,9 +195,12 @@ export function ConsentPanel(props: ConsentPanelProps) {
         <p>
           <strong id={headingId}>{compactTitles[kind]}</strong> ·{" "}
           <span className="muted">{consentSummary(consents, kind, locale)}</span>{" "}
-          <button type="button" className="secondary" disabled={busy} onClick={props.onWithdraw}>
-            Withdraw consent
-          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={props.onWithdraw}
+          >{t`Withdraw consent`}</button>
         </p>
         <Alerts messages={props.messages} />
       </section>
@@ -207,8 +211,8 @@ export function ConsentPanel(props: ConsentPanelProps) {
       <h3 id={headingId}>{compact === true ? compactTitles[kind] : titles[kind]}</h3>
       <p>
         {kind === "material-storage"
-          ? "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
-          : `Runs send the approved parts of the candidate's material to ${providerList(providers)} to draft and review the CV. The providers do not keep it.`}
+          ? t`DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU.`
+          : t`Runs send the approved parts of the candidate's material to ${providerList(providers)} to draft and review the CV. The providers do not keep it.`}
       </p>
       <p className={granted ? "muted" : "notice"}>
         {consentSummary(consents, kind, locale)}
@@ -216,21 +220,27 @@ export function ConsentPanel(props: ConsentPanelProps) {
       </p>
       {missing.length === 0 ? null : (
         <p className="notice">
-          The consent does not name {providerList(missing)}. Withdraw it and record it again for{" "}
-          {providerList(providers)}.
+          {t`The consent does not name`} {providerList(missing)}
+          {t`. Withdraw it and record it again for`} {providerList(providers)}.
         </p>
       )}
       <Alerts messages={props.messages} />
       {granted ? (
-        <button type="button" className="secondary" disabled={busy} onClick={props.onWithdraw}>
-          Withdraw consent
-        </button>
+        <button
+          type="button"
+          className="secondary"
+          disabled={busy}
+          onClick={props.onWithdraw}
+        >{t`Withdraw consent`}</button>
       ) : (
         <GrantForm kind={kind} providers={providers} busy={busy} onGrant={props.onGrant} />
       )}
       {history.length === 0 ? null : (
         <details className="consent-history">
-          <summary>History ({history.length})</summary>
+          <summary>
+            {t`History (`}
+            {history.length})
+          </summary>
           <ul>
             {history.map((entry) => (
               <li key={entry.id}>{historyLine(entry, locale)}</li>
@@ -267,7 +277,7 @@ function GrantForm({ kind, providers, busy, onGrant }: GrantFormProps) {
     <form onSubmit={submit}>
       {kind === "material-storage" ? (
         <fieldset>
-          <legend>Basis for storing the material</legend>
+          <legend>{t`Basis for storing the material`}</legend>
           {bases.map((item) => (
             <label key={item} className="check">
               <input
@@ -288,20 +298,18 @@ function GrantForm({ kind, providers, busy, onGrant }: GrantFormProps) {
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
           />
-          The candidate agreed that runs send their material to {providerList(providers)}
+          {t`The candidate agreed that runs send their material to`} {providerList(providers)}
         </label>
       )}
-      <label htmlFor={noteId}>Note (optional)</label>
+      <label htmlFor={noteId}>{t`Note (optional)`}</label>
       <input
         id={noteId}
         maxLength={maximumConsentNoteLength}
-        placeholder="Where the agreement is kept"
+        placeholder={t`Where the agreement is kept`}
         value={note}
         onChange={(event) => setNote(event.target.value)}
       />
-      <button type="submit" disabled={busy}>
-        Record consent
-      </button>
+      <button type="submit" disabled={busy}>{t`Record consent`}</button>
     </form>
   );
 }

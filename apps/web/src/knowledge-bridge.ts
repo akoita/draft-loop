@@ -1,4 +1,5 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
+import { t } from "@lingui/core/macro";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
@@ -66,7 +67,7 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
   const bases = async (workspaceId: string) =>
     (await client.call("GET /v1/knowledge-bases", { query: { workspaceId } })).knowledgeBases;
   const inStore = (storeId: string) => {
-    if (storeId !== hostedKnowledgeStoreId) refuse("That knowledge store is not on this service.");
+    if (storeId !== hostedKnowledgeStoreId) refuse(t`That knowledge store is not on this service.`);
   };
   const summary = (base: KnowledgeBase) => ({
     id: base.id,
@@ -122,7 +123,7 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         inStore(storeId);
         const file = await pickFile(acceptedSourceFiles);
         if (file === undefined) {
-          throw new Refusal("permission-denied", "Candidate knowledge file import was cancelled.");
+          throw new Refusal("permission-denied", t`Candidate knowledge file import was cancelled.`);
         }
         const contentType = evidenceMediaType(file.name);
         const problem = sourceFileProblem(file);

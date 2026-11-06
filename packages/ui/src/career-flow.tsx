@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The explanation shared by Home and the two career pages: Career evidence is what the candidate
  * provides, the Career profile is the reviewed record built from it, and Applications reuse that
@@ -49,7 +50,7 @@ export function CareerFlowStrip({
   readonly onOpen?: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
 }) {
   return (
-    <ol className="career-flow" aria-label="Career flow">
+    <ol className="career-flow" aria-label={t`Career flow`}>
       {flowSteps.map(({ step, label }, index) => {
         const open = step === current ? undefined : onOpen[step];
         return (

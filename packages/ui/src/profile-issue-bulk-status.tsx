@@ -2,6 +2,7 @@ import type {
   CanonicalCandidateProfileIssueSeverity,
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
+import { t } from "@lingui/core/macro";
 import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
 
 const bulkStatusOptions: readonly (readonly [CanonicalCandidateProfileIssueStatus, string])[] = [
@@ -29,9 +30,11 @@ export function ProfileIssueBulkStatus({
   return (
     <fieldset
       className="profile-issue-bulk"
-      aria-label={`Set status for all ${issues.length} ${severity} issues`}
+      aria-label={t`Set status for all ${issues.length} ${severity} issues`}
     >
-      <span>Set all {issues.length}:</span>
+      <span>
+        {t`Set all`} {issues.length}:
+      </span>
       {bulkStatusOptions.map(([status, label]) => (
         <button
           key={status}

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApiInput, ApiSchemas } from "./api-client.js";
 
 type Me = ApiSchemas["Me"];
@@ -31,10 +32,10 @@ export function currentRecordId(
 
 /** Why a typed id cannot name a new record, or `undefined` when it can. */
 export function newRecordIdProblem(recordId: string, ids: readonly string[]): string | undefined {
-  if (recordId.length === 0) return "Give the new record an id.";
+  if (recordId.length === 0) return t`Give the new record an id.`;
   if (!recordIdPattern.test(recordId))
-    return "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit.";
-  if (ids.includes(recordId)) return "That record exists already. Choose it in the list.";
+    return t`Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit.`;
+  if (ids.includes(recordId)) return t`That record exists already. Choose it in the list.`;
   return undefined;
 }
 
@@ -46,8 +47,8 @@ export function canManageMembers(me: Me): boolean {
 /** What the screen says when the caller reaches no record yet. */
 export function noRecordNotice(me: Me): string {
   return canManageMembers(me)
-    ? "Your organisation has no candidate record yet. Create the first one."
-    : "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you.";
+    ? t`Your organisation has no candidate record yet. Create the first one.`
+    : t`No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you.`;
 }
 
 /** The organisation's members not yet assigned to the record, by email. */

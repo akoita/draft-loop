@@ -1,4 +1,5 @@
 import { formatDate } from "@draft-loop/ui/locale-format";
+import { t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { describeActionError } from "./consent-model.js";
 
@@ -57,7 +58,7 @@ export async function readEstimate(
     const message = planRefusalMessage(error);
     return {
       kind: "failed",
-      message: message ?? "The credit estimate could not be read.",
+      message: message ?? t`The credit estimate could not be read.`,
     };
   }
 }
@@ -73,7 +74,7 @@ export function formatPeriodEnd(periodEnd: string, locale?: string): string {
 /** The balance in one line, such as `38 of 50 credits left. The period ends on 24 Nov 2026.` */
 export function balanceLine(credits: MemberCredits, locale?: string): string {
   if (credits.unlimited || credits.remaining === null || credits.allowance === null)
-    return "Your plan has unlimited credits.";
+    return t`Your plan has unlimited credits.`;
   const ends =
     credits.periodEnd === null
       ? ""
@@ -88,13 +89,13 @@ export function balanceLine(credits: MemberCredits, locale?: string): string {
 /** The balance as a few words for the header, such as `38 of 50 credits left`. */
 export function balanceChip(credits: MemberCredits): string {
   if (credits.unlimited || credits.remaining === null || credits.allowance === null)
-    return "Unlimited credits";
+    return t`Unlimited credits`;
   return `${credits.remaining} of ${creditCount(credits.allowance)} left`;
 }
 
 /** The estimate beside the start button, such as `This run uses 2 credits`. */
 export function estimateLine(estimate: RunEstimate): string {
-  return `This run uses ${creditCount(estimate.credits)}.`;
+  return t`This run uses ${creditCount(estimate.credits)}.`;
 }
 
 /** Notes on a run the plan or the balance would refuse, in plain words. */
@@ -104,7 +105,7 @@ export function estimateNotes(estimate: RunEstimate): string[] {
   if (plan !== undefined && !plan.allowed) {
     notes.push(
       plan.code === "plan_required"
-        ? "Your organisation has no plan yet."
+        ? t`Your organisation has no plan yet.`
         : tierNotInPlan(plan.role, plan.tier),
     );
   }
@@ -112,17 +113,17 @@ export function estimateNotes(estimate: RunEstimate): string[] {
   if (balance !== undefined && !balance.unlimited && !balance.sufficient) {
     notes.push(
       balance.remaining === null
-        ? "There are not enough credits left for this run."
-        : `There are not enough credits left for this run. You have ${creditCount(balance.remaining)}.`,
+        ? t`There are not enough credits left for this run.`
+        : t`There are not enough credits left for this run. You have ${creditCount(balance.remaining)}.`,
     );
   }
   return notes;
 }
 
 function tierNotInPlan(role: string | undefined, tier: string | undefined): string {
-  const models = tier === undefined ? "These models" : `${capital(tier)} models`;
+  const models = tier === undefined ? t`These models` : `${capital(tier)} models`;
   const who = role === undefined ? "" : ` for the ${role}`;
-  return `Your plan does not include ${models.toLowerCase()}${who}. Choose another preset or model.`;
+  return t`Your plan does not include ${models.toLowerCase()}${who}. Choose another preset or model.`;
 }
 
 function capital(word: string): string {
@@ -140,8 +141,8 @@ export function planRefusalMessage(error: unknown): string | undefined {
     case "402 credits_insufficient": {
       const needs =
         details?.estimate === undefined
-          ? "This run needs more credits"
-          : `This run needs ${creditCount(details.estimate)}`;
+          ? t`This run needs more credits`
+          : t`This run needs ${creditCount(details.estimate)}`;
       const has =
         details?.remaining === undefined
           ? ""
@@ -151,9 +152,9 @@ export function planRefusalMessage(error: unknown): string | undefined {
     case "403 model_tier_not_in_plan":
       return `${tierNotInPlan(details?.role, details?.tier)} Ask the owner about a bigger plan.`;
     case "403 plan_required":
-      return "Your organisation has no plan yet. Ask the owner to choose one.";
+      return t`Your organisation has no plan yet. Ask the owner to choose one.`;
     case "422 model_tier_unknown":
-      return "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model.";
+      return t`DraftLoop cannot price one of the workspace's models yet. Choose another preset or model.`;
     case "429 run_cap_reached":
       return runCapMessage(details);
     case "409 plan_limit_reached":
@@ -167,21 +168,21 @@ function runCapMessage(details: ApiRequestError["details"]): string {
   const limit = typeof details?.limit === "number" ? details.limit : undefined;
   if (details?.cap === "per_day")
     return limit === undefined
-      ? "Your plan's runs for today are used. Try again later."
-      : `Your plan allows ${plural(limit, "run", "runs")} a day, and today's are used. Try again later.`;
+      ? t`Your plan's runs for today are used. Try again later.`
+      : t`Your plan allows ${plural(limit, "run", "runs")} a day, and today's are used. Try again later.`;
   return limit === undefined
-    ? "Your plan's limit on runs at the same time is reached. Wait for a run to finish, then try again."
-    : `Your plan allows ${plural(limit, "run", "runs")} at the same time, and they are running. Wait for one to finish, then try again.`;
+    ? t`Your plan's limit on runs at the same time is reached. Wait for a run to finish, then try again.`
+    : t`Your plan allows ${plural(limit, "run", "runs")} at the same time, and they are running. Wait for one to finish, then try again.`;
 }
 
 function planLimitMessage(details: ApiRequestError["details"]): string {
   const value = details?.value;
   if (details?.limit === "seats") {
-    return `${value === undefined ? "All the seats in your plan are taken." : `Your plan allows ${plural(value, "seat", "seats")}, and all are taken.`} Remove a member, or ask the owner for a bigger plan, before inviting someone.`;
+    return `${value === undefined ? t`All the seats in your plan are taken.` : t`Your plan allows ${plural(value, "seat", "seats")}, and all are taken.`} Remove a member, or ask the owner for a bigger plan, before inviting someone.`;
   }
   if (details?.limit === "candidateRecords")
-    return `${value === undefined ? "All the candidate records in your plan are in use." : `Your plan allows ${plural(value, "candidate record", "candidate records")}, and all are in use.`} Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.`;
-  return "Your plan's limit is reached. Ask the owner for a bigger plan.";
+    return `${value === undefined ? t`All the candidate records in your plan are in use.` : t`Your plan allows ${plural(value, "candidate record", "candidate records")}, and all are in use.`} Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.`;
+  return t`Your plan's limit is reached. Ask the owner for a bigger plan.`;
 }
 
 /** What to tell the member about a failed call: a plan refusal first, then a consent refusal. */

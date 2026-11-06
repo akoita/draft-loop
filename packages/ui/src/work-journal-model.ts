@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The Work journal review's view model (#2024): the notes a coding agent recorded, as the candidate
  * reviews them on the Career evidence page. It only arranges what the API returns; the server
@@ -47,8 +48,8 @@ export function workJournalProvenance(note: WorkJournalReviewNote): string | nul
   if (note.agent_token_id === undefined && amending.length === 0) return null;
   const filed =
     note.agent_token_id === undefined
-      ? "Filed without an agent token"
-      : `Filed by agent token ${note.agent_token_id}`;
+      ? t`Filed without an agent token`
+      : t`Filed by agent token ${note.agent_token_id}`;
   return amending.length === 0 ? `${filed}.` : `${filed}; amended by ${amending.join(", ")}.`;
 }
 
@@ -93,11 +94,11 @@ export function workJournalScreening(
 ): WorkJournalScreeningView {
   switch (screening.verdict) {
     case "clear":
-      return { kind: "clear", label: "Screened: clear", held: false };
+      return { kind: "clear", label: t`Screened: clear`, held: false };
     case "flagged":
-      return { kind: "flagged", label: "Quarantined: flagged", held: true };
+      return { kind: "flagged", label: t`Quarantined: flagged`, held: true };
     case "unscreened":
-      return { kind: "unscreened", label: "Quarantined: not screened", held: true };
+      return { kind: "unscreened", label: t`Quarantined: not screened`, held: true };
   }
 }
 
@@ -159,10 +160,10 @@ export function workJournalEditedContent(
         .filter((item) => item.length > 0),
     ),
   ];
-  if (draft.title.trim().length === 0) return { problem: "Give the note a title." };
-  if (draft.summary.trim().length === 0) return { problem: "Keep a summary of the work." };
-  if (technologies.length === 0) return { problem: "Name at least one technology." };
-  if (draft.roles.length === 0) return { problem: "Choose what the candidate did." };
+  if (draft.title.trim().length === 0) return { problem: t`Give the note a title.` };
+  if (draft.summary.trim().length === 0) return { problem: t`Keep a summary of the work.` };
+  if (technologies.length === 0) return { problem: t`Name at least one technology.` };
+  if (draft.roles.length === 0) return { problem: t`Choose what the candidate did.` };
   return {
     content: {
       ...content,

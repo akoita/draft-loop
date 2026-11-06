@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useId, useState } from "react";
 
 import {
@@ -75,11 +76,8 @@ export function CareerInterviewPanel({
 
   return (
     <section className="panel host-panel career-interview" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Career interview</h2>
-      <p className="hint">
-        Talk through parts of your career your record does not tell yet. You confirm every summary
-        before it becomes evidence, and you can stop at any time.
-      </p>
+      <h2 id={`${id}-heading`}>{t`Career interview`}</h2>
+      <p className="hint">{t`Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time.`}</p>
       {problem === undefined ? null : <p role="alert">{problem}</p>}
       {session === undefined || session.status === "closed" ? (
         <>
@@ -88,18 +86,16 @@ export function CareerInterviewPanel({
             className="button button-primary"
             disabled={busy}
             onClick={() => void run({ kind: "start" }, onStart)}
-          >
-            Start a conversation
-          </button>
+          >{t`Start a conversation`}</button>
           <InterviewWaiting pending={pending} />
           {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
         </>
       ) : (
         <div className="interview-layout">
-          <aside className="interview-sidebar" aria-label="Topics in this conversation">
+          <aside className="interview-sidebar" aria-label={t`Topics in this conversation`}>
             {progress !== undefined && progress.taken > 0 ? (
               <p className="hint">
-                {progress.done} of {progress.taken} topics finished in this conversation.
+                {progress.done} {t`of`} {progress.taken} {t`topics finished in this conversation.`}
               </p>
             ) : null}
             <ul className="interview-topic-list">
@@ -140,12 +136,10 @@ export function CareerInterviewPanel({
                 className="button button-outline"
                 disabled={busy}
                 onClick={() => void act({ action: "pause" })}
-              >
-                Pause for now
-              </button>
+              >{t`Pause for now`}</button>
               {session.model === undefined ? null : (
                 <p className="hint">
-                  Questions written by {session.model.model} ({session.model.provider}).
+                  {t`Questions written by`} {session.model.model} ({session.model.provider}).
                 </p>
               )}
             </div>
@@ -196,7 +190,7 @@ function InterviewWaiting({ pending }: { readonly pending: CareerInterviewPendin
   if (pending === undefined || pending.kind === "interviewer") return null;
   return (
     <p className="hint interview-waiting" role="status">
-      {pending.kind === "start" ? "Looking through your record…" : "Saving…"}
+      {pending.kind === "start" ? t`Looking through your record…` : t`Saving…`}
     </p>
   );
 }
@@ -209,7 +203,7 @@ function WritingIndicator() {
         <span />
         <span />
       </span>{" "}
-      The interviewer is writing…
+      {t`The interviewer is writing…`}
     </li>
   );
 }
@@ -230,10 +224,10 @@ function Proposal({
   const busy = pending !== undefined;
   return (
     <div className="interview-proposal">
-      <ol className="interview-turns" aria-label="Conversation">
+      <ol className="interview-turns" aria-label={t`Conversation`}>
         {proposal === undefined ? null : (
           <li className="interview-turn interview-turn-interviewer">
-            <span className="interview-speaker">Interviewer</span>
+            <span className="interview-speaker">{t`Interviewer`}</span>
             {proposal}
           </li>
         )}
@@ -249,17 +243,13 @@ function Proposal({
                 className="button button-primary"
                 disabled={busy}
                 onClick={() => void onAction({ action: "accept", topic_key: topic.key })}
-              >
-                Talk about this
-              </button>
+              >{t`Talk about this`}</button>
               <button
                 type="button"
                 className="button button-outline"
                 disabled={busy}
                 onClick={() => void onAction({ action: "decline", topic_key: topic.key })}
-              >
-                Not now
-              </button>
+              >{t`Not now`}</button>
             </div>
           </li>
         ))}
@@ -275,7 +265,7 @@ function Proposal({
           });
         }}
       >
-        <label htmlFor={`${id}-subject`}>Or something else you would like to talk about</label>
+        <label htmlFor={`${id}-subject`}>{t`Or something else you would like to talk about`}</label>
         <div className="interview-subject-row">
           <input
             id={`${id}-subject`}
@@ -287,9 +277,7 @@ function Proposal({
             type="submit"
             className="button button-outline"
             disabled={busy || subject.trim() === ""}
-          >
-            Talk about this instead
-          </button>
+          >{t`Talk about this instead`}</button>
         </div>
       </form>
     </div>
@@ -343,42 +331,36 @@ function Conversation({
   return (
     <div className="interview-conversation">
       <h3>{topic.reason}</h3>
-      <ol className="interview-turns" aria-label="Conversation">
+      <ol className="interview-turns" aria-label={t`Conversation`}>
         <Turns turns={topic.turns} />
         {pending?.kind === "interviewer" && pending.answer !== undefined ? (
           <li className="interview-turn interview-turn-candidate interview-turn-sending">
-            <span className="interview-speaker">You</span>
+            <span className="interview-speaker">{t`You`}</span>
             {pending.answer}
           </li>
         ) : null}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
       </ol>
       <fieldset className="interview-chips">
-        <legend className="sr-only">Quick replies</legend>
+        <legend className="sr-only">{t`Quick replies`}</legend>
         <button
           type="button"
           className="button button-quiet interview-chip"
           disabled={busy}
           onClick={() => void onAction({ action: "answer", topic_key: topic.key, mark: "skipped" })}
-        >
-          Skip this question
-        </button>
+        >{t`Skip this question`}</button>
         <button
           type="button"
           className="button button-quiet interview-chip"
           disabled={busy}
           onClick={() => void onAction({ action: "answer", topic_key: topic.key, mark: "unknown" })}
-        >
-          I don't remember
-        </button>
+        >{t`I don't remember`}</button>
         <button
           type="button"
           className="button button-quiet interview-chip"
           disabled={busy}
           onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
-        >
-          Set this topic aside
-        </button>
+        >{t`Set this topic aside`}</button>
       </fieldset>
       <form
         className="interview-composer"
@@ -387,13 +369,13 @@ function Conversation({
           send();
         }}
       >
-        <label htmlFor={`${id}-answer`}>Your answer</label>
+        <label htmlFor={`${id}-answer`}>{t`Your answer`}</label>
         <textarea
           id={`${id}-answer`}
           value={answer}
           maxLength={4_000}
           rows={3}
-          placeholder="Write your answer. Enter sends, Shift+Enter starts a new line."
+          placeholder={t`Write your answer. Enter sends, Shift+Enter starts a new line.`}
           onChange={(event) => setAnswer(event.target.value)}
           onKeyDown={(event) => {
             if (
@@ -416,9 +398,7 @@ function Conversation({
             type="submit"
             className="button button-primary"
             disabled={busy || answer.trim() === ""}
-          >
-            Send
-          </button>
+          >{t`Send`}</button>
         </div>
       </form>
     </div>
@@ -471,11 +451,11 @@ function SummaryReview({
       className="interview-conversation"
     >
       <h3>{topic.reason}</h3>
-      <ol className="interview-turns" aria-label="Conversation">
+      <ol className="interview-turns" aria-label={t`Conversation`}>
         <Turns turns={topic.turns} />
       </ol>
       <div className="interview-summary-card">
-        <label htmlFor={`${id}-summary`}>Summary of what you said</label>
+        <label htmlFor={`${id}-summary`}>{t`Summary of what you said`}</label>
         <textarea
           id={`${id}-summary`}
           value={summary}
@@ -484,16 +464,17 @@ function SummaryReview({
           onChange={(event) => setSummary(event.target.value)}
         />
         {conflicts.length === 0 ? null : (
-          <ul aria-label="Differences from your record">
+          <ul aria-label={t`Differences from your record`}>
             {conflicts.map((conflict) => (
               <li key={`${conflict.summaryValue}-${conflict.factValue}`}>
-                The summary says {conflict.summaryValue}; your record says {conflict.factValue}.
-                Both are kept; edit the summary if one is wrong.
+                {t`The summary says`} {conflict.summaryValue}
+                {t`; your record says`} {conflict.factValue}
+                {t`. Both are kept; edit the summary if one is wrong.`}
               </li>
             ))}
           </ul>
         )}
-        <label htmlFor={`${id}-base`}>Save to</label>
+        <label htmlFor={`${id}-base`}>{t`Save to`}</label>
         <select id={`${id}-base`} value={base} onChange={(event) => setBase(event.target.value)}>
           {knowledgeBases.map((knowledgeBase) => (
             <option key={knowledgeBase.id} value={knowledgeBase.id}>
@@ -501,32 +482,28 @@ function SummaryReview({
             </option>
           ))}
         </select>
-        <label htmlFor={`${id}-tier`}>Who may read it</label>
+        <label htmlFor={`${id}-tier`}>{t`Who may read it`}</label>
         <select
           id={`${id}-tier`}
           value={tier}
           onChange={(event) => setTier(event.target.value as CareerInterviewTier)}
         >
-          <option value="normal">Models may use it in drafts</option>
-          <option value="sensitive">Sensitive: only with your consent</option>
-          <option value="never-share">Never share with a model</option>
+          <option value="normal">{t`Models may use it in drafts`}</option>
+          <option value="sensitive">{t`Sensitive: only with your consent`}</option>
+          <option value="never-share">{t`Never share with a model`}</option>
         </select>
         <div className="interview-actions">
           <button
             type="submit"
             className="button button-primary"
             disabled={busy || base === "" || summary.trim() === ""}
-          >
-            Confirm as evidence
-          </button>
+          >{t`Confirm as evidence`}</button>
           <button
             type="button"
             className="button button-outline"
             disabled={busy}
             onClick={() => void onAction({ action: "set_aside", topic_key: topic.key })}
-          >
-            Set aside
-          </button>
+          >{t`Set aside`}</button>
         </div>
       </div>
     </form>

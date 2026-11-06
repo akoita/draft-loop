@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   KnowledgeDirectoryImportResult,
   KnowledgeFileImportResult,
@@ -53,14 +54,14 @@ export function matchesKnowledgeBaseTarget(
 
 export function knowledgeReadinessSummary(result: KnowledgeReadinessResult): string {
   const stateNote = result.state === "archived" ? " This knowledge base is archived." : "";
-  return `Readiness: ${result.readyCount} ready, ${result.blockedCount} blocked of ${result.sourceCount} sources.${stateNote}`;
+  return t`Readiness: ${result.readyCount} ready, ${result.blockedCount} blocked of ${result.sourceCount} sources.${stateNote}`;
 }
 
 export function knowledgeIntakeSummary(result: KnowledgeIntakeResult): string {
   if ("kind" in result) {
     return result.created
-      ? "File import complete. A career-evidence source was added."
-      : "File import complete. An existing career-evidence source was reused.";
+      ? t`File import complete. A career-evidence source was added.`
+      : t`File import complete. An existing career-evidence source was reused.`;
   }
   const directoryText =
     `Directory import ${result.status}: scanned ${result.scannedEntryCount} entries, ` +
@@ -81,7 +82,7 @@ export async function runKnowledgeIntake(input: {
 }): Promise<KnowledgeIntakeOutcome> {
   const result = await input.importSource();
   if (!matchesKnowledgeBaseTarget(result, input.target)) {
-    throw new Error("Imported source result did not match the selected knowledge base");
+    throw new Error(t`Imported source result did not match the selected knowledge base`);
   }
   if (!input.isCurrent()) return { status: "stale" };
 

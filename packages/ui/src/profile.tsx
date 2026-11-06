@@ -4,6 +4,7 @@ import type {
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
+import { t } from "@lingui/core/macro";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalCandidateProfileFactResult,
@@ -225,15 +226,15 @@ function ProfileOutcomeCallout({
   return (
     <section
       className={`profile-outcome ${failed ? "profile-outcome-failure" : "profile-outcome-empty"}`}
-      aria-label="Profile generation result"
+      aria-label={t`Profile generation result`}
     >
       <strong className="profile-outcome-title">
         {failed
-          ? "Profile generation failed. No facts were saved."
-          : "This profile version has no facts."}
+          ? t`Profile generation failed. No facts were saved.`
+          : t`This profile version has no facts.`}
       </strong>
       {outcome.failureReasons.length === 0 ? null : (
-        <ul aria-label="Recorded cause">
+        <ul aria-label={t`Recorded cause`}>
           {outcome.failureReasons.map((reason) => (
             <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
           ))}
@@ -241,8 +242,8 @@ function ProfileOutcomeCallout({
       )}
       <p>
         {failed
-          ? "Fix the cause above, then retry. Retrying sends your selected career evidence again and may use provider credits. Renaming the profile does not help."
-          : "Check that the selected career evidence includes the facts you need, then retry. Retrying sends your selected career evidence again and may use provider credits."}
+          ? t`Fix the cause above, then retry. Retrying sends your selected career evidence again and may use provider credits. Renaming the profile does not help.`
+          : t`Check that the selected career evidence includes the facts you need, then retry. Retrying sends your selected career evidence again and may use provider credits.`}
       </p>
     </section>
   );
@@ -257,10 +258,10 @@ export function ProfileOutcomeFeedback({
 }) {
   if (isProfileOutcomeCallout(outcome)) return <ProfileOutcomeCallout outcome={outcome} />;
   return (
-    <section className="profile-outcome" aria-label="Profile generation result">
+    <section className="profile-outcome" aria-label={t`Profile generation result`}>
       {showMessage ? <p>{outcome.message}</p> : null}
       {outcome.failureReasons.length === 0 ? null : (
-        <ul aria-label="Saved profile issue guidance">
+        <ul aria-label={t`Saved profile issue guidance`}>
           {outcome.failureReasons.map((reason) => (
             <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
           ))}
@@ -294,23 +295,23 @@ function ProvenanceList({
       {references.map((reference) => (
         <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
           <div>
-            <dt>Store</dt>
+            <dt>{t`Store`}</dt>
             <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
           </div>
           <div>
-            <dt>CKB</dt>
+            <dt>{t`CKB`}</dt>
             <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
           </div>
           <div>
-            <dt>Source</dt>
+            <dt>{t`Source`}</dt>
             <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
           </div>
           <div>
-            <dt>Version</dt>
+            <dt>{t`Version`}</dt>
             <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
           </div>
           <div>
-            <dt>Kind</dt>
+            <dt>{t`Kind`}</dt>
             <dd>{reference.kind}</dd>
           </div>
         </dl>
@@ -344,7 +345,7 @@ function ProfileFact({
           id={inputId}
           className="profile-fact-value"
           type="text"
-          aria-label={`Value for fact ${fact.id}`}
+          aria-label={t`Value for fact ${fact.id}`}
           value={safeCanonicalCandidateProfileText(fact.value, allowUrl)}
           disabled={!editable}
           onChange={(event) =>
@@ -367,22 +368,20 @@ function ProfileFact({
           <button
             className="button button-quiet profile-remove"
             type="button"
-            aria-label="Remove fact"
+            aria-label={t`Remove fact`}
             onClick={onRemove}
-          >
-            Remove
-          </button>
+          >{t`Remove`}</button>
         ) : null}
       </div>
       <details className="profile-fact-details">
-        <summary>Details</summary>
+        <summary>{t`Details`}</summary>
         <div className="profile-fact-details-body">
           <span className="profile-opaque-id">
-            Field {safeCanonicalCandidateProfileText(fact.field)}
+            {t`Field`} {safeCanonicalCandidateProfileText(fact.field)}
           </span>
           {fact.subjectId === undefined ? null : (
             <span className="profile-opaque-id">
-              subject {safeCanonicalCandidateProfileText(fact.subjectId)}
+              {t`subject`} {safeCanonicalCandidateProfileText(fact.subjectId)}
             </span>
           )}
           <ProvenanceList label={`Provenance for fact ${fact.id}`} references={fact.provenance} />
@@ -420,29 +419,29 @@ function ProfileIssue({
       </div>
       <p>{safeCanonicalCandidateProfileText(issue.message)}</p>
       <label className="profile-issue-status">
-        <span>Status</span>
+        <span>{t`Status`}</span>
         <select
-          aria-label={`Status for issue ${issue.id}`}
+          aria-label={t`Status for issue ${issue.id}`}
           value={issue.status}
           disabled={!editable}
           onChange={(event) =>
             onStatusChange(event.target.value as CanonicalCandidateProfileIssueStatus)
           }
         >
-          <option value="open">Open</option>
-          <option value="acknowledged">Acknowledged</option>
-          <option value="resolved">Resolved</option>
+          <option value="open">{t`Open`}</option>
+          <option value="acknowledged">{t`Acknowledged`}</option>
+          <option value="resolved">{t`Resolved`}</option>
         </select>
       </label>
       {issue.factIds.length === 0 ? null : (
         <span className="profile-issue-facts">
-          Facts:{" "}
+          {t`Facts:`}{" "}
           {issue.factIds.map((factId) => describeReferencedFact(factsById.get(factId))).join("; ")}
         </span>
       )}
       {issue.sourceRefs.length === 0 ? null : (
         <details className="profile-fact-details">
-          <summary>Details</summary>
+          <summary>{t`Details`}</summary>
           <div className="profile-fact-details-body">
             <ProvenanceList
               label={`Provenance for issue ${issue.id}`}
@@ -519,31 +518,27 @@ export function ProfileDetails({
   return (
     <>
       {failureRecorded ? (
-        <p className="profile-failure-note">
-          This version records a failed generation; its cause is shown above.
-        </p>
+        <p className="profile-failure-note">{t`This version records a failed generation; its cause is shown above.`}</p>
       ) : (
         <>
           <section className="profile-subsection" aria-labelledby="profile-facts-title">
             <div className="section-heading compact">
               <div>
-                <p className="eyebrow">Your facts</p>
-                <h3 id="profile-facts-title" tabIndex={-1}>
-                  Facts by category
-                </h3>
+                <p className="eyebrow">{t`Your facts`}</p>
+                <h3 id="profile-facts-title" tabIndex={-1}>{t`Facts by category`}</h3>
               </div>
               <span className="meta-chip">{draftFacts.length}</span>
             </div>
             {factGroups.length === 0 ? (
-              <p className="profile-empty">No facts are recorded in this version.</p>
+              <p className="profile-empty">{t`No facts are recorded in this version.`}</p>
             ) : (
               <>
                 <div className="profile-facts-toolbar">
                   <input
                     className="profile-facts-filter"
                     type="search"
-                    aria-label="Filter facts"
-                    placeholder="Filter by label or value"
+                    aria-label={t`Filter facts`}
+                    placeholder={t`Filter by label or value`}
                     value={filter}
                     onChange={(event) => {
                       setFilter(event.target.value);
@@ -554,19 +549,15 @@ export function ProfileDetails({
                     className="button button-quiet"
                     type="button"
                     onClick={() => setAllCategories(true)}
-                  >
-                    Expand all
-                  </button>
+                  >{t`Expand all`}</button>
                   <button
                     className="button button-quiet"
                     type="button"
                     onClick={() => setAllCategories(false)}
-                  >
-                    Collapse all
-                  </button>
+                  >{t`Collapse all`}</button>
                   {factProjection.filtering ? (
                     <span className="profile-filter-count" role="status" aria-live="polite">
-                      {factProjection.matchCount} of {factProjection.totalCount} facts
+                      {factProjection.matchCount} {t`of`} {factProjection.totalCount} {t`facts`}
                     </span>
                   ) : null}
                 </div>
@@ -574,7 +565,7 @@ export function ProfileDetails({
                   <p className="profile-usage-note">{factUsageExplanation}</p>
                 )}
                 {factProjection.filtering && factProjection.matchCount === 0 ? (
-                  <p className="profile-empty">No facts match this filter.</p>
+                  <p className="profile-empty">{t`No facts match this filter.`}</p>
                 ) : null}
                 <div className="profile-groups">
                   {factProjection.categories.map((view) => (
@@ -598,7 +589,7 @@ export function ProfileDetails({
                         <span className="profile-group-count">
                           {" · "}
                           {factProjection.filtering
-                            ? `${view.facts.length} of ${factCountLabel(view.totalCount)}`
+                            ? t`${view.facts.length} of ${factCountLabel(view.totalCount)}`
                             : factCountLabel(view.totalCount)}
                         </span>
                       </summary>
@@ -631,15 +622,13 @@ export function ProfileDetails({
           <section className="profile-subsection" aria-labelledby="profile-issues-title">
             <div className="section-heading compact">
               <div>
-                <p className="eyebrow">Review blockers</p>
-                <h3 id="profile-issues-title" tabIndex={-1}>
-                  Issues by severity and status
-                </h3>
+                <p className="eyebrow">{t`Review blockers`}</p>
+                <h3 id="profile-issues-title" tabIndex={-1}>{t`Issues by severity and status`}</h3>
               </div>
               <span className="meta-chip">{draftIssues.length}</span>
             </div>
             {draftIssues.length === 0 ? (
-              <p className="profile-empty">No issues are recorded in this version.</p>
+              <p className="profile-empty">{t`No issues are recorded in this version.`}</p>
             ) : (
               <div className="profile-groups">
                 {[...issueGroups.entries()].map(([severity, byStatus]) => (
@@ -714,7 +703,7 @@ export function ProfileDetails({
             disabled={!editable || busy}
             onClick={onSave}
           >
-            {busy ? "Saving profile…" : "Save draft edits"}
+            {busy ? t`Saving profile…` : t`Save draft edits`}
           </button>
           <button
             className="button button-primary"
@@ -722,9 +711,7 @@ export function ProfileDetails({
             disabled={!editable || busy || !reviewAllowed}
             aria-describedby={reviewHint === null ? undefined : "profile-review-hint"}
             onClick={onReview}
-          >
-            Mark latest draft reviewed
-          </button>
+          >{t`Mark latest draft reviewed`}</button>
           {reviewHint === null ? null : (
             <p className="profile-review-hint" id="profile-review-hint">
               {reviewHint}
@@ -751,10 +738,10 @@ export function SavedProfilePicker({
   if (summaries.length === 0) return null;
   return (
     <div className="profile-catalog-picker">
-      <label htmlFor="saved-profiles">Saved profiles</label>
+      <label htmlFor="saved-profiles">{t`Saved profiles`}</label>
       <select
         id="saved-profiles"
-        aria-label="Saved profiles"
+        aria-label={t`Saved profiles`}
         value={summaries.some((summary) => summary.profileId === currentName) ? currentName : ""}
         disabled={disabled}
         onChange={(event) => {
@@ -762,7 +749,7 @@ export function SavedProfilePicker({
           if (chosen !== undefined) onChoose(chosen);
         }}
       >
-        <option value="">Choose a saved profile…</option>
+        <option value="">{t`Choose a saved profile…`}</option>
         {summaries.map((summary) => (
           <option key={summary.profileId} value={summary.profileId}>
             {savedCanonicalCandidateProfileLabel(summary)}
@@ -1462,11 +1449,11 @@ export function ProfileWorkspace({
         />
       )}
       <details className="profile-more">
-        <summary>Details</summary>
+        <summary>{t`Details`}</summary>
         <div className="profile-more-body">
           <div className="profile-controls">
             <label className="profile-id-label">
-              <span>Profile name</span>
+              <span>{t`Profile name`}</span>
               <input
                 type="text"
                 value={profileId}
@@ -1474,8 +1461,8 @@ export function ProfileWorkspace({
                 pattern={profileIdPattern.source}
                 autoComplete="off"
                 disabled={busy}
-                aria-label="Profile name"
-                placeholder="e.g. senior-data-engineer-cv"
+                aria-label={t`Profile name`}
+                placeholder={t`e.g. senior-data-engineer-cv`}
                 aria-describedby="profile-id-hint"
                 onChange={(event) => {
                   const next = event.target.value;
@@ -1509,13 +1496,11 @@ export function ProfileWorkspace({
               type="button"
               disabled={busy || !isCanonicalCandidateProfileId(normalizedProfileId)}
               onClick={loadLatest}
-            >
-              Load latest
-            </button>
-            <p className="field-hint" id="profile-id-hint">
-              Choose a name for this profile: letters, digits, dots, dashes, or underscores.
-              Approval applies to this name only.
-            </p>
+            >{t`Load latest`}</button>
+            <p
+              className="field-hint"
+              id="profile-id-hint"
+            >{t`Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval applies to this name only.`}</p>
           </div>
           {savedSummariesWorkspaceId !== workspaceId ? null : (
             <SavedProfilePicker
@@ -1527,11 +1512,11 @@ export function ProfileWorkspace({
           )}
           {capabilities.listReviewedCanonicalCandidateProfiles === undefined ? null : (
             <div className="profile-catalog-picker">
-              <label htmlFor="reviewed-profile-catalog">Existing reviewed profiles</label>
+              <label htmlFor="reviewed-profile-catalog">{t`Existing reviewed profiles`}</label>
               <div className="profile-catalog-controls">
                 <select
                   id="reviewed-profile-catalog"
-                  aria-label="Existing reviewed profiles"
+                  aria-label={t`Existing reviewed profiles`}
                   value={catalogChoice}
                   disabled={busy || catalogLoading}
                   onChange={(event) => {
@@ -1554,12 +1539,13 @@ export function ProfileWorkspace({
                     void selectReviewedProfile(choice);
                   }}
                 >
-                  <option value="">Choose a reviewed profile…</option>
+                  <option value="">{t`Choose a reviewed profile…`}</option>
                   {(catalogWorkspaceId === workspaceId ? catalogProfiles : []).map((profile) => {
                     const choice = reviewedCanonicalCandidateProfileChoice(profile);
                     return (
                       <option key={choice} value={choice}>
-                        {profile.profileId} · v{profile.version}
+                        {profile.profileId} {t`· v`}
+                        {profile.version}
                       </option>
                     );
                   })}
@@ -1569,26 +1555,20 @@ export function ProfileWorkspace({
                   type="button"
                   disabled={busy || catalogLoading}
                   onClick={() => setCatalogEpoch((epoch) => epoch + 1)}
-                >
-                  Refresh
-                </button>
+                >{t`Refresh`}</button>
               </div>
-              {catalogLoading ? <p role="status">Loading reviewed profiles…</p> : null}
+              {catalogLoading ? <p role="status">{t`Loading reviewed profiles…`}</p> : null}
               {catalogError === null ? null : (
                 <p className="profile-error" role="alert">
                   {catalogError}
                 </p>
               )}
-              <p className="profile-note">
-                Source compatibility is checked again before starting a review.
-              </p>
+              <p className="profile-note">{t`Source compatibility is checked again before starting a review.`}</p>
               {!catalogLoading &&
               catalogError === null &&
               catalogWorkspaceId === workspaceId &&
               catalogProfiles.length === 0 ? (
-                <p className="profile-empty">
-                  No reviewed profiles are available in this workspace.
-                </p>
+                <p className="profile-empty">{t`No reviewed profiles are available in this workspace.`}</p>
               ) : null}
             </div>
           )}

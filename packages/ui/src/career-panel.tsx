@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ReactNode } from "react";
 
 import { careerPanelSummary } from "./career-flow.js";
@@ -53,14 +54,14 @@ export function CareerPanel({
   return (
     <section className="panel career-panel" aria-labelledby="home-career-title">
       <div className="career-panel-head">
-        <h2 id="home-career-title">Your career</h2>
+        <h2 id="home-career-title">{t`Your career`}</h2>
         <p className="career-panel-summary">{careerPanelSummary}</p>
       </div>
       <div className="career-panel-steps">
         <Step step={evidence} number={1} />
         <div className="career-panel-arrow" aria-hidden="true">
           <span className="career-panel-arrow-mark">→</span>
-          <span>builds</span>
+          <span>{t`builds`}</span>
         </div>
         <Step step={profile} number={2} />
       </div>

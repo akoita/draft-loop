@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   KnowledgeDirectoryImportResult,
   KnowledgeReadinessResult,
@@ -42,15 +43,15 @@ export function supportsCareerEvidence(capabilities: CareerEvidenceCapabilities)
 export function semanticStatusLine(state: EmbeddingModelState): string {
   switch (state) {
     case "ready":
-      return "Semantic search: ready";
+      return t`Semantic search: ready`;
     case "absent":
-      return "Semantic search: model not installed";
+      return t`Semantic search: model not installed`;
     case "installing":
-      return "Semantic search: model installing";
+      return t`Semantic search: model installing`;
     case "corrupt":
-      return "Semantic search: model needs reinstalling";
+      return t`Semantic search: model needs reinstalling`;
     case "unsupported-platform":
-      return "Semantic search: not supported on this computer";
+      return t`Semantic search: not supported on this computer`;
   }
 }
 
@@ -130,9 +131,9 @@ export function careerEvidenceSourcesText(
 export function careerEvidenceReadinessText(
   status: Extract<CareerEvidenceStatus, { kind: "selected" }>,
 ): string {
-  if (status.sourceCount === 0) return "Empty: add a CV, portfolio, or other source";
+  if (status.sourceCount === 0) return t`Empty: add a CV, portfolio, or other source`;
   if (status.blockedCount > 0) return `${status.blockedCount} not ready`;
-  return "Ready";
+  return t`Ready`;
 }
 
 export type CareerEvidenceSource =
@@ -147,15 +148,15 @@ function careerEvidenceAddLead(
 ): string {
   if ("status" in result) return folderAddLead(result, displayName);
   const outcome = "outcome" in result ? result.outcome : undefined;
-  if (outcome === "new-version") return `Added a new version of that file to ${displayName}.`;
+  if (outcome === "new-version") return t`Added a new version of that file to ${displayName}.`;
   const created =
     outcome !== undefined ? outcome === "added" : !("created" in result) || result.created;
-  return created ? `Added to ${displayName}.` : `Already in ${displayName}.`;
+  return created ? t`Added to ${displayName}.` : t`Already in ${displayName}.`;
 }
 
 /** Says how many of the folder's files reached the base, and when the import stopped early. */
 function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
-  const lead = `Added ${plural(result.sourceCount, "source")} from the folder to ${displayName}.`;
+  const lead = t`Added ${plural(result.sourceCount, "source")} from the folder to ${displayName}.`;
   return result.status === "partial" ? `${lead} Some files could not be imported.` : lead;
 }
 
@@ -185,24 +186,24 @@ export async function addCareerEvidence(input: {
   const importDirectory = capabilities.importCandidateKnowledgeDirectory;
   const importUrl = capabilities.importCandidateKnowledgeUrl;
   const readReadiness = capabilities.getCandidateKnowledgeReadiness;
-  if (readReadiness === undefined) throw new Error("Career evidence intake is unavailable");
+  if (readReadiness === undefined) throw new Error(t`Career evidence intake is unavailable`);
   let result: KnowledgeIntakeResult | KnowledgeUrlImportResult;
   if (input.source.kind === "file") {
-    if (importFile === undefined) throw new Error("Career evidence intake is unavailable");
+    if (importFile === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importFile(target.storeId, target.knowledgeBaseId);
   } else if (input.source.kind === "directory") {
-    if (importDirectory === undefined) throw new Error("Career evidence intake is unavailable");
+    if (importDirectory === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importDirectory(target.storeId, target.knowledgeBaseId);
   } else {
-    if (importUrl === undefined) throw new Error("Career evidence intake is unavailable");
+    if (importUrl === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importUrl(target.storeId, target.knowledgeBaseId, input.source.url);
   }
   if (result.storeId !== target.storeId || result.knowledgeBaseId !== target.knowledgeBaseId) {
-    throw new Error("Imported source result did not match the selected knowledge base");
+    throw new Error(t`Imported source result did not match the selected knowledge base`);
   }
   // An empty folder adds nothing, so a first add must not go on to select an empty base.
   if ("status" in result && result.sourceCount === 0) {
-    throw new Error("The folder has no supported files to add.");
+    throw new Error(t`The folder has no supported files to add.`);
   }
   await input.afterImport?.();
   if (!input.isCurrent()) return { status: "stale" };

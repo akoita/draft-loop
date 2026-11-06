@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /** The API's rule for the owner token (ADR 0011, phase 1): long, with no whitespace. */
 export const ownerTokenMinimumLength = 32;
 
@@ -49,9 +50,9 @@ export function createTokenStore(
 
 /** Why a pasted token cannot be the owner token, or `undefined` when it can. */
 export function ownerTokenProblem(token: string): string | undefined {
-  if (token.length === 0) return "Paste the owner token.";
-  if (/\s/u.test(token)) return "The owner token has no spaces or line breaks.";
+  if (token.length === 0) return t`Paste the owner token.`;
+  if (/\s/u.test(token)) return t`The owner token has no spaces or line breaks.`;
   if (token.length < ownerTokenMinimumLength)
-    return `The owner token is at least ${ownerTokenMinimumLength} characters long.`;
+    return t`The owner token is at least ${ownerTokenMinimumLength} characters long.`;
   return undefined;
 }

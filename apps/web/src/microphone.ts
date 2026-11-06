@@ -6,6 +6,7 @@ import {
   SpeechUnavailableError,
   speechSampleRate,
 } from "@draft-loop/ui/speech-to-text";
+import { t } from "@lingui/core/macro";
 
 /**
  * The web host's microphone (#2201): records one answer with the browser's MediaRecorder, then
@@ -82,7 +83,7 @@ export function createMicrophoneRecorder(
                 const blob = new Blob(chunks, { type: recorder.mimeType });
                 chunks = [];
                 if (blob.size === 0) {
-                  reject(new SpeechUnavailableError("Nothing was recorded. Try again."));
+                  reject(new SpeechUnavailableError(t`Nothing was recorded. Try again.`));
                   return;
                 }
                 blob

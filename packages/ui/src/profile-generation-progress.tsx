@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
 const msPerSecond = 1000;
@@ -101,12 +102,12 @@ export function ProfileGenerationProgress({
 
   return (
     <div className="profile-generation-progress">
-      <span className="sr-only">Generating profile.</span>
+      <span className="sr-only">{t`Generating profile.`}</span>
       <div className="profile-generation-progress-row">
         <span className="profile-generation-spinner" aria-hidden="true" />
-        <strong aria-hidden="true">Generating profile…</strong>
+        <strong aria-hidden="true">{t`Generating profile…`}</strong>
         <span className="profile-generation-elapsed" aria-hidden="true">
-          Elapsed {elapsed}
+          {t`Elapsed`} {elapsed}
         </span>
         {part === null ? null : (
           <span className="profile-generation-part" aria-hidden="true">
@@ -114,10 +115,7 @@ export function ProfileGenerationProgress({
           </span>
         )}
       </div>
-      <p className="profile-generation-note">
-        Large knowledge bases are processed in parts, so this can take several minutes. Keep
-        DraftLoop open.
-      </p>
+      <p className="profile-generation-note">{t`Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open.`}</p>
     </div>
   );
 }
@@ -140,10 +138,10 @@ export function ProfileGenerationSummary({
   return (
     <p className="profile-generation-progress-row home-profile-progress">
       <span className="profile-generation-spinner" aria-hidden="true" />
-      <span className="sr-only">Generating profile.</span>
+      <span className="sr-only">{t`Generating profile.`}</span>
       <strong aria-hidden="true">{label}</strong>
       <span className="profile-generation-elapsed" aria-hidden="true">
-        Elapsed {elapsed}
+        {t`Elapsed`} {elapsed}
       </span>
       {part === null ? null : (
         <span className="profile-generation-part" aria-hidden="true">
@@ -169,7 +167,7 @@ export function ProfileGenerationCancel({
       disabled={cancelling}
       onClick={onCancel}
     >
-      {cancelling ? "Cancelling…" : "Cancel generation"}
+      {cancelling ? t`Cancelling…` : t`Cancel generation`}
     </button>
   );
 }

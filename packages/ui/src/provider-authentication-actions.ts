@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   CredentialProvider,
   ProviderAuthMode,
@@ -54,7 +55,7 @@ export async function saveProviderCredential(
   } catch (error: unknown) {
     return {
       ok: false,
-      feedback: error instanceof Error ? error.message : "Failed to save API key.",
+      feedback: error instanceof Error ? error.message : t`Failed to save API key.`,
     };
   }
 }
@@ -73,7 +74,7 @@ export async function removeProviderCredential(
       feedback: `${credentialProviderLabels[provider]} API key removed from app storage.`,
     };
   } catch {
-    return { ok: false, feedback: "Failed to remove API key." };
+    return { ok: false, feedback: t`Failed to remove API key.` };
   }
 }
 
@@ -101,7 +102,7 @@ export async function saveOpenAiAuthMode(
     return {
       ok: false,
       feedback:
-        error instanceof Error ? error.message : "Failed to save provider authentication mode.",
+        error instanceof Error ? error.message : t`Failed to save provider authentication mode.`,
     };
   }
 }

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
@@ -71,7 +72,7 @@ export function Records({ client, memory, children }: RecordsProps) {
     );
   }, []);
 
-  if (state.kind === "loading") return <p role="status">Reading your candidate records…</p>;
+  if (state.kind === "loading") return <p role="status">{t`Reading your candidate records…`}</p>;
   if (state.kind === "failed")
     return (
       <p className="problem" role="alert">
@@ -106,7 +107,7 @@ export function Records({ client, memory, children }: RecordsProps) {
       />
       {deleted === undefined ? null : (
         <p className="notice" role="status">
-          The record {deleted} and everything stored for it were deleted.
+          {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
         </p>
       )}
       {chosen === undefined ? null : (
@@ -157,12 +158,12 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
 
   return (
     <section className="panel records">
-      <h2>Candidate record</h2>
+      <h2>{t`Candidate record`}</h2>
       {options.length === 0 ? (
         <p className="muted">{notice}</p>
       ) : (
         <>
-          <label htmlFor="record-picker">Record</label>
+          <label htmlFor="record-picker">{t`Record`}</label>
           <select
             id="record-picker"
             value={chosen}
@@ -170,14 +171,14 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
           >
             {options.map((id) => (
               <option key={id} value={id}>
-                {ids.includes(id) ? id : `${id} (new, set it up when you open it)`}
+                {ids.includes(id) ? id : t`${id} (new, set it up when you open it)`}
               </option>
             ))}
           </select>
         </>
       )}
       <form className="inline-form" onSubmit={create}>
-        <label htmlFor="new-record-id">New record id</label>
+        <label htmlFor="new-record-id">{t`New record id`}</label>
         <input
           id="new-record-id"
           value={newId}
@@ -189,7 +190,7 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
             {problem}
           </p>
         )}
-        <button type="submit">Create record</button>
+        <button type="submit">{t`Create record`}</button>
       </form>
     </section>
   );
@@ -258,11 +259,11 @@ export function MembersPanel({ client, recordId, exists, manage }: MembersPanelP
 
   return (
     <details className="panel members">
-      <summary>Members of this record</summary>
+      <summary>{t`Members of this record`}</summary>
       {state.kind === "loading" ? (
-        <p role="status">Reading the record's members…</p>
+        <p role="status">{t`Reading the record's members…`}</p>
       ) : state.kind === "missing" ? (
-        <p className="muted">Members can be assigned once the record is set up.</p>
+        <p className="muted">{t`Members can be assigned once the record is set up.`}</p>
       ) : state.kind === "failed" ? (
         <p className="problem" role="alert">
           {state.message}
@@ -328,7 +329,7 @@ export function MemberList({
   return (
     <>
       {members.length === 0 ? (
-        <p className="muted">No member is assigned to this record.</p>
+        <p className="muted">{t`No member is assigned to this record.`}</p>
       ) : (
         <ul className="sources">
           {members.map((member) => (
@@ -339,23 +340,21 @@ export function MemberList({
                   type="button"
                   className="secondary small"
                   disabled={busy}
-                  aria-label={`Remove ${member.email} from this record`}
+                  aria-label={t`Remove ${member.email} from this record`}
                   onClick={() => onRemove(member.memberId)}
-                >
-                  Remove
-                </button>
+                >{t`Remove`}</button>
               ) : null}
             </li>
           ))}
         </ul>
       )}
       {!manage ? (
-        <p className="muted">Owners and admins of your organisation assign members.</p>
+        <p className="muted">{t`Owners and admins of your organisation assign members.`}</p>
       ) : assignable.length === 0 ? (
-        <p className="muted">Every member of your organisation is assigned to this record.</p>
+        <p className="muted">{t`Every member of your organisation is assigned to this record.`}</p>
       ) : (
         <form className="inline-form" onSubmit={assign}>
-          <label htmlFor="assign-member">Assign a member</label>
+          <label htmlFor="assign-member">{t`Assign a member`}</label>
           <select
             id="assign-member"
             value={choice}
@@ -367,9 +366,7 @@ export function MemberList({
               </option>
             ))}
           </select>
-          <button type="submit" disabled={busy}>
-            Assign
-          </button>
+          <button type="submit" disabled={busy}>{t`Assign`}</button>
         </form>
       )}
       {messages.map((message) => (
