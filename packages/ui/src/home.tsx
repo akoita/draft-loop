@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import {
   type ApplicationAction,
@@ -141,8 +142,8 @@ export function WorkspaceBackButton({ back }: { readonly back: WorkspaceBack }) 
     <button
       className="button button-toolbar home-back"
       type="button"
-      title={`Back to ${back.label}`}
-      aria-label={`Back to ${back.label}`}
+      title={t`Back to ${back.label}`}
+      aria-label={t`Back to ${back.label}`}
       onClick={back.onBack}
     >
       <span aria-hidden="true">←</span> <span className="home-back-label">{back.label}</span>
@@ -160,7 +161,7 @@ export function WorkspaceLocation({
   const ref = useRef<HTMLElement>(null);
   useFocusOnOpen(ref);
   return (
-    <nav ref={ref} className="home-location" aria-label="Workspace location" tabIndex={-1}>
+    <nav ref={ref} className="home-location" aria-label={t`Workspace location`} tabIndex={-1}>
       {back === undefined ? null : <WorkspaceBackButton back={back} />}
       {asHeading ? (
         <h1
@@ -279,7 +280,7 @@ export function ApplicationCard({
               value={rename.draft}
               readOnly={rename.busy}
               aria-busy={rename.busy ? true : undefined}
-              aria-label="Application name"
+              aria-label={t`Application name`}
               aria-invalid={rename.errorMessage === null ? undefined : true}
               aria-describedby={rename.errorMessage === null ? undefined : errorId}
               onChange={(event) => rename.change(event.target.value)}
@@ -313,8 +314,8 @@ export function ApplicationCard({
                 className="workspace-title-edit-button"
                 type="button"
                 disabled={busy}
-                aria-label={`Rename ${application.name}`}
-                title="Rename"
+                aria-label={t`Rename ${application.name}`}
+                title={t`Rename`}
                 onClick={() => rename.start()}
               >
                 <PencilIcon />
@@ -345,7 +346,7 @@ export function ApplicationCard({
         {application.isDefault ? (
           <>
             <span aria-hidden="true"> · </span>
-            <span>Original workspace job</span>
+            <span>{t`Original workspace job`}</span>
           </>
         ) : null}
       </p>
@@ -353,17 +354,15 @@ export function ApplicationCard({
         <div className="application-card-nudge">
           <p>
             {application.suggestedName === null
-              ? "Give it a name you will recognise, such as the role and the company."
-              : `Give it a name you will recognise, such as “${application.suggestedName}”.`}
+              ? t`Give it a name you will recognise, such as the role and the company.`
+              : t`Give it a name you will recognise, such as “${application.suggestedName}”.`}
           </p>
           <button
             className="button button-outline"
             type="button"
             disabled={busy}
             onClick={() => rename.start(application.suggestedName ?? application.name)}
-          >
-            Name it
-          </button>
+          >{t`Name it`}</button>
         </div>
       ) : null}
       {actions.confirmingDelete === true && onConfirmDelete !== undefined ? (
@@ -375,17 +374,13 @@ export function ApplicationCard({
               type="button"
               disabled={busy}
               onClick={onConfirmDelete}
-            >
-              Delete
-            </button>
+            >{t`Delete`}</button>
             <button
               className="button button-outline"
               type="button"
               disabled={busy}
               onClick={onCancelDelete}
-            >
-              Cancel
-            </button>
+            >{t`Cancel`}</button>
           </div>
         </fieldset>
       ) : (
@@ -394,11 +389,9 @@ export function ApplicationCard({
           <button
             className="button button-primary"
             type="button"
-            aria-label={`Open ${application.name}`}
+            aria-label={t`Open ${application.name}`}
             onClick={() => onOpen(application)}
-          >
-            Open
-          </button>
+          >{t`Open`}</button>
           {onArchive === undefined ? null : (
             <button
               className="button button-outline"
@@ -407,7 +400,7 @@ export function ApplicationCard({
               aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
               onClick={onArchive}
             >
-              {archived ? "Restore" : "Archive"}
+              {archived ? t`Restore` : t`Archive`}
             </button>
           )}
           {onRequestDelete === undefined ? null : (
@@ -415,15 +408,13 @@ export function ApplicationCard({
               className="button button-danger"
               type="button"
               disabled={busy}
-              aria-label={`Delete ${application.name}`}
+              aria-label={t`Delete ${application.name}`}
               onClick={onRequestDelete}
-            >
-              Delete
-            </button>
+            >{t`Delete`}</button>
           )}
           {actions.moveTargets === undefined || actions.moveTargets.length === 0 ? null : (
             <details className="applications-row-menu">
-              <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
+              <summary aria-label={t`More actions for ${application.name}`}>⋯</summary>
               <div className="applications-row-menu-items">
                 <MoveToItems name={application.name} targets={actions.moveTargets} busy={busy} />
               </div>
@@ -496,17 +487,14 @@ function ApplicationsList({
     writeApplicationListPreferences(browserPreferenceStorage(), { view: next, sort: query.sort });
   };
   if (state.status === "loading") {
-    return (
-      <p className="empty-state" role="status">
-        Loading applications…
-      </p>
-    );
+    return <p className="empty-state" role="status">{t`Loading applications…`}</p>;
   }
   if (state.status === "unavailable") {
     return (
-      <p className="empty-state" role="alert">
-        The applications could not be read. Close and reopen the workspace to try again.
-      </p>
+      <p
+        className="empty-state"
+        role="alert"
+      >{t`The applications could not be read. Close and reopen the workspace to try again.`}</p>
     );
   }
   const { active, archived } = partitionApplications(
@@ -612,9 +600,7 @@ function ApplicationsList({
                 {folded ? null : (
                   <div id={bodyId}>
                     {section.applications.length === 0 ? (
-                      <p className="home-card-copy">
-                        Empty. Use Move to in an application's ⋯ menu to put it here.
-                      </p>
+                      <p className="home-card-copy">{t`Empty. Use Move to in an application's ⋯ menu to put it here.`}</p>
                     ) : (
                       group(section.applications, section.folder?.name ?? noFolderLabel)
                     )}
@@ -650,30 +636,20 @@ function ApplicationsList({
       {activeGroups}
       {narrowedToNothing ? (
         <div className="empty-state home-empty-applications" role="status">
-          <p>No application matches this search or filter.</p>
+          <p>{t`No application matches this search or filter.`}</p>
           <button
             className="button button-outline"
             type="button"
             onClick={() => setQuery({ ...query, search: "", status: "all" })}
-          >
-            Clear search and filter
-          </button>
+          >{t`Clear search and filter`}</button>
         </div>
       ) : null}
       {active.length === 0 && archived.length === 0 ? (
-        <p className="empty-state home-empty-applications">
-          No applications yet. Start a new application for the job you are applying for. It uses
-          your career profile and evidence.
-        </p>
+        <p className="empty-state home-empty-applications">{t`No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence.`}</p>
       ) : active.length === 0 && archived.length > 0 ? (
-        <p className="empty-state home-empty-applications">
-          Every application is archived. Start a new application, or restore one below.
-        </p>
+        <p className="empty-state home-empty-applications">{t`Every application is archived. Start a new application, or restore one below.`}</p>
       ) : archived.length === 0 && onlyDefaultApplication(active) ? (
-        <p className="empty-state home-empty-applications">
-          Applying for another role? Start a new application. It reuses your career profile and
-          evidence, so you do not generate them again.
-        </p>
+        <p className="empty-state home-empty-applications">{t`Applying for another role? Start a new application. It reuses your career profile and evidence, so you do not generate them again.`}</p>
       ) : null}
       {archived.length === 0 ? null : (
         <div className="home-archived-applications">
@@ -684,7 +660,7 @@ function ApplicationsList({
             aria-controls="home-archived-applications"
             onClick={() => setShowArchived((shown) => !shown)}
           >
-            {showArchived ? "Hide archived" : `Show archived (${shownArchived.length})`}
+            {showArchived ? t`Hide archived` : t`Show archived (${shownArchived.length})`}
           </button>
           {showArchived ? (
             <div id="home-archived-applications" className="home-archived-applications-body">
@@ -809,9 +785,11 @@ export function HomeView({
             </div>
             <div className="home-header-actions">
               {settings === undefined ? null : (
-                <button className="button button-outline" type="button" onClick={openHomeSettings}>
-                  Workspace settings
-                </button>
+                <button
+                  className="button button-outline"
+                  type="button"
+                  onClick={openHomeSettings}
+                >{t`Workspace settings`}</button>
               )}
               {workspaceNavigation}
             </div>
@@ -879,7 +857,7 @@ export function HomeView({
 
           <section className="panel home-applications" aria-labelledby="home-applications-title">
             <div className="home-section-head">
-              <h2 id="home-applications-title">Applications</h2>
+              <h2 id="home-applications-title">{t`Applications`}</h2>
               <div className="home-section-actions">
                 {onImportApplication === undefined ? null : (
                   <button
@@ -889,7 +867,7 @@ export function HomeView({
                     aria-describedby="home-import-explanation"
                     onClick={onImportApplication}
                   >
-                    {importing ? "Importing…" : "Import from another workspace"}
+                    {importing ? t`Importing…` : t`Import from another workspace`}
                   </button>
                 )}
                 {onNewApplication === undefined ? null : (
@@ -898,9 +876,7 @@ export function HomeView({
                     type="button"
                     disabled={disabled}
                     onClick={onNewApplication}
-                  >
-                    New application
-                  </button>
+                  >{t`New application`}</button>
                 )}
               </div>
             </div>
@@ -959,7 +935,7 @@ export function HomeView({
               tabIndex={-1}
             >
               <div className="home-section-head">
-                <h2 id="home-settings-title">Workspace settings</h2>
+                <h2 id="home-settings-title">{t`Workspace settings`}</h2>
               </div>
               {settings}
             </section>

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Home's folder sections (#2283): one section per folder in creation order, then No folder.
  * Archived applications stay in their own group below, whatever their folder. Whether Home groups
@@ -64,8 +65,8 @@ export function moveTargets(
   return [
     ...folders
       .filter((folder) => folder.id !== current)
-      .map((folder) => ({ folderId: folder.id, label: `Move to ${folder.name}` })),
-    ...(current === undefined ? [] : [{ folderId: null, label: "Remove from folder" }]),
+      .map((folder) => ({ folderId: folder.id, label: t`Move to ${folder.name}` })),
+    ...(current === undefined ? [] : [{ folderId: null, label: t`Remove from folder` }]),
   ];
 }
 
@@ -73,11 +74,11 @@ export function folderDeleteConfirmation(folder: ApplicationFolderView): string 
   const held = folder.applicationCount;
   const what =
     held === 0
-      ? "It is empty."
+      ? t`It is empty.`
       : held === 1
-        ? "Its 1 application moves to No folder."
-        : `Its ${held} applications move to No folder.`;
-  return `Delete the folder “${folder.name}”? ${what} No application is deleted.`;
+        ? t`Its 1 application moves to No folder.`
+        : t`Its ${held} applications move to No folder.`;
+  return t`Delete the folder “${folder.name}”? ${what} No application is deleted.`;
 }
 
 export function folderMoveNotice(
@@ -87,8 +88,8 @@ export function folderMoveNotice(
 ): string {
   const folder = folders.find((item) => item.id === folderId);
   return folder === undefined
-    ? `Took "${application.name}" out of its folder.`
-    : `Moved "${application.name}" to ${folder.name}.`;
+    ? t`Took "${application.name}" out of its folder.`
+    : t`Moved "${application.name}" to ${folder.name}.`;
 }
 
 /** The error a person reads; the host's own words when it gave short ones. */

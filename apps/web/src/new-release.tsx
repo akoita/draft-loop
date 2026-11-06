@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
 import { NEW_RELEASE_MESSAGE, watchForNewRelease } from "./new-release-model.js";
@@ -50,9 +51,7 @@ export function NewReleaseNotice({ onReload }: NewReleaseNoticeProps) {
   return (
     <div className="notice new-release" role="status">
       <span>{NEW_RELEASE_MESSAGE}</span>
-      <button type="button" onClick={onReload}>
-        Reload
-      </button>
+      <button type="button" onClick={onReload}>{t`Reload`}</button>
     </div>
   );
 }

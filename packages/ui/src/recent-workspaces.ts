@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /** Path-free contracts for the renderer's recent-workspace controls. */
 export const maximumRecentWorkspaces = 10;
 export const maximumRecentWorkspaceIdLength = 64;
@@ -44,7 +45,7 @@ export interface RecentWorkspaceRemoveResult {
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Invalid recent workspace data.");
+    throw new Error(t`Invalid recent workspace data.`);
   }
   return value as Record<string, unknown>;
 }
@@ -65,10 +66,10 @@ function hasUnsafeNameCharacters(value: string): boolean {
 }
 
 function isoTimestamp(value: unknown): string {
-  if (typeof value !== "string" || value.length > 32) throw new Error("Invalid timestamp.");
+  if (typeof value !== "string" || value.length > 32) throw new Error(t`Invalid timestamp.`);
   const time = Date.parse(value);
   if (!Number.isFinite(time) || new Date(time).toISOString() !== value) {
-    throw new Error("Invalid timestamp.");
+    throw new Error(t`Invalid timestamp.`);
   }
   return value;
 }
@@ -83,7 +84,7 @@ function safeName(value: unknown): string {
     value === ".." ||
     hasUnsafeNameCharacters(value)
   ) {
-    throw new Error("Invalid workspace name.");
+    throw new Error(t`Invalid workspace name.`);
   }
   return value;
 }
@@ -94,14 +95,14 @@ function safeId(value: unknown): string {
     value.length > maximumRecentWorkspaceIdLength ||
     !/^[A-Za-z0-9-]{16,64}$/u.test(value)
   ) {
-    throw new Error("Invalid recent workspace id.");
+    throw new Error(t`Invalid recent workspace id.`);
   }
   return value;
 }
 
 function emptyInput(value: unknown): Record<string, unknown> {
   const input = record(value);
-  if (Object.keys(input).length !== 0) throw new Error("Invalid recent workspace input.");
+  if (Object.keys(input).length !== 0) throw new Error(t`Invalid recent workspace input.`);
   return input;
 }
 
@@ -117,7 +118,7 @@ export function parseRecentWorkspacesClearInput(value: unknown): RecentWorkspace
 
 export function parseRecentWorkspaceOpenInput(value: unknown): RecentWorkspaceOpenInput {
   const input = record(value);
-  if (!exactKeys(input, ["id"])) throw new Error("Invalid recent workspace input.");
+  if (!exactKeys(input, ["id"])) throw new Error(t`Invalid recent workspace input.`);
   return { id: safeId(input.id) };
 }
 
@@ -129,15 +130,15 @@ export function parseRecentWorkspaceRemoveInput(value: unknown): RecentWorkspace
 export function parseRecentWorkspacesListResult(value: unknown): RecentWorkspacesListResult {
   const result = record(value);
   if (!exactKeys(result, ["workspaces"]) || !Array.isArray(result.workspaces)) {
-    throw new Error("Invalid recent workspace result.");
+    throw new Error(t`Invalid recent workspace result.`);
   }
   if (result.workspaces.length > maximumRecentWorkspaces) {
-    throw new Error("Invalid recent workspace result.");
+    throw new Error(t`Invalid recent workspace result.`);
   }
   const workspaces = result.workspaces.map((candidate) => {
     const item = record(candidate);
     if (!exactKeys(item, ["id", "name", "lastOpenedAt", "location"])) {
-      throw new Error("Invalid recent workspace result.");
+      throw new Error(t`Invalid recent workspace result.`);
     }
     return {
       id: safeId(item.id),
@@ -147,7 +148,7 @@ export function parseRecentWorkspacesListResult(value: unknown): RecentWorkspace
     };
   });
   if (new Set(workspaces.map(({ id }) => id)).size !== workspaces.length) {
-    throw new Error("Invalid recent workspace result.");
+    throw new Error(t`Invalid recent workspace result.`);
   }
   return { workspaces };
 }
@@ -155,7 +156,7 @@ export function parseRecentWorkspacesListResult(value: unknown): RecentWorkspace
 export function parseRecentWorkspacesClearResult(value: unknown): RecentWorkspacesClearResult {
   const result = record(value);
   if (!exactKeys(result, ["cleared"]) || result.cleared !== true) {
-    throw new Error("Invalid recent workspace result.");
+    throw new Error(t`Invalid recent workspace result.`);
   }
   return { cleared: true };
 }
@@ -163,7 +164,7 @@ export function parseRecentWorkspacesClearResult(value: unknown): RecentWorkspac
 export function parseRecentWorkspaceRemoveResult(value: unknown): RecentWorkspaceRemoveResult {
   const result = record(value);
   if (!exactKeys(result, ["removed"]) || result.removed !== true) {
-    throw new Error("Invalid recent workspace result.");
+    throw new Error(t`Invalid recent workspace result.`);
   }
   return { removed: true };
 }

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The toolbar and the List view of Home's applications panel. The Cards view stays in `home.tsx`;
  * both draw from the same query, so search, filter and sort mean the same in either view.
@@ -49,12 +50,12 @@ export function ApplicationsToolbar({
           className="applications-search"
           type="search"
           value={query.search}
-          placeholder="Search by name, employer or role"
-          aria-label="Search applications"
+          placeholder={t`Search by name, employer or role`}
+          aria-label={t`Search applications`}
           onChange={(event) => onQuery({ ...query, search: event.target.value })}
         />
         <label className="applications-sort">
-          <span>Sort</span>
+          <span>{t`Sort`}</span>
           <select
             id="applications-sort"
             value={query.sort}
@@ -70,7 +71,7 @@ export function ApplicationsToolbar({
           </select>
         </label>
         <fieldset className="applications-segmented">
-          <legend className="sr-only">View</legend>
+          <legend className="sr-only">{t`View`}</legend>
           {applicationListViews.map((option) => (
             <button
               key={option}
@@ -84,7 +85,7 @@ export function ApplicationsToolbar({
         </fieldset>
       </div>
       <fieldset className="applications-status-filter">
-        <legend className="sr-only">Filter by status</legend>
+        <legend className="sr-only">{t`Filter by status`}</legend>
         {applicationStatusFilters.map((filter) => (
           <button
             key={filter}
@@ -145,14 +146,12 @@ export function ApplicationsTable({
         </colgroup>
         <thead>
           <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Status</th>
-            <th scope="col">Last activity</th>
-            <th scope="col" className="numeric">
-              Runs
-            </th>
+            <th scope="col">{t`Name`}</th>
+            <th scope="col">{t`Status`}</th>
+            <th scope="col">{t`Last activity`}</th>
+            <th scope="col" className="numeric">{t`Runs`}</th>
             <th scope="col">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t`Actions`}</span>
             </th>
           </tr>
         </thead>
@@ -222,12 +221,12 @@ function ApplicationRow({
                   type="button"
                   disabled={busy}
                   onClick={onConfirmDelete}
-                >
-                  Delete
-                </button>
-                <button className="button button-outline" type="button" onClick={onCancelDelete}>
-                  Cancel
-                </button>
+                >{t`Delete`}</button>
+                <button
+                  className="button button-outline"
+                  type="button"
+                  onClick={onCancelDelete}
+                >{t`Cancel`}</button>
               </div>
             </fieldset>
           ) : (
@@ -235,14 +234,12 @@ function ApplicationRow({
               <button
                 className="button button-primary"
                 type="button"
-                aria-label={`Open ${application.name}`}
+                aria-label={t`Open ${application.name}`}
                 onClick={() => onOpen(application)}
-              >
-                Open
-              </button>
+              >{t`Open`}</button>
               {hasMenu ? (
                 <details className="applications-row-menu">
-                  <summary aria-label={`More actions for ${application.name}`}>⋯</summary>
+                  <summary aria-label={t`More actions for ${application.name}`}>⋯</summary>
                   <div className="applications-row-menu-items">
                     <MoveToItems name={application.name} targets={moves} busy={busy} />
                     {onArchive === undefined ? null : (
@@ -252,18 +249,16 @@ function ApplicationRow({
                         aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
                         onClick={onArchive}
                       >
-                        {archived ? "Restore" : "Archive"}
+                        {archived ? t`Restore` : t`Archive`}
                       </button>
                     )}
                     {onRequestDelete === undefined ? null : (
                       <button
                         type="button"
                         disabled={busy}
-                        aria-label={`Delete ${application.name}`}
+                        aria-label={t`Delete ${application.name}`}
                         onClick={onRequestDelete}
-                      >
-                        Delete
-                      </button>
+                      >{t`Delete`}</button>
                     )}
                   </div>
                 </details>

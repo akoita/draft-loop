@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef } from "react";
 import { CloseWorkspaceIcon } from "./workspace-action-icons.js";
@@ -64,7 +65,7 @@ export function WorkspaceNavigationContent({
 
   return (
     <fieldset ref={navigationRef} className="workspace-navigation" tabIndex={-1}>
-      <legend className="sr-only">Workspace navigation</legend>
+      <legend className="sr-only">{t`Workspace navigation`}</legend>
       <button
         ref={closeButtonRef}
         className="button button-toolbar"
@@ -76,7 +77,7 @@ export function WorkspaceNavigationContent({
         }}
       >
         <CloseWorkspaceIcon />
-        Close workspace
+        {t`Close workspace`}
       </button>
       {closeDisabledReason === null || confirmationOpen ? null : (
         <p className="workspace-navigation-guidance" role="status">
@@ -97,14 +98,14 @@ export function WorkspaceNavigationContent({
           >
             <div className="modal-header">
               <div>
-                <p className="eyebrow">Workspace navigation</p>
-                <h2 id="workspace-close-title">Close this workspace?</h2>
+                <p className="eyebrow">{t`Workspace navigation`}</p>
+                <h2 id="workspace-close-title">{t`Close this workspace?`}</h2>
               </div>
             </div>
-            <p className="modal-copy" id="workspace-close-copy">
-              Saved workspace files, run history, and profile versions stay on this device. Any
-              unsaved setup or profile form edits will be discarded.
-            </p>
+            <p
+              className="modal-copy"
+              id="workspace-close-copy"
+            >{t`Saved workspace files, run history, and profile versions stay on this device. Any unsaved setup or profile form edits will be discarded.`}</p>
             {closeDisabledReason === null ? null : (
               <p className="workspace-navigation-guidance" role="status">
                 {closeDisabledReason}
@@ -116,9 +117,7 @@ export function WorkspaceNavigationContent({
                 className="button button-outline"
                 type="button"
                 onClick={onCancelClose}
-              >
-                Cancel
-              </button>
+              >{t`Cancel`}</button>
               <button
                 className="button button-primary"
                 type="button"
@@ -126,9 +125,7 @@ export function WorkspaceNavigationContent({
                 onClick={() => {
                   if (!closeDisabled) onConfirmClose();
                 }}
-              >
-                Close workspace
-              </button>
+              >{t`Close workspace`}</button>
             </div>
           </section>
         </div>

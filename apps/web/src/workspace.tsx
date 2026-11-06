@@ -4,6 +4,7 @@ import {
   WorkspaceSetupScreen,
   workspaceSetupPresets,
 } from "@draft-loop/ui/workspace-setup";
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
@@ -115,7 +116,7 @@ export function WorkspaceStepView({
 }: WorkspaceStepViewProps) {
   switch (state.kind) {
     case "loading":
-      return <p role="status">Reading your workspace…</p>;
+      return <p role="status">{t`Reading your workspace…`}</p>;
     case "failed":
       return (
         <p className="problem" role="alert">

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Folder controls on Home (#2283): New folder and the By folder or All together switch above the
  * list, a foldable header per section with rename and delete, and Move to in an application's
@@ -90,9 +91,12 @@ function FolderNameForm({
       <button className="button button-primary" type="submit" disabled={busy}>
         {submitLabel}
       </button>
-      <button className="button button-outline" type="button" disabled={busy} onClick={onCancel}>
-        Cancel
-      </button>
+      <button
+        className="button button-outline"
+        type="button"
+        disabled={busy}
+        onClick={onCancel}
+      >{t`Cancel`}</button>
       {error === null ? null : (
         <p className="setup-blocker" id={errorId} role="alert">
           {error}
@@ -140,13 +144,11 @@ export function FolderBar({
           type="button"
           disabled={disabled}
           onClick={() => setCreating(true)}
-        >
-          New folder
-        </button>
+        >{t`New folder`}</button>
       )}
       {hasFolders ? (
         <fieldset className="applications-segmented">
-          <legend className="sr-only">Group applications</legend>
+          <legend className="sr-only">{t`Group applications`}</legend>
           {folderGroupings.map((option) => (
             <button
               key={option}
@@ -238,17 +240,13 @@ export function FolderSectionHead({
                   },
                 );
               }}
-            >
-              Delete folder
-            </button>
+            >{t`Delete folder`}</button>
             <button
               className="button button-outline"
               type="button"
               disabled={busy}
               onClick={() => setMode("idle")}
-            >
-              Cancel
-            </button>
+            >{t`Cancel`}</button>
           </div>
           {deleteError === null ? null : (
             <p className="setup-blocker" role="alert">
@@ -262,20 +260,16 @@ export function FolderSectionHead({
             className="button button-outline button-small"
             type="button"
             disabled={disabled}
-            aria-label={`Rename folder ${folder.name}`}
+            aria-label={t`Rename folder ${folder.name}`}
             onClick={() => setMode("renaming")}
-          >
-            Rename
-          </button>
+          >{t`Rename`}</button>
           <button
             className="button button-outline button-small"
             type="button"
             disabled={disabled}
-            aria-label={`Delete folder ${folder.name}`}
+            aria-label={t`Delete folder ${folder.name}`}
             onClick={() => setMode("deleting")}
-          >
-            Delete
-          </button>
+          >{t`Delete`}</button>
         </div>
       )}
     </div>

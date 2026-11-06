@@ -2,6 +2,7 @@ import { App } from "@draft-loop/ui/app";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import { createBridgeReviewPort } from "@draft-loop/ui/native";
 import { startViewForFragment } from "@draft-loop/ui/shared-link";
+import { t } from "@lingui/core/macro";
 import { type ReactNode, useMemo, useState } from "react";
 
 import type { ApiClient, ApiRequestError } from "./api-client.js";
@@ -69,9 +70,7 @@ export function RefusalNotice({ client, refusal, onDismiss }: RefusalNoticeProps
       {quarantine === undefined ? null : (
         <QuarantineRefusalPanel client={client} refusal={quarantine} />
       )}
-      <button type="button" className="secondary" onClick={onDismiss}>
-        Dismiss
-      </button>
+      <button type="button" className="secondary" onClick={onDismiss}>{t`Dismiss`}</button>
     </div>
   );
 }

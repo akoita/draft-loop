@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { createContext, type ReactNode, useContext } from "react";
 
 export type Health = "checking" | "serving" | "unreachable";
@@ -27,9 +28,10 @@ export function ServiceStatus({ health }: { readonly health: Health }) {
 /** The red strip at the top of the page while the service cannot be reached. */
 export function ServiceDown() {
   return (
-    <p className="service-down" role="alert">
-      The service cannot be reached. Your work is saved; try again in a moment.
-    </p>
+    <p
+      className="service-down"
+      role="alert"
+    >{t`The service cannot be reached. Your work is saved; try again in a moment.`}</p>
   );
 }
 
@@ -51,7 +53,7 @@ export function SignOutButton({ onSignOut }: { readonly onSignOut: () => void })
           strokeLinejoin="round"
         />
       </svg>
-      Sign out
+      {t`Sign out`}
     </button>
   );
 }
