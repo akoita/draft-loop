@@ -8,7 +8,12 @@ import {
   careerInterviewRefusal,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
-import { CareerInterviewPanel, type CareerInterviewPanelProps } from "./career-interview-panel.js";
+import {
+  CareerInterviewPanel,
+  type CareerInterviewPanelProps,
+  careerInterviewSendsOnKey,
+  careerInterviewTopicStatusLabel,
+} from "./career-interview-panel.js";
 
 // Invented topics and answers only.
 const proposedSession: CareerInterviewSessionView = {
@@ -109,6 +114,31 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Questions written by claude-sonnet-5-5 (anthropic).");
     expect(html).toContain("0 of 1 topics finished");
     expect(html).not.toContain("Answer by voice");
+  });
+
+  it("shows the turns as chat bubbles and lists the session's topics with their state", () => {
+    const html = render({ session: openSession });
+    expect(html).toContain("interview-turn interview-turn-interviewer");
+    expect(html).toContain("interview-turn interview-turn-candidate");
+    expect(html).toContain('aria-label="Topics in this conversation"');
+    expect(html).toContain("Talking now");
+    expect(html).toContain('aria-current="step"');
+    expect(html).toContain("Enter sends, Shift+Enter starts a new line.");
+  });
+
+  it("sends on Enter but not on Shift+Enter or while composing a character", () => {
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: false })).toBe(true);
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: true })).toBe(false);
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: false, isComposing: true })).toBe(
+      false,
+    );
+    expect(careerInterviewSendsOnKey({ key: "a", shiftKey: false })).toBe(false);
+  });
+
+  it("words every topic state for the side list", () => {
+    expect(careerInterviewTopicStatusLabel("proposed")).toBe("Suggested");
+    expect(careerInterviewTopicStatusLabel("summarised")).toBe("Summary to confirm");
+    expect(careerInterviewTopicStatusLabel("closed")).toBe("Finished");
   });
 
   it("offers voice input beside the answer when the host provides it", () => {
