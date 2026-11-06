@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Tell career evidence and profile apart",
+  "releaseName": "Interview-safe facts and pull request import",
   "stageIssue": 1359,
-  "milestone": 78,
-  "summary": "One sprint since Folders on Home (milestone 77). Career evidence and Career profile now read as one pipeline. Home shows a \"Your career\" panel with two numbered steps joined by a \"builds\" arrow; its buttons say \"Add or manage documents\" and \"Review facts\" (#2297). Both career pages share numbered tabs, 1 Career evidence and 2 Career profile, with an Applications link (#2298). The profile page asks \"Looking to add or replace a CV?\" and links to Career evidence, refusing a dropped file there; the evidence page links to Career profile for facts (#2299). Shared screens only, so the desktop client changes too. No data or model change.",
-  "knownLimitations": "Names are unchanged. A file dropped on the Career profile page is not carried to Career evidence; the person adds it there. Facts do not yet link to the document they came from."
+  "milestone": 75,
+  "summary": "One sprint since Tell career evidence and profile apart (milestone 78). Each career fact or section has a usage level: CV and interview, Interview only, or Never say, set on the Career profile beside each fact and section and kept apart from sensitivity (#2258, #2259). An unset level means CV, so nothing changes until the person marks a fact. Interview questions on the Prepare panel use only interview-allowed facts, and a cover letter only CV facts; a never-say fact never reaches the model (#2260). Career evidence takes a list of merged pull requests exported with gh, as JSON or CSV, stored as Markdown with one heading per pull request and its link (#2261). Each imported repository starts as \"send only if allowed\", and Allow this repository lowers it (#2262). Agent channel tool errors now say whether a retry can help (#2263). No paid model run.",
+  "knownLimitations": "CV runs do not yet leave out interview-only and never-say facts (#2304). Usage levels and pull request import are on the web and the desktop client only, not the local-first desktop. Editing a fact's value starts it again from its section's level. DraftLoop does not fetch pull requests from GitHub itself."
 }
