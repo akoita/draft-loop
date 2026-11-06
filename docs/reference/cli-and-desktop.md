@@ -879,6 +879,26 @@ reviewed version for the next run.
 A reviewed profile is a human-reviewed record. It is not a claim about
 application readiness or quality.
 
+### Career evidence and Career profile on screen
+
+The shared screens keep the documents a person gives apart from the facts
+DraftLoop builds, on the web and the desktop alike.
+
+```mermaid
+flowchart LR
+  E["1 Career evidence<br/>documents you give"] -- builds --> P["2 Career profile<br/>facts you review"]
+  P -- reused by --> A["Applications"]
+```
+
+| Where                | What it shows                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| Home                 | A "Your career" panel: step 1 **Add or manage documents**, an arrow, step 2 **Review facts**      |
+| Both career pages    | Numbered tabs, "1 Career evidence" and "2 Career profile", then an Applications link              |
+| Career profile page  | "Looking to add or replace a CV?" with **Go to Career evidence**; a dropped file is refused there |
+| Career evidence page | "Looking for your facts?" with **Open Career profile**                                            |
+
+A host without a profile workflow shows no Career profile tab or signpost.
+
 ### Incremental derivation
 
 Derivation extracts only new or changed sources, and reuses the facts of

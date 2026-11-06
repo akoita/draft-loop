@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Folders on Home",
+  "releaseName": "Tell career evidence and profile apart",
   "stageIssue": 1359,
-  "milestone": 77,
-  "summary": "One sprint since Find an application fast (milestone 76). Applications can be grouped into one-level folders: Home shows a foldable section per folder in creation order, then No folder, then Archived, with a By folder or All together switch remembered on each device (#2283). New folder, rename and delete sit on the section headers; deleting a folder asks first, says how many applications it holds and moves them back to No folder, never deleting one. Move to is in each application's menu, on cards and in the List view, and the New application form takes an optional folder. Folders and placements are stored on SQLite and Postgres with tenant isolation, erasure and the record archive (#2280, #2281), behind /v1/workspaces/:id/application-folders and folderId on application create, update and list (#2282). No model change.",
-  "knownLimitations": "The local-first desktop has no folders and shows no folder controls. Folders do not nest, and an application sits in at most one. The agent channel has no application tool, so it does not see folders. Search matches application names only, not job text."
+  "milestone": 78,
+  "summary": "One sprint since Folders on Home (milestone 77). Career evidence and Career profile now read as one pipeline. Home shows a \"Your career\" panel with two numbered steps joined by a \"builds\" arrow; its buttons say \"Add or manage documents\" and \"Review facts\" (#2297). Both career pages share numbered tabs, 1 Career evidence and 2 Career profile, with an Applications link (#2298). The profile page asks \"Looking to add or replace a CV?\" and links to Career evidence, refusing a dropped file there; the evidence page links to Career profile for facts (#2299). Shared screens only, so the desktop client changes too. No data or model change.",
+  "knownLimitations": "Names are unchanged. A file dropped on the Career profile page is not carried to Career evidence; the person adds it there. Facts do not yet link to the document they came from."
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { type CareerFlowStep, careerEvidenceIntro, careerProfileIntro } from "./career-flow.js";
 import { CareerPageTabs } from "./career-page-tabs.js";
+import { EvidenceSignpost, ProfileSignpostArea } from "./career-signposts.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import { HostEvidenceAfter, HostEvidenceBefore } from "./host-panels.js";
 
@@ -105,6 +106,9 @@ export function CareerEvidencePage({
           {lockedReason}
         </p>
       )}
+      {frame.onOpenStep.profile === undefined ? null : (
+        <EvidenceSignpost onOpenProfile={frame.onOpenStep.profile} />
+      )}
       <HostEvidenceBefore />
       {card}
       {knowledge}
@@ -123,7 +127,9 @@ export interface CareerProfilePageProps extends CareerPageProps {
 export function CareerProfilePage({ workflow, ...frame }: CareerProfilePageProps) {
   return (
     <CareerPageFrame {...frame} page="profile" current="Career profile" intro={careerProfileIntro}>
-      {workflow}
+      <ProfileSignpostArea onOpenEvidence={frame.onOpenStep.evidence}>
+        {workflow}
+      </ProfileSignpostArea>
     </CareerPageFrame>
   );
 }
