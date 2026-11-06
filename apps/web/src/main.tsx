@@ -1,5 +1,5 @@
-import { ScreensI18nProvider, screenLocaleFromSearch } from "@draft-loop/ui/i18n";
-import { StrictMode } from "react";
+import { type ScreenLocale, ScreensI18nProvider } from "@draft-loop/ui/i18n";
+import { type ReactNode, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { type ApiSchemas, createApiClient } from "./api-client.js";
@@ -8,6 +8,7 @@ import { desktopSignIn, withDesktopSignIn } from "./desktop-sign-in.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
+import { initialScreenLocale, saveScreenLanguage } from "./screen-language-choice.js";
 import { createTokenStore } from "./session.js";
 import { ServiceUnreachable } from "./sign-in.js";
 import "./styles.css";
@@ -18,8 +19,31 @@ const element = document.getElementById("root");
 if (element === null) throw new Error("The page has no root element.");
 const root = createRoot(element);
 const createClient = (token: string) => createApiClient({ token });
-// Development builds show the pseudo-locale with `?locale=pseudo`; a release shows English.
-const screenLocale = import.meta.env.DEV ? screenLocaleFromSearch(location.search) : "en";
+const localStorage = () => globalThis.localStorage;
+// The saved screen language, else the browser's (the desktop client's window passes its own);
+// development builds also take `?locale=pseudo` from the address.
+const firstScreenLocale = initialScreenLocale({
+  storage: localStorage,
+  languages: navigator.languages,
+  search: location.search,
+  development: import.meta.env.DEV,
+});
+
+/** The screens in the chosen language; Workspace settings changes it and it is saved here. */
+function Screens({ children }: { readonly children: ReactNode }) {
+  const [locale, setLocale] = useState<ScreenLocale>(firstScreenLocale);
+  return (
+    <ScreensI18nProvider
+      locale={locale}
+      onChoose={(language) => {
+        saveScreenLanguage(localStorage, language);
+        setLocale(language);
+      }}
+    >
+      {children}
+    </ScreensI18nProvider>
+  );
+}
 
 /** The screen's own address, where the identity provider returns after signing in and out. */
 const screenAddress = `${location.origin}/`;
@@ -60,10 +84,10 @@ createApiClient({})
   .then((screen) =>
     root.render(
       <StrictMode>
-        <ScreensI18nProvider locale={screenLocale}>
+        <Screens>
           <NewReleaseWatch />
           {screen}
-        </ScreensI18nProvider>
+        </Screens>
       </StrictMode>,
     ),
   );

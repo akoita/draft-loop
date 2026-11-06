@@ -220,7 +220,7 @@ preset does not add its provider to release checks.
 
 ### Choosing models on screen
 
-**On screen**, **Change models** opens one editor with **Presets** and
+**On screen**, **Settings** opens the workspace settings: one model editor with **Presets** and
 **Custom** choices. It fits a 1280×800 window without scrolling.
 
 | Part                          | What it shows                                                                                                                                                                                                               |
@@ -247,7 +247,7 @@ preset does not add its provider to release checks.
   provider defaults, unknown context windows." when the next run would attach
   none.
 - **Suggested model ids.** When provider model discovery fails or returns
-  nothing, the setup and **Change models** forms suggest exact ids from the
+  nothing, the setup and **Settings** model forms suggest exact ids from the
   catalog. A suggestion is not guaranteed to work with your account or plan.
   You can still enter any exact id. Local endpoints stay free text.
 
