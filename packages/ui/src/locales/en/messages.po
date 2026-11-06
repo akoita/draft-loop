@@ -219,10 +219,6 @@ msgstr "1 responsibility"
 msgid "A credential is required."
 msgstr "A credential is required."
 
-#: packages/ui/src/approval-readiness.ts
-msgid "A deterministic validation check blocks readiness"
-msgstr "A deterministic validation check blocks readiness"
-
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -243,18 +239,6 @@ msgstr "A new review adds another run with the models set for new runs. This run
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 
-#: packages/ui/src/approval-readiness.ts
-msgid "A readiness dimension remains disputed"
-msgstr "A readiness dimension remains disputed"
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A readiness report finding blocks application readiness"
-msgstr "A readiness report finding blocks application readiness"
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A required revision effect is missing"
-msgstr "A required revision effect is missing"
-
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement can be at most {maximumRequirementTextLength} characters."
 msgstr "A requirement can be at most {maximumRequirementTextLength} characters."
@@ -262,10 +246,6 @@ msgstr "A requirement can be at most {maximumRequirementTextLength} characters."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement cannot be empty. Write it out or drop it."
 msgstr "A requirement cannot be empty. Write it out or drop it."
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A rubric threshold is not met"
-msgstr "A rubric threshold is not met"
 
 #: packages/ui/src/run-details.tsx
 msgid "absent"
@@ -1517,11 +1497,6 @@ msgstr "Full draft"
 msgid "Full source"
 msgstr "Full source"
 
-#. placeholder {0}: plural(mode.chunkCount, "chunk")
-#: packages/ui/src/run-evidence-mode.ts
-msgid "Full source did not fit the evidence budget ({0}), so retrieval was used"
-msgstr "Full source did not fit the evidence budget ({0}), so retrieval was used"
-
 #: packages/ui/src/run-details.tsx
 msgid "Gaps: central themes your evidence does not support"
 msgstr "Gaps: central themes your evidence does not support"
@@ -1652,10 +1627,6 @@ msgstr "Independence override rationale"
 #: packages/ui/src/run-details.tsx
 msgid "independence warning"
 msgstr "independence warning"
-
-#: packages/ui/src/approval-readiness.ts
-msgid "Independent readiness review is incomplete"
-msgstr "Independent readiness review is incomplete"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Initial illustration: 10,000 input and 1,000 output tokens per call, with 2 author calls and 1 critic call. Edit every value to reflect your own scenario."
@@ -2086,10 +2057,6 @@ msgstr "no cost cap"
 msgid "no duration cap"
 msgstr "no duration cap"
 
-#: packages/ui/src/run-evidence-mode.ts
-msgid "No eligible chunks for full source, so retrieval was used"
-msgstr "No eligible chunks for full source, so retrieval was used"
-
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
 msgstr "No folder"
@@ -2123,11 +2090,6 @@ msgstr "No required sections"
 #: packages/ui/src/home-model.ts
 msgid "No runs yet"
 msgstr "No runs yet"
-
-#. placeholder {0}: plural(unmatchedRequirements.length, "requirement")
-#: packages/ui/src/run-author-input.ts
-msgid "No sent evidence for {0}"
-msgstr "No sent evidence for {0}"
 
 #: apps/web/src/refusal-text.ts
 msgid "No such job brief."
@@ -2464,10 +2426,6 @@ msgstr "Read the draft as it stands, without change marks"
 #: packages/ui/src/review.tsx
 msgid "Read the job"
 msgstr "Read the job"
-
-#: packages/ui/src/approval-readiness.ts
-msgid "Readiness report inputs are incomplete"
-msgstr "Readiness report inputs are incomplete"
 
 #: packages/ui/src/home-model.ts
 msgid "Reading career evidence…"
@@ -3737,11 +3695,6 @@ msgstr "v"
 #: packages/ui/src/model-profile-details.tsx
 msgid "Validation and availability"
 msgstr "Validation and availability"
-
-#. placeholder {0}: approvalReadinessCheckLabels[blocker.check]
-#: packages/ui/src/approval-readiness.ts
-msgid "Validation check failed: {0}"
-msgstr "Validation check failed: {0}"
 
 #: packages/ui/src/review.tsx
 msgid "Validation details"

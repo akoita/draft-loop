@@ -1,5 +1,3 @@
-import { t } from "@lingui/core/macro";
-
 /**
  * The evidence mode a run actually used, as the review screen shows it.
  *
@@ -124,14 +122,14 @@ export function runEvidenceModeDisplay(
   if (mode.fallbackReason === "budget-exceeded") {
     return {
       kind: "fallback",
-      stripStatus: t`Full source did not fit the evidence budget (${plural(mode.chunkCount, "chunk")}), so retrieval was used`,
+      stripStatus: `Full source did not fit the evidence budget (${plural(mode.chunkCount, "chunk")}), so retrieval was used`,
       panelDetail: "retrieval; full source did not fit",
     };
   }
   if (mode.fallbackReason === "no-eligible-chunks") {
     return {
       kind: "fallback",
-      stripStatus: t`No eligible chunks for full source, so retrieval was used`,
+      stripStatus: "No eligible chunks for full source, so retrieval was used",
       panelDetail: "retrieval; no full-source chunks",
     };
   }

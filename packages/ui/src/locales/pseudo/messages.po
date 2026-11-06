@@ -219,10 +219,6 @@ msgstr ""
 msgid "A credential is required."
 msgstr ""
 
-#: packages/ui/src/approval-readiness.ts
-msgid "A deterministic validation check blocks readiness"
-msgstr ""
-
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr ""
@@ -243,28 +239,12 @@ msgstr ""
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr ""
 
-#: packages/ui/src/approval-readiness.ts
-msgid "A readiness dimension remains disputed"
-msgstr ""
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A readiness report finding blocks application readiness"
-msgstr ""
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A required revision effect is missing"
-msgstr ""
-
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement can be at most {maximumRequirementTextLength} characters."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement cannot be empty. Write it out or drop it."
-msgstr ""
-
-#: packages/ui/src/approval-readiness.ts
-msgid "A rubric threshold is not met"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -1517,11 +1497,6 @@ msgstr ""
 msgid "Full source"
 msgstr ""
 
-#. placeholder {0}: plural(mode.chunkCount, "chunk")
-#: packages/ui/src/run-evidence-mode.ts
-msgid "Full source did not fit the evidence budget ({0}), so retrieval was used"
-msgstr ""
-
 #: packages/ui/src/run-details.tsx
 msgid "Gaps: central themes your evidence does not support"
 msgstr ""
@@ -1651,10 +1626,6 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "independence warning"
-msgstr ""
-
-#: packages/ui/src/approval-readiness.ts
-msgid "Independent readiness review is incomplete"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -2086,10 +2057,6 @@ msgstr ""
 msgid "no duration cap"
 msgstr ""
 
-#: packages/ui/src/run-evidence-mode.ts
-msgid "No eligible chunks for full source, so retrieval was used"
-msgstr ""
-
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
 msgstr ""
@@ -2122,11 +2089,6 @@ msgstr ""
 
 #: packages/ui/src/home-model.ts
 msgid "No runs yet"
-msgstr ""
-
-#. placeholder {0}: plural(unmatchedRequirements.length, "requirement")
-#: packages/ui/src/run-author-input.ts
-msgid "No sent evidence for {0}"
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
@@ -2463,10 +2425,6 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Read the job"
-msgstr ""
-
-#: packages/ui/src/approval-readiness.ts
-msgid "Readiness report inputs are incomplete"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -3736,11 +3694,6 @@ msgstr ""
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "Validation and availability"
-msgstr ""
-
-#. placeholder {0}: approvalReadinessCheckLabels[blocker.check]
-#: packages/ui/src/approval-readiness.ts
-msgid "Validation check failed: {0}"
 msgstr ""
 
 #: packages/ui/src/review.tsx
