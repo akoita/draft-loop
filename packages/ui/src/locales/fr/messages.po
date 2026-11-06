@@ -4391,6 +4391,10 @@ msgstr "Reprendre la relecture interrompue"
 msgid "Resume review"
 msgstr "Reprendre la relecture"
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Resume the conversation"
+msgstr "Reprendre la conversation"
+
 #: packages/ui/src/review-run-status.ts
 msgid "Resume the review so the critic can check it. Approval and export need a finished critique."
 msgstr "Reprenez la relecture pour que le relecteur puisse la vérifier. L’approbation et l’export demandent une critique terminée."
@@ -5361,6 +5365,10 @@ msgstr "La politique configurée est illisible ; remplacez-la avant de démarrer
 #: apps/web/src/consent.tsx
 msgid "The consent does not name"
 msgstr "Le consentement ne mentionne pas"
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
+msgstr "La conversation est en pause. Vos réponses sont enregistrées ; reprenez quand vous voulez."
 
 #: apps/web/src/credits-model.ts
 msgid "The credit estimate could not be read."
