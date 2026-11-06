@@ -106,6 +106,11 @@ const sessionView = z
       .string()
       .describe("The interviewer's opening offer of the proposed topics, worded without a model."),
     published_source_id: z.string().optional(),
+    interviewer_available: z
+      .boolean()
+      .describe(
+        "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable.",
+      ),
   })
   .meta({ id: "CareerInterviewSessionView" });
 
@@ -299,6 +304,7 @@ export function registerCareerInterviewRoutes(
       session.topics.filter((topic) => topic.status === "proposed"),
     ),
     ...(published === undefined ? {} : { published_source_id: published }),
+    interviewer_available: interview.route !== undefined && interview.allowProviderData,
   });
 
   const handled = async <T>(

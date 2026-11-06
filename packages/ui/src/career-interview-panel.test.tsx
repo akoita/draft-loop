@@ -8,7 +8,12 @@ import {
   careerInterviewRefusal,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
-import { CareerInterviewPanel, type CareerInterviewPanelProps } from "./career-interview-panel.js";
+import {
+  CareerInterviewPanel,
+  type CareerInterviewPanelProps,
+  careerInterviewSendsOnKey,
+  careerInterviewTopicStatusLabel,
+} from "./career-interview-panel.js";
 
 // Invented topics and answers only.
 const proposedSession: CareerInterviewSessionView = {
@@ -76,6 +81,19 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("You confirm every summary");
   });
 
+  it("says the interviewer is not set up instead of offering topics it cannot discuss", () => {
+    const html = render({ session: { ...proposedSession, interviewerAvailable: false } });
+    expect(html).toContain("The interviewer is not set up on this server");
+    expect(html).not.toContain("Talk about this");
+    expect(html).toContain("Pause for now");
+  });
+
+  it("still lets the candidate confirm a summary when the interviewer is not set up", () => {
+    const html = render({ session: { ...summarisedSession, interviewerAvailable: false } });
+    expect(html).toContain("Confirm as evidence");
+    expect(html).not.toContain("The interviewer is not set up");
+  });
+
   it("offers a proposed topic, a no, and the candidate's own subject", () => {
     const html = render({ session: proposedSession });
     expect(html).toContain("Would you like to talk about it?");
@@ -98,6 +116,31 @@ describe("CareerInterviewPanel", () => {
     expect(html).not.toContain("Answer by voice");
   });
 
+  it("shows the turns as chat bubbles and lists the session's topics with their state", () => {
+    const html = render({ session: openSession });
+    expect(html).toContain("interview-turn interview-turn-interviewer");
+    expect(html).toContain("interview-turn interview-turn-candidate");
+    expect(html).toContain('aria-label="Topics in this conversation"');
+    expect(html).toContain("Talking now");
+    expect(html).toContain('aria-current="step"');
+    expect(html).toContain("Enter sends, Shift+Enter starts a new line.");
+  });
+
+  it("sends on Enter but not on Shift+Enter or while composing a character", () => {
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: false })).toBe(true);
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: true })).toBe(false);
+    expect(careerInterviewSendsOnKey({ key: "Enter", shiftKey: false, isComposing: true })).toBe(
+      false,
+    );
+    expect(careerInterviewSendsOnKey({ key: "a", shiftKey: false })).toBe(false);
+  });
+
+  it("words every topic state for the side list", () => {
+    expect(careerInterviewTopicStatusLabel("proposed")).toBe("Suggested");
+    expect(careerInterviewTopicStatusLabel("summarised")).toBe("Summary to confirm");
+    expect(careerInterviewTopicStatusLabel("closed")).toBe("Finished");
+  });
+
   it("offers voice input beside the answer when the host provides it", () => {
     const html = render({
       session: openSession,
@@ -107,6 +150,28 @@ describe("CareerInterviewPanel", () => {
       },
     });
     expect(html).toContain("Answer by voice");
+  });
+
+  it("offers quick replies as chips above the answer box", () => {
+    const html = render({ session: openSession });
+    expect(html).toContain("Quick replies");
+    expect(html.indexOf("interview-chip")).toBeLessThan(html.indexOf("Your answer"));
+  });
+
+  it("shows the summary as a card after the conversation it sums up", () => {
+    const html = render({
+      session: {
+        ...summarisedSession,
+        topics: summarisedSession.topics.map((topic) => ({
+          ...topic,
+          turns: [{ role: "interviewer" as const, text: "What did you learn that year?" }],
+        })),
+      },
+    });
+    expect(html).toContain("interview-summary-card");
+    expect(html.indexOf("What did you learn that year?")).toBeLessThan(
+      html.indexOf("Summary of what you said"),
+    );
   });
 
   it("shows the summary to edit, where it goes and who may read it", () => {
