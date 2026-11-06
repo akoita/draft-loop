@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { WorkspaceReadiness } from "./model.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import type { RequirementRefusalAction } from "./start-requirements-model.js";
@@ -106,13 +107,13 @@ const requirementsLabel = "Job requirements reviewed";
 function requirementRefusalFix(action: RequirementRefusalAction): StartConditionAction | null {
   switch (action) {
     case "use-reviewed":
-      return { id: "use-reviewed-requirements", label: "Use the reviewed requirements instead" };
+      return { id: "use-reviewed-requirements", label: t`Use the reviewed requirements instead` };
     case "review-draft":
-      return { id: "review-requirements", label: "Review requirements" };
+      return { id: "review-requirements", label: t`Review requirements` };
     case "extract":
-      return { id: "extract-requirements", label: "Extract requirements into a brief" };
+      return { id: "extract-requirements", label: t`Extract requirements into a brief` };
     case "extract-again":
-      return { id: "extract-requirements", label: "Extract requirements again" };
+      return { id: "extract-requirements", label: t`Extract requirements again` };
     default:
       return null;
   }
@@ -138,7 +139,7 @@ function requirementsCondition(
         input.requirementAction === "extract-again"
           ? requirementRefusalFix("extract-again")
           : input.requirementAction === "extract"
-            ? { id: "extract-requirements", label: "Extract requirements" }
+            ? { id: "extract-requirements", label: t`Extract requirements` }
             : null,
     };
   }
@@ -149,11 +150,11 @@ function requirementsCondition(
       done: false,
       detail:
         steps.find((step) => jobDescriptionSteps.includes(step)) ??
-        "Add the target job description.",
+        t`Add the target job description.`,
       action:
         input.requirementAction === "review-draft"
           ? requirementRefusalFix("review-draft")
-          : { id: "add-job-description", label: "Add job description" },
+          : { id: "add-job-description", label: t`Add job description` },
     };
   }
   if (refusal !== null) {
@@ -183,14 +184,14 @@ function requirementsCondition(
     ? { id: "requirements", label: requirementsLabel, done: true, action: null }
     : {
         id: "requirements",
-        label: "Job requirements read from the job description",
+        label: t`Job requirements read from the job description`,
         done: true,
         action: null,
       };
 }
 
 function profileCondition(input: StartChecklistInput): StartCondition | null {
-  const label = "Reviewed career profile selected";
+  const label = t`Reviewed career profile selected`;
   const reason = input.startDisabledReason;
   if (reason === candidateProfilePendingBlockerMessage) {
     return { id: "profile", label, done: false, detail: reason, action: null };
@@ -200,7 +201,7 @@ function profileCondition(input: StartChecklistInput): StartCondition | null {
       id: "profile",
       label,
       done: true,
-      detail: `Version ${input.candidateProfile.version}.`,
+      detail: t`Version ${input.candidateProfile.version}.`,
       action: null,
     };
   }
@@ -210,7 +211,7 @@ function profileCondition(input: StartChecklistInput): StartCondition | null {
       label,
       done: false,
       detail: reason,
-      action: { id: "choose-profile", label: "Choose profile" },
+      action: { id: "choose-profile", label: t`Choose profile` },
     };
   }
   // Nothing asks for a profile: this host starts without one.
@@ -218,13 +219,13 @@ function profileCondition(input: StartChecklistInput): StartCondition | null {
 }
 
 function providerSignInCondition(input: StartChecklistInput): StartCondition {
-  const label = "Provider sign-in ready";
+  const label = t`Provider sign-in ready`;
   if (input.setup.fixtureMode || !input.transmission.required) {
     return {
       id: "provider-sign-in",
       label,
       done: true,
-      detail: "Nothing is sent to a provider from this workspace.",
+      detail: t`Nothing is sent to a provider from this workspace.`,
       action: null,
     };
   }
@@ -240,7 +241,7 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
     };
   }
   const action: StartConditionAction | null = input.canOpenProviderSignIn
-    ? { id: "open-provider-sign-in", label: "Open provider sign-in" }
+    ? { id: "open-provider-sign-in", label: t`Open provider sign-in` }
     : null;
   if (state === "missing") {
     return {
@@ -248,7 +249,7 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
       label,
       done: false,
       advisory: true,
-      detail: summary === null ? "Sign in on Home, under Workspace settings." : `${summary}.`,
+      detail: summary === null ? t`Sign in on Home, under Workspace settings.` : `${summary}.`,
       action,
     };
   }
@@ -258,20 +259,20 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
     label,
     done: false,
     checkedAtStart: true,
-    detail: "Sign-in is on Home, under Workspace settings.",
+    detail: t`Sign-in is on Home, under Workspace settings.`,
     action,
   };
 }
 
 function transmissionCondition(input: StartChecklistInput): StartCondition {
-  const label = "Data sent to providers acknowledged";
+  const label = t`Data sent to providers acknowledged`;
   const { required, acknowledged } = input.transmission;
   if (!required || acknowledged) {
     return {
       id: "transmission",
       label,
       done: true,
-      ...(required ? {} : { detail: "Nothing leaves this workspace." }),
+      ...(required ? {} : { detail: t`Nothing leaves this workspace.` }),
       action: null,
     };
   }
@@ -279,8 +280,8 @@ function transmissionCondition(input: StartChecklistInput): StartCondition {
     id: "transmission",
     label,
     done: false,
-    detail: "Acknowledge provider transmission above.",
-    action: { id: "review-data-sent", label: "Review data sent" },
+    detail: t`Acknowledge provider transmission above.`,
+    action: { id: "review-data-sent", label: t`Review data sent` },
   };
 }
 
@@ -365,9 +366,9 @@ function blockedHint(condition: StartCondition): string {
 
 /** The Start button's text: it names the first unmet condition while the start is blocked. */
 export function startButtonLabel(conditions: readonly StartCondition[], pending: boolean): string {
-  if (pending) return "Starting review…";
+  if (pending) return t`Starting review…`;
   const first = firstUnmetStartCondition(conditions);
-  return first === null ? "Start author–critic review" : `Start review · ${blockedHint(first)}`;
+  return first === null ? t`Start author–critic review` : t`Start review · ${blockedHint(first)}`;
 }
 
 /** Hover text for the disabled start button; undefined once nothing blocks it. */
@@ -375,5 +376,5 @@ export function startChecklistTooltip(conditions: readonly StartCondition[]): st
   const unmet = conditions.filter(blocksStart);
   return unmet.length === 0
     ? undefined
-    : `Can't start yet: ${unmet.map((condition) => condition.detail ?? condition.label).join(" ")}`;
+    : t`Can't start yet: ${unmet.map((condition) => condition.detail ?? condition.label).join(" ")}`;
 }

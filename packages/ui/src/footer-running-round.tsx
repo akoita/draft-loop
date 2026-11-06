@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The round that is running, shown in the review footer in place of the gate's controls.
  *
@@ -122,14 +123,14 @@ export function footerRunningRound(input: FooterRunningRoundInput): FooterRunnin
 /** The running round's strip: what runs, the directions it was given, and Stop or Resume. */
 export function FooterRunningRoundStrip({ round }: { round: FooterRunningRound }): JSX.Element {
   return (
-    <section className="footer-running-round" aria-label="current round">
+    <section className="footer-running-round" aria-label={t`current round`}>
       {round.activity === null ? null : <p className="footer-running-activity">{round.activity}</p>}
       {round.execution === null ? null : (
         <p className="footer-running-execution">{round.execution}</p>
       )}
       {round.direction === null ? null : (
         <p className="author-input-direction footer-running-direction">
-          <span className="label">Your directions for this round</span>
+          <span className="label">{t`Your directions for this round`}</span>
           <q>{round.direction}</q>
         </p>
       )}
@@ -145,9 +146,11 @@ export function FooterRunningRoundStrip({ round }: { round: FooterRunningRound }
             {action.label}
           </button>
         ))}
-        <button className="next-step-action" type="button" onClick={round.onShowProgress}>
-          Show run progress
-        </button>
+        <button
+          className="next-step-action"
+          type="button"
+          onClick={round.onShowProgress}
+        >{t`Show run progress`}</button>
       </div>
     </section>
   );

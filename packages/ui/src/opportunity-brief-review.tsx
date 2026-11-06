@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { OpportunityRecordResult } from "./bridge.js";
@@ -71,7 +72,7 @@ function BriefExcerpt({ excerpt }: { readonly excerpt: string | undefined }) {
   if (excerpt === undefined) return null;
   return (
     <figure className="brief-excerpt">
-      <figcaption className="brief-excerpt-label">From the job text</figcaption>
+      <figcaption className="brief-excerpt-label">{t`From the job text`}</figcaption>
       <blockquote className="brief-excerpt-quote">{excerpt}</blockquote>
     </figure>
   );
@@ -105,7 +106,7 @@ function RequirementRow({
         <span className={`brief-priority brief-priority-${requirement.priority}`}>
           {requirementPriorityLabel(requirement.priority)}
         </span>
-        {requirement.dropped ? <span className="brief-dropped-tag">Dropped</span> : null}
+        {requirement.dropped ? <span className="brief-dropped-tag">{t`Dropped`}</span> : null}
       </div>
       {editing && !requirement.dropped ? (
         <textarea
@@ -113,7 +114,7 @@ function RequirementRow({
           value={requirement.text}
           maxLength={maximumRequirementTextLength + 200}
           disabled={busy}
-          aria-label={`Requirement ${position} text`}
+          aria-label={t`Requirement ${position} text`}
           onChange={(event) => onText(requirement.id, event.target.value)}
         />
       ) : (
@@ -121,17 +122,17 @@ function RequirementRow({
       )}
       <BriefExcerpt excerpt={requirement.excerpt} />
       <p className="brief-source">
-        <span>Source</span> {describeBriefSources(record.sources, requirement.sourceIds)}
+        <span>{t`Source`}</span> {describeBriefSources(record.sources, requirement.sourceIds)}
       </p>
       {editing ? (
         <div className="brief-item-actions">
           {requirement.dropped ? null : (
             <label className="brief-priority-field">
-              <span>Priority</span>
+              <span>{t`Priority`}</span>
               <select
                 value={requirement.priority}
                 disabled={busy}
-                aria-label={`Requirement ${position} priority`}
+                aria-label={t`Requirement ${position} priority`}
                 onChange={(event) =>
                   onPriority(requirement.id, event.target.value as RequirementPriority)
                 }
@@ -149,21 +150,17 @@ function RequirementRow({
               className="button button-outline"
               type="button"
               disabled={busy}
-              aria-label={`Restore requirement ${position}`}
+              aria-label={t`Restore requirement ${position}`}
               onClick={() => onRestore(requirement.id)}
-            >
-              Restore
-            </button>
+            >{t`Restore`}</button>
           ) : (
             <button
               className="button button-quiet"
               type="button"
               disabled={busy}
-              aria-label={`Drop requirement ${position}`}
+              aria-label={t`Drop requirement ${position}`}
               onClick={() => onDrop(requirement.id)}
-            >
-              Drop
-            </button>
+            >{t`Drop`}</button>
           )}
         </div>
       ) : null}
@@ -216,23 +213,21 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
       >
         <div className="modal-header">
           <div>
-            <p className="eyebrow">DraftLoop / Opportunity brief</p>
-            <h2 id="brief-review-title">Review requirements</h2>
+            <p className="eyebrow">{t`DraftLoop / Opportunity brief`}</p>
+            <h2 id="brief-review-title">{t`Review requirements`}</h2>
           </div>
           <button className="button button-quiet" type="button" onClick={onClose}>
-            {discardArmed ? "Discard changes" : "Close"}
+            {discardArmed ? t`Discard changes` : t`Close`}
             <kbd>Esc</kbd>
           </button>
         </div>
         {load === "loading" ? (
-          <p className="setup-note" role="status">
-            Loading the brief…
-          </p>
+          <p className="setup-note" role="status">{t`Loading the brief…`}</p>
         ) : null}
         {load === "failed" ? (
           <>
             <p className="setup-blocker" role="alert">
-              {loadMessage ?? "The brief could not be loaded."}
+              {loadMessage ?? t`The brief could not be loaded.`}
             </p>
             <div className="approval-actions">
               <button
@@ -240,9 +235,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                 type="button"
                 disabled={onRetry === undefined}
                 onClick={() => onRetry?.()}
-              >
-                Try again
-              </button>
+              >{t`Try again`}</button>
             </div>
           </>
         ) : null}
@@ -251,52 +244,50 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
             <p className="modal-copy" id="brief-review-copy">
               {reviewed
                 ? editing
-                  ? `Editing reviewed version ${record.version}. Saving creates a new draft; this reviewed version stays unchanged and must be reviewed again before a run uses the new one.`
-                  : `Reviewed version ${record.version}. It is read-only; a run can use it. Edit creates a new draft you review again.`
-                : `Draft version ${record.version}. Each save creates the next draft. Mark it reviewed before a run uses it.`}
+                  ? t`Editing reviewed version ${record.version}. Saving creates a new draft; this reviewed version stays unchanged and must be reviewed again before a run uses the new one.`
+                  : t`Reviewed version ${record.version}. It is read-only; a run can use it. Edit creates a new draft you review again.`
+                : t`Draft version ${record.version}. Each save creates the next draft. Mark it reviewed before a run uses it.`}
             </p>
             <p className="brief-version" role="status">
               <span className="status-badge">
-                {reviewed ? `Reviewed v${record.version}` : `Draft v${record.version}`}
+                {reviewed ? t`Reviewed v${record.version}` : t`Draft v${record.version}`}
               </span>
             </p>
             <dl className="brief-facts">
               <div>
-                <dt>Role</dt>
-                <dd>{record.role?.value ?? "Not found in the job description"}</dd>
+                <dt>{t`Role`}</dt>
+                <dd>{record.role?.value ?? t`Not found in the job description`}</dd>
               </div>
               <div>
-                <dt>Employer</dt>
+                <dt>{t`Employer`}</dt>
                 {edit !== null && canEnterEmployer(record) ? (
                   <dd>
                     <label className="brief-employer-field">
-                      <span>Entered by you</span>
+                      <span>{t`Entered by you`}</span>
                       <input
                         type="text"
                         value={edit.employer}
                         maxLength={maximumRequirementTextLength + 200}
                         disabled={pending}
-                        placeholder="Not named in the job posting"
-                        aria-label="Employer (entered by you)"
+                        placeholder={t`Not named in the job posting`}
+                        aria-label={t`Employer (entered by you)`}
                         onChange={(event) => onEmployer?.(event.target.value)}
                       />
                     </label>
-                    <span className="setup-note">
-                      Saved as your own entry, never as something the job posting says.
-                    </span>
+                    <span className="setup-note">{t`Saved as your own entry, never as something the job posting says.`}</span>
                   </dd>
                 ) : (
                   <dd>
-                    {record.employer?.value ?? "Not named in the job posting"}
+                    {record.employer?.value ?? t`Not named in the job posting`}
                     {isEmployerEnteredByYou(record) ? (
-                      <span className="brief-entered-tag">Entered by you</span>
+                      <span className="brief-entered-tag">{t`Entered by you`}</span>
                     ) : null}
                   </dd>
                 )}
               </div>
             </dl>
             {record.sources.some((source) => source.textOrigin === "job-posting-json-ld") ? (
-              <p className="setup-note">Read from the page's job posting data.</p>
+              <p className="setup-note">{t`Read from the page's job posting data.`}</p>
             ) : null}
             {notice === null ? null : (
               <p className="error-banner" role="alert">
@@ -305,10 +296,11 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
             )}
             <section aria-labelledby="brief-requirements-title">
               <h3 className="brief-heading" id="brief-requirements-title">
-                Requirements ({requirements.filter((requirement) => !requirement.dropped).length})
+                {t`Requirements (`}
+                {requirements.filter((requirement) => !requirement.dropped).length})
               </h3>
               {requirements.length === 0 ? (
-                <p className="setup-note">This brief has no requirements.</p>
+                <p className="setup-note">{t`This brief has no requirements.`}</p>
               ) : (
                 <ul className="brief-list">
                   {requirements.map((requirement, index) => (
@@ -330,10 +322,11 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
             </section>
             <section aria-labelledby="brief-responsibilities-title">
               <h3 className="brief-heading" id="brief-responsibilities-title">
-                Responsibilities ({record.responsibilities.length})
+                {t`Responsibilities (`}
+                {record.responsibilities.length})
               </h3>
               {record.responsibilities.length === 0 ? (
-                <p className="setup-note">This brief has no responsibilities.</p>
+                <p className="setup-note">{t`This brief has no responsibilities.`}</p>
               ) : (
                 <ul className="brief-list">
                   {record.responsibilities.map((responsibility) => (
@@ -341,7 +334,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                       <p className="brief-item-copy">{responsibility.text}</p>
                       <BriefExcerpt excerpt={responsibility.excerpt} />
                       <p className="brief-source">
-                        <span>Source</span>{" "}
+                        <span>{t`Source`}</span>{" "}
                         {describeBriefSources(record.sources, responsibility.sourceIds)}
                       </p>
                     </li>
@@ -352,7 +345,8 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
             {openIssues.length === 0 ? null : (
               <section aria-labelledby="brief-issues-title">
                 <h3 className="brief-heading" id="brief-issues-title">
-                  Open issues ({openIssues.length})
+                  {t`Open issues (`}
+                  {openIssues.length})
                 </h3>
                 <ul className="brief-list">
                   {openIssues.map((issue) => {
@@ -360,7 +354,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                     return (
                       <li className="brief-item" key={issue.id}>
                         <p className="brief-item-copy">
-                          <strong>{issue.severity === "error" ? "Problem" : "Warning"}:</strong>{" "}
+                          <strong>{issue.severity === "error" ? t`Problem` : t`Warning`}:</strong>{" "}
                           {issue.message}
                         </p>
                         {editing ? (
@@ -371,7 +365,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                               disabled={pending || acknowledged}
                               onClick={() => onAcknowledge(issue.id)}
                             >
-                              {acknowledged ? "Will acknowledge on save" : "Acknowledge"}
+                              {acknowledged ? t`Will acknowledge on save` : t`Acknowledge`}
                             </button>
                           </div>
                         ) : null}
@@ -387,21 +381,23 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
               </p>
             )}
             {!reviewed && !dirty && blockers.length > 0 ? (
-              <ul className="brief-blockers" aria-label="Before this can be reviewed">
+              <ul className="brief-blockers" aria-label={t`Before this can be reviewed`}>
                 {blockers.map((blocker) => (
                   <li key={blocker}>{blocker}</li>
                 ))}
               </ul>
             ) : null}
             {dirty && !reviewed ? (
-              <p className="setup-note" role="status">
-                You have unsaved changes. Save them before marking the brief reviewed.
-              </p>
+              <p
+                className="setup-note"
+                role="status"
+              >{t`You have unsaved changes. Save them before marking the brief reviewed.`}</p>
             ) : null}
             {discardArmed ? (
-              <p className="setup-note" role="status">
-                You have unsaved changes. Choose Discard changes to close without saving.
-              </p>
+              <p
+                className="setup-note"
+                role="status"
+              >{t`You have unsaved changes. Choose Discard changes to close without saving.`}</p>
             ) : null}
             {saved && !dirty ? (
               <p className="setup-note" role="status" tabIndex={-1} ref={savedNoteRef}>
@@ -415,9 +411,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                   type="button"
                   disabled={pending}
                   onClick={onStartEdit}
-                >
-                  Edit
-                </button>
+                >{t`Edit`}</button>
               ) : (
                 <>
                   <button
@@ -427,10 +421,10 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                     onClick={onSave}
                   >
                     {busy === "saving"
-                      ? "Saving…"
+                      ? t`Saving…`
                       : reviewed
-                        ? "Save as new draft"
-                        : "Save changes"}
+                        ? t`Save as new draft`
+                        : t`Save changes`}
                   </button>
                   {reviewed ? (
                     <button
@@ -438,9 +432,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                       type="button"
                       disabled={pending}
                       onClick={onCancelEdit}
-                    >
-                      Cancel editing
-                    </button>
+                    >{t`Cancel editing`}</button>
                   ) : (
                     <>
                       <button
@@ -452,7 +444,7 @@ export function OpportunityBriefReviewView(props: OpportunityBriefReviewViewProp
                         }
                         onClick={onReview}
                       >
-                        {busy === "reviewing" ? "Marking reviewed…" : "Mark reviewed"}
+                        {busy === "reviewing" ? t`Marking reviewed…` : t`Mark reviewed`}
                       </button>
                       {reviewReason === null ? null : (
                         <p className="brief-review-reason" id="brief-review-disabled-reason">

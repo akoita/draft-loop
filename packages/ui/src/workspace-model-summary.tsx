@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 
 import {
   modelProfileLevelSummary,
@@ -58,13 +59,13 @@ function appliedProfilesLine(applied: ModelProfileReferences) {
   if (preset !== undefined) {
     return (
       <p className="workspace-model-summary-profiles">
-        Preset: {withModelProfileLevels(presetDisplayName(preset.label), applied)}
+        {t`Preset:`} {withModelProfileLevels(presetDisplayName(preset.label), applied)}
       </p>
     );
   }
   return (
     <p className="workspace-model-summary-profiles">
-      Custom profile pair
+      {t`Custom profile pair`}
       <code className="workspace-model-summary-id">
         {applied.author.id}@{applied.author.version} and {applied.critic.id}@
         {applied.critic.version}

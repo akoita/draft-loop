@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { ReviewFinding } from "./model.js";
 import { formatReadinessBlockers } from "./readiness-blocker-groups.js";

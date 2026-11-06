@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * "Use this run's draft" on one side of the run comparison: a small confirm with an optional
  * reason, after which that run's draft is the one the application approves and exports.
@@ -56,11 +57,9 @@ export function RunDraftChoice({
       <button
         className="button button-quiet use-run-draft-button"
         type="button"
-        aria-label={`Use ${label}'s draft`}
+        aria-label={t`Use ${label}'s draft`}
         onClick={() => setStatus({ kind: "confirming" })}
-      >
-        Use this run's draft
-      </button>
+      >{t`Use this run's draft`}</button>
     );
   }
 
@@ -83,12 +82,12 @@ export function RunDraftChoice({
   };
 
   return (
-    <form className="use-run-draft-confirm" aria-label={`Use ${label}'s draft`} onSubmit={submit}>
+    <form className="use-run-draft-confirm" aria-label={t`Use ${label}'s draft`} onSubmit={submit}>
       <p>
-        {label}'s draft becomes the one you approve and export. No run is deleted, and revisions
-        still happen on the latest run.
+        {label}
+        {t`'s draft becomes the one you approve and export. No run is deleted, and revisions still happen on the latest run.`}
       </p>
-      <label htmlFor={reasonId}>Reason (optional)</label>
+      <label htmlFor={reasonId}>{t`Reason (optional)`}</label>
       <textarea
         id={reasonId}
         rows={2}
@@ -103,16 +102,14 @@ export function RunDraftChoice({
       ) : null}
       <div className="approval-actions">
         <button className="button button-primary" type="submit" disabled={status.kind === "saving"}>
-          {status.kind === "saving" ? "Choosing…" : `Use ${label}'s draft`}
+          {status.kind === "saving" ? t`Choosing…` : t`Use ${label}'s draft`}
         </button>
         <button
           className="button button-quiet"
           type="button"
           disabled={status.kind === "saving"}
           onClick={() => setStatus({ kind: "closed" })}
-        >
-          Cancel
-        </button>
+        >{t`Cancel`}</button>
       </div>
     </form>
   );

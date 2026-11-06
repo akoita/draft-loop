@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Single-draft sheet width.
  *
@@ -289,11 +290,11 @@ export function DraftWidthHandle({
       ref={handleRef}
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize draft"
+      aria-label={t`Resize draft`}
       aria-valuenow={width}
       aria-valuemin={minimumDraftWidth}
       aria-valuemax={maximum}
-      aria-valuetext={`Draft ${width} pixels wide`}
+      aria-valuetext={t`Draft ${width} pixels wide`}
       tabIndex={0}
       onKeyDown={(event) => {
         const next = nextDraftWidthForKey(event.key, event.shiftKey, width, maximum);

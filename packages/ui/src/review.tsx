@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   type CSSProperties,
   type ReactNode,
@@ -591,12 +592,12 @@ function SideRail({
   readonly onOpenFindings?: () => void;
 }) {
   return (
-    <nav className="side-rail" aria-label="Workspace sections">
+    <nav className="side-rail" aria-label={t`Workspace sections`}>
       <BrandMark />
       {onOpenSources === null ? null : (
         <>
-          <a className="rail-button" href="#artifact-review" title="Document — the draft">
-            <span className="sr-only">Document — the draft</span>
+          <a className="rail-button" href="#artifact-review" title={t`Document — the draft`}>
+            <span className="sr-only">{t`Document — the draft`}</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
               <rect
                 x="4.5"
@@ -618,10 +619,10 @@ function SideRail({
           <button
             className="rail-button"
             type="button"
-            title="Findings — the queue"
+            title={t`Findings — the queue`}
             onClick={onOpenFindings}
           >
-            <span className="sr-only">Findings — the queue</span>
+            <span className="sr-only">{t`Findings — the queue`}</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
               <path
                 d="M4 6h16M4 12h16M4 18h10"
@@ -634,10 +635,10 @@ function SideRail({
           <button
             className="rail-button"
             type="button"
-            title="Sources — claim traceability"
+            title={t`Sources — claim traceability`}
             onClick={onOpenSources}
           >
-            <span className="sr-only">Sources — claim traceability</span>
+            <span className="sr-only">{t`Sources — claim traceability`}</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
               <path
                 d="M12 4.5 3.8 8.2 12 11.9l8.2-3.7L12 4.5Z"
@@ -671,7 +672,7 @@ function LoopRail({
 }) {
   return (
     <div className="loop-rail">
-      <ol className="loop-steps" aria-label="Author–critic loop stage">
+      <ol className="loop-steps" aria-label={t`Author–critic loop stage`}>
         {loopSteps.map((label, index) => (
           <li
             className={`loop-step${index < activeIndex ? " loop-step-done" : ""}${
@@ -703,7 +704,9 @@ function LoopRail({
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <span className="loop-round">↺ round {round}</span>
+      <span className="loop-round">
+        {t`↺ round`} {round}
+      </span>
     </div>
   );
 }
@@ -1852,7 +1855,7 @@ export function ReviewWorkspace({
       onClick={() => onAction({ type: "resume" })}
     >
       <PlayIcon />
-      Resume review
+      {t`Resume review`}
     </button>
   );
   const pendingActionReason =
@@ -2086,7 +2089,7 @@ export function ReviewWorkspace({
         >
           <span className="margin-note-kind">
             <span className="margin-note-severity">
-              {finding.severity === "error" ? "Blocking" : "Warning"}
+              {finding.severity === "error" ? t`Blocking` : t`Warning`}
             </span>
             <span className="margin-note-category">{finding.category}</span>
           </span>
@@ -2122,9 +2125,7 @@ export function ReviewWorkspace({
               beginOverride(finding);
               revealFindingInQueue(finding.id, "override");
             }}
-          >
-            Override
-          </button>
+          >{t`Override`}</button>
         </span>
       </li>
     );
@@ -2170,7 +2171,7 @@ export function ReviewWorkspace({
             {sourceState === "unsourced" ? (
               <span className="block-margin-dot" aria-hidden="true" />
             ) : null}
-            {isEdited ? <span className="block-edited-flag">edited</span> : null}
+            {isEdited ? <span className="block-edited-flag">{t`edited`}</span> : null}
           </span>
         ) : null}
         <div className="block-view" hidden={isEditing}>
@@ -2186,8 +2187,8 @@ export function ReviewWorkspace({
         <button
           className="block-open"
           type="button"
-          aria-label={`Edit ${sectionTitle} text`}
-          title={`Edit ${sectionTitle} text`}
+          aria-label={t`Edit ${sectionTitle} text`}
+          title={t`Edit ${sectionTitle} text`}
           hidden={isEditing || !draftEditable}
           onClick={openLine}
           onFocus={openLine}
@@ -2196,11 +2197,11 @@ export function ReviewWorkspace({
         />
         {sourceState === "none" ? null : (
           <span className="sr-only">
-            {sourceState === "sourced" ? "source linked" : "not linked to candidate materials"}
+            {sourceState === "sourced" ? t`source linked` : t`not linked to candidate materials`}
           </span>
         )}
         <textarea
-          aria-label={`Edit ${sectionTitle}`}
+          aria-label={t`Edit ${sectionTitle}`}
           hidden={!isEditing}
           value={draftEdits.text(block.id, block.text)}
           // One row is the floor; the layout effect grows it to its text.
@@ -2273,17 +2274,15 @@ export function ReviewWorkspace({
           ref={paletteDialogRef}
         >
           <div className="palette-header">
-            <h2 id="command-palette-title">Commands</h2>
-            <span className="subtle">
-              Type to narrow · ↑↓ to move · Enter to run · Esc to close
-            </span>
+            <h2 id="command-palette-title">{t`Commands`}</h2>
+            <span className="subtle">{t`Type to narrow · ↑↓ to move · Enter to run · Esc to close`}</span>
           </div>
           <label className="palette-search">
-            <span className="sr-only">Filter commands</span>
+            <span className="sr-only">{t`Filter commands`}</span>
             <input
               className="url-input palette-input"
               type="text"
-              placeholder="Search commands…"
+              placeholder={t`Search commands…`}
               value={paletteQuery}
               autoComplete="off"
               spellCheck={false}
@@ -2305,9 +2304,7 @@ export function ReviewWorkspace({
             />
           </label>
           {paletteMatches.length === 0 ? (
-            <p className="palette-empty" role="status">
-              No command matches that search.
-            </p>
+            <p className="palette-empty" role="status">{t`No command matches that search.`}</p>
           ) : (
             <ul className="palette-list">
               {paletteMatches.map((command, index) => (
@@ -2348,15 +2345,15 @@ export function ReviewWorkspace({
       <>
         <dl className="preflight-policy-grid">
           <div>
-            <dt>Data class</dt>
+            <dt>{t`Data class`}</dt>
             <dd>{preflight.dataClass}</dd>
           </div>
           <div>
-            <dt>Retention preference</dt>
+            <dt>{t`Retention preference`}</dt>
             <dd>{preflight.retentionPreference}</dd>
           </div>
           <div>
-            <dt>Author destination</dt>
+            <dt>{t`Author destination`}</dt>
             <dd>
               {preflight.author.company} · {preflight.author.model}
               <br />
@@ -2364,7 +2361,7 @@ export function ReviewWorkspace({
             </dd>
           </div>
           <div>
-            <dt>Critic destination</dt>
+            <dt>{t`Critic destination`}</dt>
             <dd>
               {preflight.critic.company} · {preflight.critic.model}
               <br />
@@ -2372,31 +2369,31 @@ export function ReviewWorkspace({
             </dd>
           </div>
           <div>
-            <dt>Maximum run budget</dt>
+            <dt>{t`Maximum run budget`}</dt>
             <dd>
-              {preflight.budget.maxRounds} rounds ·{" "}
+              {preflight.budget.maxRounds} {t`rounds ·`}{" "}
               {preflight.budget.maxCostUsd === null
-                ? "no cost cap"
+                ? t`no cost cap`
                 : `$${preflight.budget.maxCostUsd.toFixed(2)}`}{" "}
               ·{" "}
               {preflight.budget.maxDurationMs === null
-                ? "no duration cap"
-                : `${preflight.budget.maxDurationMs} ms`}
+                ? t`no duration cap`
+                : t`${preflight.budget.maxDurationMs} ms`}
             </dd>
           </div>
           <div>
-            <dt>Policy fingerprint</dt>
+            <dt>{t`Policy fingerprint`}</dt>
             <dd className="policy-fingerprint">{preflight.fingerprint}</dd>
           </div>
         </dl>
         <div className="preflight-scope">
-          <strong>Exactly what may be transmitted</strong>
+          <strong>{t`Exactly what may be transmitted`}</strong>
           <ul>
             {preflight.transmissionScope.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <strong>Never included</strong>
+          <strong>{t`Never included`}</strong>
           <ul>
             {preflight.excludedScope.map((item) => (
               <li key={item}>{item}</li>
@@ -2412,31 +2409,31 @@ export function ReviewWorkspace({
       >
         <div className="section-heading compact">
           <div>
-            <p className="eyebrow">Provider transmission preflight</p>
+            <p className="eyebrow">{t`Provider transmission preflight`}</p>
             <h2 id="provider-preflight-title">
-              {preflight.required ? "Review data leaving this workspace" : "Demo remains local"}
+              {preflight.required ? t`Review data leaving this workspace` : t`Demo remains local`}
             </h2>
           </div>
           <span className="status-tag">
             {preflight.required
               ? preflight.acknowledged
-                ? "Acknowledged"
-                : "Acknowledgement required"
-              : "No network transmission"}
+                ? t`Acknowledged`
+                : t`Acknowledgement required`
+              : t`No network transmission`}
           </span>
         </div>
         {compact ? (
           <>
             {preflight.required ? (
               <p className="preflight-summary">
-                The review sends the job, your profile and selected evidence excerpts to{" "}
-                {preflight.author.company} · {preflight.author.model} (writer) and{" "}
-                {preflight.critic.company} · {preflight.critic.model} (reviewer), for at most{" "}
-                {preflight.budget.maxRounds} rounds. Your complete evidence is never sent.
+                {t`The review sends the job, your profile and selected evidence excerpts to`}{" "}
+                {preflight.author.company} · {preflight.author.model} {t`(writer) and`}{" "}
+                {preflight.critic.company} · {preflight.critic.model} {t`(reviewer), for at most`}{" "}
+                {preflight.budget.maxRounds} {t`rounds. Your complete evidence is never sent.`}
               </p>
             ) : null}
             <details className="setup-details">
-              <summary>See exactly what is sent</summary>
+              <summary>{t`See exactly what is sent`}</summary>
               {details}
             </details>
           </>
@@ -2453,9 +2450,7 @@ export function ReviewWorkspace({
                   setConfirmedPolicyFingerprint(event.target.checked ? preflight.fingerprint : null)
                 }
               />
-              <span>
-                I reviewed these destinations, data categories, retention preference, and limits.
-              </span>
+              <span>{t`I reviewed these destinations, data categories, retention preference, and limits.`}</span>
             </label>
             <button
               className={`button ${compact ? "button-outline" : "button-primary"}`}
@@ -2467,12 +2462,12 @@ export function ReviewWorkspace({
                   fingerprint: preflight.fingerprint,
                 })
               }
-            >
-              Acknowledge provider transmission
-            </button>
+            >{t`Acknowledge provider transmission`}</button>
           </div>
         ) : preflight.acknowledgedAt === null ? null : (
-          <p className="safe-copy">Acknowledged at {preflight.acknowledgedAt}</p>
+          <p className="safe-copy">
+            {t`Acknowledged at`} {preflight.acknowledgedAt}
+          </p>
         )}
       </section>
     );
@@ -2569,7 +2564,7 @@ export function ReviewWorkspace({
         briefOperations !== undefined ? (
           <div className="job-extraction">
             <p className="setup-note">
-              Requirements reviewed (version {state.setup.reviewedOpportunity.version}).
+              {t`Requirements reviewed (version`} {state.setup.reviewedOpportunity.version}).
             </p>
             <OpportunityBriefReviewAction
               key={briefReviewActionKey(
@@ -2613,11 +2608,11 @@ export function ReviewWorkspace({
     const startControls = (
       <>
         <div className="onboarding-footer">
-          <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
+          <span>{state.setup.fixtureMode ? t`Demo workspace` : t`Real workspace`}</span>
           <span>
             {state.setup.requiredSections.length > 0
-              ? `Required sections: ${state.setup.requiredSections.join(", ")}`
-              : "No required sections"}
+              ? t`Required sections: ${state.setup.requiredSections.join(", ")}`
+              : t`No required sections`}
           </span>
           {renderAutopilotToggle()}
           <button
@@ -2649,9 +2644,9 @@ export function ReviewWorkspace({
         />
         {startPending ? (
           <p className="pending-action-status" role="status" aria-live="polite">
-            Starting review… Elapsed{" "}
-            {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}. Keep this window
-            open while the review starts.
+            {t`Starting review… Elapsed`}{" "}
+            {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}
+            {t`. Keep this window open while the review starts.`}
           </p>
         ) : null}
       </>
@@ -2671,7 +2666,7 @@ export function ReviewWorkspace({
               <div className="spine-identity">
                 {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
                 <div className="spine-identity-meta">
-                  <span className="state-pill state-collecting">Collecting inputs</span>
+                  <span className="state-pill state-collecting">{t`Collecting inputs`}</span>
                 </div>
               </div>
               <div className="spine-loop" />
@@ -2681,12 +2676,9 @@ export function ReviewWorkspace({
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               {compact ? (
                 <>
-                  <p className="eyebrow">Before the review</p>
-                  <h2 id="onboarding-title">Start the review</h2>
-                  <p className="onboarding-copy">
-                    Finish the three steps in order. Career evidence, models, writing policy and
-                    sign-in are workspace settings with their own pages.
-                  </p>
+                  <p className="eyebrow">{t`Before the review`}</p>
+                  <h2 id="onboarding-title">{t`Start the review`}</h2>
+                  <p className="onboarding-copy">{t`Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages.`}</p>
                   <ApplicationStepsView
                     steps={applicationStepStates(startConditions)}
                     content={{
@@ -2728,13 +2720,9 @@ export function ReviewWorkspace({
                 </>
               ) : (
                 <>
-                  <p className="eyebrow">Before the first run</p>
-                  <h2 id="onboarding-title">Bring your career evidence into the loop</h2>
-                  <p className="onboarding-copy">
-                    Add the career evidence DraftLoop is allowed to use. Your files stay in this
-                    workspace. DraftLoop will not invent missing experience or start an agent run
-                    until the target job and career evidence are present.
-                  </p>
+                  <p className="eyebrow">{t`Before the first run`}</p>
+                  <h2 id="onboarding-title">{t`Bring your career evidence into the loop`}</h2>
+                  <p className="onboarding-copy">{t`Add the career evidence DraftLoop is allowed to use. Your files stay in this workspace. DraftLoop will not invent missing experience or start an agent run until the target job and career evidence are present.`}</p>
                   <div className="setup-grid">
                     <article
                       id={startJobCardId}
@@ -2742,11 +2730,11 @@ export function ReviewWorkspace({
                     >
                       <div className="setup-card-head">
                         <span className={`setup-state${jobReady ? " setup-state-ready" : ""}`}>
-                          {jobReady ? "Ready" : "Required"}
+                          {jobReady ? t`Ready` : t`Required`}
                         </span>
                       </div>
-                      <strong>Target job description</strong>
-                      <span>{jobReady ? "Ready for review" : "Required input missing"}</span>
+                      <strong>{t`Target job description`}</strong>
+                      <span>{jobReady ? t`Ready for review` : t`Required input missing`}</span>
                       {jobDescriptionInputs}
                       {requirementsControls}
                     </article>
@@ -2758,33 +2746,30 @@ export function ReviewWorkspace({
                           className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
                         >
                           {state.setup.writingPolicyStatus === "active"
-                            ? "Active"
+                            ? t`Active`
                             : state.setup.writingPolicyStatus === "unavailable"
-                              ? "Needs attention"
-                              : "Optional"}
+                              ? t`Needs attention`
+                              : t`Optional`}
                         </span>
                       </div>
-                      <strong>Writing policy</strong>
+                      <strong>{t`Writing policy`}</strong>
                       <span>
                         {state.setup.writingPolicyStatus === "unavailable"
-                          ? "The configured policy cannot be read; replace it before starting"
+                          ? t`The configured policy cannot be read; replace it before starting`
                           : state.setup.writingPolicy === null
-                            ? "Add explicit rules for both author and critic"
-                            : `Applied as ${state.setup.writingPolicy.version}`}
+                            ? t`Add explicit rules for both author and critic`
+                            : t`Applied as ${state.setup.writingPolicy.version}`}
                       </span>
-                      <span className="setup-note">
-                        Policy content stays local to this workspace and is kept separate from
-                        career evidence. Runs record only its version and checksum in ordinary
-                        review status.
-                      </span>
+                      <span className="setup-note">{t`Policy content stays local to this workspace and is kept separate from career evidence. Runs record only its version and checksum in ordinary review status.`}</span>
                       {state.setup.writingPolicy === null ? null : (
                         <span className="setup-retrieval-status" role="status">
-                          Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
+                          {t`Current checksum`}{" "}
+                          {policyChecksumLabel(state.setup.writingPolicy.checksum)}
                         </span>
                       )}
                       {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
                         <span className="setup-retrieval-status" role="status">
-                          History:{" "}
+                          {t`History:`}{" "}
                           {state.setup.writingPolicyHistory
                             ?.map(
                               (policy) =>
@@ -2800,8 +2785,8 @@ export function ReviewWorkspace({
                         onClick={() => onSelectFiles?.("writing-policy")}
                       >
                         {state.setup.writingPolicyStatus === "none"
-                          ? "Choose policy file"
-                          : "Replace policy"}
+                          ? t`Choose policy file`
+                          : t`Replace policy`}
                       </button>
                       {writingPolicyAction}
                       <button
@@ -2812,30 +2797,24 @@ export function ReviewWorkspace({
                         }
                         title={
                           state.setup.reviewedOpportunity == null
-                            ? "Review an opportunity before importing an override."
-                            : "Import a policy version for this reviewed opportunity without changing the global policy."
+                            ? t`Review an opportunity before importing an override.`
+                            : t`Import a policy version for this reviewed opportunity without changing the global policy.`
                         }
                         onClick={() => onSelectFiles?.("writing-policy-override")}
-                      >
-                        Import opportunity override
-                      </button>
+                      >{t`Import opportunity override`}</button>
                       {state.setup.reviewedOpportunity == null ? (
-                        <span className="setup-retrieval-status">
-                          Review an opportunity before importing an override.
-                        </span>
+                        <span className="setup-retrieval-status">{t`Review an opportunity before importing an override.`}</span>
                       ) : null}
                       {state.setup.pendingWritingPolicyOverride == null ? null : (
                         <span className="setup-retrieval-status" role="status">
-                          Selected override {state.setup.pendingWritingPolicyOverride.version} (
-                          {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
-                          bound to brief{" "}
-                          {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
+                          {t`Selected override`} {state.setup.pendingWritingPolicyOverride.version}{" "}
+                          ({policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)}
+                          {t`) bound to brief`}{" "}
+                          {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} {t`v`}
                           {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
                         </span>
                       )}
-                      <span className="setup-note">
-                        Importing an opportunity override does not change the global policy.
-                      </span>
+                      <span className="setup-note">{t`Importing an opportunity override does not change the global policy.`}</span>
                     </article>
                   </div>
                   {renderProviderTransmissionPreflight()}
@@ -2901,7 +2880,9 @@ export function ReviewWorkspace({
               {workspaceTitle ?? <h1 title={workspaceLabel}>{workspaceLabel}</h1>}
               <div className="spine-identity-meta">
                 <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
-                <span className="meta-chip">Round {state.round}</span>
+                <span className="meta-chip">
+                  {t`Round`} {state.round}
+                </span>
               </div>
             </div>
             <div className="spine-loop">
@@ -2923,10 +2904,14 @@ export function ReviewWorkspace({
               />
               <div className="spine-versions">
                 {state.previousArtifact === null ? null : (
-                  <span className="spine-version">v{state.previousArtifact.version}</span>
+                  <span className="spine-version">
+                    {t`v`}
+                    {state.previousArtifact.version}
+                  </span>
                 )}
                 <span className="spine-version spine-version-current">
-                  v{state.artifact.version}
+                  {t`v`}
+                  {state.artifact.version}
                 </span>
               </div>
               <div className="spine-cost">
@@ -2963,22 +2948,22 @@ export function ReviewWorkspace({
             <section
               className="panel provider-failure-panel"
               role="alert"
-              aria-label="provider failure"
+              aria-label={t`provider failure`}
             >
-              <p className="eyebrow">Provider request failed</p>
+              <p className="eyebrow">{t`Provider request failed`}</p>
               <h2>{state.providerFailure.explanation}</h2>
               <p className="subtle">
                 {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
-                {failedCallLabel(state.providerFailure)} · attempt {state.providerFailure.attempt}{" "}
-                of {state.providerFailure.maxAttempts}
+                {failedCallLabel(state.providerFailure)} {t`· attempt`}{" "}
+                {state.providerFailure.attempt} {t`of`} {state.providerFailure.maxAttempts}
               </p>
               {state.providerFailure.diagnostics.length > 0 ? (
                 <div className="provider-diagnostics">
-                  <strong>Validation details</strong>
+                  <strong>{t`Validation details`}</strong>
                   <ul>
                     {state.providerFailure.diagnostics.map((diagnostic) => (
                       <li key={`${diagnostic.code}:${diagnostic.path}`}>
-                        {diagnostic.path === "" ? "response" : diagnostic.path}: {diagnostic.code}
+                        {diagnostic.path === "" ? t`response` : diagnostic.path}: {diagnostic.code}
                       </li>
                     ))}
                   </ul>
@@ -2996,8 +2981,8 @@ export function ReviewWorkspace({
                       onClick={() => onAction({ type: "resume" })}
                     >
                       {retryRemainingMs > 0
-                        ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
-                        : `Retry ${state.providerFailure.step}`}
+                        ? t`Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
+                        : t`Retry ${state.providerFailure.step}`}
                     </button>
                   ) : null}
                   {state.providerFailure.availableActions.includes("return-to-review") ? (
@@ -3005,34 +2990,30 @@ export function ReviewWorkspace({
                       className="button button-outline"
                       type="button"
                       onClick={() => onAction({ type: "recover-to-review" })}
-                    >
-                      Return to review
-                    </button>
+                    >{t`Return to review`}</button>
                   ) : null}
                   {state.providerFailure.availableActions.includes("stop") ? (
                     <button
                       className="button button-quiet"
                       type="button"
                       onClick={() => onAction({ type: "stop" })}
-                    >
-                      Stop run
-                    </button>
+                    >{t`Stop run`}</button>
                   ) : null}
                 </div>
               )}
               {state.providerFailure.automaticRetry ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   {retryRemainingMs > 0
-                    ? `DraftLoop retries the ${state.providerFailure.step} automatically in ${retryWaitLabel(retryRemainingMs)}.`
-                    : `DraftLoop retries the ${state.providerFailure.step} automatically.`}
+                    ? t`DraftLoop retries the ${state.providerFailure.step} automatically in ${retryWaitLabel(retryRemainingMs)}.`
+                    : t`DraftLoop retries the ${state.providerFailure.step} automatically.`}
                 </p>
               ) : retryRemainingMs > 0 && state.providerFailure.retryAvailable ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
-                  Retry is paused until the provider retry window opens (
+                  {t`Retry is paused until the provider retry window opens (`}
                   {retryWaitLabel(retryRemainingMs)}).
                 </p>
               ) : !state.providerFailure.availableActions.some((action) => action !== "stop") ? (
-                <p className="subtle">This run has no retry left. Stop it, then start a new run.</p>
+                <p className="subtle">{t`This run has no retry left. Stop it, then start a new run.`}</p>
               ) : null}
             </section>
           ) : null}
@@ -3045,7 +3026,7 @@ export function ReviewWorkspace({
           <section
             hidden={comparing}
             className={`validation-banner validation-${runInProgress ? "in-progress" : findingSummary.status}`}
-            aria-label="validation status"
+            aria-label={t`validation status`}
             role="status"
             aria-live="polite"
           >
@@ -3054,23 +3035,23 @@ export function ReviewWorkspace({
               {runInProgress
                 ? runStatusLine?.detail
                 : !hasArtifact
-                  ? "Complete or recover the author step before reviewing findings or approving an artifact."
+                  ? t`Complete or recover the author step before reviewing findings or approving an artifact.`
                   : roundLimitRecovery
-                    ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
+                    ? t`Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
                     : approvalReadiness?.applicationReady === false &&
                         state.approval !== "approved" &&
                         editNote !== null
-                      ? "The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason."
+                      ? t`The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason.`
                       : approvalReadiness?.applicationReady === false &&
                           state.approval !== "approved"
-                        ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason."
+                        ? t`Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence, then revise or approve it with a recorded reason.`
                         : !state.reviewComplete
                           ? runStatusLine?.detail
                           : findingSummary.status === "blocked"
-                            ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                            ? t`Approval is unavailable until every blocking finding is resolved or explicitly overridden.`
                             : findingSummary.status === "warnings"
-                              ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                              : "All findings have a recorded decision."}
+                              ? t`Approval remains your decision; unresolved warnings will stay visible in the review history.`
+                              : t`All findings have a recorded decision.`}
             </span>
           </section>
 
@@ -3088,7 +3069,7 @@ export function ReviewWorkspace({
           <section
             hidden={comparing}
             className="review-column"
-            aria-label="artifact review"
+            aria-label={t`artifact review`}
             id="artifact-review"
             tabIndex={-1}
             ref={reviewColumnRef}
@@ -3096,8 +3077,10 @@ export function ReviewWorkspace({
             <div className="doc-toolbar">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">Draft under review</p>
-                  <h2>Version {state.artifact.version}</h2>
+                  <p className="eyebrow">{t`Draft under review`}</p>
+                  <h2>
+                    {t`Version`} {state.artifact.version}
+                  </h2>
                 </div>
               </div>
               {/* The job inputs leave the screen once a run starts; the Job tab keeps the job
@@ -3106,13 +3089,11 @@ export function ReviewWorkspace({
                 <button
                   className="button button-outline doc-toolbar-job"
                   type="button"
-                  title="The job this draft is written for, under the Job tab. A different job needs a new application."
+                  title={t`The job this draft is written for, under the Job tab. A different job needs a new application.`}
                   onClick={() => selectWorkTab("job")}
-                >
-                  Read the job
-                </button>
+                >{t`Read the job`}</button>
               )}
-              <section className="retrieval-strip" aria-label="evidence retrieval status">
+              <section className="retrieval-strip" aria-label={t`evidence retrieval status`}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
                   <path
                     d="M4 7h16M4 12h16M4 17h9"
@@ -3122,25 +3103,25 @@ export function ReviewWorkspace({
                   />
                 </svg>
                 <strong>
-                  {evidenceMode?.kind === "full-source" ? "Full source" : "Evidence retrieval"}
+                  {evidenceMode?.kind === "full-source" ? t`Full source` : t`Evidence retrieval`}
                 </strong>
                 <span role="status">
                   {evidenceMode !== undefined
                     ? evidenceMode.stripStatus
                     : state.setup.retrievalStatus === "matched"
-                      ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                      ? t`${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} career-evidence source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
                       : state.setup.retrievalStatus === "fallback"
-                        ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
+                        ? t`No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from career evidence`
                         : state.setup.retrievalStatus === "not-indexed"
                           ? notIndexedRetrievalText(state)
                           : state.setup.retrievalStatus === "no-query"
-                            ? "The job description has no searchable role terms"
-                            : "Retrieval readiness is unavailable"}
+                            ? t`The job description has no searchable role terms`
+                            : t`Retrieval readiness is unavailable`}
                 </span>
               </section>
               <div className="doc-toolbar-views">
                 <fieldset className="view-toggle">
-                  <legend className="sr-only">Draft view</legend>
+                  <legend className="sr-only">{t`Draft view`}</legend>
                   <button
                     className="view-toggle-option"
                     type="button"
@@ -3148,27 +3129,21 @@ export function ReviewWorkspace({
                     disabled={!hasPreviousArtifact}
                     title={
                       hasPreviousArtifact
-                        ? "Mark every word that changed since the previous version"
-                        : "There is no previous version to compare with."
+                        ? t`Mark every word that changed since the previous version`
+                        : t`There is no previous version to compare with.`
                     }
                     onClick={() => setDraftView("changes")}
-                  >
-                    Changes only
-                  </button>
+                  >{t`Changes only`}</button>
                   <button
                     className="view-toggle-option"
                     type="button"
                     aria-pressed={!showChanges}
-                    title="Read the draft as it stands, without change marks"
+                    title={t`Read the draft as it stands, without change marks`}
                     onClick={() => setDraftView("full")}
-                  >
-                    Full draft
-                  </button>
+                  >{t`Full draft`}</button>
                 </fieldset>
                 {state.previousArtifact === null ? (
-                  <span className="empty-state doc-toolbar-empty">
-                    This is the first artifact version.
-                  </span>
+                  <span className="empty-state doc-toolbar-empty">{t`This is the first artifact version.`}</span>
                 ) : (
                   <button
                     className="button button-quiet doc-compare-toggle"
@@ -3176,20 +3151,21 @@ export function ReviewWorkspace({
                     aria-pressed={compareVisible}
                     onClick={() => setCompareOpen((current) => !current)}
                   >
-                    Compare with v{state.previousArtifact.version}
+                    {t`Compare with v`}
+                    {state.previousArtifact.version}
                   </button>
                 )}
               </div>
               <span className="subtle doc-toolbar-note">
                 {chosenRunOpen
-                  ? "This draft is approved and exported as it is."
+                  ? t`This draft is approved and exported as it is.`
                   : readOnly
-                    ? "This run is read-only."
+                    ? t`This run is read-only.`
                     : state.approval === "approved"
-                      ? "This draft is approved; edits are closed."
+                      ? t`This draft is approved; edits are closed.`
                       : !draftEditable
-                        ? "You can edit the draft once this round finishes."
-                        : "Edits you make here are applied when you approve; the critic has not reviewed them."}
+                        ? t`You can edit the draft once this round finishes.`
+                        : t`Edits you make here are applied when you approve; the critic has not reviewed them.`}
               </span>
             </div>
 
@@ -3206,8 +3182,11 @@ export function ReviewWorkspace({
               {compareVisible && state.previousArtifact !== null ? (
                 <div className="diff-column">
                   <div className="pane-heading">
-                    <span>Previous version</span>
-                    <span>v{state.previousArtifact.version}</span>
+                    <span>{t`Previous version`}</span>
+                    <span>
+                      {t`v`}
+                      {state.previousArtifact.version}
+                    </span>
                   </div>
                   <article className="artifact-pane previous-pane">
                     {state.previousArtifact.sections.map((section) => (
@@ -3232,9 +3211,10 @@ export function ReviewWorkspace({
               ) : null}
               <div className="diff-column diff-column-current">
                 <div className="pane-heading">
-                  <span>Current draft</span>
+                  <span>{t`Current draft`}</span>
                   <span>
-                    v{state.artifact.version} · {draftPaneMode}
+                    {t`v`}
+                    {state.artifact.version} · {draftPaneMode}
                   </span>
                 </div>
                 {/* The sheet: the document itself, on the desk, with the critique written in
@@ -3280,7 +3260,7 @@ export function ReviewWorkspace({
                   >
                     <ul
                       className={`margin-notes${marginLayout === null ? "" : " margin-notes-placed"}`}
-                      aria-label="Findings in the draft margin"
+                      aria-label={t`Findings in the draft margin`}
                     >
                       {marginNotes.map((note) => renderMarginNote(note))}
                     </ul>
@@ -3293,7 +3273,7 @@ export function ReviewWorkspace({
                           if (first !== undefined) revealFindingInQueue(first);
                         }}
                       >
-                        +{marginLayout.overflow.length} more in the queue
+                        +{marginLayout.overflow.length} {t`more in the queue`}
                       </button>
                     ) : null}
                   </div>
@@ -3303,16 +3283,14 @@ export function ReviewWorkspace({
 
             {/* Traceability is an inspection, not a third copy of the draft: it stays one
                 disclosure away, closed until a reviewer asks where wording came from. */}
-            <section className="claims-panel" aria-label="claim to source inspection">
+            <section className="claims-panel" aria-label={t`claim to source inspection`}>
               <details className="claims-disclosure" ref={traceabilityRef}>
                 <summary className="claims-disclosure-summary" ref={traceabilitySummaryRef}>
                   <span className="claims-disclosure-title">
-                    <span className="eyebrow">Traceability</span>
-                    <h2>Claims and career evidence</h2>
+                    <span className="eyebrow">{t`Traceability`}</span>
+                    <h2>{t`Claims and career evidence`}</h2>
                   </span>
-                  <span className="subtle">
-                    Source links show where wording came from; they do not independently verify it.
-                  </span>
+                  <span className="subtle">{t`Source links show where wording came from; they do not independently verify it.`}</span>
                 </summary>
                 <div className="claim-list">
                   {state.artifact.claims.map((claim) => {
@@ -3331,7 +3309,7 @@ export function ReviewWorkspace({
                               <button
                                 className="claim-locate"
                                 type="button"
-                                title="Show the draft line this claim comes from"
+                                title={t`Show the draft line this claim comes from`}
                                 onMouseEnter={() => setLinkedClaimId(claim.id)}
                                 onMouseLeave={() => setLinkedClaimId(null)}
                                 onFocus={() => setLinkedClaimId(claim.id)}
@@ -3347,7 +3325,7 @@ export function ReviewWorkspace({
                               >
                                 <LinkIcon />
                                 <span className="sr-only">
-                                  Show the draft line for: {claim.text}
+                                  {t`Show the draft line for:`} {claim.text}
                                 </span>
                               </button>
                             )}
@@ -3360,10 +3338,7 @@ export function ReviewWorkspace({
                           </span>
                         )}
                         {claim.evidence.length === 0 ? (
-                          <p className="warning-copy">
-                            This claim is not linked to the candidate materials supplied to
-                            DraftLoop.
-                          </p>
+                          <p className="warning-copy">{t`This claim is not linked to the candidate materials supplied to DraftLoop.`}</p>
                         ) : (
                           claim.evidence.map((reference) => (
                             <div
@@ -3409,7 +3384,11 @@ export function ReviewWorkspace({
             {/* Run progress sits here only while the run executes; afterwards its timeline is in
               Run details, and only a paused or interrupted run keeps its way back in. */}
             {runInProgress ? (
-              <section className="panel progress-panel" aria-label="run progress" ref={runPanelRef}>
+              <section
+                className="panel progress-panel"
+                aria-label={t`run progress`}
+                ref={runPanelRef}
+              >
                 <div className="section-heading compact">
                   <div>
                     <PanelToggle
@@ -3429,7 +3408,7 @@ export function ReviewWorkspace({
                       disabled={pendingReviewAction !== null}
                       onClick={() => onAction({ type: "stop" })}
                     >
-                      {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
+                      {pendingReviewAction?.action === "stop" ? t`Stopping…` : t`Stop review`}
                     </button>
                   ) : null}
                 </div>
@@ -3447,7 +3426,7 @@ export function ReviewWorkspace({
               (state.execution.status !== "interrupted" && state.state !== "paused") ? null : (
               <section
                 className="panel run-recovery-panel"
-                aria-label="run recovery"
+                aria-label={t`run recovery`}
                 ref={runPanelRef}
               >
                 <div className="section-heading compact">
@@ -3459,17 +3438,13 @@ export function ReviewWorkspace({
                         type="button"
                         disabled={pendingReviewAction !== null || !transmissionReady}
                         onClick={() => onAction({ type: "resume" })}
-                      >
-                        Resume interrupted review
-                      </button>
+                      >{t`Resume interrupted review`}</button>
                       <button
                         className="button button-quiet"
                         type="button"
                         disabled={pendingReviewAction !== null}
                         onClick={() => onAction({ type: "stop" })}
-                      >
-                        Stop review
-                      </button>
+                      >{t`Stop review`}</button>
                     </div>
                   ) : (
                     resumeButton
@@ -3477,21 +3452,22 @@ export function ReviewWorkspace({
                 </div>
                 {state.state !== "paused" || state.usageLimit == null ? null : (
                   <p className="pending-action-status" role="status">
-                    {usageLimitText(state.usageLimit)}. Nothing is lost: Resume retries the{" "}
-                    {state.usageLimit.step} step where it stopped.
+                    {usageLimitText(state.usageLimit)}
+                    {t`. Nothing is lost: Resume retries the`} {state.usageLimit.step}{" "}
+                    {t`step where it stopped.`}
                   </p>
                 )}
                 {state.execution.status !== "interrupted" ? null : state.execution.failure !==
                   undefined ? (
                   <p className="pending-action-status setup-blocker" role="alert">
-                    The review could not continue: {state.execution.failure} Fix this, then resume
-                    the review, or stop it without losing history.
+                    {t`The review could not continue:`} {state.execution.failure}{" "}
+                    {t`Fix this, then resume the review, or stop it without losing history.`}
                   </p>
                 ) : (
-                  <p className="pending-action-status" role="status">
-                    This review was interrupted when the previous app session ended. Resume it to
-                    continue from the durable step, or stop it without losing history.
-                  </p>
+                  <p
+                    className="pending-action-status"
+                    role="status"
+                  >{t`This review was interrupted when the previous app session ended. Resume it to continue from the durable step, or stop it without losing history.`}</p>
                 )}
               </section>
             )}
@@ -3513,14 +3489,14 @@ export function ReviewWorkspace({
             <section
               className="panel findings-panel"
               id="findings-panel"
-              aria-label="critique findings"
+              aria-label={t`critique findings`}
               tabIndex={-1}
               {...reviewWorkPanelProps("findings", workTab, tabbedWork)}
             >
               <div className="findings-queue-header">
                 <div className="section-heading compact">
                   <div>
-                    <h2>Findings</h2>
+                    <h2>{t`Findings`}</h2>
                     <p className="finding-progress" role="status" aria-live="polite">
                       {findingProgressLine({
                         resolved: queueCounts.resolved,
@@ -3531,22 +3507,19 @@ export function ReviewWorkspace({
                       })}
                     </p>
                     {runInProgress && queueCounts.needsAction > 0 ? (
-                      <p className="setup-note">
-                        The review is still running, so nothing here needs you yet. It pauses when
-                        it needs your decisions.
-                      </p>
+                      <p className="setup-note">{t`The review is still running, so nothing here needs you yet. It pauses when it needs your decisions.`}</p>
                     ) : null}
                   </div>
                   <span className="count-badge">
                     {!hasArtifact || (!critiqued && state.findings.length === 0)
-                      ? "Not evaluated"
+                      ? t`Not evaluated`
                       : queueCounts.needsAction === 0
-                        ? "All resolved"
-                        : `${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
+                        ? t`All resolved`
+                        : t`${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
                   </span>
                 </div>
                 <fieldset className="finding-filters">
-                  <legend className="sr-only">Finding filters</legend>
+                  <legend className="sr-only">{t`Finding filters`}</legend>
                   {findingQueueFilters.map((filter) => {
                     const count = findingQueueFilterCount(queueCounts, filter.id);
                     const isSelected = findingFilter === filter.id;
@@ -3573,14 +3546,15 @@ export function ReviewWorkspace({
               <div id="findings-panel-body">
                 {findingDecisionPending ? (
                   <p className="pending-action-status" role="status" aria-live="polite">
-                    Saving{" "}
+                    {t`Saving`}{" "}
                     {pendingBulkFindingCount === null
-                      ? "finding decision"
-                      : `${pendingBulkFindingCount} finding decisions`}
-                    … Elapsed {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}.
-                    Keep this window open while
-                    {pendingBulkFindingCount === null ? " the decision is" : " the decisions are"}{" "}
-                    saved.
+                      ? t`finding decision`
+                      : t`${pendingBulkFindingCount} finding decisions`}
+                    {t`… Elapsed`}{" "}
+                    {formatElapsedDuration(pendingReviewAction.elapsedSeconds * 1_000)}
+                    {t`. Keep this window open while`}
+                    {pendingBulkFindingCount === null ? t` the decision is` : t` the decisions are`}{" "}
+                    {t`saved.`}
                   </p>
                 ) : null}
                 {knownGapsLabel === null || onMarkKnownGaps === undefined ? null : (
@@ -3599,7 +3573,8 @@ export function ReviewWorkspace({
                 {bulkDecisionAvailable ? (
                   <fieldset className="finding-bulk-actions">
                     <legend>
-                      Apply to all {filteredFindings.filter(isUnresolvedFinding).length} shown
+                      {t`Apply to all`} {filteredFindings.filter(isUnresolvedFinding).length}{" "}
+                      {t`shown`}
                     </legend>
                     {directFindingDecisions.map((decision) => {
                       const targetIds = bulkDecisionTargetsForDecision(
@@ -3616,7 +3591,7 @@ export function ReviewWorkspace({
                           disabled={pendingReviewAction !== null || targetIds.length === 0}
                           onClick={() => onBulkFindingDecision(targetIds, decision)}
                         >
-                          {decisionLabels[decision]} all
+                          {decisionLabels[decision]} {t`all`}
                         </button>
                       );
                     })}
@@ -3633,7 +3608,7 @@ export function ReviewWorkspace({
                 <section
                   className="findings-queue-scroll"
                   id="finding-queue-list"
-                  aria-label="Findings queue"
+                  aria-label={t`Findings queue`}
                   tabIndex={-1}
                   ref={findingQueueRef}
                 >
@@ -3715,7 +3690,7 @@ export function ReviewWorkspace({
                           }}
                         >
                           <span className={`severity severity-${finding.severity}`}>
-                            {finding.severity === "error" ? "blocking" : "warning"}
+                            {finding.severity === "error" ? t`blocking` : t`warning`}
                           </span>
                           <span className="finding-summary-content">
                             <span className="finding-summary-message">{findingTitle(finding)}</span>
@@ -3725,9 +3700,9 @@ export function ReviewWorkspace({
                               className={`finding-summary-status resolution-${finding.decision}`}
                             >
                               {acceptedWithoutRevision(finding, decisionContext)
-                                ? "Accepted · no revision left"
+                                ? t`Accepted · no revision left`
                                 : finding.severity === "error" && finding.decision === "accepted"
-                                  ? "Accepted · revision required"
+                                  ? t`Accepted · revision required`
                                   : decisionLabels[finding.decision]}
                               <span className="finding-summary-chevron" aria-hidden="true">
                                 {isExpanded ? "⌃" : "⌄"}
@@ -3749,16 +3724,20 @@ export function ReviewWorkspace({
                           >
                             {finding.agreement !== "author-and-critic" ? (
                               <p className="disagreement">
-                                Disagreement · {finding.agreement} finding
+                                {t`Disagreement ·`} {finding.agreement} {t`finding`}
                               </p>
                             ) : null}
                             {claim === undefined ? (
-                              <p className="linked-claim">No linked claim for this finding.</p>
+                              <p className="linked-claim">{t`No linked claim for this finding.`}</p>
                             ) : (
-                              <p className="linked-claim">Linked claim: {claim.text}</p>
+                              <p className="linked-claim">
+                                {t`Linked claim:`} {claim.text}
+                              </p>
                             )}
                             <fieldset className="finding-actions">
-                              <legend className="sr-only">Decision for {finding.code}</legend>
+                              <legend className="sr-only">
+                                {t`Decision for`} {finding.code}
+                              </legend>
                               {directFindingDecisions.map((decision) => (
                                 <button
                                   className={
@@ -3794,9 +3773,7 @@ export function ReviewWorkspace({
                                 aria-describedby={findingDecisionHintId(detailsId, "overridden")}
                                 disabled={findingDecisionsLocked}
                                 onClick={() => beginOverride(finding)}
-                              >
-                                Override
-                              </button>
+                              >{t`Override`}</button>
                             </fieldset>
                             <FindingDecisionHint
                               finding={finding}
@@ -3806,10 +3783,10 @@ export function ReviewWorkspace({
                             {isEditingOverride ? (
                               <section
                                 className="override-editor"
-                                aria-label={`Override ${finding.code}`}
+                                aria-label={t`Override ${finding.code}`}
                               >
                                 <label className="rationale-input-label">
-                                  <span>Override rationale (required)</span>
+                                  <span>{t`Override rationale (required)`}</span>
                                   <input
                                     className="rationale-input"
                                     type="text"
@@ -3827,7 +3804,7 @@ export function ReviewWorkspace({
                                       }))
                                     }
                                     onKeyDown={submitOnEnter(saveOverride)}
-                                    aria-label={`Override rationale for ${finding.code}`}
+                                    aria-label={t`Override rationale for ${finding.code}`}
                                   />
                                 </label>
                                 <div className="override-editor-actions">
@@ -3843,17 +3820,13 @@ export function ReviewWorkspace({
                                         return next;
                                       });
                                     }}
-                                  >
-                                    Cancel
-                                  </button>
+                                  >{t`Cancel`}</button>
                                   <button
                                     className="button button-primary"
                                     type="button"
                                     disabled={findingDecisionsLocked || rationale.trim() === ""}
                                     onClick={saveOverride}
-                                  >
-                                    Save override
-                                  </button>
+                                  >{t`Save override`}</button>
                                 </div>
                               </section>
                             ) : null}
@@ -3867,35 +3840,35 @@ export function ReviewWorkspace({
                 <footer className="finding-hints">
                   <span className="finding-hint">
                     <kbd>J</kbd>
-                    <kbd>K</kbd> move
+                    <kbd>K</kbd> {t`move`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>Enter</kbd> open
+                    <kbd>Enter</kbd> {t`open`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>A</kbd> accept
+                    <kbd>A</kbd> {t`accept`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>R</kbd> reject
+                    <kbd>R</kbd> {t`reject`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>D</kbd> defer
+                    <kbd>D</kbd> {t`defer`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>O</kbd> override
+                    <kbd>O</kbd> {t`override`}
                   </span>
                   <span className="finding-hint">
-                    <kbd>Esc</kbd> close
+                    <kbd>Esc</kbd> {t`close`}
                   </span>
                   <button
                     className="finding-hint finding-hint-command"
                     type="button"
                     aria-keyshortcuts="Control+K Meta+K"
-                    title="Open the command palette"
+                    title={t`Open the command palette`}
                     onClick={openPalette}
                   >
                     <kbd>Ctrl/⌘</kbd>
-                    <kbd>K</kbd> commands
+                    <kbd>K</kbd> {t`commands`}
                   </button>
                 </footer>
               </div>
@@ -3949,17 +3922,17 @@ export function ReviewWorkspace({
             statusLine={`Artifact: ${state.approval === "approved" ? "approved" : "not approved"} · Export: ${state.exportPath !== null ? "exported" : state.state === "exported" ? "exported, file not found" : "not exported"} · Validation: ${validationLabel}`}
             detail={
               !hasArtifact ? (
-                <p className="warning-copy">
-                  Approval and export are unavailable until the author produces a valid draft.
-                </p>
+                <p className="warning-copy">{t`Approval and export are unavailable until the author produces a valid draft.`}</p>
               ) : roundLimitRecovery ? (
                 <p className="warning-copy">
-                  Round {state.round} was opened after the configured maximum of {maximumRounds},
-                  before any new draft or critique was produced. Version {state.artifact.version}{" "}
-                  and its completed Round {state.round - 1} critique are still intact.
+                  {t`Round`} {state.round} {t`was opened after the configured maximum of`}{" "}
+                  {maximumRounds}
+                  {t`, before any new draft or critique was produced. Version`}{" "}
+                  {state.artifact.version} {t`and its completed Round`} {state.round - 1}{" "}
+                  {t`critique are still intact.`}
                 </p>
               ) : runInProgress ? (
-                <p className="setup-note">Approval opens when the review pauses for you.</p>
+                <p className="setup-note">{t`Approval opens when the review pauses for you.`}</p>
               ) : !state.reviewComplete ? (
                 <p className="warning-copy">
                   {runStatusLine?.label}. {runStatusLine?.detail}
@@ -3967,45 +3940,40 @@ export function ReviewWorkspace({
               ) : blockingFindings.length > 0 ? (
                 <p className="warning-copy">
                   {state.approval === "approved"
-                    ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`
+                    ? t`${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`
                     : acceptedBlockingFindings.length > 0
-                      ? `Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
-                      : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
+                      ? t`Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
+                      : t`Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
                 </p>
               ) : knownGapOverride !== null && state.approval !== "approved" ? (
-                <p className="warning-copy">
-                  The final CV checks fail only on the gaps you marked as known. Approving records
-                  your reasons as the override.
-                </p>
+                <p className="warning-copy">{t`The final CV checks fail only on the gaps you marked as known. Approving records your reasons as the override.`}</p>
               ) : approvalReadiness?.applicationReady === false &&
                 editNote !== null &&
                 state.approval !== "approved" ? (
                 <p className="warning-copy">
-                  Before your edits, the final CV checks failed:{" "}
-                  {formatReadinessBlockers(approvalReadiness.blockers).join("; ")}. Approving checks
-                  the edited version again; a check that still fails then needs an override.
+                  {t`Before your edits, the final CV checks failed:`}{" "}
+                  {formatReadinessBlockers(approvalReadiness.blockers).join("; ")}
+                  {t`. Approving checks the edited version again; a check that still fails then needs an override.`}
                 </p>
               ) : approvalReadiness?.applicationReady === false && state.approval !== "approved" ? (
                 <div className="warning-copy">
                   <p>
-                    Final CV checks block approval:{" "}
+                    {t`Final CV checks block approval:`}{" "}
                     {formatReadinessBlockers(approvalReadiness.blockers).join("; ")}.
                   </p>
                   <p>{approvalReadinessGuidance}</p>
                 </div>
               ) : warnings.length > 0 ? (
                 <p className="warning-copy">
-                  Approval is available with {warnings.length} unresolved non-blocking warning
-                  {warnings.length === 1 ? "" : "s"}. They remain visible after approval.
+                  {t`Approval is available with`} {warnings.length}{" "}
+                  {t`unresolved non-blocking warning`}
+                  {warnings.length === 1 ? "" : t`s`}
+                  {t`. They remain visible after approval.`}
                 </p>
               ) : state.state === "provider-error" ? (
-                <p className="warning-copy">
-                  No unresolved blocking findings; provider recovery remains before approval.
-                </p>
+                <p className="warning-copy">{t`No unresolved blocking findings; provider recovery remains before approval.`}</p>
               ) : (
-                <p className="safe-copy">
-                  No unresolved blocking findings. The final decision remains yours.
-                </p>
+                <p className="safe-copy">{t`No unresolved blocking findings. The final decision remains yours.`}</p>
               )
             }
             conditions={gateConditions}

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   type ApplicationJobSource,
   blocksStart,
@@ -120,11 +121,11 @@ export function applicationStepStates(
 export function applicationStepStatusText(status: ApplicationStepStatus): string {
   switch (status.kind) {
     case "done":
-      return "Done";
+      return t`Done`;
     case "current":
-      return "Current step";
+      return t`Current step`;
     case "blocked":
-      return `Blocked: ${status.reason}`;
+      return t`Blocked: ${status.reason}`;
   }
 }
 
@@ -132,12 +133,12 @@ export function applicationStepStatusText(status: ApplicationStepStatus): string
 export function applicationJobStepNote(source: ApplicationJobSource, ready: boolean): string {
   if (source === "approved-page") {
     return ready
-      ? "Job page approved when you created this application."
-      : "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.";
+      ? t`Job page approved when you created this application.`
+      : t`Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.`;
   }
   return ready
-    ? "Job description added."
-    : "Add the job description from a file or a public URL, then extract and review its requirements.";
+    ? t`Job description added.`
+    : t`Add the job description from a file or a public URL, then extract and review its requirements.`;
 }
 
 /**

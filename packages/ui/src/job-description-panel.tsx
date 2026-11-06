@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The Job tab of the review's work area: the job description the draft is written for, read-only.
  *
@@ -41,38 +42,35 @@ export function JobDescriptionView({
   readonly tabPanel?: ReviewWorkPanelProps | null;
 }): JSX.Element {
   return (
-    <section className="panel job-panel" aria-label="job description" {...tabPanel}>
+    <section className="panel job-panel" aria-label={t`job description`} {...tabPanel}>
       <div className="section-heading compact">
         <div>
-          <h2>Job description</h2>
+          <h2>{t`Job description`}</h2>
           {load.kind === "ready" && jobOriginNote(load.job) !== null ? (
             <p className="job-origin-note">{jobOriginNote(load.job)}</p>
           ) : null}
         </div>
       </div>
       {load.kind === "loading" ? (
-        <p className="job-status" role="status">
-          Reading the job description…
-        </p>
+        <p className="job-status" role="status">{t`Reading the job description…`}</p>
       ) : load.kind === "failed" ? (
         <p className="job-status" role="alert">
-          The job description could not be read.{" "}
-          <button className="button button-outline" type="button" onClick={onRetry}>
-            Try again
-          </button>
+          {t`The job description could not be read.`}{" "}
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={onRetry}
+          >{t`Try again`}</button>
         </p>
       ) : load.job.origin === "unavailable" ? (
-        <p className="job-status">
-          This application's job description could not be read. Its file may have been moved or
-          emptied.
-        </p>
+        <p className="job-status">{t`This application's job description could not be read. Its file may have been moved or emptied.`}</p>
       ) : load.job.origin === "url" ? (
         <p className="job-url">{load.job.url}</p>
       ) : (
         <>
           <div className="job-text">{load.job.text}</div>
           {load.job.truncated ? (
-            <p className="job-status">The job description is longer than shown here.</p>
+            <p className="job-status">{t`The job description is longer than shown here.`}</p>
           ) : null}
         </>
       )}

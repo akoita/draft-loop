@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Review panel disclosure and the run timeline.
  *
@@ -131,7 +132,7 @@ export function PanelToggle({
       type="button"
       aria-expanded={!collapsed}
       aria-controls={controls}
-      title={collapsed ? `Show ${label.toLowerCase()}` : `Hide ${label.toLowerCase()}`}
+      title={collapsed ? t`Show ${label.toLowerCase()}` : t`Hide ${label.toLowerCase()}`}
       onClick={onToggle}
     >
       <svg
@@ -211,8 +212,8 @@ export function RunTimeline({
           onClick={() => setShowEarlier((current) => !current)}
         >
           {showEarlier
-            ? "Show only recent events"
-            : `Show ${hiddenCount} earlier event${hiddenCount === 1 ? "" : "s"}`}
+            ? t`Show only recent events`
+            : t`Show ${hiddenCount} earlier event${hiddenCount === 1 ? "" : "s"}`}
         </button>
       ) : null}
       <ol className="event-list">
@@ -225,7 +226,9 @@ export function RunTimeline({
                 {group.count > 1 ? (
                   <span className="event-count">
                     <span aria-hidden="true">×{group.count}</span>
-                    <span className="sr-only">, {group.count} times</span>
+                    <span className="sr-only">
+                      , {group.count} {t`times`}
+                    </span>
                   </span>
                 ) : null}
               </strong>

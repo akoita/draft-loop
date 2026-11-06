@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The run switcher in the review header: "Run 2 of 5 ▾" opens a menu of the application's runs.
  *
@@ -141,18 +142,22 @@ function RunFacts({
   return (
     <>
       <span className="run-switcher-item-head">
-        <strong>Run {number}</strong>
+        <strong>
+          {t`Run`} {number}
+        </strong>
         <time dateTime={run.startedAt}>{runStartedLabel(run.startedAt)}</time>
-        {run.latest ? <span className="run-switcher-latest">latest</span> : null}
-        {run.chosen === true ? <span className="run-switcher-chosen">chosen</span> : null}
+        {run.latest ? <span className="run-switcher-latest">{t`latest`}</span> : null}
+        {run.chosen === true ? <span className="run-switcher-chosen">{t`chosen`}</span> : null}
       </span>
       <span className="run-switcher-item-facts">
         <span className="run-switcher-models">{runModelsLabel(run)}</span>
-        <span>round {run.round}</span>
+        <span>
+          {t`round`} {run.round}
+        </span>
         <span className="run-switcher-state">{run.state.replaceAll("-", " ")}</span>
         {run.score === undefined ? null : (
-          <span className="numeric" title="Mean of the latest evaluation's readiness dimensions">
-            mean score {run.score.toFixed(2)}
+          <span className="numeric" title={t`Mean of the latest evaluation's readiness dimensions`}>
+            {t`mean score`} {run.score.toFixed(2)}
           </span>
         )}
       </span>
@@ -328,7 +333,7 @@ export function RunSwitcher({
           {label}
         </span>
         <span className="run-switcher-label-short" aria-hidden="true">
-          Run {position.number}/{position.total}
+          {t`Run`} {position.number}/{position.total}
         </span>
         <span className="run-switcher-caret" aria-hidden="true">
           ▾
@@ -346,7 +351,7 @@ export function RunSwitcher({
         {comparing ? (
           <>
             <div className="run-switcher-menu-title" role="presentation">
-              Compare Run {position.number} with…
+              {t`Compare Run`} {position.number} {t`with…`}
             </div>
             {candidates.map((candidate, index) => (
               <div
@@ -405,7 +410,7 @@ export function RunSwitcher({
               onKeyDown={(event) => onItemKeyDown(event, showCompareList, compareItemIndex)}
             >
               <span className="run-switcher-check" aria-hidden="true" />
-              <span className="run-switcher-item-body">Compare with…</span>
+              <span className="run-switcher-item-body">{t`Compare with…`}</span>
             </div>
           </>
         )}

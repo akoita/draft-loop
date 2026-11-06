@@ -1,4 +1,5 @@
 import type { ModelProfilePreset } from "@draft-loop/application/model-profile-catalog";
+import { t } from "@lingui/core/macro";
 import type { ReactNode } from "react";
 import type { ModelProfileSupportResult } from "./bridge.js";
 import {
@@ -113,7 +114,7 @@ function PresetCard({
           {authorName} → {criticName}
         </span>
         <span className="sr-only">
-          {authorName} writes · {criticName} reviews
+          {authorName} {t`writes ·`} {criticName} {t`reviews`}
         </span>
       </span>
       <span className="model-preset-card-meta">
@@ -121,9 +122,9 @@ function PresetCard({
           {providerDisplayName(author.profile.provider)} +{" "}
           {providerDisplayName(critic.profile.provider)}
         </span>
-        {unvalidated ? <span className="model-preset-badge">Unvalidated</span> : null}
+        {unvalidated ? <span className="model-preset-badge">{t`Unvalidated`}</span> : null}
         {isDevelopmentPreset(preset) ? (
-          <span className="model-preset-badge model-preset-badge-development">Development</span>
+          <span className="model-preset-badge model-preset-badge-development">{t`Development`}</span>
         ) : null}
         {unsupported ? (
           <span className="model-preset-badge model-preset-badge-unsupported">
@@ -181,8 +182,8 @@ export function ModelPresetCards({
               disabled={disabled}
               onChange={() => onSelect(customPresetValue)}
             />
-            <span className="model-preset-card-title">Custom pair</span>
-            <span className="model-preset-card-line">Pick the writer and reviewer yourself.</span>
+            <span className="model-preset-card-title">{t`Custom pair`}</span>
+            <span className="model-preset-card-line">{t`Pick the writer and reviewer yourself.`}</span>
           </label>
         ) : null}
       </div>

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   EmbeddingModelState,
   EmbeddingModelTier,
@@ -38,15 +39,15 @@ export const retrievalModeChoices: readonly {
 export function embeddingModelStateLabel(state: EmbeddingModelState): string {
   switch (state) {
     case "absent":
-      return "Not installed";
+      return t`Not installed`;
     case "installing":
-      return "Installing";
+      return t`Installing`;
     case "ready":
-      return "Installed";
+      return t`Installed`;
     case "corrupt":
-      return "Corrupt";
+      return t`Corrupt`;
     case "unsupported-platform":
-      return "Unsupported";
+      return t`Unsupported`;
   }
 }
 
@@ -78,12 +79,12 @@ export function retrievalFallbackNote(
   if (mode === "lexical" || state === undefined || state === "ready") return null;
   switch (state) {
     case "absent":
-      return "The local model is not installed, so runs fall back to keyword retrieval until it is installed.";
+      return t`The local model is not installed, so runs fall back to keyword retrieval until it is installed.`;
     case "installing":
-      return "The local model is still downloading, so runs fall back to keyword retrieval until it is installed.";
+      return t`The local model is still downloading, so runs fall back to keyword retrieval until it is installed.`;
     case "corrupt":
-      return "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled.";
+      return t`The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled.`;
     case "unsupported-platform":
-      return "The local model cannot run on this computer, so runs use keyword retrieval.";
+      return t`The local model cannot run on this computer, so runs use keyword retrieval.`;
   }
 }

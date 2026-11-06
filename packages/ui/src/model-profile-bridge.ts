@@ -5,6 +5,7 @@ import {
   type ModelProfileRouteSupport,
   type RunProviderAuthModeConfiguration,
 } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 
 export interface ModelProfileSupportInput {
   readonly workspaceId: string;
@@ -44,7 +45,7 @@ export class ModelProfileBridgeValidationError extends Error {
   readonly code = "invalid-input" as const;
 
   constructor() {
-    super("The model profile bridge payload is invalid.");
+    super(t`The model profile bridge payload is invalid.`);
     this.name = "ModelProfileBridgeValidationError";
   }
 }

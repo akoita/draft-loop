@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Comparing two runs of one application: the state behind the review's run comparison.
  *
@@ -138,7 +139,7 @@ export function comparedRunFacts(
   }
   return {
     runId,
-    label: `Run ${runNumber(index, list.length)}`,
+    label: t`Run ${runNumber(index, list.length)}`,
     models: runModelsLabel(run),
     round: `round ${run.round}`,
     status: run.state.replaceAll("-", " "),

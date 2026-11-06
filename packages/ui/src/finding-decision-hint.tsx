@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { JSX } from "react";
 import {
   ACCEPT_UNAVAILABLE_NOTE,
@@ -53,7 +54,7 @@ export function FindingDecisionHint({
           {ACCEPT_UNAVAILABLE_NOTE}
         </p>
       ) : null}
-      <ul className="finding-decision-hint" aria-label="What each decision does">
+      <ul className="finding-decision-hint" aria-label={t`What each decision does`}>
         {hintOrder.map((decision) => (
           <li id={findingDecisionHintId(baseId, decision)} key={decision}>
             <strong>{hintLabels[decision]}:</strong> {effects[decision]}

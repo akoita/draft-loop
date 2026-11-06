@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 
 import type { ModelProfileSupportResult } from "./bridge.js";
 import { ProfileDetails } from "./model-profile-details.js";
@@ -86,12 +87,12 @@ function DetailRow({
  */
 export function ModelEditorSummary({ author, critic, applied, support }: ModelEditorSummaryProps) {
   return (
-    <section className="model-editor-summary" aria-label="Current model pair">
+    <section className="model-editor-summary" aria-label={t`Current model pair`}>
       <p className="model-editor-summary-line">
         {modelEditorSummaryText({ author, critic, applied })}
       </p>
       <details className="model-profile-picker-more model-editor-summary-details">
-        <summary>Details</summary>
+        <summary>{t`Details`}</summary>
         <div className="model-editor-summary-body">
           <dl className="model-editor-summary-sides">
             <DetailRow label="Writer" side={author} />

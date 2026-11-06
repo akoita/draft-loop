@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * What two compared runs recorded, side by side, and where their inputs differ.
  *
@@ -273,12 +274,12 @@ function differenceRow(
     };
   }
   if (left.identity === right.identity) {
-    return { ...base, status: "same", message: `Same ${noun}` };
+    return { ...base, status: "same", message: t`Same ${noun}` };
   }
   return {
     ...base,
     status: "different",
-    message: `Different ${noun}: ${left.text} vs ${right.text}`,
+    message: t`Different ${noun}: ${left.text} vs ${right.text}`,
   };
 }
 
@@ -318,38 +319,38 @@ export function runComparisonFacts(
   const facts: ComparisonFactRow[] = [
     {
       key: "author-model",
-      label: "Author model",
+      label: t`Author model`,
       left: modelOf(left, "author"),
       right: modelOf(right, "author"),
     },
     {
       key: "critic-model",
-      label: "Critic model",
+      label: t`Critic model`,
       left: modelOf(left, "critic"),
       right: modelOf(right, "critic"),
     },
-    { key: "rounds", label: "Rounds", left: String(left.round), right: String(right.round) },
+    { key: "rounds", label: t`Rounds`, left: String(left.round), right: String(right.round) },
     {
       key: "readiness",
-      label: "Mean readiness score",
+      label: t`Mean readiness score`,
       left: readinessOf(left),
       right: readinessOf(right),
       ...judgedNote,
     },
     {
       key: "coverage",
-      label: "Requirements covered (judged)",
+      label: t`Requirements covered (judged)`,
       left: coverageOf(left),
       right: coverageOf(right),
       ...judgedNote,
     },
     {
       key: "blocking-findings",
-      label: "Blocking findings left",
+      label: t`Blocking findings left`,
       left: blockingOf(left),
       right: blockingOf(right),
     },
-    { key: "cost", label: "Cost", left: costOf(left), right: costOf(right) },
+    { key: "cost", label: t`Cost`, left: costOf(left), right: costOf(right) },
   ];
 
   // The brief and profile come from each run's own recorded inputs, never from the workspace's
@@ -357,12 +358,12 @@ export function runComparisonFacts(
   const inputs: InputDifferenceRow[] = [
     optionalInputRow(
       "requirements-brief",
-      "Requirements brief",
+      t`Requirements brief`,
       "requirements brief",
       {
         text: noneText,
         clause: "requirements brief (raw job text)",
-        both: "Neither run used a requirements brief (raw job text)",
+        both: t`Neither run used a requirements brief (raw job text)`,
       },
       briefSide(left, right),
       briefSide(right, left),
@@ -370,12 +371,12 @@ export function runComparisonFacts(
     ),
     optionalInputRow(
       "career-profile",
-      "Career profile version",
+      t`Career profile version`,
       "career profile",
       {
         text: "none",
         clause: "career profile version",
-        both: "Neither run used a career profile version",
+        both: t`Neither run used a career profile version`,
       },
       profileSide(left, right),
       profileSide(right, left),
@@ -383,7 +384,7 @@ export function runComparisonFacts(
     ),
     differenceRow(
       "evidence",
-      "Evidence mode and size",
+      t`Evidence mode and size`,
       "evidence",
       recorded(evidenceOf(left)),
       recorded(evidenceOf(right)),
@@ -391,7 +392,7 @@ export function runComparisonFacts(
     ),
     differenceRow(
       "writing-policy",
-      "Writing policy",
+      t`Writing policy`,
       "writing policy",
       policyOf(left),
       policyOf(right),
@@ -400,7 +401,7 @@ export function runComparisonFacts(
     coverageInstructionsRow(
       differenceRow(
         "coverage-instructions",
-        "Coverage-judgement instructions",
+        t`Coverage-judgement instructions`,
         "coverage-judgement instructions",
         recorded(leftInstructions),
         recorded(rightInstructions),

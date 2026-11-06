@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   OpportunityEditInput,
   OpportunityEditPatch,
@@ -30,16 +31,16 @@ export const requirementPriorityOptions: readonly {
 
 /** A plain label for a brief source, from its kind and classification; never its internal id. */
 export function briefSourceLabel(source: OpportunitySourceResult | undefined): string {
-  if (source === undefined) return "Unlisted source";
-  if (source.classification === "candidate-provided-fact") return "Entered by you";
+  if (source === undefined) return t`Unlisted source`;
+  if (source.classification === "candidate-provided-fact") return t`Entered by you`;
   if (source.classification === "candidate-instruction" || source.kind === "candidate-input") {
-    return "Your instructions";
+    return t`Your instructions`;
   }
-  if (source.classification === "social-announcement") return "Social announcement";
-  if (source.classification === "company-context") return "Company context";
-  if (source.kind === "approved-url") return "Job page";
-  if (source.kind === "pasted-content") return "Pasted job text";
-  return "Job posting";
+  if (source.classification === "social-announcement") return t`Social announcement`;
+  if (source.classification === "company-context") return t`Company context`;
+  if (source.kind === "approved-url") return t`Job page`;
+  if (source.kind === "pasted-content") return t`Pasted job text`;
+  return t`Job posting`;
 }
 
 /** The sources an entry cites, as distinct plain labels in citation order. */
@@ -55,7 +56,7 @@ export function describeBriefSources(
 
 /** The status line shown, and focused, after a save created the next draft. */
 export function savedBriefNote(version: number): string {
-  return `Saved as draft v${version}. Mark it reviewed when it is ready.`;
+  return t`Saved as draft v${version}. Mark it reviewed when it is ready.`;
 }
 
 export function requirementPriorityLabel(priority: RequirementPriority): string {
@@ -186,13 +187,13 @@ export function hasUnsavedBriefChanges(
 export function briefEditProblem(state: BriefEditState): string | null {
   const kept = keptRequirements(state);
   if (kept.some((requirement) => requirement.text.trim() === "")) {
-    return "A requirement cannot be empty. Write it out or drop it.";
+    return t`A requirement cannot be empty. Write it out or drop it.`;
   }
   if (kept.some((requirement) => requirement.text.trim().length > maximumRequirementTextLength)) {
-    return `A requirement can be at most ${maximumRequirementTextLength} characters.`;
+    return t`A requirement can be at most ${maximumRequirementTextLength} characters.`;
   }
   if (state.employer.trim().length > maximumRequirementTextLength) {
-    return `The employer can be at most ${maximumRequirementTextLength} characters.`;
+    return t`The employer can be at most ${maximumRequirementTextLength} characters.`;
   }
   return null;
 }
@@ -235,12 +236,12 @@ export function buildBriefEditPatch(
  */
 export function reviewBlockers(record: OpportunityRecordResult): readonly string[] {
   const blockers: string[] = [];
-  if (record.role === null) blockers.push("The brief has no role.");
-  if (record.requirements.length === 0) blockers.push("Keep at least one requirement.");
+  if (record.role === null) blockers.push(t`The brief has no role.`);
+  if (record.requirements.length === 0) blockers.push(t`Keep at least one requirement.`);
   const open = record.issues.filter((issue) => issue.status === "open").length;
   if (open > 0) {
     blockers.push(
-      `Acknowledge or resolve the ${open === 1 ? "open issue" : `${open} open issues`} first.`,
+      t`Acknowledge or resolve the ${open === 1 ? "open issue" : `${open} open issues`} first.`,
     );
   }
   return blockers;
@@ -296,7 +297,7 @@ export async function saveBriefEdits(
       }),
     };
   } catch (reason: unknown) {
-    return failure(reason, "The requirements could not be saved. Nothing was changed.");
+    return failure(reason, t`The requirements could not be saved. Nothing was changed.`);
   }
 }
 
@@ -311,7 +312,7 @@ export async function reviewBrief(
       record: await operations.reviewOpportunity(record.briefId, record.version),
     };
   } catch (reason: unknown) {
-    return failure(reason, "The brief could not be marked reviewed. Nothing was changed.");
+    return failure(reason, t`The brief could not be marked reviewed. Nothing was changed.`);
   }
 }
 
@@ -322,6 +323,6 @@ export async function loadBrief(
   try {
     return { kind: "done", record: await operations.getOpportunity(briefId) };
   } catch (reason: unknown) {
-    return failure(reason, "The brief could not be loaded.");
+    return failure(reason, t`The brief could not be loaded.`);
   }
 }

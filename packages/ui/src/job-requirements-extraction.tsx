@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   type OpportunityCancelResult,
@@ -165,24 +166,21 @@ function FixtureExtractionConsent({
   onCancel,
 }: Pick<JobRequirementsExtractionViewProps, "disabled" | "onConfirm" | "onCancel">) {
   return (
-    <section className="job-extraction" aria-label="Extract requirements consent">
-      <p className="job-extraction-title">Extract requirements with local fixtures?</p>
-      <p className="setup-note">
-        Extract splits this application's job text into a draft opportunity brief on this computer.
-        Nothing is sent to a provider.
-      </p>
+    <section className="job-extraction" aria-label={t`Extract requirements consent`}>
+      <p className="job-extraction-title">{t`Extract requirements with local fixtures?`}</p>
+      <p className="setup-note">{t`Extract splits this application's job text into a draft opportunity brief on this computer. Nothing is sent to a provider.`}</p>
       <div className="job-extraction-actions">
         <button
           className="button button-primary"
           type="button"
           disabled={disabled}
           onClick={onConfirm}
-        >
-          Extract
-        </button>
-        <button className="button button-quiet" type="button" onClick={onCancel}>
-          Cancel
-        </button>
+        >{t`Extract`}</button>
+        <button
+          className="button button-quiet"
+          type="button"
+          onClick={onCancel}
+        >{t`Cancel`}</button>
       </div>
     </section>
   );
@@ -210,8 +208,8 @@ export function JobRequirementsExtractionView({
             {fixtureMode
               ? fixtureExtractionNote
               : jobFromUrl
-                ? "Your writing model splits the job page into requirements you review."
-                : "Long or pasted job pages can be split into reviewable requirements with your writing model."}
+                ? t`Your writing model splits the job page into requirements you review.`
+                : t`Long or pasted job pages can be split into reviewable requirements with your writing model.`}
           </p>
           {phase.notice === undefined ? null : (
             <p className="setup-note" role="status">
@@ -224,9 +222,7 @@ export function JobRequirementsExtractionView({
             type="button"
             disabled={disabled}
             onClick={onOpen}
-          >
-            Extract requirements
-          </button>
+          >{t`Extract requirements`}</button>
         </div>
       );
     case "consent":
@@ -236,20 +232,20 @@ export function JobRequirementsExtractionView({
         );
       }
       return (
-        <section className="job-extraction" aria-label="Extract requirements consent">
-          <p className="job-extraction-title">Send the job description to the writing model?</p>
+        <section className="job-extraction" aria-label={t`Extract requirements consent`}>
+          <p className="job-extraction-title">{t`Send the job description to the writing model?`}</p>
           <p className="setup-note">
             {jobFromUrl
-              ? `Extract fetches the job page you approved for this application, then sends its text to ${providerName} (${modelName}) to draft an opportunity brief.`
-              : `Extract sends this workspace's job description to ${providerName} (${modelName}) to draft an opportunity brief.`}
+              ? t`Extract fetches the job page you approved for this application, then sends its text to ${providerName} (${modelName}) to draft an opportunity brief.`
+              : t`Extract sends this workspace's job description to ${providerName} (${modelName}) to draft an opportunity brief.`}
           </p>
           <code className="job-extraction-model">
             {writingModel.company}/{writingModel.model}
           </code>
           <p className="setup-note">
             {jobFromUrl
-              ? "Only that page's text is sent. Your career evidence is not sent. Nothing is fetched or sent until you choose Extract."
-              : "Only the job description is sent. Your career evidence is not sent. Nothing is sent until you choose Extract."}
+              ? t`Only that page's text is sent. Your career evidence is not sent. Nothing is fetched or sent until you choose Extract.`
+              : t`Only the job description is sent. Your career evidence is not sent. Nothing is sent until you choose Extract.`}
           </p>
           <div className="job-extraction-actions">
             <button
@@ -257,12 +253,12 @@ export function JobRequirementsExtractionView({
               type="button"
               disabled={disabled}
               onClick={onConfirm}
-            >
-              Extract
-            </button>
-            <button className="button button-quiet" type="button" onClick={onCancel}>
-              Cancel
-            </button>
+            >{t`Extract`}</button>
+            <button
+              className="button button-quiet"
+              type="button"
+              onClick={onCancel}
+            >{t`Cancel`}</button>
           </div>
         </section>
       );
@@ -273,31 +269,29 @@ export function JobRequirementsExtractionView({
         <div className="job-extraction" role="status">
           <div className="profile-generation-progress-row">
             <span className="profile-generation-spinner" aria-hidden="true" />
-            <strong>{readingPage ? "Reading the job page…" : "Extracting requirements…"}</strong>
+            <strong>{readingPage ? t`Reading the job page…` : t`Extracting requirements…`}</strong>
           </div>
           <p className="setup-note">
             {fixtureMode
-              ? "Splitting the job text with local fixtures. Nothing is sent to a provider."
+              ? t`Splitting the job text with local fixtures. Nothing is sent to a provider.`
               : phase.background === true
                 ? pendingExtractionNote
                 : readingPage
-                  ? `DraftLoop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
+                  ? t`DraftLoop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
                   : onCancelExtraction === undefined
                     ? // A host that cannot stop the request does not offer Cancel, so the note does
                       // not promise it (#1832).
-                      `Waiting for ${providerName} (${modelName}). This can take a minute.`
-                    : `Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
+                      t`Waiting for ${providerName} (${modelName}). This can take a minute.`
+                    : t`Waiting for ${providerName} (${modelName}). Cancel to stop the request; nothing is saved unless extraction finishes.`}
           </p>
           {onCancelExtraction === undefined || phase.background === true ? null : (
             <button
               className="button button-quiet"
               type="button"
-              aria-label="Cancel extraction"
+              aria-label={t`Cancel extraction`}
               disabled={phase.cancelling === true}
               onClick={onCancelExtraction}
-            >
-              Cancel
-            </button>
+            >{t`Cancel`}</button>
           )}
         </div>
       );
@@ -322,30 +316,28 @@ export function JobRequirementsExtractionView({
               type="button"
               disabled={disabled}
               onClick={onOpen}
-            >
-              Extract again
-            </button>
+            >{t`Extract again`}</button>
           </div>
         );
       }
       return (
         <div className="job-extraction" role="status">
-          <p className="job-extraction-title">Draft brief saved</p>
+          <p className="job-extraction-title">{t`Draft brief saved`}</p>
           <dl className="job-extraction-facts">
             <div>
-              <dt>Brief</dt>
+              <dt>{t`Brief`}</dt>
               <dd>
-                <code>{phase.summary.briefId}</code> version {phase.summary.version} (
+                <code>{phase.summary.briefId}</code> {t`version`} {phase.summary.version} (
                 {phase.summary.status})
               </dd>
             </div>
             <div>
-              <dt>Extracted</dt>
+              <dt>{t`Extracted`}</dt>
               <dd>
                 {plural(phase.summary.requirementCount, "requirement")},{" "}
                 {phase.summary.responsibilityCount === 1
-                  ? "1 responsibility"
-                  : `${phase.summary.responsibilityCount} responsibilities`}
+                  ? t`1 responsibility`
+                  : t`${phase.summary.responsibilityCount} responsibilities`}
               </dd>
             </div>
           </dl>
@@ -358,25 +350,21 @@ export function JobRequirementsExtractionView({
               ))}
             </ul>
           )}
-          <p className="setup-note">
-            This is a draft: it has not been reviewed and cannot start a run yet.
-          </p>
+          <p className="setup-note">{t`This is a draft: it has not been reviewed and cannot start a run yet.`}</p>
           {reviewAction}
         </div>
       );
     case "failed":
       return (
         <div className="job-extraction" role="alert">
-          <p className="job-extraction-title">Requirements were not extracted</p>
+          <p className="job-extraction-title">{t`Requirements were not extracted`}</p>
           <p className="setup-note">{phase.message}</p>
           <button
             className="button button-outline"
             type="button"
             disabled={disabled}
             onClick={onOpen}
-          >
-            Try again
-          </button>
+          >{t`Try again`}</button>
         </div>
       );
   }

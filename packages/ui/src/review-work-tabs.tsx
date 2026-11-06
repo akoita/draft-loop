@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The review's work area: a one-line "Next:" status over the Findings, Coverage and Job tabs.
  *
@@ -353,7 +354,7 @@ export function ReviewWorkTabs({
         )}
       </p>
       {tabs.length < 2 ? null : (
-        <div className="review-work-tablist" role="tablist" aria-label="Review work">
+        <div className="review-work-tablist" role="tablist" aria-label={t`Review work`}>
           {tabs.map((tab, index) => {
             const isSelected = tab.id === selected;
             return (

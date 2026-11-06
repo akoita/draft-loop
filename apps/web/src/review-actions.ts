@@ -1,5 +1,6 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
 import { defaultExportTemplate } from "@draft-loop/ui/export-template";
+import { t } from "@lingui/core/macro";
 
 import { type ApiClient, ApiRequestError } from "./api-client.js";
 import { refuse } from "./bridge-refusal.js";
@@ -29,7 +30,7 @@ export function createReviewActions(
       });
       return;
     }
-    if (runId === "pending") return refuse("Start a run first.");
+    if (runId === "pending") return refuse(t`Start a run first.`);
     const path = { workspaceId, runId };
     switch (action.type) {
       case "finding-decision": {
@@ -93,7 +94,7 @@ export function createReviewActions(
       case "recover-to-review":
       case "recover-round-limit":
         return refuse(
-          "This recovery is not available on the hosted service yet. Stop the run and start a new one.",
+          t`This recovery is not available on the hosted service yet. Stop the run and start a new one.`,
         );
       case "export": {
         // The desktop's save dialog becomes a download: the service renders and keeps the

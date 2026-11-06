@@ -7,6 +7,7 @@ import {
   type ModelProfilePreset,
 } from "@draft-loop/application/model-profile-catalog";
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 import type {
   ModelCompany,
   ModelProfileSupportResult,
@@ -56,7 +57,7 @@ export function usableSavedModelProfiles(
 export class ModelProfileSaveError extends Error {
   constructor(detail?: string) {
     super(
-      `The models were configured, but the profile pair could not be saved for future runs.${
+      t`The models were configured, but the profile pair could not be saved for future runs.${
         detail === undefined || detail === "" ? "" : ` ${detail}`
       } It is not applied.`,
     );
@@ -69,9 +70,9 @@ export function modelProfileApplyErrorMessage(reason: unknown): string {
   if (reason instanceof ModelProfileSaveError) return reason.message;
   // A host's refusal (a run still executing, a pair it does not serve) says why in its own words.
   if (reason instanceof Error && reason.name === "DesktopBridgeError" && reason.message !== "") {
-    return `The profile pair could not be applied: ${reason.message}`;
+    return t`The profile pair could not be applied: ${reason.message}`;
   }
-  return "The profile pair could not be applied. Your draft is unchanged.";
+  return t`The profile pair could not be applied. Your draft is unchanged.`;
 }
 
 export const noModelProfilesWarning =
@@ -98,12 +99,12 @@ export function savedModelProfilesNotice(
     return null;
   }
   if (saved.status === "unavailable") {
-    return "The saved profile pair could not be read, so it is not shown. Apply a pair again or check the workspace.";
+    return t`The saved profile pair could not be read, so it is not shown. Apply a pair again or check the workspace.`;
   }
   if (saved.status !== "ready") return null;
   const { modelProfiles, ignoredReason } = saved.result;
   if (modelProfiles === null || ignoredReason === null) return null;
-  return `The saved profile pair (${describeReferences(modelProfiles)}) is not used because ${ignoredReason}.`;
+  return t`The saved profile pair (${describeReferences(modelProfiles)}) is not used because ${ignoredReason}.`;
 }
 
 /** The warning shown beside the configured models when the next run would attach no profiles. */

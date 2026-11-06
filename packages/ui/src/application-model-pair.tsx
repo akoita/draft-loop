@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 import { useState } from "react";
 import type { ApplicationModelProfilesView } from "./application-contract.js";
 import type { ModelProfileSupportResult } from "./bridge.js";
@@ -113,13 +114,10 @@ export function ApplicationModelPairChoice({
     <details className="flow-model-pair" open={pair !== null}>
       <summary>
         {pair === null
-          ? "Use a different model pair for this application"
-          : "This application uses its own model pair"}
+          ? t`Use a different model pair for this application`
+          : t`This application uses its own model pair`}
       </summary>
-      <p className="subtle">
-        Other applications keep the workspace&apos;s pair. A run records the pair it used, so
-        changing it later does not change past reviews.
-      </p>
+      <p className="subtle">{t`Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews.`}</p>
       <ModelPresetCards
         groupName="application-model-pair"
         legend="Model pair for this application"
@@ -137,12 +135,12 @@ export function ApplicationModelPairChoice({
               disabled={locked}
               onChange={() => onChoose(null)}
             />
-            <span className="model-preset-card-title">Workspace pair</span>
+            <span className="model-preset-card-title">{t`Workspace pair`}</span>
             <span className="model-preset-card-line">
-              {modelDisplayName(workspace.author.model)} writes ·{" "}
-              {modelDisplayName(workspace.critic.model)} reviews
+              {modelDisplayName(workspace.author.model)} {t`writes ·`}{" "}
+              {modelDisplayName(workspace.critic.model)} {t`reviews`}
             </span>
-            <span className="model-preset-card-meta">The pair set on Home. Default.</span>
+            <span className="model-preset-card-meta">{t`The pair set on Home. Default.`}</span>
           </label>
         }
         onSelect={(value) => {
@@ -150,11 +148,7 @@ export function ApplicationModelPairChoice({
           if (chosen !== undefined) onChoose(chosen);
         }}
       />
-      {saving ? (
-        <p className="flow-status" role="status">
-          Saving the model pair…
-        </p>
-      ) : null}
+      {saving ? <p className="flow-status" role="status">{t`Saving the model pair…`}</p> : null}
       {errorMessage === null ? null : (
         <p className="setup-blocker" role="alert">
           {errorMessage}

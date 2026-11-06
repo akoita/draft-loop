@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The run comparison as a Markdown file the reviewer saves locally.
  *
@@ -32,10 +33,10 @@ function row(cells: readonly string[]): string {
 function draftMarkdown(label: string, artifact: ReviewArtifact | null): string[] {
   const lines = [`## ${label} draft`, ""];
   if (artifact === null) {
-    lines.push("The draft could not be read.", "");
+    lines.push(t`The draft could not be read.`, "");
     return lines;
   }
-  lines.push(`Draft version ${artifact.version}.`, "");
+  lines.push(t`Draft version ${artifact.version}.`, "");
   for (const section of artifact.sections) {
     lines.push(`### ${section.title}`, "");
     for (const block of section.blocks) {
@@ -55,7 +56,7 @@ export function runComparisonMarkdown(input: {
   const lines = [
     `# Run comparison: ${facts.leftLabel} and ${facts.rightLabel}`,
     "",
-    "Each value is what that run recorded.",
+    t`Each value is what that run recorded.`,
     "",
     row(["", facts.leftLabel, facts.rightLabel]),
     row(["---", "---", "---"]),

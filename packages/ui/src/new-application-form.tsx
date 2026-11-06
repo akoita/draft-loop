@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type RefObject, useRef, useState } from "react";
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { ApplicationFolderView } from "./application-folder-contract.js";
@@ -90,31 +91,31 @@ export function NewApplicationFormView({
             if (!busy && problem === null) onSubmit();
           }}
         >
-          <h2 id="new-application-title">New application</h2>
-          <p className="modal-copy" id="new-application-copy">
-            Name the role and give its job posting. The application then opens on its three steps,
-            starting with extracting and reviewing the requirements.
-          </p>
+          <h2 id="new-application-title">{t`New application`}</h2>
+          <p
+            className="modal-copy"
+            id="new-application-copy"
+          >{t`Name the role and give its job posting. The application then opens on its three steps, starting with extracting and reviewing the requirements.`}</p>
           <label className="new-application-field">
-            <span>Name</span>
+            <span>{t`Name`}</span>
             <input
               type="text"
               value={draft.name}
               maxLength={120}
               disabled={busy}
-              placeholder="Company and role"
+              placeholder={t`Company and role`}
               onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
             />
           </label>
           {folders.length === 0 || onFolderChange === undefined ? null : (
             <label className="new-application-field">
-              <span>Folder</span>
+              <span>{t`Folder`}</span>
               <select
                 value={folderId}
                 disabled={busy}
                 onChange={(event) => onFolderChange(event.target.value)}
               >
-                <option value="">No folder</option>
+                <option value="">{t`No folder`}</option>
                 {folders.map((folder) => (
                   <option key={folder.id} value={folder.id}>
                     {folder.name}
@@ -124,7 +125,7 @@ export function NewApplicationFormView({
             </label>
           )}
           <fieldset className="model-editor-mode">
-            <legend>Job posting</legend>
+            <legend>{t`Job posting`}</legend>
             <div className="view-toggle">
               {kindButton("text", "Paste text")}
               {jobPagesAllowed ? kindButton("url", "Job page address") : null}
@@ -133,7 +134,7 @@ export function NewApplicationFormView({
           </fieldset>
           {draft.jobKind === "file" ? (
             <label className="new-application-field">
-              <span>Job description file</span>
+              <span>{t`Job description file`}</span>
               <input
                 type="file"
                 accept={newApplicationJobFileAccept}
@@ -146,30 +147,30 @@ export function NewApplicationFormView({
               />
               <span className="subtle">
                 {draft.jobFile === null
-                  ? "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
-                  : `${draft.jobFile.name} is ready. Only its text is kept, as if pasted.`}
+                  ? t`A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted.`
+                  : t`${draft.jobFile.name} is ready. Only its text is kept, as if pasted.`}
               </span>
             </label>
           ) : draft.jobKind === "text" ? (
             <label className="new-application-field">
-              <span>Job description</span>
+              <span>{t`Job description`}</span>
               <textarea
                 value={draft.jobText}
                 rows={8}
                 disabled={busy}
-                placeholder="Paste the job description"
+                placeholder={t`Paste the job description`}
                 onChange={(event) => onDraftChange({ ...draft, jobText: event.target.value })}
               />
             </label>
           ) : (
             <>
               <label className="new-application-field">
-                <span>Job page address</span>
+                <span>{t`Job page address`}</span>
                 <input
                   type="url"
                   value={draft.jobUrl}
                   disabled={busy}
-                  placeholder="https://"
+                  placeholder={t`https://`}
                   onChange={(event) => onDraftChange({ ...draft, jobUrl: event.target.value })}
                 />
               </label>
@@ -182,10 +183,7 @@ export function NewApplicationFormView({
                     onDraftChange({ ...draft, urlApproved: event.target.checked })
                   }
                 />
-                <span>
-                  I approve DraftLoop fetching this page. It is read only when you extract
-                  requirements on the application&apos;s first step, never before.
-                </span>
+                <span>{t`I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before.`}</span>
               </label>
             </>
           )}
@@ -216,16 +214,18 @@ export function NewApplicationFormView({
             </p>
           )}
           <div className="new-application-actions">
-            <button className="button button-quiet" type="button" onClick={onCancel}>
-              Cancel
-            </button>
+            <button
+              className="button button-quiet"
+              type="button"
+              onClick={onCancel}
+            >{t`Cancel`}</button>
             <button
               className="button button-primary"
               type="submit"
               disabled={busy || problem !== null}
               {...(problem === null ? {} : { "aria-describedby": "new-application-problem" })}
             >
-              {busy ? "Creating…" : "Create application"}
+              {busy ? t`Creating…` : t`Create application`}
             </button>
           </div>
         </form>

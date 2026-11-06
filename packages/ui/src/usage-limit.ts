@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { formatDateTime } from "./locale-format.js";
 import type { UsageLimitView } from "./model.js";
 
@@ -23,5 +24,5 @@ export function usageLimitText(
     (usageLimit.resetsAt === null
       ? undefined
       : formatDateTime(usageLimit.resetsAt, timeZone === undefined ? {} : { timeZone })) ?? "later";
-  return `Usage limit reached on ${providerName(usageLimit.provider)} · try again after ${when}`;
+  return t`Usage limit reached on ${providerName(usageLimit.provider)} · try again after ${when}`;
 }

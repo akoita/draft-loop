@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { EarlierRunView } from "./earlier-run.js";
 
 /**
@@ -14,28 +15,32 @@ export function EarlierRunNotice({
   if (earlierRun === undefined || earlierRun === null) return null;
   if (earlierRun.chosen === true) {
     return (
-      <section className="earlier-run-notice" role="status" aria-label="chosen earlier run">
+      <section className="earlier-run-notice" role="status" aria-label={t`chosen earlier run`}>
         <p>
-          <strong>Using this earlier run's draft.</strong> Approve and export it here; revisions are
-          made on the latest run.
+          <strong>{t`Using this earlier run's draft.`}</strong>{" "}
+          {t`Approve and export it here; revisions are made on the latest run.`}
         </p>
         {onBackToLatest === undefined ? null : (
-          <button className="button button-quiet" type="button" onClick={onBackToLatest}>
-            Open latest run
-          </button>
+          <button
+            className="button button-quiet"
+            type="button"
+            onClick={onBackToLatest}
+          >{t`Open latest run`}</button>
         )}
       </section>
     );
   }
   return (
-    <section className="earlier-run-notice" role="status" aria-label="earlier run">
+    <section className="earlier-run-notice" role="status" aria-label={t`earlier run`}>
       <p>
-        <strong>Viewing an earlier run.</strong> Changes are made on the latest run.
+        <strong>{t`Viewing an earlier run.`}</strong> {t`Changes are made on the latest run.`}
       </p>
       {onBackToLatest === undefined ? null : (
-        <button className="button button-primary" type="button" onClick={onBackToLatest}>
-          Back to latest run
-        </button>
+        <button
+          className="button button-primary"
+          type="button"
+          onClick={onBackToLatest}
+        >{t`Back to latest run`}</button>
       )}
     </section>
   );

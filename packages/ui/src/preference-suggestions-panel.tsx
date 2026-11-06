@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useId, useState } from "react";
 
 /**
@@ -50,11 +51,8 @@ export function PreferenceSuggestionsPanel({
 
   return (
     <section className="panel host-panel preference-suggestions" aria-labelledby={`${id}-heading`}>
-      <h3 id={`${id}-heading`}>Suggested preferences</h3>
-      <p className="muted">
-        DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it
-        to your writing policy for new runs.
-      </p>
+      <h3 id={`${id}-heading`}>{t`Suggested preferences`}</h3>
+      <p className="muted">{t`DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs.`}</p>
       {problem === undefined ? null : (
         <p className="problem" role="alert">
           {problem}
@@ -78,17 +76,13 @@ export function PreferenceSuggestionsPanel({
                 type="button"
                 disabled={busy !== undefined}
                 onClick={() => void decide(suggestion.id, "accept")}
-              >
-                Add to policy
-              </button>
+              >{t`Add to policy`}</button>
               <button
                 className="button button-outline"
                 type="button"
                 disabled={busy !== undefined}
                 onClick={() => void decide(suggestion.id, "dismiss")}
-              >
-                Dismiss
-              </button>
+              >{t`Dismiss`}</button>
             </div>
           </li>
         ))}

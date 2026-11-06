@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
@@ -36,9 +37,9 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy } = props;
   return (
     <section className="panel host-panel application-material" aria-labelledby="material-heading">
-      <h2 id="material-heading">Prepare</h2>
+      <h2 id="material-heading">{t`Prepare`}</h2>
       <fieldset disabled={busy}>
-        <legend>Draft for this application</legend>
+        <legend>{t`Draft for this application`}</legend>
         {kinds.map((option) => (
           <label key={option}>
             <input
@@ -54,7 +55,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
       </fieldset>
       {draft === undefined ? <p className="muted">{applicationMaterialDisclosure}</p> : null}
       <button type="button" className="button" disabled={busy} onClick={props.onDraft}>
-        {busy ? "Drafting…" : draft === undefined ? "Draft" : "Draft again"}
+        {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
       </button>
       {problem === undefined ? null : <p role="alert">{problem}</p>}
       {draft === undefined ? null : (
@@ -67,7 +68,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                   {item.question === "" ? null : <h3>{item.question}</h3>}
                   <p>{item.text}</p>
                 </div>
-                <aside aria-label="Sources">
+                <aside aria-label={t`Sources`}>
                   <ul>
                     {item.citations.map((citation) => (
                       <li key={citation.fact_id}>{citation.text}</li>
@@ -78,12 +79,14 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             ))}
           </ol>
           <p className="muted">
-            Drafted by {draft.model.model}. Check every sentence against its sources before you use
-            it.
+            {t`Drafted by`} {draft.model.model}
+            {t`. Check every sentence against its sources before you use it.`}
           </p>
-          <button type="button" className="button" onClick={props.onDownload}>
-            Download Markdown
-          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={props.onDownload}
+          >{t`Download Markdown`}</button>
         </>
       )}
     </section>

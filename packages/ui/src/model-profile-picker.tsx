@@ -1,5 +1,6 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
+import { t } from "@lingui/core/macro";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { customPresetValue, ModelPresetCards } from "./model-preset-cards.js";
 import { ModelProfileBudget } from "./model-profile-budget.js";
@@ -208,14 +209,11 @@ export function ModelProfilePicker({
         : null;
 
   return (
-    <section className="model-profile-picker" aria-label="Next-run model profiles">
+    <section className="model-profile-picker" aria-label={t`Next-run model profiles`}>
       <div className="model-profile-picker-heading">
         <div>
-          <h2>Model profiles for new runs</h2>
-          <p>
-            Choose which models write and review your next runs. Changing this does not affect runs
-            already in progress. Sending candidate material still asks for your approval each time.
-          </p>
+          <h2>{t`Model profiles for new runs`}</h2>
+          <p>{t`Choose which models write and review your next runs. Changing this does not affect runs already in progress. Sending candidate material still asks for your approval each time.`}</p>
         </div>
         {onUseWorkspaceModels === undefined ? null : (
           <button
@@ -223,24 +221,16 @@ export function ModelProfilePicker({
             type="button"
             disabled={disabled || saving || applied === null}
             onClick={onUseWorkspaceModels}
-          >
-            Use workspace models
-          </button>
+          >{t`Use workspace models`}</button>
         )}
       </div>
       {signInFixed ? null : (
         <details className="model-profile-picker-notice">
           <summary>
-            <span className="model-profile-picker-notice-line">
-              Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.
-            </span>{" "}
-            <span className="model-profile-picker-notice-more">More</span>
+            <span className="model-profile-picker-notice-line">{t`Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions.`}</span>{" "}
+            <span className="model-profile-picker-notice-more">{t`More`}</span>
           </summary>
-          <p>
-            Quality for real CVs has not been validated for these presets, and account availability
-            is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop
-            never switches your sign-in automatically.
-          </p>
+          <p>{t`Quality for real CVs has not been validated for these presets, and account availability is not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never switches your sign-in automatically.`}</p>
         </details>
       )}
       {supportMessage === null ? null : (
@@ -254,9 +244,7 @@ export function ModelProfilePicker({
           type="button"
           disabled={disabled || saving}
           onClick={onRetrySupport}
-        >
-          Retry profile check
-        </button>
+        >{t`Retry profile check`}</button>
       ) : null}
       {routeUnsupported ? (
         <p className="model-profile-picker-status" role="status">
@@ -268,8 +256,8 @@ export function ModelProfilePicker({
           <p>
             {pendingSelectionMessage ??
               (signInFixed
-                ? "New runs use the workspace's current models."
-                : "Applied next-run selection: workspace model settings (legacy path).")}
+                ? t`New runs use the workspace's current models.`
+                : t`Applied next-run selection: workspace model settings (legacy path).`)}
           </p>
           {savedPairNotice === null ? null : (
             <p className="model-profile-picker-status" role="status">
@@ -298,7 +286,7 @@ export function ModelProfilePicker({
             return (
               <div className="model-profile-picker-side" key={role}>
                 <label className="model-profile-picker-field">
-                  <span>{role === "author" ? "Author profile" : "Critic profile"}</span>
+                  <span>{role === "author" ? t`Author profile` : t`Critic profile`}</span>
                   <select
                     value={draft[role]}
                     disabled={disabled || saving}
@@ -310,9 +298,11 @@ export function ModelProfilePicker({
                       }));
                       setError(null);
                     }}
-                    aria-label={`${role === "author" ? "Author" : "Critic"} profile`}
+                    aria-label={t`${role === "author" ? "Author" : "Critic"} profile`}
                   >
-                    <option value="">Choose an exact {role} profile</option>
+                    <option value="">
+                      {t`Choose an exact`} {role} {t`profile`}
+                    </option>
                     {modelProfileCatalog
                       .filter(({ profile }) => profile.roles.includes(role))
                       .map(({ profile }) => {
@@ -327,16 +317,14 @@ export function ModelProfilePicker({
                           <option key={profileToken(profile)} value={profileToken(profile)}>
                             {profile.id}@{profile.version} — {profile.provider}/{profile.modelId} —{" "}
                             {profile.tier}
-                            {isSupported === false ? " — unsupported with current route" : ""}
+                            {isSupported === false ? t` — unsupported with current route` : ""}
                           </option>
                         );
                       })}
                   </select>
                 </label>
                 {selectedSupported === false ? (
-                  <p className="model-profile-picker-status">
-                    Unsupported with the configured route.
-                  </p>
+                  <p className="model-profile-picker-status">{t`Unsupported with the configured route.`}</p>
                 ) : null}
               </div>
             );
@@ -364,7 +352,9 @@ export function ModelProfilePicker({
                     setError(null);
                   }}
                 >
-                  <option value="">{effortDisplayName(choices.defaultEffort)} (default)</option>
+                  <option value="">
+                    {effortDisplayName(choices.defaultEffort)} {t`(default)`}
+                  </option>
                   {choices.levels
                     .filter((level) => level !== choices.defaultEffort)
                     .map((level) => (
@@ -376,15 +366,13 @@ export function ModelProfilePicker({
               </label>
             );
           })}
-          <p className="model-profile-picker-status">
-            More reasoning usually costs more and can improve the draft or the review.
-          </p>
+          <p className="model-profile-picker-status">{t`More reasoning usually costs more and can improve the draft or the review.`}</p>
         </div>
       )}
       {selectedProfiles === null ||
       modelProfileSelectionsEqual(selectedProfiles, applied) ? null : (
         <details className="model-profile-picker-more">
-          <summary>Details</summary>
+          <summary>{t`Details`}</summary>
           <div className="model-profile-picker-profile-pair">
             <ProfileDetails
               reference={selectedProfiles.author}
@@ -421,18 +409,14 @@ export function ModelProfilePicker({
             type="button"
             disabled={disabled || saving}
             onClick={onCancel}
-          >
-            Cancel
-          </button>
+          >{t`Cancel`}</button>
         )}
         <button
           className="button button-primary"
           type="button"
           disabled={applyDisabled}
           onClick={() => void applyDraft()}
-        >
-          Apply for future runs
-        </button>
+        >{t`Apply for future runs`}</button>
       </div>
     </section>
   );
