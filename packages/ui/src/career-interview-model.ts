@@ -98,7 +98,7 @@ export function careerInterviewProgress(session: CareerInterviewSessionView): {
 
 const refusals: Readonly<Record<string, string>> = {
   consent_required:
-    "The interview needs your permission to send career material to Anthropic. Record it on the consent step of this record, then try again.",
+    "The interviewer is Claude, by Anthropic, so your answers go to Anthropic to write each question. The interview needs your permission for that.",
   interview_model_unavailable:
     "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route.",
   topic_not_open: "This topic is no longer being discussed. Reload to see where it stands.",
@@ -107,6 +107,15 @@ const refusals: Readonly<Record<string, string>> = {
   invalid_answer: "Write your answer in a few words, up to 4,000 characters.",
   session_not_found: "This conversation could not be found. Start a new one.",
 };
+
+/** A refused call as the host reports it: the code lets the screen offer a way through. */
+export interface CareerInterviewRefused {
+  readonly code: string;
+  readonly message: string;
+}
+
+/** What a host call resolves with: nothing once it succeeded, or what to show. */
+export type CareerInterviewProblem = string | CareerInterviewRefused | undefined;
 
 /** The candidate-facing words for a refusal code, or the server's own message. */
 export function careerInterviewRefusal(code: string | undefined, message: string): string {

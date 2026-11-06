@@ -501,6 +501,10 @@ msgstr ""
 msgid "Allow {0} to hear my voice"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Allow and continue"
+msgstr ""
+
 #. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
 #: apps/web/src/private-sections.tsx
 msgid "Allow pull requests from {0}"
@@ -3764,10 +3768,6 @@ msgstr ""
 #. placeholder {0}: providerList(providers)
 #: apps/web/src/consent-model.ts
 msgid "Record the candidate's consent to send material to {0} first."
-msgstr ""
-
-#: apps/web/src/career-interview.tsx
-msgid "Record the permission to send material to model providers on the consent step first."
 msgstr ""
 
 #: packages/ui/src/workspace-model-settings.ts
