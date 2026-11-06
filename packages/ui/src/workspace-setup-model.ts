@@ -1,3 +1,7 @@
+import {
+  documentLanguageChoiceLabel,
+  documentLanguages,
+} from "@draft-loop/domain/document-language";
 import { modelProfileCatalog, modelProfilePresets } from "./model-profile-picker-state.js";
 import { isDevelopmentPreset, presetDisplayName } from "./model-profile-presentation.js";
 
@@ -22,16 +26,12 @@ export interface WorkspaceSetupChoice {
   readonly fixtureMode: boolean;
 }
 
+/** English and French first; the other languages work but are labelled previews (#2317). */
 export const workspaceSetupLanguages: readonly { readonly code: string; readonly label: string }[] =
-  [
-    { code: "en", label: "English" },
-    { code: "fr", label: "French" },
-    { code: "de", label: "German" },
-    { code: "es", label: "Spanish" },
-    { code: "it", label: "Italian" },
-    { code: "nl", label: "Dutch" },
-    { code: "pt", label: "Portuguese" },
-  ];
+  documentLanguages.map((language) => ({
+    code: language.code,
+    label: documentLanguageChoiceLabel(language),
+  }));
 
 export const workspaceSetupRoundLimits = [1, 2, 3, 4, 5] as const;
 export const defaultWorkspaceSetupRounds = 2;

@@ -1,5 +1,6 @@
 import {
   detectTextLanguage,
+  documentLanguageChoiceLabel,
   documentLanguageLabel,
   documentLanguages,
   isDocumentLanguage,
@@ -41,9 +42,9 @@ export function DocumentLanguageSelect({ value, disabled, onChange }: DocumentLa
         onChange={(event) => onChange(event.target.value)}
       >
         <option value={workspaceLanguageValue}>The workspace&apos;s language</option>
-        {documentLanguages.map(({ code, label }) => (
-          <option key={code} value={code}>
-            {label}
+        {documentLanguages.map((language) => (
+          <option key={language.code} value={language.code}>
+            {documentLanguageChoiceLabel(language)}
           </option>
         ))}
       </select>

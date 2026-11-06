@@ -6,6 +6,7 @@ import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
 import { isTitleBlockSection } from "./document-layout.js";
 import { headerLines } from "./header-lines.js";
 import { splitInlineLabel } from "./inline-label.js";
+import { typesetArtifact } from "./language-conventions.js";
 import { embeddedFontFlateBytes } from "./pdf-fonts.js";
 import { isRoleContextLine, isRoleHeaderBlock, splitRoleHeader } from "./role-header.js";
 import { getRenderingTemplate } from "./templates.js";
@@ -181,7 +182,8 @@ function printCss(template: RenderingTemplate): string {
 }
 
 /** The print-ready HTML of an artifact, drawn with a built-in rendering template. */
-export function renderPrintHtml(artifact: DraftArtifact, options: PrintHtmlOptions = {}): string {
+export function renderPrintHtml(source: DraftArtifact, options: PrintHtmlOptions = {}): string {
+  const artifact = typesetArtifact(source);
   const template = getRenderingTemplate(options.templateId);
   const body = artifact.sections
     .slice()

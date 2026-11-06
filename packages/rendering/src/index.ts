@@ -24,6 +24,7 @@ import { isTitleBlockSection } from "./document-layout.js";
 import { buildDocx } from "./docx-document.js";
 import { headerLines } from "./header-lines.js";
 import { sectionBodyHtml } from "./html-blocks.js";
+import { typesetArtifact } from "./language-conventions.js";
 import {
   layoutProfileIdForTemplate,
   profileFromTemplate,
@@ -444,10 +445,12 @@ ul { margin: 0 0 ${spacing.blockAfter}pt; padding-left: ${spacing.listIndent}pt;
 }
 
 function bytesForFormat(
-  artifact: DraftArtifact,
+  source: DraftArtifact,
   format: OutputFormat,
   options: RenderOptions = {},
 ): Uint8Array {
+  // The document's language's typography; the metadata still describes the source artifact.
+  const artifact = typesetArtifact(source);
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact, options));
   const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   if (format === "pdf") {
@@ -1189,6 +1192,13 @@ function renderedDocument(
 
 export * from "./controlled-document-inspector.js";
 export * from "./document-layout.js";
+export {
+  conventionsFor,
+  frenchTypography,
+  type LanguageConventions,
+  typesetArtifact,
+  typesetText,
+} from "./language-conventions.js";
 export {
   profileFromTemplate,
   type RenderingLayoutProfile,
