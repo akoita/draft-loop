@@ -2,7 +2,9 @@ import {
   type HostedKnowledgeIntake,
   type HostedKnowledgeSourceView,
   hostedKnowledgeSourceMediaTypes,
+  normalizeHostedUpload,
 } from "@draft-loop/application";
+import { pullRequestListMediaTypes } from "@draft-loop/ingestion/pull-request-list";
 import type { CandidateKnowledgeBaseRecord } from "@draft-loop/storage";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -12,6 +14,9 @@ import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { screeningOutcomeSchema } from "./content-screening-views.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { KnowledgeOwnership } from "./knowledge-access.js";
+
+/** What an upload may be sent as: a source file, or a pull request list in JSON or CSV. */
+const uploadMediaTypes = [...hostedKnowledgeSourceMediaTypes, ...pullRequestListMediaTypes];
 
 export interface KnowledgeRoutesOptions {
   /** The tenant's knowledge intake, bound to its one store and its blob prefix. */
@@ -193,7 +198,7 @@ export function registerKnowledgeRoutes(
     const upload = scope.withTypeProvider<ZodTypeProvider>();
     upload.removeAllContentTypeParsers();
     upload.addContentTypeParser(
-      [...hostedKnowledgeSourceMediaTypes],
+      uploadMediaTypes,
       { parseAs: "buffer", bodyLimit: intake.maxSourceBytes },
       (_request, body, done) => done(null, body),
     );
@@ -203,8 +208,8 @@ export function registerKnowledgeRoutes(
         bodyLimit: intake.maxSourceBytes,
         schema: {
           summary: "Upload a candidate source file",
-          description: `Send the file itself as the request body, with its media type as the Content-Type: ${hostedKnowledgeSourceMediaTypes.join(", ")}. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.`,
-          consumes: [...hostedKnowledgeSourceMediaTypes],
+          description: `Send the file itself as the request body, with its media type as the Content-Type: ${uploadMediaTypes.join(", ")}. A JSON or CSV file must be a pull request list the person exported (title, body, closedAt, url and repository per entry, as \`gh search prs --json\` prints); it is stored as Markdown with one heading per pull request. The type is checked against the file's signature; the file is stored, and its text is read only to screen it. In sign-in mode the base's candidate record needs a current material storage consent (409 storage_consent_required). The same bytes in the same knowledge base answer 200 with the existing source, so a retry is safe. After the file is stored its text is screened for prompt injection; the answer's screening shows the verdict and signal codes, never a quote. A flagged or unscreened file is quarantined: a run that would use it is refused (409 material_quarantined) until an owner or admin releases it.`,
+          consumes: uploadMediaTypes,
           params: knowledgeBaseParams,
           querystring: uploadQuery,
           body: z.unknown().meta({ type: "string", format: "binary" }),
@@ -225,12 +230,17 @@ export function registerKnowledgeRoutes(
             .code(415)
             .send(apiError("unsupported_media_type", "Send the file as the request body."));
         }
-        const mediaType = (request.headers["content-type"] ?? "").split(";")[0]?.trim() ?? "";
+        const declared = (request.headers["content-type"] ?? "").split(";")[0]?.trim() ?? "";
+        // A pull request list becomes the Markdown it is stored, and screened, as (#2261).
+        const { mediaType, bytes } = normalizeHostedUpload({
+          mediaType: declared.toLowerCase(),
+          bytes: new Uint8Array(request.body),
+        });
         const added = await intake.addFileSource({
           knowledgeBaseId: request.params.knowledgeBaseId,
           displayName: request.query.name,
-          mediaType: mediaType.toLowerCase(),
-          bytes: new Uint8Array(request.body),
+          mediaType,
+          bytes,
         });
         // After the file is stored, so its ids exist; a screener's failure is the result's
         // verdict, never the upload's.
@@ -239,8 +249,8 @@ export function registerKnowledgeRoutes(
           sourceId: added.source.id,
           sourceVersionId: added.latestVersion.id,
           name: request.query.name,
-          mediaType: mediaType.toLowerCase(),
-          bytes: new Uint8Array(request.body),
+          mediaType,
+          bytes,
         });
         return reply.code(added.created ? 201 : 200).send({
           ...knowledgeSourceView(added),

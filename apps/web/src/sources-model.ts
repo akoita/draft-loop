@@ -16,9 +16,25 @@ export type SourceMediaType =
   | "text/markdown"
   | "text/plain";
 
-export const acceptedSourceFiles = ".pdf,.docx,.md,.markdown,.txt";
+export const acceptedSourceFiles = ".pdf,.docx,.md,.markdown,.txt,.json,.csv";
 
-const unsupportedMessage = "DraftLoop takes PDF, DOCX, Markdown and text files.";
+const unsupportedMessage =
+  "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.";
+
+/** A career evidence file's media type: a source file, or a pull request list (#2261). */
+export type EvidenceMediaType = SourceMediaType | "application/json" | "text/csv";
+
+const pullRequestListTypes: Readonly<Record<string, EvidenceMediaType>> = {
+  json: "application/json",
+  csv: "text/csv",
+};
+
+/** The media type to upload career evidence as; JSON and CSV must be pull request lists. */
+export function evidenceMediaType(fileName: string): EvidenceMediaType | undefined {
+  const extension = /\.([A-Za-z0-9]+)$/u.exec(fileName)?.[1]?.toLowerCase();
+  if (extension === undefined) return undefined;
+  return mediaTypes[extension] ?? pullRequestListTypes[extension];
+}
 
 /** The media type to upload a file as, from its name; the API checks it against the bytes. */
 export function sourceMediaType(fileName: string): SourceMediaType | undefined {
@@ -28,7 +44,7 @@ export function sourceMediaType(fileName: string): SourceMediaType | undefined {
 
 /** Why a file cannot be uploaded before sending it, or `undefined` when it can. */
 export function sourceFileProblem(file: { readonly name: string; readonly size: number }) {
-  if (sourceMediaType(file.name) === undefined) return `${file.name}: ${unsupportedMessage}`;
+  if (evidenceMediaType(file.name) === undefined) return `${file.name}: ${unsupportedMessage}`;
   if (file.size === 0) return `${file.name} is empty.`;
   if (file.name.length > 200) return "Rename the file to 200 characters or fewer.";
   if ([...file.name].some((character) => character < " " || "\u007f/\\".includes(character)))

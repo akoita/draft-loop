@@ -1,4 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
+import {
+  isPullRequestListMediaType,
+  parsePullRequestList,
+  pullRequestListMarkdown,
+} from "@draft-loop/ingestion/pull-request-list";
 import type {
   BlobStoragePort,
   CandidateKnowledgeBaseRecord,
@@ -297,5 +302,32 @@ export function createHostedKnowledgeIntake(
       });
       return { source: written.source, latestVersion: written.version, created: true };
     },
+  };
+}
+
+/** An upload as the person sent it, before it becomes a stored source. */
+export interface HostedUpload {
+  readonly mediaType: string;
+  readonly bytes: Uint8Array;
+}
+
+/**
+ * Turns a pull request list the person exported themselves (#2261), sent as JSON or CSV, into the
+ * Markdown source it is stored as; any other upload is returned as it came. A JSON or CSV file
+ * that is not a pull request list is refused, since the service takes no other JSON or CSV.
+ */
+export function normalizeHostedUpload(upload: HostedUpload): HostedUpload {
+  if (!isPullRequestListMediaType(upload.mediaType)) return upload;
+  const text = isText(upload.bytes) ? Buffer.from(upload.bytes).toString("utf8") : undefined;
+  const list = text === undefined ? undefined : parsePullRequestList(text, upload.mediaType);
+  if (list === undefined) {
+    throw new HostedKnowledgeIntakeError(
+      "unsupported_media_type",
+      "A JSON or CSV file must be a pull request list with title, url and repository for each entry.",
+    );
+  }
+  return {
+    mediaType: "text/markdown",
+    bytes: new Uint8Array(Buffer.from(pullRequestListMarkdown(list), "utf8")),
   };
 }

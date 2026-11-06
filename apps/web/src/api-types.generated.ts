@@ -1881,7 +1881,7 @@ export interface ApiOperations {
       readonly name: string;
     };
     readonly body: Blob;
-    readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain";
+    readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain" | "application/json" | "text/csv";
     readonly response: ApiSchemas["KnowledgeSource"];
   };
   "GET /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules": {

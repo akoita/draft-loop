@@ -18,6 +18,10 @@
     "./remote-url-fetcher": {
       "types": "./src/remote-url-fetcher.ts",
       "import": "./src/remote-url-fetcher.ts"
+    },
+    "./pull-request-list": {
+      "types": "./src/pull-request-list.ts",
+      "import": "./src/pull-request-list.ts"
     }
   },
   "files": [

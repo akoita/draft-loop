@@ -232,7 +232,10 @@ describe("career evidence over HTTP", () => {
 
   it.each([
     [413, "example-cv.md is larger than this service accepts."],
-    [415, "example-cv.md: DraftLoop takes PDF, DOCX, Markdown and text files."],
+    [
+      415,
+      "example-cv.md: DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.",
+    ],
   ])("explains a %i refusal of the upload in the person's words", async (status, message) => {
     const { port, onRefusal } = portOver(
       {

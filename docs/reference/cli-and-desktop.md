@@ -899,6 +899,27 @@ flowchart LR
 
 A host without a profile workflow shows no Career profile tab or signpost.
 
+### Import your pull requests
+
+On the web, Career evidence takes a list of your merged pull requests, so
+code review work can support a CV claim with a link. DraftLoop makes no
+network call: you export the list yourself.
+
+```sh
+gh search prs --author=@me --merged --limit 200 \
+  --json title,body,closedAt,url,repository > pull-requests.json
+```
+
+Then add `pull-requests.json` on **Career evidence**. A CSV with the columns
+`title,body,closedAt,url,repository` works too.
+
+- **Stored as Markdown.** Each pull request gets its own heading under its
+  repository, with its date and link, so a fact drawn from it cites it.
+- **Refused otherwise.** A JSON or CSV file that is not a pull request list
+  answers "must be a pull request list".
+- **Check what you share.** Review the file before you add it: a private
+  repository's titles and descriptions may be confidential.
+
 ### Where a fact may be used
 
 On the Career profile, each fact and each section has a **usage level**. It
