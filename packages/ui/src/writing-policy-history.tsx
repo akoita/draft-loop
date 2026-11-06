@@ -1,3 +1,4 @@
+import { formatDateTime } from "./locale-format.js";
 import type { WritingPolicyVersionMetadata } from "./model.js";
 
 /** One line of a version compared with the active policy. */
@@ -70,10 +71,7 @@ export interface WritingPolicyHistoryViewProps {
 }
 
 function formatCreatedAt(createdAt: string): string {
-  const date = new Date(createdAt);
-  return Number.isNaN(date.getTime())
-    ? createdAt
-    : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return formatDateTime(createdAt) ?? createdAt;
 }
 
 /** The policy's saved versions, newest first; picking one shows its text and how it differs. */

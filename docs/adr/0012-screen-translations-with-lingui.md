@@ -23,6 +23,7 @@ The shared screens use [Lingui](https://lingui.dev) 6, pinned exactly.
 | Macro build step | `packages/ui/lingui-macro.mjs`: Babel runs only on files that import a macro |
 | Active locale | `packages/ui/src/i18n.tsx`: English at import; the host passes a locale to `ScreensI18nProvider` |
 | Gate | `pnpm i18n:check` in `pnpm validate` |
+| Dates, numbers, money, lists | `packages/ui/src/locale-format.ts` over `Intl`; English screens format as `en-GB` |
 
 ```mermaid
 flowchart LR

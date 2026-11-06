@@ -1,3 +1,4 @@
+import { formatDateTime } from "./locale-format.js";
 import type { UsageLimitView } from "./model.js";
 
 const providerNames: Readonly<Record<string, string>> = {
@@ -18,13 +19,9 @@ export function usageLimitText(
   usageLimit: Pick<UsageLimitView, "provider" | "resetsAt">,
   timeZone?: string,
 ): string {
-  const resetMs = usageLimit.resetsAt === null ? Number.NaN : Date.parse(usageLimit.resetsAt);
-  const when = Number.isFinite(resetMs)
-    ? new Date(resetMs).toLocaleString("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        ...(timeZone === undefined ? {} : { timeZone }),
-      })
-    : "later";
+  const when =
+    (usageLimit.resetsAt === null
+      ? undefined
+      : formatDateTime(usageLimit.resetsAt, timeZone === undefined ? {} : { timeZone })) ?? "later";
   return `Usage limit reached on ${providerName(usageLimit.provider)} · try again after ${when}`;
 }
