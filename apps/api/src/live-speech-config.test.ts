@@ -14,6 +14,13 @@ describe("live speech config", () => {
         DRAFT_LOOP_SPEECH_PROJECT_ID: " fixture-project ",
       }),
     ).toEqual({ mode: "google", projectId: "fixture-project" });
+    expect(
+      readLiveSpeechConfig({
+        DRAFT_LOOP_LIVE_SPEECH: "google",
+        DRAFT_LOOP_SPEECH_PROJECT_ID: "fixture-project",
+        DRAFT_LOOP_SPEECH_KEY_FILE: "/run/draft-loop/provider-keys/google_speech_api_key",
+      }),
+    ).toMatchObject({ keyFile: "/run/draft-loop/provider-keys/google_speech_api_key" });
   });
 
   it("refuses an unknown mode and a missing project", () => {

@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Career interview as a conversation",
+  "releaseName": "Live voice career interview",
   "stageIssue": 1359,
-  "milestone": 84,
-  "summary": "One sprint since Interview-safe facts and pull request import (milestone 75). The career interview reads as a conversation: interviewer and candidate turns as chat bubbles, the answer shown at once with a writing indicator while the interviewer replies, and the session's topics listed beside the chat with their state (#2338). Enter sends and Shift+Enter adds a line; a failed send keeps the answer. Skip, I don't remember and Set this topic aside are quick-reply chips, and the summary to confirm is a card after the conversation (#2339). A server with no interviewer model says so instead of offering topics that every click would refuse, and a refused action shows beside its controls (#2337). No paid model run.",
-  "knownLimitations": "Voice answers still go through the microphone button on the answer box; a dedicated voice mode is the next step. The interview needs DRAFT_LOOP_SCREENING=rules+model and a Claude key on a self-hosted server. The local-first desktop has no career interview."
+  "milestone": 85,
+  "summary": "One sprint since the career interview as a conversation (milestone 84). An open interview topic offers Talk live: the candidate speaks, sees their words as they talk, and hears each question in a Chirp 3 HD voice (#2362). Speech streams through Google Cloud in the EU over a WebSocket on the API, and Claude stays the interviewer: each finished turn goes through the same service as a typed answer, so the method-guide check runs before a question is spoken (#2361). Speech ports with scripted fakes (#2359) and the Google adapters (#2360) keep the vendor behind one boundary. Consent must name Google Cloud, which the screen offers to add; a conversation stops at 30 minutes of audio, and logs hold counts only. Off unless DRAFT_LOOP_LIVE_SPEECH=google (#2363). No paid run yet.",
+  "knownLimitations": "Live speech is off on staging until the bootstrap enables the speech APIs and the environment sets live_speech. A question plays once all its audio has arrived, not as it streams. The interview, typed or live, needs DRAFT_LOOP_SCREENING=rules+model and a Claude key. The local-first desktop has no career interview."
 }
