@@ -92,7 +92,7 @@ sequenceDiagram
     A->>G: Chirp 3 HD voice
     G-->>A: Ogg Opus audio
     A-->>P: The session, the question and its audio
-    P->>C: Plays the question; the microphone is muted
+    P->>C: Plays the question, with the microphone muted
   end
 ```
 
