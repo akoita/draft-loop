@@ -100,10 +100,9 @@ export function ProfileSignpostArea({
   };
   const attention = drop !== "none";
   return (
-    // A group, so the drag handlers sit on a labelled element; dropping is mouse-only by nature.
-    <div
+    // A labelled region, so the drag handlers sit on a named element; dropping is pointer-only.
+    <section
       className="career-signpost-area"
-      role="group"
       aria-label="Career profile"
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -125,6 +124,6 @@ export function ProfileSignpostArea({
         )}
       </Signpost>
       {children}
-    </div>
+    </section>
   );
 }
