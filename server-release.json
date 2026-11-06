@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Interview-safe facts and pull request import",
+  "releaseName": "Career interview as a conversation",
   "stageIssue": 1359,
-  "milestone": 75,
-  "summary": "One sprint since Tell career evidence and profile apart (milestone 78). Each career fact or section has a usage level: CV and interview, Interview only, or Never say, set on the Career profile beside each fact and section and kept apart from sensitivity (#2258, #2259). An unset level means CV, so nothing changes until the person marks a fact. Interview questions on the Prepare panel use only interview-allowed facts, and a cover letter only CV facts; a never-say fact never reaches the model (#2260). Career evidence takes a list of merged pull requests exported with gh, as JSON or CSV, stored as Markdown with one heading per pull request and its link (#2261). Each imported repository starts as \"send only if allowed\", and Allow this repository lowers it (#2262). Agent channel tool errors now say whether a retry can help (#2263). No paid model run.",
-  "knownLimitations": "CV runs do not yet leave out interview-only and never-say facts (#2304). Usage levels and pull request import are on the web and the desktop client only, not the local-first desktop. Editing a fact's value starts it again from its section's level. DraftLoop does not fetch pull requests from GitHub itself."
+  "milestone": 84,
+  "summary": "One sprint since Interview-safe facts and pull request import (milestone 75). The career interview reads as a conversation: interviewer and candidate turns as chat bubbles, the answer shown at once with a writing indicator while the interviewer replies, and the session's topics listed beside the chat with their state (#2338). Enter sends and Shift+Enter adds a line; a failed send keeps the answer. Skip, I don't remember and Set this topic aside are quick-reply chips, and the summary to confirm is a card after the conversation (#2339). A server with no interviewer model says so instead of offering topics that every click would refuse, and a refused action shows beside its controls (#2337). No paid model run.",
+  "knownLimitations": "Voice answers still go through the microphone button on the answer box; a dedicated voice mode is the next step. The interview needs DRAFT_LOOP_SCREENING=rules+model and a Claude key on a self-hosted server. The local-first desktop has no career interview."
 }
