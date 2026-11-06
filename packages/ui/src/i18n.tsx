@@ -11,14 +11,16 @@ import { i18n, type Messages } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { type ReactNode, useEffect } from "react";
 import { messages as englishMessages } from "./locales/en/messages.js";
+import { messages as frenchMessages } from "./locales/fr/messages.js";
 import { messages as pseudoMessages } from "./locales/pseudo/messages.js";
 
 /** The locales the screens can show; `pseudo` is for development only. */
-export const screenLocales = ["en", "pseudo"] as const;
+export const screenLocales = ["en", "fr", "pseudo"] as const;
 export type ScreenLocale = (typeof screenLocales)[number];
 
 const catalogs: Readonly<Record<ScreenLocale, Messages>> = {
   en: englishMessages,
+  fr: frenchMessages,
   pseudo: pseudoMessages,
 };
 

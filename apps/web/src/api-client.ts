@@ -120,7 +120,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       const request = input as CallInput;
       const headers: Record<string, string> = { ...request.header };
       // Only public routes, such as how to sign in, are called without a credential.
-      if (options.token !== undefined) headers.authorization = t`Bearer ${options.token}`;
+      if (options.token !== undefined) headers.authorization = `Bearer ${options.token}`;
       let body: BodyInit | undefined;
       if (request.body instanceof Blob) {
         body = request.body;
