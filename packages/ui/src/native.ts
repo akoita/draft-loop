@@ -393,6 +393,12 @@ export interface DesktopApplicationCapabilities {
     applicationId: string,
     modelProfiles: ApplicationSummaryView["modelProfiles"],
   ) => Promise<ApplicationSummaryView>;
+  /** Sets the language a created application's new runs write in, or clears it with `null`. */
+  readonly setApplicationLanguage?: (
+    workspaceId: string,
+    applicationId: string,
+    language: string | null,
+  ) => Promise<ApplicationSummaryView>;
   /**
    * Scopes later loads and run starts to one application, or back to the workspace-wide view with
    * `null`. Opening another workspace clears the scope. `openRunId` opens that run of the
@@ -697,6 +703,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "application.set-models",
                 input: { workspaceId, applicationId, modelProfiles },
+              }),
+            ).application,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.set-language")
+      ? {
+          setApplicationLanguage: async (
+            workspaceId: string,
+            applicationId: string,
+            language: string | null,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "application.set-language",
+                input: { workspaceId, applicationId, language },
               }),
             ).application,
         }

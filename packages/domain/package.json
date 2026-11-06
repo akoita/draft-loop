@@ -38,6 +38,10 @@
     "./memory-model": {
       "types": "./src/memory-model.ts",
       "import": "./src/memory-model.ts"
+    },
+    "./document-language": {
+      "types": "./src/document-language.ts",
+      "import": "./src/document-language.ts"
     }
   },
   "files": [

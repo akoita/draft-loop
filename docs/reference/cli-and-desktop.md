@@ -412,11 +412,18 @@ nothing.
 
 **On screen**, the web screen reaches the same service through its bridge. Its
 commands include `application.list`, `get`, `create`, `archive`, `rename` and
-`set-models`. `application.create` takes the job as `jobText`, or as a
-`jobUrl` with `jobUrlApproved: true`. `set-models` takes
+`set-models` and `set-language`. `application.create` takes the job as
+`jobText`, or as a `jobUrl` with `jobUrlApproved: true`. `set-models` takes
 `modelProfiles: { author, critic }`, or `null` to use the workspace's pair
 again. Results carry counts, status and timestamps, never a path, URL or job
 text.
+
+**Document language.** Each created application can write its CV, cover
+letter and interview questions in its own language (`set-language`, or
+`language` when it is created). `null` uses the workspace's language again,
+and the default application always does. New application proposes the pasted
+job's own language when a small offline guess is confident. The choice is the
+`application-languages.json` workspace setting.
 
 ### Importing a workspace
 

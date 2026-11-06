@@ -29,6 +29,8 @@ export interface NewApplicationDraft {
   readonly jobFile: NewApplicationJobFile | null;
   /** Why the chosen file was refused, such as its type or size; null otherwise. */
   readonly jobFileProblem: string | null;
+  /** The language its documents are written in, or "" for the workspace's. */
+  readonly language: string;
 }
 
 export const emptyNewApplicationDraft: NewApplicationDraft = Object.freeze({
@@ -39,6 +41,7 @@ export const emptyNewApplicationDraft: NewApplicationDraft = Object.freeze({
   urlApproved: false,
   jobFile: null,
   jobFileProblem: null,
+  language: "",
 });
 
 /** The job description files both hosts read, as career evidence: by extension, then type. */

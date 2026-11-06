@@ -47,6 +47,7 @@ import {
   type ApplicationListResult,
   type ApplicationRecordResult,
   type ApplicationRenameInput,
+  type ApplicationSetLanguageInput,
   type ApplicationSetModelsInput,
   applicationArchiveKeys,
   applicationChooseRunKeys,
@@ -56,7 +57,9 @@ import {
   applicationImportKeys,
   applicationListKeys,
   applicationRenameKeys,
+  applicationSetLanguageKeys,
   applicationSetModelsKeys,
+  documentLanguageCode,
   maximumApplicationJobTextLength,
   normalizeApplicationDeleteResult,
   normalizeApplicationDisplayName,
@@ -3199,6 +3202,7 @@ export interface BridgeCommandInputMap {
   "application.rename": ApplicationRenameInput;
   "application.delete": ApplicationDeleteInput;
   "application.set-models": ApplicationSetModelsInput;
+  "application.set-language": ApplicationSetLanguageInput;
   "application.choose-run": ApplicationChooseRunInput;
   "application.move": ApplicationMoveInput;
   "application-folder.list": ApplicationFolderListInput;
@@ -3320,6 +3324,7 @@ export interface BridgeCommandOutputMap {
   "application.rename": ApplicationRecordResult;
   "application.delete": ApplicationDeleteResult;
   "application.set-models": ApplicationRecordResult;
+  "application.set-language": ApplicationRecordResult;
   "application.choose-run": ApplicationRecordResult;
   "application.move": ApplicationRecordResult;
   "application-folder.list": ApplicationFolderListResult;
@@ -4791,6 +4796,18 @@ function validateApplicationSetModelsInput(value: unknown): ApplicationSetModels
   };
 }
 
+function validateApplicationSetLanguageInput(value: unknown): ApplicationSetLanguageInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationSetLanguageKeys)) return invalidInput();
+  const language = input.language === null ? null : documentLanguageCode(input.language);
+  if (language === undefined) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    applicationId: identifier(input.applicationId),
+    language,
+  };
+}
+
 function validateApplicationDeleteInput(value: unknown): ApplicationDeleteInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, applicationDeleteKeys)) return invalidInput();
@@ -5868,6 +5885,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "application.set-models",
         input: validateApplicationSetModelsInput(command.input),
+      };
+    case "application.set-language":
+      return {
+        type: "application.set-language",
+        input: validateApplicationSetLanguageInput(command.input),
       };
     case "application.choose-run":
       return {
@@ -8550,6 +8572,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.archive":
     case "application.rename":
     case "application.set-models":
+    case "application.set-language":
     case "application.choose-run":
     case "application.move":
       return normalizeApplicationRecord(value);

@@ -2,6 +2,11 @@ import { type RefObject, useRef, useState } from "react";
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { ApplicationFolderView } from "./application-folder-contract.js";
 import {
+  DocumentLanguageSelect,
+  JobLanguageProposal,
+  proposedJobLanguage,
+} from "./application-language.js";
+import {
   emptyNewApplicationDraft,
   type NewApplicationDraft,
   type NewApplicationJob,
@@ -29,6 +34,8 @@ export interface NewApplicationFormViewProps {
   /** The chosen folder id, or "" for no folder. */
   readonly folderId?: string;
   readonly onFolderChange?: (folderId: string) => void;
+  /** True offers the document language, with the pasted job's own language as a proposal. */
+  readonly languageChoice?: boolean;
 }
 
 /**
@@ -48,8 +55,13 @@ export function NewApplicationFormView({
   folders = [],
   folderId = "",
   onFolderChange,
+  languageChoice = false,
 }: NewApplicationFormViewProps) {
   const problem = newApplicationProblem(draft);
+  const proposal =
+    languageChoice && draft.jobKind === "text"
+      ? proposedJobLanguage(draft.jobText, draft.language)
+      : undefined;
   const kindButton = (kind: NewApplicationJobKind, label: string) => (
     <button
       className="view-toggle-option"
@@ -177,6 +189,22 @@ export function NewApplicationFormView({
               </label>
             </>
           )}
+          {languageChoice ? (
+            <div className="new-application-field">
+              <DocumentLanguageSelect
+                value={draft.language}
+                disabled={busy}
+                onChange={(language) => onDraftChange({ ...draft, language })}
+              />
+              {proposal === undefined ? null : (
+                <JobLanguageProposal
+                  language={proposal}
+                  disabled={busy}
+                  onAccept={() => onDraftChange({ ...draft, language: proposal })}
+                />
+              )}
+            </div>
+          ) : null}
           {errorMessage === null ? null : (
             <p className="setup-blocker" role="alert">
               {errorMessage}
@@ -206,11 +234,12 @@ export function NewApplicationFormView({
   );
 }
 
-/** Creates the application, in the chosen folder when one is given. */
+/** Creates the application, in the chosen folder and language when they are given. */
 export type CreateApplication = (
   name: string,
   job: NewApplicationJob,
   folderId?: string,
+  language?: string,
 ) => Promise<ApplicationSummaryView>;
 
 export type NewApplicationSubmission =
@@ -232,9 +261,11 @@ export async function submitNewApplication(
   try {
     const name = draft.name.trim();
     const job = newApplicationJobInput(draft);
-    const application = await (folderId === ""
-      ? createApplication(name, job)
-      : createApplication(name, job, folderId));
+    const application = await (draft.language !== ""
+      ? createApplication(name, job, folderId === "" ? undefined : folderId, draft.language)
+      : folderId === ""
+        ? createApplication(name, job)
+        : createApplication(name, job, folderId));
     return { kind: "created", application };
   } catch (reason: unknown) {
     return {
@@ -257,6 +288,8 @@ export interface NewApplicationDialogProps {
   readonly jobPagesAllowed?: boolean;
   /** The workspace's folders, offered as an optional folder for the new application. */
   readonly folders?: readonly ApplicationFolderView[];
+  /** True offers the document language; the host can then set it. */
+  readonly languageChoice?: boolean;
 }
 
 /** The form as a modal: it traps the focus, Escape cancels, and a failure stays in the form. */
@@ -266,6 +299,7 @@ export function NewApplicationDialog({
   onClose,
   jobPagesAllowed = true,
   folders = [],
+  languageChoice = false,
 }: NewApplicationDialogProps) {
   const [draft, setDraft] = useState<NewApplicationDraft>(emptyNewApplicationDraft);
   const [folderId, setFolderId] = useState("");
@@ -307,6 +341,7 @@ export function NewApplicationDialog({
       folders={folders}
       folderId={folderId}
       onFolderChange={setFolderId}
+      languageChoice={languageChoice}
     />
   );
 }
