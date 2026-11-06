@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 
-import {
-  type CareerFlowStep,
-  CareerFlowStrip,
-  careerEvidenceIntro,
-  careerProfileIntro,
-} from "./career-flow.js";
+import { type CareerFlowStep, careerEvidenceIntro, careerProfileIntro } from "./career-flow.js";
+import { CareerPageTabs } from "./career-page-tabs.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import { HostEvidenceAfter, HostEvidenceBefore } from "./host-panels.js";
 
@@ -17,7 +13,7 @@ interface CareerPageFrameProps {
   readonly workspaceNavigation: ReactNode;
   readonly errorMessage: string | null;
   readonly back: WorkspaceBack;
-  /** The pages the flow strip's other steps open. */
+  /** The pages the tabs and the Applications link open. */
   readonly onOpenStep: Partial<Readonly<Record<CareerFlowStep, () => void>>>;
   readonly children: ReactNode;
 }
@@ -50,9 +46,7 @@ function CareerPageFrame({
             </div>
           )}
           <div className="home-profile-screen">
-            <div className="career-page-lead">
-              <CareerFlowStrip current={page} onOpen={onOpenStep} />
-            </div>
+            <CareerPageTabs current={page} onOpen={onOpenStep} />
             <p className="career-page-intro">{intro}</p>
             {children}
           </div>
@@ -68,7 +62,7 @@ export interface CareerPageProps {
   readonly errorMessage: string | null;
   readonly back: WorkspaceBack;
   /**
-   * The pages the flow strip opens: Applications opens Home, and Career profile is absent when
+   * The pages the tabs open: Applications opens Home, and the Career profile tab is absent when
    * the host has no profile workflow.
    */
   readonly onOpenStep: Partial<Readonly<Record<CareerFlowStep, () => void>>>;

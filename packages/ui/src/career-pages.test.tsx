@@ -89,15 +89,15 @@ describe("Career evidence page", () => {
     expect(evidencePage()).not.toContain("career-page-locked");
   });
 
-  it("starts with the one-sentence intro, then the flow with Career evidence current", () => {
+  it("starts with the tabs, Career evidence current, then the one-sentence intro", () => {
     const html = evidencePage();
     expect(html).toContain(`<p class="career-page-intro">${careerEvidenceIntro}</p>`);
     expect(careerEvidenceIntro).toMatch(/^Your career evidence is the documents you provide/u);
     expect(html).toMatch(
-      /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Career evidence<\/li>/u,
+      /<span class="career-tab career-tab-current" aria-current="page"><span[^>]*>1<\/span>Career evidence<\/span>/u,
     );
-    expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
-    expect(html.indexOf("career-flow")).toBeLessThan(html.indexOf("career-page-intro"));
+    expect(html).not.toContain('aria-label="Career flow"');
+    expect(html.indexOf("career-tabs")).toBeLessThan(html.indexOf("career-page-intro"));
   });
 
   it("names the page in a labelled location with a way back", () => {
@@ -170,10 +170,10 @@ describe("Career evidence page", () => {
   });
 
   it("links to the profile page only when the host has a profile workflow", () => {
-    expect(evidencePage()).toContain('type="button">Career profile</button>');
-    expect(evidencePage({ onOpenStep: { evidence: noop, applications: noop } })).not.toContain(
-      'type="button">Career profile</button>',
-    );
+    expect(evidencePage()).toContain("</span>Career profile</button>");
+    const without = evidencePage({ onOpenStep: { evidence: noop, applications: noop } });
+    expect(without).not.toContain("Career profile</button>");
+    expect(without).toContain('type="button">Applications</button>');
   });
 });
 
@@ -187,23 +187,25 @@ describe("Career profile page", () => {
     expect(html).toContain('id="canonical-profile-title"');
   });
 
-  it("starts with the one-sentence intro, then the flow with Career profile current", () => {
+  it("starts with the tabs, Career profile current, then the one-sentence intro", () => {
     const html = profilePage();
     expect(html).toContain(`<p class="career-page-intro">${careerProfileIntro}</p>`);
     expect(careerProfileIntro).toMatch(/^Your career profile is the facts DraftLoop extracts/u);
     expect(html).toMatch(
-      /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Career profile<\/li>/u,
+      /<span class="career-tab career-tab-current" aria-current="page"><span[^>]*>2<\/span>Career profile<\/span>/u,
     );
-    expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
+    expect(html).toMatch(
+      /<button class="career-tab" type="button"><span[^>]*>1<\/span>Career evidence<\/button>/u,
+    );
   });
 
   it("names the page, offers Back and links to the other steps", () => {
     const html = profilePage();
     expect(html).toMatch(/aria-current="page">Career profile<\/span>/u);
     expect(html).toContain('aria-label="Back to Home"');
-    expect(html).toContain('type="button">Career evidence</button>');
+    expect(html).toContain("</span>Career evidence</button>");
     expect(html).toContain('type="button">Applications</button>');
-    expect(html).not.toContain('type="button">Career profile</button>');
+    expect(html).not.toContain("</span>Career profile</button>");
     expect(html).not.toContain("Career profile and evidence");
   });
 });
@@ -280,7 +282,11 @@ function findHandlers(node: ReactNode, found: Map<string, () => void>): void {
 function textOf(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(textOf).join("").trim();
-  if (isValidElement(node)) return textOf((node.props as { children?: ReactNode }).children);
+  if (isValidElement(node)) {
+    // What a screen reader announces: decoration such as the step number is aria-hidden.
+    const props = node.props as { children?: ReactNode; "aria-hidden"?: unknown };
+    return props["aria-hidden"] === "true" ? "" : textOf(props.children);
+  }
   return "";
 }
 
@@ -323,7 +329,7 @@ describe("career navigation", () => {
     expect(onManageEvidence).toHaveBeenCalledTimes(1);
   });
 
-  it("goes back and crosses between the two pages through the flow strip", () => {
+  it("goes back and crosses between the two pages through the tabs", () => {
     const onBack = vi.fn();
     const onOpenStep = { evidence: vi.fn(), profile: vi.fn(), applications: vi.fn() };
     const back = { label: "Acme", onBack };
