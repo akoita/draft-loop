@@ -8397,6 +8397,162 @@ input[type="text"].application-card-name-input {
   margin: 0;
 }
 
+/* Home applications toolbar and List view (shown above six applications). */
+.applications-toolbar {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.applications-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.applications-search {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.applications-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-3);
+}
+
+.applications-segmented,
+.applications-status-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.applications-segmented button,
+.applications-status-chip {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.applications-status-chip {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.applications-segmented button[aria-pressed="true"],
+.applications-status-chip[aria-pressed="true"] {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+  color: var(--text-1);
+}
+
+.applications-table-wrap {
+  overflow-x: auto;
+}
+
+.applications-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+}
+
+.applications-table th,
+.applications-table td {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.applications-table th {
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.applications-table .numeric {
+  text-align: right;
+}
+
+.applications-row-archived {
+  color: var(--text-3);
+}
+
+.applications-row-name {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.applications-row-name:hover {
+  text-decoration: underline;
+}
+
+.applications-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.applications-row-menu {
+  position: relative;
+}
+
+.applications-row-menu summary {
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.applications-row-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.applications-row-menu-items {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  min-width: 160px;
+  margin-top: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  background: var(--surface-3);
+}
+
+.applications-row-menu-items button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.applications-row-menu-items button:hover,
+.applications-row-menu-items button:focus-visible {
+  background: var(--teal-wash);
+}
+
 .home-archived-applications,
 .home-archived-applications-body {
   display: grid;

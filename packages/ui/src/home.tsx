@@ -35,6 +35,19 @@ import {
   careerProfileCardSubtitle,
 } from "./career-flow.js";
 import {
+  type ApplicationListView,
+  ApplicationsTable,
+  ApplicationsToolbar,
+} from "./home-applications-view.js";
+import {
+  type ApplicationListQuery,
+  applicationQueryNarrows,
+  applicationStatusCounts,
+  defaultApplicationListQuery,
+  queryApplications,
+  showApplicationToolbar,
+} from "./home-list-model.js";
+import {
   applicationActivityText,
   applicationChosenRunText,
   applicationRunningLabel,
@@ -433,6 +446,8 @@ function ApplicationsList({
   runningApplicationId = null,
   disabled = false,
   initialShowArchived = false,
+  initialQuery = defaultApplicationListQuery,
+  initialView = "cards",
 }: {
   readonly state: HomeApplicationsState;
   readonly now: Date;
@@ -448,9 +463,13 @@ function ApplicationsList({
   readonly runningApplicationId?: string | null;
   readonly disabled?: boolean;
   readonly initialShowArchived?: boolean;
+  readonly initialQuery?: ApplicationListQuery;
+  readonly initialView?: ApplicationListView;
 }) {
   const [showArchived, setShowArchived] = useState(initialShowArchived);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [query, setQuery] = useState(initialQuery);
+  const [view, setView] = useState(initialView);
   if (state.status === "loading") {
     return (
       <p className="empty-state" role="status">
@@ -468,6 +487,12 @@ function ApplicationsList({
   const { active, archived } = partitionApplications(
     applicationsByActivity(homeApplications(state.applications)),
   );
+  // Below the threshold the panel is today's card grid, in activity order, with no toolbar.
+  const toolbar = showApplicationToolbar(active.length + archived.length);
+  const shownQuery = toolbar ? query : defaultApplicationListQuery;
+  const shownView = toolbar ? view : "cards";
+  const shownActive = queryApplications(active, shownQuery);
+  const shownArchived = queryApplications(archived, shownQuery);
   const actionsFor = (application: ApplicationSummaryView): ApplicationCardActions => {
     const isArchived = application.archivedAt !== null;
     return {
@@ -499,13 +524,56 @@ function ApplicationsList({
       running={application.id === runningApplicationId}
     />
   );
+  const statusChip = (application: ApplicationSummaryView) =>
+    application.id === runningApplicationId ? (
+      <Chip tone="progress">{applicationRunningLabel}</Chip>
+    ) : (
+      <Chip tone={applicationStatusTone(application.status)}>
+        {applicationStatusLabel(application.status)}
+      </Chip>
+    );
+  const group = (list: readonly ApplicationSummaryView[], label: string) =>
+    shownView === "list" ? (
+      <ApplicationsTable
+        applications={list}
+        label={label}
+        now={now}
+        onOpen={onOpen}
+        actionsFor={actionsFor}
+        status={statusChip}
+        deleteConfirmation={applicationDeleteConfirmation}
+      />
+    ) : (
+      <ul className="application-list" aria-label={label}>
+        {list.map(card)}
+      </ul>
+    );
+  const narrowedToNothing =
+    applicationQueryNarrows(shownQuery) && active.length > 0 && shownActive.length === 0;
   return (
     <>
-      {active.length === 0 ? null : (
-        <ul className="application-list" aria-label="Applications">
-          {active.map(card)}
-        </ul>
-      )}
+      {toolbar ? (
+        <ApplicationsToolbar
+          query={query}
+          view={view}
+          counts={applicationStatusCounts(active, query.search)}
+          onQuery={setQuery}
+          onView={setView}
+        />
+      ) : null}
+      {shownActive.length === 0 ? null : group(shownActive, "Applications")}
+      {narrowedToNothing ? (
+        <div className="empty-state home-empty-applications" role="status">
+          <p>No application matches this search or filter.</p>
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={() => setQuery({ ...query, search: "", status: "all" })}
+          >
+            Clear search and filter
+          </button>
+        </div>
+      ) : null}
       {active.length === 0 && archived.length === 0 ? (
         <p className="empty-state home-empty-applications">
           No applications yet. Start a new application for the job you are applying for. It uses
@@ -530,13 +598,11 @@ function ApplicationsList({
             aria-controls="home-archived-applications"
             onClick={() => setShowArchived((shown) => !shown)}
           >
-            {showArchived ? "Hide archived" : `Show archived (${archived.length})`}
+            {showArchived ? "Hide archived" : `Show archived (${shownArchived.length})`}
           </button>
           {showArchived ? (
             <div id="home-archived-applications" className="home-archived-applications-body">
-              <ul className="application-list" aria-label="Archived applications">
-                {archived.map(card)}
-              </ul>
+              {group(shownArchived, "Archived applications")}
               {onDelete === undefined ? null : (
                 <p className="home-card-copy">{applicationDeleteExplanation}</p>
               )}
@@ -596,6 +662,10 @@ export interface HomeViewProps {
   readonly applicationNotice?: ApplicationActionNotice | null;
   /** Opens the archived applications on first render; for tests and previews. */
   readonly initialShowArchived?: boolean;
+  /** The search, status filter and sort the applications list starts with. */
+  readonly initialApplicationQuery?: ApplicationListQuery;
+  /** Cards or List; the toolbar switches it once there are more than six applications. */
+  readonly initialApplicationView?: ApplicationListView;
   readonly onOpenApplication: (application: ApplicationSummaryView) => void;
   readonly onManageProfile: () => void;
   readonly onManageEvidence: () => void;
@@ -627,6 +697,8 @@ export function HomeView({
   busyApplicationId = null,
   applicationNotice = null,
   initialShowArchived = false,
+  initialApplicationQuery,
+  initialApplicationView,
   onOpenApplication,
   onManageProfile,
   onManageEvidence,
@@ -769,6 +841,12 @@ export function HomeView({
               runningApplicationId={runningApplicationId}
               disabled={disabled}
               initialShowArchived={initialShowArchived}
+              {...(initialApplicationQuery === undefined
+                ? {}
+                : { initialQuery: initialApplicationQuery })}
+              {...(initialApplicationView === undefined
+                ? {}
+                : { initialView: initialApplicationView })}
             />
           </section>
 
