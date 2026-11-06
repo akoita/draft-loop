@@ -184,7 +184,13 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
         expect({ route: `${method} ${suffix}`, ...refused }).toEqual({
           route: `${method} ${suffix}`,
           status: 404,
-          body: { error: { code: "not_found", message: "No such workspace." } },
+          body: {
+            error: {
+              code: "not_found",
+              message: "No such workspace.",
+              params: { resource: "workspace" },
+            },
+          },
         });
       }
       expect((await call(person, "GET", `/v1/workspaces/${own}`)).status).toBe(200);
@@ -192,7 +198,13 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
     const unknown = await call("owner", "GET", "/v1/workspaces/never-created");
     expect(unknown).toEqual({
       status: 404,
-      body: { error: { code: "not_found", message: "No such workspace." } },
+      body: {
+        error: {
+          code: "not_found",
+          message: "No such workspace.",
+          params: { resource: "workspace" },
+        },
+      },
     });
     // Creating over another member's record is refused as unknown too, never as a conflict.
     expect((await call("coach-1", "PUT", "/v1/workspaces/r2", { fixtureMode: true })).status).toBe(
@@ -322,7 +334,13 @@ describe.runIf(connectionString !== undefined)("candidate record access through 
       ]);
       expect(outcomes.map(({ status }) => status).sort()).toEqual([201, 404]);
       const loser = outcomes.find(({ status }) => status === 404);
-      expect(loser?.body).toEqual({ error: { code: "not_found", message: "No such workspace." } });
+      expect(loser?.body).toEqual({
+        error: {
+          code: "not_found",
+          message: "No such workspace.",
+          params: { resource: "workspace" },
+        },
+      });
 
       // The loser is not assigned, and the record keeps the winner's settings.
       const winner =

@@ -101,14 +101,25 @@ export const apiErrorSchema = z
         .int()
         .optional()
         .describe("With credits_insufficient, the credits the organisation has left."),
+      params: z
+        .record(z.string(), z.union([z.string(), z.number()]))
+        .optional()
+        .describe(
+          "Names and numbers the code's text needs, such as the resource not_found is about, so a screen can word the refusal in its own language. Never content.",
+        ),
     }),
   })
   .meta({ id: "ApiError" });
 
 export type ApiError = z.infer<typeof apiErrorSchema>;
 
-export function apiError(code: string, message: string): ApiError {
-  return { error: { code, message } };
+/** A refusal; `params` carries the names and numbers a screen needs to word it itself (#2323). */
+export function apiError(
+  code: string,
+  message: string,
+  params?: Readonly<Record<string, string | number>>,
+): ApiError {
+  return { error: { code, message, ...(params === undefined ? {} : { params: { ...params } }) } };
 }
 
 /** The run was saved but not queued; a retry with the same Idempotency-Key queues it. */
@@ -204,7 +215,7 @@ const workJournalStatus: Readonly<Record<WorkJournalErrorCode, number>> = {
 };
 
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {
-  void reply.code(404).send(apiError("not_found", "No such route."));
+  void reply.code(404).send(apiError("not_found", "No such route.", { resource: "route" }));
 }
 
 export function sendError(error: FastifyError, request: FastifyRequest, reply: FastifyReply): void {
@@ -248,7 +259,7 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
     return;
   }
   if (error.message === opportunityBriefNotFoundErrorMessage) {
-    void reply.code(404).send(apiError("not_found", "No such job brief."));
+    void reply.code(404).send(apiError("not_found", "No such job brief.", { resource: "brief" }));
     return;
   }
   const refusedProfile = profileRefusal(error);
@@ -348,7 +359,7 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // A run the caller's tenant does not have answers the same whether it never existed or belongs
   // to another organisation; the CLI's message quotes the id, so a fixed one replaces it.
   if (error instanceof RunActionError && error.code === "run_not_found") {
-    void reply.code(404).send(apiError("not_found", "No such run."));
+    void reply.code(404).send(apiError("not_found", "No such run.", { resource: "run" }));
     return;
   }
   if (error instanceof RunActionError) {
@@ -357,7 +368,9 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   }
   // A workspace not created yet; its message names a storage path, so a fixed one replaces it.
   if (error instanceof WorkspaceNotFoundError) {
-    void reply.code(404).send(apiError("not_found", "No such workspace."));
+    void reply
+      .code(404)
+      .send(apiError("not_found", "No such workspace.", { resource: "workspace" }));
     return;
   }
   // A refused export: the log names the failed checks so the cause can be found; the answer keeps

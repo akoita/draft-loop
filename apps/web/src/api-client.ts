@@ -1,4 +1,6 @@
+import { t } from "@lingui/core/macro";
 import type { ApiOperations, ApiSchemas } from "./api-types.generated.js";
+import { refusalText } from "./refusal-text.js";
 
 export type ApiOperation = keyof ApiOperations;
 export type ApiResponse<K extends ApiOperation> = ApiOperations[K]["response"];
@@ -21,6 +23,8 @@ export class ApiRequestError extends Error {
   readonly details?: ApiErrorDetails;
   /** With `material_quarantined`, the stored screening results that hold the request. */
   readonly quarantined?: readonly ApiSchemas["QuarantinedMaterial"][];
+  /** The names and numbers the code's text needs, such as the resource `not_found` is about. */
+  readonly params?: Readonly<Record<string, string | number>>;
 
   constructor(
     status: number,
@@ -28,6 +32,7 @@ export class ApiRequestError extends Error {
     message: string,
     quarantined?: readonly ApiSchemas["QuarantinedMaterial"][],
     details?: ApiErrorDetails,
+    params?: Readonly<Record<string, string | number>>,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -35,6 +40,7 @@ export class ApiRequestError extends Error {
     this.code = code;
     if (quarantined !== undefined) this.quarantined = quarantined;
     if (details !== undefined && Object.keys(details).length > 0) this.details = details;
+    if (params !== undefined) this.params = params;
   }
 }
 
@@ -90,12 +96,16 @@ async function refusal(response: Response): Promise<ApiRequestError> {
           .filter((key) => body.error[key] !== undefined)
           .map((key) => [key, body.error[key]]),
       ),
+      body.error.params,
     );
   } catch {
     return new ApiRequestError(
       response.status,
       "unreadable-error",
       `The API answered ${response.status}.`,
+      undefined,
+      undefined,
+      { status: response.status },
     );
   }
 }
@@ -142,6 +152,6 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
 /** What to tell the owner about a failed call; the API's messages are written for them. */
 export function describeError(error: unknown): string {
-  if (error instanceof ApiRequestError) return error.message;
-  return "The service could not be reached. Check your connection and try again.";
+  if (error instanceof ApiRequestError) return refusalText(error);
+  return t`The service could not be reached. Check your connection and try again.`;
 }

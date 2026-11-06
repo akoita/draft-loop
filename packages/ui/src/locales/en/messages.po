@@ -7,13 +7,53 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
 
+#: apps/web/src/refusal-text.ts
+msgid "A credential is required."
+msgstr "A credential is required."
+
+#: apps/web/src/refusal-text.ts
+msgid "No such job brief."
+msgstr "No such job brief."
+
+#: apps/web/src/refusal-text.ts
+msgid "No such route."
+msgstr "No such route."
+
+#: apps/web/src/refusal-text.ts
+msgid "No such run."
+msgstr "No such run."
+
+#: apps/web/src/refusal-text.ts
+msgid "No such workspace."
+msgstr "No such workspace."
+
+#: apps/web/src/refusal-text.ts
+msgid "The API answered {status}."
+msgstr "The API answered {status}."
+
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
 msgstr "The CV, cover letter and interview questions of new runs use this language."
 
+#: apps/web/src/refusal-text.ts
+msgid "The job brief has a newer version; reload it."
+msgstr "The job brief has a newer version; reload it."
+
 #: packages/ui/src/application-language.tsx
 msgid "The language could not be saved."
 msgstr "The language could not be saved."
+
+#: apps/web/src/refusal-text.ts
+msgid "The request could not be processed."
+msgstr "The request could not be processed."
+
+#: apps/web/src/refusal-text.ts
+msgid "The run is still being saved; retry in a moment."
+msgstr "The run is still being saved; retry in a moment."
+
+#: apps/web/src/api-client.ts
+msgid "The service could not be reached. Check your connection and try again."
+msgstr "The service could not be reached. Check your connection and try again."
 
 #: packages/ui/src/application-language.tsx
 msgid "The workspace's language"
@@ -22,6 +62,10 @@ msgstr "The workspace's language"
 #: packages/ui/src/application-language.tsx
 msgid "This job posting looks {label}."
 msgstr "This job posting looks {label}."
+
+#: apps/web/src/refusal-text.ts
+msgid "Too many requests; retry later."
+msgstr "Too many requests; retry later."
 
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"

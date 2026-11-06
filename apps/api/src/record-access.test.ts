@@ -115,7 +115,11 @@ describe("registerRecordAccess", () => {
     expect([own.statusCode, admin.statusCode, token.statusCode]).toEqual([200, 200, 200]);
     expect([unassigned.statusCode, missing.statusCode]).toEqual([404, 404]);
     expect(unassigned.json()).toEqual({
-      error: { code: "not_found", message: "No such workspace." },
+      error: {
+        code: "not_found",
+        message: "No such workspace.",
+        params: { resource: "workspace" },
+      },
     });
     // A missing record is a plain 404, not a refusal.
     expect(refusals()).toEqual([

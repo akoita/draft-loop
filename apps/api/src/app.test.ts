@@ -77,7 +77,9 @@ describe("owner-only access", () => {
     });
 
     expect(response.statusCode).toBe(404);
-    expect(response.json()).toEqual({ error: { code: "not_found", message: "No such route." } });
+    expect(response.json()).toEqual({
+      error: { code: "not_found", message: "No such route.", params: { resource: "route" } },
+    });
   });
 });
 

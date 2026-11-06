@@ -7,12 +7,52 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: pseudo\n"
 
+#: apps/web/src/refusal-text.ts
+msgid "A credential is required."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "No such job brief."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "No such route."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "No such run."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "No such workspace."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "The API answered {status}."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "The job brief has a newer version; reload it."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "The language could not be saved."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "The request could not be processed."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "The run is still being saved; retry in a moment."
+msgstr ""
+
+#: apps/web/src/api-client.ts
+msgid "The service could not be reached. Check your connection and try again."
 msgstr ""
 
 #: packages/ui/src/application-language.tsx
@@ -21,6 +61,10 @@ msgstr ""
 
 #: packages/ui/src/application-language.tsx
 msgid "This job posting looks {label}."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "Too many requests; retry later."
 msgstr ""
 
 #: packages/ui/src/application-language.tsx

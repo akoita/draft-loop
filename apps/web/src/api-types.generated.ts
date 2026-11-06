@@ -26,6 +26,7 @@ export interface ApiSchemas {
       readonly value?: number;
       readonly estimate?: number;
       readonly remaining?: number;
+      readonly params?: Record<string, never>;
     };
   };
   "Application": {

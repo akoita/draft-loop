@@ -44,7 +44,7 @@ const createRoute = "/v1/knowledge-bases";
 const selectionRoute = "/v1/workspaces/:workspaceId/knowledge-selection";
 
 const unknownBase = apiError("knowledge_base_not_found", "No such knowledge base.");
-const unknownWorkspace = apiError("not_found", "No such workspace.");
+const unknownWorkspace = apiError("not_found", "No such workspace.", { resource: "workspace" });
 const workspaceRequired: ApiError = {
   error: {
     code: "invalid_request",
