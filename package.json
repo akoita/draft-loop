@@ -52,6 +52,7 @@
     "desktop-client:acceptance": "node scripts/desktop-client-acceptance.mjs",
     "test:model-suggestions:live": "tsx packages/application/src/model-suggestion-preflight-command.ts",
     "test:profile-windows:live": "tsx packages/application/src/profile-window-live-check-command.ts",
+    "test:decision-shadow:live": "tsx packages/evaluations/src/decision-screening-shadow-command.ts",
     "test:gateway:live": "tsx apps/worker/src/gateway-live-check.ts",
     "speech-model:install": "tsx packages/application/src/speech-model-install-command.ts",
     "test:career-interview:live": "tsx apps/api/src/career-interview-walk.ts",
