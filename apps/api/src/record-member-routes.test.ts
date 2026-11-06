@@ -236,7 +236,13 @@ describe("candidate record member routes", () => {
     // A member not assigned to the record cannot tell it from an unknown one.
     const notFound = {
       status: 404,
-      body: { error: { code: "not_found", message: "No such workspace." } },
+      body: {
+        error: {
+          code: "not_found",
+          message: "No such workspace.",
+          params: { resource: "workspace" },
+        },
+      },
     };
     expect(await call(server, "coach-1", "GET", "/v1/workspaces/r2/members")).toEqual(notFound);
     expect(await call(server, "coach-1", "PUT", "/v1/workspaces/r2/members/coach-1")).toEqual(
@@ -288,7 +294,13 @@ describe("candidate record member routes", () => {
     ] as const) {
       expect(await call(server, "admin-1", method, url)).toEqual({
         status: 404,
-        body: { error: { code: "not_found", message: "No such workspace." } },
+        body: {
+          error: {
+            code: "not_found",
+            message: "No such workspace.",
+            params: { resource: "workspace" },
+          },
+        },
       });
     }
     expect(audits()).toEqual([]);

@@ -201,7 +201,11 @@ describe("registerKnowledgeAccess", () => {
     for (const refused of [unassigned, unknown, adminUnknown]) {
       expect(refused.statusCode).toBe(404);
       expect(refused.json()).toEqual({
-        error: { code: "not_found", message: "No such workspace." },
+        error: {
+          code: "not_found",
+          message: "No such workspace.",
+          params: { resource: "workspace" },
+        },
       });
     }
     // Only the record that exists counts as a refusal; a missing id is a plain 404.
