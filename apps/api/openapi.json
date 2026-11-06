@@ -13989,6 +13989,65 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/writing-policy/versions/{checksum}": {
+      "get": {
+        "summary": "Read one writing policy version with its text",
+        "description": "Any version in the workspace's history, active or earlier, so an editor can show or restore it. Reading saves nothing.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "in": "path",
+            "name": "checksum",
+            "required": true,
+            "description": "The SHA-256 that names the version."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingPolicy"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/preference-suggestions": {
       "get": {
         "summary": "List writing preferences suggested from review choices",

@@ -119,8 +119,14 @@ export interface WorkspaceSetupCapabilities {
     workspaceId: string,
     selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
   ) => Promise<DesktopReviewState>;
-  /** Reads the policy text to edit; a workspace without a policy gets the starting template. */
-  readonly readWritingPolicy?: (workspaceId: string) => Promise<WritingPolicyReadResult>;
+  /**
+   * Reads the policy text to edit; a workspace without a policy gets the starting template.
+   * A checksum reads that exact version from the workspace's history instead.
+   */
+  readonly readWritingPolicy?: (
+    workspaceId: string,
+    checksum?: string,
+  ) => Promise<WritingPolicyReadResult>;
   /** Saves policy text as a new activated version and returns the refreshed review state. */
   readonly saveWritingPolicy?: (
     workspaceId: string,
@@ -711,11 +717,11 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(capabilityPort.hasCapability("writing-policy.read")
       ? {
-          readWritingPolicy: async (workspaceId: string) =>
+          readWritingPolicy: async (workspaceId: string, checksum?: string) =>
             unwrap(
               await capabilityPort.execute({
                 type: "writing-policy.read",
-                input: { workspaceId },
+                input: { workspaceId, ...(checksum === undefined ? {} : { checksum }) },
               }),
             ),
         }

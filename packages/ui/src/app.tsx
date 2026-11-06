@@ -2477,6 +2477,7 @@ export function App({
         workspaceId={state.workspaceId}
         disabled={busy || pendingReviewAction !== null || state.execution.status === "running"}
         readPolicy={activePort.readWritingPolicy}
+        history={state.setup.writingPolicyHistory ?? []}
         savePolicy={async (workspaceId, content) => {
           const generation = workspaceGeneration;
           try {

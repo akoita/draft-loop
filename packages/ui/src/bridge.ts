@@ -905,9 +905,11 @@ export const maximumWritingPolicyContentBytes = 64 * 1024;
 
 export interface WritingPolicyReadInput {
   readonly workspaceId: string;
+  /** Reads this exact version from the workspace's history; omit for the active policy. */
+  readonly checksum?: string;
 }
 
-const writingPolicyReadKeys = inputKeys<WritingPolicyReadInput>()(["workspaceId"]);
+const writingPolicyReadKeys = inputKeys<WritingPolicyReadInput>()(["workspaceId", "checksum"]);
 
 /**
  * The policy text the editor starts from.
@@ -4334,7 +4336,12 @@ function validateWorkspaceConfigureModelsInput(value: unknown): WorkspaceConfigu
 function validateWritingPolicyReadInput(value: unknown): WritingPolicyReadInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, writingPolicyReadKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId) };
+  return {
+    workspaceId: identifier(input.workspaceId),
+    ...(input.checksum === undefined
+      ? {}
+      : { checksum: writingPolicyChecksumValue(input.checksum) }),
+  };
 }
 
 /**
