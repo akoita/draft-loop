@@ -270,15 +270,16 @@ With `filesystem`, the host disk's encryption protects the files.
 
 ### Runs, safety and limits
 
-| Variable                         | Used by     | Meaning                                                                                                          |
-| -------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` | API, worker | `true` lets runs and the model screener send approved material to providers; default `false`                     |
-| `DRAFT_LOOP_SCREENING`           | API, worker | `off`, `rules` (default) or `rules+model`; any other value fails at start. Give the worker the API's value       |
-| `DRAFT_LOOP_REQUIRE_CONSENT`     | worker      | `true` checks each record's transmission consent before a provider call. Always on, and required, in `oidc` mode |
-| `DRAFT_LOOP_RUN_MAX_ROUNDS`      | API, worker | Required ceiling on a run's rounds                                                                               |
-| `DRAFT_LOOP_RUN_MAX_COST_USD`    | API, worker | Required ceiling on a run's estimated cost, in US dollars                                                        |
-| `DRAFT_LOOP_RUN_MAX_DURATION_MS` | API, worker | Required ceiling on a run's duration, in milliseconds                                                            |
-| `DRAFT_LOOP_MAX_SOURCE_BYTES`    | API         | Largest candidate source upload, default 10 MiB, at most 30 MiB                                                  |
+| Variable                         | Used by     | Meaning                                                                                                                                                                                                                                             |
+| -------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` | API, worker | `true` lets runs and the model screener send approved material to providers; default `false`                                                                                                                                                        |
+| `DRAFT_LOOP_SCREENING`           | API, worker | `off`, `rules` (default) or `rules+model`; any other value fails at start. Give the worker the API's value                                                                                                                                          |
+| `DRAFT_LOOP_SCREENING_SHADOW`    | API         | `off` (default) or `jev`: job pages also go to Jev, which only logs. Needs `DRAFT_LOOP_JEV_API_KEY`; daily cap `DRAFT_LOOP_SCREENING_SHADOW_MAX_DAILY_USD`, default $0.10 ([decision models](../architecture/runtime-and-trust.md#decision-models)) |
+| `DRAFT_LOOP_REQUIRE_CONSENT`     | worker      | `true` checks each record's transmission consent before a provider call. Always on, and required, in `oidc` mode                                                                                                                                    |
+| `DRAFT_LOOP_RUN_MAX_ROUNDS`      | API, worker | Required ceiling on a run's rounds                                                                                                                                                                                                                  |
+| `DRAFT_LOOP_RUN_MAX_COST_USD`    | API, worker | Required ceiling on a run's estimated cost, in US dollars                                                                                                                                                                                           |
+| `DRAFT_LOOP_RUN_MAX_DURATION_MS` | API, worker | Required ceiling on a run's duration, in milliseconds                                                                                                                                                                                               |
+| `DRAFT_LOOP_MAX_SOURCE_BYTES`    | API         | Largest candidate source upload, default 10 MiB, at most 30 MiB                                                                                                                                                                                     |
 
 Unless screening is `off`, a run on material with no stored result is refused
 by the API and held by the worker. The worker screens nothing itself.
@@ -288,19 +289,19 @@ check off.
 
 ### Processes
 
-| Variable                             | Used by           | Meaning                                                                                                                       |
-| ------------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                               | API, page fetcher | Listening port, default 8080                                                                                                  |
-| `DRAFT_LOOP_WEB_ROOT`                | API               | The built web screen's directory, served at `/`; the image sets it                                                            |
+| Variable                             | Used by           | Meaning                                                                                                                                |
+| ------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                               | API, page fetcher | Listening port, default 8080                                                                                                           |
+| `DRAFT_LOOP_WEB_ROOT`                | API               | The built web screen's directory, served at `/`; the image sets it                                                                     |
 | `DRAFT_LOOP_SPEECH_MODEL_DIR`        | API               | The pinned speech model's folder, served at `/speech-models/`; the image fetches and sets it. Fill it with `pnpm speech-model:install` |
-| `DRAFT_LOOP_PAGE_FETCHER_URL`        | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself                |
-| `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited` |
-| `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset        |
-| `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                      |
-| `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                               |
-| `DRAFT_LOOP_WORKER_IDLE_MS`          | worker            | In drain mode, how long the queue stays empty before exit, default 60000                                                      |
-| `DRAFT_LOOP_WORKER_READY_FILE`       | worker            | Touched once the worker claims jobs, for a health check                                                                       |
-| `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`    | worker            | Where the embedding model is installed; the image sets `/app/models`                                                          |
+| `DRAFT_LOOP_PAGE_FETCHER_URL`        | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself                         |
+| `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited`          |
+| `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset                 |
+| `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                               |
+| `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                                        |
+| `DRAFT_LOOP_WORKER_IDLE_MS`          | worker            | In drain mode, how long the queue stays empty before exit, default 60000                                                               |
+| `DRAFT_LOOP_WORKER_READY_FILE`       | worker            | Touched once the worker claims jobs, for a health check                                                                                |
+| `DRAFT_LOOP_EMBEDDING_MODEL_ROOT`    | worker            | Where the embedding model is installed; the image sets `/app/models`                                                                   |
 
 ## Cloud SQL
 
@@ -383,11 +384,11 @@ passed the quality gate.
 The live voice interview streams through Google Cloud speech in the EU
 ([voice input](../reference/voice-input.md#live-conversation)).
 
-| Variable                       | Read by | Meaning                                                                 |
-| ------------------------------ | ------- | ----------------------------------------------------------------------- |
-| `DRAFT_LOOP_LIVE_SPEECH`       | API     | `off` (default) or `google`; any other value fails at start             |
-| `DRAFT_LOOP_SPEECH_PROJECT_ID` | API     | The Google Cloud project; required for `google`                         |
-| `DRAFT_LOOP_SPEECH_KEY_FILE`   | API     | A service account key for speech alone; unset, the API's own identity   |
+| Variable                       | Read by | Meaning                                                               |
+| ------------------------------ | ------- | --------------------------------------------------------------------- |
+| `DRAFT_LOOP_LIVE_SPEECH`       | API     | `off` (default) or `google`; any other value fails at start           |
+| `DRAFT_LOOP_SPEECH_PROJECT_ID` | API     | The Google Cloud project; required for `google`                       |
+| `DRAFT_LOOP_SPEECH_KEY_FILE`   | API     | A service account key for speech alone; unset, the API's own identity |
 
 ### The screener's route
 

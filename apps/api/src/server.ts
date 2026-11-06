@@ -16,6 +16,7 @@ import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import type { ApiAuthOptions } from "./request-auth.js";
+import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
@@ -23,7 +24,10 @@ const localModels = readLocalModels(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
-const screening = contentScreeningSetup(readScreeningConfig(process.env));
+const screening = {
+  ...contentScreeningSetup(readScreeningConfig(process.env)),
+  ...screeningShadowFrom(readScreeningShadowConfig(process.env)),
+};
 // On Cloud Run, the database URL names the connector's socket and the API signs in as its service
 // identity; elsewhere this does nothing.
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
