@@ -14,10 +14,13 @@ class FakeDuplex extends EventEmitter {
   ended = false;
   destroyed = false;
   write(message: unknown): boolean {
+    // A real stream refuses writes after its end (ERR_STREAM_WRITE_AFTER_END).
+    if (this.ended) throw new Error("write after end");
     this.written.push(message);
     return true;
   }
   end(): void {
+    if (this.ended) throw new Error("end after end");
     this.ended = true;
   }
   destroy(): void {
@@ -70,6 +73,10 @@ describe("Google speech", () => {
     stream.emit("data", { speechEventType: "SPEECH_ACTIVITY_END" });
     timers[0]?.();
     expect(stream.ended).toBe(true);
+    // Microphone frames still on their way, and a late Done speaking, are dropped quietly.
+    recognition.write(new Uint8Array([3]));
+    recognition.end();
+    expect(stream.written).toHaveLength(2);
     stream.emit("data", {
       results: [{ alternatives: [{ transcript: "Et quarante événements." }], isFinal: true }],
     });

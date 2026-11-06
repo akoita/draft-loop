@@ -158,6 +158,14 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
       const stream = options.clients.streamingRecognize();
       let silence: unknown;
       let finished = false;
+      // Once the audio is ended, Google may still send its last finals, but the stream refuses
+      // more writes; microphone frames that arrive in between are dropped.
+      let audioEnded = false;
+      const endAudio = () => {
+        if (finished || audioEnded) return;
+        audioEnded = true;
+        stream.end();
+      };
       const finish = (error?: Error) => {
         if (finished) return;
         finished = true;
@@ -174,7 +182,7 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
           silence = undefined;
         } else if (event === "SPEECH_ACTIVITY_END" || event === "3") {
           // Ending the audio lets Google send its last finals; the stream's end closes the turn.
-          silence = setTimer(() => stream.end(), silenceMs);
+          silence = setTimer(endAudio, silenceMs);
         }
         for (const result of response.results ?? []) {
           const text = result.alternatives?.[0]?.transcript?.trim() ?? "";
@@ -205,11 +213,9 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
 
       return {
         write: (pcm) => {
-          if (!finished) stream.write({ audio: pcm });
+          if (!finished && !audioEnded) stream.write({ audio: pcm });
         },
-        end: () => {
-          if (!finished) stream.end();
-        },
+        end: endAudio,
         cancel: () => {
           if (finished) return;
           finished = true;
