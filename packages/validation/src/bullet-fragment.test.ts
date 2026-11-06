@@ -139,3 +139,25 @@ describe("bullet fragment finding", () => {
     ).toEqual([]);
   });
 });
+
+describe("findBulletFragment in French (#2320)", () => {
+  it("flags a French bullet left on a connector, and only the punctuation in other languages", () => {
+    expect(findBulletFragment("Migration des services de paiement et", "fr")?.reason).toBe(
+      "dangling-connector",
+    );
+    expect(findBulletFragment("Refonte du pipeline de données pour", "fr")?.reason).toBe(
+      "dangling-connector",
+    );
+    expect(findBulletFragment("Migration of the billing services et", "en")).toBeUndefined();
+    expect(findBulletFragment("Migración de los servicios de pago,", "es")?.reason).toBe(
+      "dangling-connector",
+    );
+    expect(findBulletFragment("Migración de los servicios de pago y", "es")).toBeUndefined();
+  });
+
+  it("leaves a complete French bullet alone", () => {
+    expect(
+      findBulletFragment("Dirigé la migration des services de paiement vers Kubernetes.", "fr"),
+    ).toBeUndefined();
+  });
+});

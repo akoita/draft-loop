@@ -229,7 +229,7 @@ const numberPattern = /\d+(?:[.,]\d+)*/gu;
  * digits-only check). "One" is left out: it reads as a pronoun ("one of my skills") far more
  * often than as a count.
  */
-const numberWords: Readonly<Record<string, number>> = {
+const englishNumberWords: Readonly<Record<string, number>> = {
   two: 2,
   three: 3,
   four: 4,
@@ -262,9 +262,44 @@ const numberWords: Readonly<Record<string, number>> = {
   billion: 1_000_000_000,
   dozen: 12,
 };
-const wordForNumber = new Map(
-  Object.entries(numberWords).map(([word, value]) => [value, word] as const),
-);
+
+/**
+ * The French number words (#2320). "Un" and "une" are articles far more often than counts, and
+ * "neuf" also means "new", so they are left out; "six" and "million" are shared with English.
+ */
+const frenchNumberWords: Readonly<Record<string, number>> = {
+  deux: 2,
+  trois: 3,
+  quatre: 4,
+  cinq: 5,
+  sept: 7,
+  huit: 8,
+  dix: 10,
+  onze: 11,
+  douze: 12,
+  treize: 13,
+  quatorze: 14,
+  quinze: 15,
+  seize: 16,
+  vingt: 20,
+  trente: 30,
+  quarante: 40,
+  cinquante: 50,
+  soixante: 60,
+  cent: 100,
+  mille: 1_000,
+  milliard: 1_000_000_000,
+  douzaine: 12,
+};
+
+const numberWords: Readonly<Record<string, number>> = {
+  ...englishNumberWords,
+  ...frenchNumberWords,
+};
+const wordsForNumber = new Map<number, string[]>();
+for (const [word, value] of Object.entries(numberWords)) {
+  wordsForNumber.set(value, [...(wordsForNumber.get(value) ?? []), word]);
+}
 
 /** A quantity stated in a draft: as written, and as a digit string when it is a word. */
 interface StatedNumber {
@@ -301,13 +336,13 @@ function wordIn(source: string, word: string): boolean {
  * digits or in words: "five" is supported by "5" or "five", and "10" by "10" or "ten".
  */
 function supported(number: StatedNumber, sources: readonly string[]): boolean {
-  const word = wordForNumber.get(Number(number.digits));
+  const words = wordsForNumber.get(Number(number.digits)) ?? [];
   const written = /^\p{L}+$/u.test(number.written) ? number.written : undefined;
   return sources.some(
     (source) =>
       digitsIn(source, number.digits) ||
       (written !== undefined && wordIn(source, written)) ||
-      (word !== undefined && wordIn(source, word)),
+      words.some((word) => wordIn(source, word)),
   );
 }
 

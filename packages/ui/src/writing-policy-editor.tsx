@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { maximumWritingPolicyContentBytes, type WritingPolicyReadResult } from "./bridge.js";
 import type { WritingPolicyVersionMetadata } from "./model.js";
@@ -20,6 +20,9 @@ import {
 const policyTooLargeMessage = "The writing policy is too large; use at most 64 KiB.";
 
 /** The size the application measures: the UTF-8 bytes of the text. */
+/** Spelling locales the field suggests; any BCP 47 tag the policy schema accepts still works. */
+export const spellingLocaleSuggestions: readonly string[] = ["en-GB", "en-US", "fr-FR", "fr-CA"];
+
 export function writingPolicyByteLength(text: string): number {
   return new TextEncoder().encode(text).byteLength;
 }
@@ -113,6 +116,7 @@ export function WritingPolicyEditorView({
   dialogRef,
   history,
 }: WritingPolicyEditorViewProps) {
+  const spellingLocaleListId = useId();
   const values = readPolicySelectorValues(text);
   const bytes = writingPolicyByteLength(text);
   const overLimit = bytes > maximumWritingPolicyContentBytes;
@@ -245,6 +249,7 @@ export function WritingPolicyEditorView({
                 <input
                   type="text"
                   placeholder="en-GB"
+                  list={spellingLocaleListId}
                   value={values.spellingLocale ?? ""}
                   disabled={saving}
                   onChange={(event) =>
@@ -254,6 +259,11 @@ export function WritingPolicyEditorView({
                     )
                   }
                 />
+                <datalist id={spellingLocaleListId}>
+                  {spellingLocaleSuggestions.map((locale) => (
+                    <option key={locale} value={locale} />
+                  ))}
+                </datalist>
               </label>
             </div>
             <label className="setup-field">

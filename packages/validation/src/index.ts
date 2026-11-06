@@ -541,7 +541,8 @@ export function validateDraftArtifact(
       } else {
         seenBlocks.add(normalized);
       }
-      const fragment = block.type === "bullet" ? findBulletFragment(block.text) : undefined;
+      const fragment =
+        block.type === "bullet" ? findBulletFragment(block.text, artifact.language) : undefined;
       if (fragment !== undefined) {
         addIssue(issues, {
           code: "editorial-fragment",
@@ -553,7 +554,7 @@ export function validateDraftArtifact(
           location: writingPolicyLocation(block.text, fragment.start, fragment.end),
         });
       }
-      const narration = findCandidateNarration(block.text);
+      const narration = findCandidateNarration(block.text, artifact.language);
       if (narration !== undefined) {
         addIssue(issues, {
           code: "editorial-source-note",
