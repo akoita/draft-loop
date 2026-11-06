@@ -138,6 +138,7 @@ describe("career interview routes", () => {
     expect(body.session.topics).toHaveLength(1);
     expect(body.proposal).toContain("Would you like to talk about it");
     expect(body.interviewer_available).toBe(true);
+    expect(body.live_voice_available).toBe(false);
     const id = body.session.id as string;
     const key = body.session.topics[0].key as string;
 
@@ -225,6 +226,7 @@ describe("career interview routes", () => {
       liveSpeech: liveSpeech(),
     });
     const started = (await call("POST", sessions)).json();
+    expect(started.live_voice_available).toBe(true);
     const key = started.session.topics[0].key as string;
     await call("POST", `${sessions}/${started.session.id}/actions`, {
       action: "accept",
