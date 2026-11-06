@@ -70,6 +70,10 @@ import type {
   WorkspaceEvidenceMigrationResult,
 } from "./career-evidence-contract.js";
 import {
+  createFactUsageCapabilities,
+  type FactUsageCapabilities,
+} from "./fact-usage-capabilities.js";
+import {
   createFixtureReviewPort,
   type DesktopReviewPort,
   type DesktopReviewState,
@@ -218,6 +222,8 @@ export interface DesktopProfileCapabilities {
     workspaceId: string,
     profileId: string,
   ) => Promise<ProfileFreshnessResult>;
+  /** Where each fact may be used (#2259); absent on a host without usage levels. */
+  readonly factUsage?: FactUsageCapabilities;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -524,6 +530,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   };
   const refresh = async (): Promise<DesktopReviewState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
+  const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
   return {
     load,
     ...(capabilityPort.hasCapability("workspace.open") ||
@@ -695,6 +702,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
         }
       : {}),
     ...(applicationFolders === undefined ? {} : { applicationFolders }),
+    ...(factUsage === undefined ? {} : { factUsage }),
     ...(capabilityPort.hasCapability("application.delete")
       ? {
           deleteApplication: async (workspaceId: string, applicationId: string) => {

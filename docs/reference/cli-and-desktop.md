@@ -899,6 +899,23 @@ flowchart LR
 
 A host without a profile workflow shows no Career profile tab or signpost.
 
+### Where a fact may be used
+
+On the Career profile, each fact and each section has a **usage level**. It
+is separate from sensitivity, which decides what may reach a model provider.
+
+| Level            | Shown as         | Used on                          |
+| ---------------- | ---------------- | -------------------------------- |
+| `cv`             | CV and interview | CVs and interview preparation    |
+| `interview-only` | Interview only   | Interview preparation, never CVs |
+| `never-say`      | Never say        | No output                        |
+
+- **Unset is `cv`.** Nothing changes until you mark a fact or section.
+- **A fact's own level wins.** "Like section" follows the section's level.
+- **Kept by content.** A level follows the fact's text, so it survives a source
+  refresh. Editing a fact's value starts it again from its section's level.
+- **Web only for now.** The local-first desktop shows no usage controls.
+
 ### Incremental derivation
 
 Derivation extracts only new or changed sources, and reuses the facts of

@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   withRunBudgetDefaults,
 } from "@draft-loop/application";
+import { createFactUsageService } from "@draft-loop/application/fact-usage";
 import { createPreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { createWorkJournalService } from "@draft-loop/application/work-journal";
 import { openRunQueue } from "@draft-loop/run-queue";
@@ -111,6 +112,7 @@ export function composeHostedApplication(
       settings,
       service,
     }),
+    factUsage: createFactUsageService(settings),
     sourceEvidenceKinds: storage,
     careerInterview: {
       sessions: storage.careerInterviewSessions,

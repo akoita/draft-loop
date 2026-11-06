@@ -113,6 +113,14 @@ import {
 } from "./credential-test-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
+import {
+  type FactUsageGetInput,
+  type FactUsageResult,
+  type FactUsageSetInput,
+  normalizeFactUsageResult,
+  validateFactUsageGetInput,
+  validateFactUsageSetInput,
+} from "./fact-usage-contract.js";
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   DesktopReviewState,
@@ -257,6 +265,13 @@ export type {
   CredentialTestProvider,
   CredentialTestResult,
 } from "./credential-test-contract.js";
+export type {
+  FactUsageChangeView,
+  FactUsageGetInput,
+  FactUsageResult,
+  FactUsageSetInput,
+  FactUsageView,
+} from "./fact-usage-contract.js";
 export type {
   ModelProfileSupportInput,
   ModelProfileSupportResult,
@@ -3190,6 +3205,8 @@ export interface BridgeCommandInputMap {
   "application-folder.create": ApplicationFolderCreateInput;
   "application-folder.rename": ApplicationFolderRenameInput;
   "application-folder.delete": ApplicationFolderDeleteInput;
+  "fact-usage.get": FactUsageGetInput;
+  "fact-usage.set": FactUsageSetInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3309,6 +3326,8 @@ export interface BridgeCommandOutputMap {
   "application-folder.create": ApplicationFolderRecordResult;
   "application-folder.rename": ApplicationFolderRecordResult;
   "application-folder.delete": ApplicationFolderDeleteResult;
+  "fact-usage.get": FactUsageResult;
+  "fact-usage.set": FactUsageResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -5879,6 +5898,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "application-folder.delete",
         input: validateApplicationFolderDeleteInput(command.input) ?? invalidInput(),
+      };
+    case "fact-usage.get":
+      return {
+        type: "fact-usage.get",
+        input: validateFactUsageGetInput(command.input) ?? invalidInput(),
+      };
+    case "fact-usage.set":
+      return {
+        type: "fact-usage.set",
+        input: validateFactUsageSetInput(command.input) ?? invalidInput(),
       };
     case "workspace.recent-remove":
       return {
@@ -8531,6 +8560,9 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeApplicationFolderRecordResult(value) ?? invalidInput();
     case "application-folder.delete":
       return normalizeApplicationFolderDeleteResult(value) ?? invalidInput();
+    case "fact-usage.get":
+    case "fact-usage.set":
+      return normalizeFactUsageResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":

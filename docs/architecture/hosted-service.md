@@ -524,6 +524,7 @@ Sources reach a hosted store through `createHostedKnowledgeIntake` in
 | `POST /v1/knowledge-bases/:id/sources?name=<file name>`                       | Uploads one file as the raw body, with its media type as `Content-Type`. The answer carries its `screening`. The same bytes again answer 200 with the existing source, so a retry is safe. | Another type answers 415. Over the limit answers 413.                  |
 | `GET /v1/knowledge-bases/:id/sensitivity-rules`, `POST`, `DELETE .../:ruleId` | Lists, adds or removes a rule that marks sections under a heading as `sensitive` or `never-share`. Each change saves a new list version, and runs withhold the marked sections.            | A duplicate rule answers 422                                           |
 | `PUT /v1/workspaces/:id/knowledge-selection`                                  | Selects the bases a workspace's runs use, by id. The API names the tenant's store itself, and the workspace view lists `knowledgeBaseIds`.                                                 | An unknown base answers 404. Several bases need `combinationApproved`. |
+| `GET /v1/workspaces/:id/fact-usage`, `PUT`                                    | Reads or sets where career facts may be used: `cv`, `interview-only` or `never-say`, by section (fact category) or by fact usage key, never fact text. `null` clears a level; unset reads as `cv` (`fact-usage-routes.ts`). | Fact text as a key, or an unknown level, answers 400                   |
 
 Every route except the upload parses JSON.
 

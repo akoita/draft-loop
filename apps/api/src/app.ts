@@ -6,6 +6,7 @@ import {
   type RunBudgetCeiling,
   type UsageLine,
 } from "@draft-loop/application";
+import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
@@ -46,6 +47,7 @@ import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-r
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportRoutes } from "./export-routes.js";
+import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
@@ -138,6 +140,8 @@ export interface ApiOptions {
     readonly careerInterview?: CareerInterviewParts;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
+    /** Where each career fact may be used (#2259); without it those routes are not served. */
+    readonly factUsage?: FactUsageService;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -399,6 +403,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     if (application.preferenceSuggestions !== undefined) {
       registerPreferenceSuggestionRoutes(app, {
         suggestions: application.preferenceSuggestions,
+        workspaceRoot: application.workspaceRoot,
+      });
+    }
+    if (application.factUsage !== undefined) {
+      registerFactUsageRoutes(app, {
+        factUsage: application.factUsage,
         workspaceRoot: application.workspaceRoot,
       });
     }

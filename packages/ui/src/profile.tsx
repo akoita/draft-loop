@@ -25,6 +25,13 @@ import {
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
+  FactUsageSelect,
+  factUsageExplanation,
+  type ProfileFactUsageControls,
+  SectionUsageSelect,
+  useProfileFactUsage,
+} from "./profile-fact-usage.js";
+import {
   nextProfileGenerationProgress,
   type ProfileGenerationActivity,
   ProfileGenerationCancel,
@@ -315,11 +322,13 @@ function ProvenanceList({
 function ProfileFact({
   fact,
   editable,
+  usage,
   onValueChange,
   onRemove,
 }: {
   readonly fact: CanonicalCandidateProfileFactResult;
   readonly editable: boolean;
+  readonly usage?: ProfileFactUsageControls | undefined;
   readonly onValueChange: (value: string) => void;
   readonly onRemove: () => void;
 }) {
@@ -347,6 +356,13 @@ function ProfileFact({
         <span className="profile-fact-sources meta-chip">
           {sourceCountLabel(fact.provenance.length)}
         </span>
+        {usage === undefined ? null : (
+          <FactUsageSelect
+            fact={fact}
+            label={safeCanonicalCandidateProfileText(humanizeProfileFieldLabel(fact.field))}
+            controls={usage}
+          />
+        )}
         {editable ? (
           <button
             className="button button-quiet profile-remove"
@@ -446,6 +462,7 @@ export function ProfileDetails({
   editable,
   busy,
   failureRecorded = false,
+  usage,
   onFactValueChange,
   onRemoveFact,
   onIssueStatusChange,
@@ -459,6 +476,8 @@ export function ProfileDetails({
   readonly busy: boolean;
   /** The version records a failed generation whose cause is shown in the outcome callout. */
   readonly failureRecorded?: boolean;
+  /** Usage level controls (#2259); absent on a host without them. */
+  readonly usage?: ProfileFactUsageControls | undefined;
   readonly onFactValueChange: (factId: string, value: string) => void;
   readonly onRemoveFact: (factId: string) => void;
   readonly onIssueStatusChange: (
@@ -551,6 +570,9 @@ export function ProfileDetails({
                     </span>
                   ) : null}
                 </div>
+                {usage === undefined ? null : (
+                  <p className="profile-usage-note">{factUsageExplanation}</p>
+                )}
                 {factProjection.filtering && factProjection.matchCount === 0 ? (
                   <p className="profile-empty">No facts match this filter.</p>
                 ) : null}
@@ -580,12 +602,20 @@ export function ProfileDetails({
                             : factCountLabel(view.totalCount)}
                         </span>
                       </summary>
+                      {usage === undefined ? null : (
+                        <SectionUsageSelect
+                          category={view.category}
+                          label={humanizeProfileCategory(view.category)}
+                          controls={usage}
+                        />
+                      )}
                       <ul className="profile-fact-list">
                         {view.facts.map((fact) => (
                           <ProfileFact
                             key={fact.id}
                             fact={fact}
                             editable={editable}
+                            usage={usage}
                             onValueChange={(value) => onFactValueChange(fact.id, value)}
                             onRemove={() => onRemoveFact(fact.id)}
                           />
@@ -763,6 +793,7 @@ export function ProfileWorkspace({
     [],
   );
   const [providerTransmissionApproved, setProviderTransmissionApproved] = useState(false);
+  const factUsage = useProfileFactUsage(workspaceId, capabilities.factUsage);
   const [fullExtraction, setFullExtraction] = useState(false);
   const [sourceReuse, setSourceReuse] = useState<{
     readonly profileId: string;
@@ -1396,6 +1427,11 @@ export function ProfileWorkspace({
           <p>{errorMessage}</p>
         </div>
       )}
+      {factUsage.error === null ? null : (
+        <p className="profile-usage-error" role="alert">
+          {factUsage.error}
+        </p>
+      )}
       {record === null ? null : (
         <ProfileDetails
           key={`${record.profileId}@${record.version}`}
@@ -1405,6 +1441,7 @@ export function ProfileWorkspace({
           editable={editable}
           busy={busy}
           failureRecorded={currentOutcome.kind === "extraction-failure"}
+          usage={factUsage.controls ?? undefined}
           onFactValueChange={(factId, value) =>
             setDraftFacts((facts) =>
               facts.map((fact) => (fact.id === factId ? { ...fact, value } : fact)),

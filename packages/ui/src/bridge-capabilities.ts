@@ -26,6 +26,8 @@ export const bridgeCapabilities = [
   "application-folder.create",
   "application-folder.rename",
   "application-folder.delete",
+  "fact-usage.get",
+  "fact-usage.set",
   "knowledge.create",
   "knowledge.open",
   "knowledge.list",
