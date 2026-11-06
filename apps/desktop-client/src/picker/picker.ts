@@ -2,6 +2,7 @@ import "./picker.css";
 
 import type { PickerApi, PickerView } from "../picker-contract.js";
 import { isLoopbackHost } from "../server-address.js";
+import { type ShellText, shellReason, shellText } from "../shell-text.js";
 
 declare global {
   interface Window {
@@ -10,6 +11,19 @@ declare global {
 }
 
 const picker = window.draftLoopPicker;
+let text: ShellText = shellText.en;
+let language: keyof typeof shellText = "en";
+
+/** Writes the page's fixed words in the shell's language. */
+function translatePage(): void {
+  document.documentElement.lang = language;
+  document.title = text.pickerTitle;
+  for (const node of document.querySelectorAll<HTMLElement>("[data-text]")) {
+    const value = text[node.dataset.text as keyof ShellText];
+    if (typeof value === "string") node.textContent = value;
+  }
+  element<HTMLInputElement>("name").placeholder = text.optional;
+}
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -40,7 +54,7 @@ async function open(address: string, name?: string): Promise<string | undefined>
     const result = await picker.open(address, name);
     if (result.ok) return undefined;
     render(await picker.view());
-    return result.reason;
+    return shellReason(result.reason, language);
   } finally {
     document.body.removeAttribute("aria-busy");
   }
@@ -53,19 +67,23 @@ function renderUnreachable(view: PickerView): void {
   if (view.unreachable === undefined) return;
   const { origin, reason } = view.unreachable;
   const title = document.createElement("strong");
-  title.textContent = `Can't reach ${origin}.`;
+  title.textContent = text.cantReach(origin);
   const detail = document.createElement("p");
+  const said = shellReason(reason, language);
   detail.textContent = isThisComputer(origin)
-    ? `${reason} If it is this computer's server, start it with draft-loop-server up, then try again.`
-    : `${reason} Check the address and your connection, then try again.`;
+    ? text.startThisComputer(said)
+    : text.checkAddress(said);
   notice.append(
     title,
     detail,
-    button("Try again", () => void open(origin)),
+    button(text.tryAgain, () => void open(origin)),
   );
 }
 
 function render(view: PickerView): void {
+  language = view.language ?? "en";
+  text = shellText[language];
+  translatePage();
   renderUnreachable(view);
   const list = element<HTMLUListElement>("servers");
   list.replaceChildren(
@@ -80,15 +98,11 @@ function render(view: PickerView): void {
       label.append(name, origin);
       item.append(
         label,
-        button("Open", () => void open(server.origin)),
+        button(text.open, () => void open(server.origin)),
         button(
-          "Remove",
+          text.remove,
           () => {
-            if (
-              window.confirm(
-                `Remove ${server.name}? Its sign-in and saved pages are cleared from this computer.`,
-              )
-            ) {
+            if (window.confirm(text.confirmRemove(server.name))) {
               void picker.remove(server.origin).then(render);
             }
           },

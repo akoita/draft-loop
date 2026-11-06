@@ -23,6 +23,13 @@ import { newerDesktopRelease, releasesApiUrl, releasesUrl } from "./release-noti
 import { createRememberedSignIns, type RememberedSignIns } from "./remembered-sign-in.js";
 import { type CheckFetch, checkServer, type ServerCheck } from "./server-check.js";
 import { createServerListStore } from "./servers.js";
+import { createScreenLanguageStore, screenLanguageChannels } from "./shell-language.js";
+import {
+  isShellLanguage,
+  negotiateShellLanguage,
+  type ShellLanguage,
+  shellText,
+} from "./shell-text.js";
 import { signInChannels } from "./sign-in-contract.js";
 import { createTokenOffers, type TokenOffers } from "./token-offer.js";
 import { type ProofFetch, serverHoldsToken } from "./token-proof.js";
@@ -91,7 +98,10 @@ function configureSession(partition: string, origin: string): Electron.Session {
       .finally(() => callback({}));
   });
   serverSession.on("will-download", (_event, item) =>
-    askWhereToSave(item, app.getPath("downloads")),
+    askWhereToSave(item, app.getPath("downloads"), {
+      title: text().saveExport,
+      buttonLabel: text().save,
+    }),
   );
   return serverSession;
 }
@@ -178,7 +188,7 @@ function openServer(origin: string, check: ServerCheck & { reachable: true }): v
   window.webContents.on("did-fail-load", (_event, errorCode, description, url, isMainFrame) => {
     // -3 is an aborted load, such as a navigation the guard stopped.
     if (!isMainFrame || errorCode === -3 || new URL(url).origin !== origin) return;
-    picker.setUnreachable(origin, `The page did not load (${description}).`);
+    picker.setUnreachable(origin, shellText.en.pageDidNotLoad(description));
     openPicker();
   });
   // The remembered token goes only to a server that proves it holds it (#2148), checked before
@@ -195,6 +205,7 @@ const picker = createPickerService({
   },
   check: (origin) => checkServer(origin, fetchForCheck),
   openServer,
+  language: () => currentLanguage(),
   async clearServerData(origin) {
     const serverSession = session.fromPartition(partitionFor(origin));
     await serverSession.clearStorageData();
@@ -242,17 +253,17 @@ async function checkForNewVersion(asked: boolean): Promise<void> {
     if (asked) {
       await dialog.showMessageBox({
         type: "info",
-        message: "No newer desktop version was found.",
-        buttons: ["OK"],
+        message: text().noNewerVersion,
+        buttons: [text().ok],
       });
     }
     return;
   }
   const choice = await dialog.showMessageBox({
     type: "info",
-    message: "A new desktop version is available.",
-    detail: `DraftLoop ${tag} is on the releases page. Download it there and replace this app.`,
-    buttons: ["Open the releases page", "Later"],
+    message: text().newVersionAvailable,
+    detail: text().newVersionDetail(tag),
+    buttons: [text().openReleasesPage, text().later],
     defaultId: 0,
     cancelId: 1,
   });
@@ -264,11 +275,38 @@ async function checkForNewVersion(asked: boolean): Promise<void> {
   if (choice.response === 0) openExternal(releasesUrl);
 }
 
+const screenLanguages = () => createScreenLanguageStore(app.getPath("userData"));
+let shellLanguage: ShellLanguage | undefined;
+
+/** The shell's language: the screen language chosen on a server, else the system's. */
+function currentLanguage(): ShellLanguage {
+  shellLanguage ??= negotiateShellLanguage(
+    screenLanguages().read(),
+    app.getPreferredSystemLanguages(),
+  );
+  return shellLanguage;
+}
+
+const text = () => shellText[currentLanguage()];
+
+function registerScreenLanguageChannels(): void {
+  ipcMain.on(screenLanguageChannels.read, (event) => {
+    event.returnValue =
+      senderServer(event) === undefined ? null : (screenLanguages().read() ?? null);
+  });
+  ipcMain.on(screenLanguageChannels.choose, (event, language: unknown) => {
+    if (senderServer(event) === undefined || !isShellLanguage(language)) return;
+    screenLanguages().save(language);
+    shellLanguage = language;
+    buildMenu();
+  });
+}
+
 function buildMenu(): void {
   const serverMenu: MenuItemConstructorOptions = {
-    label: "Server",
+    label: text().serverMenu,
     submenu: [
-      { label: "Switch server…", accelerator: "CmdOrCtrl+Shift+S", click: () => openPicker() },
+      { label: text().switchServer, accelerator: "CmdOrCtrl+Shift+S", click: () => openPicker() },
       { type: "separator" },
       { role: "reload" },
     ],
@@ -280,7 +318,7 @@ function buildMenu(): void {
     serverMenu,
     { role: "editMenu" },
     {
-      label: "View",
+      label: text().viewMenu,
       submenu: [
         { role: "resetZoom" },
         { role: "zoomIn" },
@@ -293,7 +331,7 @@ function buildMenu(): void {
     { role: "windowMenu" },
     {
       role: "help",
-      submenu: [{ label: "Check for a new version…", click: () => void checkForNewVersion(true) }],
+      submenu: [{ label: text().checkForNewVersion, click: () => void checkForNewVersion(true) }],
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -363,6 +401,7 @@ if (!app.requestSingleInstanceLock()) {
     buildMenu();
     registerPickerChannels();
     registerSignInChannels();
+    registerScreenLanguageChannels();
     void openAtLaunch();
     if (app.isPackaged && process.env.DRAFT_LOOP_DESKTOP_RELEASE_CHECK !== "off")
       void checkForNewVersion(false);

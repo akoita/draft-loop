@@ -1456,7 +1456,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .requiredOption("-j, --job-description <path>", "local job description file")
     .requiredOption("-s, --sources <path>", "local source directory")
-    .option("--language <language>", "output language", "en")
+    .option(
+      "--language <language>",
+      "document language: en or fr, or de, es, it, nl or pt as previews",
+      "en",
+    )
     .option("--instructions <text>", "candidate instructions")
     .option("--truthfulness-policy <text>", "truthfulness policy")
     .option(

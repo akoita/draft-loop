@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  desktopScreenLanguage,
   initialScreenLocale,
   saveScreenLanguage,
   screenLanguageKey,
@@ -47,5 +48,24 @@ describe("the web screen language", () => {
     };
     expect(() => saveScreenLanguage(refusing, "fr")).not.toThrow();
     expect(initialScreenLocale({ ...base, storage: refusing })).toBe("en");
+  });
+
+  it("shares the choice with the desktop client, and takes its choice when the page has none", () => {
+    const chosen: string[] = [];
+    const desktop = desktopScreenLanguage({
+      draftLoopDesktop: {
+        host: "desktop",
+        screenLanguage: { current: "fr", choose: (language: string) => chosen.push(language) },
+      },
+    });
+    expect(desktop?.current).toBe("fr");
+    const empty = memoryStorage();
+    expect(initialScreenLocale({ ...base, storage: () => empty, desktop })).toBe("fr");
+    const saved = memoryStorage({ [screenLanguageKey]: "en" });
+    expect(initialScreenLocale({ ...base, storage: () => saved, desktop })).toBe("en");
+    saveScreenLanguage(() => empty, "en", desktop);
+    expect(chosen).toEqual(["en"]);
+    expect(desktopScreenLanguage({})).toBeUndefined();
+    expect(desktopScreenLanguage({ draftLoopDesktop: { host: "desktop" } })).toBeUndefined();
   });
 });
