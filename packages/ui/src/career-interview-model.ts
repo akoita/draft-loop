@@ -28,6 +28,8 @@ export interface CareerInterviewSessionView {
   readonly model?: { readonly provider: string; readonly model: string } | undefined;
   /** False when the server has no interviewer model, so no question can be asked. */
   readonly interviewerAvailable?: boolean | undefined;
+  /** True when the server offers the live voice conversation on an open topic. */
+  readonly liveVoiceAvailable?: boolean | undefined;
 }
 
 export interface CareerInterviewConflictView {

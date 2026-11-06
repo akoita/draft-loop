@@ -496,6 +496,11 @@ msgstr ""
 msgid "All the seats in your plan are taken."
 msgstr ""
 
+#. placeholder {0}: voice.listener
+#: packages/ui/src/career-interview-live.tsx
+msgid "Allow {0} to hear my voice"
+msgstr ""
+
 #. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
 #: apps/web/src/private-sections.tsx
 msgid "Allow pull requests from {0}"
@@ -531,6 +536,10 @@ msgstr ""
 
 #: packages/ui/src/speech-button.tsx
 msgid "Answer by voice"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Answer now"
 msgstr ""
 
 #. placeholder {0}: describeMode("Anthropic", anthropicMode)
@@ -732,6 +741,10 @@ msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Back to writing"
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -1208,6 +1221,10 @@ msgstr ""
 msgid "Confirm that the candidate agreed to send their material."
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Connecting…"
+msgstr ""
+
 #: apps/web/src/private-sections.tsx
 msgid "contains"
 msgstr ""
@@ -1523,6 +1540,10 @@ msgstr ""
 msgid "Done · approved and exported"
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Done speaking"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Download Markdown"
 msgstr ""
@@ -1766,6 +1787,10 @@ msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "en-GB"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "End live conversation"
 msgstr ""
 
 #: packages/ui/src/workspace-model-settings.ts
@@ -2181,6 +2206,10 @@ msgstr ""
 msgid "Give the note a title."
 msgstr ""
 
+#: apps/web/src/career-interview.tsx
+msgid "Google Cloud in the EU"
+msgstr ""
+
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Google Gemini API key"
 msgstr ""
@@ -2593,6 +2622,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Links and technologies are combined and the period widened."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Listening. Pause when you are done, or press Done speaking."
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -3733,6 +3766,10 @@ msgstr ""
 msgid "Record the candidate's consent to send material to {0} first."
 msgstr ""
 
+#: apps/web/src/career-interview.tsx
+msgid "Record the permission to send material to model providers on the consent step first."
+msgstr ""
+
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Record why one lineage on both sides is acceptable before saving model settings."
 msgstr ""
@@ -4825,7 +4862,15 @@ msgid "Talk about this instead"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
+msgid "Talk live"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Talking live sends your voice to {listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -4914,6 +4959,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "The brief has no role."
+msgstr ""
+
+#: apps/web/src/live-voice.ts
+msgid "The browser did not allow the microphone. Allow it for this page, or keep writing your answers."
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -5034,6 +5083,14 @@ msgstr ""
 msgid "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "The interviewer is speaking."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The interviewer is thinking…"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The interviewer is writing…"
 msgstr ""
@@ -5074,6 +5131,14 @@ msgstr ""
 
 #: packages/ui/src/profile-status.ts
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The live conversation ended."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The live conversation stopped. Try again, or keep writing your answers."
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -5343,6 +5408,10 @@ msgstr ""
 
 #: packages/ui/src/application-language.tsx
 msgid "This job posting looks {label}."
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "This live conversation reached its time limit. Start it again to go on."
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -5938,6 +6007,7 @@ msgstr ""
 msgid "Writing policy versions"
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "You"
 msgstr ""

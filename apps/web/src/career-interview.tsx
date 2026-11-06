@@ -1,3 +1,4 @@
+import type { CareerInterviewLiveVoice } from "@draft-loop/ui/career-interview-live";
 import type {
   CareerInterviewAction,
   CareerInterviewConflictView,
@@ -6,9 +7,17 @@ import type {
 import { careerInterviewRefusal } from "@draft-loop/ui/career-interview-model";
 import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
 import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
-import { useCallback, useState } from "react";
+import { t } from "@lingui/core/macro";
+import { useCallback, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { isConsentProvider } from "./consent-model.js";
+import {
+  createBrowserPlayer,
+  liveVoiceSupported,
+  openBrowserMicrophone,
+  startLiveVoiceCall,
+} from "./live-voice.js";
 import { createMicrophoneRecorder, microphoneSupported } from "./microphone.js";
 import { useRecordId } from "./record-context.js";
 import { createWhisperSpeechToText, speechModelAvailable } from "./whisper-speech.js";
@@ -35,6 +44,7 @@ export function careerInterviewProblem(error: unknown): string {
 export function careerInterviewSessionView(
   read: ApiSchemas["CareerInterviewSessionView"]["session"],
   interviewerAvailable?: boolean,
+  liveVoiceAvailable?: boolean,
 ): CareerInterviewSessionView {
   return {
     id: read.id,
@@ -49,6 +59,7 @@ export function careerInterviewSessionView(
     })),
     model: read.model,
     interviewerAvailable,
+    liveVoiceAvailable,
   };
 }
 
@@ -66,13 +77,91 @@ export function webSpeechInput(): SpeechInput | undefined {
   return pageSpeech;
 }
 
+/** The language the interviewer speaks in: the browser's, French or English. */
+export function liveLanguage(languages: readonly string[]): "fr" | "en" {
+  return languages[0]?.toLowerCase().startsWith("fr") === true ? "fr" : "en";
+}
+
+/** Live voice on this page, when the browser can capture audio and the client opens sockets. */
+function liveVoice(
+  client: ApiClient,
+  workspaceId: string,
+  sessionId: string,
+  show: (read: ApiSchemas["CareerInterviewSessionView"]) => void,
+): CareerInterviewLiveVoice | undefined {
+  const openSocket = client.openSocket?.bind(client);
+  if (openSocket === undefined || !liveVoiceSupported()) return undefined;
+  return {
+    listener: t`Google Cloud in the EU`,
+    start: (topicKey, events) =>
+      startLiveVoiceCall({
+        socket: openSocket(
+          "/v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/live",
+          {
+            path: { workspaceId, sessionId },
+            query: { topic_key: topicKey, language: liveLanguage(navigator.languages) },
+          },
+          "draft-loop.live",
+        ),
+        microphone: openBrowserMicrophone,
+        player: createBrowserPlayer(),
+        events,
+        onSession: (view) => show(view as ApiSchemas["CareerInterviewSessionView"]),
+      }),
+    allow: () => allowLiveListener(client, workspaceId, "google"),
+  };
+}
+
+/**
+ * Adds the live listener to the record's transmission grant, keeping every provider it named:
+ * the candidate pressed the button that says their voice goes there.
+ */
+export async function allowLiveListener(
+  client: ApiClient,
+  workspaceId: string,
+  listener: "google",
+): Promise<string | undefined> {
+  try {
+    const consents = await client.call("GET /v1/workspaces/{workspaceId}/consents", {
+      path: { workspaceId },
+    });
+    const current = consents.current["provider-transmission"];
+    const providers =
+      current?.action === "granted"
+        ? [...new Set([...current.providers, listener])].filter(isConsentProvider).sort()
+        : [];
+    if (providers.length === 0) {
+      return t`Record the permission to send material to model providers on the consent step first.`;
+    }
+    await client.call("POST /v1/workspaces/{workspaceId}/consents", {
+      path: { workspaceId },
+      body: {
+        kind: "provider-transmission",
+        action: "granted",
+        basis: "candidate-consent",
+        providers,
+        note: "Live voice in the career interview",
+      },
+    });
+    return undefined;
+  } catch (error) {
+    return describeError(error);
+  }
+}
+
 export function CareerInterviewSection({ client, bases }: CareerInterviewSectionProps) {
   const workspaceId = useRecordId();
   const [session, setSession] = useState<CareerInterviewSessionView | undefined>(undefined);
   const [proposal, setProposal] = useState<string | undefined>(undefined);
 
   const show = useCallback((read: ApiSchemas["CareerInterviewSessionView"]) => {
-    setSession(careerInterviewSessionView(read.session, read.interviewer_available));
+    setSession(
+      careerInterviewSessionView(
+        read.session,
+        read.interviewer_available,
+        read.live_voice_available,
+      ),
+    );
     setProposal(read.proposal);
   }, []);
 
@@ -94,6 +183,12 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
       }
     },
     [client, workspaceId, session],
+  );
+
+  const sessionId = session?.id;
+  const live = useMemo(
+    () => (sessionId === undefined ? undefined : liveVoice(client, workspaceId, sessionId, show)),
+    [client, workspaceId, sessionId, show],
   );
 
   return (
@@ -132,6 +227,7 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
       }}
       loadConflicts={loadConflicts}
       speech={webSpeechInput()}
+      live={live}
     />
   );
 }

@@ -125,6 +125,11 @@ services:
       DRAFT_LOOP_ALLOW_PROVIDER_DATA: "true"
       # The local models this stack offers, separated by commas, such as `llama3.1:8b`.
       DRAFT_LOOP_LOCAL_MODELS: ${DRAFT_LOOP_LOCAL_MODELS:-}
+      # `google` turns on the live voice interview, with keys/google_speech_api_key (a service
+      # account key) and the Google Cloud project it bills to.
+      DRAFT_LOOP_LIVE_SPEECH: ${DRAFT_LOOP_LIVE_SPEECH:-off}
+      DRAFT_LOOP_SPEECH_PROJECT_ID: ${DRAFT_LOOP_SPEECH_PROJECT_ID:-}
+      DRAFT_LOOP_SPEECH_KEY_FILE: /run/draft-loop/provider-keys/google_speech_api_key
     volumes:
       - ./init:/opt/draft-loop:ro
       - secrets:/secrets:ro

@@ -496,6 +496,11 @@ msgstr "All the candidate records in your plan are in use."
 msgid "All the seats in your plan are taken."
 msgstr "All the seats in your plan are taken."
 
+#. placeholder {0}: voice.listener
+#: packages/ui/src/career-interview-live.tsx
+msgid "Allow {0} to hear my voice"
+msgstr "Allow {0} to hear my voice"
+
 #. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
 #: apps/web/src/private-sections.tsx
 msgid "Allow pull requests from {0}"
@@ -532,6 +537,10 @@ msgstr "and its completed Round"
 #: packages/ui/src/speech-button.tsx
 msgid "Answer by voice"
 msgstr "Answer by voice"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Answer now"
+msgstr "Answer now"
 
 #. placeholder {0}: describeMode("Anthropic", anthropicMode)
 #: packages/ui/src/provider-authentication-summary.ts
@@ -733,6 +742,10 @@ msgstr "Back to {0}"
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
 msgstr "Back to latest run"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Back to writing"
+msgstr "Back to writing"
 
 #: apps/web/src/consent.tsx
 msgid "Basis for storing the material"
@@ -1208,6 +1221,10 @@ msgstr "Confirm that runs may combine these knowledge bases."
 msgid "Confirm that the candidate agreed to send their material."
 msgstr "Confirm that the candidate agreed to send their material."
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Connecting…"
+msgstr "Connecting…"
+
 #: apps/web/src/private-sections.tsx
 msgid "contains"
 msgstr "contains"
@@ -1523,6 +1540,10 @@ msgstr "Done · approved"
 msgid "Done · approved and exported"
 msgstr "Done · approved and exported"
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Done speaking"
+msgstr "Done speaking"
+
 #: apps/web/src/application-material.tsx
 msgid "Download Markdown"
 msgstr "Download Markdown"
@@ -1767,6 +1788,10 @@ msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "en-GB"
 msgstr "en-GB"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "End live conversation"
+msgstr "End live conversation"
 
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Enter exact model ids using letters, numbers, dots, underscores, colons, slashes, or hyphens."
@@ -2180,6 +2205,10 @@ msgstr "Give the new record an id."
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
 msgstr "Give the note a title."
+
+#: apps/web/src/career-interview.tsx
+msgid "Google Cloud in the EU"
+msgstr "Google Cloud in the EU"
 
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Google Gemini API key"
@@ -2595,6 +2624,10 @@ msgstr "LinkedIn export"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Links and technologies are combined and the period widened."
 msgstr "Links and technologies are combined and the period widened."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Listening. Pause when you are done, or press Done speaking."
+msgstr "Listening. Pause when you are done, or press Done speaking."
 
 #: packages/ui/src/profile.tsx
 msgid "Load latest"
@@ -3734,6 +3767,10 @@ msgstr "Record consent"
 msgid "Record the candidate's consent to send material to {0} first."
 msgstr "Record the candidate's consent to send material to {0} first."
 
+#: apps/web/src/career-interview.tsx
+msgid "Record the permission to send material to model providers on the consent step first."
+msgstr "Record the permission to send material to model providers on the consent step first."
+
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Record why one lineage on both sides is acceptable before saving model settings."
 msgstr "Record why one lineage on both sides is acceptable before saving model settings."
@@ -4826,8 +4863,16 @@ msgid "Talk about this instead"
 msgstr "Talk about this instead"
 
 #: packages/ui/src/career-interview-panel.tsx
+msgid "Talk live"
+msgstr "Talk live"
+
+#: packages/ui/src/career-interview-panel.tsx
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Talking live sends your voice to {listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers."
+msgstr "Talking live sends your voice to {listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers."
 
 #: packages/ui/src/review.tsx
 msgid "Target job description"
@@ -4916,6 +4961,10 @@ msgstr "The brief could not be marked reviewed. Nothing was changed."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "The brief has no role."
 msgstr "The brief has no role."
+
+#: apps/web/src/live-voice.ts
+msgid "The browser did not allow the microphone. Allow it for this page, or keep writing your answers."
+msgstr "The browser did not allow the microphone. Allow it for this page, or keep writing your answers."
 
 #: apps/web/src/consent.tsx
 msgid "The candidate agreed that runs send their material to"
@@ -5035,6 +5084,14 @@ msgstr "The identity provider sent no access token."
 msgid "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
 msgstr "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "The interviewer is speaking."
+msgstr "The interviewer is speaking."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The interviewer is thinking…"
+msgstr "The interviewer is thinking…"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The interviewer is writing…"
 msgstr "The interviewer is writing…"
@@ -5076,6 +5133,14 @@ msgstr "The language could not be saved."
 #: packages/ui/src/profile-status.ts
 msgid "The last attempt saved no facts. Fix the cause below, then try again."
 msgstr "The last attempt saved no facts. Fix the cause below, then try again."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The live conversation ended."
+msgstr "The live conversation ended."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "The live conversation stopped. Try again, or keep writing your answers."
+msgstr "The live conversation stopped. Try again, or keep writing your answers."
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "The local model cannot run on this computer, so runs use keyword retrieval."
@@ -5345,6 +5410,10 @@ msgstr "This is the first artifact version."
 #: packages/ui/src/application-language.tsx
 msgid "This job posting looks {label}."
 msgstr "This job posting looks {label}."
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "This live conversation reached its time limit. Start it again to go on."
+msgstr "This live conversation reached its time limit. Start it again to go on."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "This note's"
@@ -5939,6 +6008,7 @@ msgstr "Writing policy needs attention: it cannot be read."
 msgid "Writing policy versions"
 msgstr "Writing policy versions"
 
+#: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "You"
 msgstr "You"
