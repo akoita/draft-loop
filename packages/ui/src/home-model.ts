@@ -73,21 +73,21 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
         chip: "Checking",
         tone: "neutral",
         description: "Reading the saved career profile…",
-        action: "Manage profile",
+        action: "Open profile",
       };
     case "unsupported":
       return {
         chip: "Unavailable",
         tone: "neutral",
         description: "This version of DraftLoop cannot manage a career profile.",
-        action: "Manage profile",
+        action: "Open profile",
       };
     case "unavailable":
       return {
         chip: "Unavailable",
         tone: "error",
         description: "The saved career profile could not be read. Open it to try again.",
-        action: "Manage profile",
+        action: "Open profile",
       };
     case "none":
       return {
@@ -109,14 +109,14 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
         chip: "Failed",
         tone: "error",
         description: `Generating version ${status.version} saved no facts. Check your career evidence, then try again.`,
-        action: "Manage profile",
+        action: "Open profile",
       };
     case "reviewed":
       return {
         chip: "Reviewed",
         tone: "ready",
         description: `Version ${status.version} is reviewed and ready for applications.`,
-        action: "Manage profile",
+        action: "Review facts",
       };
   }
 }
@@ -227,7 +227,7 @@ export function evidencePresentation(
         headline: "Reading career evidence…",
         detail: "",
         empty: false,
-        action: "Manage evidence",
+        action: "Add or manage documents",
       };
     case "unavailable":
       return {
@@ -236,7 +236,7 @@ export function evidencePresentation(
         headline: "The selected knowledge base could not be read",
         detail: "Open career evidence to choose or repair it.",
         empty: false,
-        action: "Manage evidence",
+        action: "Add or manage documents",
       };
     case "selected": {
       const empty = status.sourceCount === 0;
@@ -246,7 +246,7 @@ export function evidencePresentation(
         headline: careerEvidenceSourcesText(status),
         detail: empty ? emptyDetail : careerEvidenceReadinessText(status),
         empty,
-        action: empty ? "Add career evidence" : "Manage evidence",
+        action: empty ? "Add career evidence" : "Add or manage documents",
       };
     }
     case "none":
@@ -258,7 +258,7 @@ export function evidencePresentation(
           headline: `${plural(legacySourceCount, "source file")} in this workspace`,
           detail: "Stored with the workspace rather than in a knowledge base.",
           empty: false,
-          action: "Manage evidence",
+          action: "Add or manage documents",
         };
       }
       return {

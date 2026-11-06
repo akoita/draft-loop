@@ -13,20 +13,28 @@ const flowSteps: readonly { readonly step: CareerFlowStep; readonly label: strin
 ];
 
 export const careerEvidenceIntro =
-  "Your career evidence is the raw material you provide — CVs, career-fact files, exports and links. DraftLoop searches it during reviews and builds your career profile from it.";
+  "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them.";
 
 export const careerProfileIntro =
-  "Your career profile is the structured, verified record DraftLoop extracts from your evidence — roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.";
+  "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.";
 
 /** Shown on the Career evidence page while a profile generation reads the evidence. */
 export const careerEvidenceLockedDuringGeneration =
   "Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated.";
 
 export const careerEvidenceCardSubtitle =
-  "The raw material you provide: CVs, career-fact files, exports and links. DraftLoop searches it and builds your profile from it.";
+  "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them.";
 
 export const careerProfileCardSubtitle =
-  "The verified record DraftLoop extracts from your evidence, with an exact quote for each fact. You review it once; every application reuses it.";
+  "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them.";
+
+/** The Your career panel on Home: one line on how the two steps relate. */
+export const careerPanelSummary =
+  "You give the documents, DraftLoop builds the facts, and every application reuses them.";
+
+/** Who does the work in each step of the Your career panel. */
+export const careerEvidenceRole = "What you give";
+export const careerProfileRole = "What DraftLoop builds, you check";
 
 /**
  * "Career evidence → Career profile → Applications", with the current step marked for assistive
