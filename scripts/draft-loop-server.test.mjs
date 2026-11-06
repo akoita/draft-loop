@@ -180,12 +180,40 @@ for (const shell of shells) {
         /is a file, not a folder/u,
       );
       assert.match(
-        server(shell, ["install", "latest", join(scratch, "other")]).stderr,
+        server(shell, ["install", "v1", join(scratch, "other")]).stderr,
         /must look like 0\.12\.0/u,
       );
       assert.match(
         server(shell, ["upgrade", "0.11.0"], { home: homeOf() }).stderr,
         /going back to 0\.11\.0 is not supported/u,
+      );
+    });
+
+    it("installs the newest server release when no version is named", () => {
+      // Desktop tags (v0.9.0) and older server tags are skipped; versions compare as numbers.
+      const releases = join(scratch, "releases.json");
+      writeFileSync(
+        releases,
+        JSON.stringify([
+          { tag_name: "v0.99.0" },
+          { tag_name: "server-v0.9.6" },
+          { tag_name: "server-v0.12.0" },
+          { tag_name: "server-v0.11.3" },
+        ]),
+      );
+      const latestHome = join(scratch, `latest-${shell.name}`);
+      const env = { DRAFT_LOOP_SERVER_RELEASES: releases };
+      const installed = server(shell, ["install"], { env });
+      assert.equal(installed.status, 0, installed.stderr);
+      assert.match(installed.stdout, /Installed DraftLoop server 0\.12\.0/u);
+      const named = server(shell, ["install", "latest", latestHome], { env });
+      assert.equal(named.status, 0, named.stderr);
+      assert.equal(readFileSync(join(latestHome, ".env"), "utf8"), "DRAFT_LOOP_VERSION=0.12.0\n");
+      rmSync(join(scratch, "draft-loop-server"), { force: true, recursive: true });
+      writeFileSync(releases, "[]");
+      assert.match(
+        server(shell, ["install", "latest", join(scratch, "none")], { env }).stderr,
+        /found no server-v release/u,
       );
     });
 

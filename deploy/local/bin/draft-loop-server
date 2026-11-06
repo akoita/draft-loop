@@ -3,10 +3,10 @@
 # Node and no build. The PowerShell twin is draft-loop-server.ps1. See
 # docs/operations/self-hosted.md.
 #
-#   draft-loop-server install <version> [folder]   download a release's stack into a folder
+#   draft-loop-server install [version] [folder]   download a release's stack (default: latest)
 #   draft-loop-server up | down | status | logs [service] | token
 #   draft-loop-server token --rotate                replace the owner token and restart the API
-#   draft-loop-server upgrade <version>            switch to a newer release and restart
+#   draft-loop-server upgrade [version]            switch to a newer release (default: latest)
 #   draft-loop-server backup [file] | restore <file>   one archive of the database, files and secrets
 #
 # Every command except install works on DRAFT_LOOP_SERVER_HOME, else on the folder that holds
@@ -18,6 +18,10 @@ repository="akoita/draft-loop"
 # archive; {version} is replaced with the version asked for.
 default_source="https://codeload.github.com/${repository}/tar.gz/refs/tags/server-v{version}"
 source_template="${DRAFT_LOOP_SERVER_SOURCE:-$default_source}"
+# Where `latest` is looked up: the repository's releases, pre-releases included, since server
+# releases are published as pre-releases. Tests point it at a local file.
+default_releases="https://api.github.com/repos/${repository}/releases?per_page=100"
+releases_source="${DRAFT_LOOP_SERVER_RELEASES:-$default_releases}"
 
 die() {
   printf 'draft-loop-server: %s\n' "$1" >&2
@@ -45,6 +49,34 @@ script_home() {
 check_version() {
   printf '%s' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
     die "the version must look like 0.12.0, not '$1'."
+}
+
+# The newest published server-vX.Y.Z release, without the prefix.
+latest_version() {
+  local listing newest
+  if [ -f "$releases_source" ]; then
+    listing="$(cat "$releases_source")"
+  else
+    command -v curl > /dev/null || die "curl is needed to find the latest release."
+    listing="$(curl --fail --silent --show-error --location "$releases_source")" ||
+      die "could not read the release list from $releases_source; name a version instead."
+  fi
+  newest="$(printf '%s\n' "$listing" |
+    grep -Eo '"tag_name": *"server-v[0-9]+\.[0-9]+\.[0-9]+"' |
+    grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1 || true)"
+  [ -n "$newest" ] || die "found no server-v release at $releases_source; name a version instead."
+  printf '%s\n' "$newest"
+}
+
+# The version asked for, with an empty one or `latest` read as the newest release.
+resolve_version() {
+  case "${1:-latest}" in
+    latest) latest_version ;;
+    *)
+      check_version "$1"
+      printf '%s\n' "$1"
+      ;;
+  esac
 }
 
 # The version an installed folder runs, from its .env file.
@@ -195,9 +227,8 @@ restore() {
 }
 
 install() {
-  local version="${1:-}" home="${2:-$HOME/draft-loop-server}" scratch
-  [ -n "$version" ] || die "say which version to install, such as: install 0.14.0"
-  check_version "$version"
+  local version home="${2:-$HOME/draft-loop-server}" scratch
+  version="$(resolve_version "${1:-}")"
   [ ! -e "$home/compose.yaml" ] || die "$home already holds a stack; use upgrade instead."
   if [ -e "$home" ] && [ ! -d "$home" ]; then
     die "$home is a file, not a folder: if it is a downloaded copy of this script, move or delete it, or name another folder after the version."
@@ -213,10 +244,9 @@ install() {
 }
 
 upgrade() {
-  local version="${1:-}" home current scratch
+  local version home current scratch
   home="$(script_home)"
-  [ -n "$version" ] || die "say which version to upgrade to, such as: upgrade 0.14.0"
-  check_version "$version"
+  version="$(resolve_version "${1:-}")"
   [ -f "$home/compose.yaml" ] || die "$home holds no self-hosted stack; run install first."
   current="$(installed_version "$home")"
   if [ -n "$current" ] && [ "$current" != "$version" ] &&

@@ -1,10 +1,10 @@
 # Installs and runs DraftLoop's self-hosted server (ADR 0011, D15) with Docker only: no clone, no
 # Node and no build. The bash twin is draft-loop-server. See docs/operations/self-hosted.md.
 #
-#   draft-loop-server.ps1 install <version> [folder]   download a release's stack into a folder
+#   draft-loop-server.ps1 install [version] [folder]   download a release's stack (default: latest)
 #   draft-loop-server.ps1 up | down | status | logs [service] | token
 #   draft-loop-server.ps1 token --rotate                replace the owner token and restart the API
-#   draft-loop-server.ps1 upgrade <version>            switch to a newer release and restart
+#   draft-loop-server.ps1 upgrade [version]            switch to a newer release (default: latest)
 #   draft-loop-server.ps1 backup [file] | restore <file>   one archive of the database, files and secrets
 #
 # Every command except install works on DRAFT_LOOP_SERVER_HOME, else on the folder that holds
@@ -22,6 +22,12 @@ $Repository = "akoita/draft-loop"
 # archive; {version} is replaced with the version asked for.
 $SourceTemplate = if ($env:DRAFT_LOOP_SERVER_SOURCE) { $env:DRAFT_LOOP_SERVER_SOURCE } else {
   "https://codeload.github.com/$Repository/tar.gz/refs/tags/server-v{version}"
+}
+
+# Where `latest` is looked up: the repository's releases, pre-releases included, since server
+# releases are published as pre-releases. Tests point it at a local file.
+$ReleasesSource = if ($env:DRAFT_LOOP_SERVER_RELEASES) { $env:DRAFT_LOOP_SERVER_RELEASES } else {
+  "https://api.github.com/repos/$Repository/releases?per_page=100"
 }
 
 function Fail([string]$Message) {
@@ -50,6 +56,34 @@ function Assert-Version([string]$Version) {
   if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
     Fail "the version must look like 0.12.0, not '$Version'."
   }
+}
+
+# The newest published server-vX.Y.Z release, without the prefix.
+function Get-LatestVersion {
+  if (Test-Path -LiteralPath $ReleasesSource -PathType Leaf) {
+    $listing = Get-Content -LiteralPath $ReleasesSource -Raw
+  } else {
+    try {
+      $listing = (Invoke-WebRequest -Uri $ReleasesSource -UseBasicParsing).Content
+    } catch {
+      Fail "could not read the release list from $ReleasesSource; name a version instead."
+    }
+  }
+  $versions = @([regex]::Matches($listing, '"tag_name":\s*"server-v([0-9]+\.[0-9]+\.[0-9]+)"') |
+    ForEach-Object { $_.Groups[1].Value } | Sort-Object { [version]$_ })
+  if ($versions.Count -eq 0) {
+    Fail "found no server-v release at $ReleasesSource; name a version instead."
+  }
+  return $versions[-1]
+}
+
+# The version asked for, with an empty one or `latest` read as the newest release.
+function Resolve-Version([string[]]$Arguments) {
+  if ($Arguments.Count -lt 1 -or $Arguments[0] -eq "" -or $Arguments[0] -eq "latest") {
+    return Get-LatestVersion
+  }
+  Assert-Version $Arguments[0]
+  return $Arguments[0]
 }
 
 # The version an installed folder runs, from its .env file.
@@ -270,11 +304,7 @@ function Restore-Server([string[]]$Arguments) {
 }
 
 function Install-Server([string[]]$Arguments) {
-  if ($Arguments.Count -lt 1 -or $Arguments[0] -eq "") {
-    Fail "say which version to install, such as: install 0.14.0"
-  }
-  $version = $Arguments[0]
-  Assert-Version $version
+  $version = Resolve-Version $Arguments
   $serverHome = if ($Arguments.Count -ge 2) { $Arguments[1] } else {
     Join-Path $HOME "draft-loop-server"
   }
@@ -295,11 +325,7 @@ function Install-Server([string[]]$Arguments) {
 }
 
 function Update-Server([string[]]$Arguments) {
-  if ($Arguments.Count -lt 1 -or $Arguments[0] -eq "") {
-    Fail "say which version to upgrade to, such as: upgrade 0.14.0"
-  }
-  $version = $Arguments[0]
-  Assert-Version $version
+  $version = Resolve-Version $Arguments
   $serverHome = Get-ServerHome
   if (-not (Test-Path -LiteralPath (Join-Path $serverHome "compose.yaml"))) {
     Fail "$serverHome holds no self-hosted stack; run install first."
