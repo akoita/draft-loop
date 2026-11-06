@@ -23,6 +23,10 @@
       "types": "./src/application.ts",
       "import": "./src/application.ts"
     },
+    "./application-folder": {
+      "types": "./src/application-folder.ts",
+      "import": "./src/application-folder.ts"
+    },
     "./candidate-evidence-kind": {
       "types": "./src/candidate-evidence-kind.ts",
       "import": "./src/candidate-evidence-kind.ts"

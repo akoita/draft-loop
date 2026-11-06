@@ -31,6 +31,10 @@
       "types": "./src/application.ts",
       "import": "./src/application.ts"
     },
+    "./application-folder": {
+      "types": "./src/application-folder.ts",
+      "import": "./src/application-folder.ts"
+    },
     "./application-bundle": {
       "types": "./src/application-bundle.ts",
       "import": "./src/application-bundle.ts"
