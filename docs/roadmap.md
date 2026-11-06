@@ -484,8 +484,8 @@ device. The archive now holds interview sessions, and the interviewer varies
 its openings. Next: showing that a run cites a confirmed answer. Voxtral as an
 EU server fallback waits until the browser model proves too slow.
 
-[Milestone 84](https://github.com/akoita/draft-loop/milestone/84) (#2337 to
-#2339) makes the interview read as a conversation: chat bubbles, a writing
+[Milestone 84](https://github.com/akoita/draft-loop/milestone/84) (#2337 to #2339)
+makes the interview read as a conversation: chat bubbles, a writing
 indicator while the interviewer replies, the session's topics beside the chat,
 quick replies as chips, and the summary as a card in the chat. A server with
 no interviewer model now says so before offering topics. A voice mode with
