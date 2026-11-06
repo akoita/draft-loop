@@ -4058,6 +4058,60 @@
         ],
         "description": "Where the document is stored is never shown."
       },
+      "FactUsageInput": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "contact",
+                "role",
+                "employer",
+                "date",
+                "achievement",
+                "project",
+                "skill",
+                "certification",
+                "education",
+                "language",
+                "approved-link"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on a whole section, by fact category."
+          },
+          "facts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
+          }
+        },
+        "required": [
+          "sections",
+          "facts"
+        ]
+      },
       "KnowledgeBaseInput": {
         "type": "object",
         "properties": {
@@ -5049,60 +5103,6 @@
         "required": [
           "organisation",
           "firstOwner"
-        ]
-      },
-      "FactUsageInput": {
-        "type": "object",
-        "properties": {
-          "sections": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "enum": [
-                "identity",
-                "contact",
-                "role",
-                "employer",
-                "date",
-                "achievement",
-                "project",
-                "skill",
-                "certification",
-                "education",
-                "language",
-                "approved-link"
-              ]
-            },
-            "additionalProperties": {
-              "type": "string",
-              "enum": [
-                "cv",
-                "interview-only",
-                "never-say"
-              ]
-            },
-            "description": "Levels set on a whole section, by fact category."
-          },
-          "facts": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
-            },
-            "additionalProperties": {
-              "type": "string",
-              "enum": [
-                "cv",
-                "interview-only",
-                "never-say"
-              ]
-            },
-            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
-          }
-        },
-        "required": [
-          "sections",
-          "facts"
         ]
       },
       "PreferenceSuggestionInput": {
@@ -10198,6 +10198,61 @@
         "additionalProperties": false,
         "description": "Where the document is stored is never shown."
       },
+      "FactUsage": {
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "contact",
+                "role",
+                "employer",
+                "date",
+                "achievement",
+                "project",
+                "skill",
+                "certification",
+                "education",
+                "language",
+                "approved-link"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on a whole section, by fact category."
+          },
+          "facts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "cv",
+                "interview-only",
+                "never-say"
+              ]
+            },
+            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
+          }
+        },
+        "required": [
+          "sections",
+          "facts"
+        ],
+        "additionalProperties": false
+      },
       "KnowledgeBase": {
         "type": "object",
         "properties": {
@@ -11209,61 +11264,6 @@
         "required": [
           "organisation",
           "firstOwner"
-        ],
-        "additionalProperties": false
-      },
-      "FactUsage": {
-        "type": "object",
-        "properties": {
-          "sections": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "enum": [
-                "identity",
-                "contact",
-                "role",
-                "employer",
-                "date",
-                "achievement",
-                "project",
-                "skill",
-                "certification",
-                "education",
-                "language",
-                "approved-link"
-              ]
-            },
-            "additionalProperties": {
-              "type": "string",
-              "enum": [
-                "cv",
-                "interview-only",
-                "never-say"
-              ]
-            },
-            "description": "Levels set on a whole section, by fact category."
-          },
-          "facts": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
-            },
-            "additionalProperties": {
-              "type": "string",
-              "enum": [
-                "cv",
-                "interview-only",
-                "never-say"
-              ]
-            },
-            "description": "Levels set on one fact, by its usage key. A fact's own level wins."
-          }
-        },
-        "required": [
-          "sections",
-          "facts"
         ],
         "additionalProperties": false
       },
