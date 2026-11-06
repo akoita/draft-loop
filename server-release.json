@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Live voice career interview",
+  "releaseName": "French screens and French evidence",
   "stageIssue": 1359,
-  "milestone": 85,
-  "summary": "One sprint since the career interview as a conversation (milestone 84). An open interview topic offers Talk live: the candidate speaks, sees their words as they talk, and hears each question in a Chirp 3 HD voice (#2362). Speech streams through Google Cloud in the EU over a WebSocket on the API, and Claude stays the interviewer: each finished turn goes through the same service as a typed answer, so the method-guide check runs before a question is spoken (#2361). Speech ports with scripted fakes (#2359) and the Google adapters (#2360) keep the vendor behind one boundary. Consent must name Google Cloud, which the screen offers to add; a conversation stops at 30 minutes of audio, and logs hold counts only. Off unless DRAFT_LOOP_LIVE_SPEECH=google (#2363). No paid run yet.",
-  "knownLimitations": "Live speech is off on staging until the bootstrap enables the speech APIs and the environment sets live_speech. A question plays once all its audio has arrived, not as it streams. The interview, typed or live, needs DRAFT_LOOP_SCREENING=rules+model and a Claude key. The local-first desktop has no career interview."
+  "milestone": 82,
+  "summary": "The screens speak French: every screen has a French catalog (#2327), people pick the screen language in Workspace settings (#2328) and the hosted service saves it with their account (#2373), and counted nouns use catalog plurals (#2372). Career evidence understands French: French CV headings are recognised (#2331), each source's language can be detected on demand (#2330), and cross-language retrieval is measured (#2332). After the first document, Career evidence shows one next step instead of every choice (#2395). The career interview asks for its Anthropic permission in place (#2379), and pause and Talk live work in the owner's interview (#2392). The API can also log a decision model's injection-screening judgments on public job pages beside the stored verdict, without changing it (#2386); off unless DRAFT_LOOP_SCREENING_SHADOW=jev.",
+  "knownLimitations": "French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs; job-page quarantine still comes from the rules. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. The local-first desktop has no career interview."
 }
