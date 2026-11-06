@@ -10024,6 +10024,16 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 
 /* The live voice conversation (#2362): an orb that breathes while listening and pulses while the
    interviewer speaks, so the candidate always sees whose turn it is. */
+.interview-consent {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.interview-consent p {
+  margin: 0;
+}
+
 .interview-live {
   display: grid;
   gap: 12px;

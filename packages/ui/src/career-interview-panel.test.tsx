@@ -11,6 +11,7 @@ import {
 import {
   CareerInterviewPanel,
   type CareerInterviewPanelProps,
+  CareerInterviewProblemNotice,
   careerInterviewSendsOnKey,
   careerInterviewTopicStatusLabel,
 } from "./career-interview-panel.js";
@@ -186,7 +187,35 @@ describe("CareerInterviewPanel", () => {
   it("shows a problem the host reports", () => {
     const html = render({ problem: careerInterviewRefusal("consent_required", "fallback") });
     expect(html).toContain('role="alert"');
-    expect(html).toContain("permission to send");
+    expect(html).toContain("your answers go to Anthropic");
+  });
+
+  it("offers to allow Anthropic in place when the interview was refused for consent", () => {
+    const notice = (allowInterviewer: (() => Promise<string | undefined>) | undefined) =>
+      renderToStaticMarkup(
+        <CareerInterviewProblemNotice
+          problem={{ code: "consent_required", message: "fallback" }}
+          busy={false}
+          allowInterviewer={allowInterviewer}
+          retry={undefined}
+          onAllowFailed={() => undefined}
+        />,
+      );
+    const offered = notice(async () => undefined);
+    expect(offered).toContain("your answers go to Anthropic");
+    expect(offered).toContain("Allow and continue");
+    expect(notice(undefined)).not.toContain("Allow and continue");
+    const other = renderToStaticMarkup(
+      <CareerInterviewProblemNotice
+        problem={{ code: "rate_limited", message: "Slow down." }}
+        busy={false}
+        allowInterviewer={async () => undefined}
+        retry={undefined}
+        onAllowFailed={() => undefined}
+      />,
+    );
+    expect(other).toContain("Slow down.");
+    expect(other).not.toContain("Allow and continue");
   });
 });
 

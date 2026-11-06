@@ -1,17 +1,64 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiRequestError } from "./api-client.js";
-import { careerInterviewProblem, careerInterviewSessionView } from "./career-interview.js";
+import { type ApiClient, ApiRequestError } from "./api-client.js";
+import {
+  allowInterviewProviders,
+  careerInterviewProblem,
+  careerInterviewRefused,
+  careerInterviewSessionView,
+} from "./career-interview.js";
+
+function consentClient(current: unknown) {
+  const posted: unknown[] = [];
+  const client: ApiClient = {
+    call: async (operation, input) => {
+      if (operation === "GET /v1/workspaces/{workspaceId}/consents") {
+        return { current: { "provider-transmission": current } } as never;
+      }
+      if (operation === "POST /v1/workspaces/{workspaceId}/consents") {
+        posted.push((input as unknown as { body: unknown }).body);
+        return {} as never;
+      }
+      throw new Error(`unexpected call: ${operation}`);
+    },
+  };
+  return { client, posted };
+}
 
 describe("the web career interview", () => {
   it("explains a refusal for missing consent and falls back to the API's words", () => {
     expect(
       careerInterviewProblem(new ApiRequestError(403, "consent_required", "Consent needed.")),
-    ).toContain("permission to send career material");
+    ).toContain("your answers go to Anthropic");
     expect(careerInterviewProblem(new ApiRequestError(429, "rate_limited", "Slow down."))).toBe(
       "Slow down.",
     );
     expect(careerInterviewProblem(new TypeError("fetch failed"))).toContain("could not be reached");
+    expect(
+      careerInterviewRefused(new ApiRequestError(403, "consent_required", "Consent needed.")),
+    ).toEqual({ code: "consent_required", message: "Consent needed." });
+  });
+
+  it("grants the interviewer's providers with or without an earlier grant, keeping the others", async () => {
+    const fresh = consentClient(undefined);
+    expect(
+      await allowInterviewProviders(fresh.client, "owner", ["anthropic"], "Career interview"),
+    ).toBe(undefined);
+    expect(fresh.posted).toEqual([
+      {
+        kind: "provider-transmission",
+        action: "granted",
+        basis: "candidate-consent",
+        providers: ["anthropic"],
+        note: "Career interview",
+      },
+    ]);
+    const earlier = consentClient({ action: "granted", providers: ["openai"] });
+    await allowInterviewProviders(earlier.client, "owner", ["anthropic", "google"], "Live voice");
+    expect(earlier.posted).toMatchObject([{ providers: ["anthropic", "google", "openai"] }]);
+    const withdrawn = consentClient({ action: "withdrawn", providers: ["openai"] });
+    await allowInterviewProviders(withdrawn.client, "owner", ["anthropic"], "Career interview");
+    expect(withdrawn.posted).toMatchObject([{ providers: ["anthropic"] }]);
   });
 
   it("keeps only what the panel reads from the API's session", () => {
