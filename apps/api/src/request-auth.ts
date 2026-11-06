@@ -48,6 +48,18 @@ type Authentication =
 
 type Authenticator = (authorization: string | undefined) => Promise<Authentication>;
 
+/**
+ * The request's credential. A browser cannot set headers on a WebSocket, so the live interview
+ * sends its bearer token as the `bearer.<token>` subprotocol; only an upgrade may use it.
+ */
+export function requestAuthorization(headers: FastifyRequest["headers"]): string | undefined {
+  if (headers.authorization !== undefined) return headers.authorization;
+  if (headers.upgrade?.toLowerCase() !== "websocket") return undefined;
+  const protocols = String(headers["sec-websocket-protocol"] ?? "").split(",");
+  const token = protocols.map((protocol) => protocol.trim()).find((p) => p.startsWith("bearer."));
+  return token === undefined ? undefined : `Bearer ${token.slice("bearer.".length)}`;
+}
+
 function bearerToken(header: string | undefined): string | undefined {
   return header === undefined ? undefined : /^Bearer ([^\s]+)$/u.exec(header)?.[1];
 }
@@ -142,7 +154,7 @@ export function registerRequestAuthentication(
     let authentication: Authentication;
     try {
       authentication = await (operator ? authenticateOperator : authenticate)(
-        request.headers.authorization,
+        requestAuthorization(request.headers),
       );
     } catch (error) {
       if (!(error instanceof IdentityProviderUnavailableError)) throw error;
@@ -152,7 +164,7 @@ export function registerRequestAuthentication(
         .send(apiError("identity_provider_unavailable", "Sign-in is unavailable; retry later."));
       return;
     }
-    const presented = bearerToken(request.headers.authorization);
+    const presented = bearerToken(requestAuthorization(request.headers));
     if (
       authentication.outcome === "unauthenticated" &&
       !operator &&

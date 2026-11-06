@@ -33,6 +33,7 @@
     "@fastify/helmet": "13.1.1",
     "@fastify/static": "10.1.6",
     "@fastify/swagger": "9.9.0",
+    "@fastify/websocket": "11.3.4",
     "@google-cloud/storage": "8.3.0",
     "fastify": "5.12.7",
     "fastify-type-provider-zod": "7.0.0",
