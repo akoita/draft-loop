@@ -26,29 +26,35 @@ export interface AppProps {
   readonly createClient: (token: string) => ApiClient;
 }
 
+/**
+ * The owner's client: a refused token ends the session, so the owner signs in again instead of
+ * seeing errors. Sockets go straight through, since the live interview opens one.
+ */
+export function ownerClient(inner: ApiClient, onRefused: () => void): ApiClient {
+  return {
+    async call(operation, input) {
+      try {
+        return await inner.call(operation, input);
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) onRefused();
+        throw error;
+      }
+    },
+    ...(inner.openSocket === undefined ? {} : { openSocket: inner.openSocket.bind(inner) }),
+  };
+}
+
 /** The owner's web screen over the hosted API. */
 export function App({ tokens, createClient }: AppProps) {
   const [token, setToken] = useState<string | null>(() => tokens.read());
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const client = useMemo(() => {
     if (token === null) return undefined;
-    const inner = createClient(token);
-    // A refused token ends the session, so the owner signs in again instead of seeing errors.
-    const guarded: ApiClient = {
-      async call(operation, input) {
-        try {
-          return await inner.call(operation, input);
-        } catch (error) {
-          if (error instanceof ApiRequestError && error.status === 401) {
-            tokens.clear();
-            setNotice("The API refused the owner token. Sign in again.");
-            setToken(null);
-          }
-          throw error;
-        }
-      },
-    };
-    return guarded;
+    return ownerClient(createClient(token), () => {
+      tokens.clear();
+      setNotice("The API refused the owner token. Sign in again.");
+      setToken(null);
+    });
   }, [token, tokens, createClient]);
 
   if (client === undefined)

@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "./api-client.js";
-import { App, Shell } from "./app.js";
+import { type ApiClient, ApiRequestError } from "./api-client.js";
+import { App, ownerClient, Shell } from "./app.js";
 import type { OidcSession } from "./oidc-session.js";
 import { OidcApp, OidcSignIn, type ScreenNavigation } from "./oidc-sign-in.js";
 import { createTokenStore } from "./session.js";
@@ -13,6 +13,32 @@ const unusedClient: ApiClient = {
     throw new Error("not called while rendering");
   },
 };
+
+describe("the owner client", () => {
+  it("keeps the socket the live interview opens and ends the session on a refused token", async () => {
+    const socket = {} as WebSocket;
+    const opened: string[] = [];
+    let refused = 0;
+    const client = ownerClient(
+      {
+        call: async () => {
+          throw new ApiRequestError(401, "unauthorized", "Refused.");
+        },
+        openSocket: (path) => {
+          opened.push(path);
+          return socket;
+        },
+      },
+      () => {
+        refused += 1;
+      },
+    );
+    expect(client.openSocket?.("/live", {} as never, "draft-loop.live")).toBe(socket);
+    expect(opened).toEqual(["/live"]);
+    await expect(client.call("GET /v1/health" as never, {} as never)).rejects.toThrow("Refused.");
+    expect(refused).toBe(1);
+  });
+});
 
 describe("web screen", () => {
   it("asks for the owner token when no session exists", () => {
