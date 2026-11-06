@@ -755,11 +755,6 @@ msgstr "Back to writing"
 msgid "Basis for storing the material"
 msgstr "Basis for storing the material"
 
-#. placeholder {0}: options.token
-#: apps/web/src/api-client.ts
-msgid "Bearer {0}"
-msgstr "Bearer {0}"
-
 #: packages/ui/src/review.tsx
 msgid "Before the first run"
 msgstr "Before the first run"
@@ -911,10 +906,6 @@ msgstr "Career profile version"
 #: packages/ui/src/run-details.tsx
 msgid "central themes"
 msgstr "central themes"
-
-#: packages/ui/src/app.tsx
-msgid "Change models"
-msgstr "Change models"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -1788,10 +1779,6 @@ msgstr "Empty: add a CV, portfolio, or other source"
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
-
-#: packages/ui/src/writing-policy-editor.tsx
-msgid "en-GB"
-msgstr "en-GB"
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "End live conversation"
@@ -2778,6 +2765,10 @@ msgstr "Members can be assigned once the record is set up."
 #: apps/web/src/records.tsx
 msgid "Members of this record"
 msgstr "Members of this record"
+
+#: packages/ui/src/screen-language.tsx
+msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
+msgstr "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Merge into"
@@ -4446,6 +4437,10 @@ msgstr "saving…"
 msgid "Saving…"
 msgstr "Saving…"
 
+#: packages/ui/src/screen-language.tsx
+msgid "Screen language"
+msgstr "Screen language"
+
 #: apps/web/src/screening-model.ts
 #: packages/ui/src/work-journal-model.ts
 msgid "Screened: clear"
@@ -4520,10 +4515,13 @@ msgstr "Semantic search: ready"
 msgid "Send"
 msgstr "Send"
 
-#. placeholder {0}: mode === "update" ? "update" : "build"
 #: packages/ui/src/profile-status.ts
-msgid "Send my career evidence{sources} to {provider} to {0} the profile."
-msgstr "Send my career evidence{sources} to {provider} to {0} the profile."
+msgid "Send my career evidence{sources} to {provider} to build the profile."
+msgstr "Send my career evidence{sources} to {provider} to build the profile."
+
+#: packages/ui/src/profile-status.ts
+msgid "Send my career evidence{sources} to {provider} to update the profile."
+msgstr "Send my career evidence{sources} to {provider} to update the profile."
 
 #: apps/web/src/private-sections.tsx
 msgid "Send only if allowed"
@@ -4577,6 +4575,10 @@ msgstr "Set up the workspace's author and critic models first."
 #: packages/ui/src/workspace-setup.tsx
 msgid "Set up your workspace"
 msgstr "Set up your workspace"
+
+#: packages/ui/src/app.tsx
+msgid "Settings"
+msgstr "Settings"
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "Show"

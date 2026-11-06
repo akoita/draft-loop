@@ -180,5 +180,7 @@ export function profileApprovalText({
     providerName === undefined || providerName.trim() === ""
       ? "the configured provider"
       : providerName.trim();
-  return t`Send my career evidence${sources} to ${provider} to ${mode === "update" ? "update" : "build"} the profile.`;
+  return mode === "update"
+    ? t`Send my career evidence${sources} to ${provider} to update the profile.`
+    : t`Send my career evidence${sources} to ${provider} to build the profile.`;
 }

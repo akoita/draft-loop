@@ -7,7 +7,7 @@ import { formatter } from "@lingui/format-po";
  */
 export default defineConfig({
   sourceLocale: "en",
-  locales: ["en", "pseudo"],
+  locales: ["en", "fr", "pseudo"],
   pseudoLocale: "pseudo",
   fallbackLocales: { default: "en" },
   catalogs: [

@@ -9,16 +9,18 @@
  */
 import { i18n, type Messages } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { type ReactNode, useEffect } from "react";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { messages as englishMessages } from "./locales/en/messages.js";
+import { messages as frenchMessages } from "./locales/fr/messages.js";
 import { messages as pseudoMessages } from "./locales/pseudo/messages.js";
 
 /** The locales the screens can show; `pseudo` is for development only. */
-export const screenLocales = ["en", "pseudo"] as const;
+export const screenLocales = ["en", "fr", "pseudo"] as const;
 export type ScreenLocale = (typeof screenLocales)[number];
 
 const catalogs: Readonly<Record<ScreenLocale, Messages>> = {
   en: englishMessages,
+  fr: frenchMessages,
   pseudo: pseudoMessages,
 };
 
@@ -43,15 +45,70 @@ export function screenLocaleFromSearch(search: string): ScreenLocale {
   return isScreenLocale(asked) ? asked : "en";
 }
 
-/** Renders the screens in a locale, re-rendering them when it changes. */
+/** The languages a person can choose for the screens; the pseudo-locale is not one of them. */
+export const screenLanguages = ["en", "fr"] as const;
+export type ScreenLanguage = (typeof screenLanguages)[number];
+
+export function isScreenLanguage(value: unknown): value is ScreenLanguage {
+  return typeof value === "string" && (screenLanguages as readonly string[]).includes(value);
+}
+
+/**
+ * The screen language to show (#2328): the saved choice, else the first browser or Electron
+ * language the screens have, else English. A regional tag such as `fr-CA` counts as its language.
+ */
+export function negotiateScreenLanguage(
+  saved: string | null | undefined,
+  preferred: readonly string[],
+): ScreenLanguage {
+  if (isScreenLanguage(saved)) return saved;
+  for (const tag of preferred) {
+    const language = tag.toLowerCase().split("-")[0];
+    if (isScreenLanguage(language)) return language;
+  }
+  return "en";
+}
+
+interface ScreenLocaleChoice {
+  readonly locale: ScreenLocale;
+  /** Changes and saves the screen language; absent when the host offers no choice. */
+  readonly choose?: (language: ScreenLanguage) => void;
+}
+
+const ScreenLocaleContext = createContext<ScreenLocaleChoice>({ locale: "en" });
+
+/** The active screen locale and, when the host offers one, the way to change it. */
+export function useScreenLocale(): ScreenLocaleChoice {
+  return useContext(ScreenLocaleContext);
+}
+
+/**
+ * Renders the screens in a locale, re-rendering them when it changes, and marks the page's
+ * language for assistive technology and spelling. With `onChoose`, the screens offer the choice.
+ */
 export function ScreensI18nProvider({
   locale = "en",
+  onChoose,
   children,
 }: {
   readonly locale?: ScreenLocale;
+  readonly onChoose?: (language: ScreenLanguage) => void;
   readonly children: ReactNode;
 }) {
   activateScreenLocale(locale);
-  useEffect(() => activateScreenLocale(locale), [locale]);
-  return <I18nProvider i18n={i18n}>{children}</I18nProvider>;
+  useEffect(() => {
+    activateScreenLocale(locale);
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale === "pseudo" ? "en" : locale;
+    }
+  }, [locale]);
+  return (
+    <I18nProvider i18n={i18n}>
+      <ScreenLocaleContext.Provider
+        value={onChoose === undefined ? { locale } : { locale, choose: onChoose }}
+      >
+        {children}
+      </ScreenLocaleContext.Provider>
+    </I18nProvider>
+  );
 }

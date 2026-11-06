@@ -265,16 +265,16 @@ describe("Home dashboard", () => {
 
   it("renders the workspace settings section only when it has content", () => {
     expect(render()).not.toContain("Workspace settings");
-    const html = render({ settings: <button type="button">Change models</button> });
+    const html = render({ settings: <button type="button">Settings</button> });
     expect(html).toMatch(/<h2[^>]*>Workspace settings<\/h2>/u);
-    expect(html).toContain("Change models");
+    expect(html).toContain("Settings");
   });
 
   it("keeps a header button to Workspace settings, which a long list pushes far down", () => {
     expect(render()).not.toContain(
       '<button class="button button-outline" type="button">Workspace settings</button>',
     );
-    const html = render({ settings: <button type="button">Change models</button> });
+    const html = render({ settings: <button type="button">Settings</button> });
     const header = html.slice(
       html.indexOf('class="home-header-actions"'),
       html.indexOf("</header>"),

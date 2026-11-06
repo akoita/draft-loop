@@ -11,23 +11,23 @@
   </head>
   <body>
     <main class="picker">
-      <h1>Choose your DraftLoop server</h1>
-      <p class="lead">
+      <h1 data-text="pickerHeading">Choose your DraftLoop server</h1>
+      <p class="lead" data-text="pickerLead">
         The desktop app opens a DraftLoop server: the self-hosted server on this computer, or another server you
         reach over https.
       </p>
       <section id="unreachable" class="notice" hidden role="alert"></section>
       <section>
-        <h2>Your servers</h2>
+        <h2 data-text="yourServers">Your servers</h2>
         <ul id="servers" class="servers"></ul>
-        <p id="no-servers" hidden>No server yet. Add one below.</p>
+        <p id="no-servers" data-text="noServers" hidden>No server yet. Add one below.</p>
       </section>
       <section>
-        <h2>Another server</h2>
+        <h2 data-text="anotherServer">Another server</h2>
         <form id="add">
-          <label>Address <input id="address" name="address" placeholder="https://draftloop.example" required /></label>
-          <label>Name <input id="name" name="name" placeholder="Optional" /></label>
-          <button type="submit">Open</button>
+          <label><span data-text="address">Address</span> <input id="address" name="address" placeholder="https://draftloop.example" required /></label>
+          <label><span data-text="name">Name</span> <input id="name" name="name" placeholder="Optional" /></label>
+          <button type="submit" data-text="open">Open</button>
           <p id="add-error" class="error" role="alert"></p>
         </form>
       </section>

@@ -755,11 +755,6 @@ msgstr ""
 msgid "Basis for storing the material"
 msgstr ""
 
-#. placeholder {0}: options.token
-#: apps/web/src/api-client.ts
-msgid "Bearer {0}"
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "Before the first run"
 msgstr ""
@@ -910,10 +905,6 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "central themes"
-msgstr ""
-
-#: packages/ui/src/app.tsx
-msgid "Change models"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -1787,10 +1778,6 @@ msgstr ""
 
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
-msgstr ""
-
-#: packages/ui/src/writing-policy-editor.tsx
-msgid "en-GB"
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
@@ -2776,6 +2763,10 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Members of this record"
+msgstr ""
+
+#: packages/ui/src/screen-language.tsx
+msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -4445,6 +4436,10 @@ msgstr ""
 msgid "Saving…"
 msgstr ""
 
+#: packages/ui/src/screen-language.tsx
+msgid "Screen language"
+msgstr ""
+
 #: apps/web/src/screening-model.ts
 #: packages/ui/src/work-journal-model.ts
 msgid "Screened: clear"
@@ -4519,9 +4514,12 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#. placeholder {0}: mode === "update" ? "update" : "build"
 #: packages/ui/src/profile-status.ts
-msgid "Send my career evidence{sources} to {provider} to {0} the profile."
+msgid "Send my career evidence{sources} to {provider} to build the profile."
+msgstr ""
+
+#: packages/ui/src/profile-status.ts
+msgid "Send my career evidence{sources} to {provider} to update the profile."
 msgstr ""
 
 #: apps/web/src/private-sections.tsx
@@ -4575,6 +4573,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Set up your workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Settings"
 msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx

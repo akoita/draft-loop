@@ -1,5 +1,7 @@
 /** What the server picker page and the main process exchange over IPC. */
 
+import type { ShellLanguage } from "./shell-text.js";
+
 export const pickerChannels = {
   view: "draft-loop:picker:view",
   open: "draft-loop:picker:open",
@@ -15,6 +17,8 @@ export interface PickerView {
   readonly servers: readonly PickerServer[];
   /** The server that could not be opened, and why, when the picker opened because of it. */
   readonly unreachable?: { readonly origin: string; readonly reason: string } | undefined;
+  /** The language the picker writes in (#2329); English when left out. */
+  readonly language?: ShellLanguage;
 }
 
 export type PickerOpenResult =

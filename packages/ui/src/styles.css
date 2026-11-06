@@ -437,7 +437,7 @@ kbd::after {
   background: var(--red-wash);
 }
 
-/* Workspace-level actions (Change models, Close workspace): a solid raised control with an icon,
+/* Workspace-level actions (Settings, Close workspace): a solid raised control with an icon,
    so it reads as a real button on the desk instead of a ghost of the background. */
 .button-toolbar {
   border-color: var(--border-strong);
