@@ -13,6 +13,7 @@ import type {
 } from "@draft-loop/providers";
 
 import type { CareerInterviewFact } from "./career-interview-topics.js";
+import { withDocumentLanguage } from "./document-language-instruction.js";
 
 /**
  * The guided career interview's model adapter (#2176): it phrases the interviewer's turns through
@@ -83,6 +84,8 @@ export interface CareerInterviewerModelOptions {
   readonly dataPolicy: DataExposurePolicy;
   /** The session id, recorded as the request's context identity. */
   readonly sessionId: string;
+  /** The workspace's language, which the interviewer asks in (#2316); English when unset. */
+  readonly language?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -116,7 +119,10 @@ export function createModelCareerInterviewer(
       const response = await options.executor.execute({
         contextSnapshotId: options.sessionId,
         model: options.model,
-        systemPrompt: [...request.instructions, callInstructions].join("\n"),
+        systemPrompt: withDocumentLanguage(
+          [...request.instructions, callInstructions].join("\n"),
+          options.language,
+        ),
         input: inputOf(request),
         outputSchema,
         outputName: "career_interview_turn",

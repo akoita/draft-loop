@@ -12,6 +12,7 @@ import type {
   ApplicationMaterialPort,
   ApplicationMaterialRequest,
 } from "./application-material.js";
+import { withDocumentLanguage } from "./document-language-instruction.js";
 
 /**
  * Application material's model adapter (#2215): it drafts through any provider adapter's
@@ -133,7 +134,7 @@ export function createModelApplicationMaterialWriter(
       const response = await options.executor.execute({
         contextSnapshotId: options.applicationId,
         model: options.model,
-        systemPrompt,
+        systemPrompt: withDocumentLanguage(systemPrompt, request.context.language),
         input: inputOf(request),
         outputSchema,
         outputName: "application_material",

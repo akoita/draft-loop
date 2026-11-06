@@ -629,3 +629,23 @@ describe("local driver author revision", () => {
     expect(systemPrompts[1]).not.toContain(authorRevisionInstructions);
   });
 });
+
+describe("provider author agent document language", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  it("asks for the run's language after the run-stable prefix, and adds nothing for English", async () => {
+    const french = { ...context, language: "fr" } as ContextSnapshot;
+    const english = { ...context, language: "en" } as ContextSnapshot;
+    const inFrench = agent([proposal(acceptedText)], french);
+    const inEnglish = agent([proposal(acceptedText)], english);
+    await inFrench.author.execute(request("run-french"));
+    await inEnglish.author.execute(request("run-english"));
+
+    const [sentFrench] = inFrench.requests;
+    const [sentEnglish] = inEnglish.requests;
+    expect(sentFrench?.promptCache?.callInstructions).toContain("in French (fr)");
+    expect(sentFrench?.systemPrompt).toContain("in French (fr)");
+    expect(sentFrench?.promptCache?.systemPrompt).toBe(sentEnglish?.promptCache?.systemPrompt);
+    expect(sentEnglish?.systemPrompt).not.toContain("conventions for dates");
+  });
+});

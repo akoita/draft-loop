@@ -53,6 +53,8 @@ export interface ApplicationMaterialContext {
     readonly text: string;
     readonly priority: ApplicationMaterialRequirement["priority"];
   }[];
+  /** The language the material is written in; absent or English adds nothing to the prompt. */
+  readonly language?: string;
 }
 
 /**
@@ -148,6 +150,8 @@ export interface ApplicationMaterialContextInput {
   readonly mayTransmit?: (fact: ApplicationMaterialFact) => boolean;
   /** Where each fact may be used (#2260); every fact is `cv` when unset. */
   readonly usage?: FactUsageSettings;
+  /** The application's document language (#2316); English when unset. */
+  readonly language?: string;
 }
 
 /**
@@ -210,7 +214,12 @@ export function applicationMaterialContext(
       text: requirement.text.slice(0, maximumContextCharacters),
       priority: requirement.priority,
     }));
-  return { kind: input.kind, facts, requirements };
+  return {
+    kind: input.kind,
+    facts,
+    requirements,
+    ...(input.language === undefined ? {} : { language: input.language }),
+  };
 }
 
 const numberPattern = /\d+(?:[.,]\d+)*/gu;
