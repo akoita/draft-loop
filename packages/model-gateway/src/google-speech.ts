@@ -5,7 +5,7 @@ import { v1 as textToSpeechV1 } from "@google-cloud/text-to-speech";
  * Google Cloud speech in the EU (#2360): Chirp 3 streaming recognition and Chirp 3 HD voices for
  * the live career interview, on the `eu` endpoints. On the hosted service the clients sign in as
  * the API's service account through Application Default Credentials, so no key exists; a
- * self-hosted server points `GOOGLE_APPLICATION_CREDENTIALS` at its own key file.
+ * self-hosted server names its own key file for speech alone.
  *
  * The types below are structurally the `StreamingSpeechToText` and `TextToSpeech` ports of
  * `@draft-loop/application/live-speech`, which this package cannot import.
@@ -60,10 +60,19 @@ export interface GoogleSpeechClients {
   readonly streamingSynthesize: () => GoogleDuplex;
 }
 
-/** The real clients on the EU endpoints, signed in through Application Default Credentials. */
-export function createGoogleSpeechClients(): GoogleSpeechClients {
-  const speech = new speechV2.SpeechClient({ apiEndpoint: speechEndpoint });
-  const voice = new textToSpeechV1.TextToSpeechClient({ apiEndpoint: textToSpeechEndpoint });
+/**
+ * The real clients on the EU endpoints, signed in through Application Default Credentials, or
+ * with a service account key file a self-hosted server names for speech alone.
+ */
+export function createGoogleSpeechClients(
+  options: { readonly keyFilename?: string | undefined } = {},
+): GoogleSpeechClients {
+  const credentials = options.keyFilename === undefined ? {} : { keyFilename: options.keyFilename };
+  const speech = new speechV2.SpeechClient({ apiEndpoint: speechEndpoint, ...credentials });
+  const voice = new textToSpeechV1.TextToSpeechClient({
+    apiEndpoint: textToSpeechEndpoint,
+    ...credentials,
+  });
   return {
     streamingRecognize: () => speech._streamingRecognize() as unknown as GoogleDuplex,
     streamingSynthesize: () => voice.streamingSynthesize() as unknown as GoogleDuplex,
