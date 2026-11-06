@@ -4,14 +4,17 @@ import type {
   CareerInterviewConflictView,
   CareerInterviewSessionView,
 } from "@draft-loop/ui/career-interview-model";
-import { careerInterviewRefusal } from "@draft-loop/ui/career-interview-model";
+import {
+  type CareerInterviewProblem,
+  careerInterviewRefusal,
+} from "@draft-loop/ui/career-interview-model";
 import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
 import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
 import { t } from "@lingui/core/macro";
 import { useCallback, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
-import { isConsentProvider } from "./consent-model.js";
+import { type ConsentProvider, isConsentProvider } from "./consent-model.js";
 import {
   createBrowserPlayer,
   liveVoiceSupported,
@@ -37,6 +40,13 @@ export interface CareerInterviewSectionProps {
 export function careerInterviewProblem(error: unknown): string {
   return error instanceof ApiRequestError
     ? careerInterviewRefusal(error.code, error.message)
+    : describeError(error);
+}
+
+/** A refused call for the panel: its code, so a missing permission can be granted in place. */
+export function careerInterviewRefused(error: unknown): CareerInterviewProblem {
+  return error instanceof ApiRequestError
+    ? { code: error.code, message: error.message }
     : describeError(error);
 }
 
@@ -108,31 +118,34 @@ function liveVoice(
         events,
         onSession: (view) => show(view as ApiSchemas["CareerInterviewSessionView"]),
       }),
-    allow: () => allowLiveListener(client, workspaceId, "google"),
+    // Talking live needs both: Claude writes the questions, Google hears and speaks them.
+    allow: () =>
+      allowInterviewProviders(
+        client,
+        workspaceId,
+        ["anthropic", "google"],
+        "Live voice in the career interview",
+      ),
   };
 }
 
 /**
- * Adds the live listener to the record's transmission grant, keeping every provider it named:
- * the candidate pressed the button that says their voice goes there.
+ * Adds providers to the record's transmission grant, keeping every provider it already names:
+ * the candidate pressed the button whose words say where their answers or voice go.
  */
-export async function allowLiveListener(
+export async function allowInterviewProviders(
   client: ApiClient,
   workspaceId: string,
-  listener: "google",
+  wanted: readonly ConsentProvider[],
+  note: string,
 ): Promise<string | undefined> {
   try {
     const consents = await client.call("GET /v1/workspaces/{workspaceId}/consents", {
       path: { workspaceId },
     });
     const current = consents.current["provider-transmission"];
-    const providers =
-      current?.action === "granted"
-        ? [...new Set([...current.providers, listener])].filter(isConsentProvider).sort()
-        : [];
-    if (providers.length === 0) {
-      return t`Record the permission to send material to model providers on the consent step first.`;
-    }
+    const named = current?.action === "granted" ? current.providers : [];
+    const providers = [...new Set([...named, ...wanted])].filter(isConsentProvider).sort();
     await client.call("POST /v1/workspaces/{workspaceId}/consents", {
       path: { workspaceId },
       body: {
@@ -140,7 +153,7 @@ export async function allowLiveListener(
         action: "granted",
         basis: "candidate-consent",
         providers,
-        note: "Live voice in the career interview",
+        note,
       },
     });
     return undefined;
@@ -205,7 +218,7 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
           );
           return undefined;
         } catch (error) {
-          return careerInterviewProblem(error);
+          return careerInterviewRefused(error);
         }
       }}
       onAction={async (action: CareerInterviewAction) => {
@@ -222,12 +235,15 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
           );
           return undefined;
         } catch (error) {
-          return careerInterviewProblem(error);
+          return careerInterviewRefused(error);
         }
       }}
       loadConflicts={loadConflicts}
       speech={webSpeechInput()}
       live={live}
+      allowInterviewer={() =>
+        allowInterviewProviders(client, workspaceId, ["anthropic"], "Career interview")
+      }
     />
   );
 }

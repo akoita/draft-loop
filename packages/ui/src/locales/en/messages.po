@@ -775,6 +775,10 @@ msgstr "All the seats in your plan are taken."
 msgid "Allow {0} to hear my voice"
 msgstr "Allow {0} to hear my voice"
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Allow and continue"
+msgstr "Allow and continue"
+
 #. placeholder {0}: pullRequestRepositoryOfRule(rule) ?? ""
 #: apps/web/src/private-sections.tsx
 msgid "Allow pull requests from {0}"
@@ -4099,10 +4103,6 @@ msgstr "Record consent"
 #: apps/web/src/consent-model.ts
 msgid "Record the candidate's consent to send material to {0} first."
 msgstr "Record the candidate's consent to send material to {0} first."
-
-#: apps/web/src/career-interview.tsx
-msgid "Record the permission to send material to model providers on the consent step first."
-msgstr "Record the permission to send material to model providers on the consent step first."
 
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Record why one lineage on both sides is acceptable before saving model settings."

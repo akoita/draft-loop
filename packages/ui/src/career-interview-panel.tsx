@@ -5,11 +5,13 @@ import { CareerInterviewLiveBar, type CareerInterviewLiveVoice } from "./career-
 import {
   type CareerInterviewAction,
   type CareerInterviewConflictView,
+  type CareerInterviewProblem,
   type CareerInterviewSessionView,
   type CareerInterviewTier,
   type CareerInterviewTopicView,
   careerInterviewActiveTopic,
   careerInterviewProgress,
+  careerInterviewRefusal,
   careerInterviewTurnText,
   careerInterviewUnavailableNotice,
 } from "./career-interview-model.js";
@@ -36,13 +38,18 @@ export interface CareerInterviewPanelProps {
   /** Where a confirmed summary can go; the first is preselected. */
   readonly knowledgeBases: readonly CareerInterviewKnowledgeBase[];
   /** Starts or resumes a session; resolves with a problem to show, or undefined. */
-  readonly onStart: () => Promise<string | undefined>;
+  readonly onStart: () => Promise<CareerInterviewProblem>;
   /** Resolves with a problem to show, or undefined once the session is saved. */
-  readonly onAction: (action: CareerInterviewAction) => Promise<string | undefined>;
+  readonly onAction: (action: CareerInterviewAction) => Promise<CareerInterviewProblem>;
   /** Summary statements that disagree with the record, for the topic waiting confirmation. */
   readonly loadConflicts: (topicKey: string) => Promise<readonly CareerInterviewConflictView[]>;
   /** Voice input for answers, if the host offers it; the transcript lands in the answer box. */
   readonly speech?: SpeechInput | undefined;
+  /**
+   * Records the candidate's permission to send their answers to Anthropic, when the interview is
+   * refused for want of it; resolves with a problem, or undefined. The panel then tries again.
+   */
+  readonly allowInterviewer?: (() => Promise<string | undefined>) | undefined;
   /** The live voice conversation, if the host offers it; shown when the server does too. */
   readonly live?: CareerInterviewLiveVoice | undefined;
 }
@@ -57,21 +64,37 @@ export function CareerInterviewPanel({
   loadConflicts,
   speech,
   live,
+  allowInterviewer,
 }: CareerInterviewPanelProps) {
   const id = useId();
   const [pending, setPending] = useState<CareerInterviewPending | undefined>(undefined);
-  const [actionProblem, setActionProblem] = useState<string | undefined>(undefined);
+  const [actionProblem, setActionProblem] = useState<CareerInterviewProblem>(undefined);
+  const [retry, setRetry] = useState<(() => Promise<boolean>) | undefined>(undefined);
   const busy = pending !== undefined;
 
   /** Runs one call, showing what it waits for; resolves true when it succeeded. */
-  async function run(waiting: CareerInterviewPending, work: () => Promise<string | undefined>) {
+  async function run(
+    waiting: CareerInterviewPending,
+    work: () => Promise<CareerInterviewProblem>,
+  ): Promise<boolean> {
     setPending(waiting);
     setActionProblem(undefined);
     const found = await work();
     setActionProblem(found);
+    // A refusal for want of consent can be lifted here, then the same call runs again.
+    setRetry(() => (found === undefined ? undefined : () => run(waiting, work)));
     setPending(undefined);
     return found === undefined;
   }
+  const problemNotice = (
+    <CareerInterviewProblemNotice
+      problem={actionProblem}
+      busy={busy}
+      allowInterviewer={allowInterviewer}
+      retry={retry}
+      onAllowFailed={(message) => setActionProblem(message)}
+    />
+  );
   const act = (action: CareerInterviewAction) => run(pendingFor(action), () => onAction(action));
 
   const active = session === undefined ? undefined : careerInterviewActiveTopic(session);
@@ -92,7 +115,7 @@ export function CareerInterviewPanel({
             onClick={() => void run({ kind: "start" }, onStart)}
           >{t`Start a conversation`}</button>
           <InterviewWaiting pending={pending} />
-          {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
+          {problemNotice}
         </>
       ) : (
         <div className="interview-layout">
@@ -139,7 +162,7 @@ export function CareerInterviewPanel({
                 onAction={act}
               />
             )}
-            {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
+            {problemNotice}
             <div className="interview-footer">
               <button
                 type="button"
@@ -157,6 +180,50 @@ export function CareerInterviewPanel({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * What the last call's refusal says, and for a missing permission to send answers to Anthropic,
+ * a button that records it and tries the same call again.
+ */
+export function CareerInterviewProblemNotice({
+  problem,
+  busy,
+  allowInterviewer,
+  retry,
+  onAllowFailed,
+}: {
+  readonly problem: CareerInterviewProblem;
+  readonly busy: boolean;
+  readonly allowInterviewer: (() => Promise<string | undefined>) | undefined;
+  readonly retry: (() => Promise<boolean>) | undefined;
+  readonly onAllowFailed: (message: string) => void;
+}) {
+  const [allowing, setAllowing] = useState(false);
+  if (problem === undefined) return null;
+  if (typeof problem === "string") return <p role="alert">{problem}</p>;
+  const text = careerInterviewRefusal(problem.code, problem.message);
+  if (problem.code !== "consent_required" || allowInterviewer === undefined) {
+    return <p role="alert">{text}</p>;
+  }
+  return (
+    <div className="interview-consent" role="alert">
+      <p>{text}</p>
+      <button
+        type="button"
+        className="button button-primary"
+        disabled={busy || allowing}
+        onClick={() => {
+          setAllowing(true);
+          void allowInterviewer().then(async (failed) => {
+            setAllowing(false);
+            if (failed !== undefined) onAllowFailed(failed);
+            else await retry?.();
+          });
+        }}
+      >{t`Allow and continue`}</button>
+    </div>
   );
 }
 
