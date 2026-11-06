@@ -4396,6 +4396,10 @@ msgstr ""
 msgid "Resume review"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Resume the conversation"
+msgstr ""
+
 #: packages/ui/src/review-run-status.ts
 msgid "Resume the review so the critic can check it. Approval and export need a finished critique."
 msgstr ""
@@ -5365,6 +5369,10 @@ msgstr ""
 
 #: apps/web/src/consent.tsx
 msgid "The consent does not name"
+msgstr ""
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
 msgstr ""
 
 #: apps/web/src/credits-model.ts

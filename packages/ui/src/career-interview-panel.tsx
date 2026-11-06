@@ -117,6 +117,18 @@ export function CareerInterviewPanel({
           <InterviewWaiting pending={pending} />
           {problemNotice}
         </>
+      ) : session.status === "paused" ? (
+        <>
+          <p>{t`The conversation is paused. Your answers so far are saved; resume when you are ready.`}</p>
+          <button
+            type="button"
+            className="button button-primary"
+            disabled={busy}
+            onClick={() => void run({ kind: "start" }, onStart)}
+          >{t`Resume the conversation`}</button>
+          <InterviewWaiting pending={pending} />
+          {problemNotice}
+        </>
       ) : (
         <div className="interview-layout">
           <aside className="interview-sidebar" aria-label={t`Topics in this conversation`}>

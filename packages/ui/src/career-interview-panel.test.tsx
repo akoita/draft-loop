@@ -89,6 +89,14 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Pause for now");
   });
 
+  it("shows a paused conversation as paused, with a way back in", () => {
+    const html = render({ session: { ...openSession, status: "paused" } });
+    expect(html).toContain("The conversation is paused.");
+    expect(html).toContain("Resume the conversation");
+    expect(html).not.toContain("What happened in that period?");
+    expect(html).not.toContain("Pause for now");
+  });
+
   it("still lets the candidate confirm a summary when the interviewer is not set up", () => {
     const html = render({ session: { ...summarisedSession, interviewerAvailable: false } });
     expect(html).toContain("Confirm as evidence");
