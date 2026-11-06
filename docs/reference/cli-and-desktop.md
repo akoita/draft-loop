@@ -481,6 +481,23 @@ pnpm --filter @draft-loop/cli start application delete app-0123456789ab ./worksp
   archived".
 - **The default application** is the workspace's own job and is never deleted.
 
+### Finding an application on Home
+
+With more than six applications, Home shows a toolbar above the list:
+
+| Control      | What it does                                                                 |
+| ------------ | ---------------------------------------------------------------------------- |
+| Search       | Keeps applications whose name holds every word typed, ignoring case and accents |
+| Status chips | All, Drafting, In review, Approved or Exported, each with its count          |
+| Sort         | Last activity (the default), Name (A to Z), Date created or Status           |
+| View         | Cards, or List with one row per application and a "⋯" menu for Archive, Restore and Delete |
+
+- **Remembered.** View and sort are kept on this device in browser storage;
+  they never reach the server. Search and status filter start empty each time.
+- **Archived applications** follow the same search, filter, sort and view
+  under "Show archived".
+- **Nothing matches.** The list says so and offers "Clear search and filter".
+
 ## Compacting run history
 
 Workspaces created before slim run snapshots keep a full copy of each run's

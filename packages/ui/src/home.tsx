@@ -48,6 +48,11 @@ import {
   showApplicationToolbar,
 } from "./home-list-model.js";
 import {
+  browserPreferenceStorage,
+  readApplicationListPreferences,
+  writeApplicationListPreferences,
+} from "./home-list-preferences.js";
+import {
   applicationActivityText,
   applicationChosenRunText,
   applicationRunningLabel,
@@ -446,8 +451,8 @@ function ApplicationsList({
   runningApplicationId = null,
   disabled = false,
   initialShowArchived = false,
-  initialQuery = defaultApplicationListQuery,
-  initialView = "cards",
+  initialQuery,
+  initialView,
 }: {
   readonly state: HomeApplicationsState;
   readonly now: Date;
@@ -468,8 +473,22 @@ function ApplicationsList({
 }) {
   const [showArchived, setShowArchived] = useState(initialShowArchived);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  const [query, setQuery] = useState(initialQuery);
-  const [view, setView] = useState(initialView);
+  // View and sort come back from this device; search and status filter start empty.
+  const [stored] = useState(() => readApplicationListPreferences(browserPreferenceStorage()));
+  const [query, setQuery] = useState(
+    () => initialQuery ?? { ...defaultApplicationListQuery, sort: stored.sort },
+  );
+  const [view, setView] = useState(() => initialView ?? stored.view);
+  const changeQuery = (next: ApplicationListQuery) => {
+    setQuery(next);
+    if (next.sort !== query.sort) {
+      writeApplicationListPreferences(browserPreferenceStorage(), { view, sort: next.sort });
+    }
+  };
+  const changeView = (next: ApplicationListView) => {
+    setView(next);
+    writeApplicationListPreferences(browserPreferenceStorage(), { view: next, sort: query.sort });
+  };
   if (state.status === "loading") {
     return (
       <p className="empty-state" role="status">
@@ -557,8 +576,8 @@ function ApplicationsList({
           query={query}
           view={view}
           counts={applicationStatusCounts(active, query.search)}
-          onQuery={setQuery}
-          onView={setView}
+          onQuery={changeQuery}
+          onView={changeView}
         />
       ) : null}
       {shownActive.length === 0 ? null : group(shownActive, "Applications")}
