@@ -110,6 +110,7 @@ import {
   loadSavedModelProfilesState,
   saveAppliedModelProfiles,
 } from "./saved-model-profiles.js";
+import { ScreenLanguageSetting } from "./screen-language.js";
 import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import {
   candidateProfilePendingBlockerMessage,
@@ -2982,6 +2983,7 @@ export function App({
                 )}
               </div>
               <HostWorkspaceSettings />
+              <ScreenLanguageSetting />
               {providerAuthentication}
             </>
           }

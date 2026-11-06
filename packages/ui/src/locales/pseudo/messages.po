@@ -2765,6 +2765,10 @@ msgstr ""
 msgid "Members of this record"
 msgstr ""
 
+#: packages/ui/src/screen-language.tsx
+msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
+msgstr ""
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Merge into"
 msgstr ""
@@ -4434,6 +4438,10 @@ msgstr ""
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Saving…"
+msgstr ""
+
+#: packages/ui/src/screen-language.tsx
+msgid "Screen language"
 msgstr ""
 
 #: apps/web/src/screening-model.ts

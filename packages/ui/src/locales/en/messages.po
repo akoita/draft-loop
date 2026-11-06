@@ -2766,6 +2766,10 @@ msgstr "Members can be assigned once the record is set up."
 msgid "Members of this record"
 msgstr "Members of this record"
 
+#: packages/ui/src/screen-language.tsx
+msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
+msgstr "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Merge into"
 msgstr "Merge into"
@@ -4436,6 +4440,10 @@ msgstr "saving…"
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Saving…"
 msgstr "Saving…"
+
+#: packages/ui/src/screen-language.tsx
+msgid "Screen language"
+msgstr "Screen language"
 
 #: apps/web/src/screening-model.ts
 #: packages/ui/src/work-journal-model.ts
