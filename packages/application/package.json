@@ -74,6 +74,10 @@
     "./preference-suggestions": {
       "types": "./src/preference-suggestions.ts",
       "import": "./src/preference-suggestions.ts"
+    },
+    "./fact-usage": {
+      "types": "./src/fact-usage.ts",
+      "import": "./src/fact-usage.ts"
     }
   },
   "files": [

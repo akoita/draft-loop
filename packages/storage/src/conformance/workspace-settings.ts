@@ -66,6 +66,15 @@ export const workspaceSettingsContracts: readonly StorageContract<WorkspaceSetti
       expect(await settings.read(second, "sensitive-knowledge-consent.json")).toBe("second\n");
     },
   },
+  {
+    name: "workspace settings: fact usage levels round trip",
+    check: async ({ settings, workspaces: [workspace] }) => {
+      const content = '{"schemaVersion":1,"sections":{"skill":"interview-only"},"facts":{}}\n';
+      await settings.write(workspace, "fact-usage.json", content);
+      expect(await settings.read(workspace, "fact-usage.json")).toBe(content);
+      expect(await settings.remove(workspace, "fact-usage.json")).toBe(true);
+    },
+  },
 ];
 
 /** Runs every workspace settings contract against a fresh, empty store each. */

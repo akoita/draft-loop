@@ -39,27 +39,28 @@ The [sensitivity tiers](../../packages/domain/src/source-sensitivity.ts)
 They do not say where a fact may be **used**. A second, independent setting
 does.
 
-| Usage level | Meaning                             | Default            |
-| ----------- | ----------------------------------- | ------------------ |
-| `cv`        | May appear on a CV and in interview |                    |
-| `interview` | Interview only; never on a CV       |                    |
-| `never-say` | Never used in any output            | Applied when unset |
+| Usage level      | Meaning                             | Default            |
+| ---------------- | ----------------------------------- | ------------------ |
+| `cv`             | May appear on a CV and in interview | Applied when unset |
+| `interview-only` | Interview only; never on a CV       |                    |
+| `never-say`      | Never used in any output            |                    |
 
 Rules:
 
-- When unset, the strictest reading applies: the fact is `never-say` until
-  the candidate sets it.
+- When unset, a fact is `cv`, as before usage levels existed. Nothing
+  changes until the candidate marks a fact (owner decision, 2026-11-06).
+- A fact's own level wins over its section's. Levels are keyed by the fact's
+  content, so they survive a refresh that re-derives the profile.
 - Usage never loosens a tier. A `never-share` section stays withheld from
   every provider and from the MCP server whatever its usage level.
-- Usage applies per fact or per section, using the same heading-rule
-  mechanism as the tiers, so it survives source refreshes.
-- CV drafting ignores `interview` facts: the CV path filters on
+- Usage applies per fact or per section (a fact category). It is stored as
+  the `fact-usage.json` workspace setting, which holds keys, never fact text.
+- CV drafting ignores `interview-only` and `never-say` facts: the CV path filters on
   `cv` exactly as today after the filter exists.
 
-Open question for the owner: should `never-say` be a third usage value, or a
-separate list of phrases and topics (for example "my previous salary")?
-Recommendation: a value on facts for the first step, and a free-text "never
-say" list later, since a phrase is not always a stored fact.
+`never-say` is a usage value for the first step (owner decision). A free-text
+"never say" list of phrases and topics may follow, since a phrase is not
+always a stored fact.
 
 ## Steps and child issues
 
@@ -86,7 +87,7 @@ says the host agent never writes CV claims and tools never return
 never-share material. The amendment adds one read tool.
 
 - **Tool:** `list_interview_facts`, returning facts grouped by usage level
-  `cv` and `interview` with their source references.
+  `cv` and `interview-only` with their source references.
 - **Never returned:** `never-share` material, `never-say` facts, and the
   contents of anything the candidate has not approved.
 - **Host agent role:** it may draft interview answers from the returned facts
@@ -141,5 +142,4 @@ claim in their practised answers traces to an approved fact, and no
 ## Decisions needed
 
 1. Admit the no-code test (step 0) now, before any code?
-2. `never-say` as a usage value, a separate list, or both?
-3. Is the MCP read tool (step 2) worth shipping before steps 3–5?
+2. Is the MCP read tool (step 2) worth shipping before steps 3–5?

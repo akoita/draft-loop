@@ -15,6 +15,7 @@ export const workspaceSettingNames = [
   "sensitive-knowledge-consent.json",
   "legacy-evidence-migration.json",
   "preference-suggestions.json",
+  "fact-usage.json",
 ] as const;
 
 export type WorkspaceSettingName = (typeof workspaceSettingNames)[number];
