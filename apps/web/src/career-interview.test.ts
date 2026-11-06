@@ -16,24 +16,30 @@ describe("the web career interview", () => {
 
   it("keeps only what the panel reads from the API's session", () => {
     // An invented topic only.
-    const view = careerInterviewSessionView({
-      id: "cis_fixture0001",
-      workspace_id: "owner",
-      status: "open",
-      topics: [
-        {
-          key: "untold-theme:mentoring",
-          kind: "untold-theme",
-          reason: "You mention mentoring but no example of it.",
-          status: "open",
-          fact_ids: ["f1"],
-          requirement_ids: [],
-          turns: [{ role: "interviewer", text: "Who did you mentor?", at: "2026-11-05T08:00:00Z" }],
-        },
-      ],
-      created_at: "2026-11-05T08:00:00Z",
-      updated_at: "2026-11-05T08:00:00Z",
-    });
+    const view = careerInterviewSessionView(
+      {
+        id: "cis_fixture0001",
+        workspace_id: "owner",
+        status: "open",
+        topics: [
+          {
+            key: "untold-theme:mentoring",
+            kind: "untold-theme",
+            reason: "You mention mentoring but no example of it.",
+            status: "open",
+            fact_ids: ["f1"],
+            requirement_ids: [],
+            turns: [
+              { role: "interviewer", text: "Who did you mentor?", at: "2026-11-05T08:00:00Z" },
+            ],
+          },
+        ],
+        created_at: "2026-11-05T08:00:00Z",
+        updated_at: "2026-11-05T08:00:00Z",
+      },
+      false,
+    );
+    expect(view.interviewerAvailable).toBe(false);
     expect(view.topics[0]?.turns).toEqual([
       { role: "interviewer", text: "Who did you mentor?", mark: undefined },
     ]);

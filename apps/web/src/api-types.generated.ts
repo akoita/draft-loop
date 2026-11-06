@@ -204,6 +204,7 @@ export interface ApiSchemas {
     };
     readonly proposal: string;
     readonly published_source_id?: string;
+    readonly interviewer_available: boolean;
   };
   "CareerProfile": {
     readonly workspaceId: string;

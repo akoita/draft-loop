@@ -2729,11 +2729,16 @@
           },
           "published_source_id": {
             "type": "string"
+          },
+          "interviewer_available": {
+            "type": "boolean",
+            "description": "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable."
           }
         },
         "required": [
           "session",
-          "proposal"
+          "proposal",
+          "interviewer_available"
         ]
       },
       "CareerInterviewConflictsInput": {
@@ -9513,11 +9518,16 @@
           },
           "published_source_id": {
             "type": "string"
+          },
+          "interviewer_available": {
+            "type": "boolean",
+            "description": "Whether this server has a model route for the interviewer and allows sending it career material. When false, accept, answer and own_subject answer 503 interview_model_unavailable."
           }
         },
         "required": [
           "session",
-          "proposal"
+          "proposal",
+          "interviewer_available"
         ],
         "additionalProperties": false
       },

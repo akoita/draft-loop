@@ -76,6 +76,19 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("You confirm every summary");
   });
 
+  it("says the interviewer is not set up instead of offering topics it cannot discuss", () => {
+    const html = render({ session: { ...proposedSession, interviewerAvailable: false } });
+    expect(html).toContain("The interviewer is not set up on this server");
+    expect(html).not.toContain("Talk about this");
+    expect(html).toContain("Pause for now");
+  });
+
+  it("still lets the candidate confirm a summary when the interviewer is not set up", () => {
+    const html = render({ session: { ...summarisedSession, interviewerAvailable: false } });
+    expect(html).toContain("Confirm as evidence");
+    expect(html).not.toContain("The interviewer is not set up");
+  });
+
   it("offers a proposed topic, a no, and the candidate's own subject", () => {
     const html = render({ session: proposedSession });
     expect(html).toContain("Would you like to talk about it?");
