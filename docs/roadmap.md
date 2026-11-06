@@ -448,6 +448,15 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   Home shows a "Your career" panel with two numbered steps, both career pages
   share numbered tabs, and each page points to the other's job. Shared screens,
   so the web and the desktop both change. No data change and no paid model run.
+- **Interview-safe facts and pull request import**
+  ([milestone 75](https://github.com/akoita/draft-loop/milestone/75), #2258–#2263,
+  admitted 2026-11-05, built 2026-11-06) lets each fact or section say where
+  it may be used: CV and interview, interview only, or never said. Unset means
+  CV, so nothing changes until the person marks a fact. Interview questions
+  and cover letters follow it; CV runs follow in #2304. Merged pull requests
+  exported with `gh` become cited evidence, each repository held back until
+  the person allows it. Agent channel errors say whether a retry helps. Web
+  only; no paid model run. Stored run spans (#1103) moved out of the sprint.
 
 ### Next — Guided career interview
 
@@ -547,11 +556,13 @@ join only within one role. Four capped
 fourth, on prompt `application-material-v4`, passed every check. Drafts are not
 stored.
 
-**Next:** usage level, in
+**Built:** usage level, in
 [milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or
-section says where it may be used: CV, interview only, or never said. This is
-separate from the tiers that control what reaches a provider, and interview
-questions will use only interview-allowed facts.
+section says where it may be used: CV and interview, interview only, or never
+said. This is separate from the tiers that control what reaches a provider.
+Interview questions use only interview-allowed facts, and a cover letter only
+CV facts. **Next:** CV runs leave out interview-only and never-say facts
+(#2304).
 
 The rest waits for CV quality parity (#1309):
 
@@ -641,6 +652,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-06 | Built [milestone 75](https://github.com/akoita/draft-loop/milestone/75) (#2258–#2263). An unset usage level reads as `cv`, not `never-say`. CV runs filtering usage moved to #2304, and stored run spans (#1103) left the sprint. | The owner chose `cv` for unset levels, so existing CVs keep every fact. CV filtering needs a source-chunk filter, and the span store needs room in two frozen hotspot files: each is its own one-PR issue. |
 | 2026-11-06 | Admitted [milestone 78](https://github.com/akoita/draft-loop/milestone/78) (#2297–#2299): a "Your career" panel on Home, numbered tabs on the career pages, and signposts between Career evidence and Career profile.                                                                                                                                                                                                                                                                                                                                                 | The owner saw that people may confuse the documents they give with the facts DraftLoop builds, and approved the recommended set: names and pages kept, structure and wording changed.                                                                                                                                                                                                                                                                         |
 | 2026-11-06 | Admitted two Home sprints with no paid model run. [Milestone 76](https://github.com/akoita/draft-loop/milestone/76) (#2277–#2279): search, status filter, sort and a List view for applications. [Milestone 77](https://github.com/akoita/draft-loop/milestone/77) (#2280–#2283): one-level application folders, with storage, API and Home sections.                                                                                                                                                                                                                 | The owner asked for Home to stay usable with many applications and approved the proposal. Folders, not tags, keep one section per application; deleting a folder never deletes applications.                                                                                                                                                                                                                                                                  |
 | 2026-11-05 | Admitted two sprints with no paid model run. [Milestone 74](https://github.com/akoita/draft-loop/milestone/74) (#2249–#2253, #2256, #2257, #2265, #1102): the memory model, preferences suggested from review choices, interview transcript turns and a tracing port. [Milestone 75](https://github.com/akoita/draft-loop/milestone/75) (#2258–#2264, #1103): usage level on facts, pull request import, stored spans and retryable agent-channel errors.                                                                                                             | The owner asked for the next milestones, each mixing a user-facing feature with platform work. Usage level and pull request import build features; they claim nothing about CV quality, so they do not wait for #1309.                                                                                                                                                                                                                                        |
