@@ -1,3 +1,4 @@
+import { formatDateTime, formatList } from "@draft-loop/ui/locale-format";
 import { type ApiInput, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 
 export type ConsentEntry = ApiSchemas["ConsentEntry"];
@@ -50,9 +51,7 @@ export function providerName(provider: string): string {
 
 /** Providers in plain words, such as `Anthropic and OpenAI`. */
 export function providerList(providers: readonly string[]): string {
-  const names = providers.map(providerName);
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+  return formatList(providers.map(providerName));
 }
 
 /** Whether a company is one a transmission grant can name. */
@@ -149,11 +148,9 @@ export function transmissionBlockedReason(
 
 /** A recording time as people read it, in UTC. */
 export function formatRecordedAt(recordedAt: string, locale?: string): string {
-  const time = new Date(recordedAt).toLocaleString(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
+  const time =
+    formatDateTime(recordedAt, { timeZone: "UTC", ...(locale === undefined ? {} : { locale }) }) ??
+    recordedAt;
   return `${time} UTC`;
 }
 

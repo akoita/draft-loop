@@ -32,6 +32,10 @@
       "types": "./lingui-macro.d.mts",
       "import": "./lingui-macro.mjs"
     },
+    "./locale-format": {
+      "types": "./src/locale-format.ts",
+      "import": "./src/locale-format.ts"
+    },
     "./i18n": {
       "types": "./src/i18n.tsx",
       "import": "./src/i18n.tsx"

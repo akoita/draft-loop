@@ -12,6 +12,7 @@ import type {
   RunProviderAuthModeConfiguration,
 } from "@draft-loop/application/model-profile-selection";
 import { useMemo, useState } from "react";
+import { formatNumber } from "./locale-format.js";
 import { modelProfileEffortRaised } from "./model-profile-picker-state.js";
 import { modelDisplayName } from "./model-profile-presentation.js";
 
@@ -194,7 +195,7 @@ export function ModelProfileBudget({
       <p className="model-profile-budget-copy">
         Public standard uncached text API list rates in USD
         {Number.isFinite(inputTokenLimit)
-          ? `, up to ${inputTokenLimit.toLocaleString("en-US")} input tokens per call`
+          ? `, up to ${formatNumber(inputTokenLimit)} input tokens per call`
           : ""}
         . This is an explicit example, not a measured forecast, hard cap, or actual bill.
         Subscription quota and charges are not estimated.

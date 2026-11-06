@@ -17,6 +17,7 @@
  */
 
 import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
+import { formatDateTime } from "./locale-format.js";
 import {
   type DesktopReviewState,
   type IndependentReviewView,
@@ -42,8 +43,7 @@ import { plainStopReason } from "./stop-reason.js";
 
 /** The time a direction was given, in the reader's locale; the recorded text when unreadable. */
 function formatDirectionTime(createdAt: string): string {
-  const time = new Date(createdAt);
-  return Number.isNaN(time.getTime()) ? createdAt : time.toLocaleString();
+  return formatDateTime(createdAt) ?? createdAt;
 }
 
 function plural(count: number, noun: string): string {

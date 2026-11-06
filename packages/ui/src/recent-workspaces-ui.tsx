@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "./locale-format.js";
 import {
   parseRecentWorkspacesListResult,
   type RecentWorkspaceSummary,
@@ -80,7 +81,7 @@ export function RecentWorkspacesView({
                     <span className="recent-workspace-location">in {workspace.location}</span>
                   )}
                   <time dateTime={workspace.lastOpenedAt}>
-                    Last opened {new Date(workspace.lastOpenedAt).toLocaleString()}
+                    Last opened {formatDateTime(workspace.lastOpenedAt) ?? workspace.lastOpenedAt}
                   </time>
                 </span>
               </button>

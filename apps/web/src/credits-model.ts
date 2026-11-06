@@ -1,3 +1,4 @@
+import { formatDate } from "@draft-loop/ui/locale-format";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { describeActionError } from "./consent-model.js";
 
@@ -63,7 +64,10 @@ export async function readEstimate(
 
 /** A period end as people read it, in UTC. */
 export function formatPeriodEnd(periodEnd: string, locale?: string): string {
-  return new Date(periodEnd).toLocaleDateString(locale, { dateStyle: "medium", timeZone: "UTC" });
+  return (
+    formatDate(periodEnd, { timeZone: "UTC", ...(locale === undefined ? {} : { locale }) }) ??
+    periodEnd
+  );
 }
 
 /** The balance in one line, such as `38 of 50 credits left. The period ends on 24 Nov 2026.` */

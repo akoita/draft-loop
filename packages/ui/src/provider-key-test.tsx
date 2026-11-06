@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import type { CredentialTestProvider, CredentialTestResult } from "./bridge.js";
+import { formatTime } from "./locale-format.js";
 
 /** One key test in the Provider authentication dialog: running, answered, or refused by the host. */
 export type CredentialTestState =
@@ -71,8 +72,7 @@ export function describeCredentialTest(result: CredentialTestResult): {
 }
 
 function checkedAtText(checkedAt: string): string {
-  const time = new Date(checkedAt);
-  return Number.isNaN(time.getTime()) ? "" : time.toLocaleTimeString();
+  return formatTime(checkedAt) ?? "";
 }
 
 /** The line under a key row that shows its latest test. */
