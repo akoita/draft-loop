@@ -35,6 +35,7 @@ export const approvalReadinessCheckLabels = {
   "coverage-block-dropped": "covered requirement lost in a revision",
   "editorial-source-note": "copied source note",
   "editorial-fragment": "sentence fragment",
+  "wrong-language": "text not in the document's language",
   "dense-bullet-series": "dense bullet series",
   "max-words-exceeded": "too many words",
   "max-length-exceeded": "too long",
