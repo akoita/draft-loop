@@ -25,6 +25,8 @@ export interface CareerInterviewSessionView {
   readonly status: "open" | "paused" | "closed";
   readonly topics: readonly CareerInterviewTopicView[];
   readonly model?: { readonly provider: string; readonly model: string } | undefined;
+  /** False when the server has no interviewer model, so no question can be asked. */
+  readonly interviewerAvailable?: boolean | undefined;
 }
 
 export interface CareerInterviewConflictView {
@@ -75,6 +77,10 @@ export function careerInterviewActiveTopic(
     session.topics.find((topic) => topic.status === "open")
   );
 }
+
+/** What the screen says instead of offering topics when the server has no interviewer model. */
+export const careerInterviewUnavailableNotice =
+  "The interviewer is not set up on this server, so it cannot ask questions yet. Whoever runs the server can turn on its Claude route. You can still add career facts by hand.";
 
 /** How many topics have been confirmed or set aside, of those the candidate took up. */
 export function careerInterviewProgress(session: CareerInterviewSessionView): {
