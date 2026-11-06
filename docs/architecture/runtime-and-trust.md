@@ -338,12 +338,14 @@ decision from the answers. Nothing calls it yet; the first planned uses are in
   options, probabilities between 0 and 1. A refusal counts as an answer.
 - **Content-free errors.** Errors carry a code, status and request id, never
   the input or a response body.
-- **Shadow test.** `pnpm test:decision-shadow:live` sends each case of the
-  synthetic content-screening corpus to Jev as one yes/no judgment per signal
-  and prints recall, false alarms, latency and cost as JSON. It needs
-  `DRAFT_LOOP_JEV_API_KEY`, refuses to start above its cap
-  (`DRAFT_LOOP_DECISION_SHADOW_MAX_USD`, default $0.50), and sends no
-  candidate material.
+- **Shadow test.** `pnpm test:decision-shadow:live` sends two synthetic
+  sets to Jev, one yes/no judgment per signal: the rule screener's own corpus,
+  and attacks phrased around the rules with hard clean controls. It prints, as
+  JSON, catches and false alarms for the model, the rules and both together at
+  several thresholds, with each case's probabilities, latency and cost. It
+  needs `DRAFT_LOOP_JEV_API_KEY`, refuses to start above its cap
+  (`DRAFT_LOOP_DECISION_SHADOW_MAX_USD`, default $0.50), and sends no candidate
+  material.
 - **Data location.** Jev runs in the US, with zero retention on enterprise
   plans only. On the hosted service it must not receive candidate material.
 
