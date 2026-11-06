@@ -92,7 +92,7 @@ describe("Career evidence page", () => {
   it("starts with the one-sentence intro, then the flow with Career evidence current", () => {
     const html = evidencePage();
     expect(html).toContain(`<p class="career-page-intro">${careerEvidenceIntro}</p>`);
-    expect(careerEvidenceIntro).toMatch(/^Your career evidence is the raw material you provide/u);
+    expect(careerEvidenceIntro).toMatch(/^Your career evidence is the documents you provide/u);
     expect(html).toMatch(
       /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Career evidence<\/li>/u,
     );
@@ -190,7 +190,7 @@ describe("Career profile page", () => {
   it("starts with the one-sentence intro, then the flow with Career profile current", () => {
     const html = profilePage();
     expect(html).toContain(`<p class="career-page-intro">${careerProfileIntro}</p>`);
-    expect(careerProfileIntro).toMatch(/^Your career profile is the structured, verified record/u);
+    expect(careerProfileIntro).toMatch(/^Your career profile is the facts DraftLoop extracts/u);
     expect(html).toMatch(
       /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Career profile<\/li>/u,
     );
@@ -244,10 +244,10 @@ describe("career flow", () => {
   });
 
   it("keeps the Home card subtitles consistent with the intros", () => {
-    expect(careerEvidenceCardSubtitle).toContain("raw material");
-    expect(careerEvidenceIntro).toContain("raw material");
-    expect(careerProfileCardSubtitle).toContain("verified record");
-    expect(careerProfileIntro).toContain("verified record");
+    expect(careerEvidenceCardSubtitle).toContain("CVs, career-fact files, exports and links");
+    expect(careerEvidenceIntro).toContain("CVs, career-fact files, exports and links");
+    expect(careerProfileCardSubtitle).toContain("facts DraftLoop extracts from your documents");
+    expect(careerProfileIntro).toContain("facts DraftLoop extracts from your documents");
   });
 });
 
@@ -291,7 +291,7 @@ function handlers(node: ReactNode): Map<string, () => void> {
 }
 
 describe("career navigation", () => {
-  it("opens Evidence from Manage evidence and Profile from Manage profile on Home", () => {
+  it("opens Evidence and Profile from the two steps of the Your career panel", () => {
     const onManageEvidence = vi.fn();
     const onManageProfile = vi.fn();
     const found = handlers(
@@ -316,10 +316,10 @@ describe("career navigation", () => {
         onManageEvidence={onManageEvidence}
       />,
     );
-    found.get("Manage profile")?.();
+    found.get("Review facts")?.();
     expect(onManageProfile).toHaveBeenCalledTimes(1);
     expect(onManageEvidence).not.toHaveBeenCalled();
-    found.get("Manage evidence")?.();
+    found.get("Add or manage documents")?.();
     expect(onManageEvidence).toHaveBeenCalledTimes(1);
   });
 

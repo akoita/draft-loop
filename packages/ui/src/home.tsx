@@ -31,10 +31,12 @@ import {
   loadCareerEvidenceStatus,
 } from "./career-evidence.js";
 import {
-  CareerFlowStrip,
   careerEvidenceCardSubtitle,
+  careerEvidenceRole,
   careerProfileCardSubtitle,
+  careerProfileRole,
 } from "./career-flow.js";
+import { CareerPanel } from "./career-panel.js";
 import {
   type ApplicationListView,
   ApplicationsTable,
@@ -80,7 +82,6 @@ import {
   evidencePresentation,
   type HomeApplicationsState,
   type HomeProfileStatus,
-  type HomeStatusPresentation,
   type HomeTone,
   homeApplications,
   onlyDefaultApplication,
@@ -187,39 +188,6 @@ export function Chip({
   readonly children: ReactNode;
 }) {
   return <span className={`home-chip home-chip-${tone}`}>{children}</span>;
-}
-
-/** A status card: title, one-line purpose, a chip, and the action that opens its screen. */
-export function SummaryCard({
-  id,
-  title,
-  subtitle,
-  presentation,
-  headline,
-  children,
-  action,
-}: {
-  readonly id: string;
-  readonly title: string;
-  /** One line saying what the card is, consistent with the intro of the page it opens. */
-  readonly subtitle: string;
-  readonly presentation: Pick<HomeStatusPresentation, "chip" | "tone">;
-  readonly headline?: string;
-  readonly children?: ReactNode;
-  readonly action: ReactNode;
-}) {
-  return (
-    <section className="panel home-card" aria-labelledby={id}>
-      <div className="home-card-head">
-        <h2 id={id}>{title}</h2>
-        <Chip tone={presentation.tone}>{presentation.chip}</Chip>
-      </div>
-      <p className="home-card-subtitle">{subtitle}</p>
-      {headline === undefined ? null : <p className="home-card-headline">{headline}</p>}
-      {children}
-      <div className="home-card-actions">{action}</div>
-    </section>
-  );
 }
 
 /** One compact line saying whether the reviewed profile is current; its action opens the profile. */
@@ -855,39 +823,36 @@ export function HomeView({
             </div>
           )}
 
-          <CareerFlowStrip
-            current="applications"
-            onOpen={{
-              evidence: onManageEvidence,
-              ...(profile.kind === "unsupported" ? {} : { profile: onManageProfile }),
-            }}
-          />
-
-          <div className="home-summary">
-            {/* Evidence first, matching the Career evidence → Career profile → Applications flow. */}
-            <SummaryCard
-              id="home-evidence-title"
-              title="Career evidence"
-              subtitle={careerEvidenceCardSubtitle}
-              presentation={evidenceView}
-              headline={evidenceView.headline}
-              action={
+          {/* Evidence first, then the profile built from it: one pipeline, not two choices. */}
+          <CareerPanel
+            evidence={{
+              id: "home-evidence-title",
+              title: "Career evidence",
+              role: careerEvidenceRole,
+              subtitle: careerEvidenceCardSubtitle,
+              presentation: evidenceView,
+              headline: evidenceView.headline,
+              action: (
                 <button className="button button-outline" type="button" onClick={onManageEvidence}>
                   {evidenceView.action}
                 </button>
-              }
-            >
-              {evidenceView.detail === "" ? null : (
-                <p className="home-card-copy">{evidenceView.detail}</p>
-              )}
-              <HostHomeEvidence openEvidence={onManageEvidence} />
-            </SummaryCard>
-            <SummaryCard
-              id="home-profile-title"
-              title="Career profile"
-              subtitle={careerProfileCardSubtitle}
-              presentation={profilePresentation}
-              action={
+              ),
+              children: (
+                <>
+                  {evidenceView.detail === "" ? null : (
+                    <p className="home-card-copy">{evidenceView.detail}</p>
+                  )}
+                  <HostHomeEvidence openEvidence={onManageEvidence} />
+                </>
+              ),
+            }}
+            profile={{
+              id: "home-profile-title",
+              title: "Career profile",
+              role: careerProfileRole,
+              subtitle: careerProfileCardSubtitle,
+              presentation: profilePresentation,
+              action: (
                 <button
                   className="button button-outline"
                   type="button"
@@ -896,18 +861,21 @@ export function HomeView({
                 >
                   {profilePresentation.action}
                 </button>
-              }
-            >
-              <p className="home-card-copy">{profilePresentation.description}</p>
-              {profileGeneration === null ? (
-                profileFreshness
-              ) : (
-                <div role="status">
-                  <ProfileGenerationSummary activity={profileGeneration} />
-                </div>
-              )}
-            </SummaryCard>
-          </div>
+              ),
+              children: (
+                <>
+                  <p className="home-card-copy">{profilePresentation.description}</p>
+                  {profileGeneration === null ? (
+                    profileFreshness
+                  ) : (
+                    <div role="status">
+                      <ProfileGenerationSummary activity={profileGeneration} />
+                    </div>
+                  )}
+                </>
+              ),
+            }}
+          />
 
           <section className="panel home-applications" aria-labelledby="home-applications-title">
             <div className="home-section-head">

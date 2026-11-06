@@ -90,7 +90,7 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly revision?: number;
 }
 
-/** The raw material the candidate provides. Manage evidence opens it. */
+/** The documents the candidate provides. Add or manage documents opens it. */
 export function CareerEvidencePage({
   card = null,
   knowledge = null,
@@ -125,7 +125,7 @@ export interface CareerProfilePageProps extends CareerPageProps {
   readonly workflow: ReactNode;
 }
 
-/** The reviewed record built from the evidence. Manage profile opens it. */
+/** The reviewed facts built from the documents. The Career profile step on Home opens it. */
 export function CareerProfilePage({ workflow, ...frame }: CareerProfilePageProps) {
   return (
     <CareerPageFrame {...frame} page="profile" current="Career profile" intro={careerProfileIntro}>

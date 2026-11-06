@@ -62,19 +62,22 @@ describe("Home dashboard", () => {
   it("names the workspace and lists its sections as headings", () => {
     const html = render();
     expect(html).toContain("<h1>Job search 2026</h1>");
-    for (const heading of ["Career profile", "Career evidence", "Applications"]) {
+    for (const heading of ["Your career", "Applications"]) {
       expect(html).toMatch(new RegExp(`<h2[^>]*>${heading}</h2>`, "u"));
+    }
+    for (const step of ["Career evidence", "Career profile"]) {
+      expect(html).toMatch(new RegExp(`<h3[^>]*>(<span[^>]*>\\d</span>)${step}</h3>`, "u"));
     }
     expect(html).toContain("Close workspace");
     expect(html).toContain("New application");
   });
 
   it.each<[HomeProfileStatus, string, string]>([
-    [{ kind: "reviewed", version: 2 }, "Reviewed", "Manage profile"],
+    [{ kind: "reviewed", version: 2 }, "Reviewed", "Review facts"],
     [{ kind: "draft", version: 1 }, "Draft", "Review profile"],
-    [{ kind: "failed", version: 1 }, "Failed", "Manage profile"],
+    [{ kind: "failed", version: 1 }, "Failed", "Open profile"],
     [{ kind: "none" }, "Not yet generated", "Generate profile"],
-    [{ kind: "loading" }, "Checking", "Manage profile"],
+    [{ kind: "loading" }, "Checking", "Open profile"],
   ])("shows the %j profile status", (profile, chip, action) => {
     const html = render({ profile });
     expect(html).toContain(chip);
@@ -89,32 +92,33 @@ describe("Home dashboard", () => {
   it("shows the knowledge base name and source readiness", () => {
     const html = render();
     expect(html).toContain("Engineering · 5 sources");
-    expect(html).toContain("Manage evidence");
+    expect(html).toContain("Add or manage documents");
   });
 
   it("gives each card a one-line subtitle that matches its page intro", () => {
     const html = render();
     expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle}</p>`);
     expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle}</p>`);
-    expect(html).toContain("raw material");
-    expect(html).toContain("verified record");
+    expect(html).toContain("What you give");
+    expect(html).toContain("What DraftLoop builds, you check");
   });
 
-  it("shows the evidence, profile and applications flow with Applications current", () => {
+  it("shows evidence and profile as two numbered steps joined by an arrow", () => {
     const html = render();
-    expect(html).toContain('aria-label="Career flow"');
-    expect(html).toMatch(
-      /<li class="career-flow-step" aria-current="step">(<span[^>]*>→<\/span>)?Applications<\/li>/u,
-    );
-    expect((html.match(/aria-current="step"/gu) ?? []).length).toBe(1);
-    expect(html).toContain('class="career-flow-link" type="button">Career evidence</button>');
-    expect(html).toContain('class="career-flow-link" type="button">Career profile</button>');
+    expect(html).toContain('aria-labelledby="home-career-title"');
+    expect(html).not.toContain('aria-label="Career flow"');
+    const evidence = html.indexOf('id="home-evidence-title"');
+    const arrow = html.indexOf("career-panel-arrow");
+    const profile = html.indexOf('id="home-profile-title"');
+    expect(evidence).toBeGreaterThan(-1);
+    expect(arrow).toBeGreaterThan(evidence);
+    expect(profile).toBeGreaterThan(arrow);
   });
 
-  it("offers no Career profile link in the flow when the host has no profile workflow", () => {
+  it("disables the Career profile step's action when the host has no profile workflow", () => {
     const html = render({ profile: { kind: "unsupported" } });
-    expect(html).toContain('type="button">Career evidence</button>');
-    expect(html).not.toContain('type="button">Career profile</button>');
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Open profile<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Add or manage documents<\/button>/u);
   });
 
   it("shows the empty evidence state with an add action", () => {
@@ -230,8 +234,8 @@ describe("Home dashboard", () => {
       disabledReason: "Available again once the career profile is generated.",
     });
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>New application<\/button>/u);
-    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Manage evidence<\/button>/u);
-    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Manage profile<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Add or manage documents<\/button>/u);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Review facts<\/button>/u);
     expect(html).toContain("Available again once the career profile is generated.");
     expect(render({ disabledReason: "Not shown" })).not.toContain("Not shown");
   });
