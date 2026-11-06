@@ -34,6 +34,7 @@ export function careerInterviewProblem(error: unknown): string {
 /** The screen's view of the API's session: the fields the panel reads. */
 export function careerInterviewSessionView(
   read: ApiSchemas["CareerInterviewSessionView"]["session"],
+  interviewerAvailable?: boolean,
 ): CareerInterviewSessionView {
   return {
     id: read.id,
@@ -47,6 +48,7 @@ export function careerInterviewSessionView(
       summary: topic.summary,
     })),
     model: read.model,
+    interviewerAvailable,
   };
 }
 
@@ -70,7 +72,7 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
   const [proposal, setProposal] = useState<string | undefined>(undefined);
 
   const show = useCallback((read: ApiSchemas["CareerInterviewSessionView"]) => {
-    setSession(careerInterviewSessionView(read.session));
+    setSession(careerInterviewSessionView(read.session, read.interviewer_available));
     setProposal(read.proposal);
   }, []);
 
