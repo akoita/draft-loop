@@ -2465,7 +2465,7 @@ export function App({
         onClick={openModelSettings}
       >
         <ModelsIcon />
-        {t`Change models`}
+        {t`Settings`}
       </button>
     );
 
