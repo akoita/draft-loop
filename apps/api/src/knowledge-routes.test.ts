@@ -3,6 +3,7 @@ import {
   type HostedKnowledgeIntake,
   HostedKnowledgeIntakeError,
   type HostedKnowledgeSourceView,
+  type HostedSensitivityRules,
 } from "@draft-loop/application";
 import type { CandidateKnowledgeBaseRecord } from "@draft-loop/storage";
 import type { FastifyInstance } from "fastify";
@@ -51,6 +52,7 @@ let app: FastifyInstance;
 async function build(
   intake: Partial<HostedKnowledgeIntake>,
   maxSourceBytes = 1_024,
+  sensitivityRules?: HostedSensitivityRules,
 ): Promise<void> {
   app = await buildApi({
     ownerToken,
@@ -61,6 +63,7 @@ async function build(
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
       knowledgeIntake: { maxSourceBytes, ...intake } as HostedKnowledgeIntake,
+      ...(sensitivityRules === undefined ? {} : { sensitivityRules }),
     },
   });
 }
@@ -256,7 +259,22 @@ describe("source uploads", () => {
 
   it("stores a pull request list as Markdown, one heading per pull request", async () => {
     const addFileSource = vi.fn(async () => ({ ...sourceView, created: true }));
-    await build({ addFileSource });
+    const added: unknown[] = [];
+    const view = {
+      knowledgeBaseId: "base-1",
+      version: 0,
+      checksum: null,
+      createdAt: null,
+      rules: [],
+    };
+    await build({ addFileSource }, 4_096, {
+      list: async () => view,
+      add: async (_base, rule) => {
+        added.push(rule);
+        return view;
+      },
+      remove: async () => view,
+    });
     // An invented export, in the shape gh prints.
     const list = [
       {
@@ -282,6 +300,12 @@ describe("source uploads", () => {
     const markdown = Buffer.from(call[0].bytes).toString("utf8");
     expect(markdown).toContain("## example-org/billing\n\n### Cache rendered invoices");
     expect(markdown).toContain("- Link: https://github.com/example-org/billing/pull/42");
+    expect(added).toEqual([
+      {
+        tier: "sensitive",
+        match: { kind: "heading-path", path: ["Pull requests", "example-org/billing"] },
+      },
+    ]);
   });
 
   it("refuses a file over the limit with 413", async () => {

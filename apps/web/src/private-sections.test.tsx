@@ -39,6 +39,29 @@ describe("private sections on the Career evidence page", () => {
     );
   });
 
+  it("offers to allow an imported pull request repository held back by default", () => {
+    const html = renderToStaticMarkup(
+      <BaseRules
+        {...rulesProps}
+        rules={[
+          {
+            id: "rule-pr",
+            tier: "sensitive",
+            match: { kind: "heading-path", path: ["Pull requests", "example-employer/billing"] },
+          },
+          {
+            id: "rule-health",
+            tier: "sensitive",
+            match: { kind: "heading-path", path: ["Health"] },
+          },
+        ]}
+        onAllowRepository={() => undefined}
+      />,
+    );
+    expect(html).toContain('aria-label="Allow pull requests from example-employer/billing"');
+    expect(html.match(/Allow this repository/gu)).toHaveLength(1);
+  });
+
   it("adds a rule with one line that reads as a sentence", () => {
     const html = renderToStaticMarkup(<BaseRules {...rulesProps} />);
 

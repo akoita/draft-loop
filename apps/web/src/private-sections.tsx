@@ -2,7 +2,12 @@ import type { FormEvent, ReactNode } from "react";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { useSensitivityRules } from "./sensitivity.js";
-import { type RuleForm, ruleSentence, type SensitivityRule } from "./sensitivity-model.js";
+import {
+  pullRequestRepositoryOfRule,
+  type RuleForm,
+  ruleSentence,
+  type SensitivityRule,
+} from "./sensitivity-model.js";
 
 type KnowledgeBase = ApiSchemas["KnowledgeBase"];
 
@@ -47,6 +52,8 @@ export interface BaseRulesProps {
   readonly onChange: (form: RuleForm) => void;
   readonly onAdd: () => void;
   readonly onRemove: (ruleId: string) => void;
+  /** Lowers an imported pull request repository's default; absent, no such button. */
+  readonly onAllowRepository?: (rule: SensitivityRule) => void;
 }
 
 /** One base's rules as sentences, with a one-line form that adds another. */
@@ -84,6 +91,21 @@ export function BaseRules(props: BaseRulesProps) {
               >
                 Remove
               </button>
+              {props.onAllowRepository === undefined ||
+              pullRequestRepositoryOfRule(rule) === undefined ? null : (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={busy}
+                    aria-label={`Allow pull requests from ${pullRequestRepositoryOfRule(rule)}`}
+                    onClick={() => props.onAllowRepository?.(rule)}
+                  >
+                    Allow this repository
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -143,6 +165,7 @@ function LiveBaseRules({
       onChange={state.setForm}
       onAdd={() => void state.add()}
       onRemove={(ruleId) => void state.remove(ruleId)}
+      onAllowRepository={(rule) => void state.allowRepository(rule)}
     />
   );
 }

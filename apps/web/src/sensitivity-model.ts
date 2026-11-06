@@ -36,6 +36,26 @@ export function ruleSentence(rule: SensitivityRule): string {
 
 type AddRuleBody = { tier: RuleTier; match: SensitivityRule["match"] };
 
+/**
+ * The repository a rule holds back, when it is an imported pull request repository's default
+ * (#2262): `sensitive` on the heading path `Pull requests › owner/name`.
+ */
+export function pullRequestRepositoryOfRule(rule: SensitivityRule): string | undefined {
+  if (rule.tier !== "sensitive" || rule.match.kind !== "heading-path") return undefined;
+  const [top, repository, ...rest] = rule.match.path;
+  return top === "Pull requests" && repository !== undefined && rest.length === 0
+    ? repository
+    : undefined;
+}
+
+/** The rule that lets a repository's pull requests be used: `normal` on the same path. */
+export function allowRepositoryRequest(rule: SensitivityRule): AddRuleBody | undefined {
+  if (pullRequestRepositoryOfRule(rule) === undefined || rule.match.kind !== "heading-path") {
+    return undefined;
+  }
+  return { tier: "normal", match: { kind: "heading-path", path: [...rule.match.path] } };
+}
+
 /** The add-rule request, or what to fix first. */
 export function ruleRequest(
   form: RuleForm,

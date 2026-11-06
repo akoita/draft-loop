@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultRuleForm, ruleRequest, ruleSentence } from "./sensitivity-model.js";
+import {
+  allowRepositoryRequest,
+  defaultRuleForm,
+  pullRequestRepositoryOfRule,
+  ruleRequest,
+  ruleSentence,
+} from "./sensitivity-model.js";
 
 describe("sensitivity rule model", () => {
   it("reads each tier and match kind as a sentence", () => {
@@ -52,5 +58,25 @@ describe("sensitivity rule model", () => {
         heading: Array(13).fill("H").join(">"),
       }),
     ).toEqual({ problem: "A heading path has at most 12 headings." });
+  });
+
+  it("lowers an imported repository with an Always allow rule on its path", () => {
+    const rule = {
+      id: "rule-pr",
+      tier: "sensitive",
+      match: { kind: "heading-path", path: ["Pull requests", "sample-user/tools"] },
+    } as const;
+    expect(pullRequestRepositoryOfRule(rule)).toBe("sample-user/tools");
+    expect(allowRepositoryRequest(rule)).toEqual({
+      tier: "normal",
+      match: { kind: "heading-path", path: ["Pull requests", "sample-user/tools"] },
+    });
+    expect(
+      pullRequestRepositoryOfRule({
+        ...rule,
+        match: { kind: "heading-path", path: ["Pull requests"] },
+      }),
+    ).toBeUndefined();
+    expect(pullRequestRepositoryOfRule({ ...rule, tier: "never-share" })).toBeUndefined();
   });
 });

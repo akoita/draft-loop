@@ -1052,6 +1052,7 @@ export * from "./opportunity-extraction.js";
 export * from "./opportunity-intake.js";
 export * from "./opportunity-persistence.js";
 export { catalogModelPricing } from "./provider-model-pricing.js";
+export * from "./pull-request-sensitivity.js";
 export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
