@@ -485,11 +485,11 @@ pnpm --filter @draft-loop/cli start application delete app-0123456789ab ./worksp
 
 With more than six applications, Home shows a toolbar above the list:
 
-| Control      | What it does                                                                 |
-| ------------ | ---------------------------------------------------------------------------- |
-| Search       | Keeps applications whose name holds every word typed, ignoring case and accents |
-| Status chips | All, Drafting, In review, Approved or Exported, each with its count          |
-| Sort         | Last activity (the default), Name (A to Z), Date created or Status           |
+| Control      | What it does                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------ |
+| Search       | Keeps applications whose name holds every word typed, ignoring case and accents            |
+| Status chips | All, Drafting, In review, Approved or Exported, each with its count                        |
+| Sort         | Last activity (the default), Name (A to Z), Date created or Status                         |
 | View         | Cards, or List with one row per application and a "⋯" menu for Archive, Restore and Delete |
 
 - **Remembered.** View and sort are kept on this device in browser storage;
@@ -497,6 +497,27 @@ With more than six applications, Home shows a toolbar above the list:
 - **Archived applications** follow the same search, filter, sort and view
   under "Show archived".
 - **Nothing matches.** The list says so and offers "Clear search and filter".
+
+### Folders on Home
+
+On the client-server version, folders group applications into sections. The
+local-first desktop has no folders and shows none of these controls.
+
+| Control                       | What it does                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| New folder                    | Names a folder: up to 60 characters, unique ignoring case and accents, 50 at most |
+| Section header                | Folds or unfolds the section; Rename and Delete sit beside it                     |
+| Move to (in the "⋯" menu)     | Puts the application in another folder, or "Remove from folder"                   |
+| By folder or All together     | Shows sections, or the plain list; kept on this device                            |
+| Folder (New application form) | Files the new application straight away; "No folder" by default                   |
+
+- **One level, one folder.** Folders do not nest, and an application sits in
+  at most one. Sections follow the folders' creation order, then No folder.
+- **Deleting a folder** asks first and says how many applications it holds.
+  They go back to No folder; no application is deleted.
+- **Archived applications** keep their folder but stay under "Show archived".
+  Restoring one puts it back in its section.
+- **Search and filters** narrow every section; a section with no match hides.
 
 ## Compacting run history
 

@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Find an application fast",
+  "releaseName": "Folders on Home",
   "stageIssue": 1359,
-  "milestone": 76,
-  "summary": "One sprint since the writing preferences release (milestone 74). Home stays usable with many applications: above six, a toolbar searches application names (every word, ignoring case and accents), filters by status with a count on each chip, and sorts by last activity, name, date created or status (#2277, #2278). A List view shows one row per application with Open and a menu for Archive, Restore and Delete; archived applications follow the same search and view (#2278). View and sort are remembered on each device, never on the server (#2279). Screen change only: no API, storage or model change.",
-  "knownLimitations": "Applications cannot be grouped yet; one-level folders follow in milestone 77 (#2280-#2283). Cards keep their Archive and Delete buttons until the folders milestone adds Move to their menu. Search matches application names only, not job text."
+  "milestone": 77,
+  "summary": "One sprint since Find an application fast (milestone 76). Applications can be grouped into one-level folders: Home shows a foldable section per folder in creation order, then No folder, then Archived, with a By folder or All together switch remembered on each device (#2283). New folder, rename and delete sit on the section headers; deleting a folder asks first, says how many applications it holds and moves them back to No folder, never deleting one. Move to is in each application's menu, on cards and in the List view, and the New application form takes an optional folder. Folders and placements are stored on SQLite and Postgres with tenant isolation, erasure and the record archive (#2280, #2281), behind /v1/workspaces/:id/application-folders and folderId on application create, update and list (#2282). No model change.",
+  "knownLimitations": "The local-first desktop has no folders and shows no folder controls. Folders do not nest, and an application sits in at most one. The agent channel has no application tool, so it does not see folders. Search matches application names only, not job text."
 }

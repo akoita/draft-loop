@@ -17,6 +17,11 @@ import {
 } from "@draft-loop/ui/opportunity-projection";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import {
+  createApplicationFolderAnswers,
+  hostedApplicationFolderCapabilities,
+  isApplicationFolderCommand,
+} from "./application-folder-bridge.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
   createKnowledgeAnswers,
@@ -50,6 +55,8 @@ export const hostedBridgeCapabilities = [
   "application.rename",
   "application.set-models",
   "application.choose-run",
+  "application.move",
+  ...hostedApplicationFolderCapabilities,
   ...hostedKnowledgeCapabilities,
   "opportunity.create",
   "opportunity.get",
@@ -137,6 +144,7 @@ export function applicationSummary(application: Application): ApplicationSummary
     exportCount: application.exportCount,
     latestRunId: newestApplicationRunId(application.runs),
     archivedAt: application.archivedAt,
+    ...(application.folderId === null ? {} : { folderId: application.folderId }),
     modelProfiles: application.modelProfiles,
     nameChosen: application.nameChosen,
     suggestedName: application.suggestedName,
@@ -191,6 +199,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const idempotencyKey = options.idempotencyKey ?? (() => globalThis.crypto.randomUUID());
   const answerKnowledge = createKnowledgeAnswers(client, options.pickFile);
   const answerProfile = createProfileAnswers(client);
+  const answerFolder = createApplicationFolderAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
   /** The run as the server projects it, with the owner token's fixed workspace named in words. */
@@ -236,6 +245,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   async function answer(command: BridgeCommand): Promise<unknown> {
     if (isKnowledgeCommand(command)) return answerKnowledge(command);
     if (isProfileCommand(command)) return answerProfile(command);
+    if (isApplicationFolderCommand(command)) return answerFolder(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;
@@ -299,7 +309,8 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
         return record(workspaceId, created);
       }
       case "application.archive":
-      case "application.rename": {
+      case "application.rename":
+      case "application.move": {
         const { workspaceId, applicationId } = command.input;
         const updated = await client.call(
           "PATCH /v1/workspaces/{workspaceId}/applications/{applicationId}",
@@ -308,7 +319,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
             body:
               command.type === "application.archive"
                 ? { archived: command.input.archived }
-                : { name: command.input.name },
+                : command.type === "application.move"
+                  ? { folderId: command.input.folderId }
+                  : { name: command.input.name },
           },
         );
         return record(workspaceId, updated);

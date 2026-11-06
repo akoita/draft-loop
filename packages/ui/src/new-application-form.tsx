@@ -1,5 +1,6 @@
 import { type RefObject, useRef, useState } from "react";
 import type { ApplicationSummaryView } from "./application-contract.js";
+import type { ApplicationFolderView } from "./application-folder-contract.js";
 import {
   emptyNewApplicationDraft,
   type NewApplicationDraft,
@@ -23,6 +24,11 @@ export interface NewApplicationFormViewProps {
   readonly onDraftChange: (draft: NewApplicationDraft) => void;
   readonly onSubmit: () => void;
   readonly onCancel: () => void;
+  /** The workspace's folders; the form offers a folder only when there is one. */
+  readonly folders?: readonly ApplicationFolderView[];
+  /** The chosen folder id, or "" for no folder. */
+  readonly folderId?: string;
+  readonly onFolderChange?: (folderId: string) => void;
 }
 
 /**
@@ -39,6 +45,9 @@ export function NewApplicationFormView({
   onDraftChange,
   onSubmit,
   onCancel,
+  folders = [],
+  folderId = "",
+  onFolderChange,
 }: NewApplicationFormViewProps) {
   const problem = newApplicationProblem(draft);
   const kindButton = (kind: NewApplicationJobKind, label: string) => (
@@ -85,6 +94,23 @@ export function NewApplicationFormView({
               onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
             />
           </label>
+          {folders.length === 0 || onFolderChange === undefined ? null : (
+            <label className="new-application-field">
+              <span>Folder</span>
+              <select
+                value={folderId}
+                disabled={busy}
+                onChange={(event) => onFolderChange(event.target.value)}
+              >
+                <option value="">No folder</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <fieldset className="model-editor-mode">
             <legend>Job posting</legend>
             <div className="view-toggle">
@@ -180,9 +206,11 @@ export function NewApplicationFormView({
   );
 }
 
+/** Creates the application, in the chosen folder when one is given. */
 export type CreateApplication = (
   name: string,
   job: NewApplicationJob,
+  folderId?: string,
 ) => Promise<ApplicationSummaryView>;
 
 export type NewApplicationSubmission =
@@ -197,11 +225,16 @@ export type NewApplicationSubmission =
 export async function submitNewApplication(
   draft: NewApplicationDraft,
   createApplication: CreateApplication,
+  folderId = "",
 ): Promise<NewApplicationSubmission> {
   const problem = newApplicationProblem(draft);
   if (problem !== null) return { kind: "invalid", problem };
   try {
-    const application = await createApplication(draft.name.trim(), newApplicationJobInput(draft));
+    const name = draft.name.trim();
+    const job = newApplicationJobInput(draft);
+    const application = await (folderId === ""
+      ? createApplication(name, job)
+      : createApplication(name, job, folderId));
     return { kind: "created", application };
   } catch (reason: unknown) {
     return {
@@ -222,6 +255,8 @@ export interface NewApplicationDialogProps {
   readonly onClose: () => void;
   /** False offers pasted text or a file, for a host that fetches no job page. */
   readonly jobPagesAllowed?: boolean;
+  /** The workspace's folders, offered as an optional folder for the new application. */
+  readonly folders?: readonly ApplicationFolderView[];
 }
 
 /** The form as a modal: it traps the focus, Escape cancels, and a failure stays in the form. */
@@ -230,8 +265,10 @@ export function NewApplicationDialog({
   onCreated,
   onClose,
   jobPagesAllowed = true,
+  folders = [],
 }: NewApplicationDialogProps) {
   const [draft, setDraft] = useState<NewApplicationDraft>(emptyNewApplicationDraft);
+  const [folderId, setFolderId] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -246,7 +283,7 @@ export function NewApplicationDialog({
     creatingRef.current = true;
     setCreating(true);
     setError(null);
-    const outcome = await submitNewApplication(draft, createApplication);
+    const outcome = await submitNewApplication(draft, createApplication, folderId);
     creatingRef.current = false;
     if (outcome.kind === "created") {
       onClose();
@@ -267,6 +304,9 @@ export function NewApplicationDialog({
       onDraftChange={setDraft}
       onSubmit={() => void create()}
       onCancel={close}
+      folders={folders}
+      folderId={folderId}
+      onFolderChange={setFolderId}
     />
   );
 }

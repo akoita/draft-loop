@@ -8640,6 +8640,83 @@ input[type="text"].application-card-name-input {
   background: var(--teal-wash);
 }
 
+/* Folders on Home (#2283): the bar above the list and one foldable section per folder. */
+.application-folder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.application-folder {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.application-folder-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-1);
+}
+
+.application-folder-head h3 {
+  margin: 0;
+  font-size: inherit;
+}
+
+.application-folder-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  border: 0;
+  padding: var(--space-1) 0;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.application-folder-toggle .numeric {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.application-folder-actions,
+.application-folder-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.application-folder-form input {
+  min-width: 0;
+  max-width: 260px;
+}
+
+.application-folder-form .setup-blocker {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* A card's menu opens under its button, toward the card's middle. */
+.application-card .applications-row-menu-items {
+  right: auto;
+  left: 0;
+  white-space: nowrap;
+}
+
+.button-small {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.875em;
+}
+
 .home-archived-applications,
 .home-archived-applications-body {
   display: grid;

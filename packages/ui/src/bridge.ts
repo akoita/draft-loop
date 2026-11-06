@@ -67,6 +67,24 @@ import {
   normalizeChosenRunReasonInput,
 } from "./application-contract.js";
 import {
+  type ApplicationFolderCreateInput,
+  type ApplicationFolderDeleteInput,
+  type ApplicationFolderDeleteResult,
+  type ApplicationFolderListInput,
+  type ApplicationFolderListResult,
+  type ApplicationFolderRecordResult,
+  type ApplicationFolderRenameInput,
+  type ApplicationMoveInput,
+  normalizeApplicationFolderDeleteResult,
+  normalizeApplicationFolderListResult,
+  normalizeApplicationFolderRecordResult,
+  validateApplicationFolderCreateInput,
+  validateApplicationFolderDeleteInput,
+  validateApplicationFolderListInput,
+  validateApplicationFolderRenameInput,
+  validateApplicationMoveInput,
+} from "./application-folder-contract.js";
+import {
   type ApplicationJobInput,
   type ApplicationJobResult,
   applicationJobInputKeys,
@@ -217,6 +235,17 @@ export { bridgeCapabilities };
 
 export type BridgeCapability = (typeof bridgeCapabilities)[number];
 
+export type {
+  ApplicationFolderCreateInput,
+  ApplicationFolderDeleteInput,
+  ApplicationFolderDeleteResult,
+  ApplicationFolderListInput,
+  ApplicationFolderListResult,
+  ApplicationFolderRecordResult,
+  ApplicationFolderRenameInput,
+  ApplicationFolderView,
+  ApplicationMoveInput,
+} from "./application-folder-contract.js";
 export type {
   ApplicationJobInput,
   ApplicationJobOrigin,
@@ -3156,6 +3185,11 @@ export interface BridgeCommandInputMap {
   "application.delete": ApplicationDeleteInput;
   "application.set-models": ApplicationSetModelsInput;
   "application.choose-run": ApplicationChooseRunInput;
+  "application.move": ApplicationMoveInput;
+  "application-folder.list": ApplicationFolderListInput;
+  "application-folder.create": ApplicationFolderCreateInput;
+  "application-folder.rename": ApplicationFolderRenameInput;
+  "application-folder.delete": ApplicationFolderDeleteInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3270,6 +3304,11 @@ export interface BridgeCommandOutputMap {
   "application.delete": ApplicationDeleteResult;
   "application.set-models": ApplicationRecordResult;
   "application.choose-run": ApplicationRecordResult;
+  "application.move": ApplicationRecordResult;
+  "application-folder.list": ApplicationFolderListResult;
+  "application-folder.create": ApplicationFolderRecordResult;
+  "application-folder.rename": ApplicationFolderRecordResult;
+  "application-folder.delete": ApplicationFolderDeleteResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -5815,6 +5854,31 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "application.choose-run",
         input: validateApplicationChooseRunInput(command.input),
+      };
+    case "application.move":
+      return {
+        type: "application.move",
+        input: validateApplicationMoveInput(command.input) ?? invalidInput(),
+      };
+    case "application-folder.list":
+      return {
+        type: "application-folder.list",
+        input: validateApplicationFolderListInput(command.input) ?? invalidInput(),
+      };
+    case "application-folder.create":
+      return {
+        type: "application-folder.create",
+        input: validateApplicationFolderCreateInput(command.input) ?? invalidInput(),
+      };
+    case "application-folder.rename":
+      return {
+        type: "application-folder.rename",
+        input: validateApplicationFolderRenameInput(command.input) ?? invalidInput(),
+      };
+    case "application-folder.delete":
+      return {
+        type: "application-folder.delete",
+        input: validateApplicationFolderDeleteInput(command.input) ?? invalidInput(),
       };
     case "workspace.recent-remove":
       return {
@@ -8458,7 +8522,15 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.rename":
     case "application.set-models":
     case "application.choose-run":
+    case "application.move":
       return normalizeApplicationRecord(value);
+    case "application-folder.list":
+      return normalizeApplicationFolderListResult(value) ?? invalidInput();
+    case "application-folder.create":
+    case "application-folder.rename":
+      return normalizeApplicationFolderRecordResult(value) ?? invalidInput();
+    case "application-folder.delete":
+      return normalizeApplicationFolderDeleteResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":
