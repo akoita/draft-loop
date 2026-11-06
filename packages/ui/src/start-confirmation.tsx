@@ -378,7 +378,7 @@ export interface StartConfirmationProps {
   readonly dialogRef: RefObject<HTMLDivElement | null>;
   readonly onStart: (length: StartLengthChoice) => void;
   readonly onCancel: () => void;
-  /** The screen's existing "Change models" control, when it offers one. */
+  /** The screen's existing Settings control (models and theme), when it offers one. */
   readonly changeModelsAction?: ReactNode;
   /** The application the run belongs to, passed to the host's panel in the dialog. */
   readonly applicationId?: string | null;
@@ -405,7 +405,7 @@ interface StartActionsProps {
   readonly changeModelsAction?: ReactNode;
 }
 
-/** Start, the screen's Change models control and Cancel; Start waits while the host blocks it. */
+/** Start, the screen's Settings control and Cancel; Start waits while the host blocks it. */
 export function StartActions({
   blockedReason,
   onStart,

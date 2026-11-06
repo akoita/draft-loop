@@ -273,7 +273,7 @@ describe("start confirmation dialog", () => {
           ? {
               changeModelsAction: (
                 <button className="button button-toolbar" type="button">
-                  Change models
+                  Settings
                 </button>
               ),
             }
@@ -312,15 +312,15 @@ describe("start confirmation dialog", () => {
     expect(html).toContain(">Start</button>");
   });
 
-  it("puts Start first so it takes the focus, then Change models and Cancel", () => {
+  it("puts Start first so it takes the focus, then Settings and Cancel", () => {
     const html = render(true);
     const startAt = html.indexOf(">Start</button>");
-    const changeAt = html.indexOf(">Change models</button>");
+    const changeAt = html.indexOf(">Settings</button>");
     const cancelAt = html.indexOf(">Cancel</button>");
     expect(startAt).toBeGreaterThan(-1);
     expect(startAt).toBeLessThan(changeAt);
     expect(changeAt).toBeLessThan(cancelAt);
-    expect(render(false)).not.toContain("Change models");
+    expect(render(false)).not.toContain("Settings");
   });
 
   it("is not open until a Start trigger asks for it", () => {

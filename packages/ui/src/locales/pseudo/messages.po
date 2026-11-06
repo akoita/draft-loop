@@ -904,10 +904,6 @@ msgid "central themes"
 msgstr ""
 
 #: packages/ui/src/app.tsx
-msgid "Change models"
-msgstr ""
-
-#: packages/ui/src/app.tsx
 msgid "Change models for new runs"
 msgstr ""
 
@@ -4577,6 +4573,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Set up your workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Settings"
 msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx
