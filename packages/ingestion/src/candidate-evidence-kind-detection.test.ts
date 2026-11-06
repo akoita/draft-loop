@@ -98,6 +98,46 @@ const markdownCv = [
   "Python, SQL, Airflow",
 ].join("\n");
 
+/** The same fictional CV in French, with the headings French CVs commonly use. */
+const frenchCvs = [
+  [
+    "# Alex Exemple",
+    "alex@example.test | Lyon",
+    "",
+    "## À propos",
+    "Ingénieur données, spécialiste des chaînes de traitement fiables.",
+    "",
+    "## Expériences professionnelles",
+    "### Société Fictive - Ingénieur données senior",
+    "Janv. 2021 - Aujourd'hui",
+    "- Migration de la chaîne de facturation",
+    "### Exemple Analytique - Ingénieur données",
+    "2018 - 2020",
+    "",
+    "## Formation et diplômes",
+    "Université Exemple, 2014 - 2018",
+    "",
+    "## Compétences clés :",
+    "Python, SQL, Airflow",
+  ].join("\n"),
+  [
+    "ALEX EXEMPLE",
+    "",
+    "PARCOURS",
+    "Ingénieur données senior, Société Fictive (févr. 2021 – déc. 2023)",
+    "Ingénieur données, Exemple Analytique (sept. 2018 – janv. 2021)",
+    "",
+    "DIPLÔMES",
+    "Master, Université Exemple, 2018",
+    "",
+    "LANGUES PARLÉES",
+    "Français, anglais",
+    "",
+    "CENTRES D’INTÉRÊT",
+    "Escalade",
+  ].join("\n"),
+];
+
 const docxCv = [
   "# Alex Example",
   "# Expérience professionnelle",
@@ -244,6 +284,18 @@ describe("detectCandidateEvidenceKind", () => {
       displayName: "my-cv-linkedin-transcript-notes.txt",
     });
     expect(result.kind).toBe("other");
+  });
+
+  it("recognises a French CV's headings as reliably as an English CV's", () => {
+    for (const text of frenchCvs) {
+      const french = detectCandidateEvidenceKind({ text, mediaType: "text/plain" });
+      expect(french.kind).toBe("cv");
+      expect(french.signals).toEqual(
+        expect.arrayContaining(["cv-section-headings", "employment-date-ranges"]),
+      );
+      // The English CV's headings, date ranges and bullets give 0.95; bullets add the last 0.05.
+      expect(french.confidence).toBeGreaterThanOrEqual(0.9);
+    }
   });
 
   it("emits content-free signals and confidence within 0..1", () => {

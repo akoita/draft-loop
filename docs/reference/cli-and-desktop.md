@@ -1341,7 +1341,8 @@ and exact-quote rules are the same for every kind.
 | `other`              | Standard extraction                                                                                                                                |
 
 - **Detection.** Other kinds are detected locally from the latest version's
-  text. Nothing is sent to a provider, and the result is not stored.
+  text, from English and French section headings alike. Nothing is sent to a
+  provider, and the result is not stored.
 - **Override.** A user can override the kind per source. The override survives
   refreshes, and clearing it returns to detection.
 - **Recorded.** Each profile version records the kind used for every source
