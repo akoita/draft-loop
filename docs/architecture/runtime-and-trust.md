@@ -309,6 +309,38 @@ the context snapshot.
   output. The adapter returns the member the call named, and drops the empty
   coverage list of a critique that judged none.
 
+### Decision models
+
+`@draft-loop/providers/decisions` asks a fast judgment model small closed
+questions about one input. It writes no text: the caller's code makes the
+decision from the answers. Nothing calls it yet; the first planned uses are in
+[#2247](https://github.com/akoita/draft-loop/issues/2247).
+
+| Question  | Answer                                                    |
+| --------- | --------------------------------------------------------- |
+| Predicate | Probability that a statement holds                        |
+| Choice    | One option of 2 to 255, with a distribution and confidence |
+| Score     | A point on 2 to 10 ordered levels, with a distribution    |
+
+`createDecisionModel` picks the vendor; Jev is the default.
+
+| Vendor                 | Wire format                                  | Auth                    |
+| ---------------------- | -------------------------------------------- | ----------------------- |
+| `typesafe-jev`         | System One, `POST /v1/systemone`             | API key                 |
+| `openai-decisions`     | `POST /v1/decisions`                         | API key                 |
+| `microsoft-decision-1` | System One on a Foundry resource endpoint    | Entra ID token callback |
+
+- **Policy first.** Each call needs a decision data policy naming the allowed
+  vendors. A missing approval, an unlisted vendor or unacknowledged sensitive
+  material is refused before anything is sent.
+- **Checked both ways.** Questions are checked against the shared limits, and
+  answers must match the questions asked: same names and kinds, offered
+  options, probabilities between 0 and 1. A refusal counts as an answer.
+- **Content-free errors.** Errors carry a code, status and request id, never
+  the input or a response body.
+- **Data location.** Jev runs in the US, with zero retention on enterprise
+  plans only. On the hosted service it must not receive candidate material.
+
 ### Recorded usage and evidence
 
 - **Input tokens** count everything a call carried, including cache reads and

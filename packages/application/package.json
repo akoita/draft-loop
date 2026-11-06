@@ -39,6 +39,10 @@
       "types": "./src/work-journal-source.ts",
       "import": "./src/work-journal-source.ts"
     },
+    "./live-speech": {
+      "types": "./src/live-speech.ts",
+      "import": "./src/live-speech.ts"
+    },
     "./speech-model": {
       "types": "./src/speech-model.ts",
       "import": "./src/speech-model.ts"

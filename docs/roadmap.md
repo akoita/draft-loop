@@ -488,8 +488,14 @@ EU server fallback waits until the browser model proves too slow.
 makes the interview read as a conversation: chat bubbles, a writing
 indicator while the interviewer replies, the session's topics beside the chat,
 quick replies as chips, and the summary as a card in the chat. A server with
-no interviewer model now says so before offering topics. A voice mode with
-one microphone and a live transcript is the planned next step.
+no interviewer model now says so before offering topics.
+
+[Milestone 85](https://github.com/akoita/draft-loop/milestone/85) (#2359
+to #2363) adds **Talk live**, a spoken conversation on one topic
+([live conversation](reference/voice-input.md#live-conversation)). Google
+Cloud speech in the EU hears the candidate and speaks the questions, while
+Claude stays the interviewer behind the method-guide check. Voxtral is the
+planned second speech adapter.
 
 ### Next — Multi-language support
 
@@ -672,6 +678,7 @@ monthly while active development continues. A material change states what
 changed, why, and what moved out to make room. Every stage exit also produces a
 versioned release using [the release procedure](operations/releasing.md) only
 when its release criteria are satisfied. A stage ended with unmet criteria
+| 2026-11-06 | Admitted [milestone 85](https://github.com/akoita/draft-loop/milestone/85) (#2359–#2363): a live voice conversation in the career interview, with streaming speech in the EU and Claude as the interviewer. | The owner asked for a speech-to-speech option built on reference tools, and chose Google Cloud speech over native speech-to-speech models so every question still passes the method-guide check. A capped walk waits for the owner's go. |
 | 2026-11-06 | Admitted [milestone 84](https://github.com/akoita/draft-loop/milestone/84) (#2337–#2339): the career interview as a chat, quick replies, the summary as a card, and a notice when the server has no interviewer model. | The owner found the interview panel rustic and could not see that a conversation had started. No paid model run; voice mode follows. |
 records that negative decision explicitly and does not create a release.
 

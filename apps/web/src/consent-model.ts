@@ -4,7 +4,7 @@ export type ConsentEntry = ApiSchemas["ConsentEntry"];
 export type Consents = ApiSchemas["Consents"];
 export type ConsentKind = ConsentEntry["kind"];
 export type ConsentBasis = ConsentEntry["basis"];
-export type ConsentProvider = "anthropic" | "openai";
+export type ConsentProvider = "anthropic" | "openai" | "google";
 type ConsentBody = ApiInput<"POST /v1/workspaces/{workspaceId}/consents">["body"];
 
 /** The longest note the consent ledger keeps. */
@@ -30,6 +30,7 @@ const kindLabels: Readonly<Record<ConsentKind, string>> = {
 const providerNames: Readonly<Record<ConsentProvider, string>> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  google: "Google Cloud",
 };
 
 /** A basis as people read it, such as `A contract with the candidate`. */
@@ -54,7 +55,8 @@ export function providerList(providers: readonly string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
-function isProvider(company: string): company is ConsentProvider {
+/** Whether a company is one a transmission grant can name. */
+export function isConsentProvider(company: string): company is ConsentProvider {
   return company in providerNames;
 }
 
@@ -66,7 +68,7 @@ export function workspaceProviders(
   workspace: Pick<ApiSchemas["Workspace"], "author" | "critic"> | undefined,
 ): ConsentProvider[] {
   if (workspace === undefined) return ["anthropic", "openai"];
-  const companies = [workspace.author.company, workspace.critic.company].filter(isProvider);
+  const companies = [workspace.author.company, workspace.critic.company].filter(isConsentProvider);
   return [...new Set(companies)].sort();
 }
 
