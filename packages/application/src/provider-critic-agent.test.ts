@@ -532,3 +532,23 @@ describe("omission check over every chunk (critic v10, #2046)", () => {
     expect((error as { billed?: unknown }).billed).toMatchObject({ usage: bill(1).usage });
   });
 });
+
+describe("provider critic agent document language", () => {
+  it("reviews the language and translation of a French CV after the cached prefix", async () => {
+    const english: ModelRequest<JsonObject>[] = [];
+    const french: ModelRequest<JsonObject>[] = [];
+    await recordingCritic(english).execute(critique(1) as never);
+    await recordingCritic(french, { ...context, language: "fr" } as ContextSnapshot).execute(
+      critique(1) as never,
+    );
+
+    const [inEnglish] = english;
+    const [inFrench] = french;
+    expect(inFrench?.promptCache?.systemPrompt).toBe(inEnglish?.promptCache?.systemPrompt);
+    expect(inFrench?.promptCache?.callInstructions).toContain("(code language)");
+    expect(inFrench?.promptCache?.callInstructions).toContain("(code translation-fidelity)");
+    expect(inFrench?.systemPrompt).toContain("written in French (fr)");
+    expect(inEnglish?.systemPrompt).not.toContain("translation-fidelity");
+    expect(inEnglish?.promptCache?.callInstructions).toBe("");
+  });
+});

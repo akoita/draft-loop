@@ -7,6 +7,7 @@ import { candidateDirectionCriticInstructions } from "./candidate-direction.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { reviewsEmphasis } from "./critic-application-plan.js";
 import { critiqueOutputSchemaFor } from "./critic-critique-contract.js";
+import { withCriticLanguageReview } from "./critic-document-language.js";
 import { withPlanThemeSource } from "./critic-emphasis.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
@@ -49,18 +50,23 @@ export function criticRunPrefix(
 
 /**
  * The instructions only this critic call carries, after the cached prefix: the coverage
- * judgement when the round asks for one, and the candidate's direction when the round has one.
+ * judgement when the round asks for one, the candidate's direction when the round has one, and
+ * the language review of a document not in English (#2319).
  */
 export function criticCallInstructions(
   judgesCoverage: boolean,
   candidateDirection: CandidateDirection | undefined,
+  language?: string,
 ): string {
-  return [
-    judgesCoverage ? criticPrompt.coverageJudgementInstructions : "",
-    candidateDirection === undefined ? "" : candidateDirectionCriticInstructions,
-  ]
-    .filter((part) => part !== "")
-    .join("\n\n");
+  return withCriticLanguageReview(
+    [
+      judgesCoverage ? criticPrompt.coverageJudgementInstructions : "",
+      candidateDirection === undefined ? "" : candidateDirectionCriticInstructions,
+    ]
+      .filter((part) => part !== "")
+      .join("\n\n"),
+    language,
+  );
 }
 
 /**

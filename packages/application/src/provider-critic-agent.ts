@@ -25,6 +25,7 @@ import {
   parseCritique,
   withResolvableFindingTargets,
 } from "./critic-critique-contract.js";
+import { withCriticLanguageReview } from "./critic-document-language.js";
 import { capBlockingOmissions, isOmissionFindingCode } from "./critic-omission.js";
 import {
   blockingOmissionCheckFindings,
@@ -110,14 +111,21 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
-        systemPrompt: judgement.systemPrompt(basePrompt),
+        systemPrompt: withCriticLanguageReview(
+          judgement.systemPrompt(basePrompt),
+          context.language,
+        ),
         // Every critic call of a run, the plan review included, sends the same instructions,
         // output format and leading input, so a provider's prompt cache written by the first call
         // is read by the later ones. Coverage-judgement and candidate-direction instructions vary
         // by round, so they follow the cached prefix (#1986).
         promptCache: {
           systemPrompt: prefix.systemPrompt,
-          callInstructions: criticCallInstructions(judgesCoverage, candidateDirection),
+          callInstructions: criticCallInstructions(
+            judgesCoverage,
+            candidateDirection,
+            context.language,
+          ),
           stableInputMembers: criticStableInputMembers,
           outputSchemas: criticRunOutputSchemas(promptVersion),
         },
