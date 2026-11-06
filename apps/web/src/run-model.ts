@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApiSchemas } from "./api-client.js";
 import type { Brief } from "./brief-model.js";
 
@@ -21,8 +22,8 @@ export function latestRunId(application: Application): string | undefined {
 
 /** Why a run cannot start from the brief, or `undefined` when it can. */
 export function startProblem(brief: Brief | undefined): string | undefined {
-  if (brief === undefined) return "Review the job requirements first.";
-  if (brief.status !== "reviewed") return "Mark the job brief reviewed before starting a run.";
+  if (brief === undefined) return t`Review the job requirements first.`;
+  if (brief.status !== "reviewed") return t`Mark the job brief reviewed before starting a run.`;
   return undefined;
 }
 

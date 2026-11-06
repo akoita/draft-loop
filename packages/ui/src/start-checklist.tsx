@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   firstUnmetStartCondition,
   type StartActionId,
@@ -40,11 +41,11 @@ export function StartChecklistView({
       id={id}
       aria-labelledby={titleId}
     >
-      <strong id={titleId}>Before you can start</strong>
+      <strong id={titleId}>{t`Before you can start`}</strong>
       <p className="sr-only" role="status">
         {first === null
-          ? "Ready to start the review."
-          : `Can't start yet: ${first.detail ?? first.label}`}
+          ? t`Ready to start the review.`
+          : t`Can't start yet: ${first.detail ?? first.label}`}
       </p>
       {errorMessage ? (
         <div className="error-banner" role="alert">

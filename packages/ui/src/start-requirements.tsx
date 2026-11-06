@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { OpportunityLatestResult } from "./bridge.js";
 import type { JobRequirementsExtractionBinding } from "./job-requirements-extraction.js";
@@ -128,7 +129,7 @@ export function StartRequirementsSourceView({
   onUseReviewed,
 }: StartRequirementsSourceViewProps) {
   return (
-    <section className="start-requirements" aria-label="Requirements for this run">
+    <section className="start-requirements" aria-label={t`Requirements for this run`}>
       <p className="start-requirements-line" role="status">
         {useJobDescription ? rawJobDescriptionLabel : reviewedRequirementsLabel(selection)}
       </p>
@@ -139,8 +140,8 @@ export function StartRequirementsSourceView({
         onClick={useJobDescription ? onUseReviewed : onUseJobDescription}
       >
         {useJobDescription
-          ? `Use the reviewed requirements (brief v${selection.version})`
-          : "Use the raw job description instead"}
+          ? t`Use the reviewed requirements (brief v${selection.version})`
+          : t`Use the raw job description instead`}
       </button>
     </section>
   );
@@ -163,9 +164,9 @@ export function StartFromJobDescriptionChoice({
   onChange,
 }: StartFromJobDescriptionChoiceProps) {
   return (
-    <section aria-label="Requirements for this run">
+    <section aria-label={t`Requirements for this run`}>
       <details className="setup-details setup-advanced">
-        <summary>Advanced: requirements for this run</summary>
+        <summary>{t`Advanced: requirements for this run`}</summary>
         <label className="start-raw-choice">
           <input
             type="checkbox"

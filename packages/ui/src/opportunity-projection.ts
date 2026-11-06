@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The renderer's view of a saved job brief, projected from the record a host's service returns:
  * the desktop's application service, or the hosted API's brief view (ADR 0011, D9). Both hosts
@@ -18,7 +19,7 @@ function opportunityRecordObject(
   readonly extraction?: "pending" | "failed";
 } {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("The opportunity service returned an invalid record.");
+    return fail(t`The opportunity service returned an invalid record.`);
   }
   const record = value as Record<string, unknown>;
   const brief = record.brief;
@@ -40,7 +41,7 @@ function opportunitySourcedText(
 ): OpportunityRecordResult["role"] {
   if (value === null) return null;
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("The opportunity service returned an invalid fact.");
+    return fail(t`The opportunity service returned an invalid fact.`);
   }
   const fact = value as Record<string, unknown>;
   return { value: fact.value, sourceIds: fact.sourceIds } as OpportunityRecordResult["role"];
@@ -51,19 +52,19 @@ function opportunitySource(
   fail: ProjectionFailure,
 ): OpportunityRecordResult["sources"][number] {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("The opportunity service returned an invalid source.");
+    return fail(t`The opportunity service returned an invalid source.`);
   }
   const source = value as Record<string, unknown>;
   const provenance = source.provenance;
   if (typeof provenance !== "object" || provenance === null || Array.isArray(provenance)) {
-    return fail("The opportunity service returned an invalid source.");
+    return fail(t`The opportunity service returned an invalid source.`);
   }
   const provenanceRecord = provenance as Record<string, unknown>;
   const kind = provenanceRecord.kind;
   const checksum =
     kind === "approved-url" ? provenanceRecord.contentChecksum : provenanceRecord.checksum;
   if (typeof kind !== "string" || typeof source.id !== "string") {
-    return fail("The opportunity service returned an invalid source.");
+    return fail(t`The opportunity service returned an invalid source.`);
   }
   return {
     id: source.id,
@@ -82,11 +83,11 @@ function opportunityFactCollection<
   Value extends "responsibilities" | "requirements" | "priorities",
 >(value: unknown, field: Value, fail: ProjectionFailure): OpportunityRecordResult[Value] {
   if (!Array.isArray(value)) {
-    return fail("The opportunity service returned invalid facts.");
+    return fail(t`The opportunity service returned invalid facts.`);
   }
   return value.map((entry) => {
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      return fail("The opportunity service returned invalid facts.");
+      return fail(t`The opportunity service returned invalid facts.`);
     }
     const fact = entry as Record<string, unknown>;
     return {
@@ -104,12 +105,12 @@ function opportunityInstructions(
   fail: ProjectionFailure,
 ): OpportunityRecordResult["candidateInstructions"] {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("The opportunity service returned invalid instructions.");
+    return fail(t`The opportunity service returned invalid instructions.`);
   }
   const instructions = value as Record<string, unknown>;
   const list = (candidate: unknown): readonly unknown[] => {
     if (!Array.isArray(candidate)) {
-      return fail("The opportunity service returned invalid instructions.");
+      return fail(t`The opportunity service returned invalid instructions.`);
     }
     return candidate;
   };
@@ -128,11 +129,11 @@ function opportunityIssues(
   fail: ProjectionFailure,
 ): OpportunityRecordResult["issues"] {
   if (!Array.isArray(value)) {
-    return fail("The opportunity service returned invalid issues.");
+    return fail(t`The opportunity service returned invalid issues.`);
   }
   return value.map((entry) => {
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      return fail("The opportunity service returned invalid issues.");
+      return fail(t`The opportunity service returned invalid issues.`);
     }
     const issue = entry as Record<string, unknown>;
     return {
@@ -168,11 +169,11 @@ export function projectOpportunityRecord(
     typeof brief.createdAt !== "string" ||
     typeof brief.status !== "string"
   ) {
-    return fail("The opportunity service returned an invalid record.");
+    return fail(t`The opportunity service returned an invalid record.`);
   }
   const sources = Array.isArray(brief.sources)
     ? brief.sources.map((source) => opportunitySource(source, fail))
-    : fail("The opportunity service returned invalid sources.");
+    : fail(t`The opportunity service returned invalid sources.`);
   return {
     workspaceId,
     briefId: brief.id,

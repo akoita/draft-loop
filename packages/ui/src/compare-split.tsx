@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Compare-view column split.
  *
@@ -172,11 +173,11 @@ export function CompareSplitHandle({
       className="compare-split-handle"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize the compare columns"
+      aria-label={t`Resize the compare columns`}
       aria-valuenow={percent}
       aria-valuemin={Math.round(minimumCompareSplit * 100)}
       aria-valuemax={Math.round(maximumCompareSplit * 100)}
-      aria-valuetext={`Previous version ${percent}% of the width`}
+      aria-valuetext={t`Previous version ${percent}% of the width`}
       tabIndex={0}
       onKeyDown={(event) => {
         const next = nextCompareSplitForKey(event.key, split);

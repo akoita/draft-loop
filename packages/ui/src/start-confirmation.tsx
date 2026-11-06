@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { formatLimitDuration } from "./execution-limits.js";
 import { HostStartDialog } from "./host-panels.js";
@@ -419,9 +420,7 @@ export function StartActions({
         disabled={blockedReason !== null}
         aria-describedby={blockedReason === null ? undefined : "start-confirmation-blocked"}
         onClick={onStart}
-      >
-        Start
-      </button>
+      >{t`Start`}</button>
       {blockedReason === null ? null : (
         <p className="start-confirmation-note" id="start-confirmation-blocked" role="status">
           {blockedReason}
@@ -433,9 +432,7 @@ export function StartActions({
           {changeModelsAction}
         </span>
       )}
-      <button className="button button-quiet" type="button" onClick={onCancel}>
-        Cancel
-      </button>
+      <button className="button button-quiet" type="button" onClick={onCancel}>{t`Cancel`}</button>
     </div>
   );
 }
@@ -464,16 +461,17 @@ export function StartConfirmation({
         aria-describedby="start-confirmation-copy"
         ref={dialogRef}
       >
-        <h2 id="start-confirmation-title">Start this review?</h2>
-        <p className="modal-copy" id="start-confirmation-copy">
-          Check what the run will use. No provider call is made until you start.
-        </p>
+        <h2 id="start-confirmation-title">{t`Start this review?`}</h2>
+        <p
+          className="modal-copy"
+          id="start-confirmation-copy"
+        >{t`Check what the run will use. No provider call is made until you start.`}</p>
         <section aria-labelledby="start-confirmation-models">
-          <h3 id="start-confirmation-models">Models</h3>
+          <h3 id="start-confirmation-models">{t`Models`}</h3>
           <dl className="start-confirmation-lines">
             {summary.preset === null ? null : (
               <div>
-                <dt>Preset</dt>
+                <dt>{t`Preset`}</dt>
                 <dd>{summary.preset}</dd>
               </div>
             )}
@@ -503,14 +501,14 @@ export function StartConfirmation({
           )}
         </section>
         <section aria-labelledby="start-confirmation-inputs">
-          <h3 id="start-confirmation-inputs">Inputs</h3>
+          <h3 id="start-confirmation-inputs">{t`Inputs`}</h3>
           <Lines lines={summary.inputs} />
         </section>
         <section aria-labelledby="start-confirmation-settings">
-          <h3 id="start-confirmation-settings">Run settings</h3>
+          <h3 id="start-confirmation-settings">{t`Run settings`}</h3>
           <Lines lines={summary.settings} />
           <fieldset className="start-confirmation-length">
-            <legend>Length</legend>
+            <legend>{t`Length`}</legend>
             {(Object.keys(startLengthLabels) as StartLengthChoice[]).map((choice) => (
               <label key={choice}>
                 <input
@@ -523,10 +521,7 @@ export function StartConfirmation({
                 {startLengthLabels[choice]}
               </label>
             ))}
-            <p className="start-confirmation-note">
-              One page or two is saved as your writing policy's page target, and the draft is
-              written to it.
-            </p>
+            <p className="start-confirmation-note">{t`One page or two is saved as your writing policy's page target, and the draft is written to it.`}</p>
           </fieldset>
         </section>
         <HostStartDialog applicationId={applicationId} setBlockedReason={setBlockedReason} />

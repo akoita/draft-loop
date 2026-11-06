@@ -11,6 +11,7 @@ import type {
   ModelProfileReferences,
   RunProviderAuthModeConfiguration,
 } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 import { useMemo, useState } from "react";
 import { formatNumber } from "./locale-format.js";
 import { modelProfileEffortRaised } from "./model-profile-picker-state.js";
@@ -117,8 +118,8 @@ function PublicRate({
   if (entry === undefined) {
     return (
       <div className="model-profile-budget-rate">
-        <strong>{profileRole === "author" ? "Author" : "Critic"}</strong>
-        <p>No public API rate is available for this registered role.</p>
+        <strong>{profileRole === "author" ? t`Author` : t`Critic`}</strong>
+        <p>{t`No public API rate is available for this registered role.`}</p>
       </div>
     );
   }
@@ -136,22 +137,25 @@ function PublicRate({
   return (
     <div className="model-profile-budget-rate">
       <strong>
-        {profileRole === "author" ? "Author" : "Critic"}: {modelDisplayName(profile.modelId)}
+        {profileRole === "author" ? t`Author` : t`Critic`}: {modelDisplayName(profile.modelId)}
       </strong>
       <span>
         {profile.provider}/{profile.modelId}
       </span>
       <dl>
         <div>
-          <dt>Public uncached API list rates</dt>
+          <dt>{t`Public uncached API list rates`}</dt>
           <dd>
-            ${apiPricing.inputUsdPerMillion}/1M input · ${apiPricing.outputUsdPerMillion}/1M output
+            ${apiPricing.inputUsdPerMillion}
+            {t`/1M input · $`}
+            {apiPricing.outputUsdPerMillion}
+            {t`/1M output`}
           </dd>
         </div>
         <div>
-          <dt>Metadata review</dt>
+          <dt>{t`Metadata review`}</dt>
           <dd>
-            {entry.reviewedAt} · Official {documentationName} model/pricing documentation
+            {entry.reviewedAt} {t`· Official`} {documentationName} {t`model/pricing documentation`}
           </dd>
         </div>
       </dl>
@@ -191,58 +195,54 @@ export function ModelProfileBudget({
 
   return (
     <details className="model-profile-budget">
-      <summary>Illustrative public API token-cost scenario</summary>
+      <summary>{t`Illustrative public API token-cost scenario`}</summary>
       <p className="model-profile-budget-copy">
-        Public standard uncached text API list rates in USD
+        {t`Public standard uncached text API list rates in USD`}
         {Number.isFinite(inputTokenLimit)
-          ? `, up to ${formatNumber(inputTokenLimit)} input tokens per call`
+          ? t`, up to ${formatNumber(inputTokenLimit)} input tokens per call`
           : ""}
-        . This is an explicit example, not a measured forecast, hard cap, or actual bill.
-        Subscription quota and charges are not estimated.
+        {t`. This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated.`}
       </p>
       <div className="model-profile-budget-rates">
         <PublicRate entry={authorEntry} profileRole="author" />
         <PublicRate entry={criticEntry} profileRole="critic" />
       </div>
-      <p className="model-profile-budget-example">
-        Initial illustration: 10,000 input and 1,000 output tokens per call, with 2 author calls and
-        1 critic call. Edit every value to reflect your own scenario.
-      </p>
+      <p className="model-profile-budget-example">{t`Initial illustration: 10,000 input and 1,000 output tokens per call, with 2 author calls and 1 critic call. Edit every value to reflect your own scenario.`}</p>
       <div className="model-profile-budget-scenarios">
         {(["author", "critic"] as const).map((role) => (
           <fieldset className="model-profile-budget-role" disabled={disabled} key={role}>
-            <legend>{role === "author" ? "Author scenario" : "Critic scenario"}</legend>
+            <legend>{role === "author" ? t`Author scenario` : t`Critic scenario`}</legend>
             <label>
-              <span>Input tokens per call</span>
+              <span>{t`Input tokens per call`}</span>
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={values[role].inputTokens}
-                aria-label={`${role} input tokens per call`}
+                aria-label={t`${role} input tokens per call`}
                 onChange={(event) => update(role, "inputTokens", event.target.value)}
               />
             </label>
             <label>
-              <span>Output tokens per call</span>
+              <span>{t`Output tokens per call`}</span>
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={values[role].outputTokens}
-                aria-label={`${role} output tokens per call`}
+                aria-label={t`${role} output tokens per call`}
                 onChange={(event) => update(role, "outputTokens", event.target.value)}
               />
             </label>
             <label>
-              <span>Planned calls</span>
+              <span>{t`Planned calls`}</span>
               <input
                 type="number"
                 min="0"
                 max="1000"
                 step="1"
                 value={values[role].calls}
-                aria-label={`${role} planned calls`}
+                aria-label={t`${role} planned calls`}
                 onChange={(event) => update(role, "calls", event.target.value)}
               />
             </label>
@@ -253,28 +253,23 @@ export function ModelProfileBudget({
         .filter((role) => modelProfileEffortRaised(references[role], role))
         .map((role) => (
           <p className="model-profile-budget-example" key={`${role}-effort`}>
-            The {role === "author" ? "writer" : "reviewer"}'s reasoning level is above its default,
-            so it writes more output tokens than this scenario assumes. Raise its output tokens to
-            match; no multiplier is shown until real runs have measured one.
+            {t`The`} {role === "author" ? t`writer` : t`reviewer`}
+            {t`'s reasoning level is above its default, so it writes more output tokens than this scenario assumes. Raise its output tokens to match; no multiplier is shown until real runs have measured one.`}
           </p>
         ))}
-      <p className="model-profile-budget-formula">
-        Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000;
-        author and critic are added together. The output allocation includes billable reasoning
-        tokens where applicable, but does not change runtime controls.
-      </p>
+      <p className="model-profile-budget-formula">{t`Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls.`}</p>
       {estimate.status === "available" ? (
-        <dl className="model-profile-budget-result" aria-label="Estimated public API cost">
+        <dl className="model-profile-budget-result" aria-label={t`Estimated public API cost`}>
           <div>
-            <dt>Author estimate</dt>
+            <dt>{t`Author estimate`}</dt>
             <dd>{currency(estimate.authorUsd)}</dd>
           </div>
           <div>
-            <dt>Critic estimate</dt>
+            <dt>{t`Critic estimate`}</dt>
             <dd>{currency(estimate.criticUsd)}</dd>
           </div>
           <div>
-            <dt>Combined scenario estimate</dt>
+            <dt>{t`Combined scenario estimate`}</dt>
             <dd>{currency(estimate.totalUsd)}</dd>
           </div>
         </dl>
@@ -283,11 +278,7 @@ export function ModelProfileBudget({
           {unavailableMessage(estimate.reason)}
         </p>
       )}
-      <p className="model-profile-budget-assumptions">
-        Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools,
-        batch, regional premiums, and unsupported long context. The scenario estimates list-rate API
-        usage only and does not change the selected profiles or their runtime budgets.
-      </p>
+      <p className="model-profile-budget-assumptions">{t`Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools, batch, regional premiums, and unsupported long context. The scenario estimates list-rate API usage only and does not change the selected profiles or their runtime budgets.`}</p>
     </details>
   );
 }

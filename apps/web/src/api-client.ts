@@ -68,7 +68,7 @@ interface CallInput {
 export function operationUrl(path: string, input: CallInput): string {
   const filled = path.replace(/\{([^}]+)\}/g, (_, name: string) => {
     const value = input.path?.[name];
-    if (value === undefined) throw new Error(`The ${name} path parameter is missing.`);
+    if (value === undefined) throw new Error(t`The ${name} path parameter is missing.`);
     return encodeURIComponent(value);
   });
   const query = new URLSearchParams();
@@ -97,7 +97,7 @@ async function refusal(response: Response): Promise<ApiRequestError> {
     return new ApiRequestError(
       response.status,
       "unreadable-error",
-      `The API answered ${response.status}.`,
+      t`The API answered ${response.status}.`,
       undefined,
       undefined,
       { status: response.status },
@@ -115,7 +115,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       const request = input as CallInput;
       const headers: Record<string, string> = { ...request.header };
       // Only public routes, such as how to sign in, are called without a credential.
-      if (options.token !== undefined) headers.authorization = `Bearer ${options.token}`;
+      if (options.token !== undefined) headers.authorization = t`Bearer ${options.token}`;
       let body: BodyInit | undefined;
       if (request.body instanceof Blob) {
         body = request.body;

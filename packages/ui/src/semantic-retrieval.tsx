@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type {
   EmbeddingModelPlanResult,
@@ -101,33 +102,30 @@ export function EmbeddingInstallApproval({
         if (event.key === "Escape") onDismiss();
       }}
     >
-      <h3 id={headingId}>Approve model download</h3>
-      <p className="knowledge-copy">
-        DraftLoop will download this model once and keep it on this computer. Nothing is downloaded
-        until you confirm, and your candidate material is never uploaded.
-      </p>
+      <h3 id={headingId}>{t`Approve model download`}</h3>
+      <p className="knowledge-copy">{t`DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded.`}</p>
       <dl className="semantic-approval-facts">
         <div>
-          <dt>Source</dt>
+          <dt>{t`Source`}</dt>
           <dd>
-            Hugging Face, {sourceLabel(plan.sourceUrl)} (pinned revision{" "}
+            {t`Hugging Face,`} {sourceLabel(plan.sourceUrl)} {t`(pinned revision`}{" "}
             <code>{plan.revision.slice(0, 12)}</code>)
           </dd>
         </div>
         <div>
-          <dt>Download size</dt>
+          <dt>{t`Download size`}</dt>
           <dd>{formatModelSize(plan.totalSizeBytes)}</dd>
         </div>
         <div>
-          <dt>License</dt>
+          <dt>{t`License`}</dt>
           <dd>{plan.license}</dd>
         </div>
         <div>
-          <dt>Destination</dt>
+          <dt>{t`Destination`}</dt>
           <dd>{embeddingModelDestinationLabel}</dd>
         </div>
       </dl>
-      <ul className="semantic-approval-files" aria-label="Files to download">
+      <ul className="semantic-approval-files" aria-label={t`Files to download`}>
         {plan.files.map((file) => (
           <li key={file.path}>
             <code>{file.path}</code>
@@ -136,12 +134,16 @@ export function EmbeddingInstallApproval({
         ))}
       </ul>
       <div className="knowledge-actions">
-        <button type="button" className="button button-primary" onClick={onConfirm}>
-          Confirm download
-        </button>
-        <button type="button" className="button button-outline" onClick={onDismiss}>
-          Cancel
-        </button>
+        <button
+          type="button"
+          className="button button-primary"
+          onClick={onConfirm}
+        >{t`Confirm download`}</button>
+        <button
+          type="button"
+          className="button button-outline"
+          onClick={onDismiss}
+        >{t`Cancel`}</button>
       </div>
     </section>
   );
@@ -203,17 +205,14 @@ export function SemanticRetrievalView({
       aria-labelledby="semantic-retrieval-heading"
     >
       <div>
-        <p className="eyebrow">Career evidence</p>
-        <h2 id="semantic-retrieval-heading">Semantic retrieval</h2>
+        <p className="eyebrow">{t`Career evidence`}</p>
+        <h2 id="semantic-retrieval-heading">{t`Semantic retrieval`}</h2>
       </div>
-      <p className="knowledge-copy">
-        Choose how this workspace searches your candidate knowledge. Semantic and hybrid modes use a
-        small model that runs on this computer; the model is downloaded only after you approve it.
-      </p>
+      <p className="knowledge-copy">{t`Choose how this workspace searches your candidate knowledge. Semantic and hybrid modes use a small model that runs on this computer; the model is downloaded only after you approve it.`}</p>
 
       <div className="semantic-model">
         <label className="setup-field" htmlFor={tierId}>
-          <span>Model size</span>
+          <span>{t`Model size`}</span>
           <select
             id={tierId}
             value={tier}
@@ -228,10 +227,10 @@ export function SemanticRetrievalView({
           </select>
         </label>
         <div className="semantic-model-status">
-          <span className="semantic-status-label">Model status</span>
+          <span className="semantic-status-label">{t`Model status`}</span>
           {state === undefined ? (
             <span className="meta-chip semantic-badge" data-state="loading">
-              {loading ? "Checking…" : "Unknown"}
+              {loading ? t`Checking…` : t`Unknown`}
             </span>
           ) : (
             <span className="meta-chip semantic-badge" data-state={state}>
@@ -250,7 +249,7 @@ export function SemanticRetrievalView({
               disabled={controlsDisabled || approval !== null}
               onClick={onRequestInstall}
             >
-              {state === "corrupt" ? "Reinstall model" : "Install model"}
+              {state === "corrupt" ? t`Reinstall model` : t`Install model`}
             </button>
           ) : null}
           {state === "ready" || state === "corrupt" ? (
@@ -259,9 +258,7 @@ export function SemanticRetrievalView({
               className="button button-outline"
               disabled={controlsDisabled}
               onClick={onRemove}
-            >
-              Remove model
-            </button>
+            >{t`Remove model`}</button>
           ) : null}
         </div>
       </div>
@@ -276,15 +273,13 @@ export function SemanticRetrievalView({
 
       {installing ? (
         <div className="semantic-progress">
-          <p className="sr-only" role="status">
-            Downloading the local model.
-          </p>
+          <p className="sr-only" role="status">{t`Downloading the local model.`}</p>
           <div className="semantic-progress-row" aria-hidden="true">
-            <strong>Downloading model…</strong>
+            <strong>{t`Downloading model…`}</strong>
             {progress === undefined ? null : (
               <span className="semantic-progress-figures">
-                {formatModelSize(progress.receivedBytes)} of {formatModelSize(progress.totalBytes)}{" "}
-                ({percent}%)
+                {formatModelSize(progress.receivedBytes)} {t`of`}{" "}
+                {formatModelSize(progress.totalBytes)} ({percent}%)
               </span>
             )}
           </div>
@@ -292,7 +287,7 @@ export function SemanticRetrievalView({
             className="semantic-progress-bar"
             max={100}
             {...(progress === undefined ? {} : { value: percent })}
-            aria-label="Model download progress"
+            aria-label={t`Model download progress`}
           />
           <button
             type="button"
@@ -300,13 +295,13 @@ export function SemanticRetrievalView({
             disabled={cancelRequested}
             onClick={onCancelInstall}
           >
-            {cancelRequested ? "Cancelling…" : "Cancel download"}
+            {cancelRequested ? t`Cancelling…` : t`Cancel download`}
           </button>
         </div>
       ) : null}
 
       <fieldset className="semantic-mode" disabled={disabled}>
-        <legend>Retrieval mode</legend>
+        <legend>{t`Retrieval mode`}</legend>
         {retrievalModeChoices.map((choice) => (
           <label className="semantic-mode-choice" key={choice.mode}>
             <input
@@ -451,7 +446,7 @@ export function SemanticRetrievalPanel({
   if (!supported) {
     return (
       <section className="panel knowledge-panel" aria-labelledby="semantic-retrieval-heading">
-        <h2 id="semantic-retrieval-heading">Semantic retrieval</h2>
+        <h2 id="semantic-retrieval-heading">{t`Semantic retrieval`}</h2>
         <p className="knowledge-copy">{semanticRetrievalUnavailableMessage}</p>
       </section>
     );

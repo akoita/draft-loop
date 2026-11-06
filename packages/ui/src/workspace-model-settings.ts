@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ModelCompany, modelCompanies, type WorkspaceConfigureModelsInput } from "./bridge.js";
 import type { DesktopReviewState } from "./model.js";
 
@@ -49,7 +50,7 @@ export function workspaceModelSettingsNeedsFreshAcknowledgement(
 function modelCompany(value: string): ModelCompany {
   const normalized = value.trim().toLowerCase();
   if ((modelCompanies as readonly string[]).includes(normalized)) return normalized as ModelCompany;
-  throw new Error("The current model settings are unavailable.");
+  throw new Error(t`The current model settings are unavailable.`);
 }
 
 function loopbackEndpoint(value: string): string {
@@ -126,20 +127,20 @@ export function workspaceModelSettingsBlocker(
   preview: WorkspaceModelSettingsPreview,
 ): string | null {
   if (draft.authorModel.trim() === "" || draft.criticModel.trim() === "") {
-    return "Name an author model and a critic model before saving model settings.";
+    return t`Name an author model and a critic model before saving model settings.`;
   }
   if (!validModelId(draft.authorModel) || !validModelId(draft.criticModel)) {
-    return "Enter exact model ids using letters, numbers, dots, underscores, colons, slashes, or hyphens.";
+    return t`Enter exact model ids using letters, numbers, dots, underscores, colons, slashes, or hyphens.`;
   }
   if (
     (draft.authorCompany === "local" || draft.criticCompany === "local") &&
     draft.localEndpoint.trim() !== "" &&
     loopbackEndpoint(draft.localEndpoint) === ""
   ) {
-    return "Use a local server address on this machine, such as http://127.0.0.1:11434/v1.";
+    return t`Use a local server address on this machine, such as http://127.0.0.1:11434/v1.`;
   }
   if (!validRationale(draft.independenceOverrideRationale)) {
-    return "Keep the model pairing rationale under 500 characters without control characters.";
+    return t`Keep the model pairing rationale under 500 characters without control characters.`;
   }
   if (
     preview.status === "ready" &&
@@ -147,7 +148,7 @@ export function workspaceModelSettingsBlocker(
     !preview.result.lineagesDistinct &&
     draft.independenceOverrideRationale.trim() === ""
   ) {
-    return "Record why one lineage on both sides is acceptable before saving model settings.";
+    return t`Record why one lineage on both sides is acceptable before saving model settings.`;
   }
   return null;
 }
@@ -176,5 +177,5 @@ export function workspaceModelSettingsInput(
 
 /** Do not echo provider or user input from a native validation error. */
 export function workspaceModelSettingsFailureMessage(): string {
-  return "Model settings could not be saved. Check both model ids and the local server address, then try again.";
+  return t`Model settings could not be saved. Check both model ids and the local server address, then try again.`;
 }

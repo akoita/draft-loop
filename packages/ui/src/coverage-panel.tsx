@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The review panel's requirement coverage: one row per requirement with its status, how it was
  * assessed, the critic's rationale, and the draft blocks it cites. A row the run checked from the
@@ -89,10 +90,10 @@ export function RequirementCoveragePanel({
   const citedBlocks = citedBlocksById(sections);
   const summaryLine = coverageSummaryLine(coverage);
   return (
-    <section className="panel coverage-panel" aria-label="requirement coverage" {...tabPanel}>
+    <section className="panel coverage-panel" aria-label={t`requirement coverage`} {...tabPanel}>
       <div className="section-heading compact">
         <div>
-          <h2>Requirement coverage</h2>
+          <h2>{t`Requirement coverage`}</h2>
           <p className="coverage-information-note">{COVERAGE_INFORMATION_NOTE}</p>
           {summaryLine === null ? null : <p className="coverage-summary">{summaryLine}</p>}
         </div>
@@ -109,13 +110,13 @@ export function RequirementCoveragePanel({
               aria-controls="coverage-panel-body"
               onClick={onToggle}
             >
-              {collapsed ? "show all" : "show summary only"}
+              {collapsed ? t`show all` : t`show summary only`}
             </button>
           </>
         )}
       </p>
       <div id="coverage-panel-body" hidden={collapsed}>
-        <ul className="coverage-list" aria-label="Requirement coverage assessments">
+        <ul className="coverage-list" aria-label={t`Requirement coverage assessments`}>
           {coverage.assessments.map((assessment) => (
             <li
               className={`coverage-row coverage-status-${assessment.status}`}
@@ -128,20 +129,20 @@ export function RequirementCoveragePanel({
                   {assessment.requirementText ?? assessment.requirementId}
                 </strong>
                 {assessment.kind === "responsibility" ? (
-                  <span className="status-tag coverage-kind">Responsibility</span>
+                  <span className="status-tag coverage-kind">{t`Responsibility`}</span>
                 ) : null}
                 <span className="status-tag coverage-status">
                   {coverageStatusLabels[assessment.status]}
                 </span>
               </div>
               <span className="coverage-basis">
-                Assessed by {coverageBasisLabels[assessment.basis]}
+                {t`Assessed by`} {coverageBasisLabels[assessment.basis]}
               </span>
               <p className="coverage-rationale">{assessment.rationale}</p>
               {assessment.evidence.length === 0 ? null : (
                 <ul
                   className="coverage-evidence"
-                  aria-label={`Draft blocks cited for ${assessment.requirementText ?? assessment.requirementId}`}
+                  aria-label={t`Draft blocks cited for ${assessment.requirementText ?? assessment.requirementId}`}
                 >
                   {assessment.evidence.map((item) => {
                     const cited = citedBlocks.get(item.blockId);
@@ -153,12 +154,12 @@ export function RequirementCoveragePanel({
                           <button
                             className="coverage-block coverage-block-link"
                             type="button"
-                            title="Show this block in the draft"
+                            title={t`Show this block in the draft`}
                             onClick={() => onLocateBlock(item.blockId)}
                           >
                             {cited.title}
                             <span className="coverage-block-opening"> · {cited.opening}</span>
-                            <span className="sr-only">, show in the draft</span>
+                            <span className="sr-only">{t`, show in the draft`}</span>
                           </button>
                         )}
                       </li>

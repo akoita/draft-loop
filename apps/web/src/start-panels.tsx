@@ -1,4 +1,5 @@
 import type { StartDialogContext } from "@draft-loop/ui/host-panels";
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
@@ -40,7 +41,7 @@ export function StartPanel({ client, applicationId, setBlockedReason }: StartPan
   }, [reason, setBlockedReason]);
 
   return (
-    <section className="start-confirmation-host" aria-label="Credits and consent">
+    <section className="start-confirmation-host" aria-label={t`Credits and consent`}>
       <RunEstimateLine
         client={client}
         workspaceId={workspaceId}

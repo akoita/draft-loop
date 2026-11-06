@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Review side panel width.
  *
@@ -318,11 +319,11 @@ export function SidePanelHandle({
       className="side-panel-handle"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize side panel"
+      aria-label={t`Resize side panel`}
       aria-valuenow={width}
       aria-valuemin={minimumSidePanelWidth}
       aria-valuemax={maximumSidePanelWidthFor(viewportWidth)}
-      aria-valuetext={`Side panel ${width} pixels wide`}
+      aria-valuetext={t`Side panel ${width} pixels wide`}
       tabIndex={0}
       onKeyDown={(event) => {
         const next = nextSidePanelWidthForKey(event.key, event.shiftKey, width, viewportWidth);

@@ -2,6 +2,7 @@ import type {
   WorkspaceSetupChoice,
   WorkspaceSetupPreset,
 } from "@draft-loop/ui/workspace-setup-model";
+import { t } from "@lingui/core/macro";
 
 import type { ApiInput } from "./api-client.js";
 
@@ -37,7 +38,7 @@ export function setupRequestBody(choice: WorkspaceSetupChoice): CreateWorkspaceB
 
 function hostedCompany(company: string): Company {
   if (company === "anthropic" || company === "openai") return company;
-  throw new Error("The hosted service runs Anthropic and OpenAI models only.");
+  throw new Error(t`The hosted service runs Anthropic and OpenAI models only.`);
 }
 
 /** The presets whose author and critic models are both in the service's catalog. */

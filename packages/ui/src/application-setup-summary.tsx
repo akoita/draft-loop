@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import type { ApplicationModelProfilesView } from "./application-contract.js";
 import { applicationPairLabel } from "./application-model-pair.js";
@@ -97,13 +98,13 @@ export function ApplicationProfileChoice({
   return (
     <section className="application-profile" aria-labelledby="application-profile-title">
       <div className="application-profile-head">
-        <strong id="application-profile-title">Reviewed career profile</strong>
+        <strong id="application-profile-title">{t`Reviewed career profile`}</strong>
         <Chip tone={state.tone}>{state.chip}</Chip>
       </div>
       <p className="application-profile-text">{state.text}</p>
       {choices.length > 1 ? (
         <label className="application-summary-select">
-          <span>Reviewed version</span>
+          <span>{t`Reviewed version`}</span>
           <select
             value={selectedProfile === null ? "" : reviewedProfileKey(selectedProfile)}
             disabled={disabled}
@@ -116,7 +117,7 @@ export function ApplicationProfileChoice({
               }
             }}
           >
-            {selectedProfile === null ? <option value="">Choose a profile</option> : null}
+            {selectedProfile === null ? <option value="">{t`Choose a profile`}</option> : null}
             {choices.map((choice) => (
               <option key={reviewedProfileKey(choice)} value={reviewedProfileKey(choice)}>
                 {reviewedProfileLabel(choice)}
@@ -131,9 +132,7 @@ export function ApplicationProfileChoice({
           type="button"
           disabled={disabled || reviewed.status === "unsupported"}
           onClick={onManageProfile}
-        >
-          Update in Career profile
-        </button>
+        >{t`Update in Career profile`}</button>
       </div>
     </section>
   );
@@ -163,34 +162,35 @@ export function WorkspaceSettingsLinks({
   return (
     <ul className="application-workspace-links">
       <li>
-        <span>Career evidence: {evidenceView.headline}</span>
+        <span>
+          {t`Career evidence:`} {evidenceView.headline}
+        </span>
         <span aria-hidden="true"> · </span>
         <button
           className="link-action"
           type="button"
           disabled={disabled}
           onClick={onManageEvidence}
-        >
-          Manage
-        </button>
+        >{t`Manage`}</button>
       </li>
       <li>
-        <span>Models, writing policy and sign-in are set on Home</span>
+        <span>{t`Models, writing policy and sign-in are set on Home`}</span>
         <span aria-hidden="true"> · </span>
-        <button className="link-action" type="button" disabled={disabled} onClick={onOpenSettings}>
-          Open Home
-        </button>
+        <button
+          className="link-action"
+          type="button"
+          disabled={disabled}
+          onClick={onOpenSettings}
+        >{t`Open Home`}</button>
       </li>
       {applicationPair === null ? null : (
         <li className="application-workspace-note">
-          This application uses {applicationPairLabel(applicationPair)}. Other applications use the
-          workspace&apos;s pair.
+          {t`This application uses`} {applicationPairLabel(applicationPair)}
+          {t`. Other applications use the workspace's pair.`}
         </li>
       )}
       {writingPolicyStatus === "unavailable" ? (
-        <li className="application-workspace-attention">
-          Writing policy needs attention: it cannot be read.
-        </li>
+        <li className="application-workspace-attention">{t`Writing policy needs attention: it cannot be read.`}</li>
       ) : null}
     </ul>
   );

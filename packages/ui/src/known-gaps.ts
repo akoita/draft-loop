@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ApprovalReadiness } from "./approval-readiness.js";
 import { WORD_MATCH_COVERAGE_CODE } from "./finding-decision-help.js";
 import { isUnresolvedFinding, type ReviewFinding } from "./model.js";
@@ -27,7 +28,7 @@ export function pendingConfirmedGapIds(findings: readonly ReviewFinding[]): read
 /** The one-step action's label, or null when no confirmed gap is pending. */
 export function markKnownGapsLabel(count: number): string | null {
   if (count === 0) return null;
-  return `Mark ${count === 1 ? "1 confirmed gap" : `${count} confirmed gaps`} as known`;
+  return t`Mark ${count === 1 ? "1 confirmed gap" : `${count} confirmed gaps`} as known`;
 }
 
 export const MARK_KNOWN_GAPS_NOTE =

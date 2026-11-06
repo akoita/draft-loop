@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * What the run's latest author step was sent, as the review screen shows it.
  *
@@ -188,7 +189,7 @@ export function runAuthorInputDisplay(
     ...(unmatchedRequirements.length === 0
       ? {}
       : {
-          gapSummary: `No sent evidence for ${plural(unmatchedRequirements.length, "requirement")}`,
+          gapSummary: t`No sent evidence for ${plural(unmatchedRequirements.length, "requirement")}`,
         }),
     unmatchedRequirements,
     ...(input.candidateDirection === undefined ? {} : { direction: input.candidateDirection }),

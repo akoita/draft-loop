@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 import {
@@ -98,17 +99,17 @@ export function JobDescriptionInputs({
         disabled={onChooseFile === undefined}
         onClick={() => onChooseFile?.()}
       >
-        {ready ? "Replace job description" : "Add job description"}
+        {ready ? t`Replace job description` : t`Add job description`}
       </button>
       <label className="url-input-label">
-        <span>Or provide a public URL</span>
+        <span>{t`Or provide a public URL`}</span>
         <input
           className="url-input"
           type="url"
-          placeholder="https://…"
+          placeholder={t`https://…`}
           value={url}
           onChange={(event) => onUrlChange(event.target.value)}
-          aria-label="Target job description URL"
+          aria-label={t`Target job description URL`}
         />
       </label>
       <button
@@ -116,9 +117,7 @@ export function JobDescriptionInputs({
         type="button"
         disabled={onFetchUrl === undefined || url.trim() === ""}
         onClick={() => onFetchUrl?.()}
-      >
-        Review and fetch job URL
-      </button>
+      >{t`Review and fetch job URL`}</button>
     </>
   );
 }
@@ -146,7 +145,7 @@ export function ApplicationJobStep({
       <p className="setup-note">{applicationJobStepNote(source, ready)}</p>
       {sourceSet ? (
         <details className="setup-details">
-          <summary>Replace the job description</summary>
+          <summary>{t`Replace the job description`}</summary>
           {inputs}
         </details>
       ) : (
@@ -178,26 +177,20 @@ export function OpportunityOverrideDisclosure({
 }: OpportunityOverrideDisclosureProps) {
   return (
     <details className="setup-details setup-advanced">
-      <summary>Advanced: writing policy override for this job</summary>
-      <p className="setup-note">
-        Import a policy version for this reviewed job without changing the workspace policy.
-      </p>
+      <summary>{t`Advanced: writing policy override for this job`}</summary>
+      <p className="setup-note">{t`Import a policy version for this reviewed job without changing the workspace policy.`}</p>
       <button
         className="button button-outline"
         type="button"
         disabled={disabled || !reviewed}
         onClick={onImport}
-      >
-        Import opportunity override
-      </button>
+      >{t`Import opportunity override`}</button>
       {reviewed ? null : (
-        <span className="setup-retrieval-status">
-          Review the requirements before importing an override.
-        </span>
+        <span className="setup-retrieval-status">{t`Review the requirements before importing an override.`}</span>
       )}
       {pending === null ? null : (
         <span className="setup-retrieval-status" role="status">
-          Selected override {pending.version} ({pending.checksumLabel}).
+          {t`Selected override`} {pending.version} ({pending.checksumLabel}).
         </span>
       )}
     </details>

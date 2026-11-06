@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Run provenance in a drawer: the review header summarises the run in one line, and **Run
  * details** opens a drawer from the right with the rest.
@@ -236,7 +237,7 @@ function IndependenceBadge({ summary }: { readonly summary: IndependenceSummary 
           It is displayed locally and is never part of any provider request. */}
       {summary.overrideRationale === null ? null : (
         <div className="trust-override">
-          <span className="trust-override-label">Override rationale</span>
+          <span className="trust-override-label">{t`Override rationale`}</span>
           <p>{summary.overrideRationale}</p>
         </div>
       )}
@@ -256,7 +257,7 @@ export function RunTrustWarning({
   const summary = independenceSummary(independentReview);
   if (summary.tone !== "shared") return null;
   return (
-    <section className="trust-strip trust-warning" aria-label="independence warning">
+    <section className="trust-strip trust-warning" aria-label={t`independence warning`}>
       <IndependenceBadge summary={summary} />
     </section>
   );
@@ -276,63 +277,71 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
     recorded.author !== configuredAuthor.model ||
     recorded.critic !== configuredCritic.model;
   return (
-    <section className="trust-strip" aria-label="trust and policy summary">
+    <section className="trust-strip" aria-label={t`trust and policy summary`}>
       {/* The lineage qualifies the identity it belongs to, so it is read here
           with the company and the model rather than apart from them. */}
       {/* The run's recorded models, never the configured pair. The run list records no company. */}
       <div className="trust-fact">
-        <span className="label">Author</span>
+        <span className="label">{t`Author`}</span>
         <strong>
           {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.author)}
         </strong>
         {recorded?.authorEffort === undefined ? null : (
-          <span>{effortDisplayName(recorded.authorEffort)} reasoning</span>
+          <span>
+            {effortDisplayName(recorded.authorEffort)} {t`reasoning`}
+          </span>
         )}
         {state.providerExposure.independentReview === null ? null : (
-          <span>claimed lineage {state.providerExposure.independentReview.authorLineage}</span>
+          <span>
+            {t`claimed lineage`} {state.providerExposure.independentReview.authorLineage}
+          </span>
         )}
       </div>
       <div className="trust-fact">
-        <span className="label">Critic</span>
+        <span className="label">{t`Critic`}</span>
         <strong>
           {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.critic)}
         </strong>
         {recorded?.criticEffort === undefined ? null : (
-          <span>{effortDisplayName(recorded.criticEffort)} reasoning</span>
+          <span>
+            {effortDisplayName(recorded.criticEffort)} {t`reasoning`}
+          </span>
         )}
         {state.providerExposure.independentReview === null ? null : (
-          <span>claimed lineage {state.providerExposure.independentReview.criticLineage}</span>
+          <span>
+            {t`claimed lineage`} {state.providerExposure.independentReview.criticLineage}
+          </span>
         )}
       </div>
       {configuredDiffers ? (
         <p className="setup-note">
-          New runs use: {configuredAuthor.model} → {configuredCritic.model}
+          {t`New runs use:`} {configuredAuthor.model} → {configuredCritic.model}
         </p>
       ) : null}
       {/* A shared lineage is a warning, so the side panel shows it instead (RunTrustWarning). */}
       {independence.tone === "shared" ? null : <IndependenceBadge summary={independence} />}
       <div className="trust-fact">
-        <span className="label">Data policy</span>
+        <span className="label">{t`Data policy`}</span>
         <strong>
-          {state.providerExposure.transmissionAllowed ? "Transmission approved" : "Local only"}
+          {state.providerExposure.transmissionAllowed ? t`Transmission approved` : t`Local only`}
         </strong>
         <span>
-          {state.providerExposure.requestedRetention} · sensitive material{" "}
-          {state.providerExposure.sensitiveData ? "present" : "absent"}
+          {state.providerExposure.requestedRetention} {t`· sensitive material`}{" "}
+          {state.providerExposure.sensitiveData ? t`present` : t`absent`}
         </span>
       </div>
       {state.writingPolicy === undefined || state.writingPolicy === null ? null : (
         <div className="trust-fact">
-          <span className="label">Writing policy</span>
+          <span className="label">{t`Writing policy`}</span>
           <strong>{state.writingPolicy.effective.version}</strong>
           <span>
-            Effective checksum {policyChecksumLabel(state.writingPolicy.effective.checksum)}
+            {t`Effective checksum`} {policyChecksumLabel(state.writingPolicy.effective.checksum)}
           </span>
           <span>{policyLineageLabel(state.writingPolicy)}</span>
         </div>
       )}
       <div className="trust-fact">
-        <span className="label">Evidence</span>
+        <span className="label">{t`Evidence`}</span>
         {evidenceMode?.kind === "full-source" ? (
           <>
             <strong className="numeric">{evidenceMode.panelValue}</strong>
@@ -342,23 +351,23 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           // Setup has not searched the evidence yet, so there are no excerpt counts to show.
           <>
             <strong className="numeric">
-              {state.setup.evidenceSourceCount} source
-              {state.setup.evidenceSourceCount === 1 ? "" : "s"}
+              {state.setup.evidenceSourceCount} {t`source`}
+              {state.setup.evidenceSourceCount === 1 ? "" : t`s`}
             </strong>
             <span>{notIndexedRetrievalText(state)}</span>
           </>
         ) : (
           <>
             <strong className="numeric">
-              {state.setup.selectedEvidenceChunkCount} excerpt
-              {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
+              {state.setup.selectedEvidenceChunkCount} {t`excerpt`}
+              {state.setup.selectedEvidenceChunkCount === 1 ? "" : t`s`}
             </strong>
             {evidenceMode?.kind === "fallback" ? (
               <span>{evidenceMode.panelDetail}</span>
             ) : (
               <span>
-                from {state.setup.selectedEvidenceSourceCount} source
-                {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
+                {t`from`} {state.setup.selectedEvidenceSourceCount} {t`source`}
+                {state.setup.selectedEvidenceSourceCount === 1 ? "" : t`s`}
               </span>
             )}
           </>
@@ -366,7 +375,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
       </div>
       {authorInput !== undefined && (
         <div className="trust-fact author-input-fact">
-          <span className="label">Author input</span>
+          <span className="label">{t`Author input`}</span>
           <strong className="numeric">{authorInput.value}</strong>
           <span>{authorInput.detail}</span>
           {authorInput.gapSummary !== undefined && (
@@ -381,7 +390,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           )}
           {authorInput.direction !== undefined && (
             <p className="author-input-direction">
-              <span className="label">Your directions for this round</span>
+              <span className="label">{t`Your directions for this round`}</span>
               <q>{authorInput.direction.text}</q>
               <time dateTime={authorInput.direction.createdAt}>
                 {formatDirectionTime(authorInput.direction.createdAt)}
@@ -392,34 +401,35 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
       )}
       {applicationPlan !== undefined && (
         <div className="trust-fact application-plan-fact">
-          <span className="label">Application plan</span>
+          <span className="label">{t`Application plan`}</span>
           <span>{applicationPlan.reviewNote}</span>
-          <ol className="application-plan-themes" aria-label="central themes">
+          <ol className="application-plan-themes" aria-label={t`central themes`}>
             {applicationPlan.themes.map((theme) => (
               <li key={theme.title}>
                 <strong>{theme.title}</strong> <span>{theme.rationale}</span>{" "}
                 <span className="numeric">
-                  {theme.proofCount} supporting accomplishment{theme.proofCount === 1 ? "" : "s"}
+                  {theme.proofCount} {t`supporting accomplishment`}
+                  {theme.proofCount === 1 ? "" : t`s`}
                 </span>
               </li>
             ))}
           </ol>
           <p className="application-plan-leads">
-            <span className="label">What leads</span>
+            <span className="label">{t`What leads`}</span>
             <span>{applicationPlan.summaryAngle}</span>
           </p>
-          <ul className="application-plan-core-areas" aria-label="core areas">
+          <ul className="application-plan-core-areas" aria-label={t`core areas`}>
             {applicationPlan.coreAreas.map((area) => (
               <li key={area}>{area}</li>
             ))}
           </ul>
           {applicationPlan.cuts.length > 0 && (
             <div className="application-plan-cuts">
-              <span className="label">What is cut</span>
+              <span className="label">{t`What is cut`}</span>
               <ul>
                 {applicationPlan.cuts.map((cut) => (
                   <li key={`${cut.action}:${cut.target}`}>
-                    {cut.action === "drop" ? "Drop" : "Compress"}: {cut.target} — {cut.reason}
+                    {cut.action === "drop" ? t`Drop` : t`Compress`}: {cut.target} — {cut.reason}
                   </li>
                 ))}
               </ul>
@@ -427,7 +437,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           )}
           {applicationPlan.gaps.length > 0 && (
             <div className="application-plan-gaps">
-              <span className="label">Gaps: central themes your evidence does not support</span>
+              <span className="label">{t`Gaps: central themes your evidence does not support`}</span>
               <ul>
                 {applicationPlan.gaps.map((gap) => (
                   <li key={gap.title}>
@@ -439,7 +449,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           )}
           {applicationPlan.reviewPoints.length > 0 && (
             <details className="application-plan-review">
-              <summary>What the critic asked to change</summary>
+              <summary>{t`What the critic asked to change`}</summary>
               <ul>
                 {applicationPlan.reviewPoints.map((point) => (
                   <li key={point}>{point}</li>
@@ -478,7 +488,7 @@ export function RunDetailsButton({
       title={summary}
       onClick={onOpen}
     >
-      <span className="run-details-button-label">Run details</span>
+      <span className="run-details-button-label">{t`Run details`}</span>
       <span className="run-details-button-summary">{summary}</span>
     </button>
   );
@@ -546,16 +556,18 @@ export function RunDetailsDrawer({
         ref={drawerRef}
       >
         <div className="run-details-head">
-          <h2 id={headingId}>Run details</h2>
-          <button className="button button-quiet" type="button" onClick={onClose}>
-            Close
-          </button>
+          <h2 id={headingId}>{t`Run details`}</h2>
+          <button
+            className="button button-quiet"
+            type="button"
+            onClick={onClose}
+          >{t`Close`}</button>
         </div>
         <div className="run-details-body">
-          <section className="run-details-run" aria-label="run history">
+          <section className="run-details-run" aria-label={t`run history`}>
             <div className="section-heading compact">
               <div>
-                <p className="eyebrow">{runFinished ? "Run history" : "Run progress"}</p>
+                <p className="eyebrow">{runFinished ? t`Run history` : t`Run progress`}</p>
                 <h3>{runFinished ? finishedRunTitle(state) : describeState(state.state)}</h3>
               </div>
               {startable ? (
@@ -565,7 +577,7 @@ export function RunDetailsDrawer({
                   disabled={start.disabled}
                   onClick={start.onStart}
                 >
-                  {start.pending ? "Starting new review…" : "Start a new review"}
+                  {start.pending ? t`Starting new review…` : t`Start a new review`}
                 </button>
               ) : null}
             </div>
@@ -574,10 +586,7 @@ export function RunDetailsDrawer({
                 {start.blockedReason}
               </p>
             ) : runFinished ? (
-              <p className="setup-note">
-                A new review adds another run with the models set for new runs. This run, its
-                approval and its export are kept.
-              </p>
+              <p className="setup-note">{t`A new review adds another run with the models set for new runs. This run, its approval and its export are kept.`}</p>
             ) : null}
             {stopReason === null ? null : (
               <p className="setup-note" role="status">
@@ -587,7 +596,7 @@ export function RunDetailsDrawer({
             {runFinished || runInProgress ? null : autopilot}
             {/* While the run executes, its progress and timeline are in the side panel. */}
             {runInProgress ? (
-              <p className="setup-note">The run's progress is in the side panel while it runs.</p>
+              <p className="setup-note">{t`The run's progress is in the side panel while it runs.`}</p>
             ) : (
               <RunTimeline events={state.events} describeState={describeState} />
             )}

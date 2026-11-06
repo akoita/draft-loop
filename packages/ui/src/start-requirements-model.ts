@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { OpportunityLatestBrief } from "./bridge.js";
 
 /** The reviewed brief a run would start from: the latest version, reviewed and selected. */
@@ -64,7 +65,7 @@ export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelecti
     selection.responsibilityCount === 0
       ? ""
       : ` · ${plural(selection.responsibilityCount, "responsibility", "responsibilities")}`;
-  return `Using reviewed requirements: brief v${selection.version} · ${plural(selection.requirementCount, "requirement")} · ${selection.criticalCount} critical${responsibilities}`;
+  return t`Using reviewed requirements: brief v${selection.version} · ${plural(selection.requirementCount, "requirement")} · ${selection.criticalCount} critical${responsibilities}`;
 }
 
 export const rawJobDescriptionLabel =
@@ -185,7 +186,7 @@ export function requirementRefusalAction(
 
 /** "Requirements brief v2 (draft)" for the setup card. */
 export function latestBriefTitle(latest: OpportunityLatestBrief): string {
-  return `Requirements brief v${latest.version} (${latest.status})`;
+  return t`Requirements brief v${latest.version} (${latest.status})`;
 }
 
 /** What the person can do with the latest brief, stated for the setup card. */

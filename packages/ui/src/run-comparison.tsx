@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Two runs of one application side by side, opened from the run switcher's "Compare with…".
  *
@@ -132,15 +133,20 @@ function SideHeading({
     <div className="pane-heading run-comparison-heading">
       <span className="run-comparison-heading-title" id={id}>
         <strong>{facts.label}</strong>
-        {side.open ? <span className="run-comparison-tag">open run</span> : null}
-        {facts.latest ? <span className="run-switcher-latest">latest</span> : null}
-        {facts.chosen ? <span className="run-switcher-chosen">chosen</span> : null}
+        {side.open ? <span className="run-comparison-tag">{t`open run`}</span> : null}
+        {facts.latest ? <span className="run-switcher-latest">{t`latest`}</span> : null}
+        {facts.chosen ? <span className="run-switcher-chosen">{t`chosen`}</span> : null}
       </span>
       <span className="run-comparison-facts">
         <span className="run-switcher-models">{facts.models}</span>
         <span>{facts.round}</span>
         <span>{facts.status}</span>
-        {side.draft.status === "loaded" ? <span>v{side.draft.artifact.version}</span> : null}
+        {side.draft.status === "loaded" ? (
+          <span>
+            {t`v`}
+            {side.draft.artifact.version}
+          </span>
+        ) : null}
       </span>
       {offered ? (
         <RunDraftChoice runId={facts.runId} label={facts.label} onChoose={onChooseRun} />
@@ -153,14 +159,14 @@ function DraftUnavailable({ side }: { readonly side: ComparisonSide }): JSX.Elem
   if (side.draft.status === "loading") {
     return (
       <p className="empty-state" role="status">
-        Reading the draft of {side.facts.label}…
+        {t`Reading the draft of`} {side.facts.label}…
       </p>
     );
   }
   if (side.draft.status === "failed") {
     return (
       <p className="warning-copy" role="alert">
-        {side.facts.label} could not be read for comparison: {side.draft.message}
+        {side.facts.label} {t`could not be read for comparison:`} {side.draft.message}
       </p>
     );
   }
@@ -227,13 +233,13 @@ export function RunComparisonFactsTable({
   readonly facts: RunComparisonFacts;
 }): JSX.Element {
   return (
-    <section className="run-comparison-summary" aria-label="What each run recorded">
+    <section className="run-comparison-summary" aria-label={t`What each run recorded`}>
       <table className="run-comparison-table">
-        <caption className="subtle">Each value is what that run recorded.</caption>
+        <caption className="subtle">{t`Each value is what that run recorded.`}</caption>
         <thead>
           <tr>
             <th scope="col">
-              <span className="sr-only">Fact</span>
+              <span className="sr-only">{t`Fact`}</span>
             </th>
             <th scope="col">{facts.leftLabel}</th>
             <th scope="col">{facts.rightLabel}</th>
@@ -255,7 +261,7 @@ export function RunComparisonFactsTable({
         </tbody>
       </table>
       <div className="run-comparison-inputs">
-        <h3>Input differences</h3>
+        <h3>{t`Input differences`}</h3>
         <ul>
           {facts.inputs.map((input) => (
             <li key={input.key} data-input={input.key} data-status={input.status}>
@@ -281,26 +287,29 @@ function ExportStatusLine({ status }: { readonly status: ExportStatus }): JSX.El
       return null;
     case "saving":
       return (
-        <p className="subtle run-comparison-export-status" role="status">
-          Saving the comparison…
-        </p>
+        <p
+          className="subtle run-comparison-export-status"
+          role="status"
+        >{t`Saving the comparison…`}</p>
       );
     case "saved":
       return (
         <p className="subtle run-comparison-export-status" role="status">
-          Comparison saved{status.fileName === null ? "" : ` as ${status.fileName}`}.
+          {t`Comparison saved`}
+          {status.fileName === null ? "" : t` as ${status.fileName}`}.
         </p>
       );
     case "cancelled":
       return (
-        <p className="subtle run-comparison-export-status" role="status">
-          Export cancelled; nothing was saved.
-        </p>
+        <p
+          className="subtle run-comparison-export-status"
+          role="status"
+        >{t`Export cancelled; nothing was saved.`}</p>
       );
     case "failed":
       return (
         <p className="warning-copy run-comparison-export-status" role="alert">
-          The comparison could not be saved: {status.message}
+          {t`The comparison could not be saved:`} {status.message}
         </p>
       );
   }
@@ -374,36 +383,33 @@ export function RunComparisonView({
   };
 
   return (
-    <section className="run-comparison" aria-label="Run comparison">
+    <section className="run-comparison" aria-label={t`Run comparison`}>
       <header className="run-comparison-header">
         <div>
-          <p className="eyebrow">Comparing runs · read-only</p>
+          <p className="eyebrow">{t`Comparing runs · read-only`}</p>
           <h2>
-            {left.facts.label} and {right.facts.label}
+            {left.facts.label} {t`and`} {right.facts.label}
           </h2>
           <p className="subtle run-comparison-legend">
-            {right.facts.label} is marked against {left.facts.label}: struck text is only in{" "}
-            {left.facts.label}, underlined text only in {right.facts.label}.
+            {right.facts.label} {t`is marked against`} {left.facts.label}
+            {t`: struck text is only in`} {left.facts.label}
+            {t`, underlined text only in`} {right.facts.label}.
           </p>
         </div>
         <div className="run-comparison-actions">
           <button
             className="button button-quiet"
             type="button"
-            aria-label={`Swap sides: show ${right.facts.label} on the left`}
+            aria-label={t`Swap sides: show ${right.facts.label} on the left`}
             onClick={onSwap}
-          >
-            Swap sides
-          </button>
+          >{t`Swap sides`}</button>
           {onSaveMarkdown === undefined ? null : (
             <button
               className="button button-quiet"
               type="button"
               disabled={facts === null || exportStatus.kind === "saving"}
               onClick={exportComparison}
-            >
-              Export comparison
-            </button>
+            >{t`Export comparison`}</button>
           )}
           <button
             className="button button-outline"
@@ -411,9 +417,7 @@ export function RunComparisonView({
             ref={closeRef}
             aria-keyshortcuts="Escape"
             onClick={onClose}
-          >
-            Close comparison
-          </button>
+          >{t`Close comparison`}</button>
         </div>
       </header>
       <ExportStatusLine status={exportStatus} />

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ModelProfileSupportResult } from "./bridge.js";
 import {
   modelProfileEntryForReference,
@@ -29,37 +30,38 @@ export function ProfileDetails({
       </strong>
       <dl>
         <div>
-          <dt>Provider and model</dt>
+          <dt>{t`Provider and model`}</dt>
           <dd>
             {profile.provider}/{profile.modelId}
           </dd>
         </div>
         <div>
-          <dt>Tier and role</dt>
+          <dt>{t`Tier and role`}</dt>
           <dd>
             {profile.tier} · {profile.roles.join(", ")}
           </dd>
         </div>
         <div>
-          <dt>Runtime controls</dt>
+          <dt>{t`Runtime controls`}</dt>
           <dd>
-            effort {profile.runtime.effort}; output {profile.runtime.maxOutputTokens} tokens;
-            thinking {thinkingDescription}
+            {t`effort`} {profile.runtime.effort}
+            {t`; output`} {profile.runtime.maxOutputTokens} {t`tokens; thinking`}{" "}
+            {thinkingDescription}
           </dd>
         </div>
         <div>
-          <dt>Route support</dt>
+          <dt>{t`Route support`}</dt>
           <dd>
             {supported === undefined
-              ? "Not checked"
+              ? t`Not checked`
               : supported
-                ? "Supported with the configured authentication route"
-                : "Unsupported with the configured authentication route"}
+                ? t`Supported with the configured authentication route`
+                : t`Unsupported with the configured authentication route`}
           </dd>
         </div>
         <div>
-          <dt>Validation and availability</dt>
-          <dd>Quality unvalidated; account availability unchecked</dd>
+          <dt>{t`Validation and availability`}</dt>
+          <dd>{t`Quality unvalidated; account availability unchecked`}</dd>
         </div>
       </dl>
     </div>

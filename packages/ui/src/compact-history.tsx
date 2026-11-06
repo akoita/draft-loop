@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { type RefObject, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WorkspaceCompactHistoryResult } from "./bridge.js";
@@ -42,20 +43,10 @@ export function CompactHistoryConfirmation({
         aria-describedby="compact-history-copy"
         ref={dialogRef}
       >
-        <h2 id="compact-history-title">Compact run history?</h2>
+        <h2 id="compact-history-title">{t`Compact run history?`}</h2>
         <div id="compact-history-copy">
-          <p className="modal-copy">
-            This rewrites the run history stored with this workspace so it takes less space. Each
-            draft and step is stored once instead of being copied again for every step of a run.
-            Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and
-            checked.
-          </p>
-          <p className="modal-copy">
-            A full backup of the current history is kept beside it, so the old history is not lost.
-            The backup needs as much disk space as the history does now; delete it once you are
-            satisfied. Compacting can take a minute on a large history and refuses while a run is
-            working. Nothing is sent anywhere.
-          </p>
+          <p className="modal-copy">{t`This rewrites the run history stored with this workspace so it takes less space. Each draft and step is stored once instead of being copied again for every step of a run. Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and checked.`}</p>
+          <p className="modal-copy">{t`A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere.`}</p>
         </div>
         {errorMessage === null ? null : (
           <p className="setup-blocker" role="alert">
@@ -68,11 +59,9 @@ export function CompactHistoryConfirmation({
             type="button"
             disabled={working}
             onClick={onCancel}
-          >
-            Cancel
-          </button>
+          >{t`Cancel`}</button>
           <button className="button" type="button" disabled={working} onClick={onConfirm}>
-            {working ? "Compacting…" : "Compact run history"}
+            {working ? t`Compacting…` : t`Compact run history`}
           </button>
         </div>
       </div>
@@ -133,9 +122,7 @@ export function CompactHistoryAction({
           setErrorMessage(null);
           setOpen(true);
         }}
-      >
-        Compact run history
-      </button>
+      >{t`Compact run history`}</button>
       {result === null ? null : (
         <p className="home-card-copy" role="status">
           {compactHistoryResultText(result)}

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { DesktopReviewState } from "./model.js";
 
 /** The next-action line above the draft: a short label and what it means for the person. */
@@ -40,7 +41,7 @@ export function canStartNewReview(state: Pick<DesktopReviewState, "state">): boo
 
 /** The run panel's title for a finished run. */
 export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): string {
-  return state.state === "exported" ? "Done · approved and exported" : "Done · approved";
+  return state.state === "exported" ? t`Done · approved and exported` : t`Done · approved`;
 }
 
 /** What the running review is doing, e.g. "The author is revising version 1 for round 2." */
@@ -56,12 +57,12 @@ export function runActivity(state: RunStatusInput): string {
           : null);
   const version = state.artifact.version;
   return step === "author"
-    ? "The author is writing the draft."
+    ? t`The author is writing the draft.`
     : step === "critic"
-      ? `The critic is checking version ${version}.`
+      ? t`The critic is checking version ${version}.`
       : step === "revision"
-        ? `The author is revising version ${version} for round ${state.round}.`
-        : "The review is running.";
+        ? t`The author is revising version ${version} for round ${state.round}.`
+        : t`The review is running.`;
 }
 
 /** What the running review is doing, and when it will need the person. */
@@ -69,35 +70,32 @@ export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
   const doing = runActivity(state);
   const until =
     state.setup.autopilot === true
-      ? "Autopilot keeps going until the draft is ready, a claim needs your call, or the round limit is reached."
-      : "The review pauses here when it needs your decision.";
+      ? t`Autopilot keeps going until the draft is ready, a claim needs your call, or the round limit is reached.`
+      : t`The review pauses here when it needs your decision.`;
   return {
-    label: "Review in progress · nothing to do yet",
+    label: t`Review in progress · nothing to do yet`,
     detail: `${doing} ${until} Approval and export open after that.`,
   };
 }
 
 /** Why approval waits when the run has stopped without a critique of the current draft. */
 export function uncritiquedStatus(state: RunStatusInput): ReviewStatusLine {
-  const label = `Version ${state.artifact.version} has not been critiqued yet`;
+  const label = t`Version ${state.artifact.version} has not been critiqued yet`;
   switch (state.state) {
     case "paused":
       return {
         label,
-        detail:
-          "Resume the review so the critic can check it. Approval and export need a finished critique.",
+        detail: t`Resume the review so the critic can check it. Approval and export need a finished critique.`,
       };
     case "stopped":
       return {
         label,
-        detail:
-          "The review stopped before the critic checked it. Start a new review to get a critiqued draft you can approve or export.",
+        detail: t`The review stopped before the critic checked it. Start a new review to get a critiqued draft you can approve or export.`,
       };
     default:
       return {
         label,
-        detail:
-          "The critic did not finish checking it. Resume or retry the review; approval and export need a finished critique.",
+        detail: t`The critic did not finish checking it. Resume or retry the review; approval and export need a finished critique.`,
       };
   }
 }
@@ -108,6 +106,6 @@ export function uncritiquedStatus(state: RunStatusInput): ReviewStatusLine {
  */
 export function notIndexedRetrievalText(state: Pick<DesktopReviewState, "state">): string {
   return state.state === "collecting"
-    ? "Evidence will be indexed when the review starts"
-    : "Your career evidence is indexed and searched as the review runs";
+    ? t`Evidence will be indexed when the review starts`
+    : t`Your career evidence is indexed and searched as the review runs`;
 }

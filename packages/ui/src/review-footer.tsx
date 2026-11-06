@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The review's footer: the approval gate in one place, always at the window's bottom edge.
  *
@@ -357,10 +358,10 @@ export function ApprovalOverrideEditor({ override }: { readonly override: Approv
     <section
       className="override-editor footer-override"
       id={approvalOverrideFormId}
-      aria-label="Approve past final CV checks"
+      aria-label={t`Approve past final CV checks`}
     >
       <label className="rationale-input-label">
-        <span>Reason for approving anyway (required)</span>
+        <span>{t`Reason for approving anyway (required)`}</span>
         <input
           className="rationale-input"
           type="text"
@@ -369,7 +370,7 @@ export function ApprovalOverrideEditor({ override }: { readonly override: Approv
           disabled={override.disabled}
           onChange={(event) => override.onReasonChange(event.target.value)}
           onKeyDown={submitOnEnter(submit)}
-          aria-label="Reason for approving past final CV checks"
+          aria-label={t`Reason for approving past final CV checks`}
         />
       </label>
       <div className="override-editor-actions">
@@ -377,17 +378,13 @@ export function ApprovalOverrideEditor({ override }: { readonly override: Approv
           className="button button-quiet"
           type="button"
           onClick={() => override.onOpenChange(false)}
-        >
-          Cancel
-        </button>
+        >{t`Cancel`}</button>
         <button
           className="button button-primary"
           type="button"
           disabled={override.disabled || override.reason.trim() === ""}
           onClick={submit}
-        >
-          Approve with override
-        </button>
+        >{t`Approve with override`}</button>
       </div>
     </section>
   );
@@ -453,7 +450,7 @@ export function ReviewFooter({
       </div>
     );
   return (
-    <section className="gate-action-bar" aria-label="approval and export" ref={barRef}>
+    <section className="gate-action-bar" aria-label={t`approval and export`} ref={barRef}>
       <p
         id={approvalBlockerId}
         className={`gate-blocker gate-blocker-${blocker.tone}`}
@@ -470,7 +467,7 @@ export function ReviewFooter({
             disabled={readOnly || recovery.disabled}
             onClick={recovery.onRecover}
           >
-            Return to reviewed Round {recovery.round}
+            {t`Return to reviewed Round`} {recovery.round}
           </button>
         </div>
       )}
@@ -482,7 +479,7 @@ export function ReviewFooter({
       )}
       <fieldset
         className="gate-actions"
-        aria-label="approval actions"
+        aria-label={t`approval actions`}
         hidden={readOnly || runningRound !== null}
       >
         {runningRound === null ? errorBanner : null}
@@ -493,11 +490,11 @@ export function ReviewFooter({
                 className="button button-primary"
                 type="button"
                 aria-keyshortcuts="Alt+A"
-                title="Approve artifact (Alt+A)"
+                title={t`Approve artifact (Alt+A)`}
                 disabled={approve.disabled}
                 onClick={approve.onApprove}
               >
-                Approve artifact
+                {t`Approve artifact`}
                 <kbd>Alt+A</kbd>
               </button>
               {override === null ? null : (
@@ -508,9 +505,7 @@ export function ReviewFooter({
                   aria-controls={approvalOverrideFormId}
                   disabled={override.disabled}
                   onClick={() => override.onOpenChange(!override.open)}
-                >
-                  Approve with override…
-                </button>
+                >{t`Approve with override…`}</button>
               )}
             </div>
             {override === null || !override.open ? null : (
@@ -519,14 +514,14 @@ export function ReviewFooter({
             <div className="revision-request">
               {revision.unavailableReason == null ? (
                 <label className="revision-direction">
-                  <span>Directions for the author (optional)</span>
+                  <span>{t`Directions for the author (optional)`}</span>
                   <textarea
                     className="revision-direction-input"
                     rows={2}
                     maxLength={maximumRevisionDirectionLength}
                     value={revision.direction}
                     disabled={revision.disabled || revision.directionsUnavailable === true}
-                    placeholder="e.g. lead with tokenisation; drop certification dates"
+                    placeholder={t`e.g. lead with tokenisation; drop certification dates`}
                     onChange={(event) => revision.onDirectionChange(event.target.value)}
                   />
                 </label>
@@ -537,7 +532,7 @@ export function ReviewFooter({
                     ? revision.unavailableReason
                     : revision.directionsUnavailable === true
                       ? revisionDirectionsUnavailableNote
-                      : `Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
+                      : t`Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
                           revision.direction.length === 0
                             ? ""
                             : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
@@ -547,11 +542,11 @@ export function ReviewFooter({
                   className="button button-quiet"
                   type="button"
                   aria-keyshortcuts="Alt+R"
-                  title="Request revision (Alt+R)"
+                  title={t`Request revision (Alt+R)`}
                   disabled={revision.disabled}
                   onClick={revision.onRequest}
                 >
-                  Request revision
+                  {t`Request revision`}
                   <kbd>Alt+R</kbd>
                 </button>
               </div>
@@ -561,7 +556,7 @@ export function ReviewFooter({
         {exportStage ? (
           <>
             <fieldset className="export-templates" disabled={exportAction.disabled}>
-              <legend>Template</legend>
+              <legend>{t`Template`}</legend>
               {exportTemplates.map((template) => (
                 <label className="export-template-option" key={template}>
                   <input
@@ -581,11 +576,11 @@ export function ReviewFooter({
             </fieldset>
             <div className="export-action">
               <label className="export-format">
-                <span className="sr-only">Export format</span>
+                <span className="sr-only">{t`Export format`}</span>
                 <select
                   value={exportAction.format}
                   disabled={exportAction.disabled}
-                  aria-label="Export format"
+                  aria-label={t`Export format`}
                   onChange={(event) => {
                     const chosen = exportFormats.find((format) => format === event.target.value);
                     if (chosen !== undefined) exportAction.onFormatChange(chosen);
@@ -604,17 +599,17 @@ export function ReviewFooter({
                 aria-keyshortcuts="Alt+E"
                 title={
                   exportAction.again
-                    ? `Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
-                    : `Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
+                    ? t`Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
+                    : t`Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
                 }
                 disabled={exportAction.disabled}
                 onClick={exportAction.onExport}
               >
                 {exportPending ? (
-                  `Exporting ${exportFormatLabels[exportAction.format]}…`
+                  t`Exporting ${exportFormatLabels[exportAction.format]}…`
                 ) : (
                   <>
-                    {exportAction.again ? "Export again…" : "Export…"}
+                    {exportAction.again ? t`Export again…` : t`Export…`}
                     <kbd>Alt+E</kbd>
                   </>
                 )}
@@ -632,17 +627,17 @@ export function ReviewFooter({
             )}
             {exportAction.pendingSeconds === null ? null : (
               <p className="pending-action-status" role="status" aria-live="polite">
-                Exporting {exportFormatLabels[exportAction.format]}… Elapsed{" "}
-                {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}.{" "}
+                {t`Exporting`} {exportFormatLabels[exportAction.format]}
+                {t`… Elapsed`} {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}.{" "}
                 {exportAction.downloads === true
-                  ? "The file downloads when it is ready."
-                  : "Choose a destination in the Save As dialog; the approved artifact will be written after you confirm."}
+                  ? t`The file downloads when it is ready.`
+                  : t`Choose a destination in the Save As dialog; the approved artifact will be written after you confirm.`}
               </p>
             )}
           </>
         ) : (
           <p className="export-later">
-            <strong>{exportAction.downloads === true ? "Export" : "Export locally"}</strong>
+            <strong>{exportAction.downloads === true ? t`Export` : t`Export locally`}</strong>
             <span>{exportAction.pathLabel}</span>
           </p>
         )}
@@ -656,7 +651,7 @@ export function ReviewFooter({
           if (open !== detailsOpen) onDetailsOpenChange(open);
         }}
       >
-        <summary>Details</summary>
+        <summary>{t`Details`}</summary>
         <div className="gate-details-body">
           <p className="subtle approval-status">{statusLine}</p>
           {detail}
@@ -671,7 +666,7 @@ export function ReviewFooter({
                 </span>
                 <span>
                   {condition.label}
-                  <span className="sr-only">{condition.met ? " — met" : " — not met"}</span>
+                  <span className="sr-only">{condition.met ? t` — met` : t` — not met`}</span>
                 </span>
               </li>
             ))}

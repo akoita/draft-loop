@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useId } from "react";
 
 /**
@@ -26,13 +27,12 @@ export function AutopilotToggle({
           aria-describedby={noteId}
           onChange={(event) => onChange(event.currentTarget.checked)}
         />{" "}
-        Autopilot: run all {maximumRounds} rounds without stopping
+        {t`Autopilot: run all`} {maximumRounds} {t`rounds without stopping`}
       </label>
-      <p className="setup-note" id={noteId}>
-        The author revises from every critic finding on its own. The review pauses early only when
-        the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts
-        your materials. Final approval stays with you.
-      </p>
+      <p
+        className="setup-note"
+        id={noteId}
+      >{t`The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you.`}</p>
     </div>
   );
 }
