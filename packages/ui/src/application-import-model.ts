@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Wording for importing another workspace as an application (ADR 0010). Pure, so every state of
  * the Home action is testable without a DOM.
@@ -27,7 +28,7 @@ export function applicationImportCountsText(counts: ApplicationImportCounts): st
     plural(counts.briefVersions, "brief version", "brief versions"),
     plural(counts.exports, "export", "exports"),
   ];
-  const text = `Imported ${parts.join(", ")}.`;
+  const text = t`Imported ${parts.join(", ")}.`;
   if (counts.skippedExports === 0) return text;
   const skipped =
     counts.skippedExports === 1
@@ -42,7 +43,7 @@ export function applicationImportSuccessNotice(
 ): ApplicationImportNotice {
   return {
     kind: "success",
-    message: `Imported "${name}" as an application. ${applicationImportCountsText(counts)}`,
+    message: t`Imported "${name}" as an application. ${applicationImportCountsText(counts)}`,
   };
 }
 

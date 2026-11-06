@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { KeyboardEvent } from "react";
 import { useInlineRename } from "./inline-rename.js";
 import { invalidWorkspaceNameMessage, normalizeWorkspaceDisplayName } from "./workspace-name.js";
@@ -71,8 +72,8 @@ export function WorkspaceTitleView({
           id={renameButtonId}
           className="workspace-title-edit-button"
           type="button"
-          aria-label={`Rename workspace ${name}`}
-          title="Rename"
+          aria-label={t`Rename workspace ${name}`}
+          title={t`Rename`}
           onClick={onStartEditing}
         >
           <PencilIcon />
@@ -102,7 +103,7 @@ export function WorkspaceTitleView({
         value={draft}
         readOnly={busy}
         aria-busy={busy ? true : undefined}
-        aria-label="Workspace name"
+        aria-label={t`Workspace name`}
         aria-invalid={errorMessage === null ? undefined : true}
         aria-describedby={errorMessage === null ? undefined : errorId}
         onChange={(event) => onDraftChange(event.target.value)}

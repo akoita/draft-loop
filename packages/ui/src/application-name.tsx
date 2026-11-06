@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import { normalizeApplicationDisplayName } from "./application-contract.js";
 import {
@@ -53,7 +54,7 @@ export function ApplicationTitle({ name, onRename, editRequest = 0 }: Applicatio
           value={rename.draft}
           readOnly={rename.busy}
           aria-busy={rename.busy ? true : undefined}
-          aria-label="Application name"
+          aria-label={t`Application name`}
           aria-invalid={rename.errorMessage === null ? undefined : true}
           aria-describedby={rename.errorMessage === null ? undefined : titleErrorId}
           onChange={(event) => rename.change(event.target.value)}
@@ -78,8 +79,8 @@ export function ApplicationTitle({ name, onRename, editRequest = 0 }: Applicatio
         id={titleRenameButtonId}
         className="workspace-title-edit-button"
         type="button"
-        aria-label={`Rename application ${name}`}
-        title="Rename"
+        aria-label={t`Rename application ${name}`}
+        title={t`Rename`}
         onClick={() => rename.start()}
       >
         <PencilIcon />
@@ -126,11 +127,8 @@ export function ApplicationNameNudge({
   return (
     <section className="application-name-nudge" aria-labelledby="application-name-nudge-title">
       <div className="application-name-nudge-text">
-        <h2 id="application-name-nudge-title">Name this application</h2>
-        <p>
-          A name such as the role and the company tells it apart on Home once you apply for other
-          roles.
-        </p>
+        <h2 id="application-name-nudge-title">{t`Name this application`}</h2>
+        <p>{t`A name such as the role and the company tells it apart on Home once you apply for other roles.`}</p>
       </div>
       <div className="application-name-nudge-actions">
         {suggestedName === null ? null : (
@@ -140,7 +138,8 @@ export function ApplicationNameNudge({
             disabled={busy}
             onClick={() => store(suggestedName)}
           >
-            Use “{suggestedName}”
+            {t`Use “`}
+            {suggestedName}”
           </button>
         )}
         <button
@@ -149,7 +148,7 @@ export function ApplicationNameNudge({
           disabled={busy}
           onClick={onChooseName}
         >
-          {suggestedName === null ? "Choose a name" : "Choose another name"}
+          {suggestedName === null ? t`Choose a name` : t`Choose another name`}
         </button>
         <button
           className="button button-quiet"
@@ -157,7 +156,8 @@ export function ApplicationNameNudge({
           disabled={busy}
           onClick={() => store(name)}
         >
-          Keep “{name}”
+          {t`Keep “`}
+          {name}”
         </button>
       </div>
       {errorMessage === null ? null : (

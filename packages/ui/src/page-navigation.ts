@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Moving between the pages of an open workspace without passing through Home.
  *
@@ -57,11 +58,11 @@ export function pageErrorAfterMove(
 export function pageLabel(view: WorkspaceView): string {
   switch (view.kind) {
     case "home":
-      return "Home";
+      return t`Home`;
     case "evidence":
-      return "Career evidence";
+      return t`Career evidence`;
     case "profile":
-      return "Career profile";
+      return t`Career profile`;
     case "application":
       return view.name;
   }

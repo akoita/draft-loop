@@ -1,4 +1,5 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
+import { t } from "@lingui/core/macro";
 // English is active before the first render; a host may switch it with ScreensI18nProvider.
 import "./i18n.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -598,13 +599,15 @@ function ModelSideFields({
   const filterNoteId = `setup-model-filter-note-${side}`;
   return (
     <fieldset className="setup-side">
-      <legend>{label} model</legend>
+      <legend>
+        {label} {t`model`}
+      </legend>
       <label className="setup-field">
-        <span>Company</span>
+        <span>{t`Company`}</span>
         <select
           value={company}
           disabled={disabled}
-          aria-label={`${label} company`}
+          aria-label={t`${label} company`}
           onChange={(event) => {
             if (isModelCompany(event.target.value)) onCompanyChange(event.target.value);
           }}
@@ -624,14 +627,14 @@ function ModelSideFields({
       {mode === "list" ? (
         <>
           <label className="setup-field" htmlFor={`setup-model-filter-${side}`}>
-            <span>Filter</span>
+            <span>{t`Filter`}</span>
             <input
               id={`setup-model-filter-${side}`}
               type="text"
               value={filter}
               disabled={disabled}
-              placeholder="part of a model id"
-              aria-label={`Filter ${label} models`}
+              placeholder={t`part of a model id`}
+              aria-label={t`Filter ${label} models`}
               aria-describedby={filterNoteId}
               onChange={(event) => onFilterChange(event.target.value)}
             />
@@ -652,25 +655,25 @@ function ModelSideFields({
           label points at it by id rather than by containment: the association
           has to survive a select becoming a text field. */}
       <label className="setup-field" htmlFor={`setup-model-${side}`}>
-        <span>Model</span>
+        <span>{t`Model`}</span>
         {mode === "list" ? (
           <select
             id={`setup-model-${side}`}
             value={filtered.options.includes(model) ? model : ""}
             disabled={disabled}
-            aria-label={`${label} model`}
+            aria-label={t`${label} model`}
             onChange={(event) => {
               if (event.target.value === otherModelOptionValue) onTypeOwnModel();
               else onModelChange(event.target.value);
             }}
           >
-            <option value="">Choose a model…</option>
+            <option value="">{t`Choose a model…`}</option>
             {filtered.options.map((candidate) => (
               <option key={candidate} value={candidate}>
                 {candidate}
               </option>
             ))}
-            <option value={otherModelOptionValue}>Other model…</option>
+            <option value={otherModelOptionValue}>{t`Other model…`}</option>
           </select>
         ) : (
           <input
@@ -678,8 +681,8 @@ function ModelSideFields({
             type="text"
             value={model}
             disabled={disabled}
-            placeholder="model id"
-            aria-label={`${label} model`}
+            placeholder={t`model id`}
+            aria-label={t`${label} model`}
             {...(fallbackSuggestions ? { list: `setup-model-suggestions-${side}` } : {})}
             onChange={(event) => onModelChange(event.target.value)}
           />
@@ -759,7 +762,7 @@ export function WorkspaceSetupForm({
   return (
     <form
       className="setup-form"
-      aria-label="workspace model selection"
+      aria-label={t`workspace model selection`}
       onSubmit={(event) => {
         event.preventDefault();
         if (blocker !== null || busy) return;
@@ -770,17 +773,17 @@ export function WorkspaceSetupForm({
       {editMode ? null : (
         <>
           <label className="setup-field">
-            <span>Workspace name</span>
+            <span>{t`Workspace name`}</span>
             <input
               type="text"
               value={draft.name}
               disabled={busy}
-              aria-label="Workspace name"
+              aria-label={t`Workspace name`}
               onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
             />
           </label>
           <label className="setup-field setup-round-limit">
-            <span>Maximum review rounds</span>
+            <span>{t`Maximum review rounds`}</span>
             <input
               type="number"
               min={1}
@@ -788,7 +791,7 @@ export function WorkspaceSetupForm({
               step={1}
               value={draft.maxRounds}
               disabled={busy}
-              aria-label="Maximum review rounds"
+              aria-label={t`Maximum review rounds`}
               onChange={(event) =>
                 onDraftChange({
                   ...draft,
@@ -796,11 +799,7 @@ export function WorkspaceSetupForm({
                 })
               }
             />
-            <span className="setup-note">
-              The author and critic stop after this many rounds and return the last fully reviewed
-              draft to you. More rounds can improve convergence but use more time and provider
-              budget.
-            </span>
+            <span className="setup-note">{t`The author and critic stop after this many rounds and return the last fully reviewed draft to you. More rounds can improve convergence but use more time and provider budget.`}</span>
           </label>
         </>
       )}
@@ -810,13 +809,7 @@ export function WorkspaceSetupForm({
         </p>
       )}
       {showSuggestionNotice("author") || showSuggestionNotice("critic") ? (
-        <p className="setup-note model-suggestion-note">
-          Suggestions show only the tier and role registered in DraftLoop; they do not establish
-          account or plan availability or CV quality. IDs are not guaranteed to work with your
-          account, plan, or CLI version. You may type any exact model id. Catalog entries show their
-          review dates; CLI-specific live availability has not been reverified. Provider
-          documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral.
-        </p>
+        <p className="setup-note model-suggestion-note">{t`Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral.`}</p>
       ) : null}
       <div className="setup-sides">
         <ModelSideFields
@@ -863,19 +856,16 @@ export function WorkspaceSetupForm({
       <LocalWriterWarning authorCompany={draft.authorCompany} />
       {requiresLocalEndpoint(draft) ? (
         <label className="setup-field">
-          <span>Local model server</span>
+          <span>{t`Local model server`}</span>
           <input
             type="url"
             value={draft.localEndpoint}
             disabled={busy}
-            placeholder="http://127.0.0.1:11434/v1"
-            aria-label="Local model server address"
+            placeholder={t`http://127.0.0.1:11434/v1`}
+            aria-label={t`Local model server address`}
             onChange={(event) => onDraftChange({ ...draft, localEndpoint: event.target.value })}
           />
-          <span className="setup-note">
-            A local model must be served from this machine, so only a loopback address is accepted,
-            with no username or password. Leave this empty to use the workspace default.
-          </span>
+          <span className="setup-note">{t`A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default.`}</span>
         </label>
       ) : null}
       <div
@@ -893,18 +883,16 @@ export function WorkspaceSetupForm({
       </div>
       {blocked || draft.independenceOverrideRationale !== "" ? (
         <label className="setup-field">
-          <span>Why is one lineage on both sides acceptable? (required)</span>
+          <span>{t`Why is one lineage on both sides acceptable? (required)`}</span>
           <textarea
             value={draft.independenceOverrideRationale}
             disabled={busy}
-            aria-label="Independence override rationale"
+            aria-label={t`Independence override rationale`}
             onChange={(event) =>
               onDraftChange({ ...draft, independenceOverrideRationale: event.target.value })
             }
           />
-          <span className="setup-note">
-            This is recorded with every run of the workspace and shown at the approval gate.
-          </span>
+          <span className="setup-note">{t`This is recorded with every run of the workspace and shown at the approval gate.`}</span>
         </label>
       ) : null}
       {blocker === null ? null : <p className="setup-note setup-blocker">{blocker}</p>}
@@ -916,7 +904,7 @@ export function WorkspaceSetupForm({
             busy || blocker !== null || (editMode ? onSave === undefined : onCreate === undefined)
           }
         >
-          {editMode ? "Save models" : "Create workspace"}
+          {editMode ? t`Save models` : t`Create workspace`}
         </button>
         {editMode ? (
           <button
@@ -924,9 +912,7 @@ export function WorkspaceSetupForm({
             type="button"
             disabled={busy || onCancel === undefined}
             onClick={() => onCancel?.()}
-          >
-            Cancel
-          </button>
+          >{t`Cancel`}</button>
         ) : (
           <>
             <button
@@ -934,17 +920,13 @@ export function WorkspaceSetupForm({
               type="button"
               disabled={busy || onCreateDemo === undefined}
               onClick={() => onCreateDemo?.()}
-            >
-              Try demo workspace
-            </button>
+            >{t`Try demo workspace`}</button>
             <button
               className="button button-quiet"
               type="button"
               disabled={busy || onOpen === undefined}
               onClick={() => onOpen?.()}
-            >
-              Open workspace
-            </button>
+            >{t`Open workspace`}</button>
           </>
         )}
       </div>
@@ -1912,7 +1894,9 @@ export function App({
   const runPairSummary = (current: DesktopReviewState) => (
     <WorkspaceModelSummary
       title={
-        loadedApplicationPair === null ? "Configured model pair" : "Model pair for this application"
+        loadedApplicationPair === null
+          ? t`Configured model pair`
+          : t`Model pair for this application`
       }
       author={current.providerTransmissionPreflight.author}
       critic={current.providerTransmissionPreflight.critic}
@@ -2248,7 +2232,7 @@ export function App({
         <section className="panel boot-panel boot-panel-setup">
           <div className="boot-brand">
             <BrandMark />
-            <span className="brand-name">DraftLoop</span>
+            <span className="brand-name">{t`DraftLoop`}</span>
             <ThemeToggle />
           </div>
           <WorkspaceStartIntro navigation={workspaceSetupVisible} error={error} />
@@ -2319,12 +2303,14 @@ export function App({
         <section className="panel boot-panel boot-panel-quiet">
           <div className="boot-brand">
             <BrandMark />
-            <span className="brand-name">DraftLoop</span>
+            <span className="brand-name">{t`DraftLoop`}</span>
             <ThemeToggle />
           </div>
-          <p className="boot-loading" role="status" aria-live="polite">
-            Loading local review workspace…
-          </p>
+          <p
+            className="boot-loading"
+            role="status"
+            aria-live="polite"
+          >{t`Loading local review workspace…`}</p>
         </section>
       </main>
     );
@@ -2337,17 +2323,17 @@ export function App({
       <section className="panel boot-panel model-editor-panel">
         <div className="boot-brand">
           <BrandMark />
-          <span className="brand-name">DraftLoop</span>
+          <span className="brand-name">{t`DraftLoop`}</span>
           <ThemeToggle />
         </div>
-        <p className="eyebrow">Workspace settings</p>
+        <p className="eyebrow">{t`Workspace settings`}</p>
         <h1>
-          {modelEditorFromCreation ? "Choose models for new runs" : "Change models for new runs"}
+          {modelEditorFromCreation ? t`Choose models for new runs` : t`Change models for new runs`}
         </h1>
         <p>
           {modelEditorFromCreation
-            ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
-            : "Existing run records stay unchanged. New runs will use the saved model pair."}
+            ? t`Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged.`
+            : t`Existing run records stay unchanged. New runs will use the saved model pair.`}
         </p>
         <ModelEditorSummary
           {...workspacePairSides(state, loadedApplicationPair, selectedModelProfiles?.refs ?? null)}
@@ -2363,7 +2349,7 @@ export function App({
           }
         />
         <fieldset className="model-editor-mode">
-          <legend>How to choose models</legend>
+          <legend>{t`How to choose models`}</legend>
           <div className="view-toggle">
             <button
               className="view-toggle-option"
@@ -2371,18 +2357,14 @@ export function App({
               aria-pressed={modelEditorMode === "profiles"}
               disabled={modelSettingsDisabled}
               onClick={() => setModelEditorMode("profiles")}
-            >
-              Presets
-            </button>
+            >{t`Presets`}</button>
             <button
               className="view-toggle-option"
               type="button"
               aria-pressed={modelEditorMode === "custom"}
               disabled={modelSettingsDisabled}
               onClick={() => setModelEditorMode("custom")}
-            >
-              Custom
-            </button>
+            >{t`Custom`}</button>
           </div>
         </fieldset>
         {modelEditorMode === "profiles" &&
@@ -2443,9 +2425,10 @@ export function App({
             }}
           />
         ) : (
-          <p className="setup-blocker" role="alert">
-            Preset selection is unavailable. Choose Custom to edit the current destinations.
-          </p>
+          <p
+            className="setup-blocker"
+            role="alert"
+          >{t`Preset selection is unavailable. Choose Custom to edit the current destinations.`}</p>
         )}
       </section>
     </main>
@@ -2481,7 +2464,7 @@ export function App({
         onClick={openModelSettings}
       >
         <ModelsIcon />
-        Change models
+        {t`Change models`}
       </button>
     );
 
@@ -2976,7 +2959,7 @@ export function App({
           settings={
             <>
               <WorkspaceModelSummary
-                title="Configured model pair"
+                title={t`Configured model pair`}
                 {...workspacePairSides(
                   state,
                   loadedApplicationPair,
@@ -3087,7 +3070,7 @@ export function App({
         <main className="boot-shell">
           <section className="panel boot-panel boot-panel-quiet">
             <p className="boot-loading" role="status" aria-live="polite">
-              Opening {view.name}…
+              {t`Opening`} {view.name}…
             </p>
           </section>
         </main>

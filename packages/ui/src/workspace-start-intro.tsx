@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { DesktopBridgeError } from "./native.js";
 
 /** The host's refusal of `review.load` when no workspace is open yet (electron/host.ts). */
@@ -32,8 +33,8 @@ export function WorkspaceStartIntro({
 }) {
   return (
     <>
-      <p className="eyebrow">{navigation ? "Workspace navigation" : "First run"}</p>
-      <h1>{navigation ? "Open or create a review workspace" : "Set up a review workspace"}</h1>
+      <p className="eyebrow">{navigation ? t`Workspace navigation` : t`First run`}</p>
+      <h1>{navigation ? t`Open or create a review workspace` : t`Set up a review workspace`}</h1>
       <p>{workspaceStartGuidance}</p>
       {error === null ? null : (
         <p className="setup-blocker" role="alert">

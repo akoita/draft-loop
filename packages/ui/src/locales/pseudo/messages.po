@@ -7,8 +7,497 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: pseudo\n"
 
+#: packages/ui/src/app.tsx
+msgid "{label} company"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "{label} model"
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default."
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "A name such as the role and the company tells it apart on Home once you apply for other roles."
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Actions"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Add a CV, portfolio or other source so DraftLoop can quote you accurately."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Add career evidence"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Add or manage documents"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+#: packages/ui/src/home.tsx
+msgid "Application name"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Applications"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Applying for another role? Start a new application. It reuses your career profile and evidence, so you do not generate them again."
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "Archive"
+msgstr ""
+
+#: packages/ui/src/application-archive-model.ts
+msgid "Archived \"{name}\". Show archived applications to restore it."
+msgstr ""
+
+#. placeholder {0}: back.label
+#: packages/ui/src/home.tsx
+msgid "Back to {0}"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home-folders.tsx
+#: packages/ui/src/home.tsx
+#: packages/ui/src/workspace-navigation.tsx
+msgid "Cancel"
+msgstr ""
+
+#: packages/ui/src/page-navigation.ts
+msgid "Career evidence"
+msgstr ""
+
+#: packages/ui/src/page-navigation.ts
+msgid "Career profile"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Change models"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Change models for new runs"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Checking"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Choose a model…"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Choose a name"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Choose another name"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Choose models for new runs"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Clear recent workspaces"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Clear search and filter"
+msgstr ""
+
+#: packages/ui/src/workspace-navigation.tsx
+msgid "Close this workspace?"
+msgstr ""
+
+#: packages/ui/src/workspace-navigation.tsx
+msgid "Close workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Company"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Configured model pair"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Continue where you left off, or pick another workspace. "
+msgstr ""
+
+#: packages/ui/src/workspace-creation.tsx
+#: packages/ui/src/workspace-start.tsx
+msgid "Create a new workspace"
+msgstr ""
+
+#: packages/ui/src/workspace-creation.tsx
+msgid "Create or open a review workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+msgid "Create workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Custom"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home-folders.tsx
+#: packages/ui/src/home.tsx
+msgid "Delete"
+msgstr ""
+
+#: packages/ui/src/application-archive-model.ts
+msgid "Delete \"{name}\"? This cannot be undone."
+msgstr ""
+
+#. placeholder {0}: application.name
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "Delete {0}"
+msgstr ""
+
+#: packages/ui/src/home-folders.tsx
+msgid "Delete folder"
+msgstr ""
+
+#. placeholder {0}: folder.name
+#: packages/ui/src/home-folders.tsx
+msgid "Delete folder {0}"
+msgstr ""
+
+#. placeholder {0}: folder.name
+#: packages/ui/src/home-folder-model.ts
+msgid "Delete the folder “{0}”? {what} No application is deleted."
+msgstr ""
+
+#: packages/ui/src/application-archive-model.ts
+msgid "Deleted \"{name}\"."
+msgstr ""
+
+#: apps/web/src/shared-screens.tsx
+msgid "Dismiss"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Draft"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "DraftLoop"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Empty"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Every application is archived. Start a new application, or restore one below."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Existing run records stay unchanged. New runs will use the saved model pair."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Failed"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Filter"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Filter {label} models"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Filter by status"
+msgstr ""
+
+#: packages/ui/src/workspace-start-intro.tsx
+msgid "First run"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Generate profile"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Generate your career profile once from your career evidence. Every application reuses it."
+msgstr ""
+
+#. placeholder {0}: status.version
+#: packages/ui/src/home-model.ts
+msgid "Generating version {0} saved no facts. Check your career evidence, then try again."
+msgstr ""
+
+#. placeholder {0}: application.suggestedName
+#: packages/ui/src/home.tsx
+msgid "Give it a name you will recognise, such as “{0}”."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Give it a name you will recognise, such as the role and the company."
+msgstr ""
+
+#: packages/ui/src/home-folders.tsx
+msgid "Group applications"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Hide archived"
+msgstr ""
+
+#: packages/ui/src/page-navigation.ts
+msgid "Home"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "How to choose models"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "http://127.0.0.1:11434/v1"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Import from another workspace"
+msgstr ""
+
+#. placeholder {0}: applicationImportCountsText(counts)
+#: packages/ui/src/application-import-model.ts
+msgid "Imported \"{name}\" as an application. {0}"
+msgstr ""
+
+#. placeholder {0}: parts.join(", ")
+#: packages/ui/src/application-import-model.ts
+msgid "Imported {0}."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Importing…"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "in"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Independence override rationale"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid recent workspace data."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid recent workspace id."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid recent workspace input."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid recent workspace result."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid timestamp."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces.ts
+msgid "Invalid workspace name."
+msgstr ""
+
+#: packages/ui/src/home-folder-model.ts
+msgid "It is empty."
+msgstr ""
+
+#: packages/ui/src/home-folder-model.ts
+msgid "Its {held} applications move to No folder."
+msgstr ""
+
+#: packages/ui/src/home-folder-model.ts
+msgid "Its 1 application moves to No folder."
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Keep “"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Last activity"
+msgstr ""
+
+#. placeholder {0}: plural(Math.floor(elapsed / day), "day")
+#. placeholder {0}: plural(Math.floor(elapsed / hour), "hour")
+#. placeholder {0}: plural(Math.floor(elapsed / minute), "minute")
+#: packages/ui/src/home-model.ts
+msgid "Last activity {0} ago"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Last activity just now"
+msgstr ""
+
+#. placeholder {0}: new Date(updatedAt).toISOString().slice(0, 10)
+#: packages/ui/src/home-model.ts
+msgid "Last activity on {0}"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Last activity unknown"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Last opened"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Last used"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Loading applications…"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Loading local review workspace…"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Loading recent workspaces…"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Local model server"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Local model server address"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+msgid "Maximum review rounds"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "model"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Model"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "model id"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Model pair for this application"
+msgstr ""
+
+#. placeholder {0}: application.name
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "More actions for {0}"
+msgstr ""
+
+#. placeholder {0}: folder.name
+#: packages/ui/src/home-folder-model.ts
+msgid "Move to {0}"
+msgstr ""
+
+#. placeholder {0}: application.name
+#. placeholder {1}: folder.name
+#: packages/ui/src/home-folder-model.ts
+msgid "Moved \"{0}\" to {1}."
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Name"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Name it"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Name this application"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Needs attention"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "New application"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "New applications, imports and archiving are available again once the career profile is generated."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "New applications, imports and archiving are available again once the current workspace operation finishes."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "New applications, imports and archiving are available again once the running review stops."
+msgstr ""
+
+#: packages/ui/src/home-folders.tsx
+msgid "New folder"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "No application matches this search or filter."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "No career evidence yet"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "No recent workspaces yet."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "No runs yet"
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
@@ -27,8 +516,246 @@ msgstr ""
 msgid "No such workspace."
 msgstr ""
 
+#: packages/ui/src/home-model.ts
+msgid "None yet"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Not yet generated"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "Open"
+msgstr ""
+
+#. placeholder {0}: application.name
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "Open {0}"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Open a local workspace again. "
+msgstr ""
+
+#: packages/ui/src/workspace-recovery.tsx
+msgid "Open a workspace to continue"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Open career evidence to choose or repair it."
+msgstr ""
+
+#: packages/ui/src/workspace-start-intro.tsx
+msgid "Open or create a review workspace"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Open profile"
+msgstr ""
+
+#: packages/ui/src/workspace-activity.tsx
+msgid "Open review"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+#: packages/ui/src/workspace-recovery.tsx
+msgid "Open workspace"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Opening"
+msgstr ""
+
+#: packages/ui/src/workspace-recovery.tsx
+msgid "Opening a workspace is unavailable in this host."
+msgstr ""
+
+#: packages/ui/src/workspace-recovery.tsx
+msgid "Opening workspace…"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Original workspace job"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Other model…"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "part of a model id"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Preset selection is unavailable. Choose Custom to edit the current destinations."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Presets"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Reading career evidence…"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Reading the saved career profile…"
+msgstr ""
+
+#: apps/web/src/workspace.tsx
+msgid "Reading your workspace…"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Ready"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Recent workspaces"
+msgstr ""
+
+#: apps/web/src/new-release.tsx
+msgid "Reload"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Remove"
+msgstr ""
+
+#. placeholder {0}: workspace.name
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Remove {0} from recent workspaces"
+msgstr ""
+
+#: packages/ui/src/home-folder-model.ts
+msgid "Remove from folder"
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Remove from this list. Workspace files are kept."
+msgstr ""
+
+#: packages/ui/src/recent-workspaces-ui.tsx
+msgid "Removing entries from this list never deletes workspace files."
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+#: packages/ui/src/home-folders.tsx
+#: packages/ui/src/home.tsx
+#: packages/ui/src/workspace-title.tsx
+msgid "Rename"
+msgstr ""
+
+#. placeholder {0}: application.name
+#: packages/ui/src/home.tsx
+msgid "Rename {0}"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Rename application {name}"
+msgstr ""
+
+#. placeholder {0}: folder.name
+#: packages/ui/src/home-folders.tsx
+msgid "Rename folder {0}"
+msgstr ""
+
+#: packages/ui/src/workspace-title.tsx
+msgid "Rename workspace {name}"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+#: packages/ui/src/home.tsx
+msgid "Restore"
+msgstr ""
+
+#: packages/ui/src/application-archive-model.ts
+msgid "Restored \"{name}\"."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Review facts"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Review profile"
+msgstr ""
+
+#: packages/ui/src/workspace-activity.tsx
+msgid "Review running"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Reviewed"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Runs"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Save models"
+msgstr ""
+
+#: packages/ui/src/workspace-navigation.tsx
+msgid "Saved workspace files, run history, and profile versions stay on this device. Any unsaved setup or profile form edits will be discarded."
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Search applications"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Search by name, employer or role"
+msgstr ""
+
+#: packages/ui/src/workspace-start-intro.tsx
+msgid "Set up a review workspace"
+msgstr ""
+
+#. placeholder {0}: shownArchived.length
+#: packages/ui/src/home.tsx
+msgid "Show archived ({0})"
+msgstr ""
+
+#: apps/web/src/shell-actions.tsx
+msgid "Sign out"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Sort"
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "Status"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Stored with the workspace rather than in a knowledge base."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Suggestions show only the tier and role registered in DraftLoop; they do not establish account or plan availability or CV quality. IDs are not guaranteed to work with your account, plan, or CLI version. You may type any exact model id. Catalog entries show their review dates; CLI-specific live availability has not been reverified. Provider documentation: Anthropic, OpenAI, DeepInfra, Google, and Mistral."
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "The API answered {status}."
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "The applications could not be read. Close and reopen the workspace to try again."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+msgid "The author and critic stop after this many rounds and return the last fully reviewed draft to you. More rounds can improve convergence but use more time and provider budget."
+msgstr ""
+
+#: packages/ui/src/workspace-recovery.tsx
+msgid "The current workspace could not be found. Open a workspace to resume local review."
 msgstr ""
 
 #: packages/ui/src/application-language.tsx
@@ -51,6 +778,18 @@ msgstr ""
 msgid "The run is still being saved; retry in a moment."
 msgstr ""
 
+#: packages/ui/src/home-model.ts
+msgid "The saved career profile could not be read. Open it to try again."
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "The selected knowledge base could not be read"
+msgstr ""
+
+#: apps/web/src/shell-actions.tsx
+msgid "The service cannot be reached. Your work is saved; try again in a moment."
+msgstr ""
+
 #: apps/web/src/api-client.ts
 msgid "The service could not be reached. Check your connection and try again."
 msgstr ""
@@ -59,12 +798,97 @@ msgstr ""
 msgid "The workspace's language"
 msgstr ""
 
+#: packages/ui/src/app.tsx
+msgid "This is recorded with every run of the workspace and shown at the approval gate."
+msgstr ""
+
 #: packages/ui/src/application-language.tsx
 msgid "This job posting looks {label}."
 msgstr ""
 
+#: packages/ui/src/home-model.ts
+msgid "This version of DraftLoop cannot manage a career profile."
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "Too many requests; retry later."
+msgstr ""
+
+#. placeholder {0}: application.name
+#: packages/ui/src/home-folder-model.ts
+msgid "Took \"{0}\" out of its folder."
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+msgid "Try demo workspace"
+msgstr ""
+
+#: packages/ui/src/home-model.ts
+msgid "Unavailable"
+msgstr ""
+
+#: packages/ui/src/application-name.tsx
+msgid "Use “"
+msgstr ""
+
+#. placeholder {0}: chosen.runNumber
+#: packages/ui/src/home-model.ts
+msgid "Using Run {0}"
+msgstr ""
+
+#. placeholder {0}: status.version
+#: packages/ui/src/home-model.ts
+msgid "Version {0} is reviewed and ready for applications."
+msgstr ""
+
+#. placeholder {0}: status.version
+#: packages/ui/src/home-model.ts
+msgid "Version {0} is saved but not reviewed. Review it before an application uses it."
+msgstr ""
+
+#: packages/ui/src/home-applications-view.tsx
+msgid "View"
+msgstr ""
+
+#: packages/ui/src/workspace-activity.tsx
+msgid "View progress"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "Why is one lineage on both sides acceptable? (required)"
+msgstr ""
+
+#: packages/ui/src/workspace-activity.tsx
+msgid "Workspace activity"
+msgstr ""
+
+#: packages/ui/src/home.tsx
+msgid "Workspace location"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+msgid "workspace model selection"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-creation.tsx
+#: packages/ui/src/workspace-title.tsx
+msgid "Workspace name"
+msgstr ""
+
+#: packages/ui/src/workspace-navigation.tsx
+#: packages/ui/src/workspace-start-intro.tsx
+msgid "Workspace navigation"
+msgstr ""
+
+#: packages/ui/src/app.tsx
+#: packages/ui/src/home.tsx
+msgid "Workspace settings"
+msgstr ""
+
+#: packages/ui/src/workspace-recovery.tsx
+msgid "Workspace unavailable"
 msgstr ""
 
 #: packages/ui/src/application-language.tsx

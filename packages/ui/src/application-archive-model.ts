@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Wording and rules for archiving, restoring and deleting applications on Home. Pure, so every
  * state of the card actions is testable without a DOM.
@@ -43,7 +44,7 @@ export function partitionApplications(applications: readonly ApplicationSummaryV
 }
 
 export function applicationDeleteConfirmation(name: string): string {
-  return `Delete "${name}"? This cannot be undone.`;
+  return t`Delete "${name}"? This cannot be undone.`;
 }
 
 export function applicationActionSuccessNotice(
@@ -52,10 +53,10 @@ export function applicationActionSuccessNotice(
 ): ApplicationActionNotice {
   const message =
     action === "archive"
-      ? `Archived "${name}". Show archived applications to restore it.`
+      ? t`Archived "${name}". Show archived applications to restore it.`
       : action === "restore"
-        ? `Restored "${name}".`
-        : `Deleted "${name}".`;
+        ? t`Restored "${name}".`
+        : t`Deleted "${name}".`;
   return { kind: "success", message };
 }
 

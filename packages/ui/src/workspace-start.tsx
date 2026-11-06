@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   type RecentWorkspacesActions,
   RecentWorkspacesView,
@@ -49,7 +50,7 @@ export function WorkspaceStartLayout({ busy, form, recent }: WorkspaceStartLayou
             />
           </div>
           <details className="workspace-create-section">
-            <summary>Create a new workspace</summary>
+            <summary>{t`Create a new workspace`}</summary>
             <WorkspaceCreationForm {...form} showAlternatives={false} />
           </details>
         </>

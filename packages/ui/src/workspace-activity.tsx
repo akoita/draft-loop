@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import {
   type ProfileGenerationActivity,
   ProfileGenerationSummary,
@@ -21,7 +22,7 @@ export function WorkspaceActivityBar({
   readonly onOpen?: () => void;
 }) {
   return (
-    <aside className="workspace-activity" aria-label="Workspace activity">
+    <aside className="workspace-activity" aria-label={t`Workspace activity`}>
       <div className="workspace-activity-status" role="status">
         {activity.kind === "profile-generation" ? (
           <ProfileGenerationSummary
@@ -31,14 +32,14 @@ export function WorkspaceActivityBar({
         ) : (
           <p className="profile-generation-progress-row home-profile-progress">
             <span className="profile-generation-spinner" aria-hidden="true" />
-            <strong>Review running</strong>
+            <strong>{t`Review running`}</strong>
             <span>{activity.applicationName}</span>
           </p>
         )}
       </div>
       {onOpen === undefined ? null : (
         <button className="button button-outline" type="button" onClick={onOpen}>
-          {activity.kind === "profile-generation" ? "View progress" : "Open review"}
+          {activity.kind === "profile-generation" ? t`View progress` : t`Open review`}
         </button>
       )}
     </aside>

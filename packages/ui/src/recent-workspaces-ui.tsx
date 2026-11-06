@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 import { formatDateTime } from "./locale-format.js";
 import {
@@ -37,23 +38,23 @@ export function RecentWorkspacesView({
   return (
     <section className="panel recent-workspaces" aria-labelledby="recent-workspaces-heading">
       <div className="recent-workspaces-intro">
-        <h2 id="recent-workspaces-heading">Recent workspaces</h2>
+        <h2 id="recent-workspaces-heading">{t`Recent workspaces`}</h2>
         <p>
           {highlightFirst
-            ? "Continue where you left off, or pick another workspace. "
-            : "Open a local workspace again. "}
-          Removing entries from this list never deletes workspace files.
+            ? t`Continue where you left off, or pick another workspace. `
+            : t`Open a local workspace again. `}
+          {t`Removing entries from this list never deletes workspace files.`}
         </p>
         {statusMessage === null ? null : <p role="status">{statusMessage}</p>}
         {loadState === "loading" ? (
-          <p role="status">Loading recent workspaces…</p>
+          <p role="status">{t`Loading recent workspaces…`}</p>
         ) : errorMessage === null ? null : (
           <p className="setup-blocker" role="alert">
             {errorMessage}
           </p>
         )}
         {loadState === "ready" && errorMessage === null && workspaces.length === 0 ? (
-          <p>No recent workspaces yet.</p>
+          <p>{t`No recent workspaces yet.`}</p>
         ) : null}
       </div>
       {workspaces.length === 0 ? null : (
@@ -73,15 +74,18 @@ export function RecentWorkspacesView({
                 <span className="recent-workspace-name">
                   {workspace.name}
                   {highlightFirst && index === 0 ? (
-                    <span className="recent-workspace-badge">Last used</span>
+                    <span className="recent-workspace-badge">{t`Last used`}</span>
                   ) : null}
                 </span>
                 <span className="recent-workspace-meta">
                   {workspace.location === undefined ? null : (
-                    <span className="recent-workspace-location">in {workspace.location}</span>
+                    <span className="recent-workspace-location">
+                      {t`in`} {workspace.location}
+                    </span>
                   )}
                   <time dateTime={workspace.lastOpenedAt}>
-                    Last opened {formatDateTime(workspace.lastOpenedAt) ?? workspace.lastOpenedAt}
+                    {t`Last opened`}{" "}
+                    {formatDateTime(workspace.lastOpenedAt) ?? workspace.lastOpenedAt}
                   </time>
                 </span>
               </button>
@@ -89,13 +93,11 @@ export function RecentWorkspacesView({
                 <button
                   className="button button-quiet recent-workspace-remove"
                   type="button"
-                  aria-label={`Remove ${workspace.name} from recent workspaces`}
-                  title="Remove from this list. Workspace files are kept."
+                  aria-label={t`Remove ${workspace.name} from recent workspaces`}
+                  title={t`Remove from this list. Workspace files are kept.`}
                   disabled={busy || openingId !== null}
                   onClick={() => onRemove(workspace.id)}
-                >
-                  Remove
-                </button>
+                >{t`Remove`}</button>
               )}
             </li>
           ))}
@@ -106,9 +108,7 @@ export function RecentWorkspacesView({
         type="button"
         disabled={busy || openingId !== null || workspaces.length === 0}
         onClick={onClear}
-      >
-        Clear recent workspaces
-      </button>
+      >{t`Clear recent workspaces`}</button>
     </section>
   );
 }

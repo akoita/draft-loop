@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Pure model for the Home dashboard, the landing page of an open workspace (ADR 0010).
  *
@@ -70,53 +71,52 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
   switch (status.kind) {
     case "loading":
       return {
-        chip: "Checking",
+        chip: t`Checking`,
         tone: "neutral",
-        description: "Reading the saved career profile…",
-        action: "Open profile",
+        description: t`Reading the saved career profile…`,
+        action: t`Open profile`,
       };
     case "unsupported":
       return {
-        chip: "Unavailable",
+        chip: t`Unavailable`,
         tone: "neutral",
-        description: "This version of DraftLoop cannot manage a career profile.",
-        action: "Open profile",
+        description: t`This version of DraftLoop cannot manage a career profile.`,
+        action: t`Open profile`,
       };
     case "unavailable":
       return {
-        chip: "Unavailable",
+        chip: t`Unavailable`,
         tone: "error",
-        description: "The saved career profile could not be read. Open it to try again.",
-        action: "Open profile",
+        description: t`The saved career profile could not be read. Open it to try again.`,
+        action: t`Open profile`,
       };
     case "none":
       return {
-        chip: "Not yet generated",
+        chip: t`Not yet generated`,
         tone: "attention",
-        description:
-          "Generate your career profile once from your career evidence. Every application reuses it.",
-        action: "Generate profile",
+        description: t`Generate your career profile once from your career evidence. Every application reuses it.`,
+        action: t`Generate profile`,
       };
     case "draft":
       return {
-        chip: "Draft",
+        chip: t`Draft`,
         tone: "attention",
-        description: `Version ${status.version} is saved but not reviewed. Review it before an application uses it.`,
-        action: "Review profile",
+        description: t`Version ${status.version} is saved but not reviewed. Review it before an application uses it.`,
+        action: t`Review profile`,
       };
     case "failed":
       return {
-        chip: "Failed",
+        chip: t`Failed`,
         tone: "error",
-        description: `Generating version ${status.version} saved no facts. Check your career evidence, then try again.`,
-        action: "Open profile",
+        description: t`Generating version ${status.version} saved no facts. Check your career evidence, then try again.`,
+        action: t`Open profile`,
       };
     case "reviewed":
       return {
-        chip: "Reviewed",
+        chip: t`Reviewed`,
         tone: "ready",
-        description: `Version ${status.version} is reviewed and ready for applications.`,
-        action: "Review facts",
+        description: t`Version ${status.version} is reviewed and ready for applications.`,
+        action: t`Review facts`,
       };
   }
 }
@@ -140,11 +140,11 @@ export type HomeActivity = "profile-generation" | "review-run" | "other";
 export function homeActionsBlockedReason(activity: HomeActivity): string {
   switch (activity) {
     case "profile-generation":
-      return "New applications, imports and archiving are available again once the career profile is generated.";
+      return t`New applications, imports and archiving are available again once the career profile is generated.`;
     case "review-run":
-      return "New applications, imports and archiving are available again once the running review stops.";
+      return t`New applications, imports and archiving are available again once the running review stops.`;
     case "other":
-      return "New applications, imports and archiving are available again once the current workspace operation finishes.";
+      return t`New applications, imports and archiving are available again once the current workspace operation finishes.`;
   }
 }
 
@@ -218,56 +218,56 @@ export function evidencePresentation(
   status: CareerEvidenceStatus,
   legacySourceCount: number,
 ): HomeEvidencePresentation {
-  const emptyDetail = "Add a CV, portfolio or other source so DraftLoop can quote you accurately.";
+  const emptyDetail = t`Add a CV, portfolio or other source so DraftLoop can quote you accurately.`;
   switch (status.kind) {
     case "loading":
       return {
-        chip: "Checking",
+        chip: t`Checking`,
         tone: "neutral",
-        headline: "Reading career evidence…",
+        headline: t`Reading career evidence…`,
         detail: "",
         empty: false,
-        action: "Add or manage documents",
+        action: t`Add or manage documents`,
       };
     case "unavailable":
       return {
-        chip: "Unavailable",
+        chip: t`Unavailable`,
         tone: "error",
-        headline: "The selected knowledge base could not be read",
-        detail: "Open career evidence to choose or repair it.",
+        headline: t`The selected knowledge base could not be read`,
+        detail: t`Open career evidence to choose or repair it.`,
         empty: false,
-        action: "Add or manage documents",
+        action: t`Add or manage documents`,
       };
     case "selected": {
       const empty = status.sourceCount === 0;
       return {
-        chip: empty ? "Empty" : status.blockedCount > 0 ? "Needs attention" : "Ready",
+        chip: empty ? t`Empty` : status.blockedCount > 0 ? t`Needs attention` : t`Ready`,
         tone: empty || status.blockedCount > 0 ? "attention" : "ready",
         headline: careerEvidenceSourcesText(status),
         detail: empty ? emptyDetail : careerEvidenceReadinessText(status),
         empty,
-        action: empty ? "Add career evidence" : "Add or manage documents",
+        action: empty ? t`Add career evidence` : t`Add or manage documents`,
       };
     }
     case "none":
     case "unsupported": {
       if (legacySourceCount > 0) {
         return {
-          chip: "Ready",
+          chip: t`Ready`,
           tone: "ready",
           headline: `${plural(legacySourceCount, "source file")} in this workspace`,
-          detail: "Stored with the workspace rather than in a knowledge base.",
+          detail: t`Stored with the workspace rather than in a knowledge base.`,
           empty: false,
-          action: "Add or manage documents",
+          action: t`Add or manage documents`,
         };
       }
       return {
-        chip: "None yet",
+        chip: t`None yet`,
         tone: "attention",
-        headline: "No career evidence yet",
+        headline: t`No career evidence yet`,
         detail: emptyDetail,
         empty: true,
-        action: "Add career evidence",
+        action: t`Add career evidence`,
       };
     }
   }
@@ -307,7 +307,7 @@ export function applicationStatusTone(status: ApplicationStatus): HomeTone {
 }
 
 export function applicationRunText(runCount: number): string {
-  return runCount === 0 ? "No runs yet" : plural(runCount, "run");
+  return runCount === 0 ? t`No runs yet` : plural(runCount, "run");
 }
 
 /**
@@ -332,7 +332,7 @@ export function applicationChosenRunText(
 ): string | null {
   const chosen = application.chosenRun;
   if (chosen === undefined || chosen.runId === application.latestRunId) return null;
-  return `Using Run ${chosen.runNumber}`;
+  return t`Using Run ${chosen.runNumber}`;
 }
 
 const minute = 60_000;
@@ -344,13 +344,13 @@ export function applicationActivityText(updatedAt: string, now: Date): string {
   const time = Date.parse(updatedAt);
   // An application with no recorded time reads the epoch, e.g. a hosted default application
   // before its first run.
-  if (!Number.isFinite(time) || time <= 0) return "Last activity unknown";
+  if (!Number.isFinite(time) || time <= 0) return t`Last activity unknown`;
   const elapsed = now.getTime() - time;
-  if (elapsed < minute) return "Last activity just now";
-  if (elapsed < hour) return `Last activity ${plural(Math.floor(elapsed / minute), "minute")} ago`;
-  if (elapsed < day) return `Last activity ${plural(Math.floor(elapsed / hour), "hour")} ago`;
-  if (elapsed < 30 * day) return `Last activity ${plural(Math.floor(elapsed / day), "day")} ago`;
-  return `Last activity on ${new Date(updatedAt).toISOString().slice(0, 10)}`;
+  if (elapsed < minute) return t`Last activity just now`;
+  if (elapsed < hour) return t`Last activity ${plural(Math.floor(elapsed / minute), "minute")} ago`;
+  if (elapsed < day) return t`Last activity ${plural(Math.floor(elapsed / hour), "hour")} ago`;
+  if (elapsed < 30 * day) return t`Last activity ${plural(Math.floor(elapsed / day), "day")} ago`;
+  return t`Last activity on ${new Date(updatedAt).toISOString().slice(0, 10)}`;
 }
 
 /** Most recent activity first; the order is otherwise stable. */

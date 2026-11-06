@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 export interface WorkspaceCreationDraft {
   readonly name: string;
   readonly maxRounds: number;
@@ -38,7 +39,9 @@ export function WorkspaceCreationForm({
   return (
     <form
       className="setup-form"
-      aria-label={showAlternatives ? "Create or open a review workspace" : "Create a new workspace"}
+      aria-label={
+        showAlternatives ? t`Create or open a review workspace` : t`Create a new workspace`
+      }
       onSubmit={(event) => {
         event.preventDefault();
         if (busy || !canCreate || onCreate === undefined) return;
@@ -46,17 +49,17 @@ export function WorkspaceCreationForm({
       }}
     >
       <label className="setup-field">
-        <span>Workspace name</span>
+        <span>{t`Workspace name`}</span>
         <input
           type="text"
           value={draft.name}
           disabled={busy}
-          aria-label="Workspace name"
+          aria-label={t`Workspace name`}
           onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
         />
       </label>
       <label className="setup-field setup-round-limit">
-        <span>Maximum review rounds</span>
+        <span>{t`Maximum review rounds`}</span>
         <input
           type="number"
           min={1}
@@ -64,7 +67,7 @@ export function WorkspaceCreationForm({
           step={1}
           value={draft.maxRounds}
           disabled={busy}
-          aria-label="Maximum review rounds"
+          aria-label={t`Maximum review rounds`}
           onChange={(event) =>
             onDraftChange({
               ...draft,
@@ -72,10 +75,7 @@ export function WorkspaceCreationForm({
             })
           }
         />
-        <span className="setup-note">
-          The author and critic stop after this many rounds and return the last fully reviewed draft
-          to you. More rounds can improve convergence but use more time and provider budget.
-        </span>
+        <span className="setup-note">{t`The author and critic stop after this many rounds and return the last fully reviewed draft to you. More rounds can improve convergence but use more time and provider budget.`}</span>
       </label>
       {errorMessage === null ? null : (
         <p className="setup-blocker" role="alert">
@@ -87,9 +87,7 @@ export function WorkspaceCreationForm({
           className="button button-primary"
           type="submit"
           disabled={busy || !canCreate || onCreate === undefined}
-        >
-          Create workspace
-        </button>
+        >{t`Create workspace`}</button>
         {showAlternatives ? (
           <WorkspaceAlternatives busy={busy} onCreateDemo={onCreateDemo} onOpen={onOpen} />
         ) : null}
@@ -115,17 +113,13 @@ export function WorkspaceAlternatives({
         type="button"
         disabled={busy || onOpen === undefined}
         onClick={() => onOpen?.()}
-      >
-        Open workspace
-      </button>
+      >{t`Open workspace`}</button>
       <button
         className="button button-quiet"
         type="button"
         disabled={busy || onCreateDemo === undefined}
         onClick={() => onCreateDemo?.()}
-      >
-        Try demo workspace
-      </button>
+      >{t`Try demo workspace`}</button>
     </>
   );
 }
