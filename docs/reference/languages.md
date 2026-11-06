@@ -57,3 +57,7 @@ recognised like English ones, so a French CV is classified as a CV.
 The CLI shows the detected language of each source with `knowledge source list`
 ([source evidence kind](cli-and-desktop.md#source-evidence-kind)). The web
 screen does not list sources one by one yet.
+
+Lexical search matches words, so it rarely finds French evidence for an English
+job. Semantic search is built for that; the measurement is in
+[cross-language retrieval](../evaluation/cross-language-retrieval.md).
