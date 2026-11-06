@@ -151,7 +151,10 @@ describe("DraftLoop MCP server", () => {
     const answer = await client.callTool({ name: "record_work", arguments: note });
     expect(answer.isError).toBe(true);
     const content = answer.content as { type: string; text: string }[];
-    expect(JSON.parse(content[0]?.text ?? "{}").error.code).toBe("not_signed_in");
+    expect(JSON.parse(content[0]?.text ?? "{}").error).toMatchObject({
+      code: "not_signed_in",
+      retryable: false,
+    });
     expect(fetched).toBe(false);
     await client.close();
   });

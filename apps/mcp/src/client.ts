@@ -48,16 +48,30 @@ export function configFromEnvironment(
   };
 }
 
+/**
+ * HTTP statuses a later retry can get past (#2263): a timeout, a rate limit, or the server or a
+ * proxy in front of it being unavailable. Validation, permission and not-found never pass on retry.
+ */
+const retryableStatuses: ReadonlySet<number> = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+/** Whether the same call may succeed later, from the HTTP status it got. */
+export function isRetryableStatus(status: number): boolean {
+  return retryableStatuses.has(status);
+}
+
 /** A refusal the agent can repeat: the API's content-free code and one sentence. */
 export class WorkJournalApiError extends Error {
   readonly code: string;
   readonly fields: readonly string[];
+  /** Whether the same call may succeed if the agent tries again later. */
+  readonly retryable: boolean;
 
-  constructor(code: string, message: string, fields: readonly string[] = []) {
+  constructor(code: string, message: string, fields: readonly string[] = [], retryable = false) {
     super(message);
     this.name = "WorkJournalApiError";
     this.code = code;
     this.fields = fields;
+    this.retryable = retryable;
   }
 }
 
@@ -114,6 +128,8 @@ export function createWorkJournalApi(config: WorkJournalApiConfig): WorkJournalA
       throw new WorkJournalApiError(
         "server_unreachable",
         "The DraftLoop server did not answer; start it with `draft-loop-server up`.",
+        [],
+        true,
       );
     }
     const body = (await response.json().catch(() => ({}))) as unknown;
@@ -128,6 +144,7 @@ export function createWorkJournalApi(config: WorkJournalApiConfig): WorkJournalA
         (error?.issues ?? []).flatMap((issue) =>
           typeof issue.path === "string" ? [issue.path] : [],
         ),
+        isRetryableStatus(response.status),
       );
     }
     return body;

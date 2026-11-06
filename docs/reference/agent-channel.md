@@ -132,6 +132,17 @@ rule travels with the server, in the tool description, the
 - **The role is stated as it was:** designed, implemented, directed or
   reviewed.
 
+### When a tool call fails
+
+A failed call answers `isError` with one JSON object:
+`{"error": {"code", "message", "fields", "retryable"}}`. The message is one
+sentence, and `fields` names the note fields to fix.
+
+| `retryable` | When                                                                                       | What the agent does              |
+| ----------- | ------------------------------------------------------------------------------------------ | -------------------------------- |
+| `true`      | The server is unreachable, or answers 408, 425, 429, 500, 502, 503 or 504                  | Tries the same call again later  |
+| `false`     | Validation, permission, not found, conflict, no token (`not_signed_in`), or `internal_error` | Fixes the input or asks the user |
+
 ## How the candidate reviews
 
 Each pending note shows its title, period, project, technologies, role, links,
