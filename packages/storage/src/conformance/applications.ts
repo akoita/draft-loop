@@ -3,6 +3,7 @@ import type { AuditTrailStoragePort, HistoryStoragePort } from "../ports/history
 import type { ContextSnapshotStoragePort } from "../ports/versioned-records.js";
 import type { WorkspaceApplicationsStoragePort, WorkspaceStoragePort } from "../ports/workspace.js";
 import { StorageConflictError, StorageValidationError } from "../storage-errors.js";
+import { applicationFolderContracts } from "./application-folders.js";
 import type { StorageContract } from "./history-records.js";
 
 /** The port surface the application contracts exercise: applications plus the runs they bind. */
@@ -616,6 +617,7 @@ export const applicationsContracts: readonly StorageContract<ApplicationsStorage
       expect(await eventIds()).toEqual(["chosen-1", "chosen-2", "chosen-3", "cleared-1"]);
     },
   },
+  ...applicationFolderContracts,
 ];
 
 /** Runs every application contract against fresh stores from `open`, one test per contract. */

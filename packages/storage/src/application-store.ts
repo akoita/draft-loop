@@ -8,6 +8,11 @@ import {
   applicationModelProfilesSchema,
 } from "@draft-loop/schemas/application";
 import {
+  type ApplicationFolderStoragePort,
+  applicationFolderMigration,
+  createApplicationFolderStorage,
+} from "./application-folder-store.js";
+import {
   type ApplicationImportReadsPort,
   createApplicationImportReads,
 } from "./application-import-reads.js";
@@ -152,6 +157,7 @@ export const applicationMigrations = [
   applicationModelProfilesMigration,
   defaultApplicationNameMigration,
   applicationChosenRunMigration,
+  applicationFolderMigration,
 ] as const;
 
 export interface ApplicationStoreRecord {
@@ -210,7 +216,9 @@ export interface ApplicationChosenRunRecord {
 /** The longest reason a person can give for choosing a run. */
 export const maximumChosenRunReasonLength = 500;
 
-export interface ApplicationStoragePort extends ApplicationImportReadsPort {
+export interface ApplicationStoragePort
+  extends ApplicationImportReadsPort,
+    ApplicationFolderStoragePort {
   /** A second application with the same id is a conflict; the default id is reserved. */
   readonly insertApplication: (input: ApplicationStoreInput) => Promise<ApplicationStoreRecord>;
   readonly getApplication: (
@@ -445,6 +453,7 @@ export function createApplicationStorage(
 
   return {
     ...createApplicationImportReads(database, ensureOpen),
+    ...createApplicationFolderStorage(database, ensureOpen),
     insertApplication: async (input) => {
       ensureOpen();
       requireIdentifier(input.workspaceId, "workspace id");
@@ -785,6 +794,11 @@ export function createApplicationStorage(
         }
         database
           .prepare("DELETE FROM application_archives WHERE workspace_id = ? AND application_id = ?")
+          .run(workspaceId, applicationId);
+        database
+          .prepare(
+            "DELETE FROM application_folder_placements WHERE workspace_id = ? AND application_id = ?",
+          )
           .run(workspaceId, applicationId);
         database
           .prepare(

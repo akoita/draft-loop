@@ -27,6 +27,10 @@
       "types": "./src/application-store.ts",
       "import": "./src/application-store.ts"
     },
+    "./application-folder-store": {
+      "types": "./src/application-folder-store.ts",
+      "import": "./src/application-folder-store.ts"
+    },
     "./sqlite-handle": {
       "types": "./src/sqlite-handle.ts",
       "import": "./src/sqlite-handle.ts"

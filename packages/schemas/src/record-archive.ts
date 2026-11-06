@@ -31,6 +31,8 @@ export const recordArchiveTables = [
   "application_archives",
   "application_model_profiles",
   "application_chosen_runs",
+  "application_folders",
+  "application_folder_placements",
   "default_application_names",
   "context_snapshots",
   "artifact_versions",

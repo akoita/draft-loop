@@ -13,6 +13,7 @@ import {
   maximumChosenRunReasonLength,
 } from "@draft-loop/storage/application-store";
 import { StorageConflictError, StorageValidationError } from "@draft-loop/storage/errors";
+import { createApplicationFolders } from "./application-folders.js";
 import { appendAuditEventRow } from "./audit-trail.js";
 import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
@@ -117,6 +118,7 @@ export function createApplications(client: SqlSession): ApplicationStoragePort {
   };
 
   return {
+    ...createApplicationFolders(client),
     insertApplication: async (input) => {
       requireIdentifier(input.workspaceId, "workspace id");
       const id = applicationIdSchema.safeParse(input.id);
@@ -409,6 +411,7 @@ export function createApplications(client: SqlSession): ApplicationStoragePort {
         }
         for (const table of [
           "application_archives",
+          "application_folder_placements",
           "application_model_profiles",
           "application_chosen_runs",
           "applications",

@@ -92,6 +92,15 @@ const tableQueries: Readonly<
     "SELECT * FROM application_chosen_runs WHERE workspace_id = $1 ORDER BY application_id",
     [s.historyId],
   ],
+  application_folders: (s) => [
+    `SELECT * FROM application_folders WHERE workspace_id = $1 ORDER BY created_at, folder_id COLLATE "C"`,
+    [s.historyId],
+  ],
+  application_folder_placements: (s) => [
+    `SELECT * FROM application_folder_placements WHERE workspace_id = $1
+     ORDER BY application_id COLLATE "C"`,
+    [s.historyId],
+  ],
   default_application_names: (s) => [
     "SELECT * FROM default_application_names WHERE workspace_id = $1",
     [s.historyId],
