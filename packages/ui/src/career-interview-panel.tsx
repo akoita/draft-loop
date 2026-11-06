@@ -9,6 +9,7 @@ import {
   careerInterviewActiveTopic,
   careerInterviewProgress,
   careerInterviewTurnText,
+  careerInterviewUnavailableNotice,
 } from "./career-interview-model.js";
 import { SpeechButton } from "./speech-button.js";
 import { appendTranscript, type SpeechInput } from "./speech-to-text.js";
@@ -74,7 +75,6 @@ export function CareerInterviewPanel({
         before it becomes evidence, and you can stop at any time.
       </p>
       {problem === undefined ? null : <p role="alert">{problem}</p>}
-      {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
       {session === undefined || session.status === "closed" ? (
         <button type="button" disabled={busy} onClick={() => void run(onStart)}>
           Start a conversation
@@ -86,7 +86,11 @@ export function CareerInterviewPanel({
               {progress.done} of {progress.taken} topics finished in this conversation.
             </p>
           ) : null}
-          {active === undefined ? (
+          {session.interviewerAvailable === false && active?.status !== "summarised" ? (
+            <p className="interview-unavailable" role="status">
+              {careerInterviewUnavailableNotice}
+            </p>
+          ) : active === undefined ? (
             <Proposal
               proposal={proposal}
               topics={proposed}
@@ -109,6 +113,7 @@ export function CareerInterviewPanel({
               onAction={(action) => run(() => onAction(action))}
             />
           )}
+          {actionProblem === undefined ? null : <p role="alert">{actionProblem}</p>}
           <p>
             <button
               type="button"
