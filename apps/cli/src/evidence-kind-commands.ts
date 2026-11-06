@@ -12,6 +12,8 @@ import {
 export interface SourceEvidenceKindListing {
   readonly evidenceKind: CandidateEvidenceKind;
   readonly evidenceKindOrigin: SourceEvidenceKindEntry["origin"];
+  /** The latest version's detected language, such as `fr`, or `unknown`. */
+  readonly language: string;
 }
 
 /** Effective kinds keyed by source id; retired sources have none. */
@@ -23,7 +25,7 @@ export async function sourceEvidenceKindListings(
   return new Map(
     entries.map((entry) => [
       entry.sourceId,
-      { evidenceKind: entry.kind, evidenceKindOrigin: entry.origin },
+      { evidenceKind: entry.kind, evidenceKindOrigin: entry.origin, language: entry.language },
     ]),
   );
 }
@@ -41,7 +43,7 @@ function entryLine(entry: SourceEvidenceKindEntry): string {
     entry.origin === "user"
       ? "set by you"
       : `detected${entry.confidence === undefined ? "" : `, confidence ${entry.confidence.toFixed(2)}`}`;
-  return `source ${entry.sourceId} evidence kind: ${entry.kind} (${origin})`;
+  return `source ${entry.sourceId} evidence kind: ${entry.kind} (${origin}); language: ${entry.language}`;
 }
 
 /**

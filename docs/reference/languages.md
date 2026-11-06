@@ -47,3 +47,13 @@ describes the setting and its commands.
 
 From the CLI, `draft-loop init --language fr` creates a workspace whose
 documents are written in French.
+
+## Career evidence in French
+
+French CVs and notes work as career evidence. Their section headings, such as
+**Expériences professionnelles**, **Formation** or **Compétences clés**, are
+recognised like English ones, so a French CV is classified as a CV.
+
+The CLI shows the detected language of each source with `knowledge source list`
+([source evidence kind](cli-and-desktop.md#source-evidence-kind)). The web
+screen does not list sources one by one yet.

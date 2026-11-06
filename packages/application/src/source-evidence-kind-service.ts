@@ -3,6 +3,7 @@ import {
   candidateEvidenceKinds,
   isCandidateEvidenceKind,
 } from "@draft-loop/domain/candidate-evidence-kind";
+import { detectTextLanguage } from "@draft-loop/domain/document-language";
 import {
   ingestBytes as defaultIngestBytes,
   detectCandidateEvidenceKind,
@@ -31,6 +32,11 @@ export interface SourceEvidenceKindEntry {
   readonly versionId: string;
   readonly kind: CandidateEvidenceKind;
   readonly origin: "user" | "detected";
+  /**
+   * The latest version's language, detected locally from its text each time it is listed (an
+   * ISO 639-1 code such as `fr`), or `unknown` when it is unreadable, too short or mixed.
+   */
+  readonly language: string;
   /** Detected kinds only: 0..1, how strongly the heuristics pointed at the kind. */
   readonly confidence?: number;
   /** Detected kinds only: names of the heuristics that fired; never source text. */
@@ -118,9 +124,6 @@ export function createSourceEvidenceKindService(
       undefined,
     );
     if (latest === undefined) return undefined;
-    const base = { sourceId: source.id, displayName: source.displayName, versionId: latest.id };
-    if (override !== undefined) return { ...base, kind: override, origin: "user" };
-
     const content = await handle.readManagedCandidateKnowledgeSourceVersion(
       knowledgeBaseId,
       source.id,
@@ -135,19 +138,31 @@ export function createSourceEvidenceKindService(
             { maxSourceBytes: content.metadata.sizeBytes || 1 },
           );
     const normalized = ingested?.source;
-    if (
-      normalized === undefined ||
-      normalized === null ||
-      ingested === undefined ||
-      ingested.issues.length > 0 ||
-      normalized.issues.length > 0
-    ) {
+    const readable =
+      normalized !== undefined &&
+      normalized !== null &&
+      ingested !== undefined &&
+      ingested.issues.length === 0 &&
+      normalized.issues.length === 0
+        ? normalized
+        : undefined;
+    // Detected like the kind, on demand from the latest version; unknown when no language leads.
+    const language =
+      (readable === undefined ? undefined : detectTextLanguage(readable.text)?.code) ?? "unknown";
+    const base = {
+      sourceId: source.id,
+      displayName: source.displayName,
+      versionId: latest.id,
+      language,
+    };
+    if (override !== undefined) return { ...base, kind: override, origin: "user" };
+    if (readable === undefined) {
       // Unreadable material cannot be named; "other" with no confidence says so.
       return { ...base, kind: "other", origin: "detected", confidence: 0, signals: [] };
     }
     const detection = detectCandidateEvidenceKind({
-      text: normalized.text,
-      mediaType: normalized.mediaType,
+      text: readable.text,
+      mediaType: readable.mediaType,
       displayName: source.displayName,
     });
     return {
