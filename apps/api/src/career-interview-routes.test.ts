@@ -124,6 +124,7 @@ describe("career interview routes", () => {
     const body = started.json();
     expect(body.session.topics).toHaveLength(1);
     expect(body.proposal).toContain("Would you like to talk about it");
+    expect(body.interviewer_available).toBe(true);
     const id = body.session.id as string;
     const key = body.session.topics[0].key as string;
 
@@ -160,6 +161,7 @@ describe("career interview routes", () => {
 
     await build({ consent: granted });
     const again = (await call("POST", sessions)).json();
+    expect(again.interviewer_available).toBe(false);
     const unavailable = await call("POST", `${sessions}/${again.session.id}/actions`, {
       action: "accept",
       topic_key: again.session.topics[0].key,
