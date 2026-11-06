@@ -8192,12 +8192,80 @@ input[type="text"].workspace-title-input {
   text-decoration-color: currentColor;
 }
 
-.career-page-lead {
+/* The career pages' shared header: two numbered tabs, then a quiet link to Applications. */
+.career-tabs {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-4);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.career-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.career-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: -2px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  background: none;
+}
+
+button.career-tab {
+  cursor: pointer;
+}
+
+button.career-tab:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.career-tab-current {
+  border-color: var(--border-strong);
+  border-bottom: 2px solid var(--bg);
+  color: var(--text-1);
+  font-weight: 650;
+  background: var(--bg);
+}
+
+/* Steps the person is not on show a quieter number. */
+button.career-tab .career-step-number {
+  color: var(--text-2);
+  background: var(--surface-4);
+}
+
+.career-tabs-applications {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  border: 0;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.career-tabs-applications:hover {
+  color: var(--text-1);
+  text-decoration-color: currentColor;
 }
 
 .career-page-intro {
