@@ -12,6 +12,7 @@ import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
@@ -53,6 +54,7 @@ import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
@@ -157,6 +159,8 @@ export interface ApiOptions {
    * routes are not served. The server opens it with per-request tenancy (#1591).
    */
   readonly directory?: TenantDirectory;
+  /** Each member's own settings, such as the screen language; without it those routes are not served. */
+  readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
@@ -586,6 +590,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         knowledgeScope: auth.mode === "oidc" ? "owned" : "tenant",
       });
     }
+  }
+  if (options.memberSettings !== undefined) {
+    registerMemberSettingsRoutes(app, { memberSettings: options.memberSettings });
   }
   if (options.directory !== undefined) {
     registerOrganisationRoutes(app, {

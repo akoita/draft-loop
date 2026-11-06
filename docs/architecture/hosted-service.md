@@ -575,6 +575,7 @@ People manage their organisation through the API once it has a tenant directory
 | Route                                                | What it does                                                                                                                                   |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /v1/me`                                         | Who the caller is: a member's organisation, id, role and email, or `{ "kind": "owner" }` for the owner token, which belongs to no organisation |
+| `GET`, `PUT /v1/me/screen-language`                   | A member's saved screen language (`en`, `fr` or null), read after sign-in and saved on each change; 404 for the owner token, whose screen keeps the browser's choice |
 | `GET`, `POST /v1/organisation/members`               | Lists the organisation, or invites a person by email                                                                                           |
 | `PATCH`, `DELETE /v1/organisation/members/:memberId` | Changes a role, or removes a member                                                                                                            |
 

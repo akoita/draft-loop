@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import {
   type CreatedOrganisation,
   type MemberRecord,
@@ -15,12 +16,14 @@ import {
   TenantDirectoryError,
   verifiedSignInEmail,
 } from "@draft-loop/storage/tenant-directory";
+import { createPostgresMemberSettings } from "./member-settings.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
 import { createSqlClient, type SqlClient, type SqlExecutor, type SqlRow } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 
-/** The tenant directory on Postgres, with the pool it opened. */
+/** The tenant directory on Postgres, with the pool it opened and its members' settings. */
 export interface PostgresTenantDirectory extends TenantDirectory {
+  readonly memberSettings: MemberSettingsStore;
   readonly close: () => Promise<void>;
 }
 
@@ -280,6 +283,7 @@ export async function createPostgresTenantDirectory(
       });
     },
 
+    memberSettings: createPostgresMemberSettings(client),
     close: () => client.close(),
   };
 }

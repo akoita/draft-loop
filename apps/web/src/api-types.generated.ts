@@ -403,6 +403,9 @@ export interface ApiSchemas {
     readonly remaining: number | null;
     readonly warning: boolean;
   };
+  "MemberScreenLanguage": {
+    readonly language: "en" | "fr" | null;
+  };
   "ModelCatalog": {
     readonly models: readonly (ApiSchemas["CatalogModel"])[];
     readonly presets: readonly (ApiSchemas["CatalogPreset"])[];
@@ -2187,6 +2190,15 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: Blob;
+  };
+  "GET /v1/me/screen-language": {
+    readonly response: ApiSchemas["MemberScreenLanguage"];
+  };
+  "PUT /v1/me/screen-language": {
+    readonly body: {
+      readonly language: "en" | "fr";
+    };
+    readonly response: ApiSchemas["MemberScreenLanguage"];
   };
   "GET /v1/me": {
     readonly response: ApiSchemas["Me"];
