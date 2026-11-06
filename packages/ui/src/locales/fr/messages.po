@@ -898,10 +898,6 @@ msgid "central themes"
 msgstr "thèmes centraux"
 
 #: packages/ui/src/app.tsx
-msgid "Change models"
-msgstr "Changer de modèles"
-
-#: packages/ui/src/app.tsx
 msgid "Change models for new runs"
 msgstr "Changer les modèles"
 
@@ -4573,6 +4569,10 @@ msgstr "Configurez d’abord les modèles rédacteur et relecteur de l’espace 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Set up your workspace"
 msgstr "Configurez votre espace de travail"
+
+#: packages/ui/src/app.tsx
+msgid "Settings"
+msgstr "Réglages"
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "Show"
