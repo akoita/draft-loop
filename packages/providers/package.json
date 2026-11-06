@@ -10,6 +10,10 @@
     "./model-identities": {
       "types": "./src/model-identities.ts",
       "import": "./src/model-identities.ts"
+    },
+    "./decisions": {
+      "types": "./src/decisions/index.ts",
+      "import": "./src/decisions/index.ts"
     }
   },
   "files": [
