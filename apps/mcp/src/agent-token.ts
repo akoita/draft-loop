@@ -43,6 +43,8 @@ export interface IssueAgentTokenInput {
   readonly workspaceId: string;
   readonly ownerToken: string;
   readonly label: string;
+  /** What the token may do; the server's default, the work journal only, when absent. */
+  readonly scopes?: readonly string[] | undefined;
   readonly fetch?: typeof fetch;
 }
 
@@ -63,7 +65,10 @@ export async function issueAgentToken(input: IssueAgentTokenInput): Promise<Issu
         authorization: `Bearer ${input.ownerToken}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ label: input.label }),
+      body: JSON.stringify({
+        label: input.label,
+        ...(input.scopes === undefined ? {} : { scopes: input.scopes }),
+      }),
     });
   } catch {
     throw new Error("The DraftLoop server did not answer; start it with `draft-loop-server up`.");

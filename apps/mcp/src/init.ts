@@ -206,16 +206,21 @@ export function planInit(
   });
 }
 
-export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--no-token] [--dry-run]
+/** The scopes `init --scope` accepts (ADR 0011 D17); the server checks them again. */
+export const initScopes = ["journal", "applications:read", "jobs:write"] as const;
 
-Sets up the DraftLoop work journal in the current project. With the owner token in
-DRAFT_LOOP_SERVER_TOKEN, it also issues an agent token that reaches only the work journal and
-saves it outside the project; --no-token skips that.`;
+export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
+
+Sets up DraftLoop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
+also issues an agent token and saves it outside the project; --no-token skips that. The token
+reaches only the work journal unless --scope adds others: ${initScopes.join(", ")}.`;
 
 export interface InitArguments extends InitOptions {
   readonly dryRun: boolean;
   /** Issue and save an agent token; on unless `--no-token`. */
   readonly token?: boolean;
+  /** The token's scopes from `--scope`; the work journal only when none is given. */
+  readonly scopes?: readonly string[];
 }
 
 /** What `init` needs to issue an agent token: its environment and where to save the token. */
@@ -232,6 +237,7 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   let hook = false;
   let dryRun = false;
   let token = true;
+  const scopes: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--host") host = argv[++index];
@@ -239,14 +245,27 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
     else if (argument === "--hook") hook = true;
     else if (argument === "--dry-run") dryRun = true;
     else if (argument === "--no-token") token = false;
-    else return { problem: `Unknown argument ${argument}.\n\n${initUsage}` };
+    else if (argument === "--scope") {
+      const scope = argv[++index] ?? "";
+      if (!(initScopes as readonly string[]).includes(scope)) {
+        return { problem: `Unknown scope ${scope}; use one of ${initScopes.join(", ")}.` };
+      }
+      if (!scopes.includes(scope)) scopes.push(scope);
+    } else return { problem: `Unknown argument ${argument}.\n\n${initUsage}` };
   }
   if (!initHosts.includes(host as InitHost)) return { problem: initUsage };
   if (command.trim() === "") return { problem: "--command needs a command." };
   if (hook && host !== "claude-code") {
     return { problem: "--hook is for Claude Code only; other hosts get the skill and snippet." };
   }
-  return { host: host as InitHost, command, hook, dryRun, token };
+  return {
+    host: host as InitHost,
+    command,
+    hook,
+    dryRun,
+    token,
+    ...(scopes.length === 0 ? {} : { scopes }),
+  };
 }
 
 const intakeLine =
@@ -278,13 +297,19 @@ async function setUpAgentToken(
     ...(setup.fetch === undefined ? {} : { fetch: setup.fetch }),
   };
   try {
-    const issued = await issueAgentToken({ ...server, label: agentTokenLabel(options.host, root) });
+    const issued = await issueAgentToken({
+      ...server,
+      label: agentTokenLabel(options.host, root),
+      scopes: options.scopes,
+    });
+    const reach =
+      options.scopes === undefined ? "the work journal" : `the scopes ${options.scopes.join(", ")}`;
     await saveAgentToken(setup.tokenPath, issued.token);
     const intakeOn = await readIntakeEnabled(server);
     return {
       lines: [
         `issued: agent token ${issued.id}, saved to ${setup.tokenPath}`,
-        "The agent sends that token, which reaches only the work journal; keep the owner token out of its environment.",
+        `The agent sends that token, which reaches only ${reach}; keep the owner token out of its environment.`,
       ],
       ...(intakeOn === undefined ? {} : { intakeOn }),
     };
