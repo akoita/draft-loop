@@ -2,13 +2,24 @@ import {
   type AgentTokenRecord,
   type AgentTokenStore,
   AgentTokenStoreError,
+  defaultAgentTokenScopes,
+  isAgentTokenScope,
   legacyAgentTokenExpiry,
+  normalizeAgentTokenScopes,
   requireAgentTokenInsert,
 } from "@draft-loop/storage/agent-tokens";
 import type { SqlSession } from "./sql-client.js";
 
+/** A row's scopes; a token stored before scopes (a null column) holds the journal only. */
+function scopesOf(value: unknown): AgentTokenRecord["scopes"] {
+  if (value === null || value === undefined) return defaultAgentTokenScopes;
+  // An unknown scope in the column fails closed: the token keeps only what is recognised.
+  return normalizeAgentTokenScopes(String(value).split(",").filter(isAgentTokenScope)) ?? [];
+}
+
 function recordOf(row: Record<string, unknown>): AgentTokenRecord {
   return {
+    scopes: scopesOf(row.scopes),
     id: String(row.id),
     workspaceId: String(row.workspace_id),
     label: String(row.label),
@@ -24,7 +35,7 @@ function recordOf(row: Record<string, unknown>): AgentTokenRecord {
   };
 }
 
-const columns = "id, workspace_id, label, created_at, expires_at, revoked_at";
+const columns = "id, workspace_id, label, created_at, expires_at, revoked_at, scopes";
 
 /** One tenant's agent tokens on Postgres; row-level security confines them to the tenant. */
 export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
@@ -33,8 +44,8 @@ export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
       const token = requireAgentTokenInsert(input);
       try {
         await client.query(
-          `INSERT INTO agent_tokens (id, workspace_id, label, secret_hash, created_at, expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO agent_tokens (id, workspace_id, label, secret_hash, created_at, expires_at, scopes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
             token.id,
             token.workspaceId,
@@ -42,6 +53,7 @@ export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
             token.secretHash,
             token.createdAt,
             token.expiresAt,
+            token.scopes.join(","),
           ],
         );
       } catch (error) {

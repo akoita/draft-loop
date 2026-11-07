@@ -1,11 +1,16 @@
 import { createHash, randomBytes } from "node:crypto";
-import { type AgentTokenStore, isAgentTokenActive } from "@draft-loop/storage/agent-tokens";
-import type { FastifyRequest } from "fastify";
+import {
+  type AgentTokenScope,
+  type AgentTokenStore,
+  isAgentTokenActive,
+} from "@draft-loop/storage/agent-tokens";
+import "fastify";
 
 /**
  * Agent tokens (#2147, #2159): what a coding agent holds instead of the owner token. One reaches
- * only the work journal intake and listing of one workspace, so an injected instruction in a
- * repository the agent reads cannot use it to reach the candidate's records.
+ * only the routes its scopes admit in one workspace (`agent-route-scopes.ts`, #2438), so an
+ * injected instruction in a repository the agent reads cannot use it to reach the candidate's
+ * records or decisions.
  */
 
 /** Every agent token starts with this, so a leaked one is recognisable and is never the owner's. */
@@ -14,7 +19,13 @@ export const agentTokenPrefix = "dlagent_";
 declare module "fastify" {
   interface FastifyRequest {
     /** The agent token a request came with; unset for every other credential. */
-    agentToken: { readonly id: string; readonly workspaceId: string } | undefined;
+    agentToken:
+      | {
+          readonly id: string;
+          readonly workspaceId: string;
+          readonly scopes: readonly AgentTokenScope[];
+        }
+      | undefined;
   }
 }
 
@@ -36,7 +47,12 @@ export function isAgentTokenShape(token: string): boolean {
 }
 
 export type AgentAuthentication =
-  | { readonly outcome: "agent"; readonly id: string; readonly workspaceId: string }
+  | {
+      readonly outcome: "agent";
+      readonly id: string;
+      readonly workspaceId: string;
+      readonly scopes: readonly AgentTokenScope[];
+    }
   | { readonly outcome: "unauthenticated"; readonly reason: string };
 
 /** Looks a presented agent token up by its hash; a revoked, expired or unknown one is refused. */
@@ -53,21 +69,10 @@ export async function authenticateAgentToken(
   if (!isAgentTokenActive(found, now)) {
     return { outcome: "unauthenticated", reason: "expired agent token" };
   }
-  return { outcome: "agent", id: found.id, workspaceId: found.workspaceId };
-}
-
-const agentRoute = "/v1/workspaces/:workspaceId/work-journal/notes";
-
-/**
- * Whether an agent token may make this request: only `record_work` (POST) and `list_work` (GET
- * with titles) on its own workspace's notes. Whole notes stay with the candidate's review.
- */
-export function isAgentRequestAllowed(request: FastifyRequest, workspaceId: string): boolean {
-  if (request.routeOptions.url !== agentRoute) return false;
-  const params = request.params as { readonly workspaceId?: unknown } | undefined;
-  if (params?.workspaceId !== workspaceId) return false;
-  if (request.method === "POST") return true;
-  if (request.method !== "GET") return false;
-  const query = request.query as { readonly fields?: unknown } | undefined;
-  return query?.fields === undefined || query.fields === "titles";
+  return {
+    outcome: "agent",
+    id: found.id,
+    workspaceId: found.workspaceId,
+    scopes: found.scopes,
+  };
 }

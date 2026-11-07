@@ -1,12 +1,8 @@
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { JWTVerifyGetKey } from "jose";
-
-import {
-  authenticateAgentToken,
-  isAgentRequestAllowed,
-  isAgentTokenShape,
-} from "./agent-token-auth.js";
+import { admitAgentBody, admitAgentRoute } from "./agent-route-scopes.js";
+import { authenticateAgentToken, isAgentTokenShape } from "./agent-token-auth.js";
 import { apiError } from "./errors.js";
 import {
   IdentityProviderUnavailableError,
@@ -140,7 +136,7 @@ export function registerRequestAuthentication(
   app: FastifyInstance,
   ownerToken: string,
   auth: ApiAuthOptions = { mode: "owner" },
-  /** The owner tenant's agent tokens (#2159); owner mode accepts them on the work journal only. */
+  /** The owner tenant's agent tokens (#2159); owner mode accepts them on their scopes' routes. */
   agentTokens?: AgentTokenStore,
 ): void {
   const authenticate = authenticatorFor(ownerToken, auth);
@@ -174,23 +170,25 @@ export function registerRequestAuthentication(
     ) {
       const agent = await authenticateAgentToken(agents, presented);
       if (agent.outcome === "agent") {
-        if (!isAgentRequestAllowed(request, agent.workspaceId)) {
+        const admission = admitAgentRoute(request, agent);
+        if (admission.outcome === "refused") {
           request.log.info({ agentTokenId: agent.id }, "agent token refused on this route");
-          await reply
-            .code(403)
-            .send(
-              apiError("forbidden", "An agent token reaches only its workspace's work journal."),
-            );
+          await reply.code(403).send(apiError("forbidden", admission.message));
           return;
         }
-        // It acts in the owner's tenant, on the two work journal routes checked above only. The
-        // line ties each accepted request to the token, so a leaked token's use can be traced.
+        // It acts in the owner's tenant, on the routes its scopes admit only. The line ties
+        // each accepted request to the token, so a leaked token's use can be traced.
         request.log.info(
-          { agentTokenId: agent.id, method: request.method, route: request.routeOptions.url },
+          {
+            agentTokenId: agent.id,
+            method: request.method,
+            route: request.routeOptions.url,
+            scope: admission.scope,
+          },
           "agent token accepted",
         );
         request.caller = { kind: "owner" };
-        request.agentToken = { id: agent.id, workspaceId: agent.workspaceId };
+        request.agentToken = { id: agent.id, workspaceId: agent.workspaceId, scopes: agent.scopes };
         return;
       }
       // The reason (unknown, revoked or expired) is logged below; the answer stays one 401.
@@ -210,5 +208,13 @@ export function registerRequestAuthentication(
       request.log.info({ reason: authentication.reason }, "sign-in token refused");
     }
     await refuse(reply, operator ? "operator" : auth.mode);
+  });
+  // A body rule (such as pasted job text only) is checked once Fastify has parsed the body.
+  app.addHook("preHandler", async (request: FastifyRequest, reply) => {
+    if (request.agentToken === undefined) return;
+    const admission = admitAgentBody(request);
+    if (admission?.outcome !== "refused") return;
+    request.log.info({ agentTokenId: request.agentToken.id }, "agent token refused on this body");
+    await reply.code(403).send(apiError("forbidden", admission.message));
   });
 }

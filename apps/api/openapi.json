@@ -614,6 +614,19 @@
           "label": {
             "type": "string"
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "journal",
+                "applications:read",
+                "jobs:write"
+              ],
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+            },
+            "description": "What the token may do."
+          },
           "created_at": {
             "type": "string"
           },
@@ -632,6 +645,7 @@
         "required": [
           "id",
           "label",
+          "scopes",
           "created_at",
           "expires_at",
           "active"
@@ -645,6 +659,19 @@
           },
           "label": {
             "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "journal",
+                "applications:read",
+                "jobs:write"
+              ],
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+            },
+            "description": "What the token may do."
           },
           "created_at": {
             "type": "string"
@@ -668,6 +695,7 @@
         "required": [
           "id",
           "label",
+          "scopes",
           "created_at",
           "expires_at",
           "active",
@@ -7468,6 +7496,19 @@
           "label": {
             "type": "string"
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "journal",
+                "applications:read",
+                "jobs:write"
+              ],
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+            },
+            "description": "What the token may do."
+          },
           "created_at": {
             "type": "string"
           },
@@ -7486,6 +7527,7 @@
         "required": [
           "id",
           "label",
+          "scopes",
           "created_at",
           "expires_at",
           "active"
@@ -7500,6 +7542,19 @@
           },
           "label": {
             "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "journal",
+                "applications:read",
+                "jobs:write"
+              ],
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+            },
+            "description": "What the token may do."
           },
           "created_at": {
             "type": "string"
@@ -7523,6 +7578,7 @@
         "required": [
           "id",
           "label",
+          "scopes",
           "created_at",
           "expires_at",
           "active",
@@ -22655,7 +22711,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for a coding agent that reaches only this workspace's work journal intake (record_work) and title listing (list_work). It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for a coding agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -22674,6 +22730,21 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 365
+                  },
+                  "scopes": {
+                    "description": "What the token may do; [\"journal\"] by default.",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "journal",
+                        "applications:read",
+                        "jobs:write"
+                      ],
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+                    }
                   }
                 },
                 "required": [

@@ -2,7 +2,9 @@ import type { ApplicationService } from "@draft-loop/application";
 import {
   type AgentTokenRecord,
   type AgentTokenStore,
+  agentTokenScopes,
   defaultAgentTokenLifetimeDays,
+  defaultAgentTokenScopes,
   isAgentTokenActive,
   maximumActiveAgentTokens,
   maximumAgentTokenLifetimeDays,
@@ -29,10 +31,17 @@ const tokenParams = workspaceParams.extend({
   tokenId: z.string().regex(/^dlat_[A-Za-z0-9_-]{8,64}$/u, "must be an agent token id"),
 });
 
+const scopeSchema = z
+  .enum(agentTokenScopes)
+  .describe(
+    "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text.",
+  );
+
 const tokenSchema = z
   .object({
     id: z.string(),
     label: z.string(),
+    scopes: z.array(scopeSchema).describe("What the token may do."),
     created_at: z.string(),
     expires_at: z.string().describe("When the token stops working."),
     revoked_at: z.string().optional(),
@@ -57,6 +66,12 @@ const issueBody = z.strictObject({
     .max(maximumAgentTokenLifetimeDays)
     .optional()
     .describe(`Days until the token stops working; ${defaultAgentTokenLifetimeDays} by default.`),
+  scopes: z
+    .array(scopeSchema)
+    .min(1)
+    .max(agentTokenScopes.length)
+    .optional()
+    .describe('What the token may do; ["journal"] by default.'),
 });
 
 const errors = { 400: apiErrorSchema, 404: apiErrorSchema, 409: apiErrorSchema } as const;
@@ -67,6 +82,7 @@ function view(token: AgentTokenRecord, at: Date) {
   return {
     id: token.id,
     label: token.label,
+    scopes: [...token.scopes],
     created_at: token.createdAt,
     expires_at: token.expiresAt,
     ...(token.revokedAt === undefined ? {} : { revoked_at: token.revokedAt }),
@@ -75,7 +91,8 @@ function view(token: AgentTokenRecord, at: Date) {
 }
 
 /**
- * The owner's agent tokens (#2159): issued for one workspace, listed without their secrets and
+ * The owner's agent tokens (#2159): issued for one workspace with scopes (#2438), listed without
+ * their secrets and
  * revoked one at a time. An agent token itself never reaches these routes.
  */
 export function registerAgentTokenRoutes(
@@ -95,7 +112,7 @@ export function registerAgentTokenRoutes(
     {
       schema: {
         summary: "Issue an agent token",
-        description: `A token for a coding agent that reaches only this workspace's work journal intake (record_work) and title listing (list_work). It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
+        description: `A token for a coding agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
         params: workspaceParams,
         body: issueBody,
         response: { 201: issuedSchema, ...errors },
@@ -126,10 +143,13 @@ export function registerAgentTokenRoutes(
         label: request.body.label,
         createdAt: at.toISOString(),
         expiresAt: new Date(at.getTime() + lifetimeDays * dayMs).toISOString(),
+        scopes: agentTokenScopes.filter((scope) =>
+          (request.body.scopes ?? defaultAgentTokenScopes).includes(scope),
+        ),
       };
       await tokens.insert({ ...record, secretHash: agentTokenHash(issued.token) });
       request.log.info(
-        { agentTokenId: record.id, expiresAt: record.expiresAt },
+        { agentTokenId: record.id, expiresAt: record.expiresAt, scopes: record.scopes },
         "agent token issued",
       );
       return reply.code(201).send({ ...view(record, at), token: issued.token });

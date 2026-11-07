@@ -1,10 +1,34 @@
 /**
  * Agent tokens (#2147, #2158): credentials a coding agent holds instead of the owner token. Each
- * one reaches only the work journal of one workspace, expires, and can be revoked on its own (the
+ * one reaches only the scopes it was issued with (#2438) in one workspace, expires, and can be
+ * revoked on its own (the
  * audit in `docs/security/agent-token-audit.md`). A store keeps
  * only a SHA-256 hash of the secret, never the secret itself. This module holds the port and an
  * in-memory implementation for tests and single-process stacks; Postgres implements it too.
  */
+
+/**
+ * What an agent token may do (ADR 0011 D17, #2438). `journal` reaches the work journal intake and
+ * title listing; `applications:read` lists and reads job applications and run state;
+ * `jobs:write` creates a job application from pasted job text.
+ */
+export const agentTokenScopes = ["journal", "applications:read", "jobs:write"] as const;
+export type AgentTokenScope = (typeof agentTokenScopes)[number];
+
+/** The scopes of a token issued without any, and of every token issued before scopes existed. */
+export const defaultAgentTokenScopes: readonly AgentTokenScope[] = ["journal"];
+
+export function isAgentTokenScope(value: unknown): value is AgentTokenScope {
+  return (agentTokenScopes as readonly unknown[]).includes(value);
+}
+
+/** Scopes in the catalogue's order, without repeats; undefined when one is unknown or none given. */
+export function normalizeAgentTokenScopes(
+  scopes: readonly unknown[],
+): readonly AgentTokenScope[] | undefined {
+  if (scopes.length === 0 || !scopes.every(isAgentTokenScope)) return undefined;
+  return agentTokenScopes.filter((scope) => scopes.includes(scope));
+}
 
 /** An agent token as stored and listed: everything but the secret. */
 export interface AgentTokenRecord {
@@ -17,6 +41,8 @@ export interface AgentTokenRecord {
   /** When the token stops working; after `createdAt`, at most a year later. */
   readonly expiresAt: string;
   readonly revokedAt?: string;
+  /** What it may do; at least one scope, in the catalogue's order. */
+  readonly scopes: readonly AgentTokenScope[];
 }
 
 export interface AgentTokenInsert extends AgentTokenRecord {
@@ -72,7 +98,10 @@ const hashPattern = /^[0-9a-f]{64}$/u;
 /** Checks a token before it is stored, so a store never holds a malformed one. */
 export function requireAgentTokenInsert(token: AgentTokenInsert): AgentTokenInsert {
   const label = token.label.trim();
+  const scopes = normalizeAgentTokenScopes(token.scopes);
   if (
+    scopes === undefined ||
+    scopes.length !== token.scopes.length ||
     !idPattern.test(token.id) ||
     !hashPattern.test(token.secretHash) ||
     token.workspaceId.length < 1 ||
@@ -87,7 +116,7 @@ export function requireAgentTokenInsert(token: AgentTokenInsert): AgentTokenInse
   ) {
     throw new AgentTokenStoreError("invalid_token", "The agent token is malformed.");
   }
-  return { ...token, label };
+  return { ...token, label, scopes };
 }
 
 function recordOf(token: AgentTokenInsert): AgentTokenRecord {

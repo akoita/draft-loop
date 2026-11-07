@@ -18,6 +18,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
     label: " Claude Code ",
     createdAt: "2026-11-04T10:00:00.000Z",
     expiresAt: "2027-01-01T00:00:00.000Z",
+    scopes: ["journal"],
     secretHash: hashA,
   });
   await store.insert({
@@ -26,6 +27,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
     label: "Codex",
     createdAt: "2026-11-04T11:00:00.000Z",
     expiresAt: "2027-01-01T00:00:00.000Z",
+    scopes: ["journal"],
     secretHash: hashB,
   });
   await expect(
@@ -35,6 +37,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
       label: "Copy",
       createdAt: "2026-11-04T12:00:00.000Z",
       expiresAt: "2027-01-01T00:00:00.000Z",
+      scopes: ["journal"],
       secretHash: hashA,
     }),
   ).rejects.toMatchObject({ code: "duplicate_token" });
@@ -45,6 +48,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
       label: "Bad",
       createdAt: "2026-11-04T12:00:00.000Z",
       expiresAt: "2027-01-01T00:00:00.000Z",
+      scopes: ["journal"],
       secretHash: "c".repeat(64),
     }),
   ).rejects.toMatchObject({ code: "invalid_token" });
@@ -56,6 +60,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
     label: "Claude Code",
     createdAt: "2026-11-04T10:00:00.000Z",
     expiresAt: "2027-01-01T00:00:00.000Z",
+    scopes: ["journal"],
   });
   expect(found).not.toHaveProperty("secretHash");
   expect(await store.findByHash("d".repeat(64))).toBeUndefined();
@@ -85,6 +90,7 @@ describe("agent token expiry", () => {
     label: "Claude Code",
     createdAt: "2026-11-04T10:00:00.000Z",
     secretHash: "e".repeat(64),
+    scopes: ["journal"] as const,
   };
 
   it("refuses a token that expires before it is issued or more than a year later", async () => {
