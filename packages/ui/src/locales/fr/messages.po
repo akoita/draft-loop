@@ -1862,6 +1862,10 @@ msgstr "Affirmations et éléments de parcours"
 msgid "Classic"
 msgstr "Classique"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Claude Code plugin"
+msgstr "Plugin Claude Code"
+
 #: packages/ui/src/model-profile-presentation.ts
 msgid "Claude Fable 5.1"
 msgstr "Claude Fable 5.1"
@@ -2155,6 +2159,10 @@ msgstr "Copier"
 #: packages/ui/src/agent-setup.tsx
 msgid "Copy the configuration into your agent."
 msgstr "Copiez la configuration dans votre agent."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copy token"
+msgstr "Copier le jeton"
 
 #: packages/ui/src/run-details.tsx
 msgid "core areas"
@@ -3810,6 +3818,10 @@ msgstr "Installé"
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Installing"
 msgstr "Installation"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
+msgstr "Installe les outils DraftLoop, les compétences /log-work et /tailor-cv et un rappel pour noter les travaux marquants. Le jeton va dans votre dossier utilisateur, jamais dans un projet."
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Interview only"
@@ -8632,6 +8644,10 @@ msgstr "Pour commencer, créez un espace de travail pour votre recherche d’emp
 #: packages/ui/src/agent-setup.tsx
 msgid "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
 msgstr "Pour qu’un agent de code dépose des notes ici, connectez-le dans Agents de code, dans les Réglages de l’espace de travail."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Token:"
+msgstr "Jeton :"
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "tokens; thinking"

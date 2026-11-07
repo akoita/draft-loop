@@ -6,6 +6,7 @@ import {
   activeAgentTokens,
   agentChannelGuideUrl,
   agentConfiguration,
+  agentConfigurationHoldsToken,
   agentTokenPlaceholder,
 } from "./agent-setup-model.js";
 
@@ -55,6 +56,28 @@ describe("agent configuration", () => {
     });
   });
 
+  it("installs the Claude Code plugin and keeps the token outside the project", () => {
+    expect(agentConfiguration("plugin", connection)).toBe(
+      [
+        "# In Claude Code",
+        "/plugin marketplace add akoita/draft-loop",
+        "/plugin install draftloop@draftloop",
+        "# In a terminal: paste the token, then press Enter and Ctrl-D",
+        "draftloop-mcp save-token",
+      ].join("\n"),
+    );
+    expect(agentConfigurationHoldsToken("plugin")).toBe(false);
+    expect(agentConfigurationHoldsToken("claude-code")).toBe(true);
+    const elsewhere = agentConfiguration("plugin", {
+      ...connection,
+      serverUrl: "http://127.0.0.1:8081",
+      workspaceId: "side-projects",
+    });
+    expect(elsewhere).toContain("export DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8081");
+    expect(elsewhere).toContain("export DRAFT_LOOP_SERVER_WORKSPACE=side-projects");
+    expect(elsewhere).not.toContain("dlagent_");
+  });
+
   it("holds a placeholder until a token is created", () => {
     const configuration = agentConfiguration("claude-code", { ...connection, token: undefined });
     expect(configuration).toContain(`DRAFT_LOOP_SERVER_TOKEN=${agentTokenPlaceholder}`);
@@ -90,12 +113,13 @@ describe("AgentSetup", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} />);
     expect(html).toContain("Connect a coding agent");
     expect(html).toContain("Create agent token");
-    expect(html).toContain("claude mcp add draftloop --scope user");
-    expect(html).toContain("&lt;agent-token&gt;");
+    // The plugin comes first; its steps hold no token, so they can be copied at once.
+    expect(html).toContain("/plugin marketplace add akoita/draft-loop");
+    expect(html).toContain("draftloop-mcp save-token");
+    expect(html).not.toContain("&lt;agent-token&gt;");
+    expect(html).toMatch(/<button type="button">Copy<\/button>/u);
     expect(html).toContain("Active agent tokens: 0");
     expect(html).toContain(agentChannelGuideUrl);
-    // Nothing to copy before a token exists.
-    expect(html).toMatch(/<button type="button" disabled="">Copy<\/button>/u);
   });
 
   it("offers each scope with the journal ticked, and lists a token's scopes", () => {

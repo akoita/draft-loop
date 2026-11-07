@@ -8,6 +8,7 @@ import {
   activeAgentTokens,
   agentChannelGuideUrl,
   agentConfiguration,
+  agentConfigurationHoldsToken,
   agentHostHint,
   agentHostLabel,
   agentHosts,
@@ -68,11 +69,11 @@ export function AgentSetup({
   open = false,
 }: AgentSetupProps) {
   const id = useId();
-  const [host, setHost] = useState<AgentHost>("claude-code");
+  const [host, setHost] = useState<AgentHost>("plugin");
   const [issued, setIssued] = useState<IssuedAgentToken | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"configuration" | "token" | undefined>(undefined);
   const [showTokens, setShowTokens] = useState(false);
   const [scopes, setScopes] = useState<readonly AgentScope[]>(defaultAgentScopes);
 
@@ -103,6 +104,7 @@ export function AgentSetup({
     token: issued?.token,
   });
   const active = tokens === undefined ? undefined : activeAgentTokens(tokens);
+  const holdsToken = agentConfigurationHoldsToken(host);
 
   async function create() {
     setBusy(true);
@@ -111,17 +113,17 @@ export function AgentSetup({
     if ("problem" in answer) setProblem(t`The token could not be created. ${answer.problem}`);
     else {
       setIssued(answer);
-      setCopied(false);
+      setCopied(undefined);
     }
     setBusy(false);
   }
 
-  async function copy() {
+  async function copy(what: "configuration" | "token", value: string) {
     try {
-      await navigator.clipboard.writeText(configuration);
-      setCopied(true);
+      await navigator.clipboard.writeText(value);
+      setCopied(what);
     } catch {
-      setCopied(false);
+      setCopied(undefined);
     }
   }
 
@@ -191,7 +193,7 @@ export function AgentSetup({
               aria-controls={`${id}-configuration`}
               onClick={() => {
                 setHost(each);
-                setCopied(false);
+                setCopied(undefined);
               }}
             >
               {agentHostLabel(each)}
@@ -201,13 +203,29 @@ export function AgentSetup({
         <div role="tabpanel" id={`${id}-configuration`} aria-labelledby={`${id}-${host}`}>
           <p className="muted">{agentHostHint(host)}</p>
           <pre
-            className={issued === undefined ? "agent-setup-config pending" : "agent-setup-config"}
+            className={
+              issued === undefined && holdsToken
+                ? "agent-setup-config pending"
+                : "agent-setup-config"
+            }
           >
             <code>{configuration}</code>
           </pre>
-          <button type="button" disabled={issued === undefined} onClick={() => void copy()}>
-            {copied ? t`Copied` : t`Copy`}
+          <button
+            type="button"
+            disabled={issued === undefined && holdsToken}
+            onClick={() => void copy("configuration", configuration)}
+          >
+            {copied === "configuration" ? t`Copied` : t`Copy`}
           </button>
+          {holdsToken || issued === undefined ? null : (
+            <p className="agent-setup-token">
+              {t`Token:`} <code>{issued.token}</code>{" "}
+              <button type="button" onClick={() => void copy("token", issued.token)}>
+                {copied === "token" ? t`Copied` : t`Copy token`}
+              </button>
+            </p>
+          )}
         </div>
         {active === undefined ? null : (
           <p className="muted">

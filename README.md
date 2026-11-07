@@ -93,10 +93,20 @@ same. The [self-hosted server](docs/operations/self-hosted.md) guide covers
 settings, upgrades, backup and restore, privacy, and moving a desktop
 workspace to the server.
 
-On the self-hosted server, your coding agent can record notable work it helped
-ship through the `draftloop-mcp` MCP server. Each note waits for your review
-before it becomes career evidence; see the
-[agent channel](docs/reference/agent-channel.md).
+On the self-hosted server, your coding agent can work with DraftLoop through
+the `draftloop-mcp` MCP server. It records notable work it helped ship, lists
+your job applications, adds a job you pasted and follows a CV run; approvals
+stay with you. In Claude Code, install the plugin from this repository:
+
+```text
+/plugin marketplace add akoita/draft-loop
+/plugin install draftloop@draftloop
+```
+
+On Claude Code 2.1.275 or later, one line does both:
+`/plugin install draftloop --marketplace akoita/draft-loop`. The
+[agent channel](docs/reference/agent-channel.md) covers the token, Codex and
+other agents.
 
 ## Desktop app
 

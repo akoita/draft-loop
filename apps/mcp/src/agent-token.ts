@@ -4,8 +4,8 @@ import { basename, dirname, join } from "node:path";
 
 /**
  * The agent token (#2147, #2160): what `draftloop-mcp` sends instead of the owner token. It reaches
- * only the work journal intake and title listing of one workspace, so a coding agent that reads an
- * untrusted repository cannot use it to reach the candidate's records. `init` asks the server for
+ * only its scopes in one workspace (#2438), so a coding agent that reads an untrusted repository
+ * cannot use it to reach the candidate's records or decisions. `init` asks the server for
  * one with the owner token and keeps it in a file outside the project, which no project file names.
  */
 
@@ -86,6 +86,28 @@ export async function issueAgentToken(input: IssueAgentTokenInput): Promise<Issu
     throw new Error(`The server could not issue an agent token (HTTP ${response.status}).`);
   }
   return { id: body.id, token: body.token };
+}
+
+/** The shape the server issues: the prefix and 43 URL-safe characters. */
+export function isAgentTokenShape(token: string): boolean {
+  return /^dlagent_[A-Za-z0-9_-]{43}$/u.test(token);
+}
+
+/**
+ * `draftloop-mcp save-token` (#2441): keeps a token created under Coding agents in Workspace
+ * settings where the server reads it, so a plugin install needs no file in the project. The
+ * token comes on standard input, never as an argument, so it stays out of the shell history.
+ * Returns the line to print.
+ */
+export async function saveTokenFromInput(input: string, path: string): Promise<string> {
+  const token = input.trim();
+  if (!isAgentTokenShape(token)) {
+    throw new Error(
+      "That is not a DraftLoop agent token; copy the one shown under Coding agents in Workspace settings.",
+    );
+  }
+  await saveAgentToken(path, token);
+  return `saved: the agent token, to ${path}`;
 }
 
 /** Writes the token readable by this user only. */

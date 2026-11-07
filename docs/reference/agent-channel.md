@@ -21,9 +21,17 @@ open defects.
 
 ## Set it up
 
-The Coding agents section of Workspace settings on Home does it in three
-steps; the Work journal panel links to it. Use
-`init` below instead when you also want the `/log-work` skill and the Stop hook.
+You need a running [self-hosted server](../operations/self-hosted.md) and
+`draftloop-mcp` on your `PATH` (step 1 below). Then pick one way:
+
+| Way                          | For                     | What it adds                                          |
+| ---------------------------- | ----------------------- | ----------------------------------------------------- |
+| The Claude Code plugin       | Claude Code             | The tools, `/log-work`, `/tailor-cv` and the Stop hook |
+| A copied configuration       | Claude Code, Codex, any | The tools only                                        |
+| `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
+
+The Coding agents section of Workspace settings on Home shows the first two;
+the Work journal panel links to it.
 
 1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
    link from inside `apps/mcp`: `pnpm --dir apps/mcp link --global` links the
@@ -43,14 +51,20 @@ steps; the Work journal panel links to it. Use
    server refuses notes while intake is off. Then, under **Coding agents** in
    Workspace settings, open **Connect a coding agent**, tick what the agent
    may do and select **Create agent token**.
-3. Pick your agent's tab and copy its configuration, which holds the token and
-   the server's address:
+3. Pick your agent's tab and copy what it shows:
 
-   | Tab                     | Where it goes                                                    |
-   | ----------------------- | ---------------------------------------------------------------- |
-   | Claude Code             | A `claude mcp add --scope user` command to run in a terminal     |
-   | Codex                   | `~/.codex/config.toml`                                           |
-   | Other MCP agents (JSON) | The agent's `mcpServers` settings file                           |
+   | Tab                     | What to do                                                             |
+   | ----------------------- | ---------------------------------------------------------------------- |
+   | Claude Code plugin      | Run the two `/plugin` lines in Claude Code, then `draftloop-mcp save-token` in a terminal and paste the token |
+   | Claude Code             | Run the `claude mcp add --scope user` command, which holds the token, in a terminal |
+   | Codex                   | Add the table, which holds the token, to `~/.codex/config.toml`        |
+   | Other MCP agents (JSON) | Add the entry, which holds the token, to the agent's `mcpServers` file |
+
+   `save-token` reads the token from standard input, so it stays out of your
+   shell history, and keeps it in `~/.config/draftloop/agent-token`
+   (`%APPDATA%\draftloop\agent-token` on Windows). The
+   plugin's server reads it there and calls `http://127.0.0.1:8080` unless
+   `DRAFT_LOOP_SERVER_URL` names another address.
 
 The token is shown once. Keep it in your user settings, never in a project file
 you commit. The section lists the active tokens with their scopes and revokes

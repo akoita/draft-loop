@@ -1,0 +1,15 @@
+{
+  "name": "draftloop",
+  "owner": { "name": "DraftLoop contributors" },
+  "metadata": {
+    "description": "Connect Claude Code to your own DraftLoop server."
+  },
+  "plugins": [
+    {
+      "name": "draftloop",
+      "source": "./plugins/draftloop",
+      "description": "Record notable work as career evidence, see your job applications, add a job and follow a CV run in your DraftLoop server. Approvals stay in DraftLoop.",
+      "category": "productivity"
+    }
+  ]
+}

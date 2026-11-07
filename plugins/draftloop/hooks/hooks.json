@@ -1,0 +1,10 @@
+{
+  "description": "One advisory line when a turn pushed or merged without recording notable work; it never blocks the turn.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "draftloop-mcp hook stop" }]
+      }
+    ]
+  }
+}
