@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What changed and why? -->
+<!-- What changed and why? Check docs/engineering/change-checklist.md and name the lines that applied. -->
 
 ## Package and architecture impact
 
@@ -9,6 +9,10 @@
 ## Privacy and external effects
 
 <!-- Does this change data retention, provider exposure, or external side effects? -->
+
+## Feature catalog
+
+<!-- Row and page updated in docs/features/, or "not a capability change". -->
 
 ## Validation
 
