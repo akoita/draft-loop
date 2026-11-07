@@ -49,6 +49,18 @@ contain only compatibility exports or thin wiring that does not increase their
 line-count baseline. Whenever an extraction reduces a hotspot, lower its
 recorded limit in the same change so the reduction cannot regress.
 
+## Engineering guides
+
+[`docs/engineering/`](docs/engineering/README.md) shows how to make the common
+changes. Read the matching guide before you start, and add a guide when a PR
+repeats a pattern that none covers.
+
+| Guide                                                     | Use it when you                                  |
+| --------------------------------------------------------- | ------------------------------------------------ |
+| [Change checklist](docs/engineering/change-checklist.md)  | Finish any change and fill in the PR template    |
+| [Add an API route](docs/engineering/api-route.md)         | Expose a capability to the web and to agents     |
+| [Add a shared screen](docs/engineering/shared-screen.md)  | Add or change a screen the web and desktop share |
+
 ## Documentation synchronization
 
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
