@@ -18,6 +18,7 @@ import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from 
 import { type ConsentProvider, isConsentProvider } from "./consent-model.js";
 import {
   createBrowserPlayer,
+  liveSocketOf,
   liveVoiceSupported,
   openBrowserMicrophone,
   startLiveVoiceCall,
@@ -118,13 +119,15 @@ function liveVoice(
     listener: t`Google Cloud in the EU`,
     start: (topicKey, events) =>
       startLiveVoiceCall({
-        socket: openSocket(
-          "/v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/live",
-          {
-            path: { workspaceId, sessionId },
-            query: { topic_key: topicKey, language },
-          },
-          "draft-loop.live",
+        socket: liveSocketOf(
+          openSocket(
+            "/v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/live",
+            {
+              path: { workspaceId, sessionId },
+              query: { topic_key: topicKey, language },
+            },
+            "draft-loop.live",
+          ),
         ),
         microphone: openBrowserMicrophone,
         player: createBrowserPlayer(),

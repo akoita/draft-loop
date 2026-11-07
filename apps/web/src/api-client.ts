@@ -49,8 +49,9 @@ export interface ApiClient {
   /**
    * Opens a WebSocket on a route the OpenAPI document does not list, such as the live interview.
    * A browser socket carries no headers, so the credential travels as a `bearer.` subprotocol.
+   * The signed-in client opens it once it holds a current access token, so it may be pending.
    */
-  openSocket?(path: string, input: CallInput, protocol: string): WebSocket;
+  openSocket?(path: string, input: CallInput, protocol: string): WebSocket | Promise<WebSocket>;
 }
 
 export interface ApiClientOptions {
