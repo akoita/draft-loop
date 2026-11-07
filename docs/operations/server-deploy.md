@@ -159,8 +159,8 @@ run reserves and settles credits.
 | `POST /v1/operator/organisations/{organisationId}/credit-grants` | `credits` (1 to 1,000,000), a `reason` code such as `goodwill`, and an `Idempotency-Key` header              | The grant                                  |
 | `GET /v1/operator/organisations/{organisationId}/credits`        | none                                                                                                         | The plan, its entitlements and the balance |
 
-- **Plan ids:** `individual`, `job-search-pass`, `pro`, `team`, `business` or
-  `internal`. A new assignment replaces the current plan and keeps earlier
+- **Plan ids:** `beta`, `individual`, `job-search-pass`, `pro`, `team`,
+  `business` or `internal`. A new assignment replaces the current plan and keeps earlier
   ones as history.
 - **Grants:** repeat the same key to retry safely. Granted credits expire after
   12 months and are spent after the plan's allowance. The reason is a code,
