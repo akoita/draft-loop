@@ -2794,10 +2794,6 @@ msgstr ""
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr ""
 
-#: packages/ui/src/career-interview-live.tsx
-msgid "End live conversation"
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr ""
@@ -3694,6 +3690,7 @@ msgstr ""
 msgid "Interview questions"
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Interviewer"
@@ -3966,7 +3963,11 @@ msgid "List"
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "Listening. Pause when you are done, or press Done speaking."
+msgid "Listening"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Live conversation"
 msgstr ""
 
 #: apps/web/src/career-interview.tsx
@@ -5296,6 +5297,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Pause for now"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Pause when you are done, or press Done speaking."
 msgstr ""
 
 #: packages/ui/src/stop-reason.ts
@@ -7149,6 +7154,10 @@ msgstr ""
 msgid "Talk live"
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Talk live again"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr ""
@@ -7561,7 +7570,7 @@ msgid "The interviewer is not set up on this server, so it cannot ask questions 
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "The interviewer is speaking."
+msgid "The interviewer is speaking"
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
@@ -9136,6 +9145,11 @@ msgstr ""
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."
+msgstr ""
+
+#. placeholder {0}: voice.listener
+#: packages/ui/src/career-interview-live.tsx
+msgid "Your voice goes to {0} to become text."
 msgstr ""
 
 #: apps/web/src/workspace-model.ts

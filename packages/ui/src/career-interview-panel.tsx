@@ -1,7 +1,10 @@
 import { t } from "@lingui/core/macro";
 import { useEffect, useId, useState } from "react";
 
-import { CareerInterviewLiveBar, type CareerInterviewLiveVoice } from "./career-interview-live.js";
+import {
+  CareerInterviewLiveStage,
+  type CareerInterviewLiveVoice,
+} from "./career-interview-live.js";
 import {
   type CareerInterviewAction,
   type CareerInterviewConflictView,
@@ -420,6 +423,19 @@ function Conversation({
       if (saved) setAnswer("");
     });
   };
+  if (live !== undefined && talking) {
+    return (
+      <div className="interview-conversation interview-conversation-live">
+        <h3>{topic.reason}</h3>
+        <CareerInterviewLiveStage
+          topicKey={topic.key}
+          voice={live}
+          question={careerInterviewLatestQuestion(topic)}
+          onClose={() => setTalking(false)}
+        />
+      </div>
+    );
+  }
   return (
     <div className="interview-conversation">
       <h3>{topic.reason}</h3>
@@ -433,27 +449,28 @@ function Conversation({
         ) : null}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
       </ol>
-      {live !== undefined && talking ? (
-        <CareerInterviewLiveBar
-          topicKey={topic.key}
-          voice={live}
-          onClose={() => setTalking(false)}
-        />
-      ) : (
-        <WrittenAnswer
-          id={id}
-          topic={topic}
-          busy={busy}
-          answer={answer}
-          setAnswer={setAnswer}
-          send={send}
-          speech={speech}
-          onTalkLive={live === undefined ? undefined : () => setTalking(true)}
-          onAction={onAction}
-        />
-      )}
+      <WrittenAnswer
+        id={id}
+        topic={topic}
+        busy={busy}
+        answer={answer}
+        setAnswer={setAnswer}
+        send={send}
+        speech={speech}
+        onTalkLive={live === undefined ? undefined : () => setTalking(true)}
+        onAction={onAction}
+      />
     </div>
   );
+}
+
+/** The interviewer's last question on a topic, the one the candidate is answering. */
+export function careerInterviewLatestQuestion(topic: CareerInterviewTopicView): string | undefined {
+  for (let index = topic.turns.length - 1; index >= 0; index -= 1) {
+    const turn = topic.turns[index];
+    if (turn?.role === "interviewer" && turn.text.trim() !== "") return turn.text;
+  }
+  return undefined;
 }
 
 function WrittenAnswer({

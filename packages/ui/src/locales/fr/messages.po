@@ -2788,10 +2788,6 @@ msgstr "Vide : ajoutez un CV, un portfolio ou une autre source"
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Vide. Utilisez Déplacer vers dans le menu ⋯ d’une candidature pour la ranger ici."
 
-#: packages/ui/src/career-interview-live.tsx
-msgid "End live conversation"
-msgstr "Terminer la conversation en direct"
-
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr "Terminer cette exécution sans perdre son historique"
@@ -3689,6 +3685,7 @@ msgstr "Entretien uniquement"
 msgid "Interview questions"
 msgstr "Questions d’entretien"
 
+#: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Interviewer"
@@ -3961,8 +3958,12 @@ msgid "List"
 msgstr "Liste"
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "Listening. Pause when you are done, or press Done speaking."
-msgstr "À l’écoute. Faites une pause quand vous avez fini, ou appuyez sur J’ai fini de parler."
+msgid "Listening"
+msgstr "À l’écoute"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Live conversation"
+msgstr "Conversation en direct"
 
 #: apps/web/src/career-interview.tsx
 msgid "Live voice in the career interview"
@@ -5292,6 +5293,10 @@ msgstr "Texte de l’offre collé"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Pause for now"
 msgstr "Mettre en pause"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Pause when you are done, or press Done speaking."
+msgstr "Faites une pause quand vous avez fini, ou appuyez sur J’ai fini de parler."
 
 #: packages/ui/src/stop-reason.ts
 msgid "Paused: autopilot found a conflict only you can settle — a disputed claim or a factuality finding"
@@ -7144,6 +7149,10 @@ msgstr "Parler plutôt de ceci"
 msgid "Talk live"
 msgstr "Parler en direct"
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Talk live again"
+msgstr "Reprendre en direct"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr "Racontez les parties de votre parcours que votre dossier ne dit pas encore. Vous confirmez chaque résumé avant qu’il ne devienne un élément de parcours, et vous pouvez arrêter à tout moment."
@@ -7556,8 +7565,8 @@ msgid "The interviewer is not set up on this server, so it cannot ask questions 
 msgstr "L’intervieweur n’est pas configuré sur ce serveur et ne peut donc pas encore poser de questions. La personne qui gère le serveur peut activer son accès à Claude. Vous pouvez toujours ajouter des faits de carrière à la main."
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "The interviewer is speaking."
-msgstr "L’intervieweur parle."
+msgid "The interviewer is speaking"
+msgstr "L’intervieweur parle"
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "The interviewer is thinking…"
@@ -9132,6 +9141,11 @@ msgstr "Les exécutions du jour de votre offre sont utilisées. Réessayez plus 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."
 msgstr "Votre session a expiré. Reconnectez-vous."
+
+#. placeholder {0}: voice.listener
+#: packages/ui/src/career-interview-live.tsx
+msgid "Your voice goes to {0} to become text."
+msgstr "Votre voix est envoyée à {0} pour être transcrite."
 
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"

@@ -2794,10 +2794,6 @@ msgstr "Empty: add a CV, portfolio, or other source"
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
 
-#: packages/ui/src/career-interview-live.tsx
-msgid "End live conversation"
-msgstr "End live conversation"
-
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr "End this run without losing its history"
@@ -3695,6 +3691,7 @@ msgstr "Interview only"
 msgid "Interview questions"
 msgstr "Interview questions"
 
+#: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Interviewer"
@@ -3967,8 +3964,12 @@ msgid "List"
 msgstr "List"
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "Listening. Pause when you are done, or press Done speaking."
-msgstr "Listening. Pause when you are done, or press Done speaking."
+msgid "Listening"
+msgstr "Listening"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Live conversation"
+msgstr "Live conversation"
 
 #: apps/web/src/career-interview.tsx
 msgid "Live voice in the career interview"
@@ -5298,6 +5299,10 @@ msgstr "Pasted job text"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Pause for now"
 msgstr "Pause for now"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Pause when you are done, or press Done speaking."
+msgstr "Pause when you are done, or press Done speaking."
 
 #: packages/ui/src/stop-reason.ts
 msgid "Paused: autopilot found a conflict only you can settle — a disputed claim or a factuality finding"
@@ -7150,6 +7155,10 @@ msgstr "Talk about this instead"
 msgid "Talk live"
 msgstr "Talk live"
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Talk live again"
+msgstr "Talk live again"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
@@ -7562,8 +7571,8 @@ msgid "The interviewer is not set up on this server, so it cannot ask questions 
 msgstr "The interviewer is not set up on this server, so it cannot ask questions yet. Whoever runs the server can turn on its Claude route. You can still add career facts by hand."
 
 #: packages/ui/src/career-interview-live.tsx
-msgid "The interviewer is speaking."
-msgstr "The interviewer is speaking."
+msgid "The interviewer is speaking"
+msgstr "The interviewer is speaking"
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "The interviewer is thinking…"
@@ -9138,6 +9147,11 @@ msgstr "Your plan's runs for today are used. Try again later."
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."
 msgstr "Your sign-in has expired. Sign in again."
+
+#. placeholder {0}: voice.listener
+#: packages/ui/src/career-interview-live.tsx
+msgid "Your voice goes to {0} to become text."
+msgstr "Your voice goes to {0} to become text."
 
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"

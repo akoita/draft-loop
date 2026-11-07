@@ -2,12 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
-  CareerInterviewLiveBar,
+  CareerInterviewLiveStage,
   type CareerInterviewLiveVoice,
+  careerInterviewHeardTail,
   careerInterviewLiveRefusal,
   careerInterviewLiveStateLabel,
 } from "./career-interview-live.js";
-import { CareerInterviewPanel } from "./career-interview-panel.js";
+import type { CareerInterviewTopicView } from "./career-interview-model.js";
+import { CareerInterviewPanel, careerInterviewLatestQuestion } from "./career-interview-panel.js";
 
 const voice: CareerInterviewLiveVoice = {
   listener: "Google Cloud in the EU",
@@ -16,19 +18,14 @@ const voice: CareerInterviewLiveVoice = {
 };
 
 // Invented topic and turns only.
-const session = {
-  id: "cis_fixture0001",
-  status: "open" as const,
-  topics: [
-    {
-      key: "untold-period:2016-2017",
-      kind: "untold-period",
-      reason: "Your record says nothing between 2016 and 2017.",
-      status: "open" as const,
-      turns: [{ role: "interviewer" as const, text: "What happened in that period?" }],
-    },
-  ],
+const openTopic: CareerInterviewTopicView = {
+  key: "untold-period:2016-2017",
+  kind: "untold-period",
+  reason: "Your record says nothing between 2016 and 2017.",
+  status: "open",
+  turns: [{ role: "interviewer", text: "What happened in that period?" }],
 };
+const session = { id: "cis_fixture0001", status: "open" as const, topics: [openTopic] };
 
 function panel(liveVoiceAvailable: boolean, live: CareerInterviewLiveVoice | undefined) {
   return renderToStaticMarkup(
@@ -51,21 +48,46 @@ describe("live career interview", () => {
     expect(panel(true, undefined)).not.toContain("Talk live");
   });
 
-  it("opens connecting, with a way back to writing", () => {
+  it("opens a stage with the question, the orb and a way back to writing", () => {
     const html = renderToStaticMarkup(
-      <CareerInterviewLiveBar
+      <CareerInterviewLiveStage
         topicKey="untold-period:2016-2017"
         voice={voice}
+        question="What happened in that period?"
         onClose={() => {}}
       />,
     );
+    expect(html).toContain("interview-stage interview-stage-connecting");
+    expect(html).toContain("What happened in that period?");
+    expect(html).toContain('class="interview-orb"');
     expect(html).toContain("Connecting…");
-    expect(html).toContain("End live conversation");
+    expect(html).toContain("Back to writing");
+    expect(html).toContain("Your voice goes to Google Cloud in the EU");
+  });
+
+  it("shows the latest question and keeps a long answer to its tail", () => {
+    expect(
+      careerInterviewLatestQuestion({
+        ...openTopic,
+        turns: [
+          { role: "interviewer", text: "First question?" },
+          { role: "candidate", text: "An answer." },
+          { role: "interviewer", text: "Second question?" },
+          { role: "candidate", text: "", mark: "skipped" },
+        ],
+      }),
+    ).toBe("Second question?");
+    expect(careerInterviewLatestQuestion({ ...openTopic, turns: [] })).toBeUndefined();
+    expect(careerInterviewHeardTail("  short  ")).toBe("short");
+    const tail = careerInterviewHeardTail(`${"word ".repeat(80)}end`);
+    expect(tail.startsWith("…")).toBe(true);
+    expect(tail.endsWith("end")).toBe(true);
+    expect(tail.length).toBeLessThanOrEqual(221);
   });
 
   it("names each state and who hears the voice when consent is missing", () => {
-    expect(careerInterviewLiveStateLabel("listening")).toContain("Done speaking");
-    expect(careerInterviewLiveStateLabel("speaking")).toBe("The interviewer is speaking.");
+    expect(careerInterviewLiveStateLabel("listening")).toBe("Listening");
+    expect(careerInterviewLiveStateLabel("speaking")).toBe("The interviewer is speaking");
     expect(careerInterviewLiveRefusal("consent_required", "", voice.listener)).toContain(
       "sends your voice to Google Cloud in the EU",
     );

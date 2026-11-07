@@ -72,6 +72,12 @@ hidden.
 interviewer, and each question passes the same method-guide check as a
 written one before it is spoken.
 
+While it runs, the panel becomes a voice stage: the latest question in large
+type, an orb, the words heard so far and one main button. The orb grows with
+the candidate's voice (teal) and moves with the question's audio (amber); the
+browser measures both levels itself and sends nothing more. **Back to
+writing** returns to the chat, where every spoken turn is already saved.
+
 ```mermaid
 sequenceDiagram
   participant C as Candidate

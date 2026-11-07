@@ -5,6 +5,7 @@ import {
   createPcm16Resampler,
   type LiveMicrophone,
   type LiveSocket,
+  pcm16Level,
   startLiveVoiceCall,
 } from "./live-voice.js";
 
@@ -57,13 +58,18 @@ function call() {
   const states: CareerInterviewLiveState[] = [];
   const heard: string[] = [];
   const sessions: unknown[] = [];
-  const played: { audio: Blob; onEnded: () => void }[] = [];
+  const played: {
+    audio: Blob;
+    onEnded: () => void;
+    onLevel?: ((level: number) => void) | undefined;
+  }[] = [];
+  const levels: number[] = [];
   let stops = 0;
   const live = startLiveVoiceCall({
     socket,
     microphone: async () => microphone,
     player: {
-      play: (audio, onEnded) => played.push({ audio, onEnded }),
+      play: (audio, onEnded, onLevel) => played.push({ audio, onEnded, onLevel }),
       stop: () => {
         stops += 1;
       },
@@ -72,10 +78,11 @@ function call() {
       onState: (state) => states.push(state),
       onHeard: (text) => heard.push(text),
       onRefusal: () => {},
+      onLevel: (level) => levels.push(level),
     },
     onSession: (view) => sessions.push(view),
   });
-  return { socket, microphone, states, heard, sessions, played, live, stops: () => stops };
+  return { socket, microphone, states, heard, sessions, played, levels, live, stops: () => stops };
 }
 
 describe("web live voice", () => {
@@ -118,6 +125,34 @@ describe("web live voice", () => {
     expect(heard).toEqual(["I rebuilt"]);
     expect(sessions).toEqual([{ session: { id: "cis_fixture0001" } }]);
     expect(states).toEqual(["listening", "thinking", "speaking", "listening"]);
+  });
+
+  it("measures how loud the voice is, about twenty times a second, only while listening", async () => {
+    expect(pcm16Level(new Int16Array(800))).toBe(0);
+    expect(pcm16Level(new Int16Array(800).fill(0x7fff))).toBe(1);
+    const quiet = pcm16Level(new Int16Array(800).fill(300));
+    const loud = pcm16Level(new Int16Array(800).fill(6_000));
+    expect(quiet).toBeGreaterThan(0);
+    expect(loud).toBeGreaterThan(quiet);
+
+    const { socket, microphone, levels, played } = call();
+    await Promise.resolve();
+    microphone.speak(new Int16Array(800).fill(6_000));
+    expect(levels).toEqual([]);
+    socket.server({ type: "ready" });
+    microphone.speak(new Int16Array(400).fill(6_000));
+    expect(levels).toEqual([]);
+    microphone.speak(new Int16Array(400).fill(6_000));
+    expect(levels).toEqual([loud]);
+
+    socket.server({ type: "answer", text: "Yes." });
+    socket.server({ type: "audio_start", media_type: "audio/ogg" });
+    socket.emit("message", new Uint8Array([1]).buffer);
+    socket.server({ type: "audio_end" });
+    microphone.speak(new Int16Array(800).fill(6_000));
+    expect(levels).toHaveLength(1);
+    played[0]?.onLevel?.(0.4);
+    expect(levels.at(-1)).toBe(0.4);
   });
 
   it("lets the candidate cut a question short and releases everything on stop", async () => {
