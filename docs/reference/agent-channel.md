@@ -20,10 +20,10 @@ open defects.
 
 ## Set it up
 
-1. Run the self-hosted server, and turn on **Accept notes from coding agents**
-   in the Work journal panel of its Career evidence page. The server refuses
-   notes while it is off.
-2. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
+The Work journal panel on the Career evidence page does it in three steps. Use
+`init` below instead when you also want the `/log-work` skill and the Stop hook.
+
+1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
    link from inside `apps/mcp`: `pnpm --dir apps/mcp link --global` links the
    root package instead.
 
@@ -37,7 +37,31 @@ open defects.
    If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `pnpm setup`, open a new
    shell, and link again. The last command prints the tool's usage.
 
-3. In the project whose work you want to record, run `init` for your agent,
+2. In the self-hosted server's Work journal panel, turn on **Accept notes from
+   coding agents**, open **Connect a coding agent** and select **Create agent
+   token**. The server refuses notes while intake is off.
+3. Pick your agent's tab and copy its configuration, which holds the token and
+   the server's address:
+
+   | Tab                     | Where it goes                                                    |
+   | ----------------------- | ---------------------------------------------------------------- |
+   | Claude Code             | A `claude mcp add --scope user` command to run in a terminal     |
+   | Codex                   | `~/.codex/config.toml`                                           |
+   | Other MCP agents (JSON) | The agent's `mcpServers` settings file                           |
+
+The token is shown once. Keep it in your user settings, never in a project file
+you commit. The panel lists the active tokens and revokes each one.
+
+The desktop client shows its server's panel, so it offers the same steps when
+connected to a self-hosted server. On the hosted service, signed-in accounts
+get no agent token yet, so the panel says so and links here.
+
+### Set it up with `init`
+
+`init` writes the project's files, including the `/log-work` skill and, for
+Claude Code, the Stop hook. With `draftloop-mcp` on your `PATH` and intake on:
+
+1. In the project whose work you want to record, run `init` for your agent,
    with the owner token for that one command only:
 
    ```text
@@ -49,7 +73,7 @@ open defects.
    asks the server for an agent token and saves it in your configuration
    folder, then prints `issued: agent token dlat_..., saved to ...`.
 
-4. Start the agent from a shell without the owner token. `draftloop-mcp`
+2. Start the agent from a shell without the owner token. `draftloop-mcp`
    sends the saved agent token.
 
 `init` merges into existing files, and running it again changes nothing in
@@ -83,10 +107,11 @@ Windows.
 
 ### Revoke an agent token
 
-An agent token expires 90 days after it is issued; run `init` again to issue
-a new one. A workspace holds at most 20 active tokens. The owner lists and
-revokes agent tokens through the API; a revoked token is refused at once and
-the others keep working:
+An agent token expires 90 days after it is issued; create a new one in the
+panel or run `init` again. A workspace holds at most 20 active tokens. Revoke
+one under **Show and revoke** in the panel; a revoked token is refused at once
+and the others keep working. From a terminal, the owner lists and revokes them
+through the API:
 
 ```text
 export DRAFT_LOOP_SERVER_TOKEN="$(draft-loop-server token)"
