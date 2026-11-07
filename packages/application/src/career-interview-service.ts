@@ -205,8 +205,19 @@ export function createCareerInterviewService(
     topic: CareerInterviewSessionTopic,
   ): Promise<{ topic: CareerInterviewConversationTopic; themes: string[] }> => {
     const record = await options.loadRecord(workspaceId);
+    // A subject typed before facts were attached to it (#2414), or before the profile had any,
+    // finds its facts now, so the interviewer never reads an empty record by mistake.
+    const factIds =
+      topic.kind === "candidate-subject" && topic.fact_ids.length === 0
+        ? careerInterviewSubjectFacts(
+            topic.title ?? topic.reason,
+            record.facts,
+            record.mayTransmit,
+            maximumCareerInterviewContextEntries,
+          )
+        : topic.fact_ids;
     const bounded = careerInterviewTopicContext(
-      { kind: topic.kind, reason: topic.reason, factIds: topic.fact_ids },
+      { kind: topic.kind, reason: topic.reason, factIds },
       record.facts,
       record.mayTransmit,
     );
