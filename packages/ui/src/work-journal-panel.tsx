@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { workJournalPanelId } from "./shared-link.js";
 import {
   type WorkJournalEditDraft,
@@ -44,6 +44,8 @@ export interface WorkJournalPanelProps {
     noteId: string,
     action: WorkJournalReviewAction,
   ) => Promise<string | undefined>;
+  /** How to connect a coding agent (#2427), from a host that can issue its token. */
+  readonly agentSetup?: ReactNode;
 }
 
 export function WorkJournalPanel({
@@ -53,6 +55,7 @@ export function WorkJournalPanel({
   knowledgeBases,
   onSetIntake,
   onReview,
+  agentSetup,
 }: WorkJournalPanelProps) {
   const id = useId();
   const [intakeProblem, setIntakeProblem] = useState<string | undefined>(undefined);
@@ -111,6 +114,7 @@ export function WorkJournalPanel({
           ))}
         </ul>
       )}
+      {agentSetup}
     </section>
   );
 }

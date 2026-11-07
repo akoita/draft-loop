@@ -528,6 +528,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
+        agentTokens: agentTokens !== undefined,
         ...(knowledgeIntake === undefined ||
         application.sensitivityRules === undefined ||
         application.sourceEvidenceKinds === undefined

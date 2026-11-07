@@ -873,6 +873,11 @@ msgstr "Actions"
 msgid "Active"
 msgstr "Active"
 
+#. placeholder {0}: active.length
+#: packages/ui/src/agent-setup.tsx
+msgid "Active agent tokens: {0}"
+msgstr "Active agent tokens: {0}"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Active now:"
 msgstr "Active now:"
@@ -920,6 +925,14 @@ msgstr "Add file"
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add folder"
 msgstr "Add folder"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add it to ~/.codex/config.toml."
+msgstr "Add it to ~/.codex/config.toml."
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add it to your agent's MCP settings file."
+msgstr "Add it to your agent's MCP settings file."
 
 #: packages/ui/src/application-steps.tsx
 #: packages/ui/src/start-checklist-model.ts
@@ -1890,6 +1903,10 @@ msgstr "Codex session"
 msgid "Codex session:"
 msgstr "Codex session:"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Coding agent"
+msgstr "Coding agent"
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
@@ -2044,6 +2061,14 @@ msgstr "Conflicting titles"
 msgid "Conflicting values"
 msgstr "Conflicting values"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Connect a coding agent"
+msgstr "Connect a coding agent"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgstr "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "Connecting…"
 msgstr "Connecting…"
@@ -2075,6 +2100,18 @@ msgstr "Continue where you left off, or pick another workspace. "
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Conversation"
 msgstr "Conversation"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copied"
+msgstr "Copied"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copy"
+msgstr "Copy"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copy the configuration into your agent, then ask it to run /log-work."
+msgstr "Copy the configuration into your agent, then ask it to run /log-work."
 
 #: packages/ui/src/run-details.tsx
 msgid "core areas"
@@ -2133,6 +2170,14 @@ msgstr "Coverage-judgement instructions"
 msgid "Create a new workspace"
 msgstr "Create a new workspace"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Create a token for your agent. It can only add notes here and list their titles."
+msgstr "Create a token for your agent. It can only add notes here and list their titles."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Create agent token"
+msgstr "Create agent token"
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Create application"
 msgstr "Create application"
@@ -2170,6 +2215,10 @@ msgstr "Create workspace"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Created"
 msgstr "Created"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "created {created}, expires {until}"
+msgstr "created {created}, expires {until}"
 
 #: apps/web/src/evidence-file-model.ts
 msgid "Created {when}"
@@ -3282,6 +3331,10 @@ msgstr "From the workspace's job file."
 msgid "Full draft"
 msgstr "Full draft"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Full setup guide"
+msgstr "Full setup guide"
+
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "full source"
 msgstr "full source"
@@ -3544,6 +3597,10 @@ msgstr "History:"
 msgid "Home"
 msgstr "Home"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "How it works"
+msgstr "How it works"
+
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
 msgstr "How the heading matches"
@@ -3698,6 +3755,10 @@ msgstr "Input tokens per call"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Inputs"
 msgstr "Inputs"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Install draftloop-mcp once on this computer."
+msgstr "Install draftloop-mcp once on this computer."
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Install model"
@@ -5246,6 +5307,10 @@ msgstr "Other"
 msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
 msgstr "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Other MCP agents (JSON)"
+msgstr "Other MCP agents (JSON)"
+
 #: packages/ui/src/app.tsx
 msgid "Other model…"
 msgstr "Other model…"
@@ -6393,6 +6458,10 @@ msgstr "reviews"
 msgid "Revise"
 msgstr "Revise"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Revoke"
+msgstr "Revoke"
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Role"
 msgstr "Role"
@@ -6489,6 +6558,10 @@ msgstr "Run history"
 #: packages/ui/src/compact-history.tsx
 msgid "Run history compacted: {0} before, {1} after. The previous history is kept as {2}. {3} runs were checked to read back the same."
 msgstr "Run history compacted: {0} before, {1} after. The previous history is kept as {2}. {3} runs were checked to read back the same."
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Run it in a terminal. It saves the server in your user settings."
+msgstr "Run it in a terminal. It saves the server in your user settings."
 
 #: packages/ui/src/review.tsx
 msgid "run progress"
@@ -6835,6 +6908,10 @@ msgstr "Set up your workspace"
 msgid "Settings"
 msgstr "Settings"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Setup guide"
+msgstr "Setup guide"
+
 #: packages/ui/src/review.tsx
 msgid "Shared lineage overridden on a recorded rationale; critique was not independent"
 msgstr "Shared lineage overridden on a recorded rationale; critique was not independent"
@@ -6851,6 +6928,10 @@ msgstr "Show {0}"
 #: packages/ui/src/coverage-panel.tsx
 msgid "show all"
 msgstr "show all"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Show and revoke"
+msgstr "Show and revoke"
 
 #. placeholder {0}: shownArchived.length
 #: packages/ui/src/home.tsx
@@ -8049,6 +8130,11 @@ msgstr "The summary says"
 msgid "The text pasted when this application was created."
 msgstr "The text pasted when this application was created."
 
+#. placeholder {0}: answer.problem
+#: packages/ui/src/agent-setup.tsx
+msgid "The token could not be created. {0}"
+msgstr "The token could not be created. {0}"
+
 #. placeholder {0}: response.status
 #: apps/web/src/oidc-session.ts
 msgid "The token endpoint answered {0}."
@@ -8393,6 +8479,10 @@ msgstr "This sign-in was not started from this tab. Sign in again."
 #: apps/web/src/screening-model.ts
 msgid "This text was screened clear, so there is nothing to release."
 msgstr "This text was screened clear, so there is nothing to release."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it from this panel."
+msgstr "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it from this panel."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "This topic has no summary to confirm yet."

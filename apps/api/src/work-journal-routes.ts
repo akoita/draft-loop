@@ -36,6 +36,8 @@ export interface WorkJournalRoutesOptions {
   };
   /** Screens the approved note's source like an upload. */
   readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
+  /** Whether this server issues agent tokens, which the screen's setup steps need (#2427). */
+  readonly agentTokens?: boolean;
 }
 
 /** The tenant's evidence-kind overrides, through which approval marks a note's source. */
@@ -112,7 +114,15 @@ const reviewBody = z
   .meta({ id: "WorkJournalReview" });
 
 const intakeSchema = z
-  .object({ enabled: z.boolean(), changed_at: z.string().optional() })
+  .object({
+    enabled: z.boolean(),
+    changed_at: z.string().optional(),
+    agent_tokens: z
+      .boolean()
+      .describe(
+        "Whether this server issues agent tokens, so the screen can offer a coding agent's setup.",
+      ),
+  })
   .meta({ id: "WorkJournalIntake" });
 
 const intakeBody = z.strictObject({ enabled: z.boolean() });
@@ -297,6 +307,7 @@ export function registerWorkJournalRoutes(
       return {
         enabled: intake.enabled,
         ...(intake.changedAt === undefined ? {} : { changed_at: intake.changedAt }),
+        agent_tokens: options.agentTokens === true,
       };
     },
   );
@@ -321,6 +332,7 @@ export function registerWorkJournalRoutes(
       return {
         enabled: intake.enabled,
         ...(intake.changedAt === undefined ? {} : { changed_at: intake.changedAt }),
+        agent_tokens: options.agentTokens === true,
       };
     },
   );

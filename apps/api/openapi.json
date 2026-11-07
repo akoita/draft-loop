@@ -6718,10 +6718,15 @@
           },
           "changed_at": {
             "type": "string"
+          },
+          "agent_tokens": {
+            "type": "boolean",
+            "description": "Whether this server issues agent tokens, so the screen can offer a coding agent's setup."
           }
         },
         "required": [
-          "enabled"
+          "enabled",
+          "agent_tokens"
         ]
       },
       "WritingPolicyVersionInput": {
@@ -12994,10 +12999,15 @@
           },
           "changed_at": {
             "type": "string"
+          },
+          "agent_tokens": {
+            "type": "boolean",
+            "description": "Whether this server issues agent tokens, so the screen can offer a coding agent's setup."
           }
         },
         "required": [
-          "enabled"
+          "enabled",
+          "agent_tokens"
         ],
         "additionalProperties": false
       },

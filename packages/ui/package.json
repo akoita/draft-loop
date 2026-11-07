@@ -52,6 +52,14 @@
       "types": "./src/career-interview-panel.tsx",
       "import": "./src/career-interview-panel.tsx"
     },
+    "./agent-setup": {
+      "types": "./src/agent-setup.tsx",
+      "import": "./src/agent-setup.tsx"
+    },
+    "./agent-setup-model": {
+      "types": "./src/agent-setup-model.ts",
+      "import": "./src/agent-setup-model.ts"
+    },
     "./work-journal-panel": {
       "types": "./src/work-journal-panel.tsx",
       "import": "./src/work-journal-panel.tsx"
