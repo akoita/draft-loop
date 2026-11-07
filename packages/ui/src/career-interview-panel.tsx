@@ -321,7 +321,10 @@ function Proposal({
         {proposal === undefined ? null : (
           <li className="interview-turn interview-turn-interviewer">
             <span className="interview-speaker sr-only">{t`Interviewer`}: </span>
-            {proposal}
+            {/* With nothing to suggest, the screen words the offer itself, in its own language. */}
+            {topics.length === 0
+              ? t`I have no topic to suggest today. Is there anything from your career you would like to tell me about?`
+              : proposal}
           </li>
         )}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}

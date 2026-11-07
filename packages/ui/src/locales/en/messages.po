@@ -3570,6 +3570,10 @@ msgstr "I approve DraftLoop fetching this page. It is read only when you extract
 msgid "I don't remember"
 msgstr "I don't remember"
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
+msgstr "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
+
 #: packages/ui/src/review.tsx
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr "I reviewed these destinations, data categories, retention preference, and limits."

@@ -3569,6 +3569,10 @@ msgstr ""
 msgid "I don't remember"
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr ""

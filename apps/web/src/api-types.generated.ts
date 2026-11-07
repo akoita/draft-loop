@@ -144,17 +144,20 @@ export interface ApiSchemas {
   "CareerInterviewActionInput": {
     readonly action: "accept";
     readonly topic_key: string;
+    readonly language?: "fr" | "en";
   } | {
     readonly action: "decline";
     readonly topic_key: string;
   } | {
     readonly action: "own_subject";
     readonly subject: string;
+    readonly language?: "fr" | "en";
   } | {
     readonly action: "answer";
     readonly topic_key: string;
     readonly text?: string;
     readonly mark?: "skipped" | "unknown";
+    readonly language?: "fr" | "en";
   } | {
     readonly action: "confirm";
     readonly topic_key: string;

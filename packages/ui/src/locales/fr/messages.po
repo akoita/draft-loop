@@ -3564,6 +3564,10 @@ msgstr "J’autorise DraftLoop à récupérer cette page. Elle n’est lue que l
 msgid "I don't remember"
 msgstr "Je ne me souviens pas"
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
+msgstr "Je n’ai pas de sujet à vous proposer aujourd’hui. Y a-t-il un moment de votre parcours que vous aimeriez me raconter ?"
+
 #: packages/ui/src/review.tsx
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr "J’ai vérifié ces destinations, catégories de données, préférence de conservation et limites."

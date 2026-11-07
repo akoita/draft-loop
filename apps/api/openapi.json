@@ -2409,6 +2409,14 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 400
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
+                ]
               }
             },
             "required": [
@@ -2447,6 +2455,14 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 300
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
+                ]
               }
             },
             "required": [
@@ -2476,6 +2492,14 @@
                 "enum": [
                   "skipped",
                   "unknown"
+                ]
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
                 ]
               }
             },
@@ -9248,6 +9272,14 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 400
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
+                ]
               }
             },
             "required": [
@@ -9286,6 +9318,14 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 300
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
+                ]
               }
             },
             "required": [
@@ -9315,6 +9355,14 @@
                 "enum": [
                   "skipped",
                   "unknown"
+                ]
+              },
+              "language": {
+                "description": "The screen's language, which the interviewer asks in. Without it, the workspace's.",
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
                 ]
               }
             },

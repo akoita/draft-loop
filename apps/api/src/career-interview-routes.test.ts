@@ -301,4 +301,40 @@ describe("career interview routes", () => {
     expect(messages.find((message) => message.type === "question")?.text).toBe("And then?");
     expect(logs.join("\n")).not.toContain("loan reports");
   });
+
+  it("asks in the screen's language when the action carries one, else in the workspace's", async () => {
+    const prompts: string[] = [];
+    const base = scriptedRoute([], []);
+    await build({
+      consent: granted,
+      route: (options) => {
+        const route = base(options);
+        return {
+          ...route,
+          execute: async (request) => {
+            prompts.push(request.systemPrompt);
+            return route.execute(request);
+          },
+        };
+      },
+    });
+    const started = (await call("POST", sessions)).json();
+    const id = started.session.id as string;
+    const key = started.session.topics[0].key as string;
+
+    await call("POST", `${sessions}/${id}/actions`, {
+      action: "accept",
+      topic_key: key,
+      language: "fr",
+    });
+    await call("POST", `${sessions}/${id}/actions`, {
+      action: "answer",
+      topic_key: key,
+      text: "Hello",
+    });
+
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain("in French (fr)");
+    expect(prompts[1]).not.toContain("French");
+  });
 });

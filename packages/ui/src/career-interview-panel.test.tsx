@@ -104,6 +104,15 @@ describe("CareerInterviewPanel", () => {
     expect(html).not.toContain("The interviewer is not set up");
   });
 
+  it("words the offer itself, in the screen's language, when no topic is left to suggest", () => {
+    const html = render({
+      session: { ...summarisedSession, topics: [], status: "open" },
+      proposal: "Server words that may be in another language.",
+    });
+    expect(html).toContain("I have no topic to suggest today.");
+    expect(html).not.toContain("Server words");
+  });
+
   it("offers a proposed topic, a no, and the candidate's own subject", () => {
     const html = render({ session: proposedSession });
     expect(html).toContain("Would you like to talk about it?");
