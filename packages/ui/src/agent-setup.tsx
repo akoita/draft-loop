@@ -21,7 +21,7 @@ import { formatDate } from "./locale-format.js";
 import { codingAgentsSectionId } from "./shared-link.js";
 
 /**
- * Coding agents in Workspace settings (#2427, moved app-wide in #2439): creates an agent token
+ * Agents in Workspace settings (#2427, moved app-wide in #2439): creates an agent token
  * with the scopes the person ticks and shows the configuration to paste into the agent, with the
  * token in it. The secret lives only in this component's state, shown once; a server that issues
  * no agent tokens gets one line instead.
@@ -80,9 +80,9 @@ export function AgentSetup({
   if (available === undefined) return null;
   const heading = (
     <>
-      <h3>{t`Coding agents`}</h3>
+      <h3>{t`Agents`}</h3>
       <p className="muted">
-        {t`Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here.`}
+        {t`Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here.`}
       </p>
     </>
   );
@@ -91,7 +91,7 @@ export function AgentSetup({
       <section className="coding-agents" id={codingAgentsSectionId}>
         {heading}
         <p className="muted">
-          {t`Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server.`}{" "}
+          {t`Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server.`}{" "}
           <GuideLink>{t`How it works`}</GuideLink>
         </p>
       </section>
@@ -141,7 +141,7 @@ export function AgentSetup({
     <section className="coding-agents" id={codingAgentsSectionId}>
       {heading}
       <details className="agent-setup" open={open || undefined}>
-        <summary>{t`Connect a coding agent`}</summary>
+        <summary>{t`Connect an agent`}</summary>
         <ol>
           <li>
             {t`Install draftloop-mcp once on this computer.`}{" "}
@@ -182,7 +182,7 @@ export function AgentSetup({
             {t`This token is shown once. Keep it in your user settings, not in a file you commit. It expires on ${expires}; revoke it here.`}
           </p>
         )}
-        <div className="agent-setup-hosts" role="tablist" aria-label={t`Coding agent`}>
+        <div className="agent-setup-hosts" role="tablist" aria-label={t`Agent`}>
           {agentHosts.map((each) => (
             <button
               key={each}
@@ -277,9 +277,9 @@ export function AgentSetupLink({ onOpen }: { readonly onOpen?: (() => void) | un
   if (onOpen === undefined) return null;
   return (
     <p className="muted">
-      {t`To let a coding agent file notes here, connect it under Coding agents in Workspace settings.`}{" "}
+      {t`To let an agent file notes here, connect it under Agents in Workspace settings.`}{" "}
       <button type="button" className="link-action" onClick={onOpen}>
-        {t`Connect a coding agent`}
+        {t`Connect an agent`}
       </button>
     </p>
   );

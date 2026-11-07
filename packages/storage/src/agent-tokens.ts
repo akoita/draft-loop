@@ -1,5 +1,5 @@
 /**
- * Agent tokens (#2147, #2158): credentials a coding agent holds instead of the owner token. Each
+ * Agent tokens (#2147, #2158): credentials an agent holds instead of the owner token. Each
  * one reaches only the scopes it was issued with (#2438) in one workspace, expires, and can be
  * revoked on its own (the
  * audit in `docs/security/agent-token-audit.md`). A store keeps

@@ -185,7 +185,7 @@ export function admitAgentRoute(
   if (!token.scopes.includes(rule.scope)) {
     return {
       outcome: "refused",
-      message: `This agent token lacks the "${rule.scope}" scope; create a token with it under Coding agents in the workspace settings.`,
+      message: `This agent token lacks the "${rule.scope}" scope; create a token with it under Agents in the workspace settings.`,
     };
   }
   if (request.method === "GET" && rule.allows !== undefined && !rule.allows(request)) {

@@ -14,7 +14,7 @@ and the decisions behind this page are in
 
 ```mermaid
 flowchart LR
-  client["Web screen, desktop client<br/>or coding agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
+  client["Web screen, desktop client<br/>or agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
   api -->|screen untrusted text| screen["Intake screening"]
   api -->|ids only| queue[("Run queue<br/>packages/run-queue")]
   api -->|one approved hop| fetcher["Page fetcher<br/>apps/page-fetcher"]

@@ -10,7 +10,7 @@ import {
 import { type ApplicationIo, CliUserError } from "./workflow.js";
 
 /**
- * `draft-loop work-journal` (#2024): the candidate reviews the notes coding agents recorded,
+ * `draft-loop work-journal` (#2024): the candidate reviews the notes agents recorded,
  * through the server's work journal API, as the web's Work journal panel does. The CLI only sends
  * the review; the server checks, merges, screens and publishes.
  */
@@ -83,7 +83,7 @@ export function registerWorkJournalCommands(
   const environment = dependencies.environment ?? process.env;
   const journal = root
     .command("work-journal")
-    .description("Review the notes coding agents recorded on a DraftLoop server");
+    .description("Review the notes agents recorded on a DraftLoop server");
 
   const withConnection = (command: Command) =>
     command

@@ -191,7 +191,7 @@ unless its exit criterion was demonstrated.
 ## Current state
 
 The [feature catalog](features/README.md) lists every capability with its
-status, where it runs and what a coding agent can reach. CV quality is not
+status, where it runs and what an agent can reach. CV quality is not
 validated yet (#1309), so the CV drafting row stays `partial` until the stage
 gate passes.
 
@@ -416,8 +416,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   ([milestone 89](https://github.com/akoita/draft-loop/milestone/89),
   #2437–#2442, merged 2026-11-07, [walked](evaluation/agent-plugin-walk.md)
   with real Claude Code). Agent tokens get scopes, and agents can
-  list applications, add a job from pasted text and follow a run. "Connect a
-  coding agent" moves to the Coding agents section of the workspace settings,
+  list applications, add a job from pasted text and follow a run. "Connect an
+  agent" moves to the Agents section of the workspace settings,
   and DraftLoop installs as a Claude Code plugin. Runs, drafts and evidence
   tools follow in a later milestone; hosted agent tokens wait for hosted
   sign-in.

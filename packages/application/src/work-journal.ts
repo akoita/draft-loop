@@ -26,7 +26,7 @@ import {
 import { type ContentScreener, screenWith } from "./content-screening.js";
 
 /**
- * The work journal (ADR 0011 D17, #2018): what a coding agent's `record_work` call does, and the
+ * The work journal (ADR 0011 D17, #2018): what an agent's `record_work` call does, and the
  * candidate's review of the notes it files. A note is evidence for review, never a CV claim: it
  * waits as `pending` until the candidate approves it, edits it, merges it into another, or
  * discards it. Every answer and error is content-free, so it can be logged and relayed.
@@ -277,7 +277,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     if (!(await store.intake(workspaceId)).enabled) {
       throw new WorkJournalError(
         "not_consented",
-        'The candidate has not turned on "Accept notes from coding agents" in DraftLoop.',
+        'The candidate has not turned on "Accept notes from agents" in DraftLoop.',
       );
     }
   };

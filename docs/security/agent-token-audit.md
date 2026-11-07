@@ -1,7 +1,7 @@
 # Agent token audit
 
 This report is for the owner or reviewer who decides whether agent tokens are
-safe to hand to a coding agent. It checks how a token is issued, scoped,
+safe to hand to an agent. It checks how a token is issued, scoped,
 expired and revoked against the code on 2026-11-05. It lists the gaps found
 and how each one was closed or why it stays open.
 

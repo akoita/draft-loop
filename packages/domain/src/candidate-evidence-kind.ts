@@ -16,7 +16,7 @@ export const candidateEvidenceKinds = [
   /** A speaker-labelled or timestamped transcript of a conversation. */
   "transcript",
   /**
-   * A note a coding agent filed about notable work and the candidate approved (#2018). Always set
+   * A note an agent filed about notable work and the candidate approved (#2018). Always set
    * by the writer that renders the note, never detected.
    */
   "work-journal",

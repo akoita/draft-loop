@@ -36,7 +36,7 @@ once.
   that lifted a quarantine, with the releasing member's id and written reason.
   Results hold closed signal codes and screener identities, never the screened
   text.
-- **Work journal:** the record's "Accept notes from coding agents" switch, its
+- **Work journal:** the record's "Accept notes from agents" switch, its
   notes in every status with their content, and the keys of discarded notes
   whose text was deleted after 30 days, kept so an agent does not record that
   work again.
