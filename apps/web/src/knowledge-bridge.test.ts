@@ -211,6 +211,48 @@ describe("career evidence over HTTP", () => {
     });
   });
 
+  it("uploads pasted text as a plain-text file named after its title, without a picker", async () => {
+    const pickFile = vi.fn<PickFile>();
+    const { port, calls } = portOver(
+      {
+        "GET /v1/knowledge-bases/{knowledgeBaseId}/sources": () => ({ sources: [] }),
+        "POST /v1/knowledge-bases/{knowledgeBaseId}/sources": () => source("src-2", "ver-2"),
+      },
+      pickFile,
+    );
+    const text = "Led the billing migration.\n- Cut deploy time to 10 minutes.";
+
+    const result = await port.execute({
+      type: "knowledge.import-text",
+      input: { storeId, knowledgeBaseId: "kb-a", title: "Migration notes", text },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { sourceId: "src-2", kind: "file", created: true, outcome: "added" },
+    });
+    expect(pickFile).not.toHaveBeenCalled();
+    const upload = calls.find(({ operation }) => operation.startsWith("POST"));
+    expect(upload?.input).toMatchObject({
+      path: { knowledgeBaseId: "kb-a" },
+      query: { name: "Migration notes.pasted.txt" },
+      contentType: "text/plain",
+    });
+    expect(await (upload?.input.body as Blob | undefined)?.text()).toBe(text);
+  });
+
+  it("refuses blank pasted text before any request", async () => {
+    const { port, calls } = portOver({});
+
+    const result = await port.execute({
+      type: "knowledge.import-text",
+      input: { storeId, knowledgeBaseId: "kb-a", title: "Notes", text: "  \n " },
+    });
+
+    expect(result).toMatchObject({ ok: false });
+    expect(calls).toEqual([]);
+  });
+
   it("reads a closed picker as a cancelled import, and an unsupported file before any request", async () => {
     const cancelled = portOver({}, async () => undefined);
     const unsupported = portOver({}, async () => new File(["x"], "photo.png"));

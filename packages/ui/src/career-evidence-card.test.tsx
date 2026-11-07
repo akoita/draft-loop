@@ -93,6 +93,21 @@ describe("Career evidence setup card", () => {
     );
   });
 
+  it("offers Paste text next to Add documents only when the host takes text into a base", () => {
+    const withText = { onAddText: async () => true };
+    expect(render(selected, withText)).toMatch(
+      />Add documents<\/button><button[^>]*aria-expanded="false"[^>]*>Paste text</,
+    );
+    // The box opens on the person's click, so nothing to type in until then.
+    expect(render(selected, withText)).not.toContain("Save to career evidence");
+    expect(render(selected)).not.toContain(">Paste text<");
+    expect(render({ kind: "none" }, withText)).not.toContain(">Paste text<");
+    expect(render({ kind: "none" }, { ...withText, automatic: true })).toContain(">Paste text<");
+    expect(render(selected, { ...withText, pending: true })).toMatch(
+      /<button[^>]*disabled=""[^>]*>Paste text</,
+    );
+  });
+
   it("hides the URL box when the host fetches no URL, keeping Add documents", () => {
     const html = render(selected, { urlsOffered: false });
     expect(html).toContain(">Add documents<");

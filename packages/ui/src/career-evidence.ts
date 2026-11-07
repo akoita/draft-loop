@@ -145,7 +145,9 @@ export function careerEvidenceReadinessText(
 export type CareerEvidenceSource =
   | { readonly kind: "file" }
   | { readonly kind: "directory" }
-  | { readonly kind: "url"; readonly url: string };
+  | { readonly kind: "url"; readonly url: string }
+  /** Typed or pasted text, saved as one plain-text source (#2417). */
+  | { readonly kind: "text"; readonly title: string; readonly text: string };
 
 /** Says what adding the source did: new source, new version of one, or already there. */
 function careerEvidenceAddLead(
@@ -191,6 +193,7 @@ export async function addCareerEvidence(input: {
   const importFile = capabilities.importCandidateKnowledgeFile;
   const importDirectory = capabilities.importCandidateKnowledgeDirectory;
   const importUrl = capabilities.importCandidateKnowledgeUrl;
+  const importText = capabilities.importCandidateKnowledgeText;
   const readReadiness = capabilities.getCandidateKnowledgeReadiness;
   if (readReadiness === undefined) throw new Error(t`Career evidence intake is unavailable`);
   let result: KnowledgeIntakeResult | KnowledgeUrlImportResult;
@@ -200,6 +203,10 @@ export async function addCareerEvidence(input: {
   } else if (input.source.kind === "directory") {
     if (importDirectory === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importDirectory(target.storeId, target.knowledgeBaseId);
+  } else if (input.source.kind === "text") {
+    if (importText === undefined) throw new Error(t`Career evidence intake is unavailable`);
+    const { title, text } = input.source;
+    result = await importText(target.storeId, target.knowledgeBaseId, { title, text });
   } else {
     if (importUrl === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importUrl(target.storeId, target.knowledgeBaseId, input.source.url);
