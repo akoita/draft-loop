@@ -8,6 +8,7 @@
     }
   },
   "enabledPlugins": {
-    "utilities@agent-toolkit": true
+    "utilities@agent-toolkit": true,
+    "baseline@agent-toolkit": true
   }
 }
