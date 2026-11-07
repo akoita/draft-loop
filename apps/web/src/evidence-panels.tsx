@@ -306,6 +306,6 @@ export interface EvidenceSectionsProps {
    * owner token for now.
    */
   readonly workJournal?: boolean;
-  /** Opens Home, for the Work journal's link to Coding agents. */
+  /** Opens Home, for the Work journal's link to Agents. */
   readonly openHome?: (() => void) | undefined;
 }

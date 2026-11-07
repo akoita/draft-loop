@@ -98,7 +98,7 @@ export interface TenantApplications {
    * the pinned fetcher in this process when unset.
    */
   readonly jobPageFetcher?: UrlFetcher;
-  /** A tenant's agent tokens (#2159); owner mode reads the owner tenant's to admit coding agents. */
+  /** A tenant's agent tokens (#2159); owner mode reads the owner tenant's to admit agents. */
   readonly agentTokensFor?: (tenantId: string) => AgentTokenStore;
 }
 

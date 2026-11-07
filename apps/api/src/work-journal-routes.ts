@@ -120,7 +120,7 @@ const intakeSchema = z
     agent_tokens: z
       .boolean()
       .describe(
-        "Whether this server issues agent tokens, so the screen can offer a coding agent's setup.",
+        "Whether this server issues agent tokens, so the screen can offer an agent's setup.",
       ),
   })
   .meta({ id: "WorkJournalIntake" });
@@ -295,7 +295,7 @@ export function registerWorkJournalRoutes(
     "/v1/workspaces/:workspaceId/work-journal/intake",
     {
       schema: {
-        summary: 'Read the "Accept notes from coding agents" switch',
+        summary: 'Read the "Accept notes from agents" switch',
         params: workspaceParams,
         response: { 200: intakeSchema, ...errors },
       },
@@ -316,7 +316,7 @@ export function registerWorkJournalRoutes(
     "/v1/workspaces/:workspaceId/work-journal/intake",
     {
       schema: {
-        summary: 'Turn "Accept notes from coding agents" on or off',
+        summary: 'Turn "Accept notes from agents" on or off',
         description:
           "Intake is off until the candidate turns it on. Turning it off refuses new notes and deletes the pending ones.",
         params: workspaceParams,

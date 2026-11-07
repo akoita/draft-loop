@@ -25,7 +25,7 @@ export interface WorkJournalSectionProps {
   readonly client: ApiClient;
   /** The record's selected knowledge bases, the first preselected; undefined until read. */
   readonly bases: readonly ApiSchemas["KnowledgeBase"][] | undefined;
-  /** Opens Home, where Workspace settings hold Coding agents; the link is absent without it. */
+  /** Opens Home, where Workspace settings hold Agents; the link is absent without it. */
   readonly openHome?: (() => void) | undefined;
 }
 

@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 /**
- * Home's reminder of work journal notes that wait for review (#2151). A note from a coding agent
+ * Home's reminder of work journal notes that wait for review (#2151). A note from an agent
  * waits at the bottom of the Career evidence page, so Home says how many wait and links there.
  */
 

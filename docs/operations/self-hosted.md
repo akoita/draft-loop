@@ -144,7 +144,7 @@ Replace the owner token when it may have leaked, or to retire every copy of it.
    - **Desktop app:** it asks for the token at its next request.
    - **Web screen:** reload the page and sign in.
    - **Terminal:** update `DRAFT_LOOP_SERVER_TOKEN` or your shell's export.
-   - **Coding agents:** nothing to do. `draftloop-mcp init` gave them an agent
+   - **Agents:** nothing to do. `draftloop-mcp init` gave them an agent
      token, which keeps working. A configuration made before 0.15.0 holds the
      owner token, so rerun `draftloop-mcp init` there.
 
@@ -223,11 +223,11 @@ with its owner token takes applications.
 
 ## Work journal
 
-Coding agents can record notable work you shipped as notes in a work journal
-(ADR 0011, D17). Notes wait as pending until you review them, and only an
-approved note becomes career evidence.
+Agents such as Claude Code or Codex can record notable work you shipped as
+notes in a work journal (ADR 0011, D17). Notes wait as pending until you
+review them, and only an approved note becomes career evidence.
 
-- **Turn it on** with "Accept notes from coding agents" in the Work journal
+- **Turn it on** with "Accept notes from agents" in the Work journal
   panel of the Career evidence page. The server refuses notes while it is off.
 - **Review on the web** in the same panel: approve a note into a knowledge
   base, edit it, merge it with a likely duplicate shown beside it, or discard
@@ -255,8 +255,8 @@ draft-loop work-journal merge <note> --into <note> [--keep-summary this]
 draft-loop work-journal discard <note>
 ```
 
-Coding agents reach the server through `draftloop-mcp`, with an agent token
-that reaches only the scopes ticked for it. **Coding agents** in Workspace
+Agents reach the server through `draftloop-mcp`, with an agent token
+that reaches only the scopes ticked for it. **Agents** in Workspace
 settings creates one and shows the configuration to paste into the agent;
 `draftloop-mcp init` issues one from the owner token. The address comes from `DRAFT_LOOP_SERVER_URL`. The
 [agent channel](../reference/agent-channel.md) reference covers its setup per

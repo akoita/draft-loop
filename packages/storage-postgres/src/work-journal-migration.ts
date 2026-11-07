@@ -4,13 +4,13 @@ import { erasureDefinition, withErasureSteps } from "./erasure-redefinition.js";
 import type { PostgresMigration } from "./migrations.js";
 
 /**
- * The work journal (#2021): notes a coding agent filed, pending the candidate's review.
+ * The work journal (#2021): notes an agent filed, pending the candidate's review.
  *
  * - `work_journal_notes` holds each note as the stored-note JSON the application parsed, with the
  *   columns its queries need. A dedupe key is unique per tenant among notes not discarded.
  * - `work_journal_forgotten_keys` keeps only the key and id of a discarded note whose text aged
  *   out after 30 days, so the agent is still told the candidate discarded that work.
- * - `work_journal_intake` is each workspace's "Accept notes from coding agents" switch.
+ * - `work_journal_intake` is each workspace's "Accept notes from agents" switch.
  * - `workspace_id` is the API's workspace (candidate record) id. Erasing a record removes its
  *   rows, and erasing an organisation removes all of them: `CREATE OR REPLACE` redefines version
  *   20's `erase_candidate_record` and version 22's `erase_tenant_remainder` with the three tables

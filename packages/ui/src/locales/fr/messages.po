@@ -848,8 +848,8 @@ msgid "Accept all skips word-match findings"
 msgstr "Tout accepter ignore les constats par mots-clés"
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Accept notes from coding agents"
-msgstr "Accepter les notes des agents de code"
+msgid "Accept notes from agents"
+msgstr "Accepter les notes des agents"
 
 #: packages/ui/src/review.tsx
 msgid "Accepted · no revision left"
@@ -1037,6 +1037,18 @@ msgstr "Avancé : exigences pour cette exécution"
 #: packages/ui/src/application-steps.tsx
 msgid "Advanced: writing policy override for this job"
 msgstr "Avancé : politique de rédaction propre à cette offre"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agent"
+msgstr "Agent"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agents"
+msgstr "Agents"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr "Les agents peuvent noter les travaux marquants que vous avez livrés. Chaque note attend ici ; seules celles que vous approuvez deviennent des éléments de parcours."
 
 #: packages/ui/src/review.tsx
 msgid "all"
@@ -1950,18 +1962,6 @@ msgstr "session Codex"
 msgid "Codex session:"
 msgstr "Session Codex :"
 
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agent"
-msgstr "Agent de code"
-
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agents"
-msgstr "Agents de code"
-
-#: packages/ui/src/work-journal-panel.tsx
-msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
-msgstr "Les agents de code peuvent noter les travaux marquants que vous avez livrés. Chaque note attend ici ; seules celles que vous approuvez deviennent des éléments de parcours."
-
 #: packages/ui/src/profile.tsx
 msgid "Collapse all"
 msgstr "Tout replier"
@@ -2114,12 +2114,12 @@ msgid "Conflicting values"
 msgstr "Valeurs contradictoires"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connect a coding agent"
-msgstr "Connecter un agent de code"
+msgid "Connect an agent"
+msgstr "Connecter un agent"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
-msgstr "La connexion d'un agent de code au service hébergé n'est pas encore disponible. Elle fonctionne déjà avec un serveur auto-hébergé."
+msgid "Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgstr "La connexion d'un agent au service hébergé n'est pas encore disponible. Elle fonctionne déjà avec un serveur auto-hébergé."
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Connecting…"
@@ -4069,8 +4069,8 @@ msgid "Length"
 msgstr "Longueur"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
-msgstr "Laissez Claude Code, Codex ou un autre agent de code travailler avec DraftLoop pour vous. Les approbations, les décisions de relecture et les réglages restent toujours entre vos mains, ici."
+msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgstr "Laissez Claude Code, Codex ou un autre agent travailler avec DraftLoop pour vous. Les approbations, les décisions de relecture et les réglages restent toujours entre vos mains, ici."
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Lexical (default)"
@@ -8651,8 +8651,8 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr "Pour commencer, créez un espace de travail pour votre recherche d’emploi, ouvrez-en un récent, ou essayez la démo avec des éléments d’exemple."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
-msgstr "Pour qu’un agent de code dépose des notes ici, connectez-le dans Agents de code, dans les Réglages de l’espace de travail."
+msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
+msgstr "Pour qu’un agent dépose des notes ici, connectez-le dans Agents, dans les Réglages de l’espace de travail."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Token:"

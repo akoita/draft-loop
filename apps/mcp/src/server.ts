@@ -26,7 +26,7 @@ export const serverInstructions = [
   "Read draftloop://work-journal/guide when unsure, and use list_work to avoid recording the same work twice.",
   "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; add_job adds an application from a job description the candidate pasted.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
-  "A refusal that names a missing scope means the candidate must create a token with it under Coding agents in DraftLoop's Workspace settings.",
+  "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
 ].join(" ");
 
 export const recordWorkDescription = `File a note about notable work you just helped the candidate ship, for their career evidence. The note waits in DraftLoop's Work journal until the candidate approves, edits or discards it.

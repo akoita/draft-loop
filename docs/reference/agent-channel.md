@@ -1,6 +1,10 @@
-# Agent channel: coding agents in DraftLoop
+# Agent channel: agents in DraftLoop
 
-The candidate's coding agent can record notable work it helped ship, such as a
+An agent here is any AI assistant that pairs a model with a harness able to
+call tools over MCP. Claude Code and Codex are the examples this page sets up;
+another MCP-capable agent uses the copied configuration.
+
+The candidate's agent can record notable work it helped ship, such as a
 payments integration or a database migration, as a note in DraftLoop's work
 journal. A note is evidence for review, never a CV claim: it waits as pending
 until the candidate approves it on the Career evidence page or from the CLI.
@@ -31,7 +35,7 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 | A copied configuration       | Claude Code, Codex, any | The tools only                                        |
 | `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
 
-The Coding agents section of Workspace settings on Home shows the first two;
+The Agents section of Workspace settings on Home shows the first two;
 the Work journal panel links to it.
 
 1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
@@ -54,9 +58,9 @@ the Work journal panel links to it.
    find both `claude` and `draftloop-mcp`: use one Node version for both, or
    put both versions' `bin` folders on `PATH`.
 
-2. In the Work journal panel, turn on **Accept notes from coding agents**; the
-   server refuses notes while intake is off. Then, under **Coding agents** in
-   Workspace settings, open **Connect a coding agent**, tick what the agent
+2. In the Work journal panel, turn on **Accept notes from agents**; the
+   server refuses notes while intake is off. Then, under **Agents** in
+   Workspace settings, open **Connect an agent**, tick what the agent
    may do and select **Create agent token**.
 3. Pick your agent's tab and copy what it shows:
 
@@ -134,8 +138,8 @@ Windows.
 ### Revoke an agent token
 
 An agent token expires 90 days after it is issued; create a new one under
-Coding agents or run `init` again. A workspace holds at most 20 active tokens. Revoke
-one under **Show and revoke** in Coding agents; a revoked token is refused at once
+Agents or run `init` again. A workspace holds at most 20 active tokens. Revoke
+one under **Show and revoke** in Agents; a revoked token is refused at once
 and the others keep working. From a terminal, the owner lists and revokes them
 through the API:
 

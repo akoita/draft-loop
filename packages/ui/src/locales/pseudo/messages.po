@@ -854,7 +854,7 @@ msgid "Accept all skips word-match findings"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Accept notes from coding agents"
+msgid "Accept notes from agents"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1042,6 +1042,18 @@ msgstr ""
 
 #: packages/ui/src/application-steps.tsx
 msgid "Advanced: writing policy override for this job"
+msgstr ""
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agent"
+msgstr ""
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agents"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1956,18 +1968,6 @@ msgstr ""
 msgid "Codex session:"
 msgstr ""
 
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agent"
-msgstr ""
-
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agents"
-msgstr ""
-
-#: packages/ui/src/work-journal-panel.tsx
-msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
-msgstr ""
-
 #: packages/ui/src/profile.tsx
 msgid "Collapse all"
 msgstr ""
@@ -2120,11 +2120,11 @@ msgid "Conflicting values"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connect a coding agent"
+msgid "Connect an agent"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgid "Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server."
 msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
@@ -4074,7 +4074,7 @@ msgid "Length"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -8656,7 +8656,7 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
+msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx

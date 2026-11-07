@@ -854,8 +854,8 @@ msgid "Accept all skips word-match findings"
 msgstr "Accept all skips word-match findings"
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Accept notes from coding agents"
-msgstr "Accept notes from coding agents"
+msgid "Accept notes from agents"
+msgstr "Accept notes from agents"
 
 #: packages/ui/src/review.tsx
 msgid "Accepted · no revision left"
@@ -1043,6 +1043,18 @@ msgstr "Advanced: requirements for this run"
 #: packages/ui/src/application-steps.tsx
 msgid "Advanced: writing policy override for this job"
 msgstr "Advanced: writing policy override for this job"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agent"
+msgstr "Agent"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Agents"
+msgstr "Agents"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 
 #: packages/ui/src/review.tsx
 msgid "all"
@@ -1956,18 +1968,6 @@ msgstr "Codex session"
 msgid "Codex session:"
 msgstr "Codex session:"
 
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agent"
-msgstr "Coding agent"
-
-#: packages/ui/src/agent-setup.tsx
-msgid "Coding agents"
-msgstr "Coding agents"
-
-#: packages/ui/src/work-journal-panel.tsx
-msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
-msgstr "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
-
 #: packages/ui/src/profile.tsx
 msgid "Collapse all"
 msgstr "Collapse all"
@@ -2120,12 +2120,12 @@ msgid "Conflicting values"
 msgstr "Conflicting values"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connect a coding agent"
-msgstr "Connect a coding agent"
+msgid "Connect an agent"
+msgstr "Connect an agent"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
-msgstr "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgid "Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgstr "Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server."
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Connecting…"
@@ -4075,8 +4075,8 @@ msgid "Length"
 msgstr "Length"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
-msgstr "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgstr "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Lexical (default)"
@@ -8657,8 +8657,8 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
-msgstr "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
+msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
+msgstr "To let an agent file notes here, connect it under Agents in Workspace settings."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Token:"

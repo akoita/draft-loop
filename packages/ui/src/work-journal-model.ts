@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 /**
- * The Work journal review's view model (#2024): the notes a coding agent recorded, as the candidate
+ * The Work journal review's view model (#2024): the notes an agent recorded, as the candidate
  * reviews them on the Career evidence page. It only arranges what the API returns; the server
  * checks every edit, merges the content and refuses what screening holds.
  */

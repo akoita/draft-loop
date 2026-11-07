@@ -5,7 +5,7 @@ import {
 } from "@draft-loop/schemas/work-journal";
 
 /**
- * One tenant's work journal notes (#2021): notes a coding agent filed, pending the candidate's
+ * One tenant's work journal notes (#2021): notes an agent filed, pending the candidate's
  * review, and each workspace's intake switch. This module holds the port, its errors and an
  * in-memory implementation for tests and single-process stacks; Postgres implements it too.
  */
@@ -44,7 +44,7 @@ export interface WorkJournalNoteQuery {
   readonly limit: number;
 }
 
-/** A workspace's "Accept notes from coding agents" switch. */
+/** A workspace's "Accept notes from agents" switch. */
 export interface WorkJournalIntake {
   readonly enabled: boolean;
   readonly changedAt?: string;

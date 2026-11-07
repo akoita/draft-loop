@@ -96,7 +96,7 @@ never-share material. The amendment adds one read tool.
   CV drafting stays in the DraftLoop author–critic workflow.
 - **Token scope:** the agent token today reaches only the work journal. Add a
   read-only interview scope; it needs its own setting the candidate turns on,
-  as "Accept notes from coding agents" does for the journal.
+  as "Accept notes from agents" does for the journal.
 - **Cost:** the candidate prepares inside Claude or another agent and spends
   no DraftLoop credits. Whatever the tool returns reaches that agent's model
   provider, so the setting names this plainly.

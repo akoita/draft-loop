@@ -1338,7 +1338,7 @@ and exact-quote rules are the same for every kind.
 | `performance-review` | Judgements stay attributed to the reviewer                                                                                                         |
 | `notes`              | Only explicit statements                                                                                                                           |
 | `transcript`         | Only the candidate's own turns                                                                                                                     |
-| `work-journal`       | Credits only the role the note states. It is an approved note from a coding agent (#2018): its writer sets the kind, and detection never picks it. |
+| `work-journal`       | Credits only the role the note states. It is an approved note from an agent (#2018): its writer sets the kind, and detection never picks it. |
 | `other`              | Standard extraction                                                                                                                                |
 
 - **Detection.** Other kinds are detected locally from the latest version's

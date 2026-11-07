@@ -8,7 +8,7 @@ import { useRecordId } from "./record-context.js";
 import { workJournalProblem } from "./work-journal.js";
 
 /**
- * The web host's Coding agents section in Workspace settings (#2439): issues scoped agent tokens,
+ * The web host's Agents section in Workspace settings (#2439): issues scoped agent tokens,
  * lists and revokes them. With the owner token the server says whether it issues them; signed-in
  * accounts get none yet, so the section says so.
  */

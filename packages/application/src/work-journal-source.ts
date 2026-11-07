@@ -60,7 +60,7 @@ export function renderWorkJournalMarkdown(note: WorkJournalStoredNote): string {
   ];
   const sections = [
     `# ${workJournalSourceHeading(note)}`,
-    "Candidate-provided evidence: a note recorded from a coding agent session and approved by the candidate.",
+    "Candidate-provided evidence: a note recorded from an agent session and approved by the candidate.",
     "## Summary",
     plain(content.summary),
     "## Technologies",

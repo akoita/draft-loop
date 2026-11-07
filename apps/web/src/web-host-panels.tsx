@@ -14,7 +14,7 @@ import { StartPanel } from "./start-panels.js";
  * the Start dialog; in both modes the evidence page's file checks and private-section rules; with
  * the owner token, the work journal review (#2024) and its waiting notes on Home (#2151); on
  * every application, the prepare panel for a cover letter or interview questions (#2217); and
- * the writing preferences suggested from review choices and Coding agents (#2439) in Workspace
+ * the writing preferences suggested from review choices and Agents (#2439) in Workspace
  * settings.
  */
 export function webHostPanels(
