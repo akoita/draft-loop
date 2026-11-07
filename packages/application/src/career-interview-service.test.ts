@@ -64,6 +64,8 @@ describe("career interview service", () => {
     ]);
     const session = await service.start("owner");
     expect(session.topics.map((topic) => topic.kind)).toEqual(["role-gap"]);
+    // The screen words the reason from what the role leaves out (#2418).
+    expect(session.topics[0]?.missing?.length).toBeGreaterThan(0);
     const key = session.topics[0]?.key ?? "";
 
     const opened = await service.accept("owner", session.id, key);

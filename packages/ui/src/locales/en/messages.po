@@ -586,6 +586,14 @@ msgstr "{draftOpen} issues are still open. Acknowledge or resolve them, then sav
 msgid "{fileName} is larger than this service accepts."
 msgstr "{fileName} is larger than this service accepts."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{first} and {second}"
+msgstr "{first} and {second}"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{first}, {second} and {third}"
+msgstr "{first}, {second} and {third}"
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
@@ -675,6 +683,10 @@ msgstr "{needs}{has}. Ask the owner for more credits, or wait for the next perio
 msgid "{notDirectlyComparable}: judged under different coverage instructions"
 msgstr "{notDirectlyComparable}: judged under different coverage instructions"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{one} Would you like to talk about it, or about something else?"
+msgstr "{one} Would you like to talk about it, or about something else?"
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
@@ -715,6 +727,10 @@ msgstr "{role} planned calls"
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
 msgstr "{shown}, and the model you chose."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{theme}: your record mentions it but tells no story about it."
+msgstr "{theme}: your record mentions it but tells no story about it."
 
 #: packages/ui/src/model-suggestions.tsx
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
@@ -763,6 +779,10 @@ msgstr "A full backup of the current history is kept beside it, so the old histo
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
 msgstr "A heading path has at most 12 headings."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
+msgstr "A job you applied for asks for \"{title}\", and your record does not show it yet."
 
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
@@ -3595,7 +3615,7 @@ msgstr "I approve DraftLoop fetching this page. It is read only when you extract
 msgid "I don't remember"
 msgstr "I don't remember"
 
-#: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 msgstr "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 
@@ -8568,6 +8588,10 @@ msgstr "Two pages, centred name, ruled headings and room for full role histories
 msgid "Two pages, left-aligned name, teal headings and dates, justified text."
 msgstr "Two pages, left-aligned name, teal headings and dates, justified text."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
+msgstr "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
+
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
 msgstr "Type the record id,"
@@ -8922,6 +8946,10 @@ msgstr "Warnings"
 msgid "was opened after the configured maximum of"
 msgstr "was opened after the configured maximum of"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what changed thanks to your work"
+msgstr "what changed thanks to your work"
+
 #: packages/ui/src/career-flow.tsx
 msgid "What DraftLoop builds, you check"
 msgstr "What DraftLoop builds, you check"
@@ -8958,6 +8986,10 @@ msgstr "What the candidate did"
 msgid "What the critic asked to change"
 msgstr "What the critic asked to change"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what the role covered"
+msgstr "what the role covered"
+
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "What to do with matching sections"
@@ -8965,6 +8997,10 @@ msgstr "What to do with matching sections"
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
 msgstr "What you give"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "when it happened"
+msgstr "when it happened"
 
 #: apps/web/src/consent.tsx
 msgid "Where the agreement is kept"
@@ -9146,6 +9182,10 @@ msgstr "You"
 msgid "You can edit the draft once this round finishes."
 msgstr "You can edit the draft once this round finishes."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "You chose to talk about: {title}"
+msgstr "You chose to talk about: {title}"
+
 #: packages/ui/src/career-flow.tsx
 msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
 msgstr "You give the documents, DraftLoop builds the facts, and every application reuses them."
@@ -9273,6 +9313,22 @@ msgstr "Your plan's limit on runs at the same time is reached. Wait for a run to
 #: apps/web/src/credits-model.ts
 msgid "Your plan's runs for today are used. Try again later."
 msgstr "Your plan's runs for today are used. Try again later."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but leaves out part of this role."
+msgstr "Your record names {title} but leaves out part of this role."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but not {missing}."
+msgstr "Your record names {title} but not {missing}."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing about {from}."
+msgstr "Your record says nothing about {from}."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing between {from} and {to}."
+msgstr "Your record says nothing between {from} and {to}."
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."

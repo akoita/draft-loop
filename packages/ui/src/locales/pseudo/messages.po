@@ -586,6 +586,14 @@ msgstr ""
 msgid "{fileName} is larger than this service accepts."
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{first} and {second}"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{first}, {second} and {third}"
+msgstr ""
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr ""
@@ -675,6 +683,10 @@ msgstr ""
 msgid "{notDirectlyComparable}: judged under different coverage instructions"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{one} Would you like to talk about it, or about something else?"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr ""
@@ -714,6 +726,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{theme}: your record mentions it but tells no story about it."
 msgstr ""
 
 #: packages/ui/src/model-suggestions.tsx
@@ -762,6 +778,10 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
 msgstr ""
 
 #: packages/ui/src/finding-title.ts
@@ -3594,7 +3614,7 @@ msgstr ""
 msgid "I don't remember"
 msgstr ""
 
-#: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 msgstr ""
 
@@ -8567,6 +8587,10 @@ msgstr ""
 msgid "Two pages, left-aligned name, teal headings and dates, justified text."
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
+msgstr ""
+
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
 msgstr ""
@@ -8921,6 +8945,10 @@ msgstr ""
 msgid "was opened after the configured maximum of"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what changed thanks to your work"
+msgstr ""
+
 #: packages/ui/src/career-flow.tsx
 msgid "What DraftLoop builds, you check"
 msgstr ""
@@ -8957,12 +8985,20 @@ msgstr ""
 msgid "What the critic asked to change"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what the role covered"
+msgstr ""
+
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr ""
 
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "when it happened"
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -9145,6 +9181,10 @@ msgstr ""
 msgid "You can edit the draft once this round finishes."
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "You chose to talk about: {title}"
+msgstr ""
+
 #: packages/ui/src/career-flow.tsx
 msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
 msgstr ""
@@ -9271,6 +9311,22 @@ msgstr ""
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan's runs for today are used. Try again later."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but leaves out part of this role."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but not {missing}."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing about {from}."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing between {from} and {to}."
 msgstr ""
 
 #: apps/web/src/oidc-session.ts
