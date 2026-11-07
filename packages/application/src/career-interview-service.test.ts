@@ -164,6 +164,25 @@ describe("career interview evidence", () => {
     expect(renderCareerInterviewMarkdown(session, 0, topic)).toBe(markdown);
   });
 
+  it("writes the file's headings and labels in the conversation's language", () => {
+    const titled = { ...topic, title: "Analyst, Example Bank" } as CareerInterviewSessionTopic;
+    const markdown = renderCareerInterviewMarkdown(session, 0, titled, "fr");
+    expect(markdown).toContain("# Entretien de parcours cis_fixture0001 sujet 1");
+    expect(markdown).toContain("## Sujet\n\nAnalyst, Example Bank");
+    expect(markdown).toContain("## Résumé confirmé");
+    expect(markdown).toContain("- Candidat: I built loan reports.");
+    expect(markdown).toContain("- Intervieweur: What changed?");
+    expect(markdown).toContain("- Candidat: (a passé cette question)");
+    // English files stay byte for byte as before, and the sensitivity rule follows the heading.
+    expect(renderCareerInterviewMarkdown(session, 0, titled, "en")).toBe(
+      renderCareerInterviewMarkdown(session, 0, titled),
+    );
+    expect(careerInterviewSourceRules(session, 0, "sensitive", "fr")[0]?.match).toEqual({
+      kind: "heading-path",
+      path: ["Entretien de parcours cis_fixture0001 sujet 1"],
+    });
+  });
+
   it("keeps skipped and unknown answers in order, so each answer stays with its question", () => {
     const marked = {
       ...topic,
