@@ -190,6 +190,7 @@ export interface ApiSchemas {
         readonly kind: "role-gap" | "untold-period" | "untold-theme" | "application-relevance" | "candidate-subject";
         readonly reason: string;
         readonly title?: string;
+        readonly missing?: readonly ("dates" | "outcome" | "scope")[];
         readonly status: "proposed" | "declined" | "open" | "summarised" | "closed";
         readonly fact_ids: readonly (string)[];
         readonly requirement_ids: readonly (string)[];

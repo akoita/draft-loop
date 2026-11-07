@@ -148,6 +148,9 @@ function sessionTopic(topic: CareerInterviewTopic): CareerInterviewSessionTopic 
     kind: topic.kind,
     reason: topic.reason,
     ...(topic.title === undefined ? {} : { title: topic.title }),
+    ...(topic.missing === undefined || topic.missing.length === 0
+      ? {}
+      : { missing: [...topic.missing] }),
     status: "proposed",
     fact_ids: [...topic.factIds],
     requirement_ids: [...topic.requirementIds],
