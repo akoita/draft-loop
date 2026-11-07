@@ -18,6 +18,8 @@ export interface CareerInterviewTopicView {
   readonly reason: string;
   /** A short name from the record's own words (#2403); older sessions have none. */
   readonly title?: string | undefined;
+  /** What a role-gap topic's record leaves out (#2418); older sessions have none. */
+  readonly missing?: readonly ("dates" | "outcome" | "scope")[] | undefined;
   readonly status: CareerInterviewTopicStatus;
   readonly turns: readonly CareerInterviewTurnView[];
   readonly summary?: string | undefined;
@@ -90,7 +92,7 @@ const themeNames = (): Readonly<Record<string, string>> => ({
  */
 export function careerInterviewTopicTitle(topic: CareerInterviewTopicView): string {
   const title = topic.title;
-  if (title === undefined || title.trim() === "") return topic.reason;
+  if (title === undefined || title.trim() === "") return careerInterviewTopicReason(topic);
   switch (topic.kind) {
     case "untold-period":
       return t`The period ${title}`;
@@ -101,6 +103,80 @@ export function careerInterviewTopicTitle(topic: CareerInterviewTopicView): stri
     default:
       return title;
   }
+}
+
+const roleGapWords = (): Readonly<Record<"dates" | "outcome" | "scope", string>> => ({
+  dates: t`when it happened`,
+  outcome: t`what changed thanks to your work`,
+  scope: t`what the role covered`,
+});
+
+function listed(words: readonly string[]): string {
+  const [first, second, third] = words;
+  if (first === undefined) return "";
+  if (second === undefined) return first;
+  if (third === undefined) return t`${first} and ${second}`;
+  return t`${first}, ${second} and ${third}`;
+}
+
+/** The period an untold-period topic covers, from its key (`untold-period:2016-2017:…`). */
+function topicPeriod(key: string): { readonly from: string; readonly to: string } | undefined {
+  const match = /^untold-period:(\d{4})-(\d{4})(?::|$)/u.exec(key);
+  return match?.[1] === undefined || match[2] === undefined
+    ? undefined
+    : { from: match[1], to: match[2] };
+}
+
+/**
+ * Why a topic is offered, worded in the screen's language from the topic's own data (#2418). The
+ * stored English reason is the fallback when an older session lacks that data.
+ */
+export function careerInterviewTopicReason(topic: CareerInterviewTopicView): string {
+  const title = topic.title?.trim() ?? "";
+  switch (topic.kind) {
+    case "role-gap": {
+      if (title === "") return topic.reason;
+      const gaps = topic.missing ?? [];
+      if (gaps.length === 0) return t`Your record names ${title} but leaves out part of this role.`;
+      const words = roleGapWords();
+      const missing = listed(gaps.map((gap) => words[gap]));
+      return t`Your record names ${title} but not ${missing}.`;
+    }
+    case "untold-period": {
+      const period = topicPeriod(topic.key);
+      if (period === undefined) return topic.reason;
+      const { from, to } = period;
+      return from === to
+        ? t`Your record says nothing about ${from}.`
+        : t`Your record says nothing between ${from} and ${to}.`;
+    }
+    case "untold-theme": {
+      if (title === "") return topic.reason;
+      const theme = themeNames()[title] ?? title;
+      return t`${theme}: your record mentions it but tells no story about it.`;
+    }
+    case "application-relevance":
+      return title === ""
+        ? topic.reason
+        : t`A job you applied for asks for "${title}", and your record does not show it yet.`;
+    case "candidate-subject":
+      return title === "" ? topic.reason : t`You chose to talk about: ${title}`;
+    default:
+      return topic.reason;
+  }
+}
+
+/** The interviewer's opening offer of the proposed topics, worded on the screen (#2418). */
+export function careerInterviewOffer(topics: readonly CareerInterviewTopicView[]): string {
+  const [first, second] = topics;
+  if (first === undefined) {
+    return t`I have no topic to suggest today. Is there anything from your career you would like to tell me about?`;
+  }
+  const one = careerInterviewTopicReason(first);
+  if (second === undefined)
+    return t`${one} Would you like to talk about it, or about something else?`;
+  const two = careerInterviewTopicReason(second);
+  return t`Two things may be worth telling. 1. ${one} 2. ${two} Would you like to talk about one of them, or about something else?`;
 }
 
 /** The topic being talked through or waiting for confirmation, if any. */

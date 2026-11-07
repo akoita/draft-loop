@@ -2649,6 +2649,18 @@
                       "minLength": 1,
                       "maxLength": 200
                     },
+                    "missing": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "dates",
+                          "outcome",
+                          "scope"
+                        ]
+                      }
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -9516,6 +9528,18 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 200
+                    },
+                    "missing": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "dates",
+                          "outcome",
+                          "scope"
+                        ]
+                      }
                     },
                     "status": {
                       "type": "string",

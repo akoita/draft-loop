@@ -66,6 +66,7 @@ export function careerInterviewSessionView(
       kind: topic.kind,
       reason: topic.reason,
       title: topic.title,
+      missing: topic.missing,
       status: topic.status,
       turns: topic.turns.map((turn) => ({ role: turn.role, text: turn.text, mark: turn.mark })),
       summary: topic.summary,
