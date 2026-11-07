@@ -8,8 +8,9 @@ The design is [ADR 0011, D17](../adr/0011-client-server-version.md#d17-agent-cha
 
 The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
-An agent token reaches only the work journal of one workspace: it can file
-notes and list their titles, and every other route refuses it.
+An agent token reaches one workspace, and only the scopes ticked when it was
+created: `journal` (file notes and list their titles), `applications:read` and
+`jobs:write`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -20,7 +21,8 @@ open defects.
 
 ## Set it up
 
-The Work journal panel on the Career evidence page does it in three steps. Use
+The Coding agents section of Workspace settings on Home does it in three
+steps; the Work journal panel links to it. Use
 `init` below instead when you also want the `/log-work` skill and the Stop hook.
 
 1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
@@ -37,9 +39,10 @@ The Work journal panel on the Career evidence page does it in three steps. Use
    If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `pnpm setup`, open a new
    shell, and link again. The last command prints the tool's usage.
 
-2. In the self-hosted server's Work journal panel, turn on **Accept notes from
-   coding agents**, open **Connect a coding agent** and select **Create agent
-   token**. The server refuses notes while intake is off.
+2. In the Work journal panel, turn on **Accept notes from coding agents**; the
+   server refuses notes while intake is off. Then, under **Coding agents** in
+   Workspace settings, open **Connect a coding agent**, tick what the agent
+   may do and select **Create agent token**.
 3. Pick your agent's tab and copy its configuration, which holds the token and
    the server's address:
 
@@ -50,11 +53,12 @@ The Work journal panel on the Career evidence page does it in three steps. Use
    | Other MCP agents (JSON) | The agent's `mcpServers` settings file                           |
 
 The token is shown once. Keep it in your user settings, never in a project file
-you commit. The panel lists the active tokens and revokes each one.
+you commit. The section lists the active tokens with their scopes and revokes
+each one.
 
-The desktop client shows its server's panel, so it offers the same steps when
+The desktop client shows its server's screens, so it offers the same steps when
 connected to a self-hosted server. On the hosted service, signed-in accounts
-get no agent token yet, so the panel says so and links here.
+get no agent token yet, so the section says so and links here.
 
 ### Set it up with `init`
 
@@ -107,9 +111,9 @@ Windows.
 
 ### Revoke an agent token
 
-An agent token expires 90 days after it is issued; create a new one in the
-panel or run `init` again. A workspace holds at most 20 active tokens. Revoke
-one under **Show and revoke** in the panel; a revoked token is refused at once
+An agent token expires 90 days after it is issued; create a new one under
+Coding agents or run `init` again. A workspace holds at most 20 active tokens. Revoke
+one under **Show and revoke** in Coding agents; a revoked token is refused at once
 and the others keep working. From a terminal, the owner lists and revokes them
 through the API:
 

@@ -1,8 +1,8 @@
 import { t } from "@lingui/core/macro";
 
 /**
- * The ready-to-copy configuration that connects a coding agent to this server's work journal
- * (#2427). Each agent reads the same `draftloop-mcp` process with the same variables; only the
+ * The ready-to-copy configuration that connects a coding agent to this server (#2427), and the
+ * scopes a new agent token may hold (#2439). Each agent reads the same `draftloop-mcp` process with the same variables; only the
  * file or command that holds them differs.
  */
 
@@ -25,10 +25,42 @@ export interface AgentConnection {
   readonly token?: string | undefined;
 }
 
+/** What an agent token may do, as the API names it (ADR 0011 D17). */
+export type AgentScope = "journal" | "applications:read" | "jobs:write";
+
+export const agentScopes: readonly AgentScope[] = ["journal", "applications:read", "jobs:write"];
+
+/** A new token's scopes until the person changes them. */
+export const defaultAgentScopes: readonly AgentScope[] = ["journal"];
+
+export function agentScopeLabel(scope: AgentScope): string {
+  switch (scope) {
+    case "journal":
+      return t`Record notable work in the Work journal and list their titles`;
+    case "applications:read":
+      return t`See your job applications and how their runs stand`;
+    case "jobs:write":
+      return t`Add a job application from a pasted job description`;
+  }
+}
+
+/** A short name for a scope, for the token list. */
+export function agentScopeName(scope: AgentScope): string {
+  switch (scope) {
+    case "journal":
+      return t`Work journal`;
+    case "applications:read":
+      return t`Read applications`;
+    case "jobs:write":
+      return t`Add jobs`;
+  }
+}
+
 /** One of the workspace's agent tokens, as the API lists it. */
 export interface AgentTokenView {
   readonly id: string;
   readonly label: string;
+  readonly scopes: readonly AgentScope[];
   readonly created_at: string;
   readonly expires_at: string;
   readonly active: boolean;

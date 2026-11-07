@@ -274,7 +274,12 @@ function DownloadFileButton({
  * used first: the career interview and the work journal where the server serves them, then private
  * sections.
  */
-export function EvidenceSections({ client, revision, workJournal }: EvidenceSectionsProps) {
+export function EvidenceSections({
+  client,
+  revision,
+  workJournal,
+  openHome,
+}: EvidenceSectionsProps) {
   const { groups, problem } = useSelectedBases(client, revision);
   const bases = groups?.map((group) => group.base);
   return (
@@ -285,7 +290,9 @@ export function EvidenceSections({ client, revision, workJournal }: EvidenceSect
         <p>{t`Add more evidence at any time. None of the sections below is needed before Career profile.`}</p>
       </div>
       {workJournal === true ? <CareerInterviewSection client={client} bases={bases} /> : null}
-      {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
+      {workJournal === true ? (
+        <WorkJournalSection client={client} bases={bases} openHome={openHome} />
+      ) : null}
       <PrivateSections client={client} bases={bases} />
     </>
   );
@@ -299,4 +306,6 @@ export interface EvidenceSectionsProps {
    * owner token for now.
    */
   readonly workJournal?: boolean;
+  /** Opens Home, for the Work journal's link to Coding agents. */
+  readonly openHome?: (() => void) | undefined;
 }

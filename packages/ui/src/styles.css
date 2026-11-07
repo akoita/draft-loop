@@ -9785,6 +9785,25 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 }
 
 /* Connect a coding agent, under the Work journal (#2427). */
+.coding-agents {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.coding-agents h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.agent-setup-scopes {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+  border: 0;
+  padding: 0;
+}
+
 .agent-setup {
   margin-top: 1rem;
   border-top: 1px solid var(--border);
