@@ -40,4 +40,17 @@ describe("the web's host panels", () => {
     expect(owner).toContain("Accept notes from coding agents");
     expect(signIn).not.toContain("Work journal");
   });
+
+  it("puts the optional panels most used first: interview, work journal, private sections", () => {
+    const owner = renderToStaticMarkup(
+      webHostPanels(unusedClient, "owner", undefined).evidenceAfter?.({ revision: 0 }),
+    );
+    const interview = owner.indexOf(">Career interview</h2>");
+    const journal = owner.indexOf(">Work journal</h2>");
+    const privateSections = owner.indexOf(">Private sections</h2>");
+
+    expect(interview).toBeGreaterThan(-1);
+    expect(interview).toBeLessThan(journal);
+    expect(journal).toBeLessThan(privateSections);
+  });
 });

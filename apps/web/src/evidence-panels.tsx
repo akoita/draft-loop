@@ -267,8 +267,9 @@ function DownloadFileButton({
 }
 
 /**
- * The panels below the knowledge panel over one reading: file checks, private sections, and the
- * work journal and the career interview where the server serves them.
+ * The panels below the knowledge panel over one reading: file checks, then the optional ones, most
+ * used first: the career interview and the work journal where the server serves them, then private
+ * sections.
  */
 export function EvidenceSections({ client, revision, workJournal }: EvidenceSectionsProps) {
   const { groups, problem } = useSelectedBases(client, revision);
@@ -280,9 +281,9 @@ export function EvidenceSections({ client, revision, workJournal }: EvidenceSect
         <p className="eyebrow">{t`Optional`}</p>
         <p>{t`Add more evidence at any time. None of the sections below is needed before Career profile.`}</p>
       </div>
-      <PrivateSections client={client} bases={bases} />
-      {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
       {workJournal === true ? <CareerInterviewSection client={client} bases={bases} /> : null}
+      {workJournal === true ? <WorkJournalSection client={client} bases={bases} /> : null}
+      <PrivateSections client={client} bases={bases} />
     </>
   );
 }
