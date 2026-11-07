@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { AgentSetup, type AgentSetupProps } from "./agent-setup.js";
+import { AgentSetup, AgentSetupLink, type AgentSetupProps } from "./agent-setup.js";
 import {
   activeAgentTokens,
   agentChannelGuideUrl,
@@ -63,6 +63,7 @@ describe("agent configuration", () => {
   it("keeps only the tokens that still work", () => {
     const token = {
       label: "Claude Code",
+      scopes: ["journal" as const],
       created_at: "2026-11-07T10:00:00.000Z",
       expires_at: "2027-02-05T10:00:00.000Z",
     };
@@ -97,12 +98,47 @@ describe("AgentSetup", () => {
     expect(html).toMatch(/<button type="button" disabled="">Copy<\/button>/u);
   });
 
+  it("offers each scope with the journal ticked, and lists a token's scopes", () => {
+    const html = renderToStaticMarkup(
+      <AgentSetup
+        {...props}
+        open
+        tokens={[
+          {
+            id: "dlat_active01",
+            label: "Claude Code",
+            scopes: ["journal", "applications:read"],
+            created_at: "2026-11-07T10:00:00.000Z",
+            expires_at: "2027-02-05T10:00:00.000Z",
+            active: true,
+          },
+        ]}
+      />,
+    );
+    expect(html).toContain('id="coding-agents"');
+    expect(html).toContain("Coding agents");
+    expect(html).toContain('<details class="agent-setup" open="">');
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(3);
+    expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
+    expect(html).toContain("See your job applications");
+    expect(html).toContain("Add a job application from a pasted job description");
+    expect(html).toContain("Active agent tokens: 1");
+  });
+
+  it("points the Work journal to Coding agents only where it can open them", () => {
+    expect(renderToStaticMarkup(<AgentSetupLink />)).toBe("");
+    expect(renderToStaticMarkup(<AgentSetupLink onOpen={() => undefined} />)).toContain(
+      "under Coding agents in Workspace settings",
+    );
+  });
+
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} available={false} />);
     expect(html).toContain("is not available yet");
     expect(html).toContain(agentChannelGuideUrl);
     expect(html).not.toContain("Create agent token");
     expect(html).not.toContain("draftloop-mcp");
+    expect(html).toContain("Coding agents");
   });
 
   it("shows nothing until the server says which applies", () => {

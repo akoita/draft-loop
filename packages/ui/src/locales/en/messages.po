@@ -395,6 +395,10 @@ msgstr "{accepted, plural, one {# accepted blocking finding needs a revision} ot
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 
+#: packages/ui/src/agent-setup.tsx
+msgid "{can}; created {created}, expires {until}"
+msgstr "{can}; created {created}, expires {until}"
+
 #. placeholder {0}: countedNouns.source(sources)
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{chunks, plural, one {# relevant excerpt} other {# relevant excerpts}} selected from {0}"
@@ -918,6 +922,10 @@ msgstr "Add a CV, portfolio or other source so DraftLoop can quote you accuratel
 msgid "Add a CV, portfolio, or other source"
 msgstr "Add a CV, portfolio, or other source"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add a job application from a pasted job description"
+msgstr "Add a job application from a pasted job description"
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Add a target job description."
 msgstr "Add a target job description."
@@ -962,6 +970,10 @@ msgstr "Add it to your agent's MCP settings file."
 #: packages/ui/src/start-checklist-model.ts
 msgid "Add job description"
 msgstr "Add job description"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add jobs"
+msgstr "Add jobs"
 
 #: apps/web/src/evidence-panels.tsx
 msgid "Add more evidence at any time. None of the sections below is needed before Career profile."
@@ -1805,6 +1817,10 @@ msgstr "Choose the knowledge base the note goes to."
 msgid "Choose what the candidate did."
 msgstr "Choose what the candidate did."
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Choose what your agent may do, then create its token."
+msgstr "Choose what your agent may do, then create its token."
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Choose which models write and review your next runs. Changing this does not affect runs already in progress. Sending candidate material still asks for your approval each time."
 msgstr "Choose which models write and review your next runs. Changing this does not affect runs already in progress. Sending candidate material still asks for your approval each time."
@@ -1935,6 +1951,10 @@ msgstr "Codex session:"
 #: packages/ui/src/agent-setup.tsx
 msgid "Coding agent"
 msgstr "Coding agent"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Coding agents"
+msgstr "Coding agents"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
@@ -2139,8 +2159,8 @@ msgid "Copy"
 msgstr "Copy"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Copy the configuration into your agent, then ask it to run /log-work."
-msgstr "Copy the configuration into your agent, then ask it to run /log-work."
+msgid "Copy the configuration into your agent."
+msgstr "Copy the configuration into your agent."
 
 #: packages/ui/src/run-details.tsx
 msgid "core areas"
@@ -2200,10 +2220,6 @@ msgid "Create a new workspace"
 msgstr "Create a new workspace"
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Create a token for your agent. It can only add notes here and list their titles."
-msgstr "Create a token for your agent. It can only add notes here and list their titles."
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Create agent token"
 msgstr "Create agent token"
 
@@ -2244,10 +2260,6 @@ msgstr "Create workspace"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Created"
 msgstr "Created"
-
-#: packages/ui/src/agent-setup.tsx
-msgid "created {created}, expires {until}"
-msgstr "created {created}, expires {until}"
 
 #: apps/web/src/evidence-file-model.ts
 msgid "Created {when}"
@@ -4045,6 +4057,10 @@ msgstr "Legitimate interest"
 msgid "Length"
 msgstr "Length"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+msgstr "Let Claude Code, Codex or another coding agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Lexical (default)"
 msgstr "Lexical (default)"
@@ -5741,6 +5757,10 @@ msgstr "Raw job description, chosen under Advanced (coverage scoring is less rel
 msgid "Re-extract all sources"
 msgstr "Re-extract all sources"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read applications"
+msgstr "Read applications"
+
 #: packages/ui/src/review.tsx
 msgid "Read changes only"
 msgstr "Read changes only"
@@ -5909,6 +5929,10 @@ msgstr "Record"
 #: apps/web/src/consent.tsx
 msgid "Record consent"
 msgstr "Record consent"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Record notable work in the Work journal and list their titles"
+msgstr "Record notable work in the Work journal and list their titles"
 
 #: apps/web/src/application-material-model.ts
 msgid "Record permission to send career material to Anthropic in this record's consent, then draft again."
@@ -6827,6 +6851,10 @@ msgstr "sections whose heading contains \"{0}\""
 #: packages/ui/src/review.tsx
 msgid "See exactly what is sent"
 msgstr "See exactly what is sent"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "See your job applications and how their runs stand"
+msgstr "See your job applications and how their runs stand"
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Select an exact reviewed candidate profile before starting a review."
@@ -8547,8 +8575,8 @@ msgid "This text was screened clear, so there is nothing to release."
 msgstr "This text was screened clear, so there is nothing to release."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it from this panel."
-msgstr "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it from this panel."
+msgid "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it here."
+msgstr "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it here."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "This topic has no summary to confirm yet."
@@ -8606,6 +8634,10 @@ msgstr "Title (optional)"
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 msgstr "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
+msgstr "To let a coding agent file notes here, connect it under Coding agents in Workspace settings."
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "tokens; thinking"
@@ -9068,6 +9100,10 @@ msgstr "What is cut"
 msgid "What leads"
 msgstr "What leads"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "What the agent may do"
+msgstr "What the agent may do"
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "What the candidate did"
 msgstr "What the candidate did"
@@ -9128,6 +9164,7 @@ msgstr "Withdrawn"
 msgid "Withdrawn on {when}."
 msgstr "Withdrawn on {when}."
 
+#: packages/ui/src/agent-setup-model.ts
 #: packages/ui/src/source-evidence-kind-contract.ts
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Work journal"

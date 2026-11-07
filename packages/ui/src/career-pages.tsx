@@ -114,7 +114,7 @@ export function CareerEvidencePage({
       {card}
       {knowledge}
       {retrieval}
-      <HostEvidenceAfter revision={revision} />
+      <HostEvidenceAfter revision={revision} openHome={frame.onOpenStep.applications} />
     </CareerPageFrame>
   );
 }

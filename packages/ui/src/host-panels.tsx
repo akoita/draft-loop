@@ -10,8 +10,9 @@ export interface HostPanels {
   /**
    * Shown below the Career evidence page's knowledge panel. `revision` changes whenever the page
    * changes the knowledge selection or adds files, so the panel can read its data again.
+   * `openHome` opens Home, where Workspace settings are, when the screens offer it.
    */
-  readonly evidenceAfter?: (context: { readonly revision: number }) => ReactNode;
+  readonly evidenceAfter?: (context: EvidenceAfterContext) => ReactNode;
   /**
    * Shown in the Start confirmation above its buttons, such as a consent and the run's cost.
    * `applicationId` is the application the run belongs to, when the screen knows it. While the
@@ -28,6 +29,12 @@ export interface HostPanels {
   readonly application?: (context: ApplicationPanelContext) => ReactNode;
   /** Shown under Home's Workspace settings actions, such as suggested preferences (#2265). */
   readonly workspaceSettings?: () => ReactNode;
+}
+
+/** What the host's panel below the Career evidence page's knowledge panel is given. */
+export interface EvidenceAfterContext {
+  readonly revision: number;
+  readonly openHome?: (() => void) | undefined;
 }
 
 /** What the host's panel on an application is given. */
@@ -55,8 +62,8 @@ export function HostEvidenceBefore() {
 }
 
 /** The host's panel below the Career evidence page's knowledge panel; nothing without one. */
-export function HostEvidenceAfter({ revision }: { readonly revision: number }) {
-  return useContext(HostPanelsContext).evidenceAfter?.({ revision }) ?? null;
+export function HostEvidenceAfter(context: EvidenceAfterContext) {
+  return useContext(HostPanelsContext).evidenceAfter?.(context) ?? null;
 }
 
 /** The host's panel in the Start confirmation; nothing without one. */

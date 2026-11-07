@@ -2,6 +2,7 @@ import type { HostPanels } from "@draft-loop/ui/host-panels";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { ApplicationMaterialSection } from "./application-material.js";
+import { CodingAgentsSection } from "./coding-agents.js";
 import { EvidenceSections, StoragePermissionPanel } from "./evidence-panels.js";
 import { HomeWorkJournal } from "./home-work-journal.js";
 import { PreferenceSuggestionsSection } from "./preference-suggestions.js";
@@ -13,7 +14,8 @@ import { StartPanel } from "./start-panels.js";
  * the Start dialog; in both modes the evidence page's file checks and private-section rules; with
  * the owner token, the work journal review (#2024) and its waiting notes on Home (#2151); on
  * every application, the prepare panel for a cover letter or interview questions (#2217); and
- * the writing preferences suggested from review choices in Workspace settings (#2265).
+ * the writing preferences suggested from review choices and Coding agents (#2439) in Workspace
+ * settings.
  */
 export function webHostPanels(
   client: ApiClient,
@@ -27,12 +29,22 @@ export function webHostPanels(
           startDialog: (context) => <StartPanel client={client} {...context} />,
         }
       : {}),
-    workspaceSettings: () => <PreferenceSuggestionsSection client={client} />,
+    workspaceSettings: () => (
+      <>
+        <PreferenceSuggestionsSection client={client} />
+        <CodingAgentsSection client={client} mode={mode} />
+      </>
+    ),
     application: ({ applicationId }) => (
       <ApplicationMaterialSection client={client} applicationId={applicationId} />
     ),
-    evidenceAfter: ({ revision }) => (
-      <EvidenceSections client={client} revision={revision} workJournal={mode === "owner"} />
+    evidenceAfter: ({ revision, openHome }) => (
+      <EvidenceSections
+        client={client}
+        revision={revision}
+        workJournal={mode === "owner"}
+        openHome={openHome}
+      />
     ),
     ...(mode === "owner"
       ? {

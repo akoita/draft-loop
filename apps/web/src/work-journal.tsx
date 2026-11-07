@@ -1,6 +1,9 @@
-import { AgentSetup } from "@draft-loop/ui/agent-setup";
-import type { AgentTokenView } from "@draft-loop/ui/agent-setup-model";
-import { workJournalFragment, workJournalPanelId } from "@draft-loop/ui/shared-link";
+import { AgentSetupLink } from "@draft-loop/ui/agent-setup";
+import {
+  codingAgentsFragment,
+  workJournalFragment,
+  workJournalPanelId,
+} from "@draft-loop/ui/shared-link";
 import type {
   WorkJournalReviewAction,
   WorkJournalReviewNote,
@@ -22,6 +25,8 @@ export interface WorkJournalSectionProps {
   readonly client: ApiClient;
   /** The record's selected knowledge bases, the first preselected; undefined until read. */
   readonly bases: readonly ApiSchemas["KnowledgeBase"][] | undefined;
+  /** Opens Home, where Workspace settings hold Coding agents; the link is absent without it. */
+  readonly openHome?: (() => void) | undefined;
 }
 
 /** What to tell the candidate when a work journal call is refused. */
@@ -31,20 +36,11 @@ export function workJournalProblem(error: unknown): string {
     : describeError(error);
 }
 
-export function WorkJournalSection({ client, bases }: WorkJournalSectionProps) {
+export function WorkJournalSection({ client, bases, openHome }: WorkJournalSectionProps) {
   const workspaceId = useRecordId();
   const [intake, setIntake] = useState<boolean | undefined>(undefined);
   const [notes, setNotes] = useState<readonly WorkJournalReviewNote[] | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
-  const [agentTokensServed, setAgentTokensServed] = useState<boolean | undefined>(undefined);
-  const [agentTokens, setAgentTokens] = useState<readonly AgentTokenView[] | undefined>(undefined);
-
-  const reloadAgentTokens = useCallback(async () => {
-    const listed = await client.call("GET /v1/workspaces/{workspaceId}/agent-tokens", {
-      path: { workspaceId },
-    });
-    setAgentTokens(listed.tokens);
-  }, [client, workspaceId]);
 
   const reload = useCallback(async () => {
     try {
@@ -58,14 +54,12 @@ export function WorkJournalSection({ client, bases }: WorkJournalSectionProps) {
         }),
       ]);
       setIntake(readIntake.enabled);
-      setAgentTokensServed(readIntake.agent_tokens);
       setNotes(listed.full ?? []);
       setProblem(undefined);
-      if (readIntake.agent_tokens) await reloadAgentTokens().catch(() => undefined);
     } catch (error) {
       setProblem(t`The work journal could not be read. ${workJournalProblem(error)}`);
     }
-  }, [client, workspaceId, reloadAgentTokens]);
+  }, [client, workspaceId]);
 
   useEffect(() => {
     void reload();
@@ -87,34 +81,15 @@ export function WorkJournalSection({ client, bases }: WorkJournalSectionProps) {
       problem={problem}
       knowledgeBases={(bases ?? []).map((base) => ({ id: base.id, name: base.displayName }))}
       agentSetup={
-        <AgentSetup
-          available={agentTokensServed}
-          serverUrl={globalThis.location?.origin ?? ""}
-          workspaceId={workspaceId}
-          tokens={agentTokens}
-          onIssue={async (label) => {
-            try {
-              const issued = await client.call("POST /v1/workspaces/{workspaceId}/agent-tokens", {
-                path: { workspaceId },
-                body: { label },
-              });
-              await reloadAgentTokens().catch(() => undefined);
-              return issued;
-            } catch (error) {
-              return { problem: workJournalProblem(error) };
-            }
-          }}
-          onRevoke={async (tokenId) => {
-            try {
-              await client.call("DELETE /v1/workspaces/{workspaceId}/agent-tokens/{tokenId}", {
-                path: { workspaceId, tokenId },
-              });
-              await reloadAgentTokens();
-              return undefined;
-            } catch (error) {
-              return workJournalProblem(error);
-            }
-          }}
+        <AgentSetupLink
+          onOpen={
+            openHome === undefined
+              ? undefined
+              : () => {
+                  openHome();
+                  window.location.hash = codingAgentsFragment;
+                }
+          }
         />
       }
       onSetIntake={async (enabled) => {
