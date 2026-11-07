@@ -14,6 +14,10 @@ import type {
 import type { CandidateKnowledgeStoreDescriptor } from "@draft-loop/storage/knowledge-store";
 
 import { CliUserError } from "./cli-user-error.js";
+import {
+  type HostedKnowledgeSourceFile,
+  readHostedKnowledgeSourceFile,
+} from "./hosted-knowledge-source-file.js";
 
 /** The source files the hosted service takes; the run worker extracts their text later. */
 export const hostedKnowledgeSourceMediaTypes = [
@@ -31,6 +35,8 @@ export const defaultHostedKnowledgeSourceMaxBytes = 10 * 1024 * 1024;
 export type HostedKnowledgeIntakeErrorCode =
   | "knowledge_base_not_found"
   | "source_empty"
+  | "source_file_unavailable"
+  | "source_not_found"
   | "source_too_large"
   | "unsupported_media_type";
 
@@ -73,6 +79,12 @@ export interface HostedKnowledgeIntakeRecords
     readonly location: string;
     readonly recordedAt: string;
   }) => Promise<void>;
+  /** Where the service holds a version's bytes; undefined when it holds none. */
+  readonly getManagedCandidateKnowledgeSourceVersion: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ) => Promise<{ readonly location: string } | undefined>;
 }
 
 export interface HostedKnowledgeIntakeOptions {
@@ -118,6 +130,11 @@ export interface HostedKnowledgeIntake {
   readonly addFileSource: (
     command: AddHostedKnowledgeFileSourceCommand,
   ) => Promise<AddedHostedKnowledgeSource>;
+  /** A source's latest stored file, for the person to download (`readHostedKnowledgeSourceFile`). */
+  readonly readSourceFile: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<HostedKnowledgeSourceFile>;
 }
 
 const pdfSignature = new TextEncoder().encode("%PDF-");
@@ -243,6 +260,8 @@ export function createHostedKnowledgeIntake(
     },
     listKnowledgeBases: records.listCandidateKnowledgeBases,
     listSources,
+    readSourceFile: (knowledgeBaseId, sourceId) =>
+      readHostedKnowledgeSourceFile({ records, blobs }, knowledgeBaseId, sourceId),
     addFileSource: async (command) => {
       const { knowledgeBaseId, bytes } = command;
       if (!isHostedSourceMediaType(command.mediaType)) {

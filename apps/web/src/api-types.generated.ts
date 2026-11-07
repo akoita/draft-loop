@@ -1907,6 +1907,13 @@ export interface ApiOperations {
     readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain" | "application/json" | "text/csv";
     readonly response: ApiSchemas["KnowledgeSource"];
   };
+  "GET /v1/knowledge-bases/{knowledgeBaseId}/sources/{sourceId}/file": {
+    readonly path: {
+      readonly knowledgeBaseId: string;
+      readonly sourceId: string;
+    };
+    readonly response: Blob;
+  };
   "GET /v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules": {
     readonly path: {
       readonly knowledgeBaseId: string;

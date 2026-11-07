@@ -303,6 +303,7 @@ async function rig(options: RigOptions = {}): Promise<Rig> {
 
   const briefs = new Map<string, OpportunityBriefVersionRecord>();
   const sources: HostedKnowledgeSourceView[] = [];
+  const sourceBytes = new Map<string, Uint8Array>();
   let consent: ConsentState = {
     "material-storage": { action: "granted" },
     "provider-transmission": { action: "granted", providers: ["anthropic", "openai"] },
@@ -364,7 +365,14 @@ async function rig(options: RigOptions = {}): Promise<Rig> {
         },
       };
       sources.push(view);
+      sourceBytes.set(view.source.id, command.bytes);
       return { ...view, created: true };
+    },
+    readSourceFile: async (_knowledgeBaseId: string, sourceId: string) => {
+      const view = sources.find((candidate) => candidate.source.id === sourceId);
+      const bytes = sourceBytes.get(sourceId);
+      if (view === undefined || bytes === undefined) throw new Error("no such source");
+      return { ...view, bytes };
     },
   } as unknown as HostedKnowledgeIntake;
 
@@ -967,6 +975,59 @@ describe("releasing quarantined material", () => {
 
     expect(again.response.statusCode).toBe(200);
     expect(again.body).toEqual(first.body);
+  });
+});
+
+describe("downloading a stored file", () => {
+  const download = async (r: Rig, person: string) =>
+    r.server.inject({
+      method: "GET",
+      url: "/v1/knowledge-bases/base-1/sources/source-1/file",
+      headers: { authorization: await as(person) },
+    });
+
+  it("sends a clear file to a member who reaches its base", async () => {
+    const r = await rig({ auth: "oidc" });
+    await upload(r, "Plain fictional notes.", "coach-1");
+
+    const response = await download(r, "coach-1");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe("Plain fictional notes.");
+    expect(response.headers["content-disposition"]).toBe(
+      "attachment; filename=\"notes.md\"; filename*=UTF-8''notes.md",
+    );
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+  });
+
+  it("withholds a quarantined file from a member", async () => {
+    const r = await rig({ auth: "oidc" });
+    await upload(r, flaggedText, "coach-1");
+
+    const response = await download(r, "coach-1");
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe("material_quarantined");
+    expect(response.body).not.toContain("FLAG-ME");
+  });
+
+  it("sends a quarantined file to an admin and the owner token, to inspect it", async () => {
+    const signedIn = await rig({ auth: "oidc" });
+    await upload(signedIn, flaggedText, "admin-1");
+    expect((await download(signedIn, "admin-1")).statusCode).toBe(200);
+    await signedIn.server.close();
+
+    const owner = await rig();
+    await upload(owner, flaggedText);
+    expect((await download(owner, "owner-token")).statusCode).toBe(200);
+  });
+
+  it("sends a released file to a member", async () => {
+    const r = await rig({ auth: "oidc" });
+    await upload(r, flaggedText, "coach-1");
+    await release(r, "screening-1", "admin-1");
+
+    expect((await download(r, "coach-1")).statusCode).toBe(200);
   });
 });
 

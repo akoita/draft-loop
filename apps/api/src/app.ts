@@ -54,6 +54,7 @@ import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
+import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
@@ -503,6 +504,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.sensitivityRules === undefined
           ? {}
           : { sensitivityRules: application.sensitivityRules }),
+      });
+    }
+    if (application.knowledgeIntake !== undefined) {
+      registerKnowledgeSourceFileRoutes(app, {
+        intake: application.knowledgeIntake,
+        ...(screening === undefined ? {} : { screening }),
       });
     }
     if (application.sensitivityRules !== undefined) {

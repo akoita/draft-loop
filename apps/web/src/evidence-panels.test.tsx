@@ -130,10 +130,33 @@ describe("storage permission on the Career evidence page", () => {
 });
 
 describe("file checks on the Career evidence page", () => {
+  it("shows when each file was added, and tags the career interview's files", () => {
+    const html = renderToStaticMarkup(
+      <FileChecksPanel
+        groups={[
+          {
+            base: groups[0]!.base,
+            sources: [
+              source("s1", "sample-career-facts.md"),
+              source("s3", "career-interview-cis_example-1.md"),
+            ],
+          },
+        ]}
+        details={() => null}
+        actions={(item) => <button type="button">Download {item.displayName}</button>}
+      />,
+    );
+
+    expect(html).toMatch(/Uploaded 23 Oct 2026, \d\d:\d\d · 2 KB/u);
+    expect(html).toMatch(/Created 23 Oct 2026, \d\d:\d\d · 2 KB/u);
+    expect(html.match(/From career interview/gu)).toHaveLength(1);
+    expect(html).toContain("Download sample-career-facts.md");
+  });
+
   it("lists each file with its screening chip", () => {
     const html = fileChecks(false);
 
-    expect(html).toContain("File checks");
+    expect(html).toContain("Your files");
     expect(html).toContain("sample-career-facts.md");
     expect(html).toContain("Screened: clear");
     expect(html).toContain("sample-notes.md");

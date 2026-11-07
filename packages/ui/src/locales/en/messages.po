@@ -1274,6 +1274,10 @@ msgstr "Archived applications"
 msgid "artifact review"
 msgstr "artifact review"
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Ask an owner or admin to release this file before downloading it."
+msgstr "Ask an owner or admin to release this file before downloading it."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Asked in a job post: {title}"
 msgstr "Asked in a job post: {title}"
@@ -2187,6 +2191,10 @@ msgstr "Create workspace"
 msgid "Created"
 msgstr "Created"
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Created {when}"
+msgstr "Created {when}"
+
 #. placeholder {0}: defaultKnowledgeStoreDestinationLabel()
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Created knowledge base “{displayName}” in {0} and selected it for this workspace."
@@ -2534,6 +2542,10 @@ msgstr "Done · approved and exported"
 msgid "Done speaking"
 msgstr "Done speaking"
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Download"
+msgstr "Download"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download cancelled. Nothing was installed."
 msgstr "Download cancelled. Nothing was installed."
@@ -2826,6 +2838,10 @@ msgstr "Empty: add a CV, portfolio, or other source"
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "End this conversation"
+msgstr "End this conversation"
+
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr "End this run without losing its history"
@@ -3111,10 +3127,6 @@ msgstr "Field"
 msgid "File and directory intake is unavailable in this desktop host."
 msgstr "File and directory intake is unavailable in this desktop host."
 
-#: apps/web/src/evidence-panels.tsx
-msgid "File checks"
-msgstr "File checks"
-
 #: packages/ui/src/knowledge-intake.ts
 msgid "File import complete. A career-evidence source was added."
 msgstr "File import complete. A career-evidence source was added."
@@ -3265,6 +3277,10 @@ msgstr "Formula: calls × (input tokens × input rate + output tokens × output 
 #: packages/ui/src/run-details.tsx
 msgid "from {0}"
 msgstr "from {0}"
+
+#: apps/web/src/evidence-panels.tsx
+msgid "From career interview"
+msgstr "From career interview"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the file chosen for this application, as it reads now."
@@ -8618,6 +8634,10 @@ msgstr "Updated"
 msgid "Updating candidate knowledge…"
 msgstr "Updating candidate knowledge…"
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Uploaded {when}"
+msgstr "Uploaded {when}"
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
 msgstr "Usage"
@@ -9198,6 +9218,10 @@ msgstr "Your facts"
 #: packages/ui/src/career-signposts.tsx
 msgid "Your file was not added: documents are added in Career evidence."
 msgstr "Your file was not added: documents are added in Career evidence."
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Your files"
+msgstr "Your files"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Your instructions"

@@ -22,13 +22,20 @@ import {
   type CareerInterviewPublished,
   careerInterviewConflicts,
 } from "./career-interview-evidence.js";
+import { careerInterviewSubjectFacts } from "./career-interview-subject-facts.js";
 import {
   type CareerInterviewFact,
   type CareerInterviewRequirement,
   type CareerInterviewTopic,
   findCareerInterviewTopics,
 } from "./career-interview-topics.js";
-import { careerInterviewTopicContext } from "./career-interviewer-model.js";
+
+import {
+  careerInterviewTopicContext,
+  maximumCareerInterviewContextEntries,
+} from "./career-interviewer-model.js";
+
+export { careerInterviewSpeechHints } from "./career-interview-subject-facts.js";
 
 /**
  * The guided career interview's session service (#2177): start or resume a session with topics
@@ -292,13 +299,19 @@ export function createCareerInterviewService(
       if (session.topics.length >= maximumCareerInterviewTopicsPerSession) {
         throw new CareerInterviewError("too_many_topics", "This session has enough topics.");
       }
+      const record = await options.loadRecord(workspaceId);
       const topic: CareerInterviewSessionTopic = {
         key: `candidate-subject:${session.topics.length + 1}:${text.toLowerCase().slice(0, 80)}`,
         kind: "candidate-subject",
         reason: `You chose to talk about: ${text}`,
         title: text.length <= 200 ? text : `${text.slice(0, 199)}…`,
         status: "open",
-        fact_ids: [],
+        fact_ids: careerInterviewSubjectFacts(
+          text,
+          record.facts,
+          record.mayTransmit,
+          maximumCareerInterviewContextEntries,
+        ),
         requirement_ids: [],
         turns: [],
       };
