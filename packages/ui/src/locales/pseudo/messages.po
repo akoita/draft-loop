@@ -975,6 +975,10 @@ msgstr ""
 msgid "Added {0} from the folder to {displayName}."
 msgstr ""
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Added {when}"
+msgstr ""
+
 #: packages/ui/src/career-evidence.ts
 msgid "Added a new version of that file to {displayName}."
 msgstr ""
@@ -5351,6 +5355,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Pasted text"
 msgstr ""
 
 #: packages/ui/src/pasted-evidence.ts

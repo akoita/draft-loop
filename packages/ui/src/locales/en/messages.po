@@ -975,6 +975,10 @@ msgstr "Add URL to legacy evidence"
 msgid "Added {0} from the folder to {displayName}."
 msgstr "Added {0} from the folder to {displayName}."
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Added {when}"
+msgstr "Added {when}"
+
 #: packages/ui/src/career-evidence.ts
 msgid "Added a new version of that file to {displayName}."
 msgstr "Added a new version of that file to {displayName}."
@@ -5353,6 +5357,10 @@ msgstr "Paste this application's job description first."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Pasted job text"
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Pasted text"
+msgstr "Pasted text"
 
 #: packages/ui/src/pasted-evidence.ts
 msgid "Pasted text {stamp}"

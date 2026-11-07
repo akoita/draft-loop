@@ -969,6 +969,10 @@ msgstr "Ajouter l’URL aux éléments hérités"
 msgid "Added {0} from the folder to {displayName}."
 msgstr "{0} du dossier ajouté(s) à {displayName}."
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Added {when}"
+msgstr "Ajouté le {when}"
+
 #: packages/ui/src/career-evidence.ts
 msgid "Added a new version of that file to {displayName}."
 msgstr "Nouvelle version de ce fichier ajoutée à {displayName}."
@@ -5347,6 +5351,10 @@ msgstr "Collez d’abord l’offre d’emploi de cette candidature."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Texte de l’offre collé"
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Pasted text"
+msgstr "Texte collé"
 
 #: packages/ui/src/pasted-evidence.ts
 msgid "Pasted text {stamp}"

@@ -3,6 +3,7 @@ import { t } from "@lingui/core/macro";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
+import { pastedSourceSuffix } from "./evidence-file-model.js";
 import {
   acceptedSourceFiles,
   type EvidenceMediaType,
@@ -179,7 +180,7 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         // Pasted text goes up as a plain-text file, so the server screens and stores it the same.
         const { storeId, knowledgeBaseId, title, text } = command.input;
         inStore(storeId);
-        const name = `${title}.txt`;
+        const name = `${title}${pastedSourceSuffix}`;
         return upload(storeId, knowledgeBaseId, name, new Blob([text]), "text/plain");
       }
       case "knowledge.ensure-default": {

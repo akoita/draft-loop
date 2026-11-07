@@ -235,7 +235,7 @@ describe("career evidence over HTTP", () => {
     const upload = calls.find(({ operation }) => operation.startsWith("POST"));
     expect(upload?.input).toMatchObject({
       path: { knowledgeBaseId: "kb-a" },
-      query: { name: "Migration notes.txt" },
+      query: { name: "Migration notes.pasted.txt" },
       contentType: "text/plain",
     });
     expect(await (upload?.input.body as Blob | undefined)?.text()).toBe(text);

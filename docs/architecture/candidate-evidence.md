@@ -186,8 +186,8 @@ media type, byte size, creation time and parent lineage.
   must pass before anything is saved. Exact bytes are copied under an opaque
   ID-derived name.
 - **Pasted text.** The server's Career evidence screen has a Paste text box. It
-  uploads the text as one plain-text file named `<title>.txt`, through the same
-  route as a picked file. Screening, quarantine, consent and duplicate checks
+  uploads the text as one plain-text file named `<title>.pasted.txt`, through
+  the same route as a picked file; the file list tags it "Pasted text". Screening, quarantine, consent and duplicate checks
   are therefore the same.
 - **New versions.** A changed append creates the next parent-linked version.
   Identical bytes are a no-op, and do not advance time or imply freshness.
