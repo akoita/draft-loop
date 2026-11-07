@@ -1248,6 +1248,10 @@ msgstr "Candidatures archivées"
 msgid "artifact review"
 msgstr "relecture du document"
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Ask an owner or admin to release this file before downloading it."
+msgstr "Demandez à un propriétaire ou à un administrateur de libérer ce fichier avant de le télécharger."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Asked in a job post: {title}"
 msgstr "Demandé dans une offre : {title}"
@@ -2161,6 +2165,10 @@ msgstr "Créer l’espace de travail"
 msgid "Created"
 msgstr "Créé"
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Created {when}"
+msgstr "Créé le {when}"
+
 #. placeholder {0}: defaultKnowledgeStoreDestinationLabel()
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Created knowledge base “{displayName}” in {0} and selected it for this workspace."
@@ -2507,6 +2515,10 @@ msgstr "Terminé · approuvé et exporté"
 #: packages/ui/src/career-interview-live.tsx
 msgid "Done speaking"
 msgstr "J’ai fini de parler"
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Download"
+msgstr "Télécharger"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download cancelled. Nothing was installed."
@@ -3085,10 +3097,6 @@ msgstr "Champ"
 msgid "File and directory intake is unavailable in this desktop host."
 msgstr "L’ajout de fichiers et de répertoires est indisponible dans cet hôte de bureau."
 
-#: apps/web/src/evidence-panels.tsx
-msgid "File checks"
-msgstr "Vérification des fichiers"
-
 #: packages/ui/src/knowledge-intake.ts
 msgid "File import complete. A career-evidence source was added."
 msgstr "Import terminé. Une source d’éléments de parcours a été ajoutée."
@@ -3239,6 +3247,10 @@ msgstr "Formule : appels × (jetons d’entrée × tarif d’entrée + jetons de
 #: packages/ui/src/run-details.tsx
 msgid "from {0}"
 msgstr "issus de {0}"
+
+#: apps/web/src/evidence-panels.tsx
+msgid "From career interview"
+msgstr "Issu de l’entretien de parcours"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the file chosen for this application, as it reads now."
@@ -8588,6 +8600,10 @@ msgstr "Mis à jour"
 msgid "Updating candidate knowledge…"
 msgstr "Mise à jour des connaissances candidat…"
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Uploaded {when}"
+msgstr "Ajouté le {when}"
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
 msgstr "Utilisation"
@@ -9152,6 +9168,10 @@ msgstr "Vos faits"
 #: packages/ui/src/career-signposts.tsx
 msgid "Your file was not added: documents are added in Career evidence."
 msgstr "Votre fichier n’a pas été ajouté : les documents s’ajoutent dans Éléments de parcours."
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Your files"
+msgstr "Vos fichiers"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Your instructions"

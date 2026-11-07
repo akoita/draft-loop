@@ -5,9 +5,17 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { type ApiClient, type ApiSchemas, describeError } from "./api-client.js";
 import { CareerInterviewSection } from "./career-interview.js";
 import { ConsentStep } from "./consent.js";
+import {
+  downloadOffered,
+  downloadSourceFile,
+  fileAddedLine,
+  isInterviewSource,
+} from "./evidence-file-model.js";
 import { PrivateSections } from "./private-sections.js";
 import { useRecordId } from "./record-context.js";
+import { saveFile } from "./save-file.js";
 import { ScreeningNote, useScreening } from "./screening.js";
+import { useCanRelease } from "./screening-access.js";
 import { sourceStatus } from "./screening-model.js";
 import { activeBases, formatBytes } from "./sources-model.js";
 import { WorkJournalSection } from "./work-journal.js";
@@ -48,19 +56,22 @@ export interface FileChecksPanelProps {
   readonly screeningProblem?: string | undefined;
   /** What to show beside a file, such as its injection screening status. */
   readonly details: (source: KnowledgeSource) => ReactNode;
+  /** What the person can do with a file, such as download it. */
+  readonly actions?: (source: KnowledgeSource) => ReactNode;
 }
 
-/** The files in the selected knowledge bases, each with its screening status. */
+/** The files in the selected knowledge bases, each with when it was added and its screening status. */
 export function FileChecksPanel({
   groups,
   problem,
   screeningProblem,
   details,
+  actions,
 }: FileChecksPanelProps) {
   const files = groups?.flatMap((group) => group.sources) ?? [];
   return (
     <section className="panel host-panel" aria-labelledby="file-checks-heading">
-      <h2 id="file-checks-heading">{t`File checks`}</h2>
+      <h2 id="file-checks-heading">{t`Your files`}</h2>
       <p className="muted">{t`Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them.`}</p>
       {problem === undefined ? null : (
         <p className="problem" role="alert">
@@ -79,13 +90,27 @@ export function FileChecksPanel({
           sources.length === 0 ? null : (
             <div key={base.id}>
               <h3>{knowledgeBaseDisplayName(base.displayName)}</h3>
-              <ul className="sources">
-                {sources.map((source) => (
-                  <li key={source.id}>
-                    {source.displayName}{" "}
-                    <span className="muted">{formatBytes(source.sizeBytes)}</span> {details(source)}
-                  </li>
-                ))}
+              <ul className="sources evidence-files">
+                {sources.map((source) => {
+                  const added = fileAddedLine(source);
+                  return (
+                    <li key={source.id}>
+                      <div className="evidence-file-name">
+                        <span>{source.displayName}</span>
+                        {isInterviewSource(source) ? (
+                          <span className="evidence-file-tag">{t`From career interview`}</span>
+                        ) : null}
+                      </div>
+                      <div className="evidence-file-checks">
+                        {details(source)} {actions?.(source)}
+                      </div>
+                      <div className="muted evidence-file-meta">
+                        {added === undefined ? null : `${added} · `}
+                        {formatBytes(source.sizeBytes)}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ),
@@ -178,13 +203,66 @@ export function EvidenceFileChecks({ client, revision, groups, problem }: Eviden
     [client, screening.statuses, reloadScreening],
   );
 
+  const canRelease = useCanRelease();
+  const actions = useCallback(
+    (source: KnowledgeSource) => {
+      // Until the statuses are read, a quarantined file is not known; offer nothing yet.
+      if (screening.statuses === undefined && !canRelease) return null;
+      const status =
+        screening.statuses === undefined ? undefined : sourceStatus(screening.statuses, source);
+      return downloadOffered(status, canRelease) ? (
+        <DownloadFileButton client={client} source={source} />
+      ) : (
+        <span className="muted">{t`Ask an owner or admin to release this file before downloading it.`}</span>
+      );
+    },
+    [client, screening.statuses, canRelease],
+  );
+
   return (
     <FileChecksPanel
       groups={groups}
       problem={problem}
       screeningProblem={screening.problem}
       details={details}
+      actions={actions}
     />
+  );
+}
+
+/** Saves the file's stored bytes under its own name; a refusal shows beside the button. */
+function DownloadFileButton({
+  client,
+  source,
+}: {
+  readonly client: ApiClient;
+  readonly source: KnowledgeSource;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | undefined>(undefined);
+  return (
+    <>
+      <button
+        type="button"
+        className="secondary"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setProblem(undefined);
+          void downloadSourceFile(client, source)
+            .then((bytes) => saveFile(bytes, source.displayName))
+            .catch((error: unknown) => setProblem(describeError(error)))
+            .finally(() => setBusy(false));
+        }}
+      >
+        {t`Download`} <span className="sr-only">{source.displayName}</span>
+      </button>
+      {problem === undefined ? null : (
+        <span className="problem" role="alert">
+          {problem}
+        </span>
+      )}
+    </>
   );
 }
 
