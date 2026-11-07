@@ -6,8 +6,8 @@ import { t } from "@lingui/core/macro";
 
 /**
  * The web host's live voice conversation (#2362): the microphone streams 16 kHz PCM to the API's
- * live route, the candidate's words come back as they speak, and each question plays when its
- * audio has arrived. The microphone is muted while a question plays, so the interviewer never
+ * live route, the candidate's words come back as they speak, and the reply plays clip by clip:
+ * a short acknowledgement, then the question sentence by sentence (#2409). The microphone is muted while a question plays, so the interviewer never
  * hears itself; "Answer now" stops the question and listens again.
  */
 
@@ -50,7 +50,7 @@ export interface LiveMicrophone {
   close(): void;
 }
 
-/** Plays one question's audio once it has all arrived. */
+/** Plays one clip of a turn's audio once it has all arrived. */
 export interface LivePlayer {
   /** Plays the audio; `onLevel`, when given, hears how loud it is while it plays, if measurable. */
   play(audio: Blob, onEnded: () => void, onLevel?: (level: number) => void): void;
@@ -161,6 +161,8 @@ interface ServerMessage {
   readonly text?: string;
   readonly view?: unknown;
   readonly media_type?: string;
+  readonly kind?: string;
+  readonly more?: boolean;
   readonly code?: string;
   readonly message?: string;
 }
@@ -182,6 +184,32 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
   let ended = false;
   let microphone: LiveMicrophone | undefined;
   let audio: { type: string; chunks: ArrayBuffer[] } | undefined;
+  // A turn's speech arrives as clips (#2409): an acknowledgement, then the question sentence by
+  // sentence. Each plays as soon as it has arrived and the one before it has finished.
+  const queue: Blob[] = [];
+  let playing = false;
+  let turnAudioDone = false;
+  let skipped = false;
+  const playNext = () => {
+    if (ended || playing) return;
+    const next = queue.shift();
+    if (next === undefined) {
+      if (turnAudioDone) {
+        turnAudioDone = false;
+        listen();
+      }
+      return;
+    }
+    playing = true;
+    player.play(
+      next,
+      () => {
+        playing = false;
+        playNext();
+      },
+      events.onLevel,
+    );
+  };
 
   const listen = () => {
     if (ended) return;
@@ -250,20 +278,27 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
         break;
       case "answer":
         listening = false;
+        skipped = false;
         events.onState("thinking");
         break;
       case "session":
         options.onSession(message.view);
         break;
       case "audio_start":
+        if (skipped) break;
         audio = { type: message.media_type ?? "audio/ogg", chunks: [] };
-        events.onState("speaking");
+        // The acknowledgement plays while the interviewer still writes.
+        if (message.kind !== "acknowledgement") events.onState("speaking");
         break;
       case "audio_end": {
-        const played = audio;
+        const clip = audio;
         audio = undefined;
-        if (played === undefined || played.chunks.length === 0) listen();
-        else player.play(new Blob(played.chunks, { type: played.type }), listen, events.onLevel);
+        if (skipped) break;
+        if (clip !== undefined && clip.chunks.length > 0) {
+          queue.push(new Blob(clip.chunks, { type: clip.type }));
+        }
+        if (message.more !== true) turnAudioDone = true;
+        playNext();
         break;
       }
       case "error":
@@ -283,6 +318,11 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
     skipQuestion: () => {
       player.stop();
       audio = undefined;
+      queue.length = 0;
+      playing = false;
+      turnAudioDone = false;
+      // The rest of this question's clips may still arrive; they stay silent.
+      skipped = true;
       listen();
     },
     stop: () => {

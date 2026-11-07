@@ -54,6 +54,56 @@ export interface LiveInterviewOptions {
   readonly refusal: (error: unknown) => { readonly code: string; readonly message: string };
   /** Content-free counts for the logs when the conversation ends. */
   readonly onEnd?: (usage: LiveInterviewUsage) => void;
+  /** Content-free timings of each answered turn, for the logs (#2409). */
+  readonly onTurn?: (timing: LiveTurnTiming) => void;
+  /** The clock the timings read; `performance.now` when left out. */
+  readonly now?: () => number;
+}
+
+/** How long each step of one turn took, in milliseconds; never words or audio. */
+export interface LiveTurnTiming {
+  readonly turn: number;
+  /** From "Done speaking", when pressed, to the recognised words; otherwise absent. */
+  readonly heardMs?: number;
+  /** The interviewer's call, including the method-guide check and saving the turn. */
+  readonly interviewerMs: number;
+  /** From the recognised words to the first audio of the acknowledgement or question. */
+  readonly firstAudioMs?: number;
+  /** From the interviewer's question to its first audio. */
+  readonly questionAudioMs?: number;
+  /** From the recognised words to the question's last audio. */
+  readonly totalMs: number;
+}
+
+/**
+ * A short spoken acknowledgement played while the interviewer writes (#2409), so the candidate
+ * hears at once that they were heard. It varies by turn so it does not sound like a loop.
+ */
+const acknowledgements: Record<LiveSpeechLanguage, readonly string[]> = {
+  fr: ["D'accord.", "Merci.", "Je vois."],
+  en: ["All right.", "Thank you.", "I see."],
+};
+
+export function acknowledgementFor(turn: number, language: LiveSpeechLanguage | undefined): string {
+  const phrases = acknowledgements[language ?? "en"];
+  return phrases[turn % phrases.length] ?? "";
+}
+
+/**
+ * Splits a question into what is spoken first and the rest (#2409): the first sentence is
+ * synthesised alone, so it plays while the rest is synthesised. A short opener stays with the
+ * sentence after it, so no clip is a single word.
+ */
+export function spokenParts(text: string): string[] {
+  const trimmed = text.trim();
+  const boundary = /[.!?\u2026](?:["'\u00bb\u201d)]*)\s+/gu;
+  for (const match of trimmed.matchAll(boundary)) {
+    const end = match.index + match[0].length;
+    if (end < 24) continue;
+    const rest = trimmed.slice(end).trim();
+    return rest === "" ? [trimmed] : [trimmed.slice(0, end).trim(), rest];
+  }
+  return trimmed === "" ? [] : [trimmed];
 }
 
 export interface LiveInterviewUsage {
@@ -92,6 +142,7 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
   const { socket, speech } = options;
   const maximumSeconds = speech.maximumSessionSeconds ?? defaultMaximumSessionSeconds;
   const send = (message: object) => socket.send(JSON.stringify(message));
+  const now = options.now ?? (() => performance.now());
   let recognition: LiveRecognition | undefined;
   let turnBytes = 0;
   let totalBytes = 0;
@@ -107,6 +158,32 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
   let waiting: Uint8Array[] | undefined;
   let audioArrived: (() => void) | undefined;
   let endRequested = false;
+  let endPressedAt: number | undefined;
+
+  /** Speaks one clip; `more` tells the browser another clip of this turn follows. Returns when its first audio went out. */
+  const speak = async (
+    text: string,
+    clip: { readonly more: boolean; readonly kind?: "acknowledgement" },
+  ): Promise<number | undefined> => {
+    spokenCharacters += [...text].length;
+    speechCostUsd += textToSpeechCostUsd(text, speech.ttsPricing);
+    send({
+      type: "audio_start",
+      media_type: speech.tts.mediaType,
+      ...(clip.kind === undefined ? {} : { kind: clip.kind }),
+    });
+    let first: number | undefined;
+    try {
+      for await (const chunk of speech.tts.synthesize(text, { language: options.language })) {
+        if (stopped) break;
+        first ??= now();
+        socket.send(chunk);
+      }
+    } finally {
+      send({ type: "audio_end", ...(clip.more ? { more: true } : {}) });
+    }
+    return first;
+  };
 
   const stop = () => {
     stopped = true;
@@ -138,6 +215,7 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
     }
     const control = controlOf(data);
     if (control?.type === "end_turn") {
+      endPressedAt ??= now();
       if (recognition !== undefined) recognition.end();
       else if (waiting !== undefined && waiting.length > 0) endRequested = true;
     } else if (control?.type === "stop") stop();
@@ -161,6 +239,7 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
       turnBytes = 0;
       waiting = [];
       endRequested = false;
+      endPressedAt = undefined;
       await new Promise<void>((resolve) => {
         audioArrived = resolve;
         stopWaiting = resolve;
@@ -192,22 +271,48 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
       recognition = undefined;
       if (stopped) break;
       if (text === "") continue;
+      const heardAt = now();
+      const pressedAt = endPressedAt;
       send({ type: "answer", text });
-      const turn = await options.answer(text);
+      // The interviewer starts writing at once; the acknowledgement plays meanwhile.
+      const writing = options.answer(text);
+      writing.catch(() => {});
+      let firstAudioAt: number | undefined;
+      try {
+        firstAudioAt = await speak(acknowledgementFor(turns, options.language), {
+          more: true,
+          kind: "acknowledgement",
+        });
+      } catch {
+        // A failed acknowledgement only loses the courtesy; the question still comes.
+      }
+      const turn = await writing;
+      const answeredAt = now();
       turns += 1;
       send({ type: "session", view: turn.view });
+      // A closed topic ends the conversation; the socket's close stops the acknowledgement.
       if (!turn.open || turn.question === undefined) break;
       send({ type: "question", text: turn.question });
-      spokenCharacters += [...turn.question].length;
-      speechCostUsd += textToSpeechCostUsd(turn.question, speech.ttsPricing);
-      send({ type: "audio_start", media_type: speech.tts.mediaType });
-      for await (const chunk of speech.tts.synthesize(turn.question, {
-        language: options.language,
-      })) {
+      const parts = spokenParts(turn.question);
+      let questionAudioAt: number | undefined;
+      for (const [index, part] of parts.entries()) {
         if (stopped) break;
-        socket.send(chunk);
+        const first = await speak(part, { more: index < parts.length - 1 });
+        questionAudioAt ??= first;
       }
-      send({ type: "audio_end" });
+      if (parts.length === 0) send({ type: "audio_end" });
+      firstAudioAt ??= questionAudioAt;
+      const spokenAt = now();
+      options.onTurn?.({
+        turn: turns,
+        ...(pressedAt === undefined ? {} : { heardMs: Math.round(heardAt - pressedAt) }),
+        interviewerMs: Math.round(answeredAt - heardAt),
+        ...(firstAudioAt === undefined ? {} : { firstAudioMs: Math.round(firstAudioAt - heardAt) }),
+        ...(questionAudioAt === undefined
+          ? {}
+          : { questionAudioMs: Math.round(questionAudioAt - answeredAt) }),
+        totalMs: Math.round(spokenAt - heardAt),
+      });
     }
     outcome = limited ? "limit" : stopped ? "stopped" : "finished";
     if (limited) {

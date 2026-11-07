@@ -283,7 +283,7 @@ describe("career interview routes", () => {
           socket.send(new Uint8Array(3_200));
           socket.send(JSON.stringify({ type: "end_turn" }));
         }
-        if (message.type === "audio_end") resolve();
+        if (message.type === "audio_end" && message.more !== true) resolve();
       });
     });
     socket.send(JSON.stringify({ type: "stop" }));
@@ -293,12 +293,15 @@ describe("career interview routes", () => {
       "ready",
       "partial",
       "answer",
+      "audio_start",
+      "audio_end",
       "session",
       "question",
       "audio_start",
       "audio_end",
     ]);
     expect(messages.find((message) => message.type === "question")?.text).toBe("And then?");
+    expect(logs.join("\n")).toContain("live career interview turn");
     expect(logs.join("\n")).not.toContain("loan reports");
   });
 

@@ -588,6 +588,8 @@ export function registerCareerInterviewRoutes(
           request.log.error({ err: error, workspaceId, sessionId }, "live career interview failed");
           return { code: "live_failed", message: "The live conversation stopped. Try again." };
         },
+        onTurn: (timing) =>
+          request.log.info({ workspaceId, sessionId, ...timing }, "live career interview turn"),
         onEnd: (usage) =>
           request.log.info({ workspaceId, sessionId, ...usage }, "live career interview ended"),
       });

@@ -494,8 +494,10 @@ no interviewer model now says so before offering topics.
 to #2363) adds **Talk live**, a spoken conversation on one topic
 ([live conversation](reference/voice-input.md#live-conversation)). Google
 Cloud speech in the EU hears the candidate and speaks the questions, while
-Claude stays the interviewer behind the method-guide check. Voxtral is the
-planned second speech adapter.
+Claude stays the interviewer behind the method-guide check. Talk live works on
+the signed-in screen too (#2393). Each reply starts with a short spoken
+acknowledgement and plays sentence by sentence, and each turn logs its step
+timings (#2409). Voxtral is the planned second speech adapter.
 
 [Milestone 86](https://github.com/akoita/draft-loop/milestone/86) (#2401
 to #2403) makes the conversation immersive. Talking live opens a voice stage:

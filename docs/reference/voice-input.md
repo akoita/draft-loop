@@ -93,12 +93,17 @@ sequenceDiagram
     A->>G: Chirp 3 streaming recognition
     G-->>A: Words as spoken, then a pause
     A-->>P: partial words, then the answer
-    A->>M: The answer, as a typed answer
-    M-->>A: Next question, checked against the method guide
-    A->>G: Chirp 3 HD voice
+    par While the interviewer writes
+      A->>M: The answer, as a typed answer
+      M-->>A: Next question, checked against the method guide
+    and
+      A->>G: A short acknowledgement
+      A-->>P: Its audio, played at once
+    end
+    A->>G: Chirp 3 HD voice, first sentence then the rest
     G-->>A: Ogg Opus audio
-    A-->>P: The session, the question and its audio
-    P->>C: Plays the question, with the microphone muted
+    A-->>P: The session, the question and its audio, clip by clip
+    P->>C: Plays each clip as it arrives, with the microphone muted
   end
 ```
 
@@ -109,7 +114,8 @@ sequenceDiagram
 | Language | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language |
 | Consent | The record's transmission grant must name Anthropic and Google Cloud; the screen offers to add Google Cloud |
 | Limits | 30 minutes of audio per conversation, then `live_limit_reached`; one topic per conversation |
-| Logs | Turn count, audio seconds, spoken characters and estimated cost; never words or audio |
+| Reply | A short acknowledgement ("D'accord.", "All right.") plays while the interviewer writes; the question's first sentence plays while the rest is synthesised |
+| Logs | Per turn, `live career interview turn` with `heardMs`, `interviewerMs`, `firstAudioMs`, `questionAudioMs` and `totalMs`; at the end, turn count, audio seconds, spoken characters and estimated cost; never words or audio |
 | Content security policy | `media-src 'self' blob:` lets the question play from memory |
 
 The list prices put a 20-minute interview at about US$0.30 to US$0.45.

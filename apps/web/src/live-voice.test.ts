@@ -172,6 +172,49 @@ describe("web live voice", () => {
     expect(states.at(-1)).toBe("ended");
   });
 
+  it("plays the acknowledgement while thinking, then the question clip by clip (#2409)", async () => {
+    const { socket, microphone, states, played, live } = call();
+    await Promise.resolve();
+    socket.server({ type: "ready" });
+    socket.server({ type: "answer", text: "I rebuilt the reports." });
+    socket.server({ type: "audio_start", media_type: "audio/ogg", kind: "acknowledgement" });
+    socket.emit("message", new Uint8Array([1]).buffer);
+    socket.server({ type: "audio_end", more: true });
+    expect(played).toHaveLength(1);
+    expect(states.at(-1)).toBe("thinking");
+
+    socket.server({ type: "audio_start", media_type: "audio/ogg" });
+    socket.emit("message", new Uint8Array([1, 2]).buffer);
+    socket.server({ type: "audio_end", more: true });
+    socket.server({ type: "audio_start", media_type: "audio/ogg" });
+    socket.emit("message", new Uint8Array([1, 2, 3]).buffer);
+    socket.server({ type: "audio_end" });
+    expect(states.at(-1)).toBe("speaking");
+    expect(played).toHaveLength(1);
+
+    played[0]?.onEnded();
+    expect(played[1]?.audio.size).toBe(2);
+    played[1]?.onEnded();
+    expect(played[2]?.audio.size).toBe(3);
+    microphone.speak(new Int16Array(160));
+    const sentBefore = socket.sent.length;
+    played[2]?.onEnded();
+    expect(states.at(-1)).toBe("listening");
+    microphone.speak(new Int16Array(160));
+    expect(socket.sent).toHaveLength(sentBefore + 1);
+
+    socket.server({ type: "answer", text: "Forty events." });
+    socket.server({ type: "audio_start", media_type: "audio/ogg" });
+    socket.emit("message", new Uint8Array([1]).buffer);
+    socket.server({ type: "audio_end", more: true });
+    live.skipQuestion();
+    socket.server({ type: "audio_start", media_type: "audio/ogg" });
+    socket.emit("message", new Uint8Array([1]).buffer);
+    socket.server({ type: "audio_end" });
+    expect(played).toHaveLength(4);
+    expect(states.at(-1)).toBe("listening");
+  });
+
   it("waits for a socket that is still opening, then talks over it (#2393)", async () => {
     let open: (socket: FakeSocket) => void = () => {};
     const pending = liveSocketOf(new Promise<LiveSocket>((resolve) => (open = resolve)));
