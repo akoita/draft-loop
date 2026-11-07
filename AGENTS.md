@@ -49,6 +49,18 @@ contain only compatibility exports or thin wiring that does not increase their
 line-count baseline. Whenever an extraction reduces a hotspot, lower its
 recorded limit in the same change so the reduction cannot regress.
 
+## Engineering guides
+
+[`docs/engineering/`](docs/engineering/README.md) shows how to make the common
+changes. Read the matching guide before you start, and add a guide when a PR
+repeats a pattern that none covers.
+
+| Guide                                                     | Use it when you                                  |
+| --------------------------------------------------------- | ------------------------------------------------ |
+| [Change checklist](docs/engineering/change-checklist.md)  | Finish any change and fill in the PR template    |
+| [Add an API route](docs/engineering/api-route.md)         | Expose a capability to the web and to agents     |
+| [Add a shared screen](docs/engineering/shared-screen.md)  | Add or change a screen the web and desktop share |
+
 ## Documentation synchronization
 
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
@@ -56,6 +68,10 @@ recorded limit in the same change so the reduction cannot regress.
 - Update affected documentation in the same PR, or state why no update is needed.
 - Summarize and link to the canonical source instead of copying implementation
   history across documents.
+- A change that adds, changes, exposes, hides or removes a capability updates
+  its row in `docs/features/README.md` and its feature page in the same PR. A
+  new MCP tool is named in its row's Agent access cell. `pnpm lint:docs` checks
+  the catalog.
 
 <!-- agent-toolkit:writing-policy -->
 
