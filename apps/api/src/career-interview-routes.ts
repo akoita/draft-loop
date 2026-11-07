@@ -75,20 +75,31 @@ const workspaceParams = z.strictObject({
 });
 const sessionParams = workspaceParams.extend({ sessionId: careerInterviewSessionIdSchema });
 const topicKey = z.string().trim().min(1).max(400);
+/** The language the candidate reads the screen in; the interviewer asks in it (overrides the workspace's). */
+const interviewLanguage = z
+  .enum(["fr", "en"])
+  .optional()
+  .describe("The screen's language, which the interviewer asks in. Without it, the workspace's.");
 
 const actionBody = z
   .discriminatedUnion("action", [
-    z.strictObject({ action: z.literal("accept"), topic_key: topicKey }),
+    z.strictObject({
+      action: z.literal("accept"),
+      topic_key: topicKey,
+      language: interviewLanguage,
+    }),
     z.strictObject({ action: z.literal("decline"), topic_key: topicKey }),
     z.strictObject({
       action: z.literal("own_subject"),
       subject: z.string().trim().min(1).max(300),
+      language: interviewLanguage,
     }),
     z.strictObject({
       action: z.literal("answer"),
       topic_key: topicKey,
       text: z.string().max(4_000).optional(),
       mark: z.enum(careerInterviewTurnMarks).optional(),
+      language: interviewLanguage,
     }),
     z.strictObject({
       action: z.literal("confirm"),
@@ -240,7 +251,11 @@ export function registerCareerInterviewRoutes(
   } as const;
   const pricing = catalogModelPricing(model);
 
-  const interviewerFor = (workspaceId: string, sessionId: string): CareerInterviewerPort => ({
+  const interviewerFor = (
+    workspaceId: string,
+    sessionId: string,
+    language: "fr" | "en" | undefined,
+  ): CareerInterviewerPort => ({
     reply: async (request) => {
       if (interview.route === undefined || !interview.allowProviderData) {
         throw new InterviewUnavailableError(
@@ -269,12 +284,16 @@ export function registerCareerInterviewRoutes(
           sensitiveDataAcknowledged: true,
         },
         sessionId,
-        language: (await service.readWorkspace(workspaceRoot(workspaceId))).language,
+        language: language ?? (await service.readWorkspace(workspaceRoot(workspaceId))).language,
       }).reply(request);
     },
   });
 
-  const serviceFor = (workspaceId: string, request: FastifyRequest) => {
+  const serviceFor = (
+    workspaceId: string,
+    request: FastifyRequest,
+    language?: "fr" | "en" | undefined,
+  ) => {
     const screen =
       screening === undefined
         ? undefined
@@ -291,7 +310,7 @@ export function registerCareerInterviewRoutes(
     return createCareerInterviewService({
       store: interview.sessions,
       loadRecord: () => loadRecord(service, workspaceRoot(workspaceId)),
-      interviewer: interviewerFor,
+      interviewer: (workspace, session) => interviewerFor(workspace, session, language),
       publish:
         knowledge === undefined
           ? async () => {
@@ -434,8 +453,12 @@ export function registerCareerInterviewRoutes(
     async (request, reply) => {
       const { workspaceId, sessionId } = request.params;
       await service.readWorkspace(workspaceRoot(workspaceId));
-      const interviewService = serviceFor(workspaceId, request);
       const body = request.body;
+      const interviewService = serviceFor(
+        workspaceId,
+        request,
+        "language" in body ? body.language : undefined,
+      );
       const result = await handled(reply, async () => {
         switch (body.action) {
           case "accept":
@@ -539,7 +562,7 @@ export function registerCareerInterviewRoutes(
         );
         return;
       }
-      const interviewService = serviceFor(workspaceId, request);
+      const interviewService = serviceFor(workspaceId, request, query.language);
       request.log.info({ workspaceId, sessionId }, "live career interview started");
       await runLiveInterview({
         socket,

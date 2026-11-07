@@ -9,6 +9,7 @@ import {
   careerInterviewRefusal,
 } from "@draft-loop/ui/career-interview-model";
 import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
+import { useScreenLocale } from "@draft-loop/ui/i18n";
 import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
 import { t } from "@lingui/core/macro";
 import { useCallback, useMemo, useState } from "react";
@@ -88,9 +89,19 @@ export function webSpeechInput(): SpeechInput | undefined {
   return pageSpeech;
 }
 
-/** The language the interviewer speaks in: the browser's, French or English. */
-export function liveLanguage(languages: readonly string[]): "fr" | "en" {
-  return languages[0]?.toLowerCase().startsWith("fr") === true ? "fr" : "en";
+/** The language the interviewer asks and listens in: the screen's, French or English. */
+export function interviewLanguage(locale: string): "fr" | "en" {
+  return locale.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+/** The actions that call the interviewer carry the screen's language; the others go as they are. */
+export function withInterviewLanguage(
+  action: CareerInterviewAction,
+  language: "fr" | "en",
+): CareerInterviewAction & { readonly language?: "fr" | "en" } {
+  return action.action === "accept" || action.action === "own_subject" || action.action === "answer"
+    ? { ...action, language }
+    : action;
 }
 
 /** Live voice on this page, when the browser can capture audio and the client opens sockets. */
@@ -98,6 +109,7 @@ function liveVoice(
   client: ApiClient,
   workspaceId: string,
   sessionId: string,
+  language: "fr" | "en",
   show: (read: ApiSchemas["CareerInterviewSessionView"]) => void,
 ): CareerInterviewLiveVoice | undefined {
   const openSocket = client.openSocket?.bind(client);
@@ -110,7 +122,7 @@ function liveVoice(
           "/v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/live",
           {
             path: { workspaceId, sessionId },
-            query: { topic_key: topicKey, language: liveLanguage(navigator.languages) },
+            query: { topic_key: topicKey, language },
           },
           "draft-loop.live",
         ),
@@ -165,6 +177,7 @@ export async function allowInterviewProviders(
 
 export function CareerInterviewSection({ client, bases }: CareerInterviewSectionProps) {
   const workspaceId = useRecordId();
+  const language = interviewLanguage(useScreenLocale().locale);
   const [session, setSession] = useState<CareerInterviewSessionView | undefined>(undefined);
   const [proposal, setProposal] = useState<string | undefined>(undefined);
 
@@ -201,8 +214,11 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
 
   const sessionId = session?.id;
   const live = useMemo(
-    () => (sessionId === undefined ? undefined : liveVoice(client, workspaceId, sessionId, show)),
-    [client, workspaceId, sessionId, show],
+    () =>
+      sessionId === undefined
+        ? undefined
+        : liveVoice(client, workspaceId, sessionId, language, show),
+    [client, workspaceId, sessionId, language, show],
   );
 
   return (
@@ -230,7 +246,10 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
               "POST /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/actions",
               {
                 path: { workspaceId, sessionId: session.id },
-                body: action as ApiSchemas["CareerInterviewActionInput"],
+                body: withInterviewLanguage(
+                  action,
+                  language,
+                ) as ApiSchemas["CareerInterviewActionInput"],
               },
             ),
           );

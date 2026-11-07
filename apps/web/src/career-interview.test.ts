@@ -6,6 +6,8 @@ import {
   careerInterviewProblem,
   careerInterviewRefused,
   careerInterviewSessionView,
+  interviewLanguage,
+  withInterviewLanguage,
 } from "./career-interview.js";
 
 function consentClient(current: unknown) {
@@ -91,5 +93,28 @@ describe("the web career interview", () => {
       { role: "interviewer", text: "Who did you mentor?", mark: undefined },
     ]);
     expect(view).not.toHaveProperty("workspace_id");
+  });
+});
+
+describe("interview language", () => {
+  it("follows the screen's locale, French or English", () => {
+    expect(interviewLanguage("fr")).toBe("fr");
+    expect(interviewLanguage("en")).toBe("en");
+    expect(interviewLanguage("pseudo")).toBe("en");
+  });
+
+  it("adds it only to the actions that call the interviewer", () => {
+    expect(withInterviewLanguage({ action: "accept", topic_key: "k" }, "fr")).toEqual({
+      action: "accept",
+      topic_key: "k",
+      language: "fr",
+    });
+    expect(withInterviewLanguage({ action: "answer", topic_key: "k", text: "Oui" }, "fr")).toEqual({
+      action: "answer",
+      topic_key: "k",
+      text: "Oui",
+      language: "fr",
+    });
+    expect(withInterviewLanguage({ action: "pause" }, "fr")).toEqual({ action: "pause" });
   });
 });

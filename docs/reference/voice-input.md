@@ -105,7 +105,8 @@ sequenceDiagram
 | Part | What it does |
 | --- | --- |
 | Recognition | Chirp 3 at `eu-speech.googleapis.com`; a turn ends after 1.5 s of silence, at 120 s, or on **Done speaking** |
-| Voice | Chirp 3 HD `Charon` at `eu-texttospeech.googleapis.com`, in French or English from the browser's language |
+| Voice | Chirp 3 HD `Charon` at `eu-texttospeech.googleapis.com`, in French or English from the screen's language |
+| Language | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language |
 | Consent | The record's transmission grant must name Anthropic and Google Cloud; the screen offers to add Google Cloud |
 | Limits | 30 minutes of audio per conversation, then `live_limit_reached`; one topic per conversation |
 | Logs | Turn count, audio seconds, spoken characters and estimated cost; never words or audio |
