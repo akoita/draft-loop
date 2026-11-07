@@ -46,6 +46,8 @@ describe("live career interview", () => {
     expect(panel(true, voice)).toContain("Talk live");
     expect(panel(false, voice)).not.toContain("Talk live");
     expect(panel(true, undefined)).not.toContain("Talk live");
+    expect(panel(true, voice)).toContain('aria-pressed="true">Write</button>');
+    expect(panel(true, voice)).toContain(">Speak</button>");
   });
 
   it("opens a stage with the question, the orb and a way back to writing", () => {

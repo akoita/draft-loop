@@ -1069,6 +1069,10 @@ msgstr "and its completed Round"
 msgid "Another review action is already running."
 msgstr "Another review action is already running."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Answer by"
+msgstr "Answer by"
+
 #: packages/ui/src/speech-button.tsx
 msgid "Answer by voice"
 msgstr "Answer by voice"
@@ -6933,6 +6937,10 @@ msgstr "Sources"
 msgid "Sources — claim traceability"
 msgstr "Sources — claim traceability"
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Speak"
+msgstr "Speak"
+
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Spelling locale"
@@ -8949,6 +8957,10 @@ msgstr "Workspace settings"
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Workspace unavailable"
 msgstr "Workspace unavailable"
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Write"
+msgstr "Write"
 
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"

@@ -10029,6 +10029,182 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   resize: vertical;
 }
 
+/* The written interview leads with the latest question (#2402): a serif topic header with the
+   write / speak switch, interviewer turns as plain text with a ring mark, the question being
+   answered one step larger, and one answer bar with the microphone inside it. */
+.interview-conversation {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.interview-topic-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.interview-topic-header h3 {
+  flex: 1 1 18rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  text-wrap: balance;
+}
+
+.interview-mode {
+  display: inline-flex;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.interview-mode button {
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.interview-mode button[aria-pressed="true"] {
+  background: var(--teal-wash);
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.interview-mode button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.interview-turns .interview-turn-interviewer {
+  position: relative;
+  max-width: 62ch;
+  padding: 0 0 0 calc(18px + var(--space-3));
+  border: 0;
+  background: none;
+  color: var(--text-2);
+}
+
+.interview-turns .interview-turn-interviewer::before {
+  content: "";
+  position: absolute;
+  top: 0.2em;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--teal-line);
+  border-radius: 50%;
+}
+
+.interview-turns .interview-turn-latest {
+  color: var(--text-1);
+  font-size: var(--text-lg);
+  line-height: 1.55;
+}
+
+.interview-turns .interview-turn-latest::before {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px var(--teal-wash);
+}
+
+.interview-turns .interview-turn-candidate {
+  max-width: min(62ch, 80%);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.interview-turns {
+  gap: var(--space-3);
+}
+
+.interview-composer-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface-inset);
+}
+
+.interview-composer-bar:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-wash);
+}
+
+.interview-composer .interview-composer-bar textarea {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding: var(--space-2);
+  border: 0;
+  background: transparent;
+  resize: none;
+  box-shadow: none;
+}
+
+.interview-composer .interview-composer-bar textarea:focus-visible {
+  outline: none;
+}
+
+.interview-talk-live {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--teal);
+  color: var(--teal-ink);
+  cursor: pointer;
+}
+
+.interview-talk-live svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.interview-talk-live:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.interview-send {
+  flex: none;
+  border-radius: 12px;
+}
+
+@media (max-width: 760px) {
+  /* On a phone the topics become one strip above the conversation. */
+  .interview-topic-list {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+    scroll-snap-type: x proximity;
+  }
+
+  .interview-topic-item {
+    flex: 0 0 min(15rem, 75%);
+    scroll-snap-align: start;
+  }
+}
+
 /* An application's document language (#2315): the select, and the job posting's own language. */
 .document-language-select {
   display: grid;
