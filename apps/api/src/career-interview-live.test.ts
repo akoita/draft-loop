@@ -6,7 +6,13 @@ import {
 } from "@draft-loop/application/live-speech";
 import { describe, expect, it } from "vitest";
 
-import { type LiveSocket, runLiveInterview } from "./career-interview-live.js";
+import {
+  acknowledgementFor,
+  type LiveSocket,
+  type LiveTurnTiming,
+  runLiveInterview,
+  spokenParts,
+} from "./career-interview-live.js";
 
 class FakeSocket extends EventEmitter implements LiveSocket {
   readonly sent: (string | Uint8Array)[] = [];
@@ -15,11 +21,11 @@ class FakeSocket extends EventEmitter implements LiveSocket {
     this.sent.push(data);
     const message = typeof data === "string" ? JSON.parse(data) : undefined;
     // The browser ends each turn once the server is ready to listen again.
-    if (message?.type === "ready" || message?.type === "audio_end") {
-      queueMicrotask(() => {
+    if (message?.type === "ready" || (message?.type === "audio_end" && message.more !== true)) {
+      setTimeout(() => {
         this.emit("message", new Uint8Array(32_000), true);
         this.emit("message", JSON.stringify({ type: "end_turn" }), false);
-      });
+      }, 0);
     }
   }
   close(code?: number, reason?: string): void {
@@ -68,20 +74,28 @@ describe("live career interview", () => {
     });
 
     expect(answers).toEqual(["Hourly updates.", "About forty events."]);
-    expect(tts.spoken).toEqual(["Who used the hourly forecast?"]);
+    expect(tts.spoken).toEqual(["All right.", "Who used the hourly forecast?", "Thank you."]);
     expect(socket.messages().map((message) => message.type)).toEqual([
       "ready",
       "partial",
       "partial",
       "answer",
+      "audio_start",
+      "audio_end",
       "session",
       "question",
       "audio_start",
       "audio_end",
       "partial",
       "answer",
+      "audio_start",
+      "audio_end",
       "session",
     ]);
+    const clips = socket.messages().filter((message) => message.type.startsWith("audio_"));
+    expect(clips[0]).toMatchObject({ kind: "acknowledgement" });
+    expect(clips[1]).toEqual({ type: "audio_end", more: true });
+    expect(clips[3]).toEqual({ type: "audio_end" });
     expect(socket.sent.some((item) => item instanceof Uint8Array)).toBe(true);
     expect(usage).toMatchObject({ turns: 2, audioSeconds: 2, outcome: "finished" });
     expect(usage.costUsd).toBeGreaterThan(0);
@@ -181,5 +195,76 @@ describe("live career interview", () => {
     });
     expect(usage.outcome).toBe("stopped");
     expect(opened).toBe(0);
+  });
+
+  it("speaks a long question sentence by sentence and logs each step's timing (#2409)", async () => {
+    const socket = new FakeSocket();
+    const tts = createScriptedTextToSpeech();
+    const timings: LiveTurnTiming[] = [];
+    let clock = 0;
+    let answered = 0;
+    await runLiveInterview({
+      socket,
+      language: "fr",
+      now: () => clock,
+      speech: {
+        stt: createScriptedStreamingSpeechToText([
+          [{ kind: "final", text: "Des prévisions." }, { kind: "end_of_turn" }],
+          [{ kind: "final", text: "Quarante." }, { kind: "end_of_turn" }],
+        ]),
+        tts,
+        ...pricing,
+      },
+      answer: async () => {
+        answered += 1;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        clock += 1_200;
+        return answered === 1
+          ? {
+              view: {},
+              question: "Merci pour ces précisions. Qui utilisait la prévision horaire ?",
+              open: true,
+            }
+          : { view: {}, question: undefined, open: false };
+      },
+      refusal: () => ({ code: "x", message: "x" }),
+      onTurn: (timing) => timings.push(timing),
+    });
+
+    expect(tts.spoken).toEqual([
+      "D'accord.",
+      "Merci pour ces précisions.",
+      "Qui utilisait la prévision horaire ?",
+      "Merci.",
+    ]);
+    const ends = socket.messages().filter((message) => message.type === "audio_end");
+    expect(ends.slice(0, 3)).toEqual([
+      { type: "audio_end", more: true },
+      { type: "audio_end", more: true },
+      { type: "audio_end" },
+    ]);
+    expect(timings).toEqual([
+      {
+        turn: 1,
+        heardMs: 0,
+        interviewerMs: 1_200,
+        firstAudioMs: 0,
+        questionAudioMs: 0,
+        totalMs: 1_200,
+      },
+    ]);
+  });
+
+  it("splits only after a full first sentence and varies the acknowledgement", () => {
+    expect(spokenParts("Bien. Et ensuite, qu'avez-vous changé ?")).toEqual([
+      "Bien. Et ensuite, qu'avez-vous changé ?",
+    ]);
+    expect(spokenParts("That makes sense to me. What changed next? And why?")).toEqual([
+      "That makes sense to me.",
+      "What changed next? And why?",
+    ]);
+    expect(spokenParts("  ")).toEqual([]);
+    expect(acknowledgementFor(0, undefined)).toBe("All right.");
+    expect(acknowledgementFor(4, "fr")).toBe("Merci.");
   });
 });

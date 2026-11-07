@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Immersive interview conversation",
+  "releaseName": "Faster live interview replies",
   "stageIssue": 1359,
-  "milestone": 86,
-  "summary": "The career interview becomes immersive. Talking live opens a voice stage with the question in large type, an orb that grows with the candidate's voice and moves with the interviewer's, and one main button (#2401). The written chat leads with the question being answered, with a Write / Speak switch and one answer bar (#2402), and each topic carries a short title from the record (#2403). Live turns no longer fail on a late microphone frame or an idle recognition stream (#2398, #2399), and the French screens translate the texts the catalogs missed (#2400).",
-  "knownLimitations": "French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs; job-page quarantine still comes from the rules. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. Topic titles are new: sessions started before this release keep their long reason. The local-first desktop has no career interview."
+  "milestone": 85,
+  "summary": "Live interview replies come sooner. A short spoken acknowledgement plays while the interviewer writes, and the question plays sentence by sentence as its audio arrives (#2409). Each turn logs how long recognition, the interviewer and the voice took, with no words or audio. Talk live now opens on the signed-in screen as well as the owner screen (#2393).",
+  "knownLimitations": "The interviewer's question is still written in one call before it is spoken; streaming it into the voice waits on the turn timings. French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. The local-first desktop has no career interview."
 }
