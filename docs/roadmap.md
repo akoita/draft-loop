@@ -414,7 +414,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   agent. Agent tokens for signed-in hosted accounts come with hosted sign-in.
 - **Agents can work your applications**
   ([milestone 89](https://github.com/akoita/draft-loop/milestone/89),
-  #2437–#2442, admitted 2026-11-07). Agent tokens get scopes, and agents can
+  #2437–#2442, merged 2026-11-07, [walked](evaluation/agent-plugin-walk.md)
+  with real Claude Code). Agent tokens get scopes, and agents can
   list applications, add a job from pasted text and follow a run. "Connect a
   coding agent" moves to the Coding agents section of the workspace settings,
   and DraftLoop installs as a Claude Code plugin. Runs, drafts and evidence
