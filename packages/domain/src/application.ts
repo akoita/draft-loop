@@ -2,7 +2,13 @@
  * A job application inside a workspace (ADR 0010). The workspace is the candidate's home; each
  * application holds one job source with its briefs, runs and exports.
  */
-export const applicationStatuses = ["drafting", "in-review", "approved", "exported"] as const;
+export const applicationStatuses = [
+  "collecting",
+  "drafting",
+  "in-review",
+  "approved",
+  "exported",
+] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
 /** Reserved id of the application a legacy workspace is read as, built from its `job.md`. */
@@ -33,7 +39,9 @@ const draftingRunStates: ReadonlySet<string> = new Set(["collecting", "ingesting
  * - `exported`: an export completed, or a run reached the exported state.
  * - `approved`: a run was approved.
  * - `in-review`: a run has a draft past drafting, including paused, stopped or budget-exhausted.
- * - `drafting`: no run yet, or every run is still collecting, ingesting or drafting.
+ * - `drafting`: every run is still collecting, ingesting or drafting.
+ * - `collecting`: no run yet, so the candidate is still collecting the job and profile inputs,
+ *   as the application's page says.
  */
 export function deriveApplicationStatus(
   runs: readonly { readonly state: string }[],
@@ -42,5 +50,5 @@ export function deriveApplicationStatus(
   if (hasCompletedExport || runs.some((run) => run.state === "exported")) return "exported";
   if (runs.some((run) => run.state === "approved")) return "approved";
   if (runs.some((run) => !draftingRunStates.has(run.state))) return "in-review";
-  return "drafting";
+  return runs.length === 0 ? "collecting" : "drafting";
 }

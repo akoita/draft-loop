@@ -136,6 +136,7 @@ describe("application query", () => {
   it("counts each status chip under the current search", () => {
     expect(applicationStatusCounts(all, "")).toEqual({
       all: 4,
+      collecting: 0,
       drafting: 1,
       "in-review": 2,
       approved: 0,
@@ -143,6 +144,7 @@ describe("application query", () => {
     });
     expect(applicationStatusCounts(all, "engineer")).toEqual({
       all: 2,
+      collecting: 0,
       drafting: 0,
       "in-review": 1,
       approved: 0,

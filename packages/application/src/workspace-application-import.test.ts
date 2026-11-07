@@ -259,7 +259,7 @@ describe("importing a workspace as an application", () => {
       exports: 0,
       skippedExports: 0,
     });
-    expect(folderNamed?.application.status).toBe("drafting");
+    expect(folderNamed?.application.status).toBe("collecting");
   });
 
   it("refuses a folder that is not a workspace, the workspace itself and a workspace without a job", async () => {

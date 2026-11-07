@@ -37,6 +37,8 @@ const props: ApplicationMaterialViewProps = {
   draft: undefined,
   problem: undefined,
   busy: false,
+  collapsed: false,
+  onToggle: () => {},
   onKind: () => {},
   onDraft: () => {},
   onDownload: () => {},
@@ -45,12 +47,22 @@ const props: ApplicationMaterialViewProps = {
 describe("the prepare panel", () => {
   it("names what it sends to Anthropic before the first draft", () => {
     const html = renderToStaticMarkup(<ApplicationMaterialView {...props} />);
-    expect(html).toContain('<h2 id="material-heading">Prepare</h2>');
+    expect(html).toContain('aria-expanded="true" aria-controls="material-body"');
+    expect(html).toContain("Optional · cover letter or interview questions");
     expect(html).toContain("to Anthropic (Claude)");
     expect(html).toContain("name and contact details are never sent");
-    expect(html).toContain('checked="" value="cover-letter"');
+    expect(html).toContain('aria-pressed="true">Cover letter</button>');
+    expect(html).toContain('aria-pressed="false">Interview questions</button>');
+    expect(html).toContain('class="button button-primary"');
     expect(html).toContain("Interview questions");
     expect(html).not.toContain("Download Markdown");
+  });
+
+  it("folds to its heading row, which says it is optional", () => {
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} collapsed />);
+    expect(html).toContain('aria-expanded="false" aria-controls="material-body"');
+    expect(html).toContain("Optional · cover letter or interview questions");
+    expect(html).toContain('<div id="material-body" class="application-material-body" hidden="">');
   });
 
   it("shows each citation beside its item and offers the download", () => {

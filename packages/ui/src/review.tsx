@@ -257,6 +257,11 @@ interface ReviewWorkspaceProps {
   readonly pageNavigation?: ReactNode;
   /** A notice under the run header, such as the request to name the application. */
   readonly headerNotice?: ReactNode;
+  /**
+   * A panel after the CV: below the setup steps before a run, below the draft once one runs. The
+   * CV stays first; the host's extras, such as the prepare panel, follow it.
+   */
+  readonly afterReview?: ReactNode;
   /** The application a started run belongs to, told to the host's panel in the Start dialog. */
   readonly startApplicationId?: string | null;
 }
@@ -987,6 +992,7 @@ export function ReviewWorkspace({
   startApplicationId = null,
   pageNavigation,
   headerNotice,
+  afterReview,
 }: ReviewWorkspaceProps) {
   const workspaceLabel = state.workspaceName ?? state.workspaceId;
   // An earlier run is read-only: its controls are hidden or disabled, every change it would send
@@ -2835,6 +2841,7 @@ export function ReviewWorkspace({
                 </>
               )}
             </section>
+            {afterReview}
           </div>
         </main>
         {renderStartConfirmation()}
@@ -3377,6 +3384,7 @@ export function ReviewWorkspace({
               </details>
             </section>
           </section>
+          {afterReview}
         </div>
 
         <SidePanelHandle
