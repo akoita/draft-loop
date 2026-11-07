@@ -273,6 +273,10 @@ describe("CareerInterviewPanel", () => {
       },
     });
     expect(html).toContain("Answer by voice");
+    // Dictation, then send, in the toolbar row under the answer text.
+    const tools = html.slice(html.indexOf("interview-composer-tools"));
+    expect(html.indexOf("<textarea")).toBeLessThan(html.indexOf("interview-composer-tools"));
+    expect(tools.indexOf("Answer by voice")).toBeLessThan(tools.indexOf('aria-label="Send"'));
   });
 
   it("offers quick replies as chips above the answer box", () => {

@@ -10165,11 +10165,13 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   gap: var(--space-3);
 }
 
+/* The answer box: the text takes the full width, and one toolbar row under it holds
+   dictation, live talk and send, each centred in that row. */
 .interview-composer-bar {
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-  padding: var(--space-1);
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
   border: 1px solid var(--border-strong);
   border-radius: 16px;
   background: var(--surface-inset);
@@ -10181,9 +10183,8 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 }
 
 .interview-composer .interview-composer-bar textarea {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  width: auto;
   padding: var(--space-2);
   border: 0;
   background: transparent;
@@ -10195,34 +10196,95 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   outline: none;
 }
 
-.interview-talk-live {
+.interview-composer-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Dictation sits first and takes the free space, so its recording controls and messages
+   line up to the left of live talk and send. */
+.interview-composer-tools .speech-input {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.interview-composer-tools .speech-input [role="alert"] {
+  color: var(--red);
+}
+
+.interview-tool,
+.speech-input-start {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--teal);
-  color: var(--teal-ink);
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
-.interview-talk-live svg {
+.interview-tool svg,
+.speech-input-start svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.interview-talk-live:disabled {
+.interview-tool:disabled,
+.speech-input-start:disabled {
   cursor: default;
-  opacity: 0.5;
+  opacity: 0.45;
+}
+
+.speech-input-start {
+  color: var(--text-2);
+  background: transparent;
+}
+
+.speech-input-start:not(:disabled):hover {
+  color: var(--text-1);
+  background: var(--surface-4);
+}
+
+.interview-talk-live {
+  color: var(--teal-bright);
+  background: var(--teal-wash);
+}
+
+.interview-talk-live:not(:disabled):hover {
+  color: var(--teal-ink);
+  background: var(--teal);
 }
 
 .interview-send {
-  flex: none;
-  border-radius: 12px;
+  color: var(--teal-ink);
+  background: var(--teal);
+}
+
+.interview-send:not(:disabled):hover {
+  background: var(--teal-bright);
+}
+
+.interview-send:disabled {
+  color: var(--text-3);
+  background: var(--surface-3);
+  opacity: 1;
 }
 
 @media (max-width: 760px) {

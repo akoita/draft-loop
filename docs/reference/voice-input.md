@@ -1,7 +1,9 @@
 # Voice input
 
 This page tells an operator what the two voice modes of the career interview
-need and what they send.
+need and what they send. Both are icon buttons in the toolbar row under the
+interview answer box: a microphone for **Answer by voice** and a sound wave for
+**Talk live**, next to the **Send** arrow. Their names show on hover.
 
 | Mode | The candidate | Audio goes to | Turn on with |
 | --- | --- | --- | --- |

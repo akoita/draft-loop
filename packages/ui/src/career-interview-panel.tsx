@@ -607,21 +607,6 @@ function WrittenAnswer({
       >
         <label htmlFor={`${id}-answer`} className="sr-only">{t`Your answer`}</label>
         <div className="interview-composer-bar">
-          {onTalkLive === undefined ? null : (
-            <button
-              type="button"
-              className="interview-talk-live"
-              disabled={busy}
-              onClick={onTalkLive}
-              aria-label={t`Talk live`}
-              title={t`Talk live`}
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-              </svg>
-            </button>
-          )}
           <textarea
             id={`${id}-answer`}
             value={answer}
@@ -641,21 +626,42 @@ function WrittenAnswer({
               send();
             }}
           />
-          <button
-            type="submit"
-            className="button button-primary interview-send"
-            disabled={busy || answer.trim() === ""}
-          >{t`Send`}</button>
-        </div>
-        {speech === undefined ? null : (
-          <div className="interview-actions">
-            <SpeechButton
-              speech={speech}
-              disabled={busy}
-              onTranscript={(text) => setAnswer((existing) => appendTranscript(existing, text))}
-            />
+          {/* One toolbar row under the text, like a chat composer: dictation, live talk, send. */}
+          <div className="interview-composer-tools">
+            {speech === undefined ? null : (
+              <SpeechButton
+                speech={speech}
+                disabled={busy}
+                onTranscript={(text) => setAnswer((existing) => appendTranscript(existing, text))}
+              />
+            )}
+            {onTalkLive === undefined ? null : (
+              <button
+                type="button"
+                className="interview-tool interview-talk-live"
+                disabled={busy}
+                onClick={onTalkLive}
+                aria-label={t`Talk live`}
+                title={t`Talk live`}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+                </svg>
+              </button>
+            )}
+            <button
+              type="submit"
+              className="interview-tool interview-send"
+              disabled={busy || answer.trim() === ""}
+              aria-label={t`Send`}
+              title={t`Send`}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
           </div>
-        )}
+        </div>
       </form>
     </>
   );

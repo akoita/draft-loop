@@ -116,20 +116,22 @@ export function SpeechButton({ speech, disabled = false, onTranscript }: SpeechB
     <span className="speech-input">
       {state.step === "recording" ? (
         <>
+          <span role="status">{t`Recording… speak your answer.`}</span>
           <button
             type="button"
+            className="button button-primary"
             aria-pressed="true"
             onClick={() => void finish(state.recording)}
-          >{t`Stop and transcribe`}</button>{" "}
+          >{t`Stop and transcribe`}</button>
           <button
             type="button"
+            className="button button-outline"
             onClick={() => {
               recordingRef.current = undefined;
               state.recording.cancel();
               setState({ step: "idle" });
             }}
-          >{t`Discard recording`}</button>{" "}
-          <span role="status">{t`Recording… speak your answer.`}</span>
+          >{t`Discard recording`}</button>
         </>
       ) : state.step === "transcribing" ? (
         <span role="status">
@@ -140,11 +142,19 @@ export function SpeechButton({ speech, disabled = false, onTranscript }: SpeechB
       ) : (
         <button
           type="button"
+          className="speech-input-start"
           disabled={disabled}
           onClick={() => void start()}
-        >{t`Answer by voice`}</button>
+          aria-label={t`Answer by voice`}
+          title={t`Answer by voice`}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+          </svg>
+        </button>
       )}
-      {problem === undefined ? null : <span role="alert"> {problem}</span>}
+      {problem === undefined ? null : <span role="alert">{problem}</span>}
     </span>
   );
 }
