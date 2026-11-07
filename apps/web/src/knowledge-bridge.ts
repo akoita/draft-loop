@@ -5,6 +5,7 @@ import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.j
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
   acceptedSourceFiles,
+  type EvidenceMediaType,
   evidenceMediaType,
   sourceFileProblem,
   uploadErrorMessage,
@@ -18,6 +19,7 @@ export const hostedKnowledgeCapabilities = [
   "knowledge.current",
   "knowledge.readiness",
   "knowledge.import-file",
+  "knowledge.import-text",
   "knowledge.ensure-default",
   "knowledge.select",
 ] as const;
@@ -83,6 +85,49 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
     created,
   });
 
+  /** Uploads one source file to the base and says whether it was new or already there. */
+  const upload = async (
+    storeId: string,
+    knowledgeBaseId: string,
+    name: string,
+    body: Blob,
+    contentType: EvidenceMediaType,
+  ) => {
+    const sources = () =>
+      client.call("GET /v1/knowledge-bases/{knowledgeBaseId}/sources", {
+        path: { knowledgeBaseId },
+      });
+    try {
+      // The API answers the same bytes with the source it holds; the list before tells which.
+      const before = (await sources()).sources;
+      const added = await client.call("POST /v1/knowledge-bases/{knowledgeBaseId}/sources", {
+        path: { knowledgeBaseId },
+        query: { name },
+        body,
+        contentType,
+      });
+      const created = !before.some(
+        ({ id, versionId }) => id === added.id && versionId === added.versionId,
+      );
+      return {
+        storeId,
+        knowledgeBaseId,
+        sourceId: added.id,
+        kind: "file" as const,
+        versionId: added.versionId,
+        // Each hosted source holds one file, so it is always the first version.
+        version: 1,
+        created,
+        outcome: created ? ("added" as const) : ("already-present" as const),
+      };
+    } catch (error) {
+      if (error instanceof ApiRequestError && (error.status === 413 || error.status === 415)) {
+        return refuse(uploadErrorMessage(name, error));
+      }
+      throw error;
+    }
+  };
+
   return async function answerKnowledge(command: KnowledgeCommand): Promise<unknown> {
     switch (command.type) {
       case "knowledge.current": {
@@ -128,39 +173,14 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         const contentType = evidenceMediaType(file.name);
         const problem = sourceFileProblem(file);
         if (problem !== undefined || contentType === undefined) return refuse(problem ?? file.name);
-        const sources = () =>
-          client.call("GET /v1/knowledge-bases/{knowledgeBaseId}/sources", {
-            path: { knowledgeBaseId },
-          });
-        try {
-          // The API answers the same bytes with the source it holds; the list before tells which.
-          const before = (await sources()).sources;
-          const added = await client.call("POST /v1/knowledge-bases/{knowledgeBaseId}/sources", {
-            path: { knowledgeBaseId },
-            query: { name: file.name },
-            body: file,
-            contentType,
-          });
-          const created = !before.some(
-            ({ id, versionId }) => id === added.id && versionId === added.versionId,
-          );
-          return {
-            storeId,
-            knowledgeBaseId,
-            sourceId: added.id,
-            kind: "file",
-            versionId: added.versionId,
-            // Each hosted source holds one file, so it is always the first version.
-            version: 1,
-            created,
-            outcome: created ? "added" : "already-present",
-          };
-        } catch (error) {
-          if (error instanceof ApiRequestError && (error.status === 413 || error.status === 415)) {
-            return refuse(uploadErrorMessage(file.name, error));
-          }
-          throw error;
-        }
+        return upload(storeId, knowledgeBaseId, file.name, file, contentType);
+      }
+      case "knowledge.import-text": {
+        // Pasted text goes up as a plain-text file, so the server screens and stores it the same.
+        const { storeId, knowledgeBaseId, title, text } = command.input;
+        inStore(storeId);
+        const name = `${title}.txt`;
+        return upload(storeId, knowledgeBaseId, name, new Blob([text]), "text/plain");
       }
       case "knowledge.ensure-default": {
         const { workspaceId, displayName } = command.input;

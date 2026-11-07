@@ -241,6 +241,12 @@ export interface DesktopKnowledgeCapabilities {
     storeId: string,
     knowledgeBaseId: string,
   ) => Promise<KnowledgeFileImportResult>;
+  /** Saves typed or pasted text as one plain-text source; the call is the person's approval. */
+  readonly importCandidateKnowledgeText?: (
+    storeId: string,
+    knowledgeBaseId: string,
+    pasted: { readonly title: string; readonly text: string },
+  ) => Promise<KnowledgeFileImportResult>;
   readonly importCandidateKnowledgeDirectory?: (
     storeId: string,
     knowledgeBaseId: string,
@@ -1145,6 +1151,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.import-file",
                 input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.import-text")
+      ? {
+          importCandidateKnowledgeText: async (
+            storeId: string,
+            knowledgeBaseId: string,
+            pasted: { readonly title: string; readonly text: string },
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.import-text",
+                input: { storeId, knowledgeBaseId, title: pasted.title, text: pasted.text },
               }),
             ),
         }

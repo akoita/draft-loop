@@ -185,6 +185,10 @@ media type, byte size, creation time and parent lineage.
   Markdown, HTML, PDF and DOCX. Extraction, stable-file and managed-copy checks
   must pass before anything is saved. Exact bytes are copied under an opaque
   ID-derived name.
+- **Pasted text.** The server's Career evidence screen has a Paste text box. It
+  uploads the text as one plain-text file named `<title>.txt`, through the same
+  route as a picked file. Screening, quarantine, consent and duplicate checks
+  are therefore the same.
 - **New versions.** A changed append creates the next parent-linked version.
   Identical bytes are a no-op, and do not advance time or imply freshness.
 - **URLs.** URL intake reuses the HTTPS-only boundary, with public-address

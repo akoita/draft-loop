@@ -512,6 +512,10 @@ msgstr ""
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr ""
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "{count} / {limit}"
+msgstr ""
+
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
 msgstr ""
@@ -1496,6 +1500,7 @@ msgstr ""
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-draft-choice.tsx
@@ -5295,8 +5300,21 @@ msgstr ""
 msgid "part of a model id"
 msgstr ""
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+msgstr ""
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Paste or type some text first."
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste text"
+msgstr ""
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste text as career evidence"
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
@@ -5321,6 +5339,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
+msgstr ""
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Pasted text {stamp}"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -5478,6 +5500,10 @@ msgstr ""
 
 #: packages/ui/src/profile-status-view.tsx
 msgid "Profile version"
+msgstr ""
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Project notes, profile summary…"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -6563,6 +6589,10 @@ msgstr ""
 msgid "Save to"
 msgstr ""
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Save to career evidence"
+msgstr ""
+
 #: packages/ui/src/profile-review-navigation.ts
 msgid "Save your issue decisions before marking the draft reviewed."
 msgstr ""
@@ -7236,6 +7266,10 @@ msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "Testing the key with the provider…"
+msgstr ""
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Text"
 msgstr ""
 
 #: apps/web/src/knowledge-bridge.ts
@@ -8028,6 +8062,10 @@ msgstr ""
 msgid "The summary says"
 msgstr ""
 
+#: packages/ui/src/pasted-evidence.ts
+msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
+msgstr ""
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The text pasted when this application was created."
 msgstr ""
@@ -8424,6 +8462,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Title"
+msgstr ""
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Title (optional)"
 msgstr ""
 
 #: packages/ui/src/workspace-start-intro.tsx

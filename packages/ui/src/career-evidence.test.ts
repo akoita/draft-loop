@@ -338,6 +338,38 @@ describe("adding career evidence", () => {
     });
   });
 
+  it("saves pasted text into the selected base through the knowledge port", async () => {
+    const importCandidateKnowledgeText = vi.fn(async () => ({
+      ...target,
+      sourceId: "source-3",
+      kind: "file" as const,
+      versionId: "version-1",
+      version: 1,
+      created: true,
+      outcome: "added" as const,
+    }));
+    const outcome = await addCareerEvidence({
+      capabilities: {
+        importCandidateKnowledgeText,
+        getCandidateKnowledgeReadiness: async () => readiness({ sourceCount: 4, readyCount: 4 }),
+      },
+      workspaceId: "workspace-1",
+      target,
+      displayName: "Engineering",
+      source: { kind: "text", title: "Migration notes", text: "Led the migration." },
+      isCurrent: () => true,
+      onChanged: async () => true,
+    });
+    expect(importCandidateKnowledgeText).toHaveBeenCalledWith("store-1", "base-1", {
+      title: "Migration notes",
+      text: "Led the migration.",
+    });
+    expect(outcome).toEqual({
+      status: "added",
+      message: "Added to Engineering. 4 sources, 4 ready.",
+    });
+  });
+
   it("rejects an import result for another base and does not refresh", async () => {
     const onChanged = vi.fn(async () => true);
     await expect(

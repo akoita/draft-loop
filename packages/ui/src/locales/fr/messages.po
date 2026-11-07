@@ -506,6 +506,10 @@ msgstr "{count, plural, one {Inclut # constat de couverture par mots-clés ; l�
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr "{count, plural, one {Marquer # lacune confirmée comme connue} other {Marquer # lacunes confirmées comme connues}}"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "{count} / {limit}"
+msgstr "{count} / {limit}"
+
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
 msgstr "{count} nouvelles"
@@ -1490,6 +1494,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-draft-choice.tsx
@@ -5290,9 +5295,22 @@ msgstr "Parent"
 msgid "part of a model id"
 msgstr "partie d’un identifiant de modèle"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+msgstr "Collez un CV, un résumé de profil ou des notes sur votre travail. N’incluez ni mots de passe ni données personnelles d’autres personnes. Le texte est vérifié contre les instructions cachées, comme tout fichier."
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Paste or type some text first."
+msgstr "Collez ou saisissez d’abord du texte."
+
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste text"
 msgstr "Coller le texte"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste text as career evidence"
+msgstr "Coller du texte comme élément de parcours"
 
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
@@ -5317,6 +5335,10 @@ msgstr "Collez d’abord l’offre d’emploi de cette candidature."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Texte de l’offre collé"
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Pasted text {stamp}"
+msgstr "Texte collé {stamp}"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Pause for now"
@@ -5474,6 +5496,10 @@ msgstr "La prise en charge des profils n’est pas disponible. L’application d
 #: packages/ui/src/profile-status-view.tsx
 msgid "Profile version"
 msgstr "Version du profil"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Project notes, profile summary…"
+msgstr "Notes de projet, résumé de profil…"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Project visibility"
@@ -6558,6 +6584,10 @@ msgstr "Enregistrer la modification"
 msgid "Save to"
 msgstr "Enregistrer dans"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Save to career evidence"
+msgstr "Enregistrer dans vos éléments de parcours"
+
 #: packages/ui/src/profile-review-navigation.ts
 msgid "Save your issue decisions before marking the draft reviewed."
 msgstr "Enregistrez vos décisions sur les problèmes avant de marquer le brouillon comme relu."
@@ -7232,6 +7262,10 @@ msgstr "Tester la clé"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Testing the key with the provider…"
 msgstr "Test de la clé auprès du fournisseur…"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Text"
+msgstr "Texte"
 
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
@@ -8023,6 +8057,10 @@ msgstr "La source n’a pas pu être ajoutée à la base de connaissances."
 msgid "The summary says"
 msgstr "Le résumé indique"
 
+#: packages/ui/src/pasted-evidence.ts
+msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
+msgstr "Le texte est trop long. Restez sous {limit} caractères, ou ajoutez-le comme fichier."
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The text pasted when this application was created."
 msgstr "Le texte collé à la création de cette candidature."
@@ -8420,6 +8458,10 @@ msgstr "fois"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Title"
 msgstr "Titre"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Title (optional)"
+msgstr "Titre (facultatif)"
 
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."

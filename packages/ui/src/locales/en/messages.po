@@ -512,6 +512,10 @@ msgstr "{count, plural, one {Includes # word-match coverage finding; accepting i
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "{count} / {limit}"
+msgstr "{count} / {limit}"
+
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
 msgstr "{count} new"
@@ -1496,6 +1500,7 @@ msgstr "Can't start yet: {0}"
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-draft-choice.tsx
@@ -5296,9 +5301,22 @@ msgstr "Parent"
 msgid "part of a model id"
 msgstr "part of a model id"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+msgstr "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Paste or type some text first."
+msgstr "Paste or type some text first."
+
 #: packages/ui/src/new-application-form.tsx
+#: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste text"
 msgstr "Paste text"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Paste text as career evidence"
+msgstr "Paste text as career evidence"
 
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
@@ -5323,6 +5341,10 @@ msgstr "Paste this application's job description first."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Pasted job text"
+
+#: packages/ui/src/pasted-evidence.ts
+msgid "Pasted text {stamp}"
+msgstr "Pasted text {stamp}"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Pause for now"
@@ -5480,6 +5502,10 @@ msgstr "Profile route support is unavailable. Profile Apply is disabled; retry o
 #: packages/ui/src/profile-status-view.tsx
 msgid "Profile version"
 msgstr "Profile version"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Project notes, profile summary…"
+msgstr "Project notes, profile summary…"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Project visibility"
@@ -6564,6 +6590,10 @@ msgstr "Save the edit"
 msgid "Save to"
 msgstr "Save to"
 
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Save to career evidence"
+msgstr "Save to career evidence"
+
 #: packages/ui/src/profile-review-navigation.ts
 msgid "Save your issue decisions before marking the draft reviewed."
 msgstr "Save your issue decisions before marking the draft reviewed."
@@ -7238,6 +7268,10 @@ msgstr "Test key"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Testing the key with the provider…"
 msgstr "Testing the key with the provider…"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Text"
+msgstr "Text"
 
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
@@ -8029,6 +8063,10 @@ msgstr "The source could not be added to the knowledge base."
 msgid "The summary says"
 msgstr "The summary says"
 
+#: packages/ui/src/pasted-evidence.ts
+msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
+msgstr "The text is too long. Keep it under {limit} characters, or add it as a file."
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The text pasted when this application was created."
 msgstr "The text pasted when this application was created."
@@ -8426,6 +8464,10 @@ msgstr "times"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Title"
 msgstr "Title"
+
+#: packages/ui/src/pasted-evidence-form.tsx
+msgid "Title (optional)"
+msgstr "Title (optional)"
 
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."

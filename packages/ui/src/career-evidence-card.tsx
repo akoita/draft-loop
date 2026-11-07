@@ -22,6 +22,8 @@ import { countedNouns } from "./counted-nouns.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import type { WorkspaceReadiness } from "./model.js";
+import { pastedSourceTitle } from "./pasted-evidence.js";
+import { PastedEvidenceForm } from "./pasted-evidence-form.js";
 import {
   SourceEvidenceKindList,
   type SourceEvidenceKindListProps,
@@ -121,6 +123,11 @@ export interface CareerEvidenceCardViewProps {
   readonly evidenceKinds?: Omit<SourceEvidenceKindListProps, "disabled">;
   /** Opens Career profile, the next step once a document is ready; absent without a profile. */
   readonly onOpenProfile?: () => void;
+  /** Saves pasted text as a source; absent when the host takes no text or no base is in use. */
+  readonly onAddText?: (pasted: {
+    readonly title: string;
+    readonly text: string;
+  }) => Promise<boolean>;
 }
 
 /** The card's next step once a document is ready. */
@@ -156,6 +163,7 @@ export function CareerEvidenceCardView({
   knowledgeBase = null,
   evidenceKinds,
   onOpenProfile,
+  onAddText,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -282,6 +290,9 @@ export function CareerEvidenceCardView({
           >
             {fileLabel}
           </button>
+          {inKnowledgeBase && onAddText !== undefined ? (
+            <PastedEvidenceForm onSave={onAddText} disabled={addDisabled} />
+          ) : null}
           {inKnowledgeBase && onAddFolder !== undefined ? (
             <button
               className="button button-quiet"
@@ -472,11 +483,12 @@ export function CareerEvidenceCard({
     return outcome.status === "added" ? outcome.message : null;
   };
 
-  const addToKnowledgeBase = (source: CareerEvidenceSource) => {
-    if (knowledge === undefined) return;
-    if (status.kind !== "none" && status.kind !== "selected") return;
-    void runOperation((isCurrent) => addOne(knowledge, source, isCurrent)).then((added) => {
+  const addToKnowledgeBase = (source: CareerEvidenceSource): Promise<boolean> => {
+    if (knowledge === undefined) return Promise.resolve(false);
+    if (status.kind !== "none" && status.kind !== "selected") return Promise.resolve(false);
+    return runOperation((isCurrent) => addOne(knowledge, source, isCurrent)).then((added) => {
       if (added && source.kind === "url") setUrl("");
+      return added;
     });
   };
 
@@ -552,7 +564,17 @@ export function CareerEvidenceCard({
         ? { urlsOffered: false }
         : {})}
       {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeDirectory !== undefined
-        ? { onAddFolder: () => addToKnowledgeBase({ kind: "directory" }) }
+        ? { onAddFolder: () => void addToKnowledgeBase({ kind: "directory" }) }
+        : {})}
+      {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeText !== undefined
+        ? {
+            onAddText: ({ title, text }: { readonly title: string; readonly text: string }) =>
+              addToKnowledgeBase({
+                kind: "text",
+                title: pastedSourceTitle(title, new Date()),
+                text,
+              }),
+          }
         : {})}
       knowledgeBase={knowledgeBase}
       {...(onOpenProfile === undefined ? {} : { onOpenProfile })}
@@ -560,7 +582,7 @@ export function CareerEvidenceCard({
         ? {}
         : { evidenceKinds: { state: evidenceKinds.state, onChange: evidenceKinds.change } })}
       onAddFile={() => {
-        if (inKnowledgeBase) addToKnowledgeBase({ kind: "file" });
+        if (inKnowledgeBase) void addToKnowledgeBase({ kind: "file" });
         else onSelectLegacyFiles?.();
       }}
       onAddUrl={() => {
@@ -568,7 +590,7 @@ export function CareerEvidenceCard({
         const [first] = urls;
         if (first === undefined) return;
         if (inKnowledgeBase) {
-          if (urls.length === 1) addToKnowledgeBase({ kind: "url", url: first });
+          if (urls.length === 1) void addToKnowledgeBase({ kind: "url", url: first });
           else addUrlsToKnowledgeBase(urls);
         } else if (onAddLegacyUrl !== undefined && urls.length === 1) {
           onAddLegacyUrl(first);
