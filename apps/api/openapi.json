@@ -20066,6 +20066,74 @@
         }
       }
     },
+    "/v1/knowledge-bases/{knowledgeBaseId}/sources/{sourceId}/file": {
+      "get": {
+        "summary": "Download a knowledge source's stored file",
+        "description": "Answers the source's latest stored file as an attachment under its own name, with its media type and its SHA-256 in X-Content-SHA256. A pull request list answers the Markdown it was stored as. The bytes are checked against the recorded checksum first: a file that is missing or no longer matches answers 409 source_file_unavailable and is never sent. A file quarantined by injection screening and not released answers 409 material_quarantined, except to owners, admins and the owner token.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "knowledgeBaseId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "sourceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file's bytes, in its media type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The file's bytes, in its media type."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/knowledge-bases/{knowledgeBaseId}/sensitivity-rules": {
       "get": {
         "summary": "List a knowledge base's sensitivity rules",

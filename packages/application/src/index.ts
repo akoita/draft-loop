@@ -1046,6 +1046,7 @@ export {
   hostedDriverMethods,
 } from "./hosted-driver.js";
 export * from "./hosted-knowledge-intake.js";
+export * from "./hosted-knowledge-source-file.js";
 export * from "./hosted-sensitivity-rules.js";
 export * from "./job-description-file.js";
 export * from "./knowledge-base.js";
