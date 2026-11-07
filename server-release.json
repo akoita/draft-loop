@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Faster live interview replies",
+  "releaseName": "Faster, tidier career interview",
   "stageIssue": 1359,
   "milestone": 85,
-  "summary": "Live interview replies come sooner. A short spoken acknowledgement plays while the interviewer writes, and the question plays sentence by sentence as its audio arrives (#2409). Each turn logs how long recognition, the interviewer and the voice took, with no words or audio. Talk live now opens on the signed-in screen as well as the owner screen (#2393).",
+  "summary": "Live interview replies come sooner: a short spoken acknowledgement plays while the interviewer writes, and the question plays sentence by sentence as its audio arrives (#2409). Each turn logs how long recognition, the interviewer and the voice took, with no words or audio. Talk live opens on the signed-in screen too (#2393). The interview gains an End this conversation button, profile facts for subjects the candidate types, numbered topic cards, clearer topic reasons and name hints for live recognition (#2414). Career evidence files show when each was added and can be downloaded; a quarantined file downloads only for owners and admins (#2413). A new screen language applies without a refresh (#2412).",
   "knownLimitations": "The interviewer's question is still written in one call before it is spoken; streaming it into the voice waits on the turn timings. French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. The local-first desktop has no career interview."
 }

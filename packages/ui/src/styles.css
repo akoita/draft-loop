@@ -9844,6 +9844,10 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin-top: var(--space-3);
 }
 
+.interview-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .interview-sidebar {
   min-width: 0;
 }
@@ -9977,9 +9981,25 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 }
 
 .interview-topics > li {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) + 2rem);
+}
+
+.interview-topic-number {
+  position: absolute;
+  left: var(--space-3);
+  top: var(--space-2);
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--teal-wash);
+  border: 1px solid var(--teal-line);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .interview-topics p {

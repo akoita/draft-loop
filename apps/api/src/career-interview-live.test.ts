@@ -49,18 +49,27 @@ describe("live career interview", () => {
     const socket = new FakeSocket();
     const tts = createScriptedTextToSpeech();
     const answers: string[] = [];
+    const scripted = createScriptedStreamingSpeechToText([
+      [
+        { kind: "partial", text: "Hourly" },
+        { kind: "final", text: "Hourly updates." },
+        { kind: "end_of_turn" },
+      ],
+      [{ kind: "final", text: "About forty events." }, { kind: "end_of_turn" }],
+    ]);
+    const hinted: (readonly string[] | undefined)[] = [];
     const usage = await runLiveInterview({
       socket,
       language: "en",
+      phrases: ["Example Bank"],
       speech: {
-        stt: createScriptedStreamingSpeechToText([
-          [
-            { kind: "partial", text: "Hourly" },
-            { kind: "final", text: "Hourly updates." },
-            { kind: "end_of_turn" },
-          ],
-          [{ kind: "final", text: "About forty events." }, { kind: "end_of_turn" }],
-        ]),
+        stt: {
+          ...scripted,
+          open: (request) => {
+            hinted.push(request.phrases);
+            return scripted.open(request);
+          },
+        },
         tts,
         ...pricing,
       },
@@ -74,6 +83,7 @@ describe("live career interview", () => {
     });
 
     expect(answers).toEqual(["Hourly updates.", "About forty events."]);
+    expect(hinted).toEqual([["Example Bank"], ["Example Bank"]]);
     expect(tts.spoken).toEqual(["All right.", "Who used the hourly forecast?", "Thank you."]);
     expect(socket.messages().map((message) => message.type)).toEqual([
       "ready",

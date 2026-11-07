@@ -106,6 +106,30 @@ describe("Google speech", () => {
     expect(stream.destroyed).toBe(true);
   });
 
+  it("hints the record's names to recognition, and sends no adaptation without any", () => {
+    const stream = new FakeDuplex();
+    const stt = createGoogleStreamingSpeechToText({
+      projectId: "fixture-project",
+      clients: clients({ recognize: stream }),
+    });
+    stt.open({ phrases: ["Example Bank"] });
+    expect(stream.written[0]).toMatchObject({
+      streamingConfig: {
+        config: {
+          adaptation: {
+            phraseSets: [{ inlinePhraseSet: { phrases: [{ value: "Example Bank", boost: 10 }] } }],
+          },
+        },
+      },
+    });
+    const bare = new FakeDuplex();
+    createGoogleStreamingSpeechToText({
+      projectId: "fixture-project",
+      clients: clients({ recognize: bare }),
+    }).open({ phrases: [] });
+    expect(JSON.stringify(bare.written[0])).not.toContain("adaptation");
+  });
+
   it("passes a stream error to the reader", async () => {
     const stream = new FakeDuplex();
     const stt = createGoogleStreamingSpeechToText({
