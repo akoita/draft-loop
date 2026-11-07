@@ -32,14 +32,27 @@ source-only CLI has its own review and export commands
 | Run budget | Round, cost and duration limits for new runs, under the deployment's ceiling; an estimate shows before a run starts |
 | Autopilot  | Keeps revising through blocking findings up to the round limit, pausing early only when needed                      |
 
+### When a model call fails
+
+The failure card says what the run needs from you. Stop always ends the run,
+even while a call is running.
+
+| Card                | Meaning                                                                                     | What to do                    |
+| ------------------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| Retrying on its own | The server retries the step, up to 3 attempts; the card names the next attempt and its time | Wait; Stop asks to confirm    |
+| Waiting for you     | A retry or another action needs you, as after a key problem                                 | Fix the cause, then Retry     |
+| Can't recover       | No attempt is left                                                                          | Stop, then start a new review |
+
 ## How to test it
 
 - Walk steps 4 and 5 of the [local server stack](../operations/local-server-stack.md);
   demo mode drafts with no provider call.
 - Focused tests: `apps/api/src/review-routes.test.ts`,
   `apps/api/src/export-routes.test.ts`,
-  `apps/api/src/preference-suggestion-routes.test.ts` and
-  `packages/ui/src/export-template.test.ts`.
+  `apps/api/src/preference-suggestion-routes.test.ts`,
+  `packages/ui/src/export-template.test.ts`,
+  `packages/ui/src/provider-recovery.test.tsx` and
+  `packages/orchestrator/src/person-hold.test.ts`.
 
 ## Surfaces
 

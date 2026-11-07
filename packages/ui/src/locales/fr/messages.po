@@ -746,6 +746,10 @@ msgstr "{value, plural, one {Votre offre permet # dossier candidat, et il est ut
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr "{value, plural, one {Votre offre permet # place, et elle est prise.} other {Votre offre permet # places, et toutes sont prises.}}"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
+msgstr "{when} Vous n’avez rien à faire : attendre ne risque rien, et DraftLoop ne vous sollicite que si la dernière tentative échoue aussi."
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr "/1M en entrée · $"
@@ -1355,6 +1359,17 @@ msgstr "Joindre un fichier"
 msgid "Attach the job description file."
 msgstr "Joignez le fichier de la description de poste."
 
+#. placeholder {0}: failure.maxAttempts
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} is starting."
+msgstr "La tentative {next} sur {0} démarre."
+
+#. placeholder {0}: failure.maxAttempts
+#. placeholder {1}: waitLabel(remainingMs)
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} starts in {1}."
+msgstr "La tentative {next} sur {0} démarre dans {1}."
+
 #: packages/ui/src/provider-authentication-actions.ts
 msgid "Authenticated Codex / ChatGPT subscription"
 msgstr "Abonnement Codex / ChatGPT authentifié"
@@ -1546,6 +1561,10 @@ msgstr "Par dossier"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Call limit"
 msgstr "Limite d’appels"
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Can't recover"
+msgstr "Reprise impossible"
 
 #. placeholder {0}: first.detail ?? first.label
 #. placeholder {0}: unmet.map((condition) => condition.detail ?? condition.label).join(" ")
@@ -2763,20 +2782,13 @@ msgstr "DraftLoop n’a pas pu joindre le fournisseur, la clé n’a donc pas é
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr "DraftLoop récupère la page de l’offre que vous avez approuvée. Son texte est ensuite envoyé à {providerName} ({modelName}) pour être découpé en exigences."
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
+msgstr "DraftLoop réessaie encore. Arrêter met fin à cette relecture pour de bon ; il faudrait en démarrer une nouvelle."
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr "DraftLoop a repéré ces habitudes dans vos choix de relecture. Vous décidez : en accepter une l’ajoute à votre politique de rédaction pour les nouvelles exécutions."
-
-#. placeholder {0}: state.providerFailure.step
-#. placeholder {1}: retryWaitLabel(retryRemainingMs)
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically in {1}."
-msgstr "DraftLoop relance automatiquement {0} dans {1}."
-
-#. placeholder {0}: state.providerFailure.step
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically."
-msgstr "DraftLoop relance automatiquement {0}."
 
 #: apps/web/src/consent.tsx
 msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
@@ -3976,6 +3988,10 @@ msgstr "Limitez la note à {maximumConsentNoteLength} caractères."
 #: apps/web/src/screening-model.ts
 msgid "Keep the reason to {maximumReleaseReasonLength} characters or fewer."
 msgstr "Limitez le motif à {maximumReleaseReasonLength} caractères."
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Keep waiting"
+msgstr "Continuer d’attendre"
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Keyword search over your candidate knowledge. Needs no model."
@@ -5687,10 +5703,6 @@ msgid "Provider recovery remains before approval"
 msgstr "Une reprise après erreur du fournisseur reste à faire avant l’approbation"
 
 #: packages/ui/src/review.tsx
-msgid "Provider request failed"
-msgstr "La requête au fournisseur a échoué"
-
-#: packages/ui/src/review.tsx
 msgid "Provider sign-in lives in Home, under Workspace settings"
 msgstr "La connexion aux fournisseurs se trouve dans Accueil, sous Réglages de l’espace de travail"
 
@@ -6369,6 +6381,10 @@ msgstr "Relancer la vérification du profil"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Retry profile generation"
 msgstr "Relancer la génération du profil"
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Retrying on its own"
+msgstr "Nouvelle tentative automatique"
 
 #: packages/ui/src/review.tsx
 msgid "Return to review"
@@ -7271,12 +7287,16 @@ msgstr "Arrêter"
 msgid "Stop and transcribe"
 msgstr "Arrêter et transcrire"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Stop for good"
+msgstr "Arrêter pour de bon"
+
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/review.tsx
 msgid "Stop review"
 msgstr "Arrêter la relecture"
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/provider-recovery.tsx
 msgid "Stop run"
 msgstr "Arrêter l’exécution"
 
@@ -8527,8 +8547,8 @@ msgid "This rewrites the run history stored with this workspace so it takes less
 msgstr "Ceci réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Chaque ébauche et chaque étape sont enregistrées une seule fois au lieu d’être recopiées à chaque étape d’une exécution. Vos exécutions, ébauches et journal d’audit se relisent à l’identique, et la chaîne d’audit est reconstruite et vérifiée."
 
 #: packages/ui/src/review.tsx
-msgid "This run has no retry left. Stop it, then start a new run."
-msgstr "Cette exécution n’a plus de relance possible. Arrêtez-la, puis lancez-en une nouvelle."
+msgid "This run has no retry left. Stop it, then start a new review."
+msgstr "Cette exécution n’a plus de tentative. Arrêtez-la, puis démarrez une nouvelle relecture."
 
 #: packages/ui/src/review.tsx
 msgid "This run is neither paused nor interrupted."
@@ -9072,6 +9092,10 @@ msgstr "En attente de {providerName} ({modelName}). Cela peut prendre une minute
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Waiting for a worker to start…"
 msgstr "En attente du démarrage d’un exécutant…"
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Waiting for you"
+msgstr "En attente de votre action"
 
 #: packages/ui/src/review.tsx
 msgid "warning"
