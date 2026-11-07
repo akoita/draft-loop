@@ -53,9 +53,20 @@ describe("findCareerInterviewTopics", () => {
       subjectId: "job-2",
       missing: ["dates", "outcome", "scope"],
       factIds: ["t", "e"],
+      title: "Analyst, Example Bank",
       reason:
         "Your record names Analyst at Example Bank but not when it happened, what changed thanks to your work and what the role covered.",
     });
+  });
+
+  it("titles a dated role with its years", () => {
+    const facts: CareerInterviewFact[] = [
+      { id: "t", category: "role", subjectId: "job-2", field: "title", value: "Data Engineer" },
+      { id: "e", category: "employer", subjectId: "job-2", field: "name", value: "Example Rail" },
+      { id: "d", category: "date", subjectId: "job-2", field: "dates", value: "2019 to 2022" },
+    ];
+    const titles = findCareerInterviewTopics({ facts }, year).map((topic) => topic.title);
+    expect(titles).toEqual(["Data Engineer, Example Rail (2019–2022)"]);
   });
 
   it("proposes an untold period between dated roles", () => {
@@ -68,6 +79,7 @@ describe("findCareerInterviewTopics", () => {
     expect(topics[0]).toMatchObject({
       kind: "untold-period",
       period: { from: 2016, to: 2017 },
+      title: "2016–2017",
       reason: "Your record says nothing between 2016 and 2017.",
       factIds: ["job-1-dates", "job-2-dates"],
     });
@@ -95,6 +107,7 @@ describe("findCareerInterviewTopics", () => {
     ];
     const topics = findCareerInterviewTopics({ facts }, year);
     expect(topics.map((topic) => topic.theme)).toEqual(["volunteering"]);
+    expect(topics[0]?.title).toBe("volunteering");
     expect(topics[0]?.reason).toBe(
       "Your record mentions volunteering but tells no story about it.",
     );
@@ -120,6 +133,7 @@ describe("findCareerInterviewTopics", () => {
     expect(topics[0]).toMatchObject({
       kind: "application-relevance",
       requirementIds: ["r1"],
+      title: "Kubernetes operations",
       reason:
         'A job you applied for asks for "Kubernetes operations", and your record does not show it yet.',
     });

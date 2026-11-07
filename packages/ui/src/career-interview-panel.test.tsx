@@ -6,6 +6,7 @@ import {
   careerInterviewActiveTopic,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicTitle,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
 import {
@@ -133,6 +134,58 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Talking now");
     expect(html).toContain('aria-current="step"');
     expect(html).toContain("Enter sends, Shift+Enter starts a new line.");
+  });
+
+  it("leads with the question being answered and keeps speaker names for screen readers", () => {
+    const html = render({
+      session: {
+        ...openSession,
+        topics: openSession.topics.map((topic) => ({
+          ...topic,
+          turns: [
+            { role: "interviewer" as const, text: "First question?" },
+            { role: "candidate" as const, text: "An answer." },
+            { role: "interviewer" as const, text: "Second question?" },
+          ],
+        })),
+      },
+    });
+    expect(html).toContain("interview-topic-header");
+    expect(html).toContain(
+      'class="interview-turn interview-turn-interviewer interview-turn-latest"',
+    );
+    expect(html.match(/interview-turn-latest/g)).toHaveLength(1);
+    expect(html).toContain('<span class="interview-speaker sr-only">Interviewer: </span>');
+    expect(html).toContain("interview-composer-bar");
+    expect(html).not.toContain("interview-mode");
+  });
+
+  it("marks no question as latest once the candidate has answered it", () => {
+    const html = render({ session: openSession });
+    expect(html).not.toContain("interview-turn-latest");
+  });
+
+  it("names a topic by its short title, worded for its kind, or by its reason without one", () => {
+    const base = openSession.topics[0];
+    if (base === undefined) throw new Error("fixture");
+    expect(careerInterviewTopicTitle(base)).toBe(base.reason);
+    expect(careerInterviewTopicTitle({ ...base, kind: "untold-period", title: "2016–2017" })).toBe(
+      "The period 2016–2017",
+    );
+    expect(careerInterviewTopicTitle({ ...base, kind: "untold-theme", title: "mentoring" })).toBe(
+      "Mentoring",
+    );
+    expect(
+      careerInterviewTopicTitle({ ...base, kind: "role-gap", title: "Analyst, Example Bank" }),
+    ).toBe("Analyst, Example Bank");
+    const html = render({
+      session: {
+        ...openSession,
+        topics: [{ ...base, kind: "role-gap", title: "Analyst, Example Bank (2016–2019)" }],
+      },
+    });
+    expect(html).toContain("<h3>Analyst, Example Bank (2016–2019)</h3>");
+    expect(html).toContain(base.reason);
   });
 
   it("sends on Enter but not on Shift+Enter or while composing a character", () => {

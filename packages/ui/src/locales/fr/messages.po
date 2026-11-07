@@ -1063,6 +1063,10 @@ msgstr "et son tour terminé"
 msgid "Another review action is already running."
 msgstr "Une autre action de relecture est déjà en cours."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Answer by"
+msgstr "Répondre en"
+
 #: packages/ui/src/speech-button.tsx
 msgid "Answer by voice"
 msgstr "Répondre à voix haute"
@@ -1244,6 +1248,10 @@ msgstr "Candidatures archivées"
 msgid "artifact review"
 msgstr "relecture du document"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Asked in a job post: {title}"
+msgstr "Demandé dans une offre : {title}"
+
 #. placeholder {0}: modelCompanyLabels()[company]
 #: packages/ui/src/app.tsx
 msgid "Asking {0} which models are available…"
@@ -1375,6 +1383,10 @@ msgstr "Bases de connaissances candidat disponibles"
 #: packages/ui/src/review.tsx
 msgid "Available now"
 msgstr "Disponible maintenant"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Awards"
+msgstr "Prix et distinctions"
 
 #. placeholder {0}: back.label
 #: packages/ui/src/home.tsx
@@ -3897,6 +3909,10 @@ msgstr "Dernière utilisation"
 msgid "latest"
 msgstr "dernière"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Leadership"
+msgstr "Leadership"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr "Les éléments hérités n’acceptent qu’une URL à la fois"
@@ -4173,6 +4189,10 @@ msgstr "Des membres peuvent être attribués une fois le dossier configuré."
 #: apps/web/src/records.tsx
 msgid "Members of this record"
 msgstr "Membres de ce dossier"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Mentoring"
+msgstr "Mentorat"
 
 #: packages/ui/src/screen-language.tsx
 msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
@@ -5118,6 +5138,10 @@ msgstr "Ouvrir la relecture"
 #: packages/ui/src/run-comparison.tsx
 msgid "open run"
 msgstr "ouvrir l’exécution"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Open source"
+msgstr "Open source"
 
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
@@ -6852,6 +6876,10 @@ msgstr "affiché"
 msgid "Side panel {width} pixels wide"
 msgstr "Panneau latéral de {width} pixels de large"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Side projects"
+msgstr "Projets personnels"
+
 #: apps/web/src/oidc-sign-in.tsx
 #: apps/web/src/sign-in.tsx
 msgid "Sign in"
@@ -6926,6 +6954,14 @@ msgstr "Sources"
 #: packages/ui/src/review.tsx
 msgid "Sources — claim traceability"
 msgstr "Sources — traçabilité des affirmations"
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Speak"
+msgstr "Parler"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Speaking at events"
+msgstr "Interventions publiques"
 
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
@@ -7172,6 +7208,10 @@ msgstr "Offre d’emploi visée"
 #: packages/ui/src/application-steps.tsx
 msgid "Target job description URL"
 msgstr "URL de l’offre d’emploi visée"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Teaching"
+msgstr "Enseignement"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
@@ -7758,6 +7798,10 @@ msgstr "Le jeton propriétaire compte au moins {ownerTokenMinimumLength} caract�
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
 msgstr "La paire définie sur l’accueil. Par défaut."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "The period {title}"
+msgstr "La période {title}"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "The policy version could not be loaded."
@@ -8748,6 +8792,10 @@ msgstr "La saisie vocale a échoué. Tapez plutôt votre réponse, ou réessayez
 msgid "Voice input is not available on this server."
 msgstr "La saisie vocale n’est pas disponible sur ce serveur."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Volunteering"
+msgstr "Bénévolat"
+
 #: packages/ui/src/app.tsx
 msgid "Wait for candidate knowledge selection to finish before starting a review."
 msgstr "Attendez la fin de la sélection des connaissances candidat avant de lancer une relecture."
@@ -8943,6 +8991,10 @@ msgstr "Réglages de l’espace de travail"
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Workspace unavailable"
 msgstr "Espace de travail indisponible"
+
+#: packages/ui/src/career-interview-panel.tsx
+msgid "Write"
+msgstr "Écrire"
 
 #: packages/ui/src/application-language.tsx
 msgid "Write in {label}"

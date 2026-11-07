@@ -15,6 +15,7 @@ import {
   careerInterviewActiveTopic,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicTitle,
   careerInterviewTurnText,
   careerInterviewUnavailableNotice,
 } from "./career-interview-model.js";
@@ -147,7 +148,7 @@ export function CareerInterviewPanel({
                   className={`interview-topic-item interview-topic-${topic.status}`}
                   aria-current={topic.key === active?.key ? "step" : undefined}
                 >
-                  <span>{topic.reason}</span>
+                  <span>{careerInterviewTopicTitle(topic)}</span>
                   <small>{careerInterviewTopicStatusLabel(topic.status)}</small>
                 </li>
               ))}
@@ -319,7 +320,7 @@ function Proposal({
       <ol className="interview-turns" aria-label={t`Conversation`}>
         {proposal === undefined ? null : (
           <li className="interview-turn interview-turn-interviewer">
-            <span className="interview-speaker">{t`Interviewer`}</span>
+            <span className="interview-speaker sr-only">{t`Interviewer`}: </span>
             {proposal}
           </li>
         )}
@@ -328,7 +329,14 @@ function Proposal({
       <ul className="interview-topics">
         {topics.map((topic) => (
           <li key={topic.key}>
-            <p>{topic.reason}</p>
+            {topic.title === undefined ? (
+              <p>{topic.reason}</p>
+            ) : (
+              <>
+                <p className="interview-topic-name">{careerInterviewTopicTitle(topic)}</p>
+                <p className="hint">{topic.reason}</p>
+              </>
+            )}
             <div className="interview-actions">
               <button
                 type="button"
@@ -376,18 +384,66 @@ function Proposal({
   );
 }
 
-function Turns({ turns }: { readonly turns: CareerInterviewTopicView["turns"] }) {
+function Turns({
+  turns,
+  latest = false,
+}: {
+  readonly turns: CareerInterviewTopicView["turns"];
+  /** Whether a closing interviewer turn is the question being answered now, shown larger. */
+  readonly latest?: boolean;
+}) {
+  const current = latest && turns.at(-1)?.role === "interviewer" ? turns.length - 1 : -1;
   return turns.map((turn, index) => {
     const { speaker, text } = careerInterviewTurnText(turn);
+    const kind = `interview-turn interview-turn-${turn.role}`;
     return (
       // Turns are append-only, so their position is a stable key.
       // biome-ignore lint/suspicious/noArrayIndexKey: append-only list
-      <li key={index} className={`interview-turn interview-turn-${turn.role}`}>
-        <span className="interview-speaker">{speaker}</span>
+      <li key={index} className={index === current ? `${kind} interview-turn-latest` : kind}>
+        <span className="interview-speaker sr-only">{speaker}: </span>
         {text}
       </li>
     );
   });
+}
+
+/** The topic's header: its name, and the switch between writing and talking when live is offered. */
+function TopicHeader({
+  topic,
+  talking,
+  disabled = false,
+  onTalking,
+}: {
+  readonly topic: CareerInterviewTopicView;
+  readonly talking: boolean;
+  readonly disabled?: boolean;
+  readonly onTalking: ((talking: boolean) => void) | undefined;
+}) {
+  return (
+    <header className="interview-topic-header">
+      <div className="interview-topic-heading">
+        <h3>{careerInterviewTopicTitle(topic)}</h3>
+        {topic.title === undefined ? null : <p className="hint">{topic.reason}</p>}
+      </div>
+      {onTalking === undefined ? null : (
+        <fieldset className="interview-mode">
+          <legend className="sr-only">{t`Answer by`}</legend>
+          <button
+            type="button"
+            aria-pressed={!talking}
+            disabled={disabled}
+            onClick={() => onTalking(false)}
+          >{t`Write`}</button>
+          <button
+            type="button"
+            aria-pressed={talking}
+            disabled={disabled}
+            onClick={() => onTalking(true)}
+          >{t`Speak`}</button>
+        </fieldset>
+      )}
+    </header>
+  );
 }
 
 /** Enter sends the answer; Shift+Enter, or Enter while composing a character, adds to it. */
@@ -426,7 +482,7 @@ function Conversation({
   if (live !== undefined && talking) {
     return (
       <div className="interview-conversation interview-conversation-live">
-        <h3>{topic.reason}</h3>
+        <TopicHeader topic={topic} talking onTalking={setTalking} />
         <CareerInterviewLiveStage
           topicKey={topic.key}
           voice={live}
@@ -438,12 +494,17 @@ function Conversation({
   }
   return (
     <div className="interview-conversation">
-      <h3>{topic.reason}</h3>
+      <TopicHeader
+        topic={topic}
+        talking={false}
+        disabled={busy}
+        onTalking={live === undefined ? undefined : setTalking}
+      />
       <ol className="interview-turns" aria-label={t`Conversation`}>
-        <Turns turns={topic.turns} />
+        <Turns turns={topic.turns} latest={pending === undefined} />
         {pending?.kind === "interviewer" && pending.answer !== undefined ? (
           <li className="interview-turn interview-turn-candidate interview-turn-sending">
-            <span className="interview-speaker">{t`You`}</span>
+            <span className="interview-speaker sr-only">{t`You`}: </span>
             {pending.answer}
           </li>
         ) : null}
@@ -524,48 +585,57 @@ function WrittenAnswer({
           send();
         }}
       >
-        <label htmlFor={`${id}-answer`}>{t`Your answer`}</label>
-        <textarea
-          id={`${id}-answer`}
-          value={answer}
-          maxLength={4_000}
-          rows={3}
-          placeholder={t`Write your answer. Enter sends, Shift+Enter starts a new line.`}
-          onChange={(event) => {
-            const value = event.target.value;
-            setAnswer(() => value);
-          }}
-          onKeyDown={(event) => {
-            if (
-              !careerInterviewSendsOnKey({ ...event, isComposing: event.nativeEvent.isComposing })
-            )
-              return;
-            event.preventDefault();
-            send();
-          }}
-        />
-        <div className="interview-actions">
+        <label htmlFor={`${id}-answer`} className="sr-only">{t`Your answer`}</label>
+        <div className="interview-composer-bar">
           {onTalkLive === undefined ? null : (
             <button
               type="button"
-              className="button button-outline interview-talk-live"
+              className="interview-talk-live"
               disabled={busy}
               onClick={onTalkLive}
-            >{t`Talk live`}</button>
+              aria-label={t`Talk live`}
+              title={t`Talk live`}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+              </svg>
+            </button>
           )}
-          {speech === undefined ? null : (
+          <textarea
+            id={`${id}-answer`}
+            value={answer}
+            maxLength={4_000}
+            rows={2}
+            placeholder={t`Write your answer. Enter sends, Shift+Enter starts a new line.`}
+            onChange={(event) => {
+              const value = event.target.value;
+              setAnswer(() => value);
+            }}
+            onKeyDown={(event) => {
+              if (
+                !careerInterviewSendsOnKey({ ...event, isComposing: event.nativeEvent.isComposing })
+              )
+                return;
+              event.preventDefault();
+              send();
+            }}
+          />
+          <button
+            type="submit"
+            className="button button-primary interview-send"
+            disabled={busy || answer.trim() === ""}
+          >{t`Send`}</button>
+        </div>
+        {speech === undefined ? null : (
+          <div className="interview-actions">
             <SpeechButton
               speech={speech}
               disabled={busy}
               onTranscript={(text) => setAnswer((existing) => appendTranscript(existing, text))}
             />
-          )}
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={busy || answer.trim() === ""}
-          >{t`Send`}</button>
-        </div>
+          </div>
+        )}
       </form>
     </>
   );
@@ -616,7 +686,7 @@ function SummaryReview({
       }}
       className="interview-conversation"
     >
-      <h3>{topic.reason}</h3>
+      <TopicHeader topic={topic} talking={false} onTalking={undefined} />
       <ol className="interview-turns" aria-label={t`Conversation`}>
         <Turns turns={topic.turns} />
       </ol>
