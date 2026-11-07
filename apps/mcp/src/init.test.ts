@@ -227,6 +227,23 @@ describe("draftloop-mcp init's agent token", () => {
     expect(skipped.some((entry) => entry.includes("agent token"))).toBe(false);
     expect(parseInitArguments(["--host", "codex", "--no-token"])).toMatchObject({ token: false });
   });
+
+  it("asks for the scopes given with --scope, and refuses an unknown one", () => {
+    expect(
+      parseInitArguments([
+        "--host",
+        "claude-code",
+        "--scope",
+        "applications:read",
+        "--scope",
+        "jobs:write",
+        "--scope",
+        "jobs:write",
+      ]),
+    ).toMatchObject({ scopes: ["applications:read", "jobs:write"] });
+    expect(parseInitArguments(["--host", "codex"])).not.toHaveProperty("scopes");
+    expect(parseInitArguments(["--host", "codex", "--scope", "runs"])).toHaveProperty("problem");
+  });
 });
 
 function line(entry: unknown): string {

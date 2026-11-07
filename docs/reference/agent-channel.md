@@ -1,4 +1,4 @@
-# Agent channel: the work journal
+# Agent channel: coding agents in DraftLoop
 
 The candidate's coding agent can record notable work it helped ship, such as a
 payments integration or a database migration, as a note in DraftLoop's work
@@ -171,6 +171,31 @@ sentence, and `fields` names the note fields to fix.
 | ----------- | ------------------------------------------------------------------------------------------ | -------------------------------- |
 | `true`      | The server is unreachable, or answers 408, 425, 429, 500, 502, 503 or 504                  | Tries the same call again later  |
 | `false`     | Validation, permission, not found, conflict, no token (`not_signed_in`), or `internal_error` | Fixes the input or asks the user |
+
+## Job applications and runs
+
+With the matching scopes, the agent can also see the candidate's job
+applications and add one. Each tool returns names, status and run state only,
+never a draft, career evidence or job text.
+
+| Tool                | Scope               | What it does                                                               |
+| ------------------- | ------------------- | -------------------------------------------------------------------------- |
+| `list_applications` | `applications:read` | Lists applications with status, folder and latest run; archived on request |
+| `get_application`   | `applications:read` | Reads one application by id                                                |
+| `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
+| `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
+
+`add_job` refuses a job page address, because fetching a page needs the
+candidate's approval in DraftLoop. The job text is screened like an upload
+when its requirements are extracted. Approving a draft, deciding findings,
+exporting and every setting stay with the candidate in DraftLoop. A token
+without the scope a tool needs is refused with a message naming that scope.
+
+`init` asks for scopes with `--scope`, repeated:
+
+```text
+draftloop-mcp init --host claude-code --hook --scope applications:read --scope jobs:write
+```
 
 ## How the candidate reviews
 

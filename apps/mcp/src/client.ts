@@ -5,7 +5,7 @@ import { defaultAgentTokenPath, readAgentTokenFile } from "./agent-token.js";
 
 /**
  * The MCP server's HTTP client of the DraftLoop API (ADR 0011 D17): the self-hosted stack with
- * an agent token that reaches only the work journal (#2160), the cloud with a signed-in token
+ * an agent token that reaches only its scopes (#2160, #2438), the cloud with a signed-in token
  * later. It holds no domain logic and
  * never returns the token.
  */
@@ -111,11 +111,18 @@ interface ErrorBody {
   };
 }
 
-export function createWorkJournalApi(config: WorkJournalApiConfig): WorkJournalApi {
-  const fetcher = config.fetch ?? fetch;
-  const base = `${config.baseUrl.replace(/\/+$/u, "")}/v1/workspaces/${encodeURIComponent(config.workspaceId)}/work-journal`;
+/** Calls the API under the configured workspace, `path` starting with `/`; refusals throw. */
+export type WorkspaceApiCall = (path: string, init: RequestInit) => Promise<unknown>;
 
-  const call = async (path: string, init: RequestInit): Promise<unknown> => {
+/**
+ * One authenticated call under `/v1/workspaces/{workspace}`: the token read on each call, a
+ * refusal turned into a `WorkJournalApiError` with its code and whether a retry can help.
+ */
+export function createWorkspaceApiCall(config: WorkJournalApiConfig): WorkspaceApiCall {
+  const fetcher = config.fetch ?? fetch;
+  const base = `${config.baseUrl.replace(/\/+$/u, "")}/v1/workspaces/${encodeURIComponent(config.workspaceId)}`;
+
+  return async (path, init) => {
     const token = await config.token();
     if (token === undefined) throw notSignedIn();
     let response: Response;
@@ -149,6 +156,11 @@ export function createWorkJournalApi(config: WorkJournalApiConfig): WorkJournalA
     }
     return body;
   };
+}
+
+export function createWorkJournalApi(config: WorkJournalApiConfig): WorkJournalApi {
+  const workspaceCall = createWorkspaceApiCall(config);
+  const call: WorkspaceApiCall = (path, init) => workspaceCall(`/work-journal${path}`, init);
 
   return {
     record: async (note, idempotencyKey) =>
