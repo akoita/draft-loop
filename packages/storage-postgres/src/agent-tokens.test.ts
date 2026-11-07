@@ -22,6 +22,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         label: " Claude Code ",
         createdAt: "2026-11-04T10:00:00.000Z",
         expiresAt: "2027-01-01T00:00:00.000Z",
+        scopes: ["journal"],
         secretHash: hashA,
       });
       await storeA.insert({
@@ -30,6 +31,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         label: "Codex",
         createdAt: "2026-11-04T11:00:00.000Z",
         expiresAt: "2027-01-01T00:00:00.000Z",
+        scopes: ["journal", "applications:read", "jobs:write"],
         secretHash: "b".repeat(64),
       });
       await expect(
@@ -39,6 +41,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
           label: "Copy",
           createdAt: "2026-11-04T12:00:00.000Z",
           expiresAt: "2027-01-01T00:00:00.000Z",
+          scopes: ["journal"],
           secretHash: hashA,
         }),
       ).rejects.toMatchObject({ code: "duplicate_token" });
@@ -49,11 +52,17 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         label: "Claude Code",
         createdAt: "2026-11-04T10:00:00.000Z",
         expiresAt: "2027-01-01T00:00:00.000Z",
+        scopes: ["journal"],
       });
       expect(await storeB.findByHash(hashA)).toBeUndefined();
       expect((await storeA.list("owner")).map((token) => token.id)).toEqual([
         "dlat_fixture0002",
         "dlat_fixture0001",
+      ]);
+      expect((await storeA.list("owner"))[0]?.scopes).toEqual([
+        "journal",
+        "applications:read",
+        "jobs:write",
       ]);
       expect(await storeB.list("owner")).toEqual([]);
 

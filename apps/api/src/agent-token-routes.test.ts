@@ -104,6 +104,7 @@ describe("agent tokens", () => {
         {
           id: issued.id,
           label: "Claude Code",
+          scopes: ["journal"],
           created_at: issued.created_at,
           expires_at: issued.expires_at,
           active: true,
@@ -253,6 +254,7 @@ describe("agent tokens", () => {
       label: "Expired",
       createdAt: "2025-01-01T00:00:00.000Z",
       expiresAt: "2025-02-01T00:00:00.000Z",
+      scopes: ["journal"],
       secretHash: agentTokenHash(secret),
     });
     const expired = await app.inject({
