@@ -95,6 +95,11 @@ export interface ContentScreeningHooks {
     readonly workspace: WorkspaceDescriptor;
     readonly opportunityBrief?: { readonly briefId: string; readonly version: number } | undefined;
   }): Promise<void>;
+  /**
+   * Whether a stored file's download is withheld from the caller: it is quarantined and not
+   * released, and the caller is not an owner, an admin or the owner token, who may inspect it.
+   */
+  withholdsDownload(request: FastifyRequest, subject: ContentScreeningSubject): Promise<boolean>;
 }
 
 const identifierSchema = z
@@ -453,5 +458,14 @@ export function registerContentScreening(
     },
   );
 
-  return { screenOpportunity, screenUpload, assertRunMaterialClear };
+  const withholdsDownload: ContentScreeningHooks["withholdsDownload"] = async (
+    request,
+    subject,
+  ) => {
+    const { caller } = request;
+    if (caller !== undefined && reachesEveryRecord(caller)) return false;
+    return (await screening.store.quarantined([subject])).length > 0;
+  };
+
+  return { screenOpportunity, screenUpload, assertRunMaterialClear, withholdsDownload };
 }

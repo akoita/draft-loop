@@ -159,6 +159,8 @@ export class ConsentRequiredError extends Error {
 const intakeStatus: Readonly<Record<HostedKnowledgeIntakeErrorCode, number>> = {
   knowledge_base_not_found: 404,
   source_empty: 400,
+  source_file_unavailable: 409,
+  source_not_found: 404,
   source_too_large: 413,
   unsupported_media_type: 415,
 };

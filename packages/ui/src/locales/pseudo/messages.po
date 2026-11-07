@@ -1254,6 +1254,10 @@ msgstr ""
 msgid "artifact review"
 msgstr ""
 
+#: apps/web/src/evidence-panels.tsx
+msgid "Ask an owner or admin to release this file before downloading it."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Asked in a job post: {title}"
 msgstr ""
@@ -2167,6 +2171,10 @@ msgstr ""
 msgid "Created"
 msgstr ""
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Created {when}"
+msgstr ""
+
 #. placeholder {0}: defaultKnowledgeStoreDestinationLabel()
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Created knowledge base “{displayName}” in {0} and selected it for this workspace."
@@ -2512,6 +2520,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Done speaking"
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Download"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -3095,10 +3107,6 @@ msgstr ""
 msgid "File and directory intake is unavailable in this desktop host."
 msgstr ""
 
-#: apps/web/src/evidence-panels.tsx
-msgid "File checks"
-msgstr ""
-
 #: packages/ui/src/knowledge-intake.ts
 msgid "File import complete. A career-evidence source was added."
 msgstr ""
@@ -3248,6 +3256,10 @@ msgstr ""
 #. placeholder {0}: countedNouns.source(state.setup.selectedEvidenceSourceCount)
 #: packages/ui/src/run-details.tsx
 msgid "from {0}"
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "From career interview"
 msgstr ""
 
 #: packages/ui/src/job-description-panel.tsx
@@ -8597,6 +8609,10 @@ msgstr ""
 msgid "Updating candidate knowledge…"
 msgstr ""
 
+#: apps/web/src/evidence-file-model.ts
+msgid "Uploaded {when}"
+msgstr ""
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
 msgstr ""
@@ -9160,6 +9176,10 @@ msgstr ""
 
 #: packages/ui/src/career-signposts.tsx
 msgid "Your file was not added: documents are added in Career evidence."
+msgstr ""
+
+#: apps/web/src/evidence-panels.tsx
+msgid "Your files"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts

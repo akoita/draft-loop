@@ -81,8 +81,8 @@ client shows. A first run goes like this:
    mode, since the stack makes no provider calls. **Create workspace** opens
    Home, where **Edit policy** saves a new writing-policy version.
 2. **Career evidence:** upload PDF, DOCX, Markdown or text files into a
-   knowledge base and choose the bases runs use. **File checks** shows each
-   file's injection screening. **Private sections** marks Markdown sections as
+   knowledge base and choose the bases runs use. **Your files** shows when
+   each file was added, its injection screening and a **Download** button. **Private sections** marks Markdown sections as
    never-send or only-if-allowed.
 3. **New application:** paste a job post, attach a job file or give an
    approved page address. Check and review the requirements that were read.
@@ -96,7 +96,8 @@ Other things the screen shows:
 | Feature           | Behaviour                                                                                                                                                                                                 |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | New release       | On focus and every five minutes, the tab compares the served entry script with its own. When they differ it offers **Reload**.                                                                            |
-| Screening badges  | Each file under **File checks** is screened clear, quarantined (with the signals found, or because a screener failed), released, or not screened.                                                         |
+| Screening badges  | Each file under **Your files** is screened clear, quarantined (with the signals found, or because a screener failed), released, or not screened.                                                          |
+| File downloads    | **Download** saves the stored file under its own name. A quarantined file downloads only for owners and admins; a pull request list downloads as the Markdown it was stored as.                           |
 | Refused run       | A run that screening refuses (409 `material_quarantined`) is explained above the screens, listing the held material.                                                                                      |
 | Release           | Owners, admins and the owner token get **Release** per held piece, with a required reason of up to 500 characters. Members are told to ask an owner or admin.                                             |
 | Consents          | Sign-in mode only. Career evidence first asks permission to store material, and **Start** shows the credit cost and asks consent to send material. Each consent shows its state and a way to withdraw it. |

@@ -367,3 +367,49 @@ describe("source uploads", () => {
     expect(response.statusCode).toBe(201);
   });
 });
+
+describe("source file downloads", () => {
+  const download = () =>
+    app.inject({
+      method: "GET",
+      url: "/v1/knowledge-bases/base-1/sources/source-1/file",
+      headers: { authorization },
+    });
+
+  it("sends the stored bytes as an attachment under the file's own name", async () => {
+    const readSourceFile = vi.fn(async () => ({
+      ...sourceView,
+      source: { ...sourceView.source, displayName: "Résumé notes.md" },
+      bytes: new TextEncoder().encode("# Fictional notes\n"),
+    }));
+    await build({ readSourceFile });
+
+    const response = await download();
+
+    expect(response.statusCode).toBe(200);
+    expect(readSourceFile).toHaveBeenCalledWith("base-1", "source-1");
+    expect(response.body).toBe("# Fictional notes\n");
+    expect(response.headers["content-type"]).toContain("text/markdown");
+    expect(response.headers["content-disposition"]).toBe(
+      "attachment; filename=\"R_sum_ notes.md\"; filename*=UTF-8''R%C3%A9sum%C3%A9%20notes.md",
+    );
+    expect(response.headers["x-content-sha256"]).toBe("b".repeat(64));
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+  });
+
+  it.each([
+    ["source_not_found", 404],
+    ["source_file_unavailable", 409],
+  ] as const)("answers intake's %s as %i", async (code, status) => {
+    await build({
+      readSourceFile: async () => {
+        throw new HostedKnowledgeIntakeError(code, "Refused.");
+      },
+    });
+
+    const response = await download();
+
+    expect(response.statusCode).toBe(status);
+    expect(response.json().error.code).toBe(code);
+  });
+});
