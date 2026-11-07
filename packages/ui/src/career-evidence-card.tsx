@@ -69,11 +69,11 @@ export function legacyRetrievalText(
         other: "No lexical match; # bounded fallback excerpts selected",
       });
     case "no-query":
-      return "The job description has no searchable role terms";
+      return t`The job description has no searchable role terms`;
     case "unavailable":
-      return "Retrieval readiness is unavailable";
+      return t`Retrieval readiness is unavailable`;
     case "not-indexed":
-      return "Evidence will be indexed when the review starts";
+      return t`Evidence will be indexed when the review starts`;
   }
 }
 
@@ -168,20 +168,20 @@ export function CareerEvidenceCardView({
   const addDisabled = blocked || status.kind === "loading";
   const fileLabel =
     mode === "legacy"
-      ? "Add to legacy workspace evidence"
+      ? t`Add to legacy workspace evidence`
       : status.kind === "unsupported"
-        ? "Add source files"
-        : "Add documents";
+        ? t`Add source files`
+        : t`Add documents`;
   const urlCount = parseSourceUrls(url).length;
   // Legacy workspace evidence imports one URL per request; only a knowledge base takes several.
   const tooManyForLegacy = !inKnowledgeBase && urlCount > 1;
   const urlLabel = tooManyForLegacy
-    ? "Legacy evidence takes one URL at a time"
+    ? t`Legacy evidence takes one URL at a time`
     : mode === "legacy"
-      ? "Add URL to legacy evidence"
+      ? t`Add URL to legacy evidence`
       : urlCount > 1
-        ? `Review and fetch ${urlCount} source URLs`
-        : "Review and fetch source URL";
+        ? t`Review and fetch ${urlCount} source URLs`
+        : t`Review and fetch source URL`;
   return (
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
@@ -212,7 +212,7 @@ export function CareerEvidenceCardView({
           <span>{t`Workspace evidence files: ${countedNouns.file(legacyCount)}`}</span>
           <span className="setup-retrieval-status setup-card-line" role="status">
             {t`Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in`}{" "}
-            {defaultKnowledgeStoreDestinationLabel}
+            {defaultKnowledgeStoreDestinationLabel()}
             {t`; runs then use it instead, and these files are not copied into it.`}
           </span>
           <button
@@ -226,7 +226,7 @@ export function CareerEvidenceCardView({
         <>
           <span role="status">
             {t`No career evidence yet. Adding the first source creates a knowledge base for this workspace in`}{" "}
-            {defaultKnowledgeStoreDestinationLabel}.
+            {defaultKnowledgeStoreDestinationLabel()}.
           </span>
           <button
             className="button button-quiet"
@@ -340,7 +340,7 @@ export interface CareerEvidenceCardProps {
 function failureText(reason: unknown): string {
   return reason instanceof Error && reason.message !== ""
     ? reason.message
-    : "The source could not be added to the knowledge base.";
+    : t`The source could not be added to the knowledge base.`;
 }
 
 /** Setup card 02: the knowledge base the run will use, with add actions that import into it. */

@@ -3,6 +3,7 @@ import {
   type SpeechTranscribeOptions,
   SpeechUnavailableError,
 } from "@draft-loop/ui/speech-to-text";
+import { t } from "@lingui/core/macro";
 
 import type { WhisperModelRef, WhisperReply, WhisperWorkerLike } from "./whisper-protocol.js";
 
@@ -20,7 +21,7 @@ export interface WhisperSpeechOptions {
 const defaultManifest = async () => {
   const response = await fetch("/speech-models/manifest.json");
   if (!response.ok)
-    throw new SpeechUnavailableError("Voice input is not available on this server.");
+    throw new SpeechUnavailableError(t`Voice input is not available on this server.`);
   return (await response.json()) as { available: boolean } & WhisperModelRef;
 };
 
@@ -55,7 +56,7 @@ export function createWhisperSpeechToText(options: WhisperSpeechOptions = {}): S
     model ??= fetchManifest().then((manifest) => {
       if (!manifest.available) {
         throw new SpeechUnavailableError(
-          "This server has no speech model installed, so voice input is off.",
+          t`This server has no speech model installed, so voice input is off.`,
         );
       }
       return { model: manifest.model, revision: manifest.revision, dtype: manifest.dtype };

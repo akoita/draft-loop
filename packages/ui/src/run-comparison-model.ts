@@ -43,14 +43,14 @@ export type RunComparisonEvent =
   | { readonly type: "close" };
 
 /** The footer's line while two runs are compared: nothing can be approved or exported here. */
-export const comparingRunsNotice = "Comparing runs — read-only";
+export const comparingRunsNotice = () => t`Comparing runs — read-only`;
 
 /** The footer's blocker line while comparing; the footer's actions are hidden meanwhile. */
-export const comparingRunsBlocker: FooterBlocker = {
+export const comparingRunsBlocker = (): FooterBlocker => ({
   kind: "waiting",
-  text: comparingRunsNotice,
+  text: comparingRunsNotice(),
   tone: "neutral",
-};
+});
 
 export function runComparisonReducer(
   current: RunComparisonState | null,
@@ -129,7 +129,7 @@ export function comparedRunFacts(
   if (run === undefined) {
     return {
       runId,
-      label: "Run",
+      label: t`Run`,
       models: "models not recorded",
       round: "round unknown",
       status: "status unknown",

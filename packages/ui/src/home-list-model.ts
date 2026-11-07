@@ -3,18 +3,19 @@
  * match is testable without a DOM; the list itself comes from the host unchanged.
  */
 import { applicationStatuses } from "@draft-loop/domain/application";
+import { t } from "@lingui/core/macro";
 import type { ApplicationStatus, ApplicationSummaryView } from "./application-contract.js";
 import { applicationStatusLabel, applicationsByActivity } from "./home-model.js";
 
 export const applicationSortOrders = ["activity", "name", "created", "status"] as const;
 export type ApplicationSortOrder = (typeof applicationSortOrders)[number];
 
-export const applicationSortLabels: Readonly<Record<ApplicationSortOrder, string>> = {
-  activity: "Last activity",
-  name: "Name (A to Z)",
-  created: "Date created",
-  status: "Status",
-};
+export const applicationSortLabels = (): Readonly<Record<ApplicationSortOrder, string>> => ({
+  activity: t`Last activity`,
+  name: t`Name (A to Z)`,
+  created: t`Date created`,
+  status: t`Status`,
+});
 
 export type ApplicationStatusFilter = "all" | ApplicationStatus;
 
@@ -24,7 +25,7 @@ export const applicationStatusFilters: readonly ApplicationStatusFilter[] = [
 ];
 
 export function applicationStatusFilterLabel(filter: ApplicationStatusFilter): string {
-  return filter === "all" ? "All" : applicationStatusLabel(filter);
+  return filter === "all" ? t`All` : applicationStatusLabel(filter);
 }
 
 export interface ApplicationListQuery {

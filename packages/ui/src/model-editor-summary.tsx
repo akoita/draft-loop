@@ -36,7 +36,7 @@ export function appliedPairName(applied: ModelProfileReferences | null): string 
     modelProfileReferencesEqual(modelProfilePresetReferences(candidate), applied),
   );
   return withModelProfileLevels(
-    preset === undefined ? "Custom pair" : presetDisplayName(preset.label),
+    preset === undefined ? t`Custom pair` : presetDisplayName(preset.label),
     applied,
   );
 }
@@ -95,8 +95,8 @@ export function ModelEditorSummary({ author, critic, applied, support }: ModelEd
         <summary>{t`Details`}</summary>
         <div className="model-editor-summary-body">
           <dl className="model-editor-summary-sides">
-            <DetailRow label="Writer" side={author} />
-            <DetailRow label="Reviewer" side={critic} />
+            <DetailRow label={t`Writer`} side={author} />
+            <DetailRow label={t`Reviewer`} side={critic} />
           </dl>
           {applied === null ? null : (
             <div className="model-profile-picker-profile-pair">

@@ -12,21 +12,21 @@ import type {
  * The fixed sentence the host sends when an opportunity edit or review used an out-of-date
  * version. The renderer matches it to offer a reload instead of a generic failure.
  */
-export const opportunityVersionConflictMessage =
-  "This brief changed since you opened it. The latest version has been loaded; review it and try again.";
+export const opportunityVersionConflictMessage = () =>
+  t`This brief changed since you opened it. The latest version has been loaded; review it and try again.`;
 
 export const maximumRequirementTextLength = 2_000;
 
 export type RequirementPriority = OpportunityRequirementResult["priority"];
 
-export const requirementPriorityOptions: readonly {
+export const requirementPriorityOptions = (): readonly {
   readonly value: RequirementPriority;
   readonly label: string;
-}[] = [
-  { value: "critical", label: "Critical" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
+}[] => [
+  { value: "critical", label: t`Critical` },
+  { value: "high", label: t`High` },
+  { value: "medium", label: t`Medium` },
+  { value: "low", label: t`Low` },
 ];
 
 /** A plain label for a brief source, from its kind and classification; never its internal id. */
@@ -60,7 +60,9 @@ export function savedBriefNote(version: number): string {
 }
 
 export function requirementPriorityLabel(priority: RequirementPriority): string {
-  return requirementPriorityOptions.find((option) => option.value === priority)?.label ?? priority;
+  return (
+    requirementPriorityOptions().find((option) => option.value === priority)?.label ?? priority
+  );
 }
 
 /** One requirement while it is being edited; nothing here is saved until the person saves. */
@@ -280,7 +282,7 @@ export interface BriefOperations {
 
 function failure(reason: unknown, fallback: string): BriefOperationOutcome {
   const message = reason instanceof Error && reason.message.trim() !== "" ? reason.message : "";
-  if (message === opportunityVersionConflictMessage) return { kind: "conflict", message };
+  if (message === opportunityVersionConflictMessage()) return { kind: "conflict", message };
   return { kind: "failed", message: message === "" ? fallback : message };
 }
 

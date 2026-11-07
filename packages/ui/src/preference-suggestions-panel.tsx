@@ -28,8 +28,8 @@ export interface PreferenceSuggestionsPanelProps {
 /** What accepting the suggestion adds to the writing policy, in plain words. */
 export function preferenceSuggestionTitle(suggestion: PreferenceSuggestionView): string {
   return suggestion.kind === "forbidden-term"
-    ? `Never use "${suggestion.term ?? ""}"`
-    : `Order sections as ${(suggestion.sectionOrder ?? []).join(", ")}`;
+    ? t`Never use "${suggestion.term ?? ""}"`
+    : t`Order sections as ${(suggestion.sectionOrder ?? []).join(", ")}`;
 }
 
 export function PreferenceSuggestionsPanel({

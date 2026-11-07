@@ -142,7 +142,7 @@ describe("Home: archiving and deleting applications", () => {
     expect(shown).toContain('aria-label="Archived applications"');
     expect(shown).toContain('aria-label="Restore Old job"');
     expect(shown).toContain('aria-label="Delete Old job"');
-    expect(shown).toContain(applicationDeleteExplanation);
+    expect(shown).toContain(applicationDeleteExplanation());
   });
 
   it("says so when every application is archived", () => {

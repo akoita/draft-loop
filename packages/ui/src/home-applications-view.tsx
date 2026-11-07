@@ -24,10 +24,10 @@ export function isApplicationListView(value: unknown): value is ApplicationListV
   return typeof value === "string" && (applicationListViews as readonly string[]).includes(value);
 }
 
-const viewLabels: Readonly<Record<ApplicationListView, string>> = {
-  cards: "Cards",
-  list: "List",
-};
+const viewLabels = (): Readonly<Record<ApplicationListView, string>> => ({
+  cards: t`Cards`,
+  list: t`List`,
+});
 
 export function ApplicationsToolbar({
   query,
@@ -65,7 +65,7 @@ export function ApplicationsToolbar({
           >
             {applicationSortOrders.map((order) => (
               <option key={order} value={order}>
-                {applicationSortLabels[order]}
+                {applicationSortLabels()[order]}
               </option>
             ))}
           </select>
@@ -79,7 +79,7 @@ export function ApplicationsToolbar({
               aria-pressed={view === option}
               onClick={() => onView(option)}
             >
-              {viewLabels[option]}
+              {viewLabels()[option]}
             </button>
           ))}
         </fieldset>
@@ -246,7 +246,7 @@ function ApplicationRow({
                       <button
                         type="button"
                         disabled={busy}
-                        aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
+                        aria-label={`${archived ? t`Restore` : t`Archive`} ${application.name}`}
                         onClick={onArchive}
                       >
                         {archived ? t`Restore` : t`Archive`}

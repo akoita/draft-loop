@@ -89,17 +89,17 @@ function catalogEntry(
 function unavailableMessage(reason: ModelProfileApiScenarioUnavailableReason): string {
   switch (reason) {
     case "unknown-profile":
-      return "One or both exact profiles are not in the registered catalog, so no estimate is available.";
+      return t`One or both exact profiles are not in the registered catalog, so no estimate is available.`;
     case "authentication-unavailable":
-      return "The configured authentication route is not known. Public rates remain reference information only.";
+      return t`The configured authentication route is not known. Public rates remain reference information only.`;
     case "subscription-billing":
-      return "Public API rates do not estimate subscription quota or charges. No combined estimate is available for a user-session route.";
+      return t`Public API rates do not estimate subscription quota or charges. No combined estimate is available for a user-session route.`;
     case "invalid-scenario":
-      return "Use nonnegative whole-token counts and planned call counts, with no more than 1,000 calls per role.";
+      return t`Use nonnegative whole-token counts and planned call counts, with no more than 1,000 calls per role.`;
     case "unsupported-pricing-scope":
-      return "This profile does not have supported public pricing metadata for the displayed estimate scope.";
+      return t`This profile does not have supported public pricing metadata for the displayed estimate scope.`;
     case "unsupported-pricing-limit":
-      return "This scenario exceeds the registered input, output, or context limits. Reduce the values; they are not adjusted automatically.";
+      return t`This scenario exceeds the registered input, output, or context limits. Reduce the values; they are not adjusted automatically.`;
   }
 }
 
@@ -126,13 +126,13 @@ function PublicRate({
   const { profile, apiPricing } = entry;
   const documentationName =
     profile.provider === "anthropic"
-      ? "Anthropic"
+      ? t`Anthropic`
       : profile.provider === "openai"
         ? "OpenAI"
         : profile.provider === "google"
-          ? "Google"
+          ? t`Google`
           : profile.provider === "mistral"
-            ? "Mistral"
+            ? t`Mistral`
             : "DeepInfra";
   return (
     <div className="model-profile-budget-rate">

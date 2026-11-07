@@ -28,10 +28,10 @@ export interface HomeFolderActions {
   readonly onMove: (application: ApplicationSummaryView, folderId: string | null) => void;
 }
 
-const groupingLabels: Readonly<Record<FolderGrouping, string>> = {
-  folders: "By folder",
-  together: "All together",
-};
+const groupingLabels = (): Readonly<Record<FolderGrouping, string>> => ({
+  folders: t`By folder`,
+  together: t`All together`,
+});
 
 /** A name field that submits on Enter and cancels on Escape, with its error under it. */
 function FolderNameForm({
@@ -59,7 +59,7 @@ function FolderNameForm({
     event.preventDefault();
     const trimmed = name.trim();
     if (trimmed === "") {
-      setError("Give the folder a name.");
+      setError(t`Give the folder a name.`);
       return;
     }
     setBusy(true);
@@ -128,10 +128,10 @@ export function FolderBar({
       {creating ? (
         <FolderNameForm
           id="application-folder-new"
-          label="New folder name"
+          label={t`New folder name`}
           initial=""
-          submitLabel="Create folder"
-          failure="The folder could not be created. Try again."
+          submitLabel={t`Create folder`}
+          failure={t`The folder could not be created. Try again.`}
           onSubmit={async (name) => {
             await onCreate(name);
             setCreating(false);
@@ -156,7 +156,7 @@ export function FolderBar({
               aria-pressed={grouping === option}
               onClick={() => onGrouping(option)}
             >
-              {groupingLabels[option]}
+              {groupingLabels()[option]}
             </button>
           ))}
         </fieldset>
@@ -186,16 +186,16 @@ export function FolderSectionHead({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { folder } = section;
-  const name = folder?.name ?? noFolderLabel;
+  const name = folder?.name ?? noFolderLabel();
   if (folder !== null && mode === "renaming") {
     return (
       <div className="application-folder-head">
         <FolderNameForm
           id={`application-folder-rename-${folder.id}`}
-          label={`New name for ${folder.name}`}
+          label={t`New name for ${folder.name}`}
           initial={folder.name}
-          submitLabel="Rename"
-          failure="The folder could not be renamed. Try again."
+          submitLabel={t`Rename`}
+          failure={t`The folder could not be renamed. Try again.`}
           onSubmit={async (next) => {
             await onRename(folder, next);
             setMode("idle");
@@ -235,7 +235,7 @@ export function FolderSectionHead({
                   (reason: unknown) => {
                     setBusy(false);
                     setDeleteError(
-                      folderErrorMessage(reason, "The folder could not be deleted. Try again."),
+                      folderErrorMessage(reason, t`The folder could not be deleted. Try again.`),
                     );
                   },
                 );

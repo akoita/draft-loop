@@ -30,7 +30,7 @@ export function ruleSentence(rule: SensitivityRule): string {
   };
   const sections =
     rule.match.kind === "heading-contains"
-      ? `sections whose heading contains "${rule.match.text}"`
+      ? t`sections whose heading contains "${rule.match.text}"`
       : `sections under ${rule.match.path.join(" › ")}`;
   return `${lead[rule.tier]} ${sections}`;
 }

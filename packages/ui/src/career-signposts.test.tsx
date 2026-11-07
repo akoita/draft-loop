@@ -24,21 +24,21 @@ describe("career signposts", () => {
     const html = renderToStaticMarkup(
       <CareerProfilePage {...frame} workflow={<section id="workflow" />} />,
     );
-    expect(html).toContain(profileSignpostText.lead);
-    expect(html).toContain(profileSignpostText.body);
-    expect(html).toContain(`${profileSignpostText.action} <span aria-hidden="true">→</span>`);
+    expect(html).toContain(profileSignpostText().lead);
+    expect(html).toContain(profileSignpostText().body);
+    expect(html).toContain(`${profileSignpostText().action} <span aria-hidden="true">→</span>`);
     expect(html.indexOf("career-signpost")).toBeLessThan(html.indexOf('id="workflow"'));
-    expect(html).not.toContain(evidenceSignpostText.lead);
+    expect(html).not.toContain(evidenceSignpostText().lead);
   });
 
   it("points from the evidence page to Career profile for facts, before the evidence card", () => {
     const html = renderToStaticMarkup(
       <CareerEvidencePage {...frame} card={<section id="evidence-card" />} />,
     );
-    expect(html).toContain(evidenceSignpostText.body);
-    expect(html).toContain(evidenceSignpostText.action);
+    expect(html).toContain(evidenceSignpostText().body);
+    expect(html).toContain(evidenceSignpostText().action);
     expect(html.indexOf("career-signpost")).toBeLessThan(html.indexOf('id="evidence-card"'));
-    expect(html).not.toContain(profileSignpostText.lead);
+    expect(html).not.toContain(profileSignpostText().lead);
   });
 
   it("offers no signpost to a page the host cannot open", () => {

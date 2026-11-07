@@ -7,11 +7,11 @@ import {
 } from "./bridge.js";
 
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
-const genericProfileOperationFailure = "The profile operation could not be completed.";
-const historicalMalformedStreamFailure =
-  "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.";
-const safeMalformedStreamFailure =
-  "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.";
+const genericProfileOperationFailure = () => t`The profile operation could not be completed.`;
+const historicalMalformedStreamFailure = () =>
+  t`DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.`;
+const safeMalformedStreamFailure = () =>
+  t`DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.`;
 
 export type CanonicalCandidateProfileOutcomeKind =
   | "unloaded"
@@ -29,25 +29,25 @@ export interface CanonicalCandidateProfileOutcome {
   readonly retry: boolean;
 }
 
-const noVersionOutcome: CanonicalCandidateProfileOutcome = {
+const noVersionOutcome = (): CanonicalCandidateProfileOutcome => ({
   kind: "no-version",
-  message: "No saved profile version exists for this name yet.",
+  message: t`No saved profile version exists for this name yet.`,
   failureReasons: [],
   retry: false,
-};
+});
 
-const unloadedOutcome: CanonicalCandidateProfileOutcome = {
+const unloadedOutcome = (): CanonicalCandidateProfileOutcome => ({
   kind: "unloaded",
-  message: "Enter a profile name and load a saved version to see its status.",
+  message: t`Enter a profile name and load a saved version to see its status.`,
   failureReasons: [],
   retry: false,
-};
+});
 
 /** A cancelled generation is a user decision, not a failure, so it keeps its own message. */
 export function isCanonicalCandidateProfileGenerationCancelled(reason: unknown): boolean {
   return (
     reason instanceof Error &&
-    reason.message.trim() === canonicalCandidateProfileGenerationCancelledMessage
+    reason.message.trim() === canonicalCandidateProfileGenerationCancelledMessage()
   );
 }
 
@@ -60,7 +60,7 @@ export function safeCanonicalCandidateProfileFeedback(reason: unknown): string {
         ? reason.message.trim()
         : "";
   const message =
-    rawMessage === historicalMalformedStreamFailure ? safeMalformedStreamFailure : rawMessage;
+    rawMessage === historicalMalformedStreamFailure() ? safeMalformedStreamFailure() : rawMessage;
   if (
     message === "" ||
     message.length > 240 ||
@@ -68,7 +68,7 @@ export function safeCanonicalCandidateProfileFeedback(reason: unknown): string {
     message.includes("\\") ||
     absoluteUrlPattern.test(message)
   ) {
-    return genericProfileOperationFailure;
+    return genericProfileOperationFailure();
   }
   return message;
 }
@@ -104,15 +104,15 @@ export function projectCanonicalCandidateProfileOutcome(
   draftIssues: readonly CanonicalCandidateProfileIssueResult[] = record?.issues ?? [],
 ): CanonicalCandidateProfileOutcome {
   if (currentProfileId === "" || loadedProfileId !== currentProfileId) {
-    return unloadedOutcome;
+    return unloadedOutcome();
   }
 
   if (record === null) {
-    return noVersionOutcome;
+    return noVersionOutcome();
   }
 
   if (record.profileId !== currentProfileId || record.profileId !== loadedProfileId) {
-    return unloadedOutcome;
+    return unloadedOutcome();
   }
 
   if (recordedExtractionFailure(record)) {
@@ -167,7 +167,7 @@ export function projectCanonicalCandidateProfileOutcome(
 export function projectCanonicalCandidateProfileOperationResult(
   record: CanonicalCandidateProfileRecordResult | null,
 ): CanonicalCandidateProfileOutcome {
-  if (record === null) return noVersionOutcome;
+  if (record === null) return noVersionOutcome();
   return projectCanonicalCandidateProfileOutcome(record, record.profileId, record.profileId);
 }
 

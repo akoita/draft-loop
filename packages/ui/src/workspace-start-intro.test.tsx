@@ -58,13 +58,13 @@ describe("start page intro", () => {
   it("leads a fresh start page with guidance and no host error", () => {
     const html = startPage(null);
     expect(html).toContain("Set up a review workspace");
-    expect(html).toContain(workspaceStartGuidance);
+    expect(html).toContain(workspaceStartGuidance());
     expect(html).toContain("create a workspace");
     expect(html).toContain("open a recent one");
     expect(html).toContain("try the demo");
     expect(html).not.toContain("Open a workspace first.");
     expect(html).not.toContain('role="alert"');
-    expect(html.indexOf(workspaceStartGuidance)).toBeLessThan(
+    expect(html.indexOf(workspaceStartGuidance())).toBeLessThan(
       html.indexOf('aria-label="Workspace name"'),
     );
   });
@@ -74,7 +74,7 @@ describe("start page intro", () => {
     expect(html).toContain(
       '<p class="setup-blocker" role="alert">The workspace could not be opened.</p>',
     );
-    expect(html.indexOf(workspaceStartGuidance)).toBeLessThan(
+    expect(html.indexOf(workspaceStartGuidance())).toBeLessThan(
       html.indexOf("The workspace could not be opened."),
     );
   });

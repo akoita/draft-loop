@@ -12,14 +12,15 @@ export interface FindingDecisionContext {
 /** The finding code the deterministic, word-match coverage check reports. */
 export const WORD_MATCH_COVERAGE_CODE = "uncovered-requirement";
 
-export const ACCEPT_UNAVAILABLE_NOTE = "No revision left: use Reject or Override";
+export const ACCEPT_UNAVAILABLE_NOTE = () => t`No revision left: use Reject or Override`;
 
-export const ACCEPTED_WITHOUT_REVISION_NUDGE =
-  "Accepted, but no revision is left: change to Reject or Override to unblock approval";
+export const ACCEPTED_WITHOUT_REVISION_NUDGE = () =>
+  t`Accepted, but no revision is left: change to Reject or Override to unblock approval`;
 
-export const COVERAGE_INFORMATION_NOTE = "Coverage verdicts inform you; they never block approval.";
+export const COVERAGE_INFORMATION_NOTE = () =>
+  t`Coverage verdicts inform you; they never block approval.`;
 
-export const BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE = "Accept all skips word-match findings";
+export const BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE = () => t`Accept all skips word-match findings`;
 
 /**
  * One plain line per decision saying what it does to the next revision and to
@@ -93,8 +94,8 @@ export function bulkDecisionTargetsForDecision(
   return targetIds.filter((id) => !skipped.has(id));
 }
 
-export const BULK_ACCEPT_SKIPS_BLOCKING_NOTE =
-  "No revision left: Accept all skips blocking findings; use Reject or Override for them.";
+export const BULK_ACCEPT_SKIPS_BLOCKING_NOTE = () =>
+  t`No revision left: Accept all skips blocking findings; use Reject or Override for them.`;
 
 /** The bulk bar's line when Accept all skips blocking findings, or null when it does not. */
 export function bulkBlockingSkipNote(
@@ -102,7 +103,7 @@ export function bulkBlockingSkipNote(
   context: FindingDecisionContext,
 ): string | null {
   return shown.some((finding) => acceptUnavailable(finding, context))
-    ? BULK_ACCEPT_SKIPS_BLOCKING_NOTE
+    ? BULK_ACCEPT_SKIPS_BLOCKING_NOTE()
     : null;
 }
 

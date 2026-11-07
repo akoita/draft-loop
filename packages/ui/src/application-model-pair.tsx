@@ -120,7 +120,7 @@ export function ApplicationModelPairChoice({
       <p className="subtle">{t`Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews.`}</p>
       <ModelPresetCards
         groupName="application-model-pair"
-        legend="Model pair for this application"
+        legend={t`Model pair for this application`}
         checkedValue={checked}
         disabled={locked}
         support={support}
@@ -172,7 +172,7 @@ export async function saveApplicationModelPair(
   } catch (reason: unknown) {
     return reason instanceof Error && reason.message.trim() !== ""
       ? reason.message
-      : "The model pair could not be saved.";
+      : t`The model pair could not be saved.`;
   }
 }
 
@@ -222,7 +222,7 @@ export function applicationPairLabel(pair: ApplicationModelProfilesView): string
   );
   return withModelProfileLevels(
     preset === undefined
-      ? `Custom pair ${pair.author.id}@${pair.author.version} and ${pair.critic.id}@${pair.critic.version}`
+      ? t`Custom pair ${pair.author.id}@${pair.author.version} and ${pair.critic.id}@${pair.critic.version}`
       : `Preset ${presetDisplayName(preset.label)}`,
     pair,
   );

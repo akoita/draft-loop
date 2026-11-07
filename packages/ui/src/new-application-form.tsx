@@ -127,9 +127,9 @@ export function NewApplicationFormView({
           <fieldset className="model-editor-mode">
             <legend>{t`Job posting`}</legend>
             <div className="view-toggle">
-              {kindButton("text", "Paste text")}
-              {jobPagesAllowed ? kindButton("url", "Job page address") : null}
-              {kindButton("file", "Attach file")}
+              {kindButton("text", t`Paste text`)}
+              {jobPagesAllowed ? kindButton("url", t`Job page address`) : null}
+              {kindButton("file", t`Attach file`)}
             </div>
           </fieldset>
           {draft.jobKind === "file" ? (
@@ -273,7 +273,7 @@ export async function submitNewApplication(
       message:
         reason instanceof Error && reason.message.trim() !== ""
           ? reason.message
-          : "The application could not be created.",
+          : t`The application could not be created.`,
     };
   }
 }

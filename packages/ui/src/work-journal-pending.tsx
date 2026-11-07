@@ -11,11 +11,11 @@ export const pendingNoteCountLimit = 50;
 export function pendingNotesText(count: number): string | null {
   if (count <= 0) return null;
   if (count >= pendingNoteCountLimit) {
-    return `${pendingNoteCountLimit} or more work journal notes wait for your review.`;
+    return t`${pendingNoteCountLimit} or more work journal notes wait for your review.`;
   }
   return count === 1
     ? "1 work journal note waits for your review."
-    : `${count} work journal notes wait for your review.`;
+    : t`${count} work journal notes wait for your review.`;
 }
 
 export interface WorkJournalPendingProps {

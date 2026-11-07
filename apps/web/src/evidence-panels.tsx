@@ -1,3 +1,4 @@
+import { knowledgeBaseDisplayName } from "@draft-loop/ui/career-evidence";
 import { t } from "@lingui/core/macro";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -77,7 +78,7 @@ export function FileChecksPanel({
         groups.map(({ base, sources }) =>
           sources.length === 0 ? null : (
             <div key={base.id}>
-              <h3>{base.displayName}</h3>
+              <h3>{knowledgeBaseDisplayName(base.displayName)}</h3>
               <ul className="sources">
                 {sources.map((source) => (
                   <li key={source.id}>

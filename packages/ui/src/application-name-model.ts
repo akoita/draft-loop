@@ -1,7 +1,8 @@
+import { t } from "@lingui/core/macro";
 /** Renaming applications: the messages and when the default application asks for a name. */
 
-export const invalidApplicationNameMessage = "Enter a name of 1 to 120 characters.";
-export const applicationRenameFailureMessage = "The application could not be renamed.";
+export const invalidApplicationNameMessage = () => t`Enter a name of 1 to 120 characters.`;
+export const applicationRenameFailureMessage = () => t`The application could not be renamed.`;
 
 /** True while the default application still has the name DraftLoop derived for it. */
 export function needsApplicationName(application: {

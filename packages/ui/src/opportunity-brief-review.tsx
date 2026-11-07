@@ -137,7 +137,7 @@ function RequirementRow({
                   onPriority(requirement.id, event.target.value as RequirementPriority)
                 }
               >
-                {requirementPriorityOptions.map((option) => (
+                {requirementPriorityOptions().map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -652,7 +652,7 @@ export function OpportunityBriefReviewAction({
   operations,
   onBriefChanged,
   disabled = false,
-  label = "Review requirements",
+  label = t`Review requirements`,
 }: OpportunityBriefReviewActionProps) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);

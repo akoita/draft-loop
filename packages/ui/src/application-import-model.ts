@@ -13,11 +13,11 @@ export type ApplicationImportNotice =
 /** The host answers a cancelled folder picker with this code; it is not worth an error. */
 const cancelledCode = "permission-denied";
 
-export const applicationImportExplanation =
-  "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged.";
+export const applicationImportExplanation = () =>
+  t`Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged.`;
 
-export const applicationImportFailureFallback =
-  "The workspace could not be imported. Try again, or choose a different workspace.";
+export const applicationImportFailureFallback = () =>
+  t`The workspace could not be imported. Try again, or choose a different workspace.`;
 
 export function applicationImportCountsText(counts: ApplicationImportCounts): string {
   const parts = [
@@ -30,7 +30,7 @@ export function applicationImportCountsText(counts: ApplicationImportCounts): st
   const skipped =
     counts.skippedExports === 1
       ? "1 export was not imported because its file was missing."
-      : `${counts.skippedExports} exports were not imported because their files were missing.`;
+      : t`${counts.skippedExports} exports were not imported because their files were missing.`;
   return `${text} ${skipped}`;
 }
 
@@ -55,6 +55,6 @@ export function applicationImportErrorNotice(error: unknown): ApplicationImportN
   const message = error instanceof Error ? error.message.trim() : "";
   return {
     kind: "error",
-    message: message === "" || message.length > 300 ? applicationImportFailureFallback : message,
+    message: message === "" || message.length > 300 ? applicationImportFailureFallback() : message,
   };
 }

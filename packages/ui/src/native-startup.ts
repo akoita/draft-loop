@@ -1,7 +1,8 @@
+import { t } from "@lingui/core/macro";
 import type { DesktopReviewPort } from "./model.js";
 
-export const nativeConnectionUnavailableMessage =
-  "The desktop native connection is unavailable. Restart DraftLoop and try again.";
+export const nativeConnectionUnavailableMessage = () =>
+  t`The desktop native connection is unavailable. Restart DraftLoop and try again.`;
 
 /** The Electron marker suppresses the browser fixture fallback; it grants no host access. */
 export function isElectronRendererRuntime(
@@ -14,7 +15,7 @@ export function isElectronRendererRuntime(
 
 export function createNativeStartupUnavailablePort(): DesktopReviewPort {
   const unavailable = async (): Promise<never> => {
-    throw new Error(nativeConnectionUnavailableMessage);
+    throw new Error(nativeConnectionUnavailableMessage());
   };
   return {
     load: unavailable,

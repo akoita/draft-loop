@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Decisions for the Manage career evidence panel that follow the workspace's current knowledge
  * base, kept free of React so they can be tested without a DOM.
@@ -82,14 +83,14 @@ export function isNewStoreFormRequest(handled: number, requested: number): boole
   return requested !== handled;
 }
 
-export const differentStoreDisclosureLabel = "Use a different knowledge store…";
+export const differentStoreDisclosureLabel = () => t`Use a different knowledge store…`;
 
-export const autoCreateHint =
-  "Add career evidence from the Career evidence card above to create your knowledge base.";
+export const autoCreateHint = () =>
+  t`Add career evidence from the Career evidence card above to create your knowledge base.`;
 
 /** The same hint inside the Career evidence card, whose add actions sit just above. */
-export const embeddedAutoCreateHint =
-  "Your knowledge base is created when you add your first evidence above.";
+export const embeddedAutoCreateHint = () =>
+  t`Your knowledge base is created when you add your first evidence above.`;
 
 /**
  * Whether the panel points to card 02 for creating a base. It must not when the workspace has a

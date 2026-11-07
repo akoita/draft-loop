@@ -72,7 +72,7 @@ describe("confirmed coverage gaps (#1873)", () => {
       />,
     );
     expect(html).toContain("Mark 2 confirmed gaps as known");
-    expect(html).toContain(MARK_KNOWN_GAPS_NOTE);
+    expect(html).toContain(MARK_KNOWN_GAPS_NOTE());
     expect(html).toContain("No evidence found for: Five years of synthetic platform work");
   });
 
@@ -88,14 +88,14 @@ describe("confirmed coverage gaps (#1873)", () => {
         return reduceReviewState(state, action);
       },
       () => undefined,
-      KNOWN_GAP_RATIONALE,
+      KNOWN_GAP_RATIONALE(),
     );
     expect(actions).toEqual(
       ["a", "b"].map((findingId) => ({
         type: "finding-decision",
         findingId,
         decision: "overridden",
-        rationale: KNOWN_GAP_RATIONALE,
+        rationale: KNOWN_GAP_RATIONALE(),
       })),
     );
     expect(result.findings.map((finding) => finding.decision)).toEqual([
@@ -110,10 +110,10 @@ describe("settled known gaps at approval (#1903)", () => {
     applicationReady: false,
     blockers: [{ code: "deterministic-error", check: "uncovered-requirement" }],
   } as const;
-  const known = { decision: "overridden", rationale: KNOWN_GAP_RATIONALE } as const;
+  const known = { decision: "overridden", rationale: KNOWN_GAP_RATIONALE() } as const;
 
   it("turns the known-gap reasons into the readiness override", () => {
-    expect(knownGapReadinessOverride(wordMatch, [gap("a", known)])).toBe(KNOWN_GAP_RATIONALE);
+    expect(knownGapReadinessOverride(wordMatch, [gap("a", known)])).toBe(KNOWN_GAP_RATIONALE());
     expect(
       knownGapReadinessOverride(wordMatch, [
         gap("a", known),
@@ -122,7 +122,7 @@ describe("settled known gaps at approval (#1903)", () => {
         gap("warning", { severity: "warning" }),
       ]),
     ).toBe(
-      `3 known gaps settled in review: ${KNOWN_GAP_RATIONALE}; The job ad lists it as a nice-to-have.`,
+      `3 known gaps settled in review: ${KNOWN_GAP_RATIONALE()}; The job ad lists it as a nice-to-have.`,
     );
     const long = knownGapReadinessOverride(wordMatch, [
       gap("a", { decision: "overridden", rationale: "x".repeat(600) }),

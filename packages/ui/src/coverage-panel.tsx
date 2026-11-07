@@ -94,7 +94,7 @@ export function RequirementCoveragePanel({
       <div className="section-heading compact">
         <div>
           <h2>{t`Requirement coverage`}</h2>
-          <p className="coverage-information-note">{COVERAGE_INFORMATION_NOTE}</p>
+          <p className="coverage-information-note">{COVERAGE_INFORMATION_NOTE()}</p>
           {summaryLine === null ? null : <p className="coverage-summary">{summaryLine}</p>}
         </div>
       </div>

@@ -55,7 +55,7 @@ export function CareerPanel({
     <section className="panel career-panel" aria-labelledby="home-career-title">
       <div className="career-panel-head">
         <h2 id="home-career-title">{t`Your career`}</h2>
-        <p className="career-panel-summary">{careerPanelSummary}</p>
+        <p className="career-panel-summary">{careerPanelSummary()}</p>
       </div>
       <div className="career-panel-steps">
         <Step step={evidence} number={1} />

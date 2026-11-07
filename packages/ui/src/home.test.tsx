@@ -1,10 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { ApplicationSummaryView } from "./application-contract.js";
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import { careerEvidenceCardSubtitle, careerProfileCardSubtitle } from "./career-flow.js";
 import { HomeView, type HomeViewProps, WorkspaceLocation } from "./home.js";
 import type { HomeProfileStatus } from "./home-model.js";
+import { activateScreenLocale } from "./i18n.js";
+import { untranslatedRuns } from "./untranslated-text.test-support.js";
 
 const now = new Date("2026-10-08T12:00:00.000Z");
 
@@ -97,8 +99,8 @@ describe("Home dashboard", () => {
 
   it("gives each card a one-line subtitle that matches its page intro", () => {
     const html = render();
-    expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle}</p>`);
-    expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle}</p>`);
+    expect(html).toContain(`<p class="home-card-subtitle">${careerProfileCardSubtitle()}</p>`);
+    expect(html).toContain(`<p class="home-card-subtitle">${careerEvidenceCardSubtitle()}</p>`);
     expect(html).toContain("What you give");
     expect(html).toContain("What DraftLoop builds, you check");
   });
@@ -312,5 +314,22 @@ describe("workspace location", () => {
     expect(html).toContain('aria-label="Back to Home"');
     expect(html).toContain("←");
     expect(html).toContain("Acme — Backend Lead");
+  });
+});
+
+describe("Home in another screen language", () => {
+  afterEach(() => activateScreenLocale("en"));
+
+  it("draws every visible text from the message catalogs", () => {
+    activateScreenLocale("pseudo");
+    const html = render();
+    expect(
+      untranslatedRuns(html, [
+        "Job search 2026",
+        "Close workspace",
+        "Staff Platform Engineer",
+        "DraftLoop",
+      ]),
+    ).toEqual([]);
   });
 });

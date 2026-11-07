@@ -131,8 +131,8 @@ export function WorkspaceTitle({ name, onRename }: WorkspaceTitleProps) {
   const rename = useInlineRename({
     name,
     normalize: normalizeWorkspaceDisplayName,
-    invalidMessage: invalidWorkspaceNameMessage,
-    failureMessage: "The workspace could not be renamed.",
+    invalidMessage: invalidWorkspaceNameMessage(),
+    failureMessage: t`The workspace could not be renamed.`,
     onRename,
     inputId: nameInputId,
     buttonId: renameButtonId,

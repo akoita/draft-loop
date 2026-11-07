@@ -19,8 +19,8 @@ export interface StartChecklistViewProps {
 }
 
 function statusText(condition: StartCondition): string {
-  if (condition.done) return "Done";
-  return condition.checkedAtStart === true ? "Checked when the review starts" : "Not done";
+  if (condition.done) return t`Done`;
+  return condition.checkedAtStart === true ? t`Checked when the review starts` : t`Not done`;
 }
 
 /** The start conditions beside the Start button, each with its state and its fixing action. */

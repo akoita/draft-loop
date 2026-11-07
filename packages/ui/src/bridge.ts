@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Renderer-safe contracts for the desktop capability boundary.
  *
@@ -2425,7 +2426,8 @@ export interface OpportunityCancelResult {
 }
 
 /** The fixed message a cancelled extraction reports; the renderer shows it as a status, not a failure. */
-export const opportunityExtractionCancelledMessage = "Extraction cancelled. No brief was saved.";
+export const opportunityExtractionCancelledMessage = () =>
+  t`Extraction cancelled. No brief was saved.`;
 
 const opportunityCancelKeys = inputKeys<OpportunityCancelInput>()(["workspaceId"]);
 const opportunityCancelResultKeys = resultKeys<OpportunityCancelResult>()(["cancelled"]);
@@ -2800,8 +2802,8 @@ export interface CanonicalCandidateProfileCancelInput {
 }
 
 /** The fixed message a cancelled generation reports; the renderer shows it as a status, not a failure. */
-export const canonicalCandidateProfileGenerationCancelledMessage =
-  "Profile generation was cancelled. No facts were saved.";
+export const canonicalCandidateProfileGenerationCancelledMessage = () =>
+  t`Profile generation was cancelled. No facts were saved.`;
 
 /** Counts are present only once the running generation has reported them. */
 export interface CanonicalCandidateProfileProgressResult {
@@ -3468,16 +3470,16 @@ export interface CapabilityPort {
   ) => Promise<BridgeResult<BridgeOutput<Command>>>;
 }
 
-const errorMessages: Readonly<Record<BridgeErrorCode, string>> = {
-  "invalid-command": "The desktop command is not supported.",
-  "invalid-input": "The desktop command input is invalid.",
-  "capability-unavailable": "This desktop capability is unavailable in the current host.",
-  "permission-denied": "The desktop host denied this operation.",
-  "not-found": "The requested desktop resource was not found.",
-  "operation-failed": "The desktop operation could not be completed.",
-};
+const errorMessages = (): Readonly<Record<BridgeErrorCode, string>> => ({
+  "invalid-command": t`The desktop command is not supported.`,
+  "invalid-input": t`The desktop command input is invalid.`,
+  "capability-unavailable": t`This desktop capability is unavailable in the current host.`,
+  "permission-denied": t`The desktop host denied this operation.`,
+  "not-found": t`The requested desktop resource was not found.`,
+  "operation-failed": t`The desktop operation could not be completed.`,
+});
 
-const bridgeErrorCodes = Object.freeze(Object.keys(errorMessages) as BridgeErrorCode[]);
+const bridgeErrorCodes = Object.freeze(Object.keys(errorMessages()) as BridgeErrorCode[]);
 const maxBridgeErrorMessageLength = 500;
 
 const fileMediaTypeByExtension: Readonly<Record<SupportedFileExtension, SupportedMediaType>> = {
@@ -6321,7 +6323,7 @@ export function bridgeError(
   const message = bridgeErrorMessage(customMessage);
   return {
     code,
-    message: message ?? errorMessages[code],
+    message: message ?? errorMessages()[code],
     ...(capability === undefined ? {} : { capability }),
   };
 }
@@ -6389,7 +6391,7 @@ class BridgeValidationError extends Error {
   public readonly code: "invalid-command" | "invalid-input";
 
   public constructor(code: "invalid-command" | "invalid-input") {
-    super(errorMessages[code]);
+    super(errorMessages()[code]);
     this.name = "BridgeValidationError";
     this.code = code;
   }

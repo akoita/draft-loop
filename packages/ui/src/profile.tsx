@@ -387,7 +387,7 @@ function ProfileFact({
               {t`subject`} {safeCanonicalCandidateProfileText(fact.subjectId)}
             </span>
           )}
-          <ProvenanceList label={`Provenance for fact ${fact.id}`} references={fact.provenance} />
+          <ProvenanceList label={t`Provenance for fact ${fact.id}`} references={fact.provenance} />
         </div>
       </details>
     </li>
@@ -447,7 +447,7 @@ function ProfileIssue({
           <summary>{t`Details`}</summary>
           <div className="profile-fact-details-body">
             <ProvenanceList
-              label={`Provenance for issue ${issue.id}`}
+              label={t`Provenance for issue ${issue.id}`}
               references={issue.sourceRefs}
             />
           </div>
@@ -565,7 +565,7 @@ export function ProfileDetails({
                   ) : null}
                 </div>
                 {usage === undefined ? null : (
-                  <p className="profile-usage-note">{factUsageExplanation}</p>
+                  <p className="profile-usage-note">{factUsageExplanation()}</p>
                 )}
                 {factProjection.filtering && factProjection.matchCount === 0 ? (
                   <p className="profile-empty">{t`No facts match this filter.`}</p>
@@ -965,7 +965,7 @@ export function ProfileWorkspace({
         if (!active || request !== catalogRequestRef.current || epoch !== catalogEpochRef.current)
           return;
         setCatalogLoading(false);
-        setCatalogError("Could not load reviewed profiles. Refresh to try again.");
+        setCatalogError(t`Could not load reviewed profiles. Refresh to try again.`);
       });
     return () => {
       active = false;
@@ -1020,7 +1020,7 @@ export function ProfileWorkspace({
 
   const withBusy = async (
     operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
-    pendingMessage = "Working on your profile…",
+    pendingMessage = t`Working on your profile…`,
   ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
@@ -1033,7 +1033,7 @@ export function ProfileWorkspace({
         setStatusMessage(safeCanonicalCandidateProfileFeedback(reason));
       } else {
         setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
-        setStatusMessage("The operation did not complete. No new profile version was confirmed.");
+        setStatusMessage(t`The operation did not complete. No new profile version was confirmed.`);
       }
     } finally {
       setBusy(false);
@@ -1079,7 +1079,7 @@ export function ProfileWorkspace({
     setCatalogChoice(choice);
     setProfileId(summary.profileId);
     setProviderTransmissionApproved(false);
-    setStatusMessage("Loading the selected reviewed profile locally…");
+    setStatusMessage(t`Loading the selected reviewed profile locally…`);
     setErrorMessage(null);
     setLoadedProfileId(null);
     setHistory([]);
@@ -1114,7 +1114,7 @@ export function ProfileWorkspace({
       setHistory(listing.versions);
       setLoadedProfileId(summary.profileId);
       applyRecord(selected);
-      setStatusMessage(`Loaded reviewed profile version ${summary.version} locally.`);
+      setStatusMessage(t`Loaded reviewed profile version ${summary.version} locally.`);
     } catch {
       if (!current()) return;
       catalogChoiceRef.current = null;
@@ -1127,7 +1127,7 @@ export function ProfileWorkspace({
       onSelectionChange(null);
       setStatusMessage("");
       setErrorMessage(
-        "Could not load that reviewed profile version. Choose it again or load by name.",
+        t`Could not load that reviewed profile version. Choose it again or load by name.`,
       );
     } finally {
       if (current()) {
@@ -1146,7 +1146,7 @@ export function ProfileWorkspace({
     setCatalogChoice("");
     setProfileId(id);
     setProviderTransmissionApproved(false);
-    setStatusMessage("Loading the saved profile locally…");
+    setStatusMessage(t`Loading the saved profile locally…`);
     setErrorMessage(null);
     setLoadedProfileId(null);
     setHistory([]);
@@ -1179,7 +1179,7 @@ export function ProfileWorkspace({
         setHistory(listing.versions);
         setLoadedProfileId(id);
         applyRecord(loaded);
-        setStatusMessage(`Loaded saved profile ${id} version ${loaded.version} locally.`);
+        setStatusMessage(t`Loaded saved profile ${id} version ${loaded.version} locally.`);
       } catch {
         if (!current()) return;
         setLoadedProfileId(null);
@@ -1189,7 +1189,7 @@ export function ProfileWorkspace({
         setDraftIssues([]);
         onSelectionChange(null);
         setStatusMessage("");
-        setErrorMessage("Could not load that saved profile. Choose it again or load by name.");
+        setErrorMessage(t`Could not load that saved profile. Choose it again or load by name.`);
       } finally {
         if (current()) setBusy(false);
       }
@@ -1199,7 +1199,7 @@ export function ProfileWorkspace({
 
   const loadLatest = (): void => {
     if (!isCanonicalCandidateProfileId(normalizedProfileId)) {
-      setErrorMessage("Enter a valid opaque profile ID.");
+      setErrorMessage(t`Enter a valid opaque profile ID.`);
       return;
     }
     selectionRequestRef.current += 1;
@@ -1284,7 +1284,7 @@ export function ProfileWorkspace({
         setCancelRequested(false);
         report(null);
       }
-    }, "Generating profile…");
+    }, t`Generating profile…`);
   };
 
   const cancelGeneration = (): void => {

@@ -65,7 +65,7 @@ describe("the Job tab", () => {
   });
 
   it("falls back to Findings when the remembered tab is not offered", () => {
-    const tabs = [findingsTabLabel(0), jobTabLabel];
+    const tabs = [findingsTabLabel(0), jobTabLabel()];
     expect(availableReviewWorkTab("coverage", tabs)).toBe("findings");
     expect(availableReviewWorkTab("job", tabs)).toBe("job");
     expect(reviewWorkPanelProps("job", "job", true)).toMatchObject({

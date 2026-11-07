@@ -21,7 +21,7 @@ import {
 /** A language tag, the same in every screen language, so it stays out of the catalog. */
 const spellingLocaleExample = "en-GB";
 
-const policyTooLargeMessage = "The writing policy is too large; use at most 64 KiB.";
+const policyTooLargeMessage = () => t`The writing policy is too large; use at most 64 KiB.`;
 
 /** The size the application measures: the UTF-8 bytes of the text. */
 /** Spelling locales the field suggests; any BCP 47 tag the policy schema accepts still works. */
@@ -45,23 +45,23 @@ interface SelectorField {
   readonly options: readonly { readonly value: string; readonly label: string }[];
 }
 
-const selectorFields: readonly SelectorField[] = [
+const selectorFields = (): readonly SelectorField[] => [
   {
     directive: "tone",
-    label: "Tone",
+    label: t`Tone`,
     options: writingPolicyTones.map((value) => ({ value, label: capitalize(value) })),
   },
   {
     directive: "verbosity",
-    label: "Verbosity",
+    label: t`Verbosity`,
     options: writingPolicyVerbosityLevels.map((value) => ({ value, label: capitalize(value) })),
   },
   {
     directive: "pageTarget",
-    label: "Page target",
+    label: t`Page target`,
     options: writingPolicyPageTargets.map((value) => ({
       value,
-      label: value === "one-page" ? "One page" : "Two pages",
+      label: value === "one-page" ? t`One page` : t`Two pages`,
     })),
   },
 ];
@@ -207,7 +207,7 @@ export function WritingPolicyEditorView({
             }}
           >
             <div className="setup-sides">
-              {selectorFields.map((field) => {
+              {selectorFields().map((field) => {
                 const written = values[field.directive];
                 const matched =
                   written === null
@@ -284,7 +284,7 @@ export function WritingPolicyEditorView({
             </label>
             {overLimit ? (
               <p className="error-banner" role="alert">
-                {policyTooLargeMessage}
+                {policyTooLargeMessage()}
               </p>
             ) : null}
             {saveError === null ? null : (
@@ -384,7 +384,7 @@ export function WritingPolicyEditor({
         setLoadState({
           status: "failed",
           message:
-            reason instanceof Error ? reason.message : "The writing policy could not be loaded.",
+            reason instanceof Error ? reason.message : t`The writing policy could not be loaded.`,
         });
       },
     );
@@ -418,7 +418,7 @@ export function WritingPolicyEditor({
         if (!mounted.current) return;
         setSaving(false);
         setSaveError(
-          reason instanceof Error ? reason.message : "The writing policy could not be saved.",
+          reason instanceof Error ? reason.message : t`The writing policy could not be saved.`,
         );
       },
     );
@@ -439,7 +439,7 @@ export function WritingPolicyEditor({
         setSelectedVersion({
           status: "failed",
           message:
-            reason instanceof Error ? reason.message : "The policy version could not be loaded.",
+            reason instanceof Error ? reason.message : t`The policy version could not be loaded.`,
         });
       },
     );

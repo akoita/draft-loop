@@ -40,7 +40,7 @@ export function useScreening(client: ApiClient): ScreeningState {
     } catch (error) {
       // A service without screening has no such route; that is not a problem to show.
       if (!(error instanceof ApiRequestError && error.status === 404))
-        setProblem(`The screening status could not be read. ${describeError(error)}`);
+        setProblem(t`The screening status could not be read. ${describeError(error)}`);
     }
   }, [client, workspaceId]);
 

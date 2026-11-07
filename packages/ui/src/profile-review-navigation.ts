@@ -120,7 +120,7 @@ export function profileReviewBlockedReason({
   if (draftOpen > 0) {
     return draftOpen === 1
       ? "1 issue is still open. Acknowledge or resolve it, then save."
-      : `${draftOpen} issues are still open. Acknowledge or resolve them, then save.`;
+      : t`${draftOpen} issues are still open. Acknowledge or resolve them, then save.`;
   }
   if (openIssueCount(record.issues) > 0) {
     return t`Save your issue decisions before marking the draft reviewed.`;

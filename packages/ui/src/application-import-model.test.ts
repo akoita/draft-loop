@@ -44,7 +44,7 @@ describe("application import wording", () => {
     for (const error of [new Error(""), new Error("x".repeat(400)), "boom", undefined]) {
       expect(applicationImportErrorNotice(error)).toEqual({
         kind: "error",
-        message: applicationImportFailureFallback,
+        message: applicationImportFailureFallback(),
       });
     }
   });

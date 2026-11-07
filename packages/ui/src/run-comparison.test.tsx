@@ -237,7 +237,7 @@ describe("the review while comparing", () => {
     const html = render(loaded);
     expect(html).toContain('aria-label="Run comparison"');
     expect(html).toMatch(/<section hidden=""[^>]*class="review-column"/u);
-    expect(html).toContain(comparingRunsNotice);
+    expect(html).toContain(comparingRunsNotice());
     expect(html).toMatch(/<fieldset class="gate-actions" aria-label="approval actions" hidden=""/u);
   });
 
@@ -263,7 +263,7 @@ describe("the review while comparing", () => {
     expect(left).toBeNull();
     const html = render(left);
     expect(html).not.toContain('aria-label="Run comparison"');
-    expect(html).not.toContain(comparingRunsNotice);
+    expect(html).not.toContain(comparingRunsNotice());
     expect(html).not.toMatch(/<section hidden=""[^>]*class="review-column"/u);
     expect(html).toMatch(/<main class="app-shell app-shell-resizable"/u);
     expect(html).toContain('<div class="side-scroll">');

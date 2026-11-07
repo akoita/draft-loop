@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
+import { knowledgeBaseDisplayName } from "./career-evidence.js";
 import { supportsAutomaticKnowledgeBase } from "./career-evidence-setup.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import {
@@ -74,7 +75,7 @@ export function safeKnowledgeBaseDisplayName(value: string): string {
     /^[a-z][a-z\d+.-]*:/iu.test(trimmed) ||
     /^[a-z]:/iu.test(trimmed)
   ) {
-    return "Knowledge base";
+    return t`Knowledge base`;
   }
   return trimmed;
 }
@@ -223,8 +224,8 @@ export function KnowledgeInUseSummary({
   );
 }
 
-export const savedKnowledgeUnavailableMessage =
-  "The saved knowledge store could not be opened from its saved location. Open it again to continue.";
+export const savedKnowledgeUnavailableMessage = () =>
+  t`The saved knowledge store could not be opened from its saved location. Open it again to continue.`;
 
 export function SavedKnowledgeStatus({
   loading,
@@ -239,7 +240,7 @@ export function SavedKnowledgeStatus({
   if (unavailable) {
     return (
       <p className="knowledge-status" role="status">
-        {savedKnowledgeUnavailableMessage}
+        {savedKnowledgeUnavailableMessage()}
       </p>
     );
   }
@@ -405,7 +406,7 @@ export function KnowledgeWorkspace({
       await operation(generation);
     } catch (reason: unknown) {
       if (operationGeneration.current === generation && !isKnowledgeOperationCancelled(reason)) {
-        setMessage("The candidate knowledge operation could not be completed.");
+        setMessage(t`The candidate knowledge operation could not be completed.`);
       }
     } finally {
       pendingLatch.current = false;
@@ -428,7 +429,7 @@ export function KnowledgeWorkspace({
     if (!storesSwitchable) return;
     const trimmedName = name.trim();
     if (trimmedName === "" || /[\\/]/u.test(trimmedName)) {
-      setMessage("Enter a folder name without path separators.");
+      setMessage(t`Enter a folder name without path separators.`);
       return;
     }
     void perform(async (generation) => {
@@ -446,7 +447,7 @@ export function KnowledgeWorkspace({
     if (ensureNamedBase === undefined) return;
     const trimmedName = baseName.trim();
     if (trimmedName === "") {
-      setMessage("Enter a name for the knowledge base.");
+      setMessage(t`Enter a name for the knowledge base.`);
       return;
     }
     const expectedWorkspaceId = workspaceId;
@@ -465,7 +466,7 @@ export function KnowledgeWorkspace({
       setFormToggled(false);
       const shown = safeKnowledgeBaseDisplayName(made.displayName);
       setMessage(
-        `${made.created ? `Created knowledge base “${shown}”.` : `Knowledge base “${shown}” already exists.`} Add a source to it to use it in this workspace.`,
+        t`${made.created ? t`Created knowledge base “${shown}”.` : t`Knowledge base “${shown}” already exists.`} Add a source to it to use it in this workspace.`,
       );
     });
   };
@@ -494,7 +495,7 @@ export function KnowledgeWorkspace({
         setSelection({ storeId, ids: [knowledgeBaseId] });
       }
       if (refreshed && operationGeneration.current === generation) {
-        setMessage("Knowledge base selected for this workspace.");
+        setMessage(t`Knowledge base selected for this workspace.`);
       }
     });
   };
@@ -534,17 +535,20 @@ export function KnowledgeWorkspace({
       if (outcome.status === "stale" || operationGeneration.current !== generation) return;
       if (outcome.status === "readiness-unavailable") {
         setMessage(
-          `${knowledgeIntakeSummary(outcome.result)} Readiness could not be checked; some sources may not be ready.`,
+          t`${knowledgeIntakeSummary(outcome.result)} Readiness could not be checked; some sources may not be ready.`,
         );
         return;
       }
       if (outcome.status === "refresh-unavailable") {
         setMessage(
-          `${knowledgeIntakeSummary(outcome.result)} ${
-            outcome.readiness === null ? "Readiness could not be checked. " : ""
-          }Workspace review could not be refreshed. Reopen the workspace before continuing.${
-            outcome.readiness === null ? "" : ` ${knowledgeReadinessSummary(outcome.readiness)}`
-          }`,
+          [
+            knowledgeIntakeSummary(outcome.result),
+            outcome.readiness === null ? t`Readiness could not be checked.` : null,
+            t`Workspace review could not be refreshed. Reopen the workspace before continuing.`,
+            outcome.readiness === null ? null : knowledgeReadinessSummary(outcome.readiness),
+          ]
+            .filter((part) => part !== null)
+            .join(" "),
         );
         return;
       }
@@ -652,7 +656,7 @@ export function KnowledgeWorkspace({
       )}
       {inUseBase === undefined ? null : (
         <KnowledgeInUseSummary
-          displayName={inUseBase.displayName}
+          displayName={knowledgeBaseDisplayName(inUseBase.displayName)}
           open={changeOpen}
           onToggle={() => setChangeOpen(!changeOpen)}
         />
@@ -678,7 +682,9 @@ export function KnowledgeWorkspace({
             autoCreateSupported,
             savedUnavailable,
           }) ? (
-            <p className="knowledge-hint">{embedded ? embeddedAutoCreateHint : autoCreateHint}</p>
+            <p className="knowledge-hint">
+              {embedded ? embeddedAutoCreateHint() : autoCreateHint()}
+            </p>
           ) : null}
           {store === null ? null : (
             <KnowledgeBaseList
@@ -721,7 +727,7 @@ export function KnowledgeWorkspace({
                 aria-controls="candidate-knowledge-store-form"
                 onClick={() => setFormToggled(!formOpen)}
               >
-                {differentStoreDisclosureLabel}
+                {differentStoreDisclosureLabel()}
               </button>
               <div id="candidate-knowledge-store-form" hidden={!formOpen}>
                 {formOpen ? storeForm : null}

@@ -13,7 +13,7 @@ import type { ApiInput } from "./api-client.js";
 export const ownerWorkspaceId = "owner";
 
 /** What the screens call that workspace, since its id names no one's job search. */
-export const ownerWorkspaceName = "Your workspace";
+export const ownerWorkspaceName = (): string => t`Your workspace`;
 
 export type Company = "anthropic" | "openai";
 

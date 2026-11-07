@@ -126,13 +126,13 @@ export function profileStatusPresentation(status: HomeProfileStatus): HomeStatus
  * The Career profile card while a generation runs: it reports the work in progress whatever the
  * saved status was, and its action opens the live progress on the profile page.
  */
-export const profileGenerationPresentation: HomeStatusPresentation = Object.freeze({
-  chip: "In progress",
-  tone: "progress",
-  description:
-    "Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel.",
-  action: "View progress",
-});
+export const profileGenerationPresentation = (): HomeStatusPresentation =>
+  Object.freeze({
+    chip: t`In progress`,
+    tone: "progress",
+    description: t`Your career profile is being generated. You can keep using DraftLoop meanwhile; open the profile to follow the progress or cancel.`,
+    action: t`View progress`,
+  });
 
 /** The workspace operation that holds back the actions that change applications. */
 export type HomeActivity = "profile-generation" | "review-run" | "other";
@@ -277,19 +277,19 @@ export type HomeApplicationsState =
   | { readonly status: "unavailable" }
   | { readonly status: "ready"; readonly applications: readonly ApplicationSummaryView[] };
 
-const applicationStatusLabels: Readonly<Record<ApplicationStatus, string>> = {
-  drafting: "Drafting",
-  "in-review": "In review",
-  approved: "Approved",
-  exported: "Exported",
-};
+const applicationStatusLabels = (): Readonly<Record<ApplicationStatus, string>> => ({
+  drafting: t`Drafting`,
+  "in-review": t`In review`,
+  approved: t`Approved`,
+  exported: t`Exported`,
+});
 
 export function applicationStatusLabel(status: ApplicationStatus): string {
-  return applicationStatusLabels[status];
+  return applicationStatusLabels()[status];
 }
 
 /** The chip of the application whose review is running, in place of its saved status. */
-export const applicationRunningLabel = "Review running";
+export const applicationRunningLabel = () => t`Review running`;
 
 export function applicationStatusTone(status: ApplicationStatus): HomeTone {
   switch (status) {

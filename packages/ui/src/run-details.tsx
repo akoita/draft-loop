@@ -147,7 +147,7 @@ export function policyChecksumLabel(checksum: string): string {
 }
 
 function policyLineageLabel(policy: RunWritingPolicyProjection): string {
-  if (policy.lineage.kind === "workspace") return "Workspace policy";
+  if (policy.lineage.kind === "workspace") return t`Workspace policy`;
   return `Base ${policy.base?.version ?? policy.lineage.base.version} → override ${policy.override?.version ?? policy.lineage.override.version}`;
 }
 
@@ -181,8 +181,7 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
     return {
       tone: "unrecorded",
       mark: "not recorded",
-      detail:
-        "No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
+      detail: t`No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.`,
       overrideRationale: null,
     };
   }
@@ -190,7 +189,7 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
     return {
       tone: "unrecorded",
       mark: "not required",
-      detail: `Independent review was not required for this run; the claimed lineages ${
+      detail: t`Independent review was not required for this run; the claimed lineages ${
         view.lineagesDistinct ? "differ" : "are the same"
       }.`,
       overrideRationale: null,
@@ -200,8 +199,7 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
     return {
       tone: "independent",
       mark: "lineages differ",
-      detail:
-        "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
+      detail: t`Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.`,
       overrideRationale: null,
     };
   }
@@ -209,16 +207,14 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
     return {
       tone: "shared",
       mark: "overridden",
-      detail:
-        "Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.",
+      detail: t`Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.`,
       overrideRationale: view.overrideRationale,
     };
   }
   return {
     tone: "shared",
     mark: "not independent",
-    detail:
-      "Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.",
+    detail: t`Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.`,
     overrideRationale: null,
   };
 }

@@ -65,15 +65,15 @@ export function reviewedRequirementsLabel(selection: ReviewedRequirementsSelecti
   return t`Using reviewed requirements: brief v${selection.version} · ${countedNouns.requirement(selection.requirementCount)} · ${selection.criticalCount} critical${responsibilities}`;
 }
 
-export const rawJobDescriptionLabel =
-  "Using the raw job description (unreviewed source units), not the reviewed requirements.";
+export const rawJobDescriptionLabel = () =>
+  t`Using the raw job description (unreviewed source units), not the reviewed requirements.`;
 
 /** The Advanced choice to start without reviewing a draft brief, and what it costs. */
-export const rawJobDescriptionChoiceLabel = "Start from the raw job description instead";
-export const rawJobDescriptionChoiceNote =
-  "Coverage scoring is less reliable without reviewed requirements.";
-export const rawJobDescriptionOverDraftLabel =
-  "Using the raw job description (unreviewed source units), not the draft requirements.";
+export const rawJobDescriptionChoiceLabel = () => t`Start from the raw job description instead`;
+export const rawJobDescriptionChoiceNote = () =>
+  t`Coverage scoring is less reliable without reviewed requirements.`;
+export const rawJobDescriptionOverDraftLabel = () =>
+  t`Using the raw job description (unreviewed source units), not the draft requirements.`;
 
 /** Where a run's requirements may come from before the person chooses, for the start panel. */
 export interface StartRequirementsChoice {
@@ -119,16 +119,16 @@ export function startRequirementsChoice(
 }
 
 /** What an extraction that found nothing says, so a person is never offered an empty brief to review. */
-export const noRequirementsFoundTitle = "No requirements were found in this job text";
-export const noRequirementsFoundNote =
-  "Nothing was found to review. Extract again, or paste the job text into the application instead.";
+export const noRequirementsFoundTitle = () => t`No requirements were found in this job text`;
+export const noRequirementsFoundNote = () =>
+  t`Nothing was found to review. Extract again, or paste the job text into the application instead.`;
 
 /** What the setup card says while the service extracts a just-saved brief, as the hosted worker does. */
-export const pendingExtractionNote =
-  "Reading this job's requirements. This takes about a minute; the page updates when they are ready.";
+export const pendingExtractionNote = () =>
+  t`Reading this job's requirements. This takes about a minute; the page updates when they are ready.`;
 /** What it says when that extraction failed after its retries. */
-export const failedExtractionNote =
-  "The requirements could not be extracted. Extract them again, or paste the job text into the application instead.";
+export const failedExtractionNote = () =>
+  t`The requirements could not be extracted. Extract them again, or paste the job text into the application instead.`;
 
 /** Whether the service is still extracting the latest brief: nothing to review or extract yet. */
 export function extractionPending(latest: OpportunityLatestBrief | null | undefined): boolean {
@@ -188,9 +188,10 @@ export function latestBriefTitle(latest: OpportunityLatestBrief): string {
 
 /** What the person can do with the latest brief, stated for the setup card. */
 export function latestBriefNote(latest: OpportunityLatestBrief): string {
-  if (extractionPending(latest)) return pendingExtractionNote;
-  if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote;
-  if (isEmptyDraftBrief(latest)) return `${noRequirementsFoundTitle}. ${noRequirementsFoundNote}`;
+  if (extractionPending(latest)) return pendingExtractionNote();
+  if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote();
+  if (isEmptyDraftBrief(latest))
+    return `${noRequirementsFoundTitle()}. ${noRequirementsFoundNote()}`;
   const counts = t`${countedNouns.requirement(latest.requirementCount)}, ${latest.criticalCount} critical.`;
   return latest.status === "draft"
     ? t`${counts} A draft cannot start a run until you review it.`

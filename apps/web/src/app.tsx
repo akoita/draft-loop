@@ -1,4 +1,5 @@
 import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
+import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
@@ -52,7 +53,7 @@ export function App({ tokens, createClient }: AppProps) {
     if (token === null) return undefined;
     return ownerClient(createClient(token), () => {
       tokens.clear();
-      setNotice("The API refused the owner token. Sign in again.");
+      setNotice(t`The API refused the owner token. Sign in again.`);
       setToken(null);
     });
   }, [token, tokens, createClient]);

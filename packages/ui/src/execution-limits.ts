@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ReviewExecutionView } from "./model.js";
 
 /** "10 min" for whole minutes, otherwise whole seconds rounded up, e.g. "90s". */
@@ -20,6 +21,6 @@ export function executionLimitText(
   const runLimit =
     execution.timeoutRemainingMs === null
       ? " · no run limit"
-      : ` · run limit in ${Math.ceil(execution.timeoutRemainingMs / 1_000)}s`;
+      : t` · run limit in ${Math.ceil(execution.timeoutRemainingMs / 1_000)}s`;
   return `${callLimit}${runLimit}`;
 }

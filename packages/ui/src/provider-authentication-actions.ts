@@ -6,18 +6,18 @@ import type {
   ProviderAuthModeStatus,
 } from "./bridge.js";
 
-export const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
-  anthropic: "Anthropic",
+export const credentialProviderLabels = (): Readonly<Record<CredentialProvider, string>> => ({
+  anthropic: t`Anthropic`,
   openai: "OpenAI",
   deepinfra: "DeepInfra",
-  google: "Google Gemini",
-  mistral: "Mistral",
-};
+  google: t`Google Gemini`,
+  mistral: t`Mistral`,
+});
 
-export const providerAuthModeLabels: Readonly<Record<ProviderAuthMode, string>> = {
-  "api-key": "Provider API key",
-  "user-session": "Authenticated Codex / ChatGPT subscription",
-};
+export const providerAuthModeLabels = (): Readonly<Record<ProviderAuthMode, string>> => ({
+  "api-key": t`Provider API key`,
+  "user-session": t`Authenticated Codex / ChatGPT subscription`,
+});
 
 export interface ProviderAuthenticationCallbacks {
   readonly onSetCredential?:
@@ -50,7 +50,7 @@ export async function saveProviderCredential(
     await onSetCredential(provider, key.trim());
     return {
       ok: true,
-      feedback: `${credentialProviderLabels[provider]} API key saved in app storage. Review the protection status below.`,
+      feedback: t`${credentialProviderLabels()[provider]} API key saved in app storage. Review the protection status below.`,
     };
   } catch (error: unknown) {
     return {
@@ -71,7 +71,7 @@ export async function removeProviderCredential(
     await onRemoveCredential(provider);
     return {
       ok: true,
-      feedback: `${credentialProviderLabels[provider]} API key removed from app storage.`,
+      feedback: t`${credentialProviderLabels()[provider]} API key removed from app storage.`,
     };
   } catch {
     return { ok: false, feedback: t`Failed to remove API key.` };
@@ -95,8 +95,8 @@ export async function saveOpenAiAuthMode(
       ok: true,
       status,
       feedback: status.restartRequired
-        ? `${providerAuthModeLabels[mode]} selected for OpenAI. Close and reopen DraftLoop to apply it.`
-        : `${providerAuthModeLabels[mode]} is active for OpenAI.`,
+        ? t`${providerAuthModeLabels()[mode]} selected for OpenAI. Close and reopen DraftLoop to apply it.`
+        : t`${providerAuthModeLabels()[mode]} is active for OpenAI.`,
     };
   } catch (error: unknown) {
     return {

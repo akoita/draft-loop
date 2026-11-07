@@ -5,6 +5,7 @@ import type {
 } from "@draft-loop/ui/work-journal-model";
 import { workJournalRefusal } from "@draft-loop/ui/work-journal-model";
 import { WorkJournalPanel } from "@draft-loop/ui/work-journal-panel";
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
@@ -49,7 +50,7 @@ export function WorkJournalSection({ client, bases }: WorkJournalSectionProps) {
       setNotes(listed.full ?? []);
       setProblem(undefined);
     } catch (error) {
-      setProblem(`The work journal could not be read. ${workJournalProblem(error)}`);
+      setProblem(t`The work journal could not be read. ${workJournalProblem(error)}`);
     }
   }, [client, workspaceId]);
 

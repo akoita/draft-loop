@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The directive lines of a writing policy, read and rewritten as plain text.
  *
@@ -16,12 +17,12 @@ export type PolicySelectorDirective = "tone" | "verbosity" | "pageTarget" | "spe
 
 export type PolicySelectorValues = Readonly<Record<PolicySelectorDirective, string | null>>;
 
-const directiveLabels: Readonly<Record<PolicySelectorDirective, string>> = {
-  tone: "Tone",
-  verbosity: "Verbosity",
-  pageTarget: "Page target",
-  spellingLocale: "Spelling locale",
-};
+const directiveLabels = (): Readonly<Record<PolicySelectorDirective, string>> => ({
+  tone: t`Tone`,
+  verbosity: t`Verbosity`,
+  pageTarget: t`Page target`,
+  spellingLocale: t`Spelling locale`,
+});
 
 /** Every directive the application recognises, so insertion can sit beside any of them. */
 const anyDirectiveLine =
@@ -116,7 +117,7 @@ export function setPolicySelectorValue(
     lastDirectivePrefix = match[1] ?? "";
   }
   if (next !== null && !written) {
-    const line = `${lastDirectivePrefix}${directiveLabels[directive]}: ${next}`;
+    const line = `${lastDirectivePrefix}${directiveLabels()[directive]}: ${next}`;
     if (lastDirectiveIndex >= 0) {
       output.splice(lastDirectiveIndex + 1, 0, line);
     } else {

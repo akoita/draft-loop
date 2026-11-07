@@ -28,7 +28,7 @@ export function noSelectionMode(automatic: boolean): NoSelectionMode {
 
 function createdNotice(displayName: string, created: boolean): string {
   return created
-    ? t`Created knowledge base “${displayName}” in ${defaultKnowledgeStoreDestinationLabel} and selected it for this workspace.`
+    ? t`Created knowledge base “${displayName}” in ${defaultKnowledgeStoreDestinationLabel()} and selected it for this workspace.`
     : t`Selected knowledge base “${displayName}” for this workspace.`;
 }
 

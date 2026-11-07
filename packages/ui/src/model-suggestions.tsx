@@ -25,7 +25,7 @@ function activeCatalogProfiles(): ModelProfile[] {
 }
 
 function readableRole(role: AgentRole): string {
-  return role === "author" ? "Author" : "Critic";
+  return role === "author" ? t`Author` : t`Critic`;
 }
 
 function suggestionLabel(

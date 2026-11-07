@@ -24,7 +24,9 @@ describe("export templates", () => {
     expect([...exportTemplates].sort()).toEqual(Object.keys(builtInRenderingTemplates).sort());
     expect(defaultExportTemplate).toBe("modern");
     for (const template of exportTemplates) {
-      expect(exportTemplateLabels[template]).toBe(builtInRenderingTemplates[template]?.displayName);
+      expect(exportTemplateLabels()[template]).toBe(
+        builtInRenderingTemplates[template]?.displayName,
+      );
     }
   });
 

@@ -58,7 +58,7 @@ export interface RunComparisonControls {
 function messageOf(reason: unknown): string {
   return reason instanceof Error && reason.message !== ""
     ? reason.message
-    : "The run could not be read.";
+    : t`The run could not be read.`;
 }
 
 /**
@@ -377,7 +377,7 @@ export function RunComparisonView({
           message:
             reason instanceof Error && reason.message !== ""
               ? reason.message
-              : "The file could not be written.",
+              : t`The file could not be written.`,
         }),
     );
   };

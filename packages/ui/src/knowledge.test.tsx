@@ -92,8 +92,8 @@ describe("desktop candidate knowledge workspace", () => {
         onSelectionSaved={async () => true}
       />,
     );
-    expect(html).not.toContain(differentStoreDisclosureLabel);
-    expect(html).not.toContain(autoCreateHint);
+    expect(html).not.toContain(differentStoreDisclosureLabel());
+    expect(html).not.toContain(autoCreateHint());
     expect(html).toContain('id="candidate-knowledge-name"');
   });
 
@@ -121,7 +121,7 @@ describe("desktop candidate knowledge workspace", () => {
         onSelectionSaved={async () => true}
       />,
     );
-    expect(html).toContain(autoCreateHint);
+    expect(html).toContain(autoCreateHint());
     expect(html).toMatch(
       /<button[^>]*aria-expanded="false"[^>]*>Use a different knowledge store…</,
     );
@@ -148,8 +148,8 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).not.toContain("eyebrow");
     expect(html).toContain("Where your evidence is kept.");
     expect(html).toContain('id="candidate-knowledge-name"');
-    expect(html).not.toContain(autoCreateHint);
-    expect(html).not.toContain(embeddedAutoCreateHint);
+    expect(html).not.toContain(autoCreateHint());
+    expect(html).not.toContain(embeddedAutoCreateHint());
   });
 
   it("renders nothing embedded when the host lacks the knowledge capabilities", () => {
@@ -184,7 +184,7 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).toContain("Knowledge base");
     expect(html).not.toContain("Create knowledge store");
     expect(html).not.toContain("Open knowledge store");
-    expect(html).not.toContain(differentStoreDisclosureLabel);
+    expect(html).not.toContain(differentStoreDisclosureLabel());
   });
 
   it("lets a host with one store name a new base, and keeps store folders to the desktop", () => {
@@ -312,9 +312,9 @@ describe("desktop candidate knowledge workspace", () => {
 
   it("explains an unavailable saved store and shows loading", () => {
     expect(renderToStaticMarkup(<SavedKnowledgeStatus loading={false} unavailable />)).toContain(
-      savedKnowledgeUnavailableMessage,
+      savedKnowledgeUnavailableMessage(),
     );
-    expect(savedKnowledgeUnavailableMessage).toBe(
+    expect(savedKnowledgeUnavailableMessage()).toBe(
       "The saved knowledge store could not be opened from its saved location. Open it again to continue.",
     );
     expect(renderToStaticMarkup(<SavedKnowledgeStatus loading unavailable />)).toContain(

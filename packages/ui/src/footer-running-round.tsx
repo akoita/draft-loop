@@ -83,17 +83,17 @@ export function footerRunningRound(input: FooterRunningRoundInput): FooterRunnin
   const actions: FooterRunAction[] = interrupted
     ? [
         {
-          label: "Resume interrupted review",
+          label: t`Resume interrupted review`,
           primary: true,
           disabled: input.busy || !input.transmissionReady,
           onClick: input.onResume,
         },
-        { label: "Stop review", primary: false, disabled: input.busy, onClick: input.onStop },
+        { label: t`Stop review`, primary: false, disabled: input.busy, onClick: input.onStop },
       ]
     : paused
       ? [
           {
-            label: "Resume review",
+            label: t`Resume review`,
             primary: true,
             disabled: input.busy || !input.transmissionReady,
             onClick: input.onResume,
@@ -102,7 +102,7 @@ export function footerRunningRound(input: FooterRunningRoundInput): FooterRunnin
       : state.execution.status === "running"
         ? [
             {
-              label: input.stopping ? "Stopping…" : "Stop review",
+              label: input.stopping ? "Stopping…" : t`Stop review`,
               primary: false,
               disabled: input.busy,
               onClick: input.onStop,

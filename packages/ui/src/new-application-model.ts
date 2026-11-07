@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Pure model for creating an application (ADR 0010) and for the reviewed career profiles an
  * application can reuse. Home's New application form holds the draft; the application screen's
@@ -61,9 +62,10 @@ export const newApplicationJobFileAccept = Object.keys(jobFileMediaTypes)
 /** The largest job file taken, the career-evidence upload limit (10 MiB). */
 export const newApplicationJobFileMaxBytes = 10 * 1024 * 1024;
 
-export const newApplicationJobFileMessage = "Attach the job description file.";
-export const newApplicationJobFileTypeMessage = "Attach a PDF, DOCX, Markdown or plain text file.";
-export const newApplicationJobFileSizeMessage = "The file is larger than 10 MB.";
+export const newApplicationJobFileMessage = () => t`Attach the job description file.`;
+export const newApplicationJobFileTypeMessage = () =>
+  t`Attach a PDF, DOCX, Markdown or plain text file.`;
+export const newApplicationJobFileSizeMessage = () => t`The file is larger than 10 MB.`;
 
 /** The media type a job file is read as, from its name; undefined for any other file. */
 export function newApplicationJobFileMediaType(name: string): string | undefined {
@@ -81,20 +83,22 @@ export async function withChosenJobFile(
 ): Promise<NewApplicationDraft> {
   const mediaType = newApplicationJobFileMediaType(file.name);
   if (mediaType === undefined) {
-    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileTypeMessage };
+    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileTypeMessage() };
   }
   if (file.size > newApplicationJobFileMaxBytes) {
-    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileSizeMessage };
+    return { ...draft, jobFile: null, jobFileProblem: newApplicationJobFileSizeMessage() };
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
   return { ...draft, jobFile: { name: file.name, mediaType, bytes }, jobFileProblem: null };
 }
 
-export const newApplicationNameMessage = "Name the application, for example a company and role.";
-export const newApplicationJobTextMessage = "Paste the job description to work from.";
-export const newApplicationJobUrlMessage = "Enter the web address (http or https) of the job page.";
-export const newApplicationUrlApprovalMessage =
-  "Allow DraftLoop to fetch this page to continue. Nothing is fetched until you extract requirements.";
+export const newApplicationNameMessage = () =>
+  t`Name the application, for example a company and role.`;
+export const newApplicationJobTextMessage = () => t`Paste the job description to work from.`;
+export const newApplicationJobUrlMessage = () =>
+  t`Enter the web address (http or https) of the job page.`;
+export const newApplicationUrlApprovalMessage = () =>
+  t`Allow DraftLoop to fetch this page to continue. Nothing is fetched until you extract requirements.`;
 
 function isWebAddress(value: string): boolean {
   try {
@@ -107,15 +111,15 @@ function isWebAddress(value: string): boolean {
 
 /** The first thing wrong with the draft, in the order the fields appear; null when it is valid. */
 export function newApplicationProblem(draft: NewApplicationDraft): string | null {
-  if (draft.name.trim() === "") return newApplicationNameMessage;
+  if (draft.name.trim() === "") return newApplicationNameMessage();
   if (draft.jobKind === "text") {
-    return draft.jobText.trim() === "" ? newApplicationJobTextMessage : null;
+    return draft.jobText.trim() === "" ? newApplicationJobTextMessage() : null;
   }
   if (draft.jobKind === "file") {
-    return draft.jobFile === null ? (draft.jobFileProblem ?? newApplicationJobFileMessage) : null;
+    return draft.jobFile === null ? (draft.jobFileProblem ?? newApplicationJobFileMessage()) : null;
   }
-  if (!isWebAddress(draft.jobUrl)) return newApplicationJobUrlMessage;
-  return draft.urlApproved ? null : newApplicationUrlApprovalMessage;
+  if (!isWebAddress(draft.jobUrl)) return newApplicationJobUrlMessage();
+  return draft.urlApproved ? null : newApplicationUrlApprovalMessage();
 }
 
 /** The job as the application port takes it: pasted text, the approved URL, or the file. */
@@ -171,8 +175,8 @@ export type ReviewedProfilesState =
   | { readonly status: "failed" }
   | { readonly status: "ready"; readonly choices: readonly ReviewedProfileChoice[] };
 
-export const noReviewedProfileMessage =
-  "No reviewed career profile yet. Generate and review one once, and every application reuses it.";
+export const noReviewedProfileMessage = () =>
+  t`No reviewed career profile yet. Generate and review one once, and every application reuses it.`;
 
 /**
  * Reads every reviewed version of every saved profile. The catalog names the latest reviewed

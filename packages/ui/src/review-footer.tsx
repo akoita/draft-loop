@@ -68,11 +68,11 @@ export interface FooterBlocker {
   readonly tone: "safe" | "warning" | "neutral";
 }
 
-export const NO_REVISION_LEFT = "No revision left";
+export const NO_REVISION_LEFT = () => t`No revision left`;
 
 /** The export line for an exported run whose recorded export file is no longer readable. */
-export const MISSING_EXPORT_LABEL =
-  "The previous export can't be found. Export again to save a new copy.";
+export const MISSING_EXPORT_LABEL = () =>
+  t`The previous export can't be found. Export again to save a new copy.`;
 
 function percent(value: number): string {
   return `${(value * 100).toFixed(0)}%`;
@@ -135,18 +135,18 @@ export function footerBlocker(
   if (state.artifact.version <= 0) {
     return {
       kind: "no-artifact",
-      text: "No draft yet: approval opens once the author produces a valid draft",
+      text: t`No draft yet: approval opens once the author produces a valid draft`,
       tone: "neutral",
     };
   }
   if (state.exportPath !== null) {
-    return { kind: "exported", text: `Exported to ${state.exportPath}`, tone: "safe" };
+    return { kind: "exported", text: t`Exported to ${state.exportPath}`, tone: "safe" };
   }
   // A moved or deleted export file, or a workspace opened on another machine.
   if (state.state === "exported") {
     return {
       kind: "exported",
-      text: "Exported · the previous export can't be found",
+      text: t`Exported · the previous export can't be found`,
       tone: "warning",
     };
   }
@@ -155,15 +155,15 @@ export function footerBlocker(
       kind: "approved",
       text:
         readiness?.overridden === true
-          ? "Approved past the final CV checks with a recorded reason · ready to export"
-          : "Approved · ready to export",
+          ? t`Approved past the final CV checks with a recorded reason · ready to export`
+          : t`Approved · ready to export`,
       tone: "safe",
     };
   }
   if (roundLimitRecoveryRequired(state)) {
     return {
       kind: "waiting",
-      text: `Round limit recovery required: return to reviewed Round ${state.round - 1}`,
+      text: t`Round limit recovery required: return to reviewed Round ${state.round - 1}`,
       tone: "warning",
     };
   }
@@ -178,7 +178,7 @@ export function footerBlocker(
     };
   }
   const revisionLeft = state.round < state.providerTransmissionPreflight.budget.maxRounds;
-  const noRevision = revisionLeft ? "" : ` · ${NO_REVISION_LEFT}`;
+  const noRevision = revisionLeft ? "" : ` · ${NO_REVISION_LEFT()}`;
   const { blocking } = reviewFindingSummary(state);
   if (blocking.length > 0) {
     const accepted = blocking.filter((finding) => finding.decision === "accepted").length;
@@ -195,11 +195,11 @@ export function footerBlocker(
     // The run paused because the same finding came back; say so until the reviewer decides it.
     const undecided = blocking.some((finding) => finding.decision === "pending");
     if (undecided && state.evaluation.stopReason === "persisting-findings") {
-      return { kind: "findings", text: PERSISTING_FINDINGS_REASON, tone: "warning" };
+      return { kind: "findings", text: PERSISTING_FINDINGS_REASON(), tone: "warning" };
     }
     return {
       kind: "findings",
-      text: revisionLeft ? text : `${text} · ${ACCEPT_UNAVAILABLE_NOTE}`,
+      text: revisionLeft ? text : `${text} · ${ACCEPT_UNAVAILABLE_NOTE()}`,
       tone: "warning",
     };
   }
@@ -208,7 +208,7 @@ export function footerBlocker(
   if (readiness?.applicationReady === false && edited) {
     return {
       kind: "edited-checks",
-      text: `Approving checks your edits again · before them: ${compactReadinessBlockers(
+      text: t`Approving checks your edits again · before them: ${compactReadinessBlockers(
         readiness.blockers,
         relevanceScope(state.coverage),
       ).join("; ")}${noRevision}`,
@@ -218,7 +218,7 @@ export function footerBlocker(
   if (readiness?.applicationReady === false) {
     return {
       kind: "final-checks",
-      text: `Not ready: ${compactReadinessBlockers(
+      text: t`Not ready: ${compactReadinessBlockers(
         readiness.blockers,
         relevanceScope(state.coverage),
       ).join("; ")}${noRevision}`,
@@ -226,13 +226,13 @@ export function footerBlocker(
     };
   }
   if (state.state === "provider-error") {
-    return { kind: "waiting", text: "Provider recovery remains before approval", tone: "warning" };
+    return { kind: "waiting", text: t`Provider recovery remains before approval`, tone: "warning" };
   }
   if (verdict === null || verdict.ready) {
     const agreed = state.evaluation.stopReason === "consensus-ready";
     return {
       kind: "ready",
-      text: `${agreed ? CONSENSUS_READY_REASON : "Ready to send"}${noRevision}`,
+      text: `${agreed ? CONSENSUS_READY_REASON() : t`Ready to send`}${noRevision}`,
       tone: "safe",
     };
   }
@@ -253,13 +253,13 @@ export function revisionUnavailableReason(
   maximumRounds: number,
 ): string | null {
   if (state.approval === "approved" || state.state === "approved" || state.state === "exported") {
-    return "The draft is approved, so this run takes no more revisions.";
+    return t`The draft is approved, so this run takes no more revisions.`;
   }
   if (state.state === "stopped" || state.state === "budget-exhausted") {
-    return "This review has ended. Start a new review from Run details to revise again.";
+    return t`This review has ended. Start a new review from Run details to revise again.`;
   }
   if (state.reviewComplete && state.round >= maximumRounds) {
-    return `${NO_REVISION_LEFT}: this run has used all ${maximumRounds} rounds.`;
+    return t`${NO_REVISION_LEFT()}: this run has used all ${maximumRounds} rounds.`;
   }
   return null;
 }
@@ -571,8 +571,8 @@ export function ReviewFooter({
                   />
                   <ExportTemplatePreview template={template} />
                   <span className="export-template-text">
-                    <strong>{exportTemplateLabels[template]}</strong>
-                    <span>{exportTemplateDescriptions[template]}</span>
+                    <strong>{exportTemplateLabels()[template]}</strong>
+                    <span>{exportTemplateDescriptions()[template]}</span>
                   </span>
                 </label>
               ))}

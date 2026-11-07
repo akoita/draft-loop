@@ -27,7 +27,7 @@ export function WorkspaceActivityBar({
         {activity.kind === "profile-generation" ? (
           <ProfileGenerationSummary
             activity={activity.generation}
-            label="Generating your career profile…"
+            label={t`Generating your career profile…`}
           />
         ) : (
           <p className="profile-generation-progress-row home-profile-progress">

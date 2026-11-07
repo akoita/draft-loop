@@ -2,14 +2,14 @@ import { t } from "@lingui/core/macro";
 import { formatDateTime } from "./locale-format.js";
 import type { UsageLimitView } from "./model.js";
 
-const providerNames: Readonly<Record<string, string>> = {
-  anthropic: "Anthropic",
+const providerNames = (): Readonly<Record<string, string>> => ({
+  anthropic: t`Anthropic`,
   openai: "OpenAI",
-};
+});
 
 /** The provider as a person reads it: the known companies by name, anything else as given. */
 function providerName(provider: string): string {
-  return providerNames[provider.toLowerCase()] ?? provider;
+  return providerNames()[provider.toLowerCase()] ?? provider;
 }
 
 /**

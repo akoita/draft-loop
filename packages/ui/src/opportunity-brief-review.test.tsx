@@ -450,13 +450,13 @@ describe("saving, conflicts and review", () => {
       saveBriefEdits(
         {
           editOpportunity: async () => {
-            throw new Error(opportunityVersionConflictMessage);
+            throw new Error(opportunityVersionConflictMessage());
           },
         },
         rec,
         state,
       ),
-    ).resolves.toEqual({ kind: "conflict", message: opportunityVersionConflictMessage });
+    ).resolves.toEqual({ kind: "conflict", message: opportunityVersionConflictMessage() });
     await expect(
       saveBriefEdits(
         {
@@ -472,7 +472,7 @@ describe("saving, conflicts and review", () => {
       reviewBrief(
         {
           reviewOpportunity: async () => {
-            throw new Error(opportunityVersionConflictMessage);
+            throw new Error(opportunityVersionConflictMessage());
           },
         },
         rec,
@@ -482,7 +482,7 @@ describe("saving, conflicts and review", () => {
 
   it("shows the conflict message in the dialog", () => {
     const html = view(rec, createBriefEditState(rec), {
-      notice: { kind: "conflict", message: opportunityVersionConflictMessage },
+      notice: { kind: "conflict", message: opportunityVersionConflictMessage() },
     });
     expect(html).toContain('role="alert"');
     expect(html).toContain("This brief changed since you opened it.");

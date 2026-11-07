@@ -14,9 +14,9 @@ export interface WorkspaceCloseGuard {
 /** Explain the operation that currently prevents a workspace from closing. */
 export function workspaceCloseDisabledReason(guard: WorkspaceCloseGuard): string | null {
   if (guard.busy || guard.knowledgePending || guard.pendingReviewAction || guard.profilePending) {
-    return "Wait for the current workspace operation to finish before closing the workspace.";
+    return t`Wait for the current workspace operation to finish before closing the workspace.`;
   }
-  if (guard.running) return "Stop the review before closing the workspace.";
+  if (guard.running) return t`Stop the review before closing the workspace.`;
   return null;
 }
 

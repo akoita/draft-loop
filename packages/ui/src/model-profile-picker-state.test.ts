@@ -129,7 +129,7 @@ describe("desktop model profile picker state", () => {
         { status: "unavailable", workspaceId: "workspace-1", generation: 4 },
         fixture.providerTransmissionPreflight,
       ),
-    ).toBe(modelProfileSupportUnavailableMessage);
+    ).toBe(modelProfileSupportUnavailableMessage());
     expect(
       modelProfileStartDisabledReason(
         applied,
@@ -138,7 +138,7 @@ describe("desktop model profile picker state", () => {
         { ...ready, result: supportFor(false) },
         fixture.providerTransmissionPreflight,
       ),
-    ).toBe(modelProfileNotSupportedMessage);
+    ).toBe(modelProfileNotSupportedMessage());
     expect(
       modelProfileStartDisabledReason(
         applied,
@@ -147,7 +147,7 @@ describe("desktop model profile picker state", () => {
         ready,
         fixture.providerTransmissionPreflight,
       ),
-    ).toBe(modelProfileSupportUnavailableMessage);
+    ).toBe(modelProfileSupportUnavailableMessage());
     expect(
       modelProfileStartDisabledReason(
         applied,
@@ -156,7 +156,7 @@ describe("desktop model profile picker state", () => {
         { ...ready, workspaceId: "other" },
         fixture.providerTransmissionPreflight,
       ),
-    ).toBe(modelProfileSupportUnavailableMessage);
+    ).toBe(modelProfileSupportUnavailableMessage());
 
     const wrongPair = {
       ...fixture.providerTransmissionPreflight,

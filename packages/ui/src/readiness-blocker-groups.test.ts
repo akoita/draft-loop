@@ -87,7 +87,7 @@ describe("grouped readiness blockers", () => {
 describe("finding progress", () => {
   it("says the critique has not run instead of calling nothing resolved", () => {
     const none = { resolved: 0, total: 0, needsAction: 0, runInProgress: true };
-    expect(findingProgressLine({ ...none, critiqued: false })).toBe(NOT_CRITIQUED_PROGRESS);
+    expect(findingProgressLine({ ...none, critiqued: false })).toBe(NOT_CRITIQUED_PROGRESS());
     expect(findingProgressLine({ ...none, critiqued: true })).toBe(
       "0 of 0 resolved · all findings resolved",
     );

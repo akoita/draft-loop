@@ -11,11 +11,11 @@ export function formatHistorySize(bytes: number): string {
 }
 
 export function compactHistoryResultText(result: WorkspaceCompactHistoryResult): string {
-  return `Run history compacted: ${formatHistorySize(result.beforeBytes)} before, ${formatHistorySize(result.afterBytes)} after. The previous history is kept as ${result.backupFileName}. ${result.runsVerified} runs were checked to read back the same.`;
+  return t`Run history compacted: ${formatHistorySize(result.beforeBytes)} before, ${formatHistorySize(result.afterBytes)} after. The previous history is kept as ${result.backupFileName}. ${result.runsVerified} runs were checked to read back the same.`;
 }
 
-export const compactHistoryFailureFallback =
-  "The run history could not be compacted. It was not changed.";
+export const compactHistoryFailureFallback = () =>
+  t`The run history could not be compacted. It was not changed.`;
 
 export interface CompactHistoryConfirmationProps {
   readonly working: boolean;
@@ -105,7 +105,7 @@ export function CompactHistoryAction({
         setErrorMessage(
           reason instanceof Error && reason.message !== ""
             ? reason.message
-            : compactHistoryFailureFallback,
+            : compactHistoryFailureFallback(),
         );
       })
       .finally(() => setWorking(false));

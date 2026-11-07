@@ -203,9 +203,9 @@ export function ModelProfilePicker({
     currentSupport === null ||
     currentSupport.status === "idle" ||
     currentSupport.status === "loading"
-      ? "Checking profile support for this workspace's configured authentication routes…"
+      ? t`Checking profile support for this workspace's configured authentication routes…`
       : currentSupport.status === "unavailable"
-        ? "Profile route support is unavailable. Profile Apply is disabled; retry or use the workspace's current models."
+        ? t`Profile route support is unavailable. Profile Apply is disabled; retry or use the workspace's current models.`
         : null;
 
   return (
@@ -248,7 +248,7 @@ export function ModelProfilePicker({
       ) : null}
       {routeUnsupported ? (
         <p className="model-profile-picker-status" role="status">
-          {modelProfileNotSupportedMessage}
+          {modelProfileNotSupportedMessage()}
         </p>
       ) : null}
       {applied === null && (matching === null || pendingSelectionMessage !== undefined) ? (
@@ -336,7 +336,7 @@ export function ModelProfilePicker({
           {(["author", "critic"] as const).map((role) => {
             const choices = modelProfileEffortChoices(selectedProfiles[role], role);
             if (choices === null || choices.levels.length < 2) return null;
-            const label = role === "author" ? "Writer reasoning" : "Reviewer reasoning";
+            const label = role === "author" ? t`Writer reasoning` : t`Reviewer reasoning`;
             return (
               <label className="model-profile-picker-field" key={role}>
                 <span>{label}</span>
@@ -395,7 +395,7 @@ export function ModelProfilePicker({
         />
       )}
       {currentDraftReferences === null ? (
-        <p className="model-profile-picker-status">{modelProfileApplyDisabledMessage}</p>
+        <p className="model-profile-picker-status">{modelProfileApplyDisabledMessage()}</p>
       ) : null}
       {error === null ? null : (
         <p className="model-profile-picker-error" role="alert">

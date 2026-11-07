@@ -40,7 +40,7 @@ describe("provider credential row", () => {
       <CredentialRow
         title="Google Gemini API key"
         placeholder="Gemini API key"
-        note={googleCredentialNote}
+        note={googleCredentialNote()}
         status={{ provider: "google", configured: false, source: "none", protection: "none" }}
         value=""
         revealed={false}
@@ -65,7 +65,7 @@ describe("provider credential row", () => {
       <CredentialRow
         title="Mistral API key"
         placeholder="Mistral API key"
-        note={mistralCredentialNote}
+        note={mistralCredentialNote()}
         status={{ provider: "mistral", configured: false, source: "none", protection: "none" }}
         value=""
         revealed={false}
@@ -89,7 +89,7 @@ describe("provider credential row", () => {
       <CredentialRow
         title="Mistral API key"
         placeholder="Mistral API key"
-        note={mistralCredentialNote}
+        note={mistralCredentialNote()}
         status={{ provider: "mistral", configured: true, source: "app", protection: "os-backed" }}
         value=""
         revealed={false}

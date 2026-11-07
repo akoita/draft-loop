@@ -131,7 +131,7 @@ export function StartRequirementsSourceView({
   return (
     <section className="start-requirements" aria-label={t`Requirements for this run`}>
       <p className="start-requirements-line" role="status">
-        {useJobDescription ? rawJobDescriptionLabel : reviewedRequirementsLabel(selection)}
+        {useJobDescription ? rawJobDescriptionLabel() : reviewedRequirementsLabel(selection)}
       </p>
       <button
         className="button button-quiet"
@@ -174,13 +174,13 @@ export function StartFromJobDescriptionChoice({
             disabled={disabled}
             onChange={(event) => onChange(event.target.checked)}
           />
-          <span>{rawJobDescriptionChoiceLabel}</span>
+          <span>{rawJobDescriptionChoiceLabel()}</span>
         </label>
-        <p className="setup-note">{rawJobDescriptionChoiceNote}</p>
+        <p className="setup-note">{rawJobDescriptionChoiceNote()}</p>
       </details>
       {chosen ? (
         <p className="start-requirements-line" role="status">
-          {rawJobDescriptionOverDraftLabel}
+          {rawJobDescriptionOverDraftLabel()}
         </p>
       ) : null}
     </section>

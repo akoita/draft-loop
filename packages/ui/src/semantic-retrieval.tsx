@@ -24,8 +24,8 @@ import {
   retrievalModeChoices,
 } from "./semantic-retrieval-presentation.js";
 
-export const semanticRetrievalUnavailableMessage =
-  "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval.";
+export const semanticRetrievalUnavailableMessage = () =>
+  t`Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval.`;
 
 const installProgressPollMs = 500;
 
@@ -70,7 +70,7 @@ export function hasAnySemanticRetrievalCapability(
 }
 
 function isInstallCancelled(reason: unknown): boolean {
-  return reason instanceof Error && reason.message === embeddingModelInstallCancelledMessage;
+  return reason instanceof Error && reason.message === embeddingModelInstallCancelledMessage();
 }
 
 function sourceLabel(sourceUrl: string): string {
@@ -122,7 +122,7 @@ export function EmbeddingInstallApproval({
         </div>
         <div>
           <dt>{t`Destination`}</dt>
-          <dd>{embeddingModelDestinationLabel}</dd>
+          <dd>{embeddingModelDestinationLabel()}</dd>
         </div>
       </dl>
       <ul className="semantic-approval-files" aria-label={t`Files to download`}>
@@ -219,7 +219,7 @@ export function SemanticRetrievalView({
             disabled={controlsDisabled}
             onChange={(event) => onTierChange(event.currentTarget.value as EmbeddingModelTier)}
           >
-            {embeddingTierChoices.map((choice) => (
+            {embeddingTierChoices().map((choice) => (
               <option key={choice.tier} value={choice.tier}>
                 {choice.label}
               </option>
@@ -302,7 +302,7 @@ export function SemanticRetrievalView({
 
       <fieldset className="semantic-mode" disabled={disabled}>
         <legend>{t`Retrieval mode`}</legend>
-        {retrievalModeChoices.map((choice) => (
+        {retrievalModeChoices().map((choice) => (
           <label className="semantic-mode-choice" key={choice.mode}>
             <input
               type="radio"
@@ -383,7 +383,7 @@ export function SemanticRetrievalPanel({
     } catch (reason: unknown) {
       if (generation.current !== token) return;
       setStatus(null);
-      setError(failureMessage(reason, "The model status could not be read."));
+      setError(failureMessage(reason, t`The model status could not be read.`));
     } finally {
       if (generation.current === token) setLoading(false);
     }
@@ -414,7 +414,7 @@ export function SemanticRetrievalPanel({
       (reason: unknown) => {
         if (generation.current !== token) return;
         setLoading(false);
-        setError(failureMessage(reason, "The retrieval mode could not be read."));
+        setError(failureMessage(reason, t`The retrieval mode could not be read.`));
       },
     );
     return () => {
@@ -447,7 +447,7 @@ export function SemanticRetrievalPanel({
     return (
       <section className="panel knowledge-panel" aria-labelledby="semantic-retrieval-heading">
         <h2 id="semantic-retrieval-heading">{t`Semantic retrieval`}</h2>
-        <p className="knowledge-copy">{semanticRetrievalUnavailableMessage}</p>
+        <p className="knowledge-copy">{semanticRetrievalUnavailableMessage()}</p>
       </section>
     );
   }
@@ -464,13 +464,13 @@ export function SemanticRetrievalPanel({
         if (generation.current !== token) return;
         setMode(record.mode);
         setTier(record.modelTier);
-        setMessage("Retrieval setting saved for this workspace.");
+        setMessage(t`Retrieval setting saved for this workspace.`);
       },
       (reason: unknown) => {
         if (generation.current !== token) return;
         setMode(previous.mode);
         setTier(previous.tier);
-        setError(failureMessage(reason, "The retrieval setting could not be saved."));
+        setError(failureMessage(reason, t`The retrieval setting could not be saved.`));
       },
     );
   };
@@ -496,7 +496,7 @@ export function SemanticRetrievalPanel({
       },
       (reason: unknown) => {
         if (generation.current === token) {
-          setError(failureMessage(reason, "The model download could not be prepared."));
+          setError(failureMessage(reason, t`The model download could not be prepared.`));
         }
       },
     );
@@ -517,14 +517,14 @@ export function SemanticRetrievalPanel({
         (result) => {
           if (generation.current !== token) return;
           setStatus(result);
-          setMessage("The local model is installed.");
+          setMessage(t`The local model is installed.`);
         },
         (reason: unknown) => {
           if (generation.current !== token) return;
           if (isInstallCancelled(reason)) {
-            setMessage("Download cancelled. Nothing was installed.");
+            setMessage(t`Download cancelled. Nothing was installed.`);
           } else {
-            setError(failureMessage(reason, "The model could not be installed."));
+            setError(failureMessage(reason, t`The model could not be installed.`));
           }
         },
       )
@@ -556,11 +556,11 @@ export function SemanticRetrievalPanel({
       (result) => {
         if (generation.current !== token) return;
         setStatus(result);
-        setMessage("The local model was removed.");
+        setMessage(t`The local model was removed.`);
       },
       (reason: unknown) => {
         if (generation.current === token) {
-          setError(failureMessage(reason, "The model could not be removed."));
+          setError(failureMessage(reason, t`The model could not be removed.`));
         }
       },
     );
