@@ -228,7 +228,7 @@ describe("draftloop-mcp init's agent token", () => {
     expect(parseInitArguments(["--host", "codex", "--no-token"])).toMatchObject({ token: false });
   });
 
-  it("asks for the scopes given with --scope, and refuses an unknown one", () => {
+  it("asks for the journal and the scopes given with --scope, and refuses an unknown one", () => {
     expect(
       parseInitArguments([
         "--host",
@@ -240,7 +240,10 @@ describe("draftloop-mcp init's agent token", () => {
         "--scope",
         "jobs:write",
       ]),
-    ).toMatchObject({ scopes: ["applications:read", "jobs:write"] });
+    ).toMatchObject({ scopes: ["journal", "applications:read", "jobs:write"] });
+    expect(
+      parseInitArguments(["--host", "codex", "--scope", "jobs:write", "--scope", "journal"]),
+    ).toMatchObject({ scopes: ["jobs:write", "journal"] });
     expect(parseInitArguments(["--host", "codex"])).not.toHaveProperty("scopes");
     expect(parseInitArguments(["--host", "codex", "--scope", "runs"])).toHaveProperty("problem");
   });

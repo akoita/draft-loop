@@ -17,7 +17,8 @@ nothing for it to call: the CLI-only path is not served.
 Real Claude Code sessions walked this setup on 2026-11-04: the
 [work journal walk](../evaluation/work-journal-walk.md) and the
 [agent token walk](../evaluation/agent-token-walk.md) list what passed and the
-open defects.
+open defects. The [plugin walk](../evaluation/agent-plugin-walk.md) of
+2026-11-07 installed the plugin and called every tool.
 
 ## Set it up
 
@@ -44,8 +45,14 @@ the Work journal panel links to it.
    draftloop-mcp --help
    ```
 
-   If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `pnpm setup`, open a new
-   shell, and link again. The last command prints the tool's usage.
+   If pnpm answers `ERR_PNPM_NO_GLOBAL_BIN_DIR`, run `npm link` in the same
+   folder instead, or run `pnpm setup`, open a new shell, and link again. The
+   last command prints the tool's usage.
+
+   With nvm, the link lands in the folder of the Node version that was active.
+   Claude Code starts `draftloop-mcp` from its own shell, so that shell must
+   find both `claude` and `draftloop-mcp`: use one Node version for both, or
+   put both versions' `bin` folders on `PATH`.
 
 2. In the Work journal panel, turn on **Accept notes from coding agents**; the
    server refuses notes while intake is off. Then, under **Coding agents** in
@@ -64,7 +71,8 @@ the Work journal panel links to it.
    shell history, and keeps it in `~/.config/draftloop/agent-token`
    (`%APPDATA%\draftloop\agent-token` on Windows). The
    plugin's server reads it there and calls `http://127.0.0.1:8080` unless
-   `DRAFT_LOOP_SERVER_URL` names another address.
+   `DRAFT_LOOP_SERVER_URL` names another address. Export it before you start
+   Claude Code, for example `http://127.0.0.1:8081` for a clone's stack.
 
 The token is shown once. Keep it in your user settings, never in a project file
 you commit. The section lists the active tokens with their scopes and revokes
@@ -205,7 +213,8 @@ when its requirements are extracted. Approving a draft, deciding findings,
 exporting and every setting stay with the candidate in DraftLoop. A token
 without the scope a tool needs is refused with a message naming that scope.
 
-`init` asks for scopes with `--scope`, repeated:
+`init` asks for scopes with `--scope`, repeated. Its token always keeps
+`journal`, which the skill and hook it writes need:
 
 ```text
 draftloop-mcp init --host claude-code --hook --scope applications:read --scope jobs:write

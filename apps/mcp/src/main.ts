@@ -46,7 +46,7 @@ if (command === "init") {
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       draftloop-mcp save-token  keep a token from Coding agents, read from standard input\n",
+    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       draftloop-mcp save-token  keep a token from Coding agents, read from standard input\n       draftloop-mcp hook stop   the Claude Code Stop hook: one advisory line, never a failure\n",
   );
   process.exitCode = 2;
 }

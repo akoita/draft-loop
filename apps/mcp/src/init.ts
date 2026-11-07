@@ -213,13 +213,14 @@ export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|gen
 
 Sets up DraftLoop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
 also issues an agent token and saves it outside the project; --no-token skips that. The token
-reaches only the work journal unless --scope adds others: ${initScopes.join(", ")}.`;
+always reaches the work journal, which the skill and hook need; --scope adds others:
+${initScopes.join(", ")}.`;
 
 export interface InitArguments extends InitOptions {
   readonly dryRun: boolean;
   /** Issue and save an agent token; on unless `--no-token`. */
   readonly token?: boolean;
-  /** The token's scopes from `--scope`; the work journal only when none is given. */
+  /** The token's scopes: the work journal, then any `--scope`; absent when none is given. */
   readonly scopes?: readonly string[];
 }
 
@@ -264,7 +265,10 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
     hook,
     dryRun,
     token,
-    ...(scopes.length === 0 ? {} : { scopes }),
+    // The skill and the hook init writes use the journal, so a token it issues always keeps it.
+    ...(scopes.length === 0
+      ? {}
+      : { scopes: scopes.includes("journal") ? scopes : ["journal", ...scopes] }),
   };
 }
 
