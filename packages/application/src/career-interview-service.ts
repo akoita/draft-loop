@@ -69,6 +69,8 @@ export interface CareerInterviewServiceOptions {
   readonly publish: CareerInterviewPublish;
   readonly now?: () => string;
   readonly newId?: () => string;
+  /** The conversation's language (the screen's): the safe turns and evidence follow it (#2419). */
+  readonly language?: string | undefined;
   /** Topics offered at the start of a session; two by default, as the method guide says. */
   readonly topicsPerProposal?: number;
 }
@@ -219,6 +221,7 @@ export function createCareerInterviewService(
       topic: bounded,
       targetThemes: themes,
       turns: topic.turns,
+      language: options.language,
     });
     const turn: CareerInterviewTurn = { role: "interviewer", text: next.text, at: now() };
     const closing = next.summary !== undefined;

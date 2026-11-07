@@ -311,6 +311,7 @@ export function registerCareerInterviewRoutes(
       store: interview.sessions,
       loadRecord: () => loadRecord(service, workspaceRoot(workspaceId)),
       interviewer: (workspace, session) => interviewerFor(workspace, session, language),
+      language,
       publish:
         knowledge === undefined
           ? async () => {

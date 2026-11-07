@@ -1,3 +1,6 @@
+import { careerInterviewPhrases } from "./career-interview-phrases.js";
+
+export { type CareerInterviewPhrases, careerInterviewPhrases } from "./career-interview-phrases.js";
 import {
   type CareerInterviewRule,
   type CareerInterviewTurnRefusal,
@@ -63,10 +66,9 @@ export interface CareerInterviewNextTurn {
 export const maximumCareerInterviewFollowUps = 6;
 const maximumAttempts = 2;
 
-export const careerInterviewFallbackQuestion =
-  "What would you like to tell me about this, in your own words?";
-export const careerInterviewSummaryRequest =
-  "Here is what I noted. Is it right, or would you like to change anything?";
+/** The English safe turns; `careerInterviewPhrases` gives them in the conversation's language. */
+export const careerInterviewFallbackQuestion = careerInterviewPhrases("en").fallbackQuestion;
+export const careerInterviewSummaryRequest = careerInterviewPhrases("en").summaryRequest;
 
 /** The opening proposal, worded without a model so it never suggests a detail. */
 export function careerInterviewProposal(
@@ -120,8 +122,11 @@ export async function nextCareerInterviewTurn(
     readonly topic: CareerInterviewConversationTopic;
     readonly targetThemes?: readonly string[];
     readonly turns: readonly CareerInterviewConversationTurn[];
+    /** The conversation's language, which the safe turns are said in (#2419); English by default. */
+    readonly language?: string | undefined;
   },
 ): Promise<CareerInterviewNextTurn> {
+  const phrases = careerInterviewPhrases(input.language);
   const closing = careerInterviewShouldClose(input.turns);
   const allowedText = [
     input.topic.reason,
@@ -165,10 +170,7 @@ export async function nextCareerInterviewTurn(
   if (closing) {
     const summary = verbatimSummary(input.turns);
     return {
-      text:
-        summary === undefined
-          ? "Let us leave this topic for now. We can come back to it whenever you like."
-          : careerInterviewSummaryRequest,
+      text: summary === undefined ? phrases.leaveTopic : phrases.summaryRequest,
       ...(summary === undefined ? {} : { summary }),
       fallback: true,
       refusals,
@@ -176,7 +178,7 @@ export async function nextCareerInterviewTurn(
     };
   }
   return {
-    text: careerInterviewFallbackQuestion,
+    text: phrases.fallbackQuestion,
     fallback: true,
     refusals,
     ...(model === undefined ? {} : { model }),
