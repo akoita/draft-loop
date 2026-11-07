@@ -10,6 +10,10 @@
 
 <!-- Does this change data retention, provider exposure, or external side effects? -->
 
+## Feature catalog
+
+<!-- Row and page updated in docs/features/, or "not a capability change". -->
+
 ## Validation
 
 - [ ] `pnpm format:check`

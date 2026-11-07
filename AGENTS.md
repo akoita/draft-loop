@@ -56,6 +56,10 @@ recorded limit in the same change so the reduction cannot regress.
 - Update affected documentation in the same PR, or state why no update is needed.
 - Summarize and link to the canonical source instead of copying implementation
   history across documents.
+- A change that adds, changes, exposes, hides or removes a capability updates
+  its row in `docs/features/README.md` and its feature page in the same PR. A
+  new MCP tool is named in its row's Agent access cell. `pnpm lint:docs` checks
+  the catalog.
 
 <!-- agent-toolkit:writing-policy -->
 
