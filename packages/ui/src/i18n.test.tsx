@@ -4,6 +4,7 @@ import { ApplicationLanguageControl } from "./application-language.js";
 import {
   activateScreenLocale,
   isScreenLocale,
+  rerenderedChildren,
   ScreensI18nProvider,
   screenLocaleFromSearch,
 } from "./i18n.js";
@@ -24,6 +25,16 @@ describe("the screens' locale", () => {
     );
     expect(pseudo).not.toContain("Write its documents in");
     expect(pseudo).toContain("Ŵŕĩţē ĩţś ďōćũḿēńţś ĩń");
+  });
+
+  it("hands the screens on as new elements, so a locale change re-renders text already shown", () => {
+    const screen = <ApplicationLanguageControl key="screen" {...control.props} />;
+    const [again, text] = rerenderedChildren([screen, "plain"]) as [typeof screen, string];
+    expect(again).not.toBe(screen);
+    expect(again.type).toBe(screen.type);
+    expect(again.props).toEqual(screen.props);
+    expect(text).toBe("plain");
+    expect(rerenderedChildren(null)).toBeNull();
   });
 
   it("takes the pseudo-locale from the address and anything else as English", () => {
