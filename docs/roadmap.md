@@ -497,6 +497,12 @@ Cloud speech in the EU hears the candidate and speaks the questions, while
 Claude stays the interviewer behind the method-guide check. Voxtral is the
 planned second speech adapter.
 
+[Milestone 86](https://github.com/akoita/draft-loop/milestone/86) (#2401
+to #2403) makes the conversation immersive. Talking live opens a voice stage:
+the question in large type and an orb that moves with whoever speaks. The
+written chat leads with the question being answered, and each topic carries a
+short title from the record instead of a long reason.
+
 ### Next — Multi-language support
 
 A candidate gets French CVs, cover letters and interview questions from French

@@ -15,6 +15,7 @@ import {
   careerInterviewActiveTopic,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicTitle,
   careerInterviewTurnText,
   careerInterviewUnavailableNotice,
 } from "./career-interview-model.js";
@@ -147,7 +148,7 @@ export function CareerInterviewPanel({
                   className={`interview-topic-item interview-topic-${topic.status}`}
                   aria-current={topic.key === active?.key ? "step" : undefined}
                 >
-                  <span>{topic.reason}</span>
+                  <span>{careerInterviewTopicTitle(topic)}</span>
                   <small>{careerInterviewTopicStatusLabel(topic.status)}</small>
                 </li>
               ))}
@@ -328,7 +329,14 @@ function Proposal({
       <ul className="interview-topics">
         {topics.map((topic) => (
           <li key={topic.key}>
-            <p>{topic.reason}</p>
+            {topic.title === undefined ? (
+              <p>{topic.reason}</p>
+            ) : (
+              <>
+                <p className="interview-topic-name">{careerInterviewTopicTitle(topic)}</p>
+                <p className="hint">{topic.reason}</p>
+              </>
+            )}
             <div className="interview-actions">
               <button
                 type="button"
@@ -413,7 +421,10 @@ function TopicHeader({
 }) {
   return (
     <header className="interview-topic-header">
-      <h3>{topic.reason}</h3>
+      <div className="interview-topic-heading">
+        <h3>{careerInterviewTopicTitle(topic)}</h3>
+        {topic.title === undefined ? null : <p className="hint">{topic.reason}</p>}
+      </div>
       {onTalking === undefined ? null : (
         <fieldset className="interview-mode">
           <legend className="sr-only">{t`Answer by`}</legend>

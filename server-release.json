@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "French screens and French evidence",
+  "releaseName": "Immersive interview conversation",
   "stageIssue": 1359,
-  "milestone": 82,
-  "summary": "The screens speak French: every screen has a French catalog (#2327), people pick the screen language in Workspace settings (#2328) and the hosted service saves it with their account (#2373), and counted nouns use catalog plurals (#2372). Career evidence understands French: French CV headings are recognised (#2331), each source's language can be detected on demand (#2330), and cross-language retrieval is measured (#2332). After the first document, Career evidence shows one next step instead of every choice (#2395). The career interview asks for its Anthropic permission in place (#2379), and pause and Talk live work in the owner's interview (#2392). The API can also log a decision model's injection-screening judgments on public job pages beside the stored verdict, without changing it (#2386); off unless DRAFT_LOOP_SCREENING_SHADOW=jev.",
-  "knownLimitations": "French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs; job-page quarantine still comes from the rules. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. The local-first desktop has no career interview."
+  "milestone": 86,
+  "summary": "The career interview becomes immersive. Talking live opens a voice stage with the question in large type, an orb that grows with the candidate's voice and moves with the interviewer's, and one main button (#2401). The written chat leads with the question being answered, with a Write / Speak switch and one answer bar (#2402), and each topic carries a short title from the record (#2403). Live turns no longer fail on a late microphone frame or an idle recognition stream (#2398, #2399), and the French screens translate the texts the catalogs missed (#2400).",
+  "knownLimitations": "French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs; job-page quarantine still comes from the rules. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. Topic titles are new: sessions started before this release keep their long reason. The local-first desktop has no career interview."
 }

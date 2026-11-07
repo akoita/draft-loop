@@ -16,6 +16,8 @@ export interface CareerInterviewTopicView {
   readonly key: string;
   readonly kind: string;
   readonly reason: string;
+  /** A short name from the record's own words (#2403); older sessions have none. */
+  readonly title?: string | undefined;
   readonly status: CareerInterviewTopicStatus;
   readonly turns: readonly CareerInterviewTurnView[];
   readonly summary?: string | undefined;
@@ -69,6 +71,36 @@ export function careerInterviewTurnText(turn: CareerInterviewTurnView): {
   if (turn.mark === "skipped") return { speaker, text: t`Skipped this question.` };
   if (turn.mark === "unknown") return { speaker, text: t`Did not remember.` };
   return { speaker, text: turn.text };
+}
+
+const themeNames = (): Readonly<Record<string, string>> => ({
+  volunteering: t`Volunteering`,
+  mentoring: t`Mentoring`,
+  teaching: t`Teaching`,
+  speaking: t`Speaking at events`,
+  awards: t`Awards`,
+  "open source": t`Open source`,
+  "side projects": t`Side projects`,
+  leadership: t`Leadership`,
+});
+
+/**
+ * A topic's name on the screen (#2403): its short title worded for its kind in the screen's
+ * language, or its reason when an older session has no title.
+ */
+export function careerInterviewTopicTitle(topic: CareerInterviewTopicView): string {
+  const title = topic.title;
+  if (title === undefined || title.trim() === "") return topic.reason;
+  switch (topic.kind) {
+    case "untold-period":
+      return t`The period ${title}`;
+    case "untold-theme":
+      return themeNames()[title] ?? title;
+    case "application-relevance":
+      return t`Asked in a job post: ${title}`;
+    default:
+      return title;
+  }
 }
 
 /** The topic being talked through or waiting for confirmation, if any. */

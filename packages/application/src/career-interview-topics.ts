@@ -39,6 +39,8 @@ export interface CareerInterviewTopic {
   readonly kind: CareerInterviewTopicKind;
   /** Why the topic is proposed, in plain words the interviewer can repeat. */
   readonly reason: string;
+  /** A short name from the record's own words, without glue words; see the session schema. */
+  readonly title?: string;
   readonly subjectId?: string;
   readonly missing?: readonly CareerInterviewRoleGap[];
   readonly period?: { readonly from: number; readonly to: number };
@@ -133,9 +135,39 @@ interface RoleSummary {
   readonly subjectId: string;
   readonly facts: readonly CareerInterviewFact[];
   readonly label: string;
+  /** The role's title and employer as the record words them, if it names either. */
+  readonly names: readonly string[];
   readonly from?: number;
   readonly to?: number;
   readonly missing: readonly CareerInterviewRoleGap[];
+}
+
+/** At most 200 characters, cut at a word, as the session schema allows a title. */
+function shortTitle(text: string): string | undefined {
+  const trimmed = text.trim().replace(/\s+/gu, " ");
+  if (trimmed === "") return undefined;
+  if (trimmed.length <= 120) return trimmed;
+  const cut = trimmed.slice(0, 119);
+  const space = cut.lastIndexOf(" ");
+  return `${space > 60 ? cut.slice(0, space) : cut}…`;
+}
+
+/** A year or a span of years, with an en dash. */
+function yearsTitle(from: number, to: number): string {
+  return from === to ? `${from}` : `${from}–${to}`;
+}
+
+/** A role's title and employer, and its years when the record gives them. */
+function roleTitle(role: RoleSummary): string | undefined {
+  if (role.names.length === 0) return undefined;
+  const years =
+    role.from === undefined || role.to === undefined ? "" : ` (${yearsTitle(role.from, role.to)})`;
+  return shortTitle(`${role.names.join(", ")}${years}`);
+}
+
+/** The title property when there is one, so an absent title stays absent. */
+function titled(title: string | undefined): { readonly title?: string } {
+  return title === undefined ? {} : { title };
 }
 
 function summarizeRoles(facts: readonly CareerInterviewFact[], currentYear: number): RoleSummary[] {
@@ -167,6 +199,9 @@ function summarizeRoles(facts: readonly CareerInterviewFact[], currentYear: numb
       subjectId,
       facts: group,
       label: label === "" ? "a role" : label,
+      names: [title, employer].filter(
+        (part): part is string => part !== undefined && part.trim() !== "",
+      ),
       ...(years.length === 0
         ? {}
         : { from: Math.min(...years), to: ongoing ? currentYear : Math.max(...years) }),
@@ -246,6 +281,7 @@ export function findCareerInterviewTopics(
         key: `role-gap:${role.subjectId}:${fingerprint(factParts(role.facts))}`,
         kind: "role-gap",
         reason: `Your record names ${role.label} but not ${listWords(role.missing.map((gap) => missingWords[gap]))}.`,
+        ...titled(roleTitle(role)),
         subjectId: role.subjectId,
         missing: role.missing,
         factIds: role.facts.map((fact) => fact.id),
@@ -275,6 +311,7 @@ export function findCareerInterviewTopics(
             period.from === period.to
               ? `Your record says nothing about ${period.from}.`
               : `Your record says nothing between ${period.from} and ${period.to}.`,
+          title: yearsTitle(period.from, period.to),
           period,
           factIds: read.map((fact) => fact.id),
           requirementIds: [],
@@ -304,6 +341,7 @@ export function findCareerInterviewTopics(
         kind: "untold-theme",
         theme,
         reason: `Your record mentions ${theme} but tells no story about it.`,
+        title: theme,
         factIds: hints.map((fact) => fact.id),
         requirementIds: relevance.ids,
       },
@@ -321,6 +359,7 @@ export function findCareerInterviewTopics(
         key: `application-relevance:${requirement.applicationId}:${requirement.id}:${fingerprint([requirement.text, ...factParts(facts)])}`,
         kind: "application-relevance",
         reason: `A job you applied for asks for "${requirement.text}", and your record does not show it yet.`,
+        ...titled(shortTitle(requirement.text)),
         factIds: [],
         requirementIds: [requirement.id],
       },
