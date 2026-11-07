@@ -22,6 +22,11 @@ export interface CareerInterviewLiveEvents {
   /** The candidate's words heard so far in this turn. */
   readonly onHeard: (text: string) => void;
   readonly onRefusal: (code: string, message: string) => void;
+  /**
+   * How loud the voice in play is, from 0 to 1: the candidate's while listening, the question's
+   * while the interviewer speaks. A host that cannot measure it never calls this.
+   */
+  readonly onLevel?: ((level: number) => void) | undefined;
 }
 
 /** One running live conversation. */
@@ -43,20 +48,29 @@ export interface CareerInterviewLiveVoice {
   readonly allow: () => Promise<string | undefined>;
 }
 
-/** What the live bar says for each state. */
+/** What the voice stage says under the orb for each state. */
 export function careerInterviewLiveStateLabel(state: CareerInterviewLiveState): string {
   switch (state) {
     case "connecting":
       return t`Connecting…`;
     case "listening":
-      return t`Listening. Pause when you are done, or press Done speaking.`;
+      return t`Listening`;
     case "thinking":
       return t`The interviewer is thinking…`;
     case "speaking":
-      return t`The interviewer is speaking.`;
+      return t`The interviewer is speaking`;
     case "ended":
       return t`The live conversation ended.`;
   }
+}
+
+/** The tail of what was heard, so a long answer never pushes the question off the stage. */
+export function careerInterviewHeardTail(text: string, limit = 220): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= limit) return trimmed;
+  const cut = trimmed.slice(trimmed.length - limit);
+  const space = cut.indexOf(" ");
+  return `…${space === -1 || space > 40 ? cut : cut.slice(space + 1)}`;
 }
 
 /** The words for a live refusal, with the live-only codes the typed screen never sees. */
@@ -73,21 +87,33 @@ export function careerInterviewLiveRefusal(code: string, message: string, listen
   }
 }
 
-export interface CareerInterviewLiveBarProps {
+export interface CareerInterviewLiveStageProps {
   readonly topicKey: string;
   readonly voice: CareerInterviewLiveVoice;
+  /** The interviewer's latest question, shown large while the conversation runs. */
+  readonly question: string | undefined;
   /** Back to the written conversation. */
   readonly onClose: () => void;
 }
 
-/** The live conversation's controls, shown instead of the answer box while it runs. */
-export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInterviewLiveBarProps) {
+/**
+ * The live conversation as a focused stage (#2401), shown instead of the transcript and the
+ * answer box while it runs: the question, an orb that moves with whoever is speaking, the words
+ * heard so far, and one main control. Every turn is already in the transcript when it closes.
+ */
+export function CareerInterviewLiveStage({
+  topicKey,
+  voice,
+  question,
+  onClose,
+}: CareerInterviewLiveStageProps) {
   const [state, setState] = useState<CareerInterviewLiveState>("connecting");
   const [heard, setHeard] = useState("");
   const [refusal, setRefusal] = useState<{ code: string; message: string } | undefined>();
   const [attempt, setAttempt] = useState(0);
   const [allowing, setAllowing] = useState(false);
   const call = useRef<CareerInterviewLiveCall | undefined>(undefined);
+  const orb = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // `attempt` restarts the conversation after the candidate allows it.
@@ -95,13 +121,18 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
     setState("connecting");
     setHeard("");
     setRefusal(undefined);
+    // The level reaches the orb's style directly: dozens of updates a second, no re-render.
+    const level = (value: number) =>
+      orb.current?.style.setProperty("--level", Math.max(0, Math.min(1, value)).toFixed(3));
     const running = voice.start(topicKey, {
       onState: (next) => {
         setState(next);
+        level(0);
         if (next === "thinking" || next === "connecting") setHeard("");
       },
       onHeard: setHeard,
       onRefusal: (code, message) => setRefusal({ code, message }),
+      onLevel: level,
     });
     call.current = running;
     return () => {
@@ -111,28 +142,53 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
   }, [voice, topicKey, attempt]);
 
   const live = state !== "ended" && refusal === undefined;
+  const label = careerInterviewLiveStateLabel(state);
   return (
-    <div className={`interview-live interview-live-${state}`}>
-      <div className="interview-live-status" role="status" aria-live="polite">
-        <span className="interview-live-orb" aria-hidden="true" />
-        <span>{careerInterviewLiveStateLabel(state)}</span>
+    <section
+      className={`interview-stage interview-stage-${state}`}
+      aria-label={t`Live conversation`}
+    >
+      <div className="interview-stage-center">
+        {question === undefined ? null : (
+          <p className="interview-stage-question">
+            <span className="sr-only">{t`Interviewer`}: </span>
+            {question}
+          </p>
+        )}
+        <div ref={orb} className="interview-orb" aria-hidden="true">
+          <span className="interview-orb-ring" />
+          <span className="interview-orb-ring" />
+          <span className="interview-orb-core">
+            <span className="interview-orb-dots">
+              <span />
+              <span />
+              <span />
+            </span>
+          </span>
+        </div>
+        <p className="interview-stage-state" role="status" aria-live="polite">
+          {label}
+        </p>
+        {state === "listening" && heard === "" && live ? (
+          <p className="interview-stage-hint">{t`Pause when you are done, or press Done speaking.`}</p>
+        ) : null}
+        {heard === "" ? null : (
+          <p className="interview-stage-heard">
+            <span className="sr-only">{t`You`}: </span>
+            {careerInterviewHeardTail(heard)}
+          </p>
+        )}
+        {refusal === undefined ? null : (
+          <p className="interview-stage-refusal" role="alert">
+            {careerInterviewLiveRefusal(refusal.code, refusal.message, voice.listener)}
+          </p>
+        )}
       </div>
-      {heard === "" ? null : (
-        <p className="interview-turn interview-turn-candidate interview-turn-sending">
-          <span className="interview-speaker">{t`You`}</span>
-          {heard}
-        </p>
-      )}
-      {refusal === undefined ? null : (
-        <p role="alert">
-          {careerInterviewLiveRefusal(refusal.code, refusal.message, voice.listener)}
-        </p>
-      )}
-      <div className="interview-actions">
+      <div className="interview-stage-controls">
         {refusal?.code === "consent_required" ? (
           <button
             type="button"
-            className="button button-primary"
+            className="button button-primary interview-stage-main"
             disabled={allowing}
             onClick={() => {
               setAllowing(true);
@@ -147,7 +203,7 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
         {live && state === "listening" ? (
           <button
             type="button"
-            className="button button-primary"
+            className="button button-primary interview-stage-main"
             disabled={heard === ""}
             onClick={() => call.current?.endTurn()}
           >{t`Done speaking`}</button>
@@ -155,21 +211,29 @@ export function CareerInterviewLiveBar({ topicKey, voice, onClose }: CareerInter
         {live && state === "speaking" ? (
           <button
             type="button"
-            className="button button-outline"
+            className="button button-primary interview-stage-main interview-stage-interrupt"
             onClick={() => call.current?.skipQuestion()}
           >{t`Answer now`}</button>
         ) : null}
+        {!live && refusal?.code !== "consent_required" ? (
+          <button
+            type="button"
+            className="button button-primary interview-stage-main"
+            onClick={() => setAttempt((count) => count + 1)}
+          >{t`Talk live again`}</button>
+        ) : null}
         <button
           type="button"
-          className="button button-outline"
+          className="button button-quiet interview-stage-back"
           onClick={() => {
             call.current?.stop();
             onClose();
           }}
-        >
-          {live ? t`End live conversation` : t`Back to writing`}
-        </button>
+        >{t`Back to writing`}</button>
       </div>
-    </div>
+      <p className="interview-stage-note">
+        {t`Your voice goes to ${voice.listener} to become text.`}
+      </p>
+    </section>
   );
 }

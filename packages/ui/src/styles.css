@@ -10059,8 +10059,7 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin: 0;
 }
 
-/* The live voice conversation (#2362): an orb that breathes while listening and pulses while the
-   interviewer speaks, so the candidate always sees whose turn it is. */
+/* The permission to send answers or voice, asked in place (#2379). */
 .interview-consent {
   display: grid;
   justify-items: start;
@@ -10071,51 +10070,139 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin: 0;
 }
 
-.interview-live {
+/* The live voice conversation as a focused stage (#2401): the question large, an orb that grows
+   with the candidate's voice (teal) or moves with the interviewer's (amber), the words heard so far
+   and one main control. The host sets --level from 0 to 1; without it the orb breathes. */
+.interview-stage {
+  --level: 0;
+  --orb: var(--teal);
+  --orb-wash: var(--teal-wash);
+  --orb-line: var(--teal-line);
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--teal-line);
-  border-radius: 12px;
-  background: var(--teal-wash);
+  gap: var(--space-5);
+  min-height: 26rem;
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 50% 55%, var(--orb-wash), transparent 65%), var(--surface-inset);
+  text-align: center;
+  transition: background var(--dur) var(--ease);
 }
 
-.interview-live-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: var(--text-xs);
+.interview-stage-speaking {
+  --orb: var(--amber);
+  --orb-wash: var(--amber-wash);
+  --orb-line: var(--amber-line);
 }
 
-.interview-live-orb {
-  flex: none;
-  width: 28px;
-  height: 28px;
+.interview-stage-center {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-4);
+}
+
+.interview-stage-question {
+  max-width: 32ch;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.interview-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 10rem;
+  height: 10rem;
+  margin-block: var(--space-3);
+}
+
+.interview-orb-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.5rem;
+  height: 6.5rem;
   border-radius: 50%;
-  background: var(--teal);
+  background: radial-gradient(
+    circle at 38% 32%,
+    color-mix(in srgb, var(--orb) 55%, white),
+    var(--orb) 70%
+  );
+  box-shadow: 0 0 0 calc(4px + var(--level) * 14px) var(--orb-wash);
+  transform: scale(calc(1 + var(--level) * 0.08));
+  transition:
+    transform 90ms linear,
+    box-shadow 90ms linear,
+    background var(--dur) var(--ease);
 }
 
-.interview-live-listening .interview-live-orb {
-  animation: interview-live-breathe 2.4s ease-in-out infinite;
+.interview-orb-ring {
+  position: absolute;
+  inset: 1.75rem;
+  border: 2px solid var(--orb-line);
+  border-radius: 50%;
+  opacity: calc(0.2 + var(--level) * 0.8);
+  transform: scale(calc(1.1 + var(--level) * 0.45));
+  transition:
+    transform 120ms linear,
+    opacity 120ms linear;
 }
 
-.interview-live-thinking .interview-live-orb {
-  opacity: 0.5;
-  animation: interview-live-breathe 1.2s ease-in-out infinite;
+.interview-orb-ring + .interview-orb-ring {
+  transform: scale(calc(1.25 + var(--level) * 0.75));
+  opacity: calc(0.1 + var(--level) * 0.5);
 }
 
-.interview-live-speaking .interview-live-orb {
-  animation: interview-live-pulse 0.8s ease-in-out infinite;
+.interview-orb-dots {
+  display: none;
+  gap: 6px;
 }
 
-.interview-live-ended .interview-live-orb {
+.interview-orb-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bg);
+  animation: interview-dot 1.2s infinite;
+}
+
+.interview-orb-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.interview-orb-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.interview-stage-thinking .interview-orb-dots {
+  display: flex;
+}
+
+.interview-stage-thinking .interview-orb-core,
+.interview-stage-connecting .interview-orb-core {
+  opacity: 0.6;
+  animation: interview-orb-breathe 2.4s ease-in-out infinite;
+}
+
+.interview-stage-ended .interview-orb-core {
   opacity: 0.3;
 }
 
-@keyframes interview-live-breathe {
+.interview-stage-ended .interview-orb-ring,
+.interview-stage-connecting .interview-orb-ring,
+.interview-stage-thinking .interview-orb-ring {
+  opacity: 0.15;
+}
+
+@keyframes interview-orb-breathe {
   0%,
   100% {
-    transform: scale(0.85);
+    transform: scale(0.94);
   }
 
   50% {
@@ -10123,19 +10210,91 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   }
 }
 
-@keyframes interview-live-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--teal-line);
+.interview-stage-state {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.interview-stage-listening .interview-stage-state {
+  color: var(--teal);
+}
+
+.interview-stage-speaking .interview-stage-state {
+  color: var(--amber);
+}
+
+.interview-stage-hint,
+.interview-stage-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.interview-stage-heard {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  font-style: italic;
+}
+
+.interview-stage-refusal {
+  max-width: 52ch;
+  margin: 0;
+}
+
+.interview-stage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.interview-stage-main {
+  min-width: 11rem;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-md);
+}
+
+.interview-stage-interrupt {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--amber-ink);
+}
+
+@media (max-width: 760px) {
+  .interview-stage {
+    min-height: 0;
+    padding-inline: var(--space-4);
   }
 
-  50% {
-    box-shadow: 0 0 0 8px transparent;
+  .interview-orb {
+    width: 8rem;
+    height: 8rem;
+  }
+
+  .interview-orb-core {
+    width: 5.25rem;
+    height: 5.25rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .interview-live .interview-live-orb {
+  .interview-orb-core,
+  .interview-orb-ring {
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+
+  .interview-stage-thinking .interview-orb-core,
+  .interview-stage-connecting .interview-orb-core,
+  .interview-orb-dots span {
     animation: none;
   }
 }

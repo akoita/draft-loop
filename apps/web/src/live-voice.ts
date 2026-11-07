@@ -52,9 +52,24 @@ export interface LiveMicrophone {
 
 /** Plays one question's audio once it has all arrived. */
 export interface LivePlayer {
-  play(audio: Blob, onEnded: () => void): void;
+  /** Plays the audio; `onLevel`, when given, hears how loud it is while it plays, if measurable. */
+  play(audio: Blob, onEnded: () => void, onLevel?: (level: number) => void): void;
   stop(): void;
 }
+
+/**
+ * How loud a stretch of PCM16 is, from 0 to 1, for the voice stage's orb (#2401). The square root
+ * of the RMS spreads ordinary speech over the range instead of crowding it near zero.
+ */
+export function pcm16Level(samples: Int16Array): number {
+  if (samples.length === 0) return 0;
+  let sum = 0;
+  for (const sample of samples) sum += (sample / 0x8000) ** 2;
+  return Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length)) * 1.6);
+}
+
+/** Samples of 16 kHz audio between two level reports: 50 ms, about twenty a second. */
+const levelWindow = liveSampleRate / 20;
 
 /** The socket as the live call uses it; a browser WebSocket satisfies it. */
 export interface LiveSocket {
@@ -125,8 +140,24 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
         return;
       }
       microphone = opened;
+      let measured: Int16Array[] = [];
+      let measuredLength = 0;
       opened.onFrame((frame) => {
-        if (listening && socket.readyState === openState) socket.send(frame);
+        if (!listening) return;
+        if (socket.readyState === openState) socket.send(frame);
+        if (events.onLevel === undefined) return;
+        measured.push(frame);
+        measuredLength += frame.length;
+        if (measuredLength < levelWindow) return;
+        const joined = new Int16Array(measuredLength);
+        let offset = 0;
+        for (const part of measured) {
+          joined.set(part, offset);
+          offset += part.length;
+        }
+        measured = [];
+        measuredLength = 0;
+        events.onLevel(pcm16Level(joined));
       });
     },
     () => {
@@ -168,7 +199,7 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
         const played = audio;
         audio = undefined;
         if (played === undefined || played.chunks.length === 0) listen();
-        else player.play(new Blob(played.chunks, { type: played.type }), listen);
+        else player.play(new Blob(played.chunks, { type: played.type }), listen, events.onLevel);
         break;
       }
       case "error":
@@ -236,22 +267,57 @@ export async function openBrowserMicrophone(): Promise<LiveMicrophone> {
   };
 }
 
-/** Plays each question through one audio element, freeing its object URL when done. */
+/**
+ * Plays each question through one audio element, freeing its object URL when done. When asked for
+ * levels, it routes the element through an analyser so the orb moves with the interviewer's voice;
+ * a browser that refuses that, or an audio context that is not running, plays it plainly instead.
+ */
 export function createBrowserPlayer(): LivePlayer {
-  let current: { element: HTMLAudioElement; url: string } | undefined;
+  let current: { element: HTMLAudioElement; url: string; frame?: number } | undefined;
+  let context: AudioContext | undefined;
   const stop = () => {
     if (current === undefined) return;
+    if (current.frame !== undefined) cancelAnimationFrame(current.frame);
     current.element.pause();
     current.element.onended = null;
     URL.revokeObjectURL(current.url);
     current = undefined;
   };
+  const measure = (element: HTMLAudioElement, onLevel: (level: number) => void) => {
+    try {
+      context ??= new AudioContext();
+      if (context.state !== "running") {
+        // Routing the element through a context that is not running would silence it: play it
+        // plainly this time, and let the context start for the next question.
+        void context.resume().catch(() => {});
+        return;
+      }
+      const source = context.createMediaElementSource(element);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      analyser.connect(context.destination);
+      const samples = new Float32Array(analyser.fftSize);
+      const tick = () => {
+        if (current?.element !== element) return;
+        analyser.getFloatTimeDomainData(samples);
+        let sum = 0;
+        for (const sample of samples) sum += sample * sample;
+        onLevel(Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length)) * 1.6));
+        current.frame = requestAnimationFrame(tick);
+      };
+      if (current !== undefined) current.frame = requestAnimationFrame(tick);
+    } catch {
+      // No levels: the question still plays, and the orb keeps its resting motion.
+    }
+  };
   return {
-    play: (audio, onEnded) => {
+    play: (audio, onEnded, onLevel) => {
       stop();
       const url = URL.createObjectURL(audio);
       const element = new Audio(url);
       current = { element, url };
+      if (onLevel !== undefined) measure(element, onLevel);
       element.onended = () => {
         stop();
         onEnded();
