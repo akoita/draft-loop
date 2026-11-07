@@ -259,6 +259,68 @@ form button[type="submit"]:where(:not(.button)) {
   padding-left: 1.25rem;
 }
 
+/* Career evidence files: name and checks on one row, when it was added below (#2413). */
+.evidence-files {
+  list-style: none;
+  padding-left: 0;
+}
+
+.evidence-files li {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.5rem 0;
+}
+
+.evidence-files li:first-child {
+  border-top: 0;
+}
+
+.evidence-file-name {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.evidence-file-tag {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  padding: 0 0.4rem;
+}
+
+.evidence-file-checks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.evidence-file-meta {
+  font-size: 0.875rem;
+  grid-column: 1;
+}
+
+@media (max-width: 40rem) {
+  .evidence-files li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .evidence-file-checks {
+    justify-content: flex-start;
+  }
+
+  .evidence-file-meta {
+    grid-row: 2;
+  }
+}
+
 .rules {
   margin-top: 0.75rem;
 }
