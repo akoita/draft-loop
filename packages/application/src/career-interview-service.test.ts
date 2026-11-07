@@ -137,6 +137,23 @@ describe("career interview service", () => {
     expect(requests.at(-1)?.topic.context.join(" ")).toContain("Example Bank");
   });
 
+  it("finds facts for an own subject saved without any, as an older version saved them", async () => {
+    const { service, store, requests } = harness([]);
+    const session = await service.start("owner");
+    const withOwn = await service.ownSubject("owner", session.id, "where is my profile thin?");
+    const key = withOwn.topics.at(-1)?.key ?? "";
+    await store.replace({
+      ...withOwn,
+      topics: withOwn.topics.map((topic) =>
+        topic.key === key ? { ...topic, fact_ids: [] } : topic,
+      ),
+    });
+    await service.answer("owner", session.id, key, { text: "That is my question to you." });
+    const context = requests.at(-1)?.topic.context.join(" ") ?? "";
+    expect(context).toContain("Analyst");
+    expect(context).not.toContain("Secret client list");
+  });
+
   it("shows a summary year outside the role's dates as a conflict without changing the record", () => {
     expect(careerInterviewConflicts("I joined in 2017 and left in 2021.", facts)).toEqual([
       { kind: "date", summaryValue: "2017", factId: "d", factValue: "2019 to 2022" },
