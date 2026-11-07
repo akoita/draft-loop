@@ -143,7 +143,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Draft a cover letter or interview questions for an application",
         description:
-          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations; nothing is stored. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, and 409 cost_cap_reached when the next call could pass the request's cost cap.",
+          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations; nothing is stored. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
         params,
         body,
         response: { 200: draftView, ...errors },
@@ -289,8 +289,40 @@ export function registerApplicationMaterialRoutes(
               ),
             );
         }
+        const failure = providerFailureOf(error);
+        if (failure !== undefined) {
+          request.log.warn(
+            { workspaceId, applicationId, ...failure, spentUsd },
+            "application material model failed",
+          );
+          return reply
+            .code(502)
+            .send(
+              apiError(
+                "material_model_failed",
+                "The model's answer could not be used. Nothing was saved; try again.",
+              ),
+            );
+        }
         throw error;
       }
     },
   );
+}
+
+/** A provider adapter's failure, named by its code and diagnostics, never by its text. */
+function providerFailureOf(
+  error: unknown,
+): { readonly code: string; readonly diagnostics: readonly string[] } | undefined {
+  if (!(error instanceof Error) || !("diagnostics" in error) || !("code" in error)) {
+    return undefined;
+  }
+  const { code, diagnostics } = error as { code: unknown; diagnostics: unknown };
+  if (typeof code !== "string" || !Array.isArray(diagnostics)) return undefined;
+  return {
+    code,
+    diagnostics: diagnostics.flatMap((item: { code?: unknown }) =>
+      typeof item?.code === "string" ? [item.code] : [],
+    ),
+  };
 }

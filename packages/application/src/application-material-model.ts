@@ -23,7 +23,12 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 export const applicationMaterialDefaultModelId = "claude-sonnet-5-5";
 export const applicationMaterialEconomyModelId = "claude-haiku-5-5";
 export const applicationMaterialPromptVersion = "application-material-v4";
-export const applicationMaterialMaxOutputTokens = 2_048;
+/**
+ * Room for the longest valid draft: ten items of up to 1,200 characters, each with a question and
+ * its fact ids, in a language such as French that spends more tokens per character. A smaller
+ * budget cut real drafts off at `max_tokens`, which the provider adapter rejects.
+ */
+export const applicationMaterialMaxOutputTokens = 8_192;
 
 const outputSchema = {
   type: "object",

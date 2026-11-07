@@ -26,6 +26,7 @@ const refusals = (): Readonly<Record<string, string>> => ({
   no_citable_facts: t`Your career profile has no fact a draft could cite yet. Build or review the profile first.`,
   invalid_draft: t`The draft cited something your record does not support, so it was refused. Try again, or add the missing facts to your record.`,
   cost_cap_reached: t`This draft would pass the server's cost cap for one request.`,
+  material_model_failed: t`The model's answer could not be used, so nothing was drafted. Try again.`,
   material_quarantined: t`The job post was quarantined by injection screening. Release or replace it before drafting.`,
   material_unscreened: t`The job post has not been screened yet. Save the brief again to screen it.`,
 });

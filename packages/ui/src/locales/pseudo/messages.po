@@ -7959,6 +7959,10 @@ msgstr ""
 msgid "The model status could not be read."
 msgstr ""
 
+#: apps/web/src/application-material-model.ts
+msgid "The model's answer could not be used, so nothing was drafted. Try again."
+msgstr ""
+
 #. placeholder {0}: detail === undefined || detail === "" ? "" : ` ${detail}`
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "The models were configured, but the profile pair could not be saved for future runs.{0} It is not applied."

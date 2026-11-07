@@ -225,6 +225,28 @@ describe("application material route", () => {
     expect(logs.join("\n")).not.toContain("I led 12 people");
   });
 
+  it("answers 502 with the provider's diagnostics logged when the answer is cut off", async () => {
+    await build({
+      consent: granted,
+      route: () => ({
+        provider: "anthropic",
+        route: "anthropic-api",
+        execute: async () => {
+          throw Object.assign(new Error("The provider response was invalid."), {
+            code: "invalid-response",
+            diagnostics: [{ code: "max_tokens", path: "stop_reason" }],
+          });
+        },
+      }),
+    });
+    const response = await draft("interview-questions");
+    expect(response.statusCode).toBe(502);
+    expect(response.json().error.code).toBe("material_model_failed");
+    const failed = logs.find((line) => line.includes("application material model failed"));
+    expect(failed).toContain('"code":"invalid-response"');
+    expect(failed).toContain('"diagnostics":["max_tokens"]');
+  });
+
   it("answers 404 for an unknown application and 400 for an unknown kind", async () => {
     await build({ consent: granted, route: scriptedRoute([], []) });
     const missing = await draft(
