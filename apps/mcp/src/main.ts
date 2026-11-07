@@ -1,7 +1,7 @@
 import { text } from "node:stream/consumers";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { defaultAgentTokenPath } from "./agent-token.js";
+import { defaultAgentTokenPath, saveTokenFromInput } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
 import { configFromEnvironment, createWorkJournalApi, createWorkspaceApiCall } from "./client.js";
 import { runStopHook } from "./hook.js";
@@ -25,6 +25,17 @@ if (command === "init") {
   // An advisory hook never fails the turn: any problem prints nothing.
   const output = await runStopHook(await text(process.stdin)).catch(() => "");
   if (output !== "") process.stdout.write(`${output}\n`);
+} else if (command === "save-token" && rest.length === 0) {
+  if (process.stdin.isTTY)
+    process.stderr.write("Paste the agent token, then press Enter and Ctrl-D:\n");
+  try {
+    process.stdout.write(
+      `${await saveTokenFromInput(await text(process.stdin), defaultAgentTokenPath())}\n`,
+    );
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  }
 } else if (command === undefined) {
   // Stdout carries the protocol; nothing else may write to it.
   const config = configFromEnvironment();
@@ -35,7 +46,7 @@ if (command === "init") {
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--no-token]\n",
+    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       draftloop-mcp save-token  keep a token from Coding agents, read from standard input\n",
   );
   process.exitCode = 2;
 }

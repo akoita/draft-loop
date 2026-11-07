@@ -9835,6 +9835,10 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   text-decoration: underline;
 }
 
+.agent-setup-token code {
+  overflow-wrap: anywhere;
+}
+
 .agent-setup-config {
   overflow-x: auto;
   padding: 0.6rem 0.8rem;

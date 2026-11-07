@@ -6,9 +6,16 @@ import { t } from "@lingui/core/macro";
  * file or command that holds them differs.
  */
 
-export type AgentHost = "claude-code" | "codex" | "json";
+export type AgentHost = "plugin" | "claude-code" | "codex" | "json";
 
-export const agentHosts: readonly AgentHost[] = ["claude-code", "codex", "json"];
+export const agentHosts: readonly AgentHost[] = ["plugin", "claude-code", "codex", "json"];
+
+/** Whether the configuration holds the token, so it cannot be copied before one exists. */
+export function agentConfigurationHoldsToken(host: AgentHost): boolean {
+  return host !== "plugin";
+}
+
+const defaultServerUrl = "http://127.0.0.1:8080";
 
 /** The public setup guide; it holds no address or identifier of any deployment. */
 export const agentChannelGuideUrl =
@@ -82,6 +89,27 @@ function variables(connection: AgentConnection): readonly (readonly [string, str
 export function agentConfiguration(host: AgentHost, connection: AgentConnection): string {
   const env = variables(connection);
   switch (host) {
+    case "plugin": {
+      // The plugin's server reads the token `save-token` keeps; only other values are exported.
+      const exports = env.filter(
+        ([name, value]) =>
+          name === "DRAFT_LOOP_SERVER_WORKSPACE" ||
+          (name === "DRAFT_LOOP_SERVER_URL" && value !== defaultServerUrl),
+      );
+      return [
+        "# In Claude Code",
+        "/plugin marketplace add akoita/draft-loop",
+        "/plugin install draftloop@draftloop",
+        "# In a terminal: paste the token, then press Enter and Ctrl-D",
+        "draftloop-mcp save-token",
+        ...(exports.length === 0
+          ? []
+          : [
+              "# In your shell profile, before starting Claude Code",
+              ...exports.map(([name, value]) => `export ${name}=${value}`),
+            ]),
+      ].join("\n");
+    }
     case "claude-code":
       return [
         "claude mcp add draftloop --scope user \\",
@@ -105,6 +133,8 @@ export function agentConfiguration(host: AgentHost, connection: AgentConnection)
 
 export function agentHostLabel(host: AgentHost): string {
   switch (host) {
+    case "plugin":
+      return t`Claude Code plugin`;
     case "claude-code":
       return "Claude Code";
     case "codex":
@@ -117,6 +147,8 @@ export function agentHostLabel(host: AgentHost): string {
 /** Where the configuration goes, for one agent. */
 export function agentHostHint(host: AgentHost): string {
   switch (host) {
+    case "plugin":
+      return t`Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project.`;
     case "claude-code":
       return t`Run it in a terminal. It saves the server in your user settings.`;
     case "codex":
