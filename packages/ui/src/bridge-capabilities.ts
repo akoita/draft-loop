@@ -43,6 +43,7 @@ export const bridgeCapabilities = [
   "knowledge.backup-inspect",
   "knowledge.backup-restore",
   "knowledge.import-file",
+  "knowledge.import-text",
   "knowledge.import-directory",
   "knowledge.import-workspace-sources",
   "knowledge.ensure-default",

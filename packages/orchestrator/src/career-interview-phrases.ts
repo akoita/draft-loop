@@ -18,6 +18,7 @@ export interface CareerInterviewPhrases {
     readonly candidate: string;
     readonly skipped: string;
     readonly unknown: string;
+    readonly noWords: string;
   };
 }
 
@@ -36,6 +37,7 @@ const english: CareerInterviewPhrases = {
     candidate: "Candidate",
     skipped: "(skipped this question)",
     unknown: "(said they did not know)",
+    noWords: "No words recorded.",
   },
 };
 
@@ -55,6 +57,7 @@ const french: CareerInterviewPhrases = {
     candidate: "Candidat",
     skipped: "(a passé cette question)",
     unknown: "(a dit ne pas savoir)",
+    noWords: "Aucune parole enregistrée.",
   },
 };
 

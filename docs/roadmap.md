@@ -510,6 +510,11 @@ the question in large type and an orb that moves with whoever speaks. The
 written chat leads with the question being answered, and each topic carries a
 short title from the record instead of a long reason.
 
+[Milestone 87](https://github.com/akoita/draft-loop/milestone/87) (#2418
+to #2420) puts the career interview's fixed texts in the screen's language:
+the screen words topic reasons and the opening offer, and the interviewer's
+safe sentences and the evidence file follow the conversation's language.
+
 ### Next — Multi-language support
 
 A candidate gets French CVs, cover letters and interview questions from French
