@@ -280,7 +280,7 @@ export function findCareerInterviewTopics(
       topic: {
         key: `role-gap:${role.subjectId}:${fingerprint(factParts(role.facts))}`,
         kind: "role-gap",
-        reason: `Your record names ${role.label} but not ${listWords(role.missing.map((gap) => missingWords[gap]))}.`,
+        reason: `For your role “${role.label}”, your record does not say ${listWords(role.missing.map((gap) => missingWords[gap]))}.`,
         ...titled(roleTitle(role)),
         subjectId: role.subjectId,
         missing: role.missing,

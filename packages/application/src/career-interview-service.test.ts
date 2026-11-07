@@ -129,6 +129,14 @@ describe("career interview service", () => {
     ).rejects.toMatchObject({ code: "topic_not_summarised" });
   });
 
+  it("gives an own subject the record facts it names, minus the withheld ones", async () => {
+    const { service, requests } = harness([{ text: "What did you do there?" }]);
+    const session = await service.start("owner");
+    const withOwn = await service.ownSubject("owner", session.id, "My years at Example Bank");
+    expect(withOwn.topics.at(-1)?.fact_ids).toEqual(["e"]);
+    expect(requests.at(-1)?.topic.context.join(" ")).toContain("Example Bank");
+  });
+
   it("shows a summary year outside the role's dates as a conflict without changing the record", () => {
     expect(careerInterviewConflicts("I joined in 2017 and left in 2021.", facts)).toEqual([
       { kind: "date", summaryValue: "2017", factId: "d", factValue: "2019 to 2022" },

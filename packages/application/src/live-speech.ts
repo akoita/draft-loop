@@ -42,7 +42,11 @@ export interface LiveRecognition {
 
 export interface StreamingSpeechToText {
   readonly identity: SpeechProviderIdentity;
-  open(options: { readonly language?: LiveSpeechLanguage | undefined }): LiveRecognition;
+  open(options: {
+    readonly language?: LiveSpeechLanguage | undefined;
+    /** Names from the record the recogniser should expect, such as employers and projects. */
+    readonly phrases?: readonly string[] | undefined;
+  }): LiveRecognition;
 }
 
 export interface TextToSpeech {
