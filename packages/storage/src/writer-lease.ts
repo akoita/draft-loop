@@ -42,7 +42,7 @@ export class StorageWriterLeaseError extends Error {
 
 /** A live lease prevented acquisition, or the bounded wait elapsed. */
 export class StorageWriterLeaseConflictError extends StorageWriterLeaseError {
-  public declare readonly status: StorageWriterLeaseConflictStatus;
+  declare public readonly status: StorageWriterLeaseConflictStatus;
 
   public constructor(
     diagnostic: Omit<StorageWriterLeaseDiagnostic, "status"> & {
@@ -56,7 +56,7 @@ export class StorageWriterLeaseConflictError extends StorageWriterLeaseError {
 
 /** The caller tried to use a lease after it expired or was fenced by a successor. */
 export class StorageWriterLeaseLostError extends StorageWriterLeaseError {
-  public declare readonly status: "lost";
+  declare public readonly status: "lost";
 
   public constructor(
     diagnostic: Omit<StorageWriterLeaseDiagnostic, "status"> & { readonly status: "lost" },

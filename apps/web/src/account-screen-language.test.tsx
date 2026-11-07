@@ -67,14 +67,10 @@ describe("a member's screen language on the hosted service", () => {
     const browser: ScreenLanguage[] = [];
     const server: ScreenLanguage[] = [];
     let choose: ((language: ScreenLanguage) => void) | undefined;
-    function Probe() {
-      choose = useScreenLocale().choose;
-      return null;
-    }
     renderToStaticMarkup(
       <ScreensI18nProvider locale="en" onChoose={(language) => browser.push(language)}>
         <ScreenLanguageChoiceListener onChoose={(language) => server.push(language)}>
-          <Probe />
+          <ChooseProbe onChoose={(next) => (choose = next)} />
         </ScreenLanguageChoiceListener>
       </ScreensI18nProvider>,
     );
@@ -83,3 +79,13 @@ describe("a member's screen language on the hosted service", () => {
     expect(server).toEqual(["fr"]);
   });
 });
+
+/** Hands the screens' language picker to the test. */
+function ChooseProbe({
+  onChoose,
+}: {
+  onChoose: (choose: ((language: ScreenLanguage) => void) | undefined) => void;
+}) {
+  onChoose(useScreenLocale().choose);
+  return null;
+}

@@ -4,8 +4,16 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # Let a release age two weeks before it reaches CI, as for actions.
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 5
     groups:
+      # The Vertex SDK pins a range of the core SDK, so a major of one needs
+      # the other in the same change.
+      anthropic:
+        patterns:
+          - "@anthropic-ai/*"
       # React refuses mismatched react and react-dom versions, so bump the
       # runtime and its type packages together.
       react:
@@ -14,6 +22,12 @@ updates:
           - react-dom
           - "@types/react"
           - "@types/react-dom"
+      # Every other minor and patch bump lands as one monthly PR. Majors stay
+      # one PR each, because each may need code changes.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
   # Workflow actions are pinned to commit SHAs with the release in a trailing
   # comment; Dependabot moves both together. The cooldown lets a release age
   # before it reaches CI.
