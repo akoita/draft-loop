@@ -71,6 +71,12 @@ export const careerInterviewSessionTopicSchema = z.strictObject({
   key: text(400),
   kind: z.enum(careerInterviewTopicKinds),
   reason: text(600),
+  /**
+   * A short name for the topic in the record's own words (a role and its years, a period, a
+   * theme, a job requirement, the candidate's subject), without glue words, so each screen can
+   * word it in its own language (#2403). Older sessions have none and show the reason.
+   */
+  title: text(200).optional(),
   status: z.enum(careerInterviewTopicStatuses),
   fact_ids: z.array(text(256)).max(200).default([]),
   requirement_ids: z.array(text(256)).max(50).default([]),

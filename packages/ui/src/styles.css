@@ -10047,8 +10047,23 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   border-bottom: 1px solid var(--border);
 }
 
-.interview-topic-header h3 {
+.interview-topic-heading {
+  display: grid;
   flex: 1 1 18rem;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.interview-topic-heading .hint {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.interview-topic-name {
+  font-weight: 600;
+}
+
+.interview-topic-header h3 {
   min-width: 0;
   margin: 0;
   color: var(--text-1);

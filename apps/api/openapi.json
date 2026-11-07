@@ -2620,6 +2620,11 @@
                       "minLength": 1,
                       "maxLength": 600
                     },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -9453,6 +9458,11 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 600
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
                     },
                     "status": {
                       "type": "string",

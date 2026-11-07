@@ -114,6 +114,7 @@ describe("career interview service", () => {
     const withOwn = await service.ownSubject("owner", session.id, "a hackathon win");
     const own = withOwn.topics.at(-1);
     expect(own).toMatchObject({ kind: "candidate-subject", status: "open" });
+    expect(own?.title).toBe("a hackathon win");
     await service.setAside("owner", session.id, own?.key ?? "");
     await expect(
       service.answer("owner", session.id, own?.key ?? "", { text: "More words" }),

@@ -1254,6 +1254,10 @@ msgstr ""
 msgid "artifact review"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Asked in a job post: {title}"
+msgstr ""
+
 #. placeholder {0}: modelCompanyLabels()[company]
 #: packages/ui/src/app.tsx
 msgid "Asking {0} which models are available…"
@@ -1384,6 +1388,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Available now"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Awards"
 msgstr ""
 
 #. placeholder {0}: back.label
@@ -3906,6 +3914,10 @@ msgstr ""
 msgid "latest"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Leadership"
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr ""
@@ -4181,6 +4193,10 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Members of this record"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Mentoring"
 msgstr ""
 
 #: packages/ui/src/screen-language.tsx
@@ -5126,6 +5142,10 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "open run"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Open source"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -6861,6 +6881,10 @@ msgstr ""
 msgid "Side panel {width} pixels wide"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Side projects"
+msgstr ""
+
 #: apps/web/src/oidc-sign-in.tsx
 #: apps/web/src/sign-in.tsx
 msgid "Sign in"
@@ -6938,6 +6962,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Speak"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Speaking at events"
 msgstr ""
 
 #: packages/ui/src/writing-policy-directives.ts
@@ -7184,6 +7212,10 @@ msgstr ""
 
 #: packages/ui/src/application-steps.tsx
 msgid "Target job description URL"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Teaching"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -7770,6 +7802,10 @@ msgstr ""
 
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "The period {title}"
 msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx
@@ -8759,6 +8795,10 @@ msgstr ""
 
 #: apps/web/src/whisper-speech.ts
 msgid "Voice input is not available on this server."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Volunteering"
 msgstr ""
 
 #: packages/ui/src/app.tsx

@@ -6,6 +6,7 @@ import {
   careerInterviewActiveTopic,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicTitle,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
 import {
@@ -162,6 +163,29 @@ describe("CareerInterviewPanel", () => {
   it("marks no question as latest once the candidate has answered it", () => {
     const html = render({ session: openSession });
     expect(html).not.toContain("interview-turn-latest");
+  });
+
+  it("names a topic by its short title, worded for its kind, or by its reason without one", () => {
+    const base = openSession.topics[0];
+    if (base === undefined) throw new Error("fixture");
+    expect(careerInterviewTopicTitle(base)).toBe(base.reason);
+    expect(careerInterviewTopicTitle({ ...base, kind: "untold-period", title: "2016–2017" })).toBe(
+      "The period 2016–2017",
+    );
+    expect(careerInterviewTopicTitle({ ...base, kind: "untold-theme", title: "mentoring" })).toBe(
+      "Mentoring",
+    );
+    expect(
+      careerInterviewTopicTitle({ ...base, kind: "role-gap", title: "Analyst, Example Bank" }),
+    ).toBe("Analyst, Example Bank");
+    const html = render({
+      session: {
+        ...openSession,
+        topics: [{ ...base, kind: "role-gap", title: "Analyst, Example Bank (2016–2019)" }],
+      },
+    });
+    expect(html).toContain("<h3>Analyst, Example Bank (2016–2019)</h3>");
+    expect(html).toContain(base.reason);
   });
 
   it("sends on Enter but not on Shift+Enter or while composing a character", () => {

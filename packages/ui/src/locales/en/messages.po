@@ -1254,6 +1254,10 @@ msgstr "Archived applications"
 msgid "artifact review"
 msgstr "artifact review"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Asked in a job post: {title}"
+msgstr "Asked in a job post: {title}"
+
 #. placeholder {0}: modelCompanyLabels()[company]
 #: packages/ui/src/app.tsx
 msgid "Asking {0} which models are available…"
@@ -1385,6 +1389,10 @@ msgstr "Available candidate knowledge bases"
 #: packages/ui/src/review.tsx
 msgid "Available now"
 msgstr "Available now"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Awards"
+msgstr "Awards"
 
 #. placeholder {0}: back.label
 #: packages/ui/src/home.tsx
@@ -3907,6 +3915,10 @@ msgstr "Last used"
 msgid "latest"
 msgstr "latest"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Leadership"
+msgstr "Leadership"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr "Legacy evidence takes one URL at a time"
@@ -4183,6 +4195,10 @@ msgstr "Members can be assigned once the record is set up."
 #: apps/web/src/records.tsx
 msgid "Members of this record"
 msgstr "Members of this record"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Mentoring"
+msgstr "Mentoring"
 
 #: packages/ui/src/screen-language.tsx
 msgid "Menus, buttons and messages use this language. Each CV and letter keeps its own document language."
@@ -5128,6 +5144,10 @@ msgstr "Open review"
 #: packages/ui/src/run-comparison.tsx
 msgid "open run"
 msgstr "open run"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Open source"
+msgstr "Open source"
 
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
@@ -6862,6 +6882,10 @@ msgstr "shown"
 msgid "Side panel {width} pixels wide"
 msgstr "Side panel {width} pixels wide"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Side projects"
+msgstr "Side projects"
+
 #: apps/web/src/oidc-sign-in.tsx
 #: apps/web/src/sign-in.tsx
 msgid "Sign in"
@@ -6940,6 +6964,10 @@ msgstr "Sources — claim traceability"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Speak"
 msgstr "Speak"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Speaking at events"
+msgstr "Speaking at events"
 
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
@@ -7186,6 +7214,10 @@ msgstr "Target job description"
 #: packages/ui/src/application-steps.tsx
 msgid "Target job description URL"
 msgstr "Target job description URL"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Teaching"
+msgstr "Teaching"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
@@ -7772,6 +7804,10 @@ msgstr "The owner token is at least {ownerTokenMinimumLength} characters long."
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
 msgstr "The pair set on Home. Default."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "The period {title}"
+msgstr "The period {title}"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "The policy version could not be loaded."
@@ -8761,6 +8797,10 @@ msgstr "Voice input failed. Type your answer instead, or try again."
 #: apps/web/src/whisper-speech.ts
 msgid "Voice input is not available on this server."
 msgstr "Voice input is not available on this server."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Volunteering"
+msgstr "Volunteering"
 
 #: packages/ui/src/app.tsx
 msgid "Wait for candidate knowledge selection to finish before starting a review."
