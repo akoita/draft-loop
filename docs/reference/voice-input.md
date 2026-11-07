@@ -111,7 +111,7 @@ sequenceDiagram
 | --- | --- |
 | Recognition | Chirp 3 at `eu-speech.googleapis.com`; a turn ends after 1.5 s of silence, at 120 s, or on **Done speaking**; employer, project, skill and certification names from the career profile go with it as phrase hints |
 | Voice | Chirp 3 HD `Charon` at `eu-texttospeech.googleapis.com`, in French or English from the screen's language |
-| Language | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language |
+| Language | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language. Its fixed sentences and the evidence file follow the same language (English or French) |
 | Consent | The record's transmission grant must name Anthropic and Google Cloud; the screen offers to add Google Cloud |
 | Limits | 30 minutes of audio per conversation, then `live_limit_reached`; one topic per conversation |
 | Reply | A short acknowledgement ("D'accord.", "All right.") plays while the interviewer writes; the question's first sentence plays while the rest is synthesised |

@@ -378,6 +378,7 @@ export function createCareerInterviewService(
         topicIndex: index,
         knowledgeBaseId: input.knowledgeBaseId,
         tier: input.tier,
+        language: options.language,
       });
       return { session: await save(session, { topics: pending.topics }), published };
     },
