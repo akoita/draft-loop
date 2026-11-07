@@ -111,6 +111,7 @@ import {
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
+  hostRetrying,
   inProgressStatus,
   notIndexedRetrievalText,
   reviewFinished,
@@ -1058,7 +1059,8 @@ export function ReviewWorkspace({
   const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
   // Edits apply at approval, so the draft locks once it is approved, and while a round runs the
   // next version would replace them (#1925).
-  const draftEditable = !readOnly && !reviewFinished(state) && !reviewInProgress(state);
+  const draftEditable =
+    !readOnly && !reviewFinished(state) && !reviewInProgress(state) && !hostRetrying(state);
   const savedBlockText = useMemo(
     () =>
       new Map(
@@ -1114,21 +1116,23 @@ export function ReviewWorkspace({
     state.state !== "collecting" &&
     state.state !== "provider-error";
   const runInProgress = reviewInProgress(state);
+  // A step the host retries on its own reads as a review still going, not one waiting on the person.
+  const reviewWorking = runInProgress || hostRetrying(state);
   // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
   const verdict =
     hasArtifact &&
     state.reviewComplete &&
-    !runInProgress &&
+    !reviewWorking &&
     !roundLimitRecovery &&
     state.approval !== "approved"
       ? sendVerdict({ blocking: blockingFindings, warnings, readiness: approvalReadiness })
       : null;
-  const runStatusLine = runInProgress
+  const runStatusLine = reviewWorking
     ? inProgressStatus(state)
     : !state.reviewComplete
       ? uncritiquedStatus(state)
       : null;
-  const validationLabel = runInProgress
+  const validationLabel = reviewWorking
     ? (runStatusLine?.label ?? "")
     : !hasArtifact
       ? t`No draft artifact available`
@@ -3048,14 +3052,14 @@ export function ReviewWorkspace({
 
           <section
             hidden={comparing}
-            className={`validation-banner validation-${runInProgress ? "in-progress" : findingSummary.status}`}
+            className={`validation-banner validation-${reviewWorking ? "in-progress" : findingSummary.status}`}
             aria-label={t`validation status`}
             role="status"
             aria-live="polite"
           >
             <strong>{validationLabel}</strong>
             <span>
-              {runInProgress
+              {reviewWorking
                 ? runStatusLine?.detail
                 : !hasArtifact
                   ? t`Complete or recover the author step before reviewing findings or approving an artifact.`
