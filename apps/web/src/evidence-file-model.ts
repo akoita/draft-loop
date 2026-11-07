@@ -14,6 +14,17 @@ export function isInterviewSource(source: Pick<KnowledgeSource, "displayName">):
   return interviewSourceName.test(source.displayName);
 }
 
+/**
+ * The ending the web host gives text pasted on the Career evidence card (#2417), so the file
+ * list can tell it from an uploaded text file whatever its title or the screen's language.
+ */
+export const pastedSourceSuffix = ".pasted.txt";
+
+/** Whether the file holds text the person pasted on screen rather than a file they uploaded. */
+export function isPastedSource(source: Pick<KnowledgeSource, "displayName">): boolean {
+  return source.displayName.endsWith(pastedSourceSuffix);
+}
+
 /** When the file was added, such as `Uploaded 3 Nov 2026, 14:12`, in the viewer's time zone. */
 export function fileAddedLine(
   source: Pick<KnowledgeSource, "displayName" | "createdAt">,
@@ -21,7 +32,8 @@ export function fileAddedLine(
 ): string | undefined {
   const when = formatDateTime(source.createdAt, options);
   if (when === undefined) return undefined;
-  return isInterviewSource(source) ? t`Created ${when}` : t`Uploaded ${when}`;
+  if (isInterviewSource(source)) return t`Created ${when}`;
+  return isPastedSource(source) ? t`Added ${when}` : t`Uploaded ${when}`;
 }
 
 /**

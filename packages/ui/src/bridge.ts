@@ -154,6 +154,7 @@ import {
   type SavedModelProfilesResult,
   type SavedModelProfilesSaveInput,
 } from "./model-profile-bridge.js";
+import { isPastedText } from "./pasted-evidence.js";
 import {
   parseReviewedCanonicalCandidateProfileCatalogInput,
   parseReviewedCanonicalCandidateProfileCatalogResult,
@@ -537,6 +538,20 @@ const knowledgeFileImportKeys = inputKeys<KnowledgeFileImportInput>()([
   "knowledgeBaseId",
   "selection",
   "displayName",
+]);
+
+/** Text the person typed or pasted, saved as one plain-text source (#2417). */
+export interface KnowledgeTextImportInput extends KnowledgeReadinessInput {
+  /** A file-name-safe title; the host adds `.txt`. */
+  readonly title: string;
+  readonly text: string;
+}
+
+const knowledgeTextImportKeys = inputKeys<KnowledgeTextImportInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "title",
+  "text",
 ]);
 
 export interface KnowledgeDirectoryImportInput extends KnowledgeReadinessInput {
@@ -3227,6 +3242,7 @@ export interface BridgeCommandInputMap {
   "knowledge.backup-inspect": KnowledgeBackupInspectInput;
   "knowledge.backup-restore": KnowledgeBackupRestoreInput;
   "knowledge.import-file": KnowledgeFileImportInput;
+  "knowledge.import-text": KnowledgeTextImportInput;
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.import-workspace-sources": KnowledgeWorkspaceSourcesImportInput;
   "knowledge.ensure-default": KnowledgeEnsureDefaultInput;
@@ -3349,6 +3365,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.backup-inspect": KnowledgePortableBackupResult;
   "knowledge.backup-restore": KnowledgePortableBackupRestoreResult;
   "knowledge.import-file": KnowledgeFileImportResult;
+  "knowledge.import-text": KnowledgeFileImportResult;
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.import-workspace-sources": KnowledgeDirectoryImportResult;
   "knowledge.ensure-default": KnowledgeEnsureDefaultResult;
@@ -3957,6 +3974,19 @@ function validateKnowledgeFileImportInput(value: unknown): KnowledgeFileImportIn
     knowledgeBaseId: identifier(input.knowledgeBaseId),
     selection: "native-dialog",
     ...(selectedDisplayName === undefined ? {} : { displayName: selectedDisplayName }),
+  };
+}
+
+function validateKnowledgeTextImportInput(value: unknown): KnowledgeTextImportInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeTextImportKeys) || !isPastedText(input.text)) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    title: displayName(input.title),
+    text: input.text,
   };
 }
 
@@ -5994,6 +6024,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.import-file",
         input: validateKnowledgeFileImportInput(command.input),
+      };
+    case "knowledge.import-text":
+      return {
+        type: "knowledge.import-text",
+        input: validateKnowledgeTextImportInput(command.input),
       };
     case "knowledge.import-directory":
       return {
@@ -8659,6 +8694,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "knowledge.backup-restore":
       return normalizeKnowledgePortableBackupRestoreResult(value);
     case "knowledge.import-file":
+    case "knowledge.import-text":
     case "knowledge.append-file-version":
       return normalizeKnowledgeFileWriteResult(value);
     case "knowledge.import-directory":

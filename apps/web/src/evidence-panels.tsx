@@ -10,6 +10,7 @@ import {
   downloadSourceFile,
   fileAddedLine,
   isInterviewSource,
+  isPastedSource,
 } from "./evidence-file-model.js";
 import { PrivateSections } from "./private-sections.js";
 import { useRecordId } from "./record-context.js";
@@ -99,6 +100,8 @@ export function FileChecksPanel({
                         <span>{source.displayName}</span>
                         {isInterviewSource(source) ? (
                           <span className="evidence-file-tag">{t`From career interview`}</span>
+                        ) : isPastedSource(source) ? (
+                          <span className="evidence-file-tag">{t`Pasted text`}</span>
                         ) : null}
                       </div>
                       <div className="evidence-file-checks">

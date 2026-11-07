@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { downloadOffered, fileAddedLine, isInterviewSource } from "./evidence-file-model.js";
+import {
+  downloadOffered,
+  fileAddedLine,
+  isInterviewSource,
+  isPastedSource,
+} from "./evidence-file-model.js";
 import type { ScreeningStatus } from "./screening-model.js";
 
 const status = (quarantined: boolean): ScreeningStatus => ({
@@ -19,6 +24,8 @@ describe("career evidence files", () => {
     expect(isInterviewSource({ displayName: "career-interview-cis_example-2.md" })).toBe(true);
     expect(isInterviewSource({ displayName: "career-interview-notes.md" })).toBe(false);
     expect(isInterviewSource({ displayName: "facts.md" })).toBe(false);
+    expect(isPastedSource({ displayName: "Migration notes.pasted.txt" })).toBe(true);
+    expect(isPastedSource({ displayName: "notes.txt" })).toBe(false);
   });
 
   it("says when a file was uploaded or created", () => {
@@ -32,6 +39,9 @@ describe("career evidence files", () => {
       fileAddedLine({ displayName: "career-interview-cis_example-1.md", createdAt }, options),
     ).toBe("Created 3 Nov 2026, 14:12");
     expect(fileAddedLine({ displayName: "facts.md", createdAt: "not a date" })).toBeUndefined();
+    expect(
+      fileAddedLine({ displayName: "Migration notes.pasted.txt", createdAt }, options),
+    ).toMatch(/^Added /u);
   });
 
   it("offers a quarantined file's download only to those who may release it", () => {

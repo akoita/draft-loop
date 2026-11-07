@@ -1,4 +1,5 @@
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
+import { careerInterviewPhrases } from "@draft-loop/orchestrator";
 import type {
   CareerInterviewSession,
   CareerInterviewSessionTopic,
@@ -26,8 +27,14 @@ function plain(value: string): string {
   return value.replace(/[\\`*_[\]<>#|]/gu, (character) => `\\${character}`);
 }
 
-function topicLabel(topic: CareerInterviewSessionTopic): string {
-  return topic.reason
+/**
+ * The topic as the file names it: its reason, which the server words in English; in another
+ * language, its short title when it has one (#2420).
+ */
+function topicLabel(topic: CareerInterviewSessionTopic, language: string | undefined): string {
+  const english = careerInterviewPhrases(language) === careerInterviewPhrases("en");
+  const label = english || topic.title === undefined ? topic.reason : topic.title;
+  return label
     .replace(/[\\`*_[\]<>#|]/gu, "")
     .replace(/\s+/gu, " ")
     .trim()
@@ -38,14 +45,16 @@ function topicLabel(topic: CareerInterviewSessionTopic): string {
 export function careerInterviewSourceHeading(
   session: Pick<CareerInterviewSession, "id">,
   topicIndex: number,
+  language?: string,
 ): string {
-  return `Career interview ${session.id} topic ${topicIndex + 1}`;
+  const phrases = careerInterviewPhrases(language);
+  return `${phrases.evidence.title} ${session.id} ${phrases.evidence.topic.toLowerCase()} ${topicIndex + 1}`;
 }
 
 /** How a marked candidate turn reads in the transcript evidence. */
 export const careerInterviewMarkLabels = {
-  skipped: "(skipped this question)",
-  unknown: "(said they did not know)",
+  skipped: careerInterviewPhrases("en").evidence.skipped,
+  unknown: careerInterviewPhrases("en").evidence.unknown,
 } as const satisfies Record<
   NonNullable<CareerInterviewSessionTopic["turns"][number]["mark"]>,
   string
@@ -55,26 +64,30 @@ export function renderCareerInterviewMarkdown(
   session: Pick<CareerInterviewSession, "id">,
   topicIndex: number,
   topic: CareerInterviewSessionTopic,
+  language?: string,
 ): string {
+  const { evidence } = careerInterviewPhrases(language);
   if (topic.summary === undefined) {
     throw new Error("Only a topic with a confirmed summary becomes evidence.");
   }
   const words = topic.turns.flatMap((turn) => {
-    const speaker = turn.role === "candidate" ? "Candidate" : "Interviewer";
+    const speaker = turn.role === "candidate" ? evidence.candidate : evidence.interviewer;
     // A marked turn stays, labelled, so the next answer never reads as a reply to its question
     // (#2256). The label is fixed text: no candidate words are invented.
-    if (turn.mark !== undefined) return [`- ${speaker}: ${careerInterviewMarkLabels[turn.mark]}`];
+    if (turn.mark !== undefined) {
+      return [`- ${speaker}: ${turn.mark === "skipped" ? evidence.skipped : evidence.unknown}`];
+    }
     return turn.text === "" ? [] : [`- ${speaker}: ${plain(turn.text)}`];
   });
   const sections = [
-    `# ${careerInterviewSourceHeading(session, topicIndex)}`,
-    "Candidate-provided evidence: a topic from a guided career interview, summarised and confirmed by the candidate.",
-    "## Topic",
-    plain(topicLabel(topic)),
-    "## Confirmed summary",
+    `# ${careerInterviewSourceHeading(session, topicIndex, language)}`,
+    evidence.intro,
+    `## ${evidence.topic}`,
+    plain(topicLabel(topic, language)),
+    `## ${evidence.summary}`,
     plain(topic.summary),
-    "## Conversation",
-    words.length === 0 ? "No words recorded." : words.join("\n"),
+    `## ${evidence.conversation}`,
+    words.length === 0 ? evidence.noWords : words.join("\n"),
   ];
   return `${sections.join("\n\n")}\n`;
 }
@@ -83,10 +96,13 @@ export function renderCareerInterviewSource(
   session: Pick<CareerInterviewSession, "id">,
   topicIndex: number,
   topic: CareerInterviewSessionTopic,
+  language?: string,
 ): { readonly displayName: string; readonly bytes: Uint8Array } {
   return {
     displayName: `career-interview-${session.id}-${topicIndex + 1}.md`,
-    bytes: new TextEncoder().encode(renderCareerInterviewMarkdown(session, topicIndex, topic)),
+    bytes: new TextEncoder().encode(
+      renderCareerInterviewMarkdown(session, topicIndex, topic, language),
+    ),
   };
 }
 
@@ -99,13 +115,17 @@ export function careerInterviewSourceRules(
   session: Pick<CareerInterviewSession, "id">,
   topicIndex: number,
   tier: SourceSensitivityTier,
+  language?: string,
 ): CareerInterviewSourceRule[] {
   if (tier === "normal") return [];
   return [
     {
       id: `ci-${session.id}-${topicIndex + 1}`,
       tier,
-      match: { kind: "heading-path", path: [careerInterviewSourceHeading(session, topicIndex)] },
+      match: {
+        kind: "heading-path",
+        path: [careerInterviewSourceHeading(session, topicIndex, language)],
+      },
     },
   ];
 }
@@ -115,6 +135,8 @@ export interface CareerInterviewPublishInput {
   readonly topicIndex: number;
   readonly knowledgeBaseId: string;
   readonly tier: SourceSensitivityTier;
+  /** The conversation's language, which the file's headings and labels follow (#2420). */
+  readonly language?: string | undefined;
 }
 
 export interface CareerInterviewPublished {
@@ -143,16 +165,21 @@ export interface CareerInterviewPublisherOptions {
 export function createCareerInterviewPublisher(
   options: CareerInterviewPublisherOptions,
 ): CareerInterviewPublish {
-  return async ({ session, topicIndex, knowledgeBaseId, tier }) => {
+  return async ({ session, topicIndex, knowledgeBaseId, tier, language }) => {
     const topic = session.topics[topicIndex];
     if (topic === undefined) throw new Error("No such interview topic.");
     const existing = new Set(
       (await options.rules.list(knowledgeBaseId)).rules.map((rule) => rule.id),
     );
-    for (const { id, ...rule } of careerInterviewSourceRules(session, topicIndex, tier)) {
+    for (const { id, ...rule } of careerInterviewSourceRules(session, topicIndex, tier, language)) {
       if (!existing.has(id)) await options.rules.add(knowledgeBaseId, rule, id);
     }
-    const { displayName, bytes } = renderCareerInterviewSource(session, topicIndex, topic);
+    const { displayName, bytes } = renderCareerInterviewSource(
+      session,
+      topicIndex,
+      topic,
+      language,
+    );
     const added = await options.intake.addFileSource({
       knowledgeBaseId,
       displayName,
