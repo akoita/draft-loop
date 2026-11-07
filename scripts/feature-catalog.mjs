@@ -77,7 +77,11 @@ export async function checkFeatureCatalog(root) {
     if (!statuses.includes(row.status ?? "")) {
       violations.push(`${row.feature}: status must be one of ${statuses.join(", ")}`);
     }
-    if (row.link === undefined) continue;
+    if (row.link === undefined) {
+      if (row.status !== "planned") violations.push(`${row.feature}: links no feature page`);
+      continue;
+    }
+    if (/^https?:/u.test(row.link)) continue;
     const target = resolve(dirname(catalogFile), row.link);
     if (!(await exists(target))) {
       violations.push(`${row.feature}: link ${row.link} does not resolve`);
