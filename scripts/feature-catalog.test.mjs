@@ -83,6 +83,8 @@ test("rejects broken links, unknown statuses, unlisted pages, drift and unlisted
       "| [Journal](journal.md) | `partial` | server | `record_work` | Notes |",
       "| [Gone](missing.md) | `available` | server | `none` | Lost |",
       "| Folders | `soon` | server | `none` | Groups |",
+      "| Search | `available` | server | `none` | Finds |",
+      "| [Tools](https://example.com/issues/1) | `planned` | server | `none` | Later |",
     ]),
     "docs/features/journal.md": page("available"),
     "docs/features/orphan.md": page("available"),
@@ -91,6 +93,8 @@ test("rejects broken links, unknown statuses, unlisted pages, drift and unlisted
   assert.deepEqual(violations, [
     "Gone: link missing.md does not resolve",
     "Folders: status must be one of available, partial, planned, retired",
+    "Folders: links no feature page",
+    "Search: links no feature page",
     "docs/features/journal.md: front matter status available differs from its row (partial)",
     "docs/features/orphan.md: not listed in the catalog",
     "MCP tool list_work: not named in any Agent access cell",
