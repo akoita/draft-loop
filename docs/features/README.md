@@ -82,11 +82,11 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 
 ## Agent channel
 
-| Feature                                                                           | Status      | Where it runs | Agent access               | What it does                                                                 |
-| --------------------------------------------------------------------------------- | ----------- | ------------- | -------------------------- | ---------------------------------------------------------------------------- |
-| [Work journal](../reference/agent-channel.md)                                     | `available` | server        | `record_work`, `list_work` | A coding agent records notable work as notes you approve as evidence.        |
-| [Connect a coding agent](../reference/agent-channel.md)                           | `available` | self-hosted   | `none`                     | A Work journal panel section that issues an agent token and shows the setup. |
-| [Agents work your applications](https://github.com/akoita/draft-loop/issues/2440) | `planned`   | server        | `none`                     | MCP tools for applications, job intake and run status; milestone 89 (#2440). |
+| Feature                                                        | Status      | Where it runs | Agent access                                                        | What it does                                                                      |
+| -------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Work journal](../reference/agent-channel.md)                  | `available` | server        | `record_work`, `list_work`                                          | A coding agent records notable work as notes you approve as evidence.             |
+| [Coding agents](../reference/agent-channel.md#set-it-up)       | `available` | self-hosted   | `none`                                                              | A Workspace settings section that issues scoped agent tokens and shows the setup. |
+| [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `add_job`, `get_run_status` | An agent lists applications, adds a job from pasted text and follows a CV run.    |
 
 ## Account and data
 

@@ -77,6 +77,19 @@ test("accepts a catalog whose rows, pages and tools agree", async () => {
   );
 });
 
+test("finds tools registered in the modules beside the server, not in its tests", async () => {
+  const violations = await check({
+    "docs/features/README.md": catalog([
+      "| [Journal](journal.md) | `available` | server | `record_work`, `list_work` | Notes |",
+    ]),
+    "docs/features/journal.md": page("available"),
+    "apps/mcp/src/server.ts": server,
+    "apps/mcp/src/applications.ts": 'server.registerTool("list_applications", {});',
+    "apps/mcp/src/applications.test.ts": 'server.registerTool("only_in_a_test", {});',
+  });
+  assert.deepEqual(violations, ["MCP tool list_applications: not named in any Agent access cell"]);
+});
+
 test("rejects broken links, unknown statuses, unlisted pages, drift and unlisted tools", async () => {
   const violations = await check({
     "docs/features/README.md": catalog([

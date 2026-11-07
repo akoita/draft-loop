@@ -108,11 +108,18 @@ export async function checkFeatureCatalog(root) {
   }
 
   const listedTools = new Set(rows.flatMap((row) => row.tools));
+  // Tools are registered in the server file and in the modules beside it (#2440).
   const serverFile = resolve(root, mcpServerPath);
   if (await exists(serverFile)) {
-    for (const tool of mcpToolNames(await readFile(serverFile, "utf8"))) {
-      if (!listedTools.has(tool)) {
-        violations.push(`MCP tool ${tool}: not named in any Agent access cell`);
+    const sourceDirectory = dirname(serverFile);
+    const sources = (await readdir(sourceDirectory))
+      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
+      .sort();
+    for (const name of sources) {
+      for (const tool of mcpToolNames(await readFile(join(sourceDirectory, name), "utf8"))) {
+        if (!listedTools.has(tool)) {
+          violations.push(`MCP tool ${tool}: not named in any Agent access cell`);
+        }
       }
     }
   }
