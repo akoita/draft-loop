@@ -742,9 +742,33 @@ not a second product.
   it waits in a pending inbox, and only the candidate's approval in
   DraftLoop turns it into a knowledge source. Intake is off until the
   candidate turns on "Accept notes from coding agents".
-- **CV tools next:** list applications, start a tailored CV run from a job
-  post, follow its progress, read the draft with its findings and evidence,
-  and request an export. Inputs and outputs reuse the API's Zod contracts.
+- **Every suitable feature, not only the journal (amended 2026-11-07,
+  #2437).** An agent may use a feature when it saves the candidate work and
+  leaves every decision in DraftLoop. The tool catalogue grows by scope:
+
+  | Scope | Tools | What reaches the agent's provider | Stage |
+  |---|---|---|---|
+  | `journal` | `record_work`, `list_work` | Note titles | Built |
+  | `applications:read` | `list_applications`, `get_application`, `get_run_status` | Names, status, run state | Milestone 89 |
+  | `jobs:write` | `add_job` from pasted job text | Nothing new | Milestone 89 |
+  | `runs` | Start a run, ask for a revision, draft a cover letter or interview questions, within a per-token credit cap | Nothing new; spends credits | Planned |
+  | `drafts:read` | Read a draft with its findings and readiness; download an export the candidate approved | CV text | Planned |
+  | `evidence:read` | Search approved facts of the `normal` tier, with their sources | Approved facts | Planned |
+  | `evidence:write` | Add pasted text as evidence, pending review like a journal note | Nothing new | Planned |
+
+- **Scoped agent tokens.** The candidate ticks a token's scopes when they
+  create it; `journal` is the default and a token issued before scopes holds
+  `journal` only. The API admits an agent token through one route-to-scope
+  table, and a test fails when a route is not classified, so a new route is
+  refused to agents until someone decides.
+- **Human-only:** approving a draft, deciding findings, editing draft blocks,
+  consent, erasure, releasing quarantined material, models, budget, writing
+  policy and its suggestions, members, tokens and the career interview, which
+  needs the candidate's own answers.
+- **Distribution as a plugin.** DraftLoop ships as a Claude Code plugin from a
+  marketplace in this repository: the MCP server, skills and the Stop hook.
+  Codex receives the same server and skills. A pasted configuration stays the
+  fallback for other agents.
 - **The engine stays in DraftLoop.** The host agent never writes or edits
   CV claims. It may record evidence for the candidate's review; it asks
   DraftLoop to run the author–critic workflow, so grounding and the critic
