@@ -101,6 +101,12 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
   let stopped = false;
   let limited = false;
   let stopWaiting: (() => void) | undefined;
+  // Google closes a recognition stream that gets no audio for a few seconds, and the browser
+  // sends none while a question plays. So each turn's stream opens on its first frame; frames
+  // that arrive before it is open wait here.
+  let waiting: Uint8Array[] | undefined;
+  let audioArrived: (() => void) | undefined;
+  let endRequested = false;
 
   const stop = () => {
     stopped = true;
@@ -112,7 +118,13 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
     if (stopped) return;
     if (isBinary) {
       const bytes = bytesOf(data);
-      if (bytes === undefined || recognition === undefined) return;
+      if (bytes === undefined) return;
+      if (recognition === undefined) {
+        if (waiting === undefined) return;
+        waiting.push(bytes);
+        audioArrived?.();
+        return;
+      }
       turnBytes += bytes.byteLength;
       totalBytes += bytes.byteLength;
       if (liveAudioSeconds(totalBytes) > maximumSeconds) {
@@ -125,8 +137,10 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
       return;
     }
     const control = controlOf(data);
-    if (control?.type === "end_turn") recognition?.end();
-    else if (control?.type === "stop") stop();
+    if (control?.type === "end_turn") {
+      if (recognition !== undefined) recognition.end();
+      else if (waiting !== undefined && waiting.length > 0) endRequested = true;
+    } else if (control?.type === "stop") stop();
   });
 
   const usage = (outcome: LiveInterviewUsage["outcome"]): LiveInterviewUsage => {
@@ -144,9 +158,31 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
   try {
     send({ type: "ready", heard_by: speech.stt.identity, spoken_by: speech.tts.identity });
     while (!stopped) {
-      recognition = speech.stt.open({ language: options.language });
       turnBytes = 0;
-      const ended = collectLiveTurn(recognition.events, (text) => send({ type: "partial", text }));
+      waiting = [];
+      endRequested = false;
+      await new Promise<void>((resolve) => {
+        audioArrived = resolve;
+        stopWaiting = resolve;
+      });
+      audioArrived = undefined;
+      if (stopped) break;
+      const early = waiting;
+      waiting = undefined;
+      const opened = speech.stt.open({ language: options.language });
+      recognition = opened;
+      const ended = collectLiveTurn(opened.events, (text) => send({ type: "partial", text }));
+      for (const bytes of early) {
+        turnBytes += bytes.byteLength;
+        totalBytes += bytes.byteLength;
+        opened.write(bytes);
+      }
+      if (liveAudioSeconds(totalBytes) > maximumSeconds) {
+        limited = true;
+        stop();
+      } else if (endRequested || liveAudioSeconds(turnBytes) >= maximumLiveTurnSeconds) {
+        opened.end();
+      }
       const text = await Promise.race([
         ended,
         new Promise<string>((resolve) => {
