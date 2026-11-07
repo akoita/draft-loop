@@ -16,6 +16,9 @@ export const careerInterviewTopicKinds = [
 ] as const;
 export type CareerInterviewTopicKindName = (typeof careerInterviewTopicKinds)[number];
 
+/** What a role-gap topic's record leaves out of the role (#2418). */
+export const careerInterviewRoleGaps = ["dates", "outcome", "scope"] as const;
+
 /**
  * - `proposed`: offered, no answer yet. `declined`: the candidate said no; not offered again
  *   until the record changes. `open`: being discussed. `summarised`: a summary waits for the
@@ -77,6 +80,11 @@ export const careerInterviewSessionTopicSchema = z.strictObject({
    * word it in its own language (#2403). Older sessions have none and show the reason.
    */
   title: text(200).optional(),
+  /**
+   * What a role-gap topic's record leaves out of the role, so each screen can word the reason in
+   * its own language (#2418). Older sessions have none.
+   */
+  missing: z.array(z.enum(careerInterviewRoleGaps)).max(3).optional(),
   status: z.enum(careerInterviewTopicStatuses),
   fact_ids: z.array(text(256)).max(200).default([]),
   requirement_ids: z.array(text(256)).max(50).default([]),

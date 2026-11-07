@@ -5,6 +5,7 @@ import {
   type CareerInterviewerReply,
   type CareerInterviewerRequest,
   careerInterviewFallbackQuestion,
+  careerInterviewPhrases,
   careerInterviewProposal,
   careerInterviewShouldClose,
   careerInterviewSummaryRequest,
@@ -116,6 +117,21 @@ describe("nextCareerInterviewTurn", () => {
     const next = await nextCareerInterviewTurn(port, { topic, turns });
     expect(next).toMatchObject({ text: careerInterviewFallbackQuestion, fallback: true, model });
     expect(next.refusals.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("says its safe turns in the conversation's language", async () => {
+    const { port } = scripted([
+      { text: "Why did you leave in 2015?" },
+      { text: "Surely you increased adoption? And how?" },
+    ]);
+    const next = await nextCareerInterviewTurn(port, { topic, turns, language: "fr" });
+    expect(next).toMatchObject({
+      text: careerInterviewPhrases("fr").fallbackQuestion,
+      fallback: true,
+    });
+    expect(next.text).toBe("Que voudriez-vous m’en dire, avec vos propres mots ?");
+    expect(careerInterviewPhrases("fr-FR")).toBe(careerInterviewPhrases("fr"));
+    expect(careerInterviewPhrases("de").fallbackQuestion).toBe(careerInterviewFallbackQuestion);
   });
 
   it("closes with the model's summary when it repeats only the candidate's numbers", async () => {
