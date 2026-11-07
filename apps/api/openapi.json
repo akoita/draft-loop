@@ -6761,7 +6761,7 @@
           },
           "agent_tokens": {
             "type": "boolean",
-            "description": "Whether this server issues agent tokens, so the screen can offer a coding agent's setup."
+            "description": "Whether this server issues agent tokens, so the screen can offer an agent's setup."
           }
         },
         "required": [
@@ -13082,7 +13082,7 @@
           },
           "agent_tokens": {
             "type": "boolean",
-            "description": "Whether this server issues agent tokens, so the screen can offer a coding agent's setup."
+            "description": "Whether this server issues agent tokens, so the screen can offer an agent's setup."
           }
         },
         "required": [
@@ -21937,7 +21937,7 @@
     },
     "/v1/workspaces/{workspaceId}/work-journal/intake": {
       "get": {
-        "summary": "Read the \"Accept notes from coding agents\" switch",
+        "summary": "Read the \"Accept notes from agents\" switch",
         "parameters": [
           {
             "schema": {
@@ -22033,7 +22033,7 @@
         }
       },
       "put": {
-        "summary": "Turn \"Accept notes from coding agents\" on or off",
+        "summary": "Turn \"Accept notes from agents\" on or off",
         "description": "Intake is off until the candidate turns it on. Turning it off refuses new notes and deletes the pending ones.",
         "requestBody": {
           "required": true,
@@ -22711,7 +22711,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for a coding agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {

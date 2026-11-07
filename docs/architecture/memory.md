@@ -65,7 +65,7 @@ What each kind holds:
   by default and semantic when the workspace opts in.
 - **`candidate-facts`:** the reviewed career profile with citations, drawn
   from the knowledge base ([ADR 0007](../adr/0007-portable-candidate-knowledge-store.md)).
-- **`pending-evidence`:** work journal notes from a coding agent, waiting in
+- **`pending-evidence`:** work journal notes from an agent, waiting in
   an inbox until the person approves them as evidence. Confirmed career
   interview topics take the same path.
 - **`writing-policy`:** forbidden terms, section order and style preferences.

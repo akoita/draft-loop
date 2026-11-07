@@ -27,7 +27,7 @@ One set of packages runs in four ways, which differ only at their adapters
 
 | Way to run | Status | Clients | Storage and keys | Model routes |
 | --- | --- | --- | --- | --- |
-| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, coding agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
+| Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
 | Desktop client ([guide](../reference/cli-and-desktop.md#desktop-client)) | Alpha (v0.9.0) | An Electron window over a self-hosted server's own web screen, and the hosted service's once it opens | None of its own: the server's storage and keys; the owner token is remembered in the system keychain | The server's |
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | Hosted service | In development, staging only | The web screen | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
@@ -51,7 +51,7 @@ flowchart LR
   subgraph clients [Clients]
     web["Web screen<br/>apps/web"]
     desk["Desktop client<br/>apps/desktop-client"]
-    agent["Coding agent<br/>apps/mcp"]
+    agent["Agent<br/>apps/mcp"]
     cli["CLI<br/>apps/cli"]
   end
 
@@ -93,7 +93,7 @@ flowchart LR
 
 - **Clients** hold no domain logic. The web screen and the desktop share their
   screens (`packages/ui`), the desktop client is an Electron shell over the
-  server's own web screen, and coding agents reach the API through the
+  server's own web screen, and agents reach the API through the
   `draftloop-mcp` server ([agent channel](../reference/agent-channel.md)).
 - **The API** is a Fastify adapter over the application contracts, with
   Zod-typed `/v1` routes and a committed OpenAPI document. It saves a run and

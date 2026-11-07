@@ -18,7 +18,7 @@ import {
 } from "./work-journal-model.js";
 
 /**
- * The Work journal on the Career evidence page (#2024): the notes a coding agent recorded wait
+ * The Work journal on the Career evidence page (#2024): the notes an agent recorded wait
  * here until the candidate approves, edits, merges or discards each one. A host that serves the
  * work journal provides it as a host panel; the desktop has none.
  */
@@ -29,7 +29,7 @@ export interface WorkJournalKnowledgeBase {
 }
 
 export interface WorkJournalPanelProps {
-  /** Whether notes from coding agents are accepted; undefined until read. */
+  /** Whether notes from agents are accepted; undefined until read. */
   readonly intake: boolean | undefined;
   /** Every note the API returned; undefined until read. */
   readonly notes: readonly WorkJournalReviewNote[] | undefined;
@@ -44,7 +44,7 @@ export interface WorkJournalPanelProps {
     noteId: string,
     action: WorkJournalReviewAction,
   ) => Promise<string | undefined>;
-  /** How to connect a coding agent (#2427), from a host that can issue its token. */
+  /** How to connect an agent (#2427), from a host that can issue its token. */
   readonly agentSetup?: ReactNode;
 }
 
@@ -75,7 +75,7 @@ export function WorkJournalPanel({
       aria-labelledby={`${id}-heading`}
     >
       <h2 id={`${id}-heading`}>{t`Work journal`}</h2>
-      <p className="muted">{t`Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence.`}</p>
+      <p className="muted">{t`Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence.`}</p>
       <label className="checkbox">
         <input
           type="checkbox"
@@ -83,7 +83,7 @@ export function WorkJournalPanel({
           disabled={intake === undefined || saving}
           onChange={(event) => void toggle(event.target.checked)}
         />{" "}
-        {t`Accept notes from coding agents`}
+        {t`Accept notes from agents`}
       </label>
       {intakeProblem === undefined ? null : (
         <p className="problem" role="alert">

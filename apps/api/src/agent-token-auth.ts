@@ -7,7 +7,7 @@ import {
 import "fastify";
 
 /**
- * Agent tokens (#2147, #2159): what a coding agent holds instead of the owner token. One reaches
+ * Agent tokens (#2147, #2159): what an agent holds instead of the owner token. One reaches
  * only the routes its scopes admit in one workspace (`agent-route-scopes.ts`, #2438), so an
  * injected instruction in a repository the agent reads cannot use it to reach the candidate's
  * records or decisions.

@@ -2,7 +2,7 @@
   "name": "draftloop",
   "owner": { "name": "DraftLoop contributors" },
   "metadata": {
-    "description": "Connect Claude Code to your own DraftLoop server."
+    "description": "Connect Claude Code, Codex or another agent to your own DraftLoop server."
   },
   "plugins": [
     {

@@ -1,7 +1,7 @@
 # Feature catalog
 
-This catalog lists every capability a candidate, a coach, an operator or a
-coding agent can reach in DraftLoop, with its status and where it runs. Start
+This catalog lists every capability a candidate, a coach, an operator or an
+agent can reach in DraftLoop, with its status and where it runs. Start
 here before reading the architecture or the code. The
 [roadmap](../roadmap.md) holds stages and priorities; this page holds what is
 true now.
@@ -22,7 +22,7 @@ true now.
 | hosted        | Only on the hosted service                                                                    |
 | CLI           | The source-only CLI over a local workspace                                                    |
 
-**Agent access** names the MCP tools a coding agent can call for the feature
+**Agent access** names the MCP tools an agent can call for the feature
 through the [agent channel](../reference/agent-channel.md), or says `none`.
 
 ## Running DraftLoop
@@ -84,8 +84,8 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 
 | Feature                                                        | Status      | Where it runs | Agent access                                                        | What it does                                                                      |
 | -------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [Work journal](../reference/agent-channel.md)                  | `available` | server        | `record_work`, `list_work`                                          | A coding agent records notable work as notes you approve as evidence.             |
-| [Coding agents](../reference/agent-channel.md#set-it-up)       | `available` | self-hosted   | `none`                                                              | A Workspace settings section that issues scoped agent tokens and shows the setup. |
+| [Work journal](../reference/agent-channel.md)                  | `available` | server        | `record_work`, `list_work`                                          | An agent records notable work as notes you approve as evidence.                   |
+| [Agents](../reference/agent-channel.md#set-it-up)              | `available` | self-hosted   | `none`                                                              | A Workspace settings section that issues scoped agent tokens and shows the setup. |
 | [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `add_job`, `get_run_status` | An agent lists applications, adds a job from pasted text and follows a CV run.    |
 
 ## Account and data

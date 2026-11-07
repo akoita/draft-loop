@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
 
 /**
- * The ready-to-copy configuration that connects a coding agent to this server (#2427), and the
+ * The ready-to-copy configuration that connects an agent to this server (#2427), and the
  * scopes a new agent token may hold (#2439). Each agent reads the same `draftloop-mcp` process with the same variables; only the
  * file or command that holds them differs.
  */

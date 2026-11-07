@@ -3,7 +3,7 @@ import { z } from "zod";
 import { contentScreeningSignals, contentScreeningVerdicts } from "./content-screening.js";
 
 /**
- * The work journal (ADR 0011 D17, #2018): a coding agent files a short note about notable work it
+ * The work journal (ADR 0011 D17, #2018): an agent files a short note about notable work it
  * helped ship, and the note waits for the candidate's review before it becomes career evidence.
  * One contract serves the API, the MCP server, the web and the CLI. Field names are the ones the
  * agent sees, so they follow the MCP tool's snake_case.

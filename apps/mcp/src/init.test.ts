@@ -43,7 +43,7 @@ describe("draftloop-mcp init", () => {
       "updated: CLAUDE.md",
       "created: .claude/skills/log-work/SKILL.md",
       "created: .claude/settings.json",
-      expect.stringContaining("Accept notes from coding agents"),
+      expect.stringContaining("Accept notes from agents"),
     ]);
     const mcp = JSON.parse(await readFile(join(root, ".mcp.json"), "utf8"));
     expect(mcp.mcpServers.other).toEqual({ command: "other-server" });
@@ -184,7 +184,7 @@ describe("draftloop-mcp init's agent token", () => {
       fetch: fetcher,
     });
 
-    expect(lines.some((line) => line.includes("Accept notes from coding agents"))).toBe(named);
+    expect(lines.some((line) => line.includes("Accept notes from agents"))).toBe(named);
   });
 
   it("keeps an older setup on the owner token working, and says how to issue one", async () => {

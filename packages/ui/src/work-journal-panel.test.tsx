@@ -103,7 +103,7 @@ describe("work journal view model", () => {
 describe("work journal panel", () => {
   it("shows the consent switch and an empty list", () => {
     const html = renderToStaticMarkup(<WorkJournalPanel {...props} />);
-    expect(html).toContain("Accept notes from coding agents");
+    expect(html).toContain("Accept notes from agents");
     expect(html).toMatch(/type="checkbox" checked=""/u);
     expect(html).toContain("No notes wait for review.");
   });

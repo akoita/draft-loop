@@ -82,7 +82,7 @@ describe("work journal routes", () => {
     const refused = await post(note);
     expect(refused.statusCode).toBe(403);
     expect(refused.json().error.code).toBe("not_consented");
-    // This server issues no agent tokens, so the screen offers no coding agent setup (#2427).
+    // This server issues no agent tokens, so the screen offers no agent setup (#2427).
     expect((await enable()).json()).toMatchObject({ enabled: true, agent_tokens: false });
     const recorded = await post(note);
     expect(recorded.statusCode).toBe(201);

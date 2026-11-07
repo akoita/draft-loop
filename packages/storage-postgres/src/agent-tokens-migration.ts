@@ -3,7 +3,7 @@ import type { PostgresMigration } from "./migrations.js";
 import { sourceEvidenceKindsMigration } from "./source-evidence-kinds-migration.js";
 
 /**
- * Agent tokens (#2147, #2158): credentials a coding agent holds instead of the owner token, each
+ * Agent tokens (#2147, #2158): credentials an agent holds instead of the owner token, each
  * reaching only one workspace's work journal. Only a SHA-256 hash of the secret is kept, unique
  * across tenants so a presented token finds exactly one row. Erasing a record removes its tokens,
  * and erasing an organisation removes all of them: the two erasure functions are redefined from

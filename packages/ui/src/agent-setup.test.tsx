@@ -111,7 +111,7 @@ const props: AgentSetupProps = {
 describe("AgentSetup", () => {
   it("shows the steps, the placeholder configuration and the guide where tokens are issued", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} />);
-    expect(html).toContain("Connect a coding agent");
+    expect(html).toContain("Connect an agent");
     expect(html).toContain("Create agent token");
     // The plugin comes first; its steps hold no token, so they can be copied at once.
     expect(html).toContain("/plugin marketplace add akoita/draft-loop");
@@ -140,7 +140,7 @@ describe("AgentSetup", () => {
       />,
     );
     expect(html).toContain('id="coding-agents"');
-    expect(html).toContain("Coding agents");
+    expect(html).toContain("<h3>Agents</h3>");
     expect(html).toContain('<details class="agent-setup" open="">');
     expect(html.match(/type="checkbox"/gu)).toHaveLength(3);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
@@ -149,10 +149,10 @@ describe("AgentSetup", () => {
     expect(html).toContain("Active agent tokens: 1");
   });
 
-  it("points the Work journal to Coding agents only where it can open them", () => {
+  it("points the Work journal to Agents only where it can open them", () => {
     expect(renderToStaticMarkup(<AgentSetupLink />)).toBe("");
     expect(renderToStaticMarkup(<AgentSetupLink onOpen={() => undefined} />)).toContain(
-      "under Coding agents in Workspace settings",
+      "under Agents in Workspace settings",
     );
   });
 
@@ -162,7 +162,7 @@ describe("AgentSetup", () => {
     expect(html).toContain(agentChannelGuideUrl);
     expect(html).not.toContain("Create agent token");
     expect(html).not.toContain("draftloop-mcp");
-    expect(html).toContain("Coding agents");
+    expect(html).toContain("<h3>Agents</h3>");
   });
 
   it("shows nothing until the server says which applies", () => {

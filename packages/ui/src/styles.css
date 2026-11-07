@@ -9784,7 +9784,7 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin: 0.5rem 0;
 }
 
-/* Connect a coding agent, under the Work journal (#2427). */
+/* Connect an agent, in Workspace settings (#2427, #2439). */
 .coding-agents {
   margin-top: 1rem;
   border-top: 1px solid var(--border);
