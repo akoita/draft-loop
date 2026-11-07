@@ -236,6 +236,27 @@ describe("signed-in client", () => {
     expect(ended).toEqual([]);
   });
 
+  it("opens the live socket with a current access token (#2393)", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    const session = await signIn(context);
+    const opened: string[] = [];
+    const socket = {} as WebSocket;
+    const client = signedInClient(
+      session,
+      (token) => ({
+        call: async () => ({}) as never,
+        openSocket: (path) => {
+          opened.push(`${path} ${token}`);
+          return socket;
+        },
+      }),
+      () => {},
+    );
+
+    expect(await client.openSocket?.("/live", {} as never, "draft-loop.live")).toBe(socket);
+    expect(opened).toEqual(["/live access-1"]);
+  });
+
   it("returns to sign-in when the refreshed token is refused too", async () => {
     const context = setup([tokens("access-1", "refresh-1"), tokens("access-2")]);
     const session = await signIn(context);

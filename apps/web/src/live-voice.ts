@@ -81,6 +81,70 @@ export interface LiveSocket {
   addEventListener(type: "close" | "error", listener: () => void): void;
 }
 
+const connectingState = 0;
+const closedState = 3;
+
+/**
+ * A socket that may still be opening, such as the signed-in screen's, which waits for a current
+ * access token (#2393). Until it resolves the call sees a connecting socket and sends nothing;
+ * listeners attach when it arrives, and a refused opening reports an error and a close.
+ */
+export function liveSocketOf(opening: LiveSocket | Promise<LiveSocket>): LiveSocket {
+  if (!(opening instanceof Promise)) return opening;
+  let socket: LiveSocket | undefined;
+  let failed = false;
+  let closeRequested: { code?: number; reason?: string } | undefined;
+  let binaryType: BinaryType = "blob";
+  const listeners: Array<[string, (event: MessageEvent) => void]> = [];
+  void opening.then(
+    (opened) => {
+      socket = opened;
+      opened.binaryType = binaryType;
+      for (const [type, listener] of listeners) {
+        if (type === "message") opened.addEventListener("message", listener);
+        else opened.addEventListener(type as "close" | "error", () => listener({} as MessageEvent));
+      }
+      if (closeRequested !== undefined) opened.close(closeRequested.code, closeRequested.reason);
+    },
+    () => {
+      failed = true;
+      for (const [type, listener] of listeners) {
+        if (type !== "message") listener({} as MessageEvent);
+      }
+    },
+  );
+  return {
+    get binaryType() {
+      return socket?.binaryType ?? binaryType;
+    },
+    set binaryType(value) {
+      binaryType = value;
+      if (socket !== undefined) socket.binaryType = value;
+    },
+    get readyState() {
+      return socket?.readyState ?? (failed ? closedState : connectingState);
+    },
+    send: (data) => socket?.send(data),
+    close: (code, reason) => {
+      if (socket !== undefined) socket.close(code, reason);
+      else
+        closeRequested = {
+          ...(code === undefined ? {} : { code }),
+          ...(reason === undefined ? {} : { reason }),
+        };
+    },
+    addEventListener: (type: string, listener: (event: MessageEvent) => void) => {
+      if (socket === undefined) {
+        listeners.push([type, listener]);
+      } else if (type === "message") {
+        socket.addEventListener("message", listener);
+      } else {
+        socket.addEventListener(type as "close" | "error", () => listener({} as MessageEvent));
+      }
+    },
+  } as LiveSocket;
+}
+
 export interface LiveVoiceCallOptions {
   readonly socket: LiveSocket;
   readonly microphone: () => Promise<LiveMicrophone>;

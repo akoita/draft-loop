@@ -272,14 +272,17 @@ export function signedInClient(
   createClient: (token: string) => ApiClient,
   onEnd: EndSession,
 ): ApiClient {
-  async function attempt<T>(call: (client: ApiClient) => Promise<T>): Promise<T> {
-    let token: string;
+  async function currentToken(): Promise<string> {
     try {
-      token = await session.accessToken();
+      return await session.accessToken();
     } catch (error) {
       if (error instanceof SignInEndedError) onEnd(error.notice, false);
       throw error;
     }
+  }
+
+  async function attempt<T>(call: (client: ApiClient) => Promise<T>): Promise<T> {
+    const token = await currentToken();
     try {
       return await call(createClient(token));
     } catch (error) {
@@ -311,5 +314,12 @@ export function signedInClient(
   }
   return {
     call: (operation, input) => attempt((client) => client.call(operation, input)),
+    // The live interview's socket (#2393) carries the token in its subprotocol, so it opens only
+    // once the session holds a current one; a socket the API refuses closes and Talk live ends.
+    openSocket: async (path, input, protocol) => {
+      const client = createClient(await currentToken());
+      if (client.openSocket === undefined) throw new Error("This client cannot open sockets.");
+      return await client.openSocket(path, input, protocol);
+    },
   };
 }

@@ -5,6 +5,7 @@ import {
   createPcm16Resampler,
   type LiveMicrophone,
   type LiveSocket,
+  liveSocketOf,
   pcm16Level,
   startLiveVoiceCall,
 } from "./live-voice.js";
@@ -169,5 +170,59 @@ describe("web live voice", () => {
     expect(socket.closed).toBe(true);
     expect(microphone.closed).toBe(true);
     expect(states.at(-1)).toBe("ended");
+  });
+
+  it("waits for a socket that is still opening, then talks over it (#2393)", async () => {
+    let open: (socket: FakeSocket) => void = () => {};
+    const pending = liveSocketOf(new Promise<LiveSocket>((resolve) => (open = resolve)));
+    const states: CareerInterviewLiveState[] = [];
+    startLiveVoiceCall({
+      socket: pending,
+      microphone: async () => fakeMicrophone(),
+      player: { play: () => {}, stop: () => {} },
+      events: { onState: (state) => states.push(state), onHeard: () => {}, onRefusal: () => {} },
+      onSession: () => {},
+    });
+    expect(pending.readyState).toBe(0);
+
+    const socket = new FakeSocket();
+    open(socket);
+    await Promise.resolve();
+    expect(socket.binaryType).toBe("arraybuffer");
+    socket.server({ type: "ready" });
+    expect(states).toEqual(["listening"]);
+    socket.close();
+    expect(states).toEqual(["listening", "ended"]);
+  });
+
+  it("ends the call when the socket cannot open, and closes one stopped while opening", async () => {
+    const states: CareerInterviewLiveState[] = [];
+    const refused = liveSocketOf(Promise.reject(new Error("signed out")));
+    startLiveVoiceCall({
+      socket: refused,
+      microphone: async () => fakeMicrophone(),
+      player: { play: () => {}, stop: () => {} },
+      events: { onState: (state) => states.push(state), onHeard: () => {}, onRefusal: () => {} },
+      onSession: () => {},
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(refused.readyState).toBe(3);
+    expect(states).toEqual(["ended"]);
+
+    let open: (socket: FakeSocket) => void = () => {};
+    const pending = liveSocketOf(new Promise<LiveSocket>((resolve) => (open = resolve)));
+    const live = startLiveVoiceCall({
+      socket: pending,
+      microphone: async () => fakeMicrophone(),
+      player: { play: () => {}, stop: () => {} },
+      events: { onState: () => {}, onHeard: () => {}, onRefusal: () => {} },
+      onSession: () => {},
+    });
+    live.stop();
+    const socket = new FakeSocket();
+    open(socket);
+    await Promise.resolve();
+    expect(socket.closed).toBe(true);
   });
 });
