@@ -70,6 +70,7 @@ the career interview's rules:
 | 409 `no_citable_facts`                              | The career record holds no fact the draft may cite.                                       |
 | 409 `cost_cap_reached`                              | The next call could pass the request's cap, US$0.50 by default.                           |
 | 422 `invalid_draft`                                 | Both drafts broke the rules above.                                                        |
+| 502 `material_model_failed`                         | The model's answer could not be used, such as one cut off at its output limit.            |
 
 Each model call is logged with its model, tokens and cost, never the draft. The
 draft is not stored: download it or ask again.

@@ -7954,6 +7954,10 @@ msgstr "Les données de profil de modèle transmises sont invalides."
 msgid "The model status could not be read."
 msgstr "L’état du modèle n’a pas pu être lu."
 
+#: apps/web/src/application-material-model.ts
+msgid "The model's answer could not be used, so nothing was drafted. Try again."
+msgstr "La réponse du modèle n'a pas pu être utilisée, rien n'a donc été rédigé. Réessayez."
+
 #. placeholder {0}: detail === undefined || detail === "" ? "" : ` ${detail}`
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "The models were configured, but the profile pair could not be saved for future runs.{0} It is not applied."
