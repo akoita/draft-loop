@@ -144,7 +144,7 @@ describe("Test key in the Provider authentication dialog", () => {
     });
 
     expect(row(html, anthropicTitle)).toContain("<strong>Works.</strong>");
-    expect(row(html, anthropicTitle)).toContain("claude-fictional-5 is available");
+    expect(row(html, anthropicTitle)).toContain("it can use claude-fictional-5");
     expect(row(html, openaiTitle)).toContain("<strong>Rejected.</strong>");
     expect(row(offline, anthropicTitle)).toContain("<strong>Could not check.</strong>");
     expect(row(offline, anthropicTitle)).not.toContain("Rejected");

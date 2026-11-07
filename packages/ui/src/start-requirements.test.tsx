@@ -112,7 +112,7 @@ describe("setup card 01 latest brief", () => {
       />,
     );
 
-    expect(latestBriefNote(pending)).toBe(pendingExtractionNote);
+    expect(latestBriefNote(pending)).toBe(pendingExtractionNote());
     expect(html).toContain("Reading this job");
     expect(html).not.toContain("No requirements were found");
     expect(html).not.toContain("Review requirements");
@@ -129,7 +129,7 @@ describe("setup card 01 latest brief", () => {
       extraction: "failed",
     };
 
-    expect(latestBriefNote(failed)).toBe(failedExtractionNote);
+    expect(latestBriefNote(failed)).toBe(failedExtractionNote());
     expect(offersRequirementsExtraction(failed)).toBe(true);
     expect(requirementRefusalAction(failed, null, true)).toBe("extract-again");
   });
@@ -178,7 +178,7 @@ describe("start panel requirements source", () => {
         onUseReviewed={() => undefined}
       />,
     );
-    expect(html).toContain(rawJobDescriptionLabel);
+    expect(html).toContain(rawJobDescriptionLabel());
     expect(html).toContain("Use the reviewed requirements (brief v3)");
   });
 });
@@ -224,14 +224,14 @@ describe("the raw job description over a draft brief", () => {
     });
     const html = renderToStaticMarkup(unchosen);
     expect(html).toContain("<summary>Advanced: requirements for this run</summary>");
-    expect(html).toContain(rawJobDescriptionChoiceLabel);
-    expect(html).toContain(rawJobDescriptionChoiceNote);
-    expect(html).not.toContain(rawJobDescriptionOverDraftLabel);
+    expect(html).toContain(rawJobDescriptionChoiceLabel());
+    expect(html).toContain(rawJobDescriptionChoiceNote());
+    expect(html).not.toContain(rawJobDescriptionOverDraftLabel());
     const chosen = renderToStaticMarkup(
       <StartFromJobDescriptionChoice chosen onChange={() => undefined} />,
     );
     expect(chosen).toContain('checked=""');
-    expect(chosen).toContain(rawJobDescriptionOverDraftLabel);
+    expect(chosen).toContain(rawJobDescriptionOverDraftLabel());
     const input = findCheckbox(unchosen);
     input.props.onChange({ target: { checked: true } });
     expect(changes).toEqual([true]);

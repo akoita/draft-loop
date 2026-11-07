@@ -5,10 +5,13 @@ import type {
 import { t } from "@lingui/core/macro";
 import type { CanonicalCandidateProfileIssueResult } from "./bridge.js";
 
-const bulkStatusOptions: readonly (readonly [CanonicalCandidateProfileIssueStatus, string])[] = [
-  ["open", "Open"],
-  ["acknowledged", "Acknowledged"],
-  ["resolved", "Resolved"],
+const bulkStatusOptions = (): readonly (readonly [
+  CanonicalCandidateProfileIssueStatus,
+  string,
+])[] => [
+  ["open", t`Open`],
+  ["acknowledged", t`Acknowledged`],
+  ["resolved", t`Resolved`],
 ];
 
 /** Applies one status to every issue of a severity so long duplicate lists need one action. */
@@ -35,7 +38,7 @@ export function ProfileIssueBulkStatus({
       <span>
         {t`Set all`} {issues.length}:
       </span>
-      {bulkStatusOptions.map(([status, label]) => (
+      {bulkStatusOptions().map(([status, label]) => (
         <button
           key={status}
           className="button button-outline"

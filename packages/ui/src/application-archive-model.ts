@@ -11,14 +11,14 @@ export type ApplicationAction = "archive" | "restore" | "delete";
 /** Same shape as the import notice, so Home shows both the same way. */
 export type ApplicationActionNotice = ApplicationImportNotice;
 
-export const applicationDeleteExplanation =
-  "Only applications without runs, briefs or exports can be deleted. Archiving keeps everything and can be undone.";
+export const applicationDeleteExplanation = () =>
+  t`Only applications without runs, briefs or exports can be deleted. Archiving keeps everything and can be undone.`;
 
-const failureFallbacks: Readonly<Record<ApplicationAction, string>> = {
-  archive: "The application could not be archived. Try again.",
-  restore: "The application could not be restored. Try again.",
-  delete: "The application could not be deleted. Try again, or archive it instead.",
-};
+const failureFallbacks = (): Readonly<Record<ApplicationAction, string>> => ({
+  archive: t`The application could not be archived. Try again.`,
+  restore: t`The application could not be restored. Try again.`,
+  delete: t`The application could not be deleted. Try again, or archive it instead.`,
+});
 
 /**
  * Only a created application that holds nothing can be deleted. The default application is the
@@ -71,6 +71,6 @@ export function applicationActionErrorNotice(
   const message = error instanceof Error ? error.message.trim() : "";
   return {
     kind: "error",
-    message: message === "" || message.length > 300 ? failureFallbacks[action] : message,
+    message: message === "" || message.length > 300 ? failureFallbacks()[action] : message,
   };
 }

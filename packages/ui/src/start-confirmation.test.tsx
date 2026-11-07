@@ -82,8 +82,8 @@ describe("start confirmation summary", () => {
       { action: start },
     );
     expect(summary.models[0].route).toBe("Claude session");
-    expect(summary.models[1].route).toBe(apiKeyRouteLabel);
-    expect(apiKeyRouteLabel).toBe("API key, billed per token");
+    expect(summary.models[1].route).toBe(apiKeyRouteLabel());
+    expect(apiKeyRouteLabel()).toBe("API key, billed per token");
   });
 
   it("omits the route when the host did not report one", () => {
@@ -124,7 +124,7 @@ describe("start confirmation summary", () => {
         { action: start },
       );
 
-    expect(withPair("local", "openai").localWriterWarning).toBe(localWriterWarning);
+    expect(withPair("local", "openai").localWriterWarning).toBe(localWriterWarning());
     expect(withPair("anthropic", "local").localWriterWarning).toBeNull();
     expect(startConfirmationSummary(liveState(), { action: start }).localWriterWarning).toBeNull();
   });
@@ -238,7 +238,7 @@ describe("start confirmation summary", () => {
       candidateProfile: null,
     });
     expect(raw.inputs).toEqual([
-      { label: "Requirements", value: chosenRawJobDescriptionValue },
+      { label: "Requirements", value: chosenRawJobDescriptionValue() },
       { label: "Career profile", value: "None pinned" },
       { label: "Writing policy", value: "None" },
     ]);
@@ -246,7 +246,7 @@ describe("start confirmation summary", () => {
       liveState({ setup: { ...liveState().setup, reviewedOpportunity: null } }),
       { action: start, reviewedRequirements: null },
     );
-    expect(noBrief.inputs[0]).toEqual({ label: "Requirements", value: jobTextRequirementsValue });
+    expect(noBrief.inputs[0]).toEqual({ label: "Requirements", value: jobTextRequirementsValue() });
   });
 
   it("lists autopilot and the round limit", () => {
@@ -296,7 +296,7 @@ describe("start confirmation dialog", () => {
   it("shows the local writer warning as a note that does not block Start", () => {
     const summary = {
       ...startConfirmationSummary(liveState(), { action: start }),
-      localWriterWarning,
+      localWriterWarning: localWriterWarning(),
     };
     const html = renderToStaticMarkup(
       <StartConfirmation

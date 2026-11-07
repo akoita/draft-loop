@@ -241,7 +241,7 @@ describe("canonical candidate profile outcome", () => {
 
 describe("cancelled profile generation", () => {
   it("recognizes only the fixed cancellation message and keeps it readable", () => {
-    const cancelled = new Error(canonicalCandidateProfileGenerationCancelledMessage);
+    const cancelled = new Error(canonicalCandidateProfileGenerationCancelledMessage());
     expect(isCanonicalCandidateProfileGenerationCancelled(cancelled)).toBe(true);
     expect(safeCanonicalCandidateProfileFeedback(cancelled)).toBe(
       "Profile generation was cancelled. No facts were saved.",
@@ -251,7 +251,7 @@ describe("cancelled profile generation", () => {
     );
     expect(
       isCanonicalCandidateProfileGenerationCancelled(
-        canonicalCandidateProfileGenerationCancelledMessage,
+        canonicalCandidateProfileGenerationCancelledMessage(),
       ),
     ).toBe(false);
   });

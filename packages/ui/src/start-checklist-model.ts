@@ -12,22 +12,22 @@ export const startChecklistId = "start-checklist";
 /** DOM id of the job and requirements setup card, so a checklist action can reveal it. */
 export const startJobCardId = "start-job-card";
 
-export const candidateProfileStartBlockerMessage =
-  "Select an exact reviewed candidate profile before starting a review.";
-export const candidateProfilePendingBlockerMessage =
-  "Wait for the candidate profile operation to finish before starting a review.";
+export const candidateProfileStartBlockerMessage = () =>
+  t`Select an exact reviewed candidate profile before starting a review.`;
+export const candidateProfilePendingBlockerMessage = () =>
+  t`Wait for the candidate profile operation to finish before starting a review.`;
 
 /**
  * The host's wording for a missing job description (see `electron/host.ts` and
  * `electron/host-applications.ts`). A step that matches folds into the requirements condition;
  * one that drifts still shows as its own unmet item.
  */
-export const jobDescriptionSteps: readonly string[] = [
-  "Add a target job description.",
-  "Extract and review requirements from this application's job posting before starting.",
+export const jobDescriptionSteps = (): readonly string[] => [
+  t`Add a target job description.`,
+  t`Extract and review requirements from this application's job posting before starting.`,
 ];
 
-const setupIncompleteFallback = "Finish the workspace setup above.";
+const setupIncompleteFallback = () => t`Finish the workspace setup above.`;
 
 /**
  * Where an application reads its job from. An application created from an approved job page
@@ -36,8 +36,8 @@ const setupIncompleteFallback = "Finish the workspace setup above.";
 export type ApplicationJobSource = "document" | "approved-page";
 
 /** The requirements detail for an approved job page that has no brief to review yet. */
-export const approvedPageRequirementsDetail =
-  "The job page was approved when you created this application. Extract its requirements, then review them.";
+export const approvedPageRequirementsDetail = () =>
+  t`The job page was approved when you created this application. Extract its requirements, then review them.`;
 
 export type StartActionId =
   | "add-job-description"
@@ -99,10 +99,10 @@ export interface StartChecklistInput {
 }
 
 /** Why a draft brief blocks the start, with the explicit alternative. */
-export const draftBriefStartDetail =
-  "The requirements brief is a draft. Review it before starting, or choose to start from the raw job description under Advanced.";
+export const draftBriefStartDetail = () =>
+  t`The requirements brief is a draft. Review it before starting, or choose to start from the raw job description under Advanced.`;
 
-const requirementsLabel = "Job requirements reviewed";
+const requirementsLabel = () => t`Job requirements reviewed`;
 
 function requirementRefusalFix(action: RequirementRefusalAction): StartConditionAction | null {
   switch (action) {
@@ -132,9 +132,9 @@ function requirementsCondition(
     // The page is the source already: extraction fetches it, so nothing is left to add.
     return {
       id: "requirements",
-      label: requirementsLabel,
+      label: requirementsLabel(),
       done: false,
-      detail: approvedPageRequirementsDetail,
+      detail: approvedPageRequirementsDetail(),
       action:
         input.requirementAction === "extract-again"
           ? requirementRefusalFix("extract-again")
@@ -146,10 +146,10 @@ function requirementsCondition(
   if (!input.setup.jobDescriptionReady) {
     return {
       id: "requirements",
-      label: requirementsLabel,
+      label: requirementsLabel(),
       done: false,
       detail:
-        steps.find((step) => jobDescriptionSteps.includes(step)) ??
+        steps.find((step) => jobDescriptionSteps().includes(step)) ??
         t`Add the target job description.`,
       action:
         input.requirementAction === "review-draft"
@@ -160,7 +160,7 @@ function requirementsCondition(
   if (refusal !== null) {
     return {
       id: "requirements",
-      label: requirementsLabel,
+      label: requirementsLabel(),
       done: false,
       detail: refusal,
       action: requirementRefusalFix(input.requirementAction),
@@ -170,9 +170,9 @@ function requirementsCondition(
     // A draft is never skipped silently: only the explicit raw-text choice starts without it.
     return {
       id: "requirements",
-      label: requirementsLabel,
+      label: requirementsLabel(),
       done: false,
-      detail: draftBriefStartDetail,
+      detail: draftBriefStartDetail(),
       action: requirementRefusalFix(input.requirementAction),
     };
   }
@@ -181,7 +181,7 @@ function requirementsCondition(
     input.setup.reviewedOpportunity !== undefined &&
     !input.startFromJobDescription;
   return reviewed
-    ? { id: "requirements", label: requirementsLabel, done: true, action: null }
+    ? { id: "requirements", label: requirementsLabel(), done: true, action: null }
     : {
         id: "requirements",
         label: t`Job requirements read from the job description`,
@@ -193,7 +193,7 @@ function requirementsCondition(
 function profileCondition(input: StartChecklistInput): StartCondition | null {
   const label = t`Reviewed career profile selected`;
   const reason = input.startDisabledReason;
-  if (reason === candidateProfilePendingBlockerMessage) {
+  if (reason === candidateProfilePendingBlockerMessage()) {
     return { id: "profile", label, done: false, detail: reason, action: null };
   }
   if (input.candidateProfile !== null && input.candidateProfile !== undefined) {
@@ -205,7 +205,7 @@ function profileCondition(input: StartChecklistInput): StartCondition | null {
       action: null,
     };
   }
-  if (reason === candidateProfileStartBlockerMessage) {
+  if (reason === candidateProfileStartBlockerMessage()) {
     return {
       id: "profile",
       label,
@@ -295,7 +295,7 @@ export function startChecklist(input: StartChecklistInput): readonly StartCondit
     ? []
     : input.setup.nextSteps.length > 0
       ? input.setup.nextSteps
-      : [setupIncompleteFallback];
+      : [setupIncompleteFallback()];
   const problem = input.setup.jobRequirementProblem ?? null;
   const refusal =
     problem !== null && (steps.includes(problem) || input.startFromJobDescription) ? problem : null;
@@ -303,8 +303,8 @@ export function startChecklist(input: StartChecklistInput): readonly StartCondit
   const conditions: StartCondition[] = [];
   if (
     reason !== null &&
-    reason !== candidateProfileStartBlockerMessage &&
-    reason !== candidateProfilePendingBlockerMessage
+    reason !== candidateProfileStartBlockerMessage() &&
+    reason !== candidateProfilePendingBlockerMessage()
   ) {
     conditions.push({ id: "host-refusal", label: reason, done: false, action: null });
   }
@@ -314,7 +314,8 @@ export function startChecklist(input: StartChecklistInput): readonly StartCondit
   conditions.push(providerSignInCondition(input), transmissionCondition(input));
   const otherSteps = steps.filter(
     (step) =>
-      step !== problem && !(jobDescriptionSteps.includes(step) && !input.setup.jobDescriptionReady),
+      step !== problem &&
+      !(jobDescriptionSteps().includes(step) && !input.setup.jobDescriptionReady),
   );
   return [
     ...conditions,

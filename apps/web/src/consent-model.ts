@@ -12,11 +12,11 @@ type ConsentBody = ApiInput<"POST /v1/workspaces/{workspaceId}/consents">["body"
 /** The longest note the consent ledger keeps. */
 export const maximumConsentNoteLength = 500;
 
-const basisLabels: Readonly<Record<ConsentBasis, string>> = {
-  "candidate-consent": "The candidate consented",
-  contract: "A contract with the candidate",
-  "legitimate-interest": "Legitimate interest",
-};
+const basisLabels = (): Readonly<Record<ConsentBasis, string>> => ({
+  "candidate-consent": t`The candidate consented`,
+  contract: t`A contract with the candidate`,
+  "legitimate-interest": t`Legitimate interest`,
+});
 
 /** The bases each kind takes: storage any lawful basis, transmission only the candidate's consent. */
 export const consentBases: Readonly<Record<ConsentKind, readonly ConsentBasis[]>> = {
@@ -24,30 +24,30 @@ export const consentBases: Readonly<Record<ConsentKind, readonly ConsentBasis[]>
   "provider-transmission": ["candidate-consent"],
 };
 
-const kindLabels: Readonly<Record<ConsentKind, string>> = {
-  "material-storage": "Storing material",
-  "provider-transmission": "Sending to providers",
-};
+const kindLabels = (): Readonly<Record<ConsentKind, string>> => ({
+  "material-storage": t`Storing material`,
+  "provider-transmission": t`Sending to providers`,
+});
 
-const providerNames: Readonly<Record<ConsentProvider, string>> = {
-  anthropic: "Anthropic",
+const providerNames = (): Readonly<Record<ConsentProvider, string>> => ({
+  anthropic: t`Anthropic`,
   openai: "OpenAI",
-  google: "Google Cloud",
-};
+  google: t`Google Cloud`,
+});
 
 /** A basis as people read it, such as `A contract with the candidate`. */
 export function basisLabel(basis: ConsentBasis): string {
-  return basisLabels[basis];
+  return basisLabels()[basis];
 }
 
 /** A consent kind as the history names it. */
 export function consentKindLabel(kind: ConsentKind): string {
-  return kindLabels[kind];
+  return kindLabels()[kind];
 }
 
 /** A provider as people read it, such as `OpenAI`. */
 export function providerName(provider: string): string {
-  return providerNames[provider as ConsentProvider] ?? provider;
+  return providerNames()[provider as ConsentProvider] ?? provider;
 }
 
 /** Providers in plain words, such as `Anthropic and OpenAI`. */
@@ -57,7 +57,7 @@ export function providerList(providers: readonly string[]): string {
 
 /** Whether a company is one a transmission grant can name. */
 export function isConsentProvider(company: string): company is ConsentProvider {
-  return company in providerNames;
+  return company in providerNames();
 }
 
 /**
@@ -186,25 +186,23 @@ export function consentHistory(consents: Consents, kind: ConsentKind): ConsentEn
   return consents.history.filter((entry) => entry.kind === kind).reverse();
 }
 
-const refusals: Readonly<Record<string, { kind: ConsentKind; message: string }>> = {
+const refusals = (): Readonly<Record<string, { kind: ConsentKind; message: string }>> => ({
   storage_consent_required: {
     kind: "material-storage",
-    message:
-      "The candidate's material cannot be stored yet. Record the permission to store it on the Career evidence page, then upload again.",
+    message: t`The candidate's material cannot be stored yet. Record the permission to store it on the Career evidence page, then upload again.`,
   },
   transmission_consent_required: {
     kind: "provider-transmission",
-    message:
-      "The candidate has not agreed to send their material to the model providers. Record their consent in the Start dialog, then try again.",
+    message: t`The candidate has not agreed to send their material to the model providers. Record their consent in the Start dialog, then try again.`,
   },
-};
+});
 
 /** The missing consent behind a refused upload or run, if a consent is what is missing. */
 export function consentRefusal(
   error: unknown,
 ): { readonly kind: ConsentKind; readonly message: string } | undefined {
   if (!(error instanceof ApiRequestError) || error.status !== 409) return undefined;
-  return refusals[error.code];
+  return refusals()[error.code];
 }
 
 /** What to tell the member about a failed call, pointing to a missing consent when it is one. */

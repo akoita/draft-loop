@@ -166,20 +166,20 @@ export interface ConsentPanelProps {
   readonly compact?: boolean;
 }
 
-const titles: Readonly<Record<ConsentKind, string>> = {
-  "material-storage": "Consent to store the candidate's material",
-  "provider-transmission": "Consent to send material to model providers",
-};
+const titles = (): Readonly<Record<ConsentKind, string>> => ({
+  "material-storage": t`Consent to store the candidate's material`,
+  "provider-transmission": t`Consent to send material to model providers`,
+});
 
-const compactTitles: Readonly<Record<ConsentKind, string>> = {
-  "material-storage": "Permission to store this material",
-  "provider-transmission": "Permission to send material to model providers",
-};
+const compactTitles = (): Readonly<Record<ConsentKind, string>> => ({
+  "material-storage": t`Permission to store this material`,
+  "provider-transmission": t`Permission to send material to model providers`,
+});
 
-const firstSteps: Readonly<Record<ConsentKind, string>> = {
-  "material-storage": "Record this before the first upload.",
-  "provider-transmission": "Record this before the first run.",
-};
+const firstSteps = (): Readonly<Record<ConsentKind, string>> => ({
+  "material-storage": t`Record this before the first upload.`,
+  "provider-transmission": t`Record this before the first run.`,
+});
 
 /** One kind of consent: what it covers, its current state, the form or withdrawal, and history. */
 export function ConsentPanel(props: ConsentPanelProps) {
@@ -193,7 +193,7 @@ export function ConsentPanel(props: ConsentPanelProps) {
     return (
       <section className="consent consent-compact" aria-labelledby={headingId}>
         <p>
-          <strong id={headingId}>{compactTitles[kind]}</strong> ·{" "}
+          <strong id={headingId}>{compactTitles()[kind]}</strong> ·{" "}
           <span className="muted">{consentSummary(consents, kind, locale)}</span>{" "}
           <button
             type="button"
@@ -208,7 +208,7 @@ export function ConsentPanel(props: ConsentPanelProps) {
 
   return (
     <section className="consent" aria-labelledby={headingId}>
-      <h3 id={headingId}>{compact === true ? compactTitles[kind] : titles[kind]}</h3>
+      <h3 id={headingId}>{compact === true ? compactTitles()[kind] : titles()[kind]}</h3>
       <p>
         {kind === "material-storage"
           ? t`DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU.`
@@ -216,7 +216,7 @@ export function ConsentPanel(props: ConsentPanelProps) {
       </p>
       <p className={granted ? "muted" : "notice"}>
         {consentSummary(consents, kind, locale)}
-        {granted ? null : ` ${firstSteps[kind]}`}
+        {granted ? null : ` ${firstSteps()[kind]}`}
       </p>
       {missing.length === 0 ? null : (
         <p className="notice">

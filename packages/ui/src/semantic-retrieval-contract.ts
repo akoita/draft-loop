@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Path-free bridge contracts for the local embedding model and the workspace retrieval mode.
  *
@@ -23,11 +24,11 @@ export type RetrievalMode = (typeof retrievalModes)[number];
 export const defaultRetrievalMode: RetrievalMode = "lexical";
 
 /** How the install approval names the destination, instead of a local path. */
-export const embeddingModelDestinationLabel = "DraftLoop application data";
+export const embeddingModelDestinationLabel = () => t`DraftLoop application data`;
 
 /** The fixed message a cancelled install reports; the renderer shows it as a status. */
-export const embeddingModelInstallCancelledMessage =
-  "The model download was cancelled. Nothing was installed.";
+export const embeddingModelInstallCancelledMessage = () =>
+  t`The model download was cancelled. Nothing was installed.`;
 
 /** Binds a runtime key list to its interface so a missing or extra key is a compile error. */
 function exactKeys<Shape extends object>() {

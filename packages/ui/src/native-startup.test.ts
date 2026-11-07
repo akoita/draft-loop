@@ -26,9 +26,9 @@ describe("desktop renderer startup", () => {
   it("fails closed when Electron has no native bridge", async () => {
     const port = createDesktopReviewPort({ nativeBridge: undefined, electronRuntime: true });
 
-    await expect(port.load()).rejects.toThrow(nativeConnectionUnavailableMessage);
+    await expect(port.load()).rejects.toThrow(nativeConnectionUnavailableMessage());
     await expect(port.dispatch(createFixtureReviewState(), { type: "start" })).rejects.toThrow(
-      nativeConnectionUnavailableMessage,
+      nativeConnectionUnavailableMessage(),
     );
   });
 
@@ -42,7 +42,7 @@ describe("desktop renderer startup", () => {
       electronRuntime: true,
     });
 
-    await expect(port.load()).rejects.toThrow(nativeConnectionUnavailableMessage);
+    await expect(port.load()).rejects.toThrow(nativeConnectionUnavailableMessage());
     expect(invoke).not.toHaveBeenCalled();
   });
 

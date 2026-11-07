@@ -124,7 +124,7 @@ function liveVoice(
         client,
         workspaceId,
         ["anthropic", "google"],
-        "Live voice in the career interview",
+        t`Live voice in the career interview`,
       ),
   };
 }
@@ -242,7 +242,7 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
       speech={webSpeechInput()}
       live={live}
       allowInterviewer={() =>
-        allowInterviewProviders(client, workspaceId, ["anthropic"], "Career interview")
+        allowInterviewProviders(client, workspaceId, ["anthropic"], t`Career interview`)
       }
     />
   );

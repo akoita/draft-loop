@@ -30,8 +30,8 @@ export function ApplicationTitle({ name, onRename, editRequest = 0 }: Applicatio
   const rename = useInlineRename({
     name,
     normalize: normalizeApplicationDisplayName,
-    invalidMessage: invalidApplicationNameMessage,
-    failureMessage: applicationRenameFailureMessage,
+    invalidMessage: invalidApplicationNameMessage(),
+    failureMessage: applicationRenameFailureMessage(),
     onRename,
     inputId: titleInputId,
     buttonId: titleRenameButtonId,
@@ -119,7 +119,7 @@ export function ApplicationNameNudge({
         setErrorMessage(
           reason instanceof Error && reason.message.trim() !== ""
             ? reason.message
-            : applicationRenameFailureMessage,
+            : applicationRenameFailureMessage(),
         );
       })
       .finally(() => setBusy(false));

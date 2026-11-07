@@ -3,13 +3,13 @@ import type { CareerFlowStep } from "./career-flow.js";
 
 type CareerPage = Extract<CareerFlowStep, "evidence" | "profile">;
 
-const tabs: readonly {
+const tabs = (): readonly {
   readonly page: CareerPage;
   readonly number: 1 | 2;
   readonly label: string;
-}[] = [
-  { page: "evidence", number: 1, label: "Career evidence" },
-  { page: "profile", number: 2, label: "Career profile" },
+}[] => [
+  { page: "evidence", number: 1, label: t`Career evidence` },
+  { page: "profile", number: 2, label: t`Career profile` },
 ];
 
 /**
@@ -29,7 +29,7 @@ export function CareerPageTabs({
   return (
     <nav className="career-tabs" aria-label={t`Your career`}>
       <ul className="career-tabs-list">
-        {tabs.map(({ page, number, label }) => {
+        {tabs().map(({ page, number, label }) => {
           const open = onOpen[page];
           if (page !== current && open === undefined) return null;
           const content = (

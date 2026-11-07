@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ReactNode } from "react";
 
 import { type CareerFlowStep, careerEvidenceIntro, careerProfileIntro } from "./career-flow.js";
@@ -98,8 +99,8 @@ export function CareerEvidencePage({
     <CareerPageFrame
       {...frame}
       page="evidence"
-      current="Career evidence"
-      intro={careerEvidenceIntro}
+      current={t`Career evidence`}
+      intro={careerEvidenceIntro()}
     >
       {lockedReason === null ? null : (
         <p className="career-page-locked" role="status">
@@ -126,7 +127,12 @@ export interface CareerProfilePageProps extends CareerPageProps {
 /** The reviewed facts built from the documents. The Career profile step on Home opens it. */
 export function CareerProfilePage({ workflow, ...frame }: CareerProfilePageProps) {
   return (
-    <CareerPageFrame {...frame} page="profile" current="Career profile" intro={careerProfileIntro}>
+    <CareerPageFrame
+      {...frame}
+      page="profile"
+      current={t`Career profile`}
+      intro={careerProfileIntro()}
+    >
       <ProfileSignpostArea onOpenEvidence={frame.onOpenStep.evidence}>
         {workflow}
       </ProfileSignpostArea>

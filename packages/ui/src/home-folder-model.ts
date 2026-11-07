@@ -8,7 +8,7 @@ import type { ApplicationSummaryView } from "./application-contract.js";
 import type { ApplicationFolderView } from "./application-folder-contract.js";
 
 export const noFolderSectionKey = "none";
-export const noFolderLabel = "No folder";
+export const noFolderLabel = () => t`No folder`;
 
 export interface FolderSection {
   /** The folder id, or `none` for the applications in no folder. */

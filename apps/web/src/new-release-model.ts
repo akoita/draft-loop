@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Noticing a new release while a tab stays open (#1904). The API serves the built screen with a
  * revalidated `index.html` and content-hashed assets, so a release changes the entry script the
@@ -7,7 +8,7 @@
 /** How often an open tab checks, besides whenever it regains focus. */
 export const RELEASE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
-export const NEW_RELEASE_MESSAGE = "A new version of DraftLoop is available.";
+export const NEW_RELEASE_MESSAGE = () => t`A new version of DraftLoop is available.`;
 
 /** The module script an HTML page loads, as written in its `src`, or null without one. */
 export function entryScriptOf(html: string): string | null {

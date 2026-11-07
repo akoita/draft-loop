@@ -86,8 +86,8 @@ export function WorkspaceModelSummary({
     <section className="workspace-model-summary" aria-label={title}>
       <h2 className="eyebrow">{title}</h2>
       <dl className="workspace-model-summary-rows">
-        <SummaryRow label="Writer" side={author} />
-        <SummaryRow label="Reviewer" side={critic} />
+        <SummaryRow label={t`Writer`} side={author} />
+        <SummaryRow label={t`Reviewer`} side={critic} />
       </dl>
       {appliedProfiles === null ? null : appliedProfilesLine(appliedProfiles)}
       {profileWarning === null ? null : (

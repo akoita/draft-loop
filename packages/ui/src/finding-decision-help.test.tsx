@@ -132,7 +132,7 @@ describe("bulk decisions and word-match coverage warnings", () => {
         onBulkFindingDecision={() => undefined}
       />,
     );
-    expect(html).toContain(`<p class="finding-bulk-note">${BULK_ACCEPT_SKIPS_BLOCKING_NOTE}</p>`);
+    expect(html).toContain(`<p class="finding-bulk-note">${BULK_ACCEPT_SKIPS_BLOCKING_NOTE()}</p>`);
     // Every shown finding is either blocking or a word-match warning, so nothing is left to accept.
     expect(html).toContain('disabled="">Accept all</button>');
     expect(html).not.toContain('disabled="">Reject all</button>');
@@ -155,9 +155,9 @@ describe("bulk decisions and word-match coverage warnings", () => {
     );
     expect(html).toContain("Apply to all 3 shown");
     expect(html).toContain(
-      `Includes 2 word-match coverage findings; accepting them asks the author to add the job&#x27;s wording. ${BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.`,
+      `Includes 2 word-match coverage findings; accepting them asks the author to add the job&#x27;s wording. ${BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE()}.`,
     );
-    expect(html).not.toContain(BULK_ACCEPT_SKIPS_BLOCKING_NOTE);
+    expect(html).not.toContain(BULK_ACCEPT_SKIPS_BLOCKING_NOTE());
   });
 
   it("disables Accept all when only word-match warnings are shown", () => {
@@ -188,7 +188,7 @@ describe("finding cards explain their decisions", () => {
     expect(html).toMatch(
       /aria-describedby="finding-details-finding-unsupported-claim-effect-accepted">Accept<\/button>/u,
     );
-    expect(html).not.toContain(ACCEPT_UNAVAILABLE_NOTE);
+    expect(html).not.toContain(ACCEPT_UNAVAILABLE_NOTE());
   });
 
   it("disables Accept on a blocking finding when no revision is left", () => {
@@ -196,12 +196,12 @@ describe("finding cards explain their decisions", () => {
       <ReviewWorkspace state={atLimit} onAction={() => undefined} />,
     );
     expect(html).toContain(`<p class="finding-accept-guard"`);
-    expect(html).toContain(ACCEPT_UNAVAILABLE_NOTE);
+    expect(html).toContain(ACCEPT_UNAVAILABLE_NOTE());
     expect(html).toMatch(
       /aria-describedby="finding-details-finding-unsupported-claim-accept-guard [^"]+"[^>]*disabled="">Accept<\/button>/u,
     );
     // The margin note's Accept is unavailable too.
-    expect(html).toContain(`title="${ACCEPT_UNAVAILABLE_NOTE}"`);
+    expect(html).toContain(`title="${ACCEPT_UNAVAILABLE_NOTE()}"`);
   });
 
   it("nudges an accepted blocking finding toward Reject or Override at the round limit", () => {
@@ -216,7 +216,7 @@ describe("finding cards explain their decisions", () => {
     );
     expect(html).toContain("Accepted · no revision left");
     expect(html).not.toContain("Accepted · revision required");
-    expect(html).toContain(ACCEPTED_WITHOUT_REVISION_NUDGE);
+    expect(html).toContain(ACCEPTED_WITHOUT_REVISION_NUDGE());
   });
 });
 
@@ -236,7 +236,7 @@ describe("coverage panel", () => {
       />,
     );
     expect(html).toContain(
-      `<h2>Requirement coverage</h2><p class="coverage-information-note">${COVERAGE_INFORMATION_NOTE}</p>`,
+      `<h2>Requirement coverage</h2><p class="coverage-information-note">${COVERAGE_INFORMATION_NOTE()}</p>`,
     );
   });
 });

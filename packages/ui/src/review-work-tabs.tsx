@@ -62,48 +62,48 @@ export function nextStepLine(
   switch (blocker.kind) {
     case "no-artifact":
       return reviewInProgress(state)
-        ? "Next: wait for the review"
-        : "Next: resume or start a review to get a draft";
+        ? t`Next: wait for the review`
+        : t`Next: resume or start a review to get a draft`;
     case "exported":
       return state.exportPath === null
-        ? "Next: export again to save a new copy"
-        : "Next: nothing left · the CV is exported";
+        ? t`Next: export again to save a new copy`
+        : t`Next: nothing left · the CV is exported`;
     case "approved":
-      return "Next: export";
+      return t`Next: export`;
     case "waiting":
       if (roundLimitRecoveryRequired(state)) {
-        return `Next: return to reviewed Round ${state.round - 1}`;
+        return t`Next: return to reviewed Round ${state.round - 1}`;
       }
-      if (reviewInProgress(state)) return "Next: wait for the review";
+      if (reviewInProgress(state)) return t`Next: wait for the review`;
       if (!state.reviewComplete) {
-        if (state.state === "paused") return "Next: resume the review";
-        if (state.state === "stopped") return "Next: start a new review";
-        return "Next: resume or retry the review";
+        if (state.state === "paused") return t`Next: resume the review`;
+        if (state.state === "stopped") return t`Next: start a new review`;
+        return t`Next: resume or retry the review`;
       }
-      return "Next: recover from the provider error";
+      return t`Next: recover from the provider error`;
     case "findings": {
       const revisionLeft = state.round < state.providerTransmissionPreflight.budget.maxRounds;
       const { blocking } = reviewFindingSummary(state);
       const undecided = blocking.filter((finding) => finding.decision !== "accepted").length;
-      if (revisionLeft && undecided === 0) return "Next: request a revision";
+      if (revisionLeft && undecided === 0) return t`Next: request a revision`;
       return t`Next: decide ${countedNouns.blockingFinding(revisionLeft ? undecided : blocking.length)}`;
     }
     case "final-checks": {
       // Identical blockers count once, so "and N more" names distinct checks.
       const groups = groupReadinessBlockers(readiness?.blockers ?? []);
       const first = groups[0];
-      if (first === undefined) return "Next: approve or override";
+      if (first === undefined) return t`Next: approve or override`;
       const more = groups.length > 1 ? ` and ${groups.length - 1} more` : "";
       const label =
         first.count === 1
           ? shortReadinessBlocker(first.blocker)
           : compactReadinessBlockerGroup(first);
-      return `Next: approve or override (${label}${more})`;
+      return t`Next: approve or override (${label}${more})`;
     }
     case "edited-checks":
-      return "Next: approve to check your edits";
+      return t`Next: approve to check your edits`;
     case "ready":
-      return blocker.tone === "safe" ? "Next: approve" : "Next: check the warnings, then approve";
+      return blocker.tone === "safe" ? t`Next: approve` : t`Next: check the warnings, then approve`;
   }
 }
 
@@ -129,7 +129,7 @@ export function coverageTally(coverage: ReviewCoverageView): CoverageTally {
  */
 export function coverageCollapsedSummary(coverage: ReviewCoverageView): string {
   const { covered, total, notCovered } = coverageTally(coverage);
-  if (total === 0) return "No requirements assessed";
+  if (total === 0) return t`No requirements assessed`;
   const tallies = coverageKindTallies(coverage);
   if (tallies !== null) return coverageKindsSummary(tallies);
   return notCovered === 0
@@ -175,11 +175,12 @@ export function coverageTabLabel(coverage: ReviewCoverageView): ReviewWorkTabLab
   };
 }
 
-export const jobTabLabel: ReviewWorkTabLabel = Object.freeze({
-  id: "job",
-  label: "Job",
-  ariaLabel: "Job description",
-});
+export const jobTabLabel = (): ReviewWorkTabLabel =>
+  Object.freeze({
+    id: "job",
+    label: t`Job`,
+    ariaLabel: t`Job description`,
+  });
 
 /** The selected tab when the review offers it, otherwise Findings, which every review has. */
 export function availableReviewWorkTab(

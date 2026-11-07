@@ -44,22 +44,26 @@ function profileState(
 ): { readonly chip: string; readonly tone: HomeTone; readonly text: string } {
   switch (reviewed.status) {
     case "loading":
-      return { chip: "Checking", tone: "neutral", text: "Reading your reviewed career profiles…" };
+      return {
+        chip: t`Checking`,
+        tone: "neutral",
+        text: t`Reading your reviewed career profiles…`,
+      };
     case "unsupported":
       return {
-        chip: "Unavailable",
+        chip: t`Unavailable`,
         tone: "neutral",
-        text: "This version of DraftLoop cannot manage a career profile.",
+        text: t`This version of DraftLoop cannot manage a career profile.`,
       };
     case "failed":
       return {
-        chip: "Unavailable",
+        chip: t`Unavailable`,
         tone: "error",
-        text: "The reviewed career profiles could not be read. Open Career profile to try again.",
+        text: t`The reviewed career profiles could not be read. Open Career profile to try again.`,
       };
     case "ready": {
       if (reviewed.choices.length === 0) {
-        return { chip: "Required", tone: "attention", text: noReviewedProfileMessage };
+        return { chip: t`Required`, tone: "attention", text: noReviewedProfileMessage() };
       }
       const choice =
         selected === null
@@ -68,8 +72,8 @@ function profileState(
               (candidate) => reviewedProfileKey(candidate) === reviewedProfileKey(selected),
             );
       return choice === undefined
-        ? { chip: "Required", tone: "attention", text: "Choose a reviewed profile to start." }
-        : { chip: "Selected", tone: "ready", text: `Using ${reviewedProfileLabel(choice)}` };
+        ? { chip: t`Required`, tone: "attention", text: t`Choose a reviewed profile to start.` }
+        : { chip: t`Selected`, tone: "ready", text: `Using ${reviewedProfileLabel(choice)}` };
     }
   }
 }

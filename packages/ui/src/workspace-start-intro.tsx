@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { DesktopBridgeError } from "./native.js";
 
 /** The host's refusal of `review.load` when no workspace is open yet (electron/host.ts). */
-const noWorkspaceRefusalMessage = "Open a workspace first.";
+const noWorkspaceRefusalMessage = () => t`Open a workspace first.`;
 
 /**
  * True when the startup load failed only because no workspace is open, as on a fresh install.
@@ -12,12 +12,12 @@ export function isNoWorkspaceRefusal(reason: unknown): boolean {
   return (
     reason instanceof DesktopBridgeError &&
     reason.code === "not-found" &&
-    reason.message === noWorkspaceRefusalMessage
+    reason.message === noWorkspaceRefusalMessage()
   );
 }
 
-export const workspaceStartGuidance =
-  "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material.";
+export const workspaceStartGuidance = () =>
+  t`To begin, create a workspace for your job search, open a recent one, or try the demo with sample material.`;
 
 /**
  * The start page heading: guidance on what to do first, then the refusal of an action that
@@ -35,7 +35,7 @@ export function WorkspaceStartIntro({
     <>
       <p className="eyebrow">{navigation ? t`Workspace navigation` : t`First run`}</p>
       <h1>{navigation ? t`Open or create a review workspace` : t`Set up a review workspace`}</h1>
-      <p>{workspaceStartGuidance}</p>
+      <p>{workspaceStartGuidance()}</p>
       {error === null ? null : (
         <p className="setup-blocker" role="alert">
           {error}

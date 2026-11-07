@@ -253,7 +253,7 @@ export function SidePanelToggle({
   readonly controls: string;
   readonly onToggle: () => void;
 }): JSX.Element {
-  const label = collapsed ? "Show side panel" : "Hide side panel";
+  const label = collapsed ? t`Show side panel` : t`Hide side panel`;
   return (
     <button
       type="button"

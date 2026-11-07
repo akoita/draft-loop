@@ -1,3 +1,4 @@
+import { knowledgeBaseDisplayName } from "@draft-loop/ui/career-evidence";
 import { t } from "@lingui/core/macro";
 import type { FormEvent, ReactNode } from "react";
 
@@ -32,7 +33,7 @@ export function PrivateSectionsPanel({ bases, rulesFor }: PrivateSectionsPanelPr
       ) : (
         bases.map((base) => (
           <div key={base.id}>
-            {bases.length > 1 ? <h3>{base.displayName}</h3> : null}
+            {bases.length > 1 ? <h3>{knowledgeBaseDisplayName(base.displayName)}</h3> : null}
             {rulesFor(base)}
           </div>
         ))

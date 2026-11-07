@@ -1151,7 +1151,7 @@ describe("desktop candidate profile run selection", () => {
 
   it("blocks a packaged collecting start until a reviewed profile is selected", () => {
     expect(candidateProfileStartDisabledReason(true, null)).toBe(
-      candidateProfileStartBlockerMessage,
+      candidateProfileStartBlockerMessage(),
     );
     expect(candidateProfileStartDisabledReason(true, { profileId: "profile-1", version: 2 })).toBe(
       null,

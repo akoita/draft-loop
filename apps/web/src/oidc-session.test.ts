@@ -150,7 +150,7 @@ describe("sign-in through the identity provider", () => {
     await context.session.begin();
 
     await expect(context.make().complete("?code=code-1&state=forged")).rejects.toEqual(
-      new SignInEndedError(signInNotices.mismatch),
+      new SignInEndedError(signInNotices().mismatch),
     );
     expect(context.stub.tokenCalls).toHaveLength(0);
   });
@@ -160,7 +160,7 @@ describe("sign-in through the identity provider", () => {
     await context.session.begin();
 
     await expect(context.make().complete("?error=access_denied&state=x")).rejects.toMatchObject({
-      notice: signInNotices.refused,
+      notice: signInNotices().refused,
     });
   });
 
@@ -177,7 +177,7 @@ describe("sign-in through the identity provider", () => {
       now: () => start,
     });
 
-    await expect(session.begin()).rejects.toMatchObject({ notice: signInNotices.unreachable });
+    await expect(session.begin()).rejects.toMatchObject({ notice: signInNotices().unreachable });
   });
 });
 
@@ -204,7 +204,7 @@ describe("refresh", () => {
     const context = setup([tokens("access-1", "refresh-1"), new Response("{}", { status: 400 })]);
     const session = await signIn(context);
 
-    await expect(session.refresh()).rejects.toMatchObject({ notice: signInNotices.expired });
+    await expect(session.refresh()).rejects.toMatchObject({ notice: signInNotices().expired });
     expect(session.isSignedIn()).toBe(false);
   });
 });
@@ -245,7 +245,7 @@ describe("signed-in client", () => {
     );
 
     await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ status: 401 });
-    expect(ended).toEqual([[signInNotices.expired, false]]);
+    expect(ended).toEqual([[signInNotices().expired, false]]);
     expect(session.isSignedIn()).toBe(false);
   });
 
@@ -256,7 +256,7 @@ describe("signed-in client", () => {
     const client = signedInClient(session, api([401]).createClient, (...args) => ended.push(args));
 
     await expect(client.call("GET /v1/health", {})).rejects.toBeInstanceOf(SignInEndedError);
-    expect(ended).toEqual([[signInNotices.expired, false]]);
+    expect(ended).toEqual([[signInNotices().expired, false]]);
   });
 
   it("signs a person who is not a member out at the provider", async () => {
@@ -266,7 +266,7 @@ describe("signed-in client", () => {
     const client = signedInClient(session, api([403]).createClient, (...args) => ended.push(args));
 
     await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ status: 403 });
-    expect(ended).toEqual([[signInNotices.notMember, true]]);
+    expect(ended).toEqual([[signInNotices().notMember, true]]);
   });
 });
 
@@ -275,14 +275,14 @@ describe("sign-out", () => {
     const context = setup([tokens("access-1", "refresh-1")]);
     const session = await signIn(context);
 
-    const url = new URL((await session.signOut(signInNotices.notMember)) ?? "");
+    const url = new URL((await session.signOut(signInNotices().notMember)) ?? "");
 
     expect(`${url.origin}${url.pathname}`).toBe(`${issuer}/protocol/openid-connect/logout`);
     expect(url.searchParams.get("post_logout_redirect_uri")).toBe(screen);
     expect(session.isSignedIn()).toBe(false);
     // The screen the provider returns to shows why, once.
     const next = context.make();
-    expect(next.takeNotice()).toBe(signInNotices.notMember);
+    expect(next.takeNotice()).toBe(signInNotices().notMember);
     expect(next.takeNotice()).toBeUndefined();
   });
 

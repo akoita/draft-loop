@@ -74,7 +74,7 @@ export function inProgressStatus(state: RunStatusInput): ReviewStatusLine {
       : t`The review pauses here when it needs your decision.`;
   return {
     label: t`Review in progress · nothing to do yet`,
-    detail: `${doing} ${until} Approval and export open after that.`,
+    detail: t`${doing} ${until} Approval and export open after that.`,
   };
 }
 

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Export template choice (#1330).
  *
@@ -16,18 +17,18 @@ export type ExportTemplate = (typeof exportTemplates)[number];
 /** Modern unless the person picks another; it matches the application's default for a run with no one-page target. */
 export const defaultExportTemplate: ExportTemplate = "modern";
 
-export const exportTemplateLabels: Readonly<Record<ExportTemplate, string>> = {
-  classic: "Classic",
-  compact: "Compact",
-  modern: "Modern",
-};
+export const exportTemplateLabels = (): Readonly<Record<ExportTemplate, string>> => ({
+  classic: t`Classic`,
+  compact: t`Compact`,
+  modern: t`Modern`,
+});
 
 /** One line on what the template is for, shown beside the preview. */
-export const exportTemplateDescriptions: Readonly<Record<ExportTemplate, string>> = {
-  classic: "Two pages, centred name, ruled headings and room for full role histories.",
-  compact: "One page with smaller type and tighter spacing, so the most fits on each page.",
-  modern: "Two pages, left-aligned name, teal headings and dates, justified text.",
-};
+export const exportTemplateDescriptions = (): Readonly<Record<ExportTemplate, string>> => ({
+  classic: t`Two pages, centred name, ruled headings and room for full role histories.`,
+  compact: t`One page with smaller type and tighter spacing, so the most fits on each page.`,
+  modern: t`Two pages, left-aligned name, teal headings and dates, justified text.`,
+});
 
 /** `localStorage` key prefix; the application key follows it. */
 export const exportTemplateStorageKeyPrefix = "draft-loop.export.template.";

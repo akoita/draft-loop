@@ -75,8 +75,8 @@ export function modelProfileApplyErrorMessage(reason: unknown): string {
   return t`The profile pair could not be applied. Your draft is unchanged.`;
 }
 
-export const noModelProfilesWarning =
-  "No model profiles: provider defaults, unknown context windows.";
+export const noModelProfilesWarning = () =>
+  t`No model profiles: provider defaults, unknown context windows.`;
 
 function describeReferences(references: ModelProfileReferences): string {
   return `author ${references.author.id}@${references.author.version}; critic ${references.critic.id}@${references.critic.version}`;
@@ -118,20 +118,20 @@ export function modelProfileWarning(
   if (saved.status === "idle" || saved.status === "loading") return null;
   if (saved.workspaceId !== workspaceId || saved.generation !== generation) return null;
   const notice = savedModelProfilesNotice(saved, workspaceId, generation);
-  return notice === null ? noModelProfilesWarning : `${notice} ${noModelProfilesWarning}`;
+  return notice === null ? noModelProfilesWarning() : `${notice} ${noModelProfilesWarning()}`;
 }
 
 export const modelProfileCatalog = listModelProfileCatalog();
 export const modelProfilePresets = listModelProfilePresets();
 
-export const modelProfileSupportUnavailableMessage =
-  "Profile route support could not be checked. Retry or use the workspace model settings.";
-export const modelProfilePairMismatchMessage =
-  "The applied profiles no longer match the configured workspace models. Apply them again before starting a new run.";
-export const modelProfileNotSupportedMessage =
-  "The configured authentication route does not support one or both selected profiles.";
-export const modelProfileApplyDisabledMessage =
-  "Select one supported author profile and one supported critic profile before applying.";
+export const modelProfileSupportUnavailableMessage = () =>
+  t`Profile route support could not be checked. Retry or use the workspace model settings.`;
+export const modelProfilePairMismatchMessage = () =>
+  t`The applied profiles no longer match the configured workspace models. Apply them again before starting a new run.`;
+export const modelProfileNotSupportedMessage = () =>
+  t`The configured authentication route does not support one or both selected profiles.`;
+export const modelProfileApplyDisabledMessage = () =>
+  t`Select one supported author profile and one supported critic profile before applying.`;
 
 export function modelProfileEntryForReference(
   reference: { readonly id: string; readonly version: number },
@@ -199,18 +199,18 @@ export function modelProfileStartDisabledReason(
 ): string | null {
   if (applied === null) return null;
   if (applied.workspaceId !== workspaceId || applied.generation !== generation) {
-    return modelProfileSupportUnavailableMessage;
+    return modelProfileSupportUnavailableMessage();
   }
   const contextualSupport = modelProfileSupportForContext(supportState, workspaceId, generation);
-  if (contextualSupport?.status !== "ready") return modelProfileSupportUnavailableMessage;
+  if (contextualSupport?.status !== "ready") return modelProfileSupportUnavailableMessage();
   const author = modelProfileEntryForReference(applied.refs.author, "author");
   const critic = modelProfileEntryForReference(applied.refs.critic, "critic");
-  if (author === undefined || critic === undefined) return modelProfileSupportUnavailableMessage;
+  if (author === undefined || critic === undefined) return modelProfileSupportUnavailableMessage();
   if (
     !modelProfileRouteIsSupported(applied.refs.author, contextualSupport.result) ||
     !modelProfileRouteIsSupported(applied.refs.critic, contextualSupport.result)
   ) {
-    return modelProfileNotSupportedMessage;
+    return modelProfileNotSupportedMessage();
   }
   if (
     preflight.author.company !== author.profile.provider ||
@@ -218,7 +218,7 @@ export function modelProfileStartDisabledReason(
     preflight.critic.company !== critic.profile.provider ||
     preflight.critic.model !== critic.profile.modelId
   ) {
-    return modelProfilePairMismatchMessage;
+    return modelProfilePairMismatchMessage();
   }
   return null;
 }

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Desk theme preference.
  *
@@ -42,11 +43,11 @@ export function nextThemePreference(current: ThemePreference): ThemePreference {
 export function themePreferenceLabel(preference: ThemePreference): string {
   switch (preference) {
     case "light":
-      return "Light";
+      return t`Light`;
     case "dark":
-      return "Dark";
+      return t`Dark`;
     default:
-      return "Follow system";
+      return t`Follow system`;
   }
 }
 
@@ -186,7 +187,7 @@ export function ThemeToggle({
 }): JSX.Element {
   const [preference, choose] = useThemePreference();
   const next = nextThemePreference(preference);
-  const label = `Theme: ${themePreferenceLabel(preference)}. Activate to switch to ${themePreferenceLabel(next)}.`;
+  const label = t`Theme: ${themePreferenceLabel(preference)}. Activate to switch to ${themePreferenceLabel(next)}.`;
   return (
     <button className={className} type="button" title={label} onClick={() => choose(next)}>
       <span className="sr-only">{label}</span>

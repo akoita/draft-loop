@@ -110,7 +110,7 @@ function blockingOf(state: RunState): string {
 
 function costOf(state: RunState): string {
   const { text } = runCostLabel(state);
-  return text === costNotRecorded ? notRecorded : text;
+  return text === costNotRecorded() ? notRecorded : text;
 }
 
 /** The evidence mode and size the run recorded; retrieval runs record none. */
@@ -262,7 +262,7 @@ function differenceRow(
     return {
       ...base,
       status: "unknown",
-      message: `${label} not recorded for either run, so it cannot be compared`,
+      message: t`${label} not recorded for either run, so it cannot be compared`,
     };
   }
   if (left.identity === null || right.identity === null) {
@@ -270,7 +270,7 @@ function differenceRow(
     return {
       ...base,
       status: "unknown",
-      message: `${label} not recorded for ${missing}, so it cannot be compared`,
+      message: t`${label} not recorded for ${missing}, so it cannot be compared`,
     };
   }
   if (left.identity === right.identity) {
@@ -286,7 +286,7 @@ function differenceRow(
 /** Different coverage instructions make the judged values not directly comparable. */
 function coverageInstructionsRow(row: InputDifferenceRow): InputDifferenceRow {
   return row.status === "different"
-    ? { ...row, message: `${row.message}; coverage and readiness are ${notDirectlyComparable}` }
+    ? { ...row, message: t`${row.message}; coverage and readiness are ${notDirectlyComparable}` }
     : row;
 }
 
@@ -313,7 +313,7 @@ export function runComparisonFacts(
     rightInstructions !== notRecorded &&
     leftInstructions !== rightInstructions;
   const judgedNote = instructionsDiffer
-    ? { note: `${notDirectlyComparable}: judged under different coverage instructions` }
+    ? { note: t`${notDirectlyComparable}: judged under different coverage instructions` }
     : {};
 
   const facts: ComparisonFactRow[] = [

@@ -1,11 +1,12 @@
+import { t } from "@lingui/core/macro";
 /**
  * Workspace display names, shared by the renderer, the bridge validator and
  * the native host so one rule decides what a person may call a workspace.
  */
 export const maximumWorkspaceNameLength = 80;
 
-export const invalidWorkspaceNameMessage =
-  "Enter a name of 1 to 80 characters without slashes or control characters.";
+export const invalidWorkspaceNameMessage = () =>
+  t`Enter a name of 1 to 80 characters without slashes or control characters.`;
 
 const fallbackFolderName = "draft-loop-workspace";
 const maximumFolderNameLength = 60;

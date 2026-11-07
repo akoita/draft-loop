@@ -5,34 +5,34 @@ import type {
   RetrievalMode,
 } from "./semantic-retrieval-contract.js";
 
-export const embeddingTierChoices: readonly {
+export const embeddingTierChoices = (): readonly {
   readonly tier: EmbeddingModelTier;
   readonly label: string;
-}[] = [
-  { tier: "311m", label: "Standard (311M parameters, recommended)" },
-  { tier: "97m", label: "Low resource (97M parameters)" },
-  { tier: "eg2-text", label: "EmbeddingGemma 2 (text, experimental)" },
+}[] => [
+  { tier: "311m", label: t`Standard (311M parameters, recommended)` },
+  { tier: "97m", label: t`Low resource (97M parameters)` },
+  { tier: "eg2-text", label: t`EmbeddingGemma 2 (text, experimental)` },
 ];
 
-export const retrievalModeChoices: readonly {
+export const retrievalModeChoices = (): readonly {
   readonly mode: RetrievalMode;
   readonly label: string;
   readonly description: string;
-}[] = [
+}[] => [
   {
     mode: "lexical",
-    label: "Lexical (default)",
-    description: "Keyword search over your candidate knowledge. Needs no model.",
+    label: t`Lexical (default)`,
+    description: t`Keyword search over your candidate knowledge. Needs no model.`,
   },
   {
     mode: "semantic",
-    label: "Semantic",
-    description: "Finds passages by meaning with the local model, even without shared keywords.",
+    label: t`Semantic`,
+    description: t`Finds passages by meaning with the local model, even without shared keywords.`,
   },
   {
     mode: "hybrid",
-    label: "Hybrid",
-    description: "Combines keyword and meaning-based results.",
+    label: t`Hybrid`,
+    description: t`Combines keyword and meaning-based results.`,
   },
 ];
 

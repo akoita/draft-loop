@@ -19,8 +19,8 @@ export type SourceMediaType =
 
 export const acceptedSourceFiles = ".pdf,.docx,.md,.markdown,.txt,.json,.csv";
 
-const unsupportedMessage =
-  "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.";
+const unsupportedMessage = () =>
+  t`DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV.`;
 
 /** A career evidence file's media type: a source file, or a pull request list (#2261). */
 export type EvidenceMediaType = SourceMediaType | "application/json" | "text/csv";
@@ -45,7 +45,7 @@ export function sourceMediaType(fileName: string): SourceMediaType | undefined {
 
 /** Why a file cannot be uploaded before sending it, or `undefined` when it can. */
 export function sourceFileProblem(file: { readonly name: string; readonly size: number }) {
-  if (evidenceMediaType(file.name) === undefined) return `${file.name}: ${unsupportedMessage}`;
+  if (evidenceMediaType(file.name) === undefined) return `${file.name}: ${unsupportedMessage()}`;
   if (file.size === 0) return `${file.name} is empty.`;
   if (file.name.length > 200) return t`Rename the file to 200 characters or fewer.`;
   if ([...file.name].some((character) => character < " " || "\u007f/\\".includes(character)))
@@ -56,8 +56,8 @@ export function sourceFileProblem(file: { readonly name: string; readonly size: 
 /** What to tell the member when an upload is refused, pointing to a missing consent. */
 export function uploadErrorMessage(fileName: string, error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (error.status === 413) return `${fileName} is larger than this service accepts.`;
-    if (error.status === 415) return `${fileName}: ${unsupportedMessage} ${error.message}`;
+    if (error.status === 413) return t`${fileName} is larger than this service accepts.`;
+    if (error.status === 415) return `${fileName}: ${unsupportedMessage()} ${error.message}`;
   }
   return `${fileName}: ${describeActionError(error)}`;
 }

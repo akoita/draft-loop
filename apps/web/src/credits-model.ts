@@ -74,10 +74,10 @@ export function balanceLine(credits: MemberCredits, locale?: string): string {
   const ends =
     credits.periodEnd === null
       ? ""
-      : ` The period ends on ${formatPeriodEnd(credits.periodEnd, locale)}.`;
+      : t` The period ends on ${formatPeriodEnd(credits.periodEnd, locale)}.`;
   const extra =
     credits.grantsRemaining > 0
-      ? ` That includes ${creditCount(credits.grantsRemaining)} granted to you.`
+      ? t` That includes ${creditCount(credits.grantsRemaining)} granted to you.`
       : "";
   return `${credits.remaining} of ${creditCount(credits.allowance)} left.${ends}${extra}`;
 }
@@ -142,11 +142,11 @@ export function planRefusalMessage(error: unknown): string | undefined {
       const has =
         details?.remaining === undefined
           ? ""
-          : ` and you have ${creditCount(details.remaining)} left`;
-      return `${needs}${has}. Ask the owner for more credits, or wait for the next period.`;
+          : t` and you have ${creditCount(details.remaining)} left`;
+      return t`${needs}${has}. Ask the owner for more credits, or wait for the next period.`;
     }
     case "403 model_tier_not_in_plan":
-      return `${tierNotInPlan(details?.role, details?.tier)} Ask the owner about a bigger plan.`;
+      return t`${tierNotInPlan(details?.role, details?.tier)} Ask the owner about a bigger plan.`;
     case "403 plan_required":
       return t`Your organisation has no plan yet. Ask the owner to choose one.`;
     case "422 model_tier_unknown":

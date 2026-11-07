@@ -295,7 +295,7 @@ describe("runJobRequirementsExtraction", () => {
 
   it("returns a cancelled extraction to idle with the calm notice, not a failure", async () => {
     const outcome = await runJobRequirementsExtraction(async () => {
-      throw new Error(opportunityExtractionCancelledMessage);
+      throw new Error(opportunityExtractionCancelledMessage());
     });
     expect(outcome).toEqual({
       kind: "idle",

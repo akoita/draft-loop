@@ -7,7 +7,7 @@ export interface RunCostLabel {
   readonly explanation?: string;
 }
 
-export const costNotRecorded = "Cost not recorded";
+export const costNotRecorded = () => t`Cost not recorded`;
 
 type RunCost = Pick<DesktopReviewState, "totalCostUsd" | "unpricedCallCount">;
 
@@ -17,7 +17,7 @@ type RunCost = Pick<DesktopReviewState, "totalCostUsd" | "unpricedCallCount">;
  * total is marked as a lower bound.
  */
 export function runCostLabel({ totalCostUsd, unpricedCallCount }: RunCost): RunCostLabel {
-  if (!Number.isFinite(totalCostUsd)) return { text: costNotRecorded };
+  if (!Number.isFinite(totalCostUsd)) return { text: costNotRecorded() };
   const total = `$${totalCostUsd.toFixed(3)}`;
   const unpriced = unpricedCallCount ?? 0;
   if (unpriced === 0) return { text: total };
@@ -27,6 +27,6 @@ export function runCostLabel({ totalCostUsd, unpricedCallCount }: RunCost): RunC
       "# model calls have no recorded price, from a subscription session or a model without catalog rates.",
   });
   return totalCostUsd === 0
-    ? { text: costNotRecorded, explanation }
+    ? { text: costNotRecorded(), explanation }
     : { text: `${total}+`, explanation: `${explanation} ${t`The total is a lower bound.`}` };
 }

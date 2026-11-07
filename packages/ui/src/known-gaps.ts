@@ -8,10 +8,10 @@ import { isUnresolvedFinding, type ReviewFinding } from "./model.js";
  * (#1789, #1872), so a blocking one is a real evidence gap: no revision can fill it from the
  * approved evidence. The review names it as a gap and settles all of them in one step (#1873).
  */
-export const KNOWN_GAP_RATIONALE =
-  "Known gap: the approved evidence does not support this requirement";
+export const KNOWN_GAP_RATIONALE = () =>
+  t`Known gap: the approved evidence does not support this requirement`;
 
-export const CONFIRMED_GAP_TITLE_PREFIX = "No evidence found for: ";
+export const CONFIRMED_GAP_TITLE_PREFIX = () => t`No evidence found for: `;
 
 /** Whether a finding is a word-match miss the critic confirmed as a gap. */
 export function isConfirmedCoverageGap(finding: Pick<ReviewFinding, "code" | "severity">): boolean {
@@ -34,8 +34,8 @@ export function markKnownGapsLabel(count: number): string | null {
   });
 }
 
-export const MARK_KNOWN_GAPS_NOTE =
-  "The critic agrees the evidence does not cover these requirements, so no revision can fix them. Marking them as known records an override with that reason and unblocks approval; you can change each one later.";
+export const MARK_KNOWN_GAPS_NOTE = () =>
+  t`The critic agrees the evidence does not cover these requirements, so no revision can fix them. Marking them as known records an override with that reason and unblocks approval; you can change each one later.`;
 
 /** The longest readiness override reason the approve action carries. */
 const MAXIMUM_OVERRIDE_RATIONALE_LENGTH = 500;
@@ -64,10 +64,10 @@ export function knownGapReadinessOverride(
     return null;
   }
   const reasons = [
-    ...new Set(gaps.map((gap) => gap.rationale?.trim() || KNOWN_GAP_RATIONALE)),
+    ...new Set(gaps.map((gap) => gap.rationale?.trim() || KNOWN_GAP_RATIONALE())),
   ].join("; ");
   const rationale =
-    gaps.length === 1 ? reasons : `${gaps.length} known gaps settled in review: ${reasons}`;
+    gaps.length === 1 ? reasons : t`${gaps.length} known gaps settled in review: ${reasons}`;
   return rationale.length <= MAXIMUM_OVERRIDE_RATIONALE_LENGTH
     ? rationale
     : `${rationale.slice(0, MAXIMUM_OVERRIDE_RATIONALE_LENGTH - 1)}…`;

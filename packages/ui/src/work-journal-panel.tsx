@@ -153,11 +153,11 @@ export function WorkJournalNoteDetails({ note }: { readonly note: WorkJournalRev
   );
 }
 
-const tiers: readonly { readonly value: WorkJournalTier | ""; readonly label: string }[] = [
-  { value: "", label: "Default for the project's visibility" },
-  { value: "normal", label: "Normal" },
-  { value: "sensitive", label: "Sensitive" },
-  { value: "never-share", label: "Never share" },
+const tiers = (): readonly { readonly value: WorkJournalTier | ""; readonly label: string }[] => [
+  { value: "", label: t`Default for the project's visibility` },
+  { value: "normal", label: t`Normal` },
+  { value: "sensitive", label: t`Sensitive` },
+  { value: "never-share", label: t`Never share` },
 ];
 
 const roles: readonly WorkJournalRole[] = ["designed", "implemented", "directed", "reviewed"];
@@ -210,7 +210,7 @@ export function WorkJournalReviewCard({
     switch (current) {
       case "approve":
         if (knowledgeBaseId === "") {
-          setProblem("Choose the knowledge base the note goes to.");
+          setProblem(t`Choose the knowledge base the note goes to.`);
           return;
         }
         void send({
@@ -265,7 +265,7 @@ export function WorkJournalReviewCard({
                 setProblem(undefined);
               }}
             />{" "}
-            {modeLabels[value]}
+            {modeLabels()[value]}
           </label>
         ))}
       </fieldset>
@@ -289,7 +289,7 @@ export function WorkJournalReviewCard({
             value={tier}
             onChange={(event) => setTier(event.target.value as WorkJournalTier | "")}
           >
-            {tiers.map((option) => (
+            {tiers().map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -329,26 +329,26 @@ export function WorkJournalReviewCard({
       )}
       <div className="actions">
         <button type="button" disabled={busy} onClick={submit}>
-          {busy ? t`Saving…` : submitLabels[current]}
+          {busy ? t`Saving…` : submitLabels()[current]}
         </button>
       </div>
     </article>
   );
 }
 
-const modeLabels: Readonly<Record<Mode, string>> = {
-  approve: "Approve",
-  merge: "Merge",
-  edit: "Edit",
-  discard: "Discard",
-};
+const modeLabels = (): Readonly<Record<Mode, string>> => ({
+  approve: t`Approve`,
+  merge: t`Merge`,
+  edit: t`Edit`,
+  discard: t`Discard`,
+});
 
-const submitLabels: Readonly<Record<Mode, string>> = {
-  approve: "Approve as career evidence",
-  merge: "Merge the notes",
-  edit: "Save the edit",
-  discard: "Discard the note",
-};
+const submitLabels = (): Readonly<Record<Mode, string>> => ({
+  approve: t`Approve as career evidence`,
+  merge: t`Merge the notes`,
+  edit: t`Save the edit`,
+  discard: t`Discard the note`,
+});
 
 interface WorkJournalEditFormProps {
   readonly id: string;

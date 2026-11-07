@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ReviewAction } from "./model.js";
 
 /**
@@ -52,11 +53,11 @@ export function normalizeEarlierRun(value: unknown): EarlierRunView | undefined 
 }
 
 /** Why an earlier run refuses a change; the host and the review say the same thing. */
-export const earlierRunRefusal = "This is an earlier run. Open the latest run to change it.";
+export const earlierRunRefusal = () => t`This is an earlier run. Open the latest run to change it.`;
 
 /** Why the chosen earlier run refuses a change other than approval and export. */
-export const chosenRunRefusal =
-  "This earlier run can only be approved and exported. Open the latest run to revise it.";
+export const chosenRunRefusal = () =>
+  t`This earlier run can only be approved and exported. Open the latest run to revise it.`;
 
 /** Whether the earlier-run marker is for the run the person chose. */
 export function isChosenEarlierRun(earlierRun: EarlierRunView | null | undefined): boolean {

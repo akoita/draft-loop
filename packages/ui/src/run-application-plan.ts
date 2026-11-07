@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The application plan a run made before drafting, as Run details shows it (#1304): the job's
  * central themes, what the CV leads with, what is cut, and the themes the evidence does not
@@ -227,11 +228,11 @@ export interface RunApplicationPlanDisplay {
   readonly reviewPoints: readonly string[];
 }
 
-const reviewNotes: Readonly<Record<ApplicationPlanReviewState, string>> = {
-  accepted: "The critic accepted this plan before drafting.",
-  revised: "The critic asked for changes and the author revised the plan once.",
-  pending: "The critic had not reviewed this plan when the run stopped.",
-};
+const reviewNotes = (): Readonly<Record<ApplicationPlanReviewState, string>> => ({
+  accepted: t`The critic accepted this plan before drafting.`,
+  revised: t`The critic asked for changes and the author revised the plan once.`,
+  pending: t`The critic had not reviewed this plan when the run stopped.`,
+});
 
 /** `undefined` hides the section. */
 export function runApplicationPlanDisplay(
@@ -244,7 +245,7 @@ export function runApplicationPlanDisplay(
     summaryAngle: plan.summaryAngle,
     coreAreas: plan.coreAreas,
     cuts: plan.cuts,
-    reviewNote: reviewNotes[plan.review],
+    reviewNote: reviewNotes()[plan.review],
     reviewPoints: plan.reviewPoints,
   };
 }

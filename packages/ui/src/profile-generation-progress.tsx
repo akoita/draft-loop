@@ -30,7 +30,7 @@ export type ProfileGenerationProgressState =
   | ProfileGenerationCallProgress
   | ProfileGenerationQueued;
 
-export const profileGenerationQueuedLabel = "Waiting for a worker to start…";
+export const profileGenerationQueuedLabel = () => t`Waiting for a worker to start…`;
 
 /**
  * What the screen shows after a progress poll of an active generation: the wait to start, else
@@ -64,7 +64,7 @@ export interface ProfileGenerationActivity {
 export function formatProfileGenerationPart(
   progress: ProfileGenerationProgressState | undefined,
 ): string | null {
-  if (progress !== undefined && "queued" in progress) return profileGenerationQueuedLabel;
+  if (progress !== undefined && "queued" in progress) return profileGenerationQueuedLabel();
   if (progress === undefined || progress.plannedCalls < 1) return null;
   if (progress.completedCalls >= progress.plannedCalls) return "Finishing…";
   // Parts run in parallel, so report finished parts rather than a "current" part.

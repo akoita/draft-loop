@@ -230,19 +230,19 @@ export type IndependencePreviewState =
 
 export type ModelSide = "author" | "critic";
 
-const modelCompanyLabels: Readonly<Record<ModelCompany, string>> = {
-  anthropic: "Anthropic",
+const modelCompanyLabels = (): Readonly<Record<ModelCompany, string>> => ({
+  anthropic: t`Anthropic`,
   openai: "OpenAI",
   zai: "Z.ai (DeepInfra)",
-  google: "Google (Gemini)",
-  mistral: "Mistral AI",
-  local: "Local model server",
-};
+  google: t`Google (Gemini)`,
+  mistral: t`Mistral AI`,
+  local: t`Local model server`,
+});
 
-const modelSideLabels: Readonly<Record<ModelSide, string>> = {
-  author: "Author",
-  critic: "Critic",
-};
+const modelSideLabels = (): Readonly<Record<ModelSide, string>> => ({
+  author: t`Author`,
+  critic: t`Critic`,
+});
 
 /** The option value that turns a discovered list back into a free-text field. */
 export const otherModelOptionValue = "__other__";
@@ -256,8 +256,8 @@ function messageOf(reason: unknown, fallback: string): string {
 }
 
 export { candidateProfilePendingBlockerMessage, candidateProfileStartBlockerMessage };
-export const candidateKnowledgePendingBlockerMessage =
-  "Wait for candidate knowledge selection to finish before starting a review.";
+export const candidateKnowledgePendingBlockerMessage = () =>
+  t`Wait for candidate knowledge selection to finish before starting a review.`;
 
 export function candidateProfileStartDisabledReason(
   profileCapabilitiesPresent: boolean,
@@ -265,10 +265,10 @@ export function candidateProfileStartDisabledReason(
   knowledgePending = false,
   profilePending = false,
 ): string | null {
-  if (knowledgePending) return candidateKnowledgePendingBlockerMessage;
-  if (profilePending) return candidateProfilePendingBlockerMessage;
+  if (knowledgePending) return candidateKnowledgePendingBlockerMessage();
+  if (profilePending) return candidateProfilePendingBlockerMessage();
   return profileCapabilitiesPresent && selectedProfile === null
-    ? candidateProfileStartBlockerMessage
+    ? candidateProfileStartBlockerMessage()
     : null;
 }
 
@@ -317,20 +317,20 @@ export function modelDiscoveryNote(
 ): string {
   if (company === "local" && localEndpointNamed) {
     if (editMode) {
-      return "Model discovery uses the default local server, not this workspace address. Type the model id served at the local address below.";
+      return t`Model discovery uses the default local server, not this workspace address. Type the model id served at the local address below.`;
     }
-    return "Model discovery can only ask the default local server until this workspace exists, and you named a different address. Type the model id your server serves.";
+    return t`Model discovery can only ask the default local server until this workspace exists, and you named a different address. Type the model id your server serves.`;
   }
   switch (discovery.status) {
     case "idle":
       return "";
     case "loading":
-      return `Asking ${modelCompanyLabels[company]} which models are available…`;
+      return t`Asking ${modelCompanyLabels()[company]} which models are available…`;
     case "unavailable":
-      return `Models could not be listed. ${discovery.reason} Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
+      return t`Models could not be listed. ${discovery.reason} Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
     case "ready":
       if (discovery.models.length === 0) {
-        return `${modelCompanyLabels[company]} listed no models. Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
+        return t`${modelCompanyLabels()[company]} listed no models. Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
       }
       {
         const listed = countedNouns.model(discovery.models.length);
@@ -420,8 +420,8 @@ export function filterModelOptions(
       matched: 0,
       keptSelected,
       note: keptSelected
-        ? `No model id contains “${wanted}”, so only the model you chose is listed. ${wayOut}`
-        : `No model id contains “${wanted}”. ${wayOut}`,
+        ? t`No model id contains “${wanted}”, so only the model you chose is listed. ${wayOut}`
+        : t`No model id contains “${wanted}”. ${wayOut}`,
     };
   }
   const shown = t`Showing ${matched.size} of ${total} matching “${wanted}”`;
@@ -429,7 +429,7 @@ export function filterModelOptions(
     options,
     matched: matched.size,
     keptSelected,
-    note: keptSelected ? `${shown}, and the model you chose.` : `${shown}.`,
+    note: keptSelected ? t`${shown}, and the model you chose.` : `${shown}.`,
   };
 }
 
@@ -457,32 +457,30 @@ export function independencePreviewSummary(
       return {
         tone: "unrecorded",
         mark: "not checked",
-        detail:
-          "Name an author model and a critic model, and this will say whether the pairing counts as independent.",
+        detail: t`Name an author model and a critic model, and this will say whether the pairing counts as independent.`,
         lineages: null,
       };
     case "loading":
       return {
         tone: "unrecorded",
         mark: "checking",
-        detail: "Checking whether the author and critic lineages differ…",
+        detail: t`Checking whether the author and critic lineages differ…`,
         lineages: null,
       };
     case "unavailable":
       return {
         tone: "unrecorded",
         mark: "not checked",
-        detail: `This pairing could not be checked. ${preview.reason} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded.`,
+        detail: t`This pairing could not be checked. ${preview.reason} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded.`,
         lineages: null,
       };
     case "ready": {
-      const lineages = `Claimed lineages: author ${preview.result.authorLineage}; critic ${preview.result.criticLineage}`;
+      const lineages = t`Claimed lineages: author ${preview.result.authorLineage}; critic ${preview.result.criticLineage}`;
       if (preview.result.lineagesDistinct) {
         return {
           tone: "independent",
           mark: "lineages differ",
-          detail:
-            "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
+          detail: t`Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.`,
           lineages,
         };
       }
@@ -490,16 +488,14 @@ export function independencePreviewSummary(
         return {
           tone: "shared",
           mark: "overridden",
-          detail:
-            "Author and critic would share one lineage, so this critique would not be independent; the workspace will record your rationale.",
+          detail: t`Author and critic would share one lineage, so this critique would not be independent; the workspace will record your rationale.`,
           lineages,
         };
       }
       return {
         tone: "shared",
         mark: "not independent",
-        detail:
-          "Author and critic would share one lineage, so this critique would not be independent. Choose a different model on one side, or record why one lineage on both sides is acceptable.",
+        detail: t`Author and critic would share one lineage, so this critique would not be independent. Choose a different model on one side, or record why one lineage on both sides is acceptable.`,
         lineages,
       };
     }
@@ -523,15 +519,15 @@ export function workspaceSetupBlocker(
   draft: WorkspaceSetupDraft,
   preview: IndependencePreviewState,
 ): string | null {
-  if (draft.name.trim() === "") return "Name the workspace before creating it.";
+  if (draft.name.trim() === "") return t`Name the workspace before creating it.`;
   if (!Number.isInteger(draft.maxRounds) || draft.maxRounds < 1 || draft.maxRounds > 20) {
-    return "Choose a maximum round count between 1 and 20.";
+    return t`Choose a maximum round count between 1 and 20.`;
   }
   if (draft.authorModel.trim() === "" || draft.criticModel.trim() === "") {
-    return "Name an author model and a critic model before creating the workspace.";
+    return t`Name an author model and a critic model before creating the workspace.`;
   }
   if (sharedLineageBlocksCreation(preview, draft.independenceOverrideRationale)) {
-    return "Record why one lineage on both sides is acceptable before creating the workspace.";
+    return t`Record why one lineage on both sides is acceptable before creating the workspace.`;
   }
   return null;
 }
@@ -558,10 +554,10 @@ export function workspaceModelSelection(draft: WorkspaceSetupDraft): WorkspaceMo
  * itself is not restated, because the boundary stays the authority on it.
  */
 export function workspaceSetupFailureMessage(reason: unknown, draft: WorkspaceSetupDraft): string {
-  const base = messageOf(reason, "The workspace could not be created.");
+  const base = messageOf(reason, t`The workspace could not be created.`);
   const refusedInput = reason instanceof DesktopBridgeError && reason.code === "invalid-input";
   if (refusedInput && requiresLocalEndpoint(draft) && draft.localEndpoint.trim() !== "") {
-    return `${base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password.`;
+    return t`${base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password.`;
   }
   return base;
 }
@@ -597,7 +593,7 @@ function ModelSideFields({
   onFilterChange,
   onTypeOwnModel,
 }: ModelSideFieldsProps) {
-  const label = modelSideLabels[side];
+  const label = modelSideLabels()[side];
   const mode = modelInputMode(company, discovery, localEndpointNamed, typingOwnModel);
   const note = modelDiscoveryNote(company, discovery, localEndpointNamed, editMode);
   const fallbackSuggestions = hasFallbackModelSuggestions(
@@ -625,7 +621,7 @@ function ModelSideFields({
         >
           {modelCompanies.map((candidate) => (
             <option key={candidate} value={candidate}>
-              {modelCompanyLabels[candidate]}
+              {modelCompanyLabels()[candidate]}
             </option>
           ))}
         </select>
@@ -1345,7 +1341,7 @@ export function App({
         if (requestedWorkspaceId !== null) {
           if (enterWorkspaceRecovery(requestedWorkspaceId, requestedGeneration, reason)) return;
           setImportError(
-            reason instanceof Error ? reason.message : "The review workspace could not load.",
+            reason instanceof Error ? reason.message : t`The review workspace could not load.`,
           );
           return;
         }
@@ -1353,7 +1349,9 @@ export function App({
           setNoWorkspaceOpen(true);
           return;
         }
-        setError(reason instanceof Error ? reason.message : "The review workspace could not load.");
+        setError(
+          reason instanceof Error ? reason.message : t`The review workspace could not load.`,
+        );
       });
     return () => {
       active = false;
@@ -1388,7 +1386,7 @@ export function App({
         if (!active || !isCurrentWorkspaceContext(workspaceId, generation)) return;
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
         const message =
-          reason instanceof Error ? reason.message : "Review progress could not be refreshed.";
+          reason instanceof Error ? reason.message : t`Review progress could not be refreshed.`;
         refreshFailureRef.current = message;
         setImportError(message);
       } finally {
@@ -1414,7 +1412,7 @@ export function App({
     const generation = workspaceGeneration;
     if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     if (action.type === "start" && knowledgePendingRef.current) {
-      setImportError(candidateKnowledgePendingBlockerMessage);
+      setImportError(candidateKnowledgePendingBlockerMessage());
       return;
     }
     if (action.type === "start" && profileStartDisabledReason !== null) {
@@ -1440,7 +1438,7 @@ export function App({
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
         if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
         setImportError(
-          reason instanceof Error ? reason.message : "The review action could not be completed.",
+          reason instanceof Error ? reason.message : t`The review action could not be completed.`,
         );
       }
     });
@@ -1469,7 +1467,7 @@ export function App({
             .catch((reason: unknown) => {
               if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
               if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
-              setImportError(messageOf(reason, "The run could not be opened."));
+              setImportError(messageOf(reason, t`The run could not be opened.`));
             });
         };
 
@@ -1497,7 +1495,7 @@ export function App({
             }
           } catch (reason: unknown) {
             if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
-            throw new Error(messageOf(reason, "The run could not be chosen."));
+            throw new Error(messageOf(reason, t`The run could not be chosen.`));
           }
         };
 
@@ -1579,7 +1577,7 @@ export function App({
         setImportError(
           reason instanceof Error
             ? reason.message
-            : "The finding decisions could not be completed.",
+            : t`The finding decisions could not be completed.`,
         );
       } finally {
         if (isCurrentWorkspaceContext(workspaceId, generation)) setPendingBulkFindingCount(null);
@@ -1597,7 +1595,7 @@ export function App({
   const setup = async (
     action: (() => Promise<DesktopReviewState>) | undefined,
     describeFailure: (reason: unknown) => string = (reason) =>
-      messageOf(reason, "The workspace could not be opened."),
+      messageOf(reason, t`The workspace could not be opened.`),
     openModelEditor = false,
   ): Promise<boolean> => {
     if (action === undefined) return false;
@@ -1624,7 +1622,7 @@ export function App({
           setModelEditorFromCreation(true);
           setEditingModels(true);
         } catch {
-          setImportError("The current model settings are unavailable.");
+          setImportError(t`The current model settings are unavailable.`);
           setModelEditorFromCreation(false);
           setEditingModels(false);
         }
@@ -1663,7 +1661,7 @@ export function App({
       setLoadedApplicationId(null);
       setState(loaded);
     } catch {
-      setWorkspaceRecoveryError("The workspace was not opened. Choose a workspace and try again.");
+      setWorkspaceRecoveryError(t`The workspace was not opened. Choose a workspace and try again.`);
     } finally {
       setBusy(false);
     }
@@ -1686,8 +1684,8 @@ export function App({
     state?.execution.status === "running";
   const modelSettingsDisabledReason =
     state?.execution.status === "running"
-      ? "Stop the review before changing models."
-      : "Wait for the current workspace operation to finish before changing models.";
+      ? t`Stop the review before changing models.`
+      : t`Wait for the current workspace operation to finish before changing models.`;
 
   const currentWorkspaceCloseGuard = () => {
     const profilePendingForActiveWorkspace =
@@ -1707,7 +1705,7 @@ export function App({
   // Name the operation when it is the profile generation, which the activity bar also shows.
   const closeDisabledReason =
     closeGuardReason !== null && profileGenerationForActiveWorkspace !== null
-      ? "Close workspace is available again once your career profile is generated."
+      ? t`Close workspace is available again once your career profile is generated.`
       : closeGuardReason;
 
   const requestWorkspaceClose = () => {
@@ -1814,7 +1812,7 @@ export function App({
         if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
         if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
         setNavigation((current) => navigateTo(current, homeView));
-        setImportError(messageOf(reason, "The application could not be opened."));
+        setImportError(messageOf(reason, t`The application could not be opened.`));
       });
   };
 
@@ -1947,7 +1945,7 @@ export function App({
       setModelEditorFromCreation(false);
       setEditingModels(true);
     } catch {
-      setModelSettingsError("The current model settings are unavailable.");
+      setModelSettingsError(t`The current model settings are unavailable.`);
     }
   };
 
@@ -1957,7 +1955,7 @@ export function App({
     const selection = workspaceModelSettingsInput(draft, preview);
     if (blocker !== null || selection === null) {
       setModelSettingsError(
-        blocker ?? "Model settings could not be saved. Check both model ids and try again.",
+        blocker ?? t`Model settings could not be saved. Check both model ids and try again.`,
       );
       return;
     }
@@ -1980,7 +1978,7 @@ export function App({
         )
       ) {
         setModelSettingsError(
-          "The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again.",
+          t`The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again.`,
         );
         return;
       }
@@ -1995,7 +1993,7 @@ export function App({
         } catch {
           if (isCurrentWorkspaceContext(workspaceId, generation)) {
             setModelSettingsError(
-              "The models were saved, but the previously saved profile pair could not be cleared. Try saving again.",
+              t`The models were saved, but the previously saved profile pair could not be cleared. Try saving again.`,
             );
           }
           return;
@@ -2032,7 +2030,7 @@ export function App({
       support.workspaceId !== workspaceId ||
       support.generation !== generation
     ) {
-      throw new Error(modelProfileSupportUnavailableMessage);
+      throw new Error(modelProfileSupportUnavailableMessage());
     }
     const author = modelProfileEntryForReference(references.author, "author");
     const critic = modelProfileEntryForReference(references.critic, "critic");
@@ -2042,7 +2040,7 @@ export function App({
       !modelProfileRouteIsSupported(references.author, support.result) ||
       !modelProfileRouteIsSupported(references.critic, support.result)
     ) {
-      throw new Error(modelProfileNotSupportedMessage);
+      throw new Error(modelProfileNotSupportedMessage());
     }
     const selection = workspaceModelsForProfileReferences(references, modelProfileCatalog);
     if (selection === null) throw new Error("The selected profile pair is unavailable.");
@@ -2108,7 +2106,7 @@ export function App({
           ...current,
           [company]: {
             status: "unavailable",
-            reason: "This host does not offer model discovery.",
+            reason: t`This host does not offer model discovery.`,
           },
         }));
         continue;
@@ -2133,7 +2131,7 @@ export function App({
             ...current,
             [company]: {
               status: "unavailable",
-              reason: messageOf(reason, "The provider could not be reached."),
+              reason: messageOf(reason, t`The provider could not be reached.`),
             },
           }));
         });
@@ -2159,7 +2157,7 @@ export function App({
     if (previewIndependence === undefined) {
       setPreview({
         status: "unavailable",
-        reason: "This host cannot check the current model pairing.",
+        reason: t`This host cannot check the current model pairing.`,
       });
       return;
     }
@@ -2177,7 +2175,7 @@ export function App({
           if (!active) return;
           setPreview({
             status: "unavailable",
-            reason: messageOf(reason, "The independence check could not be completed."),
+            reason: messageOf(reason, t`The independence check could not be completed.`),
           });
         });
     }, independencePreviewDebounceMs);
@@ -2267,7 +2265,7 @@ export function App({
                                 const submission = workspaceCreationSubmission(name, maxRounds);
                                 return createWorkspace(submission.name, submission.selection);
                               },
-                              (reason) => messageOf(reason, "The workspace could not be created."),
+                              (reason) => messageOf(reason, t`The workspace could not be created.`),
                               true,
                             ),
                         }),
@@ -2296,7 +2294,7 @@ export function App({
                         (reason) =>
                           messageOf(
                             reason,
-                            "This recent workspace could not be opened. Choose another.",
+                            t`This recent workspace could not be opened. Choose another.`,
                           ),
                       ),
                     ...(removeRecentWorkspace === undefined ? {} : { removeRecentWorkspace }),
@@ -2391,7 +2389,7 @@ export function App({
             savedPairNotice={modelProfileNotice}
             {...(modelEditorFromCreation
               ? {
-                  pendingSelectionMessage: "No profile has been selected for this workspace yet.",
+                  pendingSelectionMessage: t`No profile has been selected for this workspace yet.`,
                 }
               : {})}
             support={modelProfileSupport}
@@ -2678,7 +2676,7 @@ export function App({
               if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
               if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
               setImportError(
-                reason instanceof Error ? reason.message : "The files could not be imported.",
+                reason instanceof Error ? reason.message : t`The files could not be imported.`,
               );
             });
         };
@@ -2703,7 +2701,7 @@ export function App({
               if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
               if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
               setImportError(
-                reason instanceof Error ? reason.message : "The URL could not be imported.",
+                reason instanceof Error ? reason.message : t`The URL could not be imported.`,
               );
             });
         };
@@ -2788,7 +2786,7 @@ export function App({
       exportsDownload={activePort.exportsDownload === true}
       onBulkFindingDecision={onBulkFindingDecision}
       onMarkKnownGaps={(findingIds) =>
-        onBulkFindingDecision(findingIds, "overridden", KNOWN_GAP_RATIONALE)
+        onBulkFindingDecision(findingIds, "overridden", KNOWN_GAP_RATIONALE())
       }
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}
@@ -2923,7 +2921,7 @@ export function App({
 
   const pageBack = (() => {
     const target = backTarget(navigation);
-    return { label: target === null ? "Home" : pageLabel(target), onBack: goBackPage };
+    return { label: target === null ? t`Home` : pageLabel(target), onBack: goBackPage };
   })();
   const flowStepHandlers: Partial<Record<CareerFlowStep, () => void>> = {
     evidence: openEvidenceScreen,
@@ -3016,7 +3014,7 @@ export function App({
           lockedReason={
             profileGenerationForActiveWorkspace === null
               ? null
-              : careerEvidenceLockedDuringGeneration
+              : careerEvidenceLockedDuringGeneration()
           }
           card={
             <CareerEvidenceCard

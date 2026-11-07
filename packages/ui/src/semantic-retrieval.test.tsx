@@ -172,7 +172,7 @@ describe("semantic retrieval panel", () => {
     const html = renderToStaticMarkup(
       <SemanticRetrievalPanel workspaceId="workspace-1" capabilities={{}} disabled={false} />,
     );
-    expect(html).toContain(semanticRetrievalUnavailableMessage);
+    expect(html).toContain(semanticRetrievalUnavailableMessage());
     expect(hasAnySemanticRetrievalCapability({})).toBe(false);
     expect(hasAnySemanticRetrievalCapability({ getRetrievalMode: vi.fn() })).toBe(true);
   });

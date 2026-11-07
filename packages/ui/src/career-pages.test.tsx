@@ -1,6 +1,6 @@
 import { isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CareerEvidenceCard } from "./career-evidence-card.js";
 import {
   type CareerFlowStep,
@@ -14,11 +14,13 @@ import {
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { HomeView, WorkspaceLocation } from "./home.js";
 import { HostPanelsContext } from "./host-panels.js";
+import { activateScreenLocale } from "./i18n.js";
 import { KnowledgeWorkspace } from "./knowledge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ProfileWorkspace } from "./profile.js";
 import { ReviewWorkspace } from "./review.js";
 import { SemanticRetrievalPanel } from "./semantic-retrieval.js";
+import { untranslatedRuns } from "./untranslated-text.test-support.js";
 
 const noop = () => undefined;
 
@@ -83,16 +85,16 @@ describe("Career evidence page", () => {
   });
 
   it("says why changes wait while the profile is generated, and only then", () => {
-    expect(evidencePage({ lockedReason: careerEvidenceLockedDuringGeneration })).toContain(
-      careerEvidenceLockedDuringGeneration,
+    expect(evidencePage({ lockedReason: careerEvidenceLockedDuringGeneration() })).toContain(
+      careerEvidenceLockedDuringGeneration(),
     );
     expect(evidencePage()).not.toContain("career-page-locked");
   });
 
   it("starts with the tabs, Career evidence current, then the one-sentence intro", () => {
     const html = evidencePage();
-    expect(html).toContain(`<p class="career-page-intro">${careerEvidenceIntro}</p>`);
-    expect(careerEvidenceIntro).toMatch(/^Your career evidence is the documents you provide/u);
+    expect(html).toContain(`<p class="career-page-intro">${careerEvidenceIntro()}</p>`);
+    expect(careerEvidenceIntro()).toMatch(/^Your career evidence is the documents you provide/u);
     expect(html).toMatch(
       /<span class="career-tab career-tab-current" aria-current="page"><span[^>]*>1<\/span>Career evidence<\/span>/u,
     );
@@ -189,8 +191,8 @@ describe("Career profile page", () => {
 
   it("starts with the tabs, Career profile current, then the one-sentence intro", () => {
     const html = profilePage();
-    expect(html).toContain(`<p class="career-page-intro">${careerProfileIntro}</p>`);
-    expect(careerProfileIntro).toMatch(/^Your career profile is the facts DraftLoop extracts/u);
+    expect(html).toContain(`<p class="career-page-intro">${careerProfileIntro()}</p>`);
+    expect(careerProfileIntro()).toMatch(/^Your career profile is the facts DraftLoop extracts/u);
     expect(html).toMatch(
       /<span class="career-tab career-tab-current" aria-current="page"><span[^>]*>2<\/span>Career profile<\/span>/u,
     );
@@ -246,10 +248,10 @@ describe("career flow", () => {
   });
 
   it("keeps the Home card subtitles consistent with the intros", () => {
-    expect(careerEvidenceCardSubtitle).toContain("CVs, career-fact files, exports and links");
-    expect(careerEvidenceIntro).toContain("CVs, career-fact files, exports and links");
-    expect(careerProfileCardSubtitle).toContain("facts DraftLoop extracts from your documents");
-    expect(careerProfileIntro).toContain("facts DraftLoop extracts from your documents");
+    expect(careerEvidenceCardSubtitle()).toContain("CVs, career-fact files, exports and links");
+    expect(careerEvidenceIntro()).toContain("CVs, career-fact files, exports and links");
+    expect(careerProfileCardSubtitle()).toContain("facts DraftLoop extracts from your documents");
+    expect(careerProfileIntro()).toContain("facts DraftLoop extracts from your documents");
   });
 });
 
@@ -350,5 +352,16 @@ describe("career navigation", () => {
     expect(onBack).toHaveBeenCalledTimes(2);
     expect(onOpenStep.evidence).toHaveBeenCalledTimes(1);
     expect(onOpenStep.applications).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("career pages in another screen language", () => {
+  afterEach(() => activateScreenLocale("en"));
+
+  it("draws every visible text from the message catalogs", () => {
+    activateScreenLocale("pseudo");
+    for (const html of [evidencePage(), profilePage()]) {
+      expect(untranslatedRuns(html, ["DraftLoop", "Job search 2026"])).toEqual([]);
+    }
   });
 });

@@ -3,11 +3,11 @@ import { createContext, type ReactNode, useContext } from "react";
 
 export type Health = "checking" | "serving" | "unreachable";
 
-const healthLabels: Readonly<Record<Health, string>> = {
-  checking: "Checking the service",
-  serving: "Service is up",
-  unreachable: "Service is down",
-};
+const healthLabels = (): Readonly<Record<Health, string>> => ({
+  checking: t`Checking the service`,
+  serving: t`Service is up`,
+  unreachable: t`Service is down`,
+});
 
 /**
  * The shell's own actions, the service status and sign-out, drawn in the shared screens' header
@@ -20,7 +20,7 @@ export function ServiceStatus({ health }: { readonly health: Health }) {
   return (
     <span className={`service-status service-${health}`} role="status">
       <span className="service-dot" aria-hidden="true" />
-      {healthLabels[health]}
+      {healthLabels()[health]}
     </span>
   );
 }

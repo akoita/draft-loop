@@ -260,8 +260,8 @@ export function ApplicationCard({
   const rename = useInlineRename({
     name: application.name,
     normalize: normalizeApplicationDisplayName,
-    invalidMessage: invalidApplicationNameMessage,
-    failureMessage: applicationRenameFailureMessage,
+    invalidMessage: invalidApplicationNameMessage(),
+    failureMessage: applicationRenameFailureMessage(),
     onRename,
     inputId,
     buttonId: renameButtonId,
@@ -324,7 +324,7 @@ export function ApplicationCard({
           </div>
         )}
         {running ? (
-          <Chip tone="progress">{applicationRunningLabel}</Chip>
+          <Chip tone="progress">{applicationRunningLabel()}</Chip>
         ) : (
           <Chip tone={applicationStatusTone(application.status)}>
             {applicationStatusLabel(application.status)}
@@ -397,7 +397,7 @@ export function ApplicationCard({
               className="button button-outline"
               type="button"
               disabled={busy}
-              aria-label={`${archived ? "Restore" : "Archive"} ${application.name}`}
+              aria-label={`${archived ? t`Restore` : t`Archive`} ${application.name}`}
               onClick={onArchive}
             >
               {archived ? t`Restore` : t`Archive`}
@@ -547,7 +547,7 @@ function ApplicationsList({
   );
   const statusChip = (application: ApplicationSummaryView) =>
     application.id === runningApplicationId ? (
-      <Chip tone="progress">{applicationRunningLabel}</Chip>
+      <Chip tone="progress">{applicationRunningLabel()}</Chip>
     ) : (
       <Chip tone={applicationStatusTone(application.status)}>
         {applicationStatusLabel(application.status)}
@@ -602,7 +602,7 @@ function ApplicationsList({
                     {section.applications.length === 0 ? (
                       <p className="home-card-copy">{t`Empty. Use Move to in an application's ⋯ menu to put it here.`}</p>
                     ) : (
-                      group(section.applications, section.folder?.name ?? noFolderLabel)
+                      group(section.applications, section.folder?.name ?? noFolderLabel())
                     )}
                   </div>
                 )}
@@ -612,7 +612,7 @@ function ApplicationsList({
         )
       : shownActive.length === 0
         ? null
-        : group(shownActive, "Applications");
+        : group(shownActive, t`Applications`);
   return (
     <>
       {toolbar ? (
@@ -664,9 +664,9 @@ function ApplicationsList({
           </button>
           {showArchived ? (
             <div id="home-archived-applications" className="home-archived-applications-body">
-              {group(shownArchived, "Archived applications")}
+              {group(shownArchived, t`Archived applications`)}
               {onDelete === undefined ? null : (
-                <p className="home-card-copy">{applicationDeleteExplanation}</p>
+                <p className="home-card-copy">{applicationDeleteExplanation()}</p>
               )}
             </div>
           ) : null}
@@ -772,7 +772,9 @@ export function HomeView({
   onManageEvidence,
 }: HomeViewProps) {
   const profilePresentation =
-    profileGeneration === null ? profileStatusPresentation(profile) : profileGenerationPresentation;
+    profileGeneration === null
+      ? profileStatusPresentation(profile)
+      : profileGenerationPresentation();
   const evidenceView = evidencePresentation(evidence, legacyEvidenceSourceCount);
   return (
     <div className="app-frame">
@@ -780,7 +782,7 @@ export function HomeView({
         <div className="main-column">
           <header className="home-header">
             <div className="home-header-identity">
-              <WorkspaceLocation current="Home" />
+              <WorkspaceLocation current={t`Home`} />
               {workspaceTitle}
             </div>
             <div className="home-header-actions">
@@ -805,9 +807,9 @@ export function HomeView({
           <CareerPanel
             evidence={{
               id: "home-evidence-title",
-              title: "Career evidence",
-              role: careerEvidenceRole,
-              subtitle: careerEvidenceCardSubtitle,
+              title: t`Career evidence`,
+              role: careerEvidenceRole(),
+              subtitle: careerEvidenceCardSubtitle(),
               presentation: evidenceView,
               headline: evidenceView.headline,
               action: (
@@ -826,9 +828,9 @@ export function HomeView({
             }}
             profile={{
               id: "home-profile-title",
-              title: "Career profile",
-              role: careerProfileRole,
-              subtitle: careerProfileCardSubtitle,
+              title: t`Career profile`,
+              role: careerProfileRole(),
+              subtitle: careerProfileCardSubtitle(),
               presentation: profilePresentation,
               action: (
                 <button
@@ -882,7 +884,7 @@ export function HomeView({
             </div>
             {onImportApplication === undefined ? null : (
               <p className="home-card-copy" id="home-import-explanation">
-                {applicationImportExplanation}
+                {applicationImportExplanation()}
               </p>
             )}
             {!disabled || disabledReason === null ? null : (
@@ -1247,7 +1249,7 @@ export function HomeScreen({
                   kind: "error",
                   message: folderErrorMessage(
                     error,
-                    "The application could not be moved. Try again.",
+                    t`The application could not be moved. Try again.`,
                   ),
                 });
               })

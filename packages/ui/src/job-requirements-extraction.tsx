@@ -64,7 +64,7 @@ export function briefOperationsOf(
 }
 
 const jobDescriptionSourceId = "workspace-job-description";
-const failureFallback = "Requirements could not be extracted. Nothing was saved.";
+const failureFallback = () => t`Requirements could not be extracted. Nothing was saved.`;
 
 export interface JobRequirementsSummary {
   readonly briefId: string;
@@ -88,7 +88,7 @@ export function summarizeJobRequirements(record: OpportunityRecordResult): JobRe
 }
 
 function issueLabel(issue: OpportunityIssueResult): string {
-  return issue.severity === "error" ? "Problem" : "Warning";
+  return issue.severity === "error" ? t`Problem` : t`Warning`;
 }
 
 /**
@@ -116,12 +116,12 @@ export async function runJobRequirementsExtraction(
     // A cancelled extraction is the person's own decision, so the card calmly returns to idle.
     if (
       reason instanceof Error &&
-      reason.message.trim() === opportunityExtractionCancelledMessage
+      reason.message.trim() === opportunityExtractionCancelledMessage()
     ) {
-      return { kind: "idle", notice: opportunityExtractionCancelledMessage };
+      return { kind: "idle", notice: opportunityExtractionCancelledMessage() };
     }
     const message =
-      reason instanceof Error && reason.message.trim() !== "" ? reason.message : failureFallback;
+      reason instanceof Error && reason.message.trim() !== "" ? reason.message : failureFallback();
     return { kind: "failed", message };
   }
 }
@@ -153,8 +153,8 @@ export interface JobRequirementsExtractionViewProps {
   readonly onCancelExtraction?: () => void;
 }
 
-const fixtureExtractionNote =
-  "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider.";
+const fixtureExtractionNote = () =>
+  t`This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider.`;
 
 /** The demo's consent step: the same Extract choice, worded as a local, offline action. */
 function FixtureExtractionConsent({
@@ -203,7 +203,7 @@ export function JobRequirementsExtractionView({
         <div className="job-extraction">
           <p className="setup-note">
             {fixtureMode
-              ? fixtureExtractionNote
+              ? fixtureExtractionNote()
               : jobFromUrl
                 ? t`Your writing model splits the job page into requirements you review.`
                 : t`Long or pasted job pages can be split into reviewable requirements with your writing model.`}
@@ -272,7 +272,7 @@ export function JobRequirementsExtractionView({
             {fixtureMode
               ? t`Splitting the job text with local fixtures. Nothing is sent to a provider.`
               : phase.background === true
-                ? pendingExtractionNote
+                ? pendingExtractionNote()
                 : readingPage
                   ? t`DraftLoop is fetching the job page you approved. Its text then goes to ${providerName} (${modelName}) to split into requirements.`
                   : onCancelExtraction === undefined
@@ -297,8 +297,8 @@ export function JobRequirementsExtractionView({
       if (phase.summary.requirementCount === 0) {
         return (
           <div className="job-extraction" role="status">
-            <p className="job-extraction-title">{noRequirementsFoundTitle}</p>
-            <p className="setup-note">{noRequirementsFoundNote}</p>
+            <p className="job-extraction-title">{noRequirementsFoundTitle()}</p>
+            <p className="setup-note">{noRequirementsFoundNote()}</p>
             {phase.summary.issues.length === 0 ? null : (
               <ul className="job-extraction-issues">
                 {phase.summary.issues.map((issue) => (

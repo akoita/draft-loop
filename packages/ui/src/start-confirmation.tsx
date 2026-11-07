@@ -94,36 +94,36 @@ export function startModelPreset(profiles: StartModelProfiles | undefined): stri
   return preset === undefined ? null : presetDisplayName(preset.label);
 }
 
-const tierPrefixes: readonly (readonly [string, string])[] = [
-  ["economy-", "Economy"],
-  ["balanced-", "Balanced"],
-  ["standard-", "Standard"],
-  ["premium-", "Premium"],
-  ["dev-", "Development"],
+const tierPrefixes = (): readonly (readonly [string, string])[] => [
+  ["economy-", t`Economy`],
+  ["balanced-", t`Balanced`],
+  ["standard-", t`Standard`],
+  ["premium-", t`Premium`],
+  ["dev-", t`Development`],
 ];
 
 /** The tier a model profile id names by its prefix, or `null` when the id names none. */
 export function modelProfileTier(profileId: string | undefined): string | null {
   if (profileId === undefined) return null;
-  return tierPrefixes.find(([prefix]) => profileId.startsWith(prefix))?.[1] ?? null;
+  return tierPrefixes().find(([prefix]) => profileId.startsWith(prefix))?.[1] ?? null;
 }
 
-const companyNames: Readonly<Record<string, string>> = {
-  anthropic: "Anthropic",
+const companyNames = (): Readonly<Record<string, string>> => ({
+  anthropic: t`Anthropic`,
   openai: "OpenAI",
-};
+});
 
 function companyName(company: string): string {
-  return companyNames[company.trim().toLowerCase()] ?? company;
+  return companyNames()[company.trim().toLowerCase()] ?? company;
 }
 
-const sessionRouteLabels: Readonly<Record<"anthropic" | "openai", string>> = {
-  anthropic: "Claude session",
-  openai: "ChatGPT session",
-};
+const sessionRouteLabels = (): Readonly<Record<"anthropic" | "openai", string>> => ({
+  anthropic: t`Claude session`,
+  openai: t`ChatGPT session`,
+});
 
-export const apiKeyRouteLabel = "API key, billed per token";
-export const demoRouteLabel = "Demo, no provider call";
+export const apiKeyRouteLabel = () => t`API key, billed per token`;
+export const demoRouteLabel = () => t`Demo, no provider call`;
 
 function routeOf(state: DesktopReviewState, company: string): ProviderRoute | null {
   const provider = company.trim().toLowerCase();
@@ -133,36 +133,37 @@ function routeOf(state: DesktopReviewState, company: string): ProviderRoute | nu
 }
 
 function routeLabel(state: DesktopReviewState, company: string): string | null {
-  if (state.setup.fixtureMode) return demoRouteLabel;
+  if (state.setup.fixtureMode) return demoRouteLabel();
   const route = routeOf(state, company);
   if (route === null) return null;
-  if (route === "api-key") return apiKeyRouteLabel;
+  if (route === "api-key") return apiKeyRouteLabel();
   const provider = company.trim().toLowerCase() as "anthropic" | "openai";
-  return sessionRouteLabels[provider];
+  return sessionRouteLabels()[provider];
 }
 
 /** The requirements line when the person chose the raw job description explicitly. */
-export const chosenRawJobDescriptionValue =
-  "Raw job description, chosen under Advanced (coverage scoring is less reliable)";
+export const chosenRawJobDescriptionValue = () =>
+  t`Raw job description, chosen under Advanced (coverage scoring is less reliable)`;
 /** The requirements line when the application has no brief, so the run reads the job text. */
-export const jobTextRequirementsValue = "Read from the job text (no requirements brief)";
+export const jobTextRequirementsValue = () => t`Read from the job text (no requirements brief)`;
 
 function requirementsValue(state: DesktopReviewState, context: StartConfirmationContext): string {
-  if (context.action.requirementsSource === "job-description") return chosenRawJobDescriptionValue;
+  if (context.action.requirementsSource === "job-description")
+    return chosenRawJobDescriptionValue();
   const reviewed = context.reviewedRequirements;
   if (reviewed !== null && reviewed !== undefined) {
-    return `Reviewed brief v${reviewed.version} · ${reviewedRequirementsCounts(reviewed)}`;
+    return t`Reviewed brief v${reviewed.version} · ${reviewedRequirementsCounts(reviewed)}`;
   }
   const selected = state.setup.reviewedOpportunity;
-  if (selected !== null && selected !== undefined) return `Reviewed brief v${selected.version}`;
-  return jobTextRequirementsValue;
+  if (selected !== null && selected !== undefined) return t`Reviewed brief v${selected.version}`;
+  return jobTextRequirementsValue();
 }
 
 /** The evidence line: the mode the run would use and how much of the source that is. */
 export function evidencePreviewValue(preview: StartEvidencePreview): string {
   if (preview.status === "checking") return "Checking…";
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } = preview.preview;
-  if (requestedMode === "retrieval") return "Retrieval";
+  if (requestedMode === "retrieval") return t`Retrieval`;
   if (effectiveMode === "full-source") {
     const chunks = countedNouns.chunk(chunkCount);
     return sourceCount === undefined
@@ -170,7 +171,7 @@ export function evidencePreviewValue(preview: StartEvidencePreview): string {
       : t`Full source · ${chunks} from ${countedNouns.source(sourceCount)} (fits)`;
   }
   if (fallbackReason === "no-eligible-chunks") {
-    return "Full source has no eligible chunks; retrieval will be used";
+    return t`Full source has no eligible chunks; retrieval will be used`;
   }
   return t`Full source does not fit the budget for this pair (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
 }
@@ -225,13 +226,13 @@ export function requestStartEvidencePreview(
 }
 
 function writingPolicyValue(state: DesktopReviewState): string {
-  if (state.setup.writingPolicyStatus === "unavailable") return "Unavailable";
+  if (state.setup.writingPolicyStatus === "unavailable") return t`Unavailable`;
   if (state.setup.writingPolicyStatus === "active") {
     return state.setup.writingPolicy === null
-      ? "Active"
+      ? t`Active`
       : `Active, ${state.setup.writingPolicy.version}`;
   }
-  return "None";
+  return t`None`;
 }
 
 function callLimitValue(state: DesktopReviewState): string | null {
@@ -241,8 +242,8 @@ function callLimitValue(state: DesktopReviewState): string | null {
   const critic = routeOf(state, state.providerTransmissionPreflight.critic.company);
   const limit = `${formatLimitDuration(routes.sessionCallLimitMs)} per call`;
   if (author === "user-session" && critic === "user-session") return limit;
-  if (author === "user-session") return `${limit} for the author`;
-  if (critic === "user-session") return `${limit} for the critic`;
+  if (author === "user-session") return t`${limit} for the author`;
+  if (critic === "user-session") return t`${limit} for the critic`;
   return null;
 }
 
@@ -251,7 +252,7 @@ function changedPairNote(state: DesktopReviewState): string | null {
   if (latest === undefined || latest.authorModel === "" || latest.criticModel === "") return null;
   const { author, critic } = state.providerTransmissionPreflight;
   if (latest.authorModel === author.model && latest.criticModel === critic.model) return null;
-  return `The last run on this application used ${latest.authorModel} → ${latest.criticModel}.`;
+  return t`The last run on this application used ${latest.authorModel} → ${latest.criticModel}.`;
 }
 
 /**
@@ -305,34 +306,34 @@ export function startConfirmationSummary(
   });
   const sameCompany = author.company.trim().toLowerCase() === critic.company.trim().toLowerCase();
   const inputs: StartConfirmationLine[] = [
-    { label: "Requirements", value: requirementsValue(state, context) },
+    { label: t`Requirements`, value: requirementsValue(state, context) },
   ];
   if (context.candidateProfile !== undefined) {
     inputs.push({
-      label: "Career profile",
+      label: t`Career profile`,
       value:
-        context.candidateProfile === null ? "None pinned" : `v${context.candidateProfile.version}`,
+        context.candidateProfile === null ? t`None pinned` : `v${context.candidateProfile.version}`,
     });
   }
-  inputs.push({ label: "Writing policy", value: writingPolicyValue(state) });
+  inputs.push({ label: t`Writing policy`, value: writingPolicyValue(state) });
   if (context.evidencePreview !== undefined && context.evidencePreview !== null) {
-    inputs.push({ label: "Evidence", value: evidencePreviewValue(context.evidencePreview) });
+    inputs.push({ label: t`Evidence`, value: evidencePreviewValue(context.evidencePreview) });
   }
   const settings: StartConfirmationLine[] = [];
   if (state.setup.autopilot !== undefined) {
-    settings.push({ label: "Autopilot", value: state.setup.autopilot ? "On" : "Off" });
+    settings.push({ label: t`Autopilot`, value: state.setup.autopilot ? t`On` : t`Off` });
   }
   settings.push({
-    label: "Round limit",
+    label: t`Round limit`,
     value: countedNouns.round(state.providerTransmissionPreflight.budget.maxRounds),
   });
   const callLimit = callLimitValue(state);
-  if (callLimit !== null) settings.push({ label: "Call limit", value: callLimit });
+  if (callLimit !== null) settings.push({ label: t`Call limit`, value: callLimit });
   return {
     preset,
     models: [model("Author", author), model("Critic", critic)],
     sameCompanyWarning: sameCompany
-      ? `Author and critic are both from ${companyName(author.company)}, so the critique is not a cross-company check.`
+      ? t`Author and critic are both from ${companyName(author.company)}, so the critique is not a cross-company check.`
       : null,
     localWriterWarning: localWriterWarningFor(author.company),
     inputs,
@@ -344,11 +345,11 @@ export function startConfirmationSummary(
 /** The Length choice (#1366): keep the writing policy's target, or write to one page or two. */
 export type StartLengthChoice = "policy" | "one-page" | "two-page";
 
-export const startLengthLabels: Readonly<Record<StartLengthChoice, string>> = {
-  policy: "Writing policy",
-  "one-page": "One page",
-  "two-page": "Two pages",
-};
+export const startLengthLabels = (): Readonly<Record<StartLengthChoice, string>> => ({
+  policy: t`Writing policy`,
+  "one-page": t`One page`,
+  "two-page": t`Two pages`,
+});
 
 /**
  * What the dialog's buttons do: Start closes it and sends the trigger's own action, the same
@@ -476,7 +477,7 @@ export function StartConfirmation({
             )}
             {summary.models.map((model) => (
               <div key={model.role}>
-                <dt>{model.role}</dt>
+                <dt>{model.role === "Author" ? t`Author` : t`Critic`}</dt>
                 <dd>
                   {[model.company, model.model, model.tier, model.reasoning, model.route]
                     .filter((part): part is string => part !== null)
@@ -508,7 +509,7 @@ export function StartConfirmation({
           <Lines lines={summary.settings} />
           <fieldset className="start-confirmation-length">
             <legend>{t`Length`}</legend>
-            {(Object.keys(startLengthLabels) as StartLengthChoice[]).map((choice) => (
+            {(Object.keys(startLengthLabels()) as StartLengthChoice[]).map((choice) => (
               <label key={choice}>
                 <input
                   type="radio"
@@ -517,7 +518,7 @@ export function StartConfirmation({
                   checked={length === choice}
                   onChange={() => setLength(choice)}
                 />
-                {startLengthLabels[choice]}
+                {startLengthLabels()[choice]}
               </label>
             ))}
             <p className="start-confirmation-note">{t`One page or two is saved as your writing policy's page target, and the draft is written to it.`}</p>

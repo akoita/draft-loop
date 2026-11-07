@@ -128,7 +128,7 @@ describe("career profile commands over HTTP", () => {
 
   it("ends a cancelled or failed derivation with the desktop's words", async () => {
     const outcomes: [ApiSchemas["CareerProfileDerivation"], string][] = [
-      [{ status: "cancelled" }, canonicalCandidateProfileGenerationCancelledMessage],
+      [{ status: "cancelled" }, canonicalCandidateProfileGenerationCancelledMessage()],
       [
         { status: "failed", reason: "consent-required" },
         "The candidate's consent does not cover sending this evidence to the workspace's providers.",

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * Path-free bridge contracts for creating the workspace's career-evidence knowledge base
  * automatically and for remembering a declined one-time import of legacy evidence.
@@ -7,7 +8,7 @@
  */
 
 /** How the created-base notice names the store's location, instead of a local path. */
-export const defaultKnowledgeStoreDestinationLabel = "DraftLoop application data";
+export const defaultKnowledgeStoreDestinationLabel = () => t`DraftLoop application data`;
 
 /** Binds a runtime key list to its interface so a missing or extra key is a compile error. */
 function exactKeys<Shape extends object>() {

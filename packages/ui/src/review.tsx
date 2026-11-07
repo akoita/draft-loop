@@ -261,13 +261,13 @@ interface ReviewWorkspaceProps {
   readonly startApplicationId?: string | null;
 }
 
-const decisionLabels: Readonly<Record<FindingDecision, string>> = {
-  pending: "Pending",
-  accepted: "Accept",
-  rejected: "Reject",
-  deferred: "Defer",
-  overridden: "Override",
-};
+const decisionLabels = (): Readonly<Record<FindingDecision, string>> => ({
+  pending: t`Pending`,
+  accepted: t`Accept`,
+  rejected: t`Reject`,
+  deferred: t`Defer`,
+  overridden: t`Override`,
+});
 
 export type FindingQueueFilter = "needs-action" | "blocking" | "warnings" | "resolved";
 
@@ -304,14 +304,14 @@ export function canExportReview(
   );
 }
 
-const findingQueueFilters: ReadonlyArray<{
+const findingQueueFilters = (): ReadonlyArray<{
   readonly id: FindingQueueFilter;
   readonly label: string;
-}> = [
-  { id: "needs-action", label: "Needs action" },
-  { id: "blocking", label: "Blocking" },
-  { id: "warnings", label: "Warnings" },
-  { id: "resolved", label: "Resolved" },
+}> => [
+  { id: "needs-action", label: t`Needs action` },
+  { id: "blocking", label: t`Blocking` },
+  { id: "warnings", label: t`Warnings` },
+  { id: "resolved", label: t`Resolved` },
 ];
 
 export type DirectFindingDecision = Exclude<FindingDecision, "pending" | "overridden">;
@@ -463,12 +463,12 @@ export function findingQueueEmptyMessage(
   counts: FindingQueueCounts,
 ): string {
   if (filter === "needs-action" && counts.needsAction === 0) {
-    return counts.resolved > 0 ? "All findings are resolved." : "No findings need action yet.";
+    return counts.resolved > 0 ? t`All findings are resolved.` : t`No findings need action yet.`;
   }
-  if (filter === "blocking" && counts.blocking === 0) return "No blocking findings need action.";
-  if (filter === "warnings" && counts.warnings === 0) return "No warnings need action.";
-  if (filter === "resolved" && counts.resolved === 0) return "No findings have been resolved yet.";
-  return "No findings match this filter.";
+  if (filter === "blocking" && counts.blocking === 0) return t`No blocking findings need action.`;
+  if (filter === "warnings" && counts.warnings === 0) return t`No warnings need action.`;
+  if (filter === "resolved" && counts.resolved === 0) return t`No findings have been resolved yet.`;
+  return t`No findings match this filter.`;
 }
 
 export function isOverrideEditorVisible(
@@ -486,7 +486,7 @@ function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
-const loopSteps = ["Draft", "Critique", "Revise", "Approve"] as const;
+const loopSteps = () => [t`Draft`, t`Critique`, t`Revise`, t`Approve`] as const;
 
 /** Where the run currently sits on the author–critic loop, for the rail readout. */
 export function loopStageIndex(state: DesktopReviewState): number {
@@ -503,7 +503,7 @@ export function loopStageIndex(state: DesktopReviewState): number {
       return 3;
     case "approved":
     case "exported":
-      return loopSteps.length;
+      return loopSteps().length;
     default:
       if (state.execution.step === "author") return 0;
       if (state.execution.step === "critic") return 1;
@@ -675,7 +675,7 @@ function LoopRail({
   return (
     <div className="loop-rail">
       <ol className="loop-steps" aria-label={t`Author–critic loop stage`}>
-        {loopSteps.map((label, index) => (
+        {loopSteps().map((label, index) => (
           <li
             className={`loop-step${index < activeIndex ? " loop-step-done" : ""}${
               index === activeIndex ? " loop-step-active" : ""
@@ -722,19 +722,19 @@ function LoopRail({
  * not.
  */
 function independenceGateLabel(view: IndependentReviewView | null): string {
-  if (view === null) return "Independence claim recorded";
-  if (!view.required) return "Independent review not required for this run";
-  if (view.lineagesDistinct) return "Author and critic lineages differ, as claimed";
+  if (view === null) return t`Independence claim recorded`;
+  if (!view.required) return t`Independent review not required for this run`;
+  if (view.lineagesDistinct) return t`Author and critic lineages differ, as claimed`;
   if (view.overrideRationale !== null) {
-    return "Shared lineage overridden on a recorded rationale; critique was not independent";
+    return t`Shared lineage overridden on a recorded rationale; critique was not independent`;
   }
-  return "Author and critic share one lineage; critique was not independent";
+  return t`Author and critic share one lineage; critique was not independent`;
 }
 
 /** The failed call's step, and its role when another role's call failed that step. */
 function failedCallLabel({ step, role }: Pick<ProviderFailureView, "step" | "role">): string {
   const stepRole = step === "critic" ? "critic" : "author";
-  return role === stepRole ? step : `${role} call in the ${step} step`;
+  return role === stepRole ? step : t`${role} call in the ${step} step`;
 }
 
 function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
@@ -947,8 +947,8 @@ export function approvalEditNote(
   if (edited.size === 0) return null;
   const version = artifact.version + 1;
   return plural(edited.size, {
-    one: `Approving makes v${version} with your # edit; the critic has not reviewed it.`,
-    other: `Approving makes v${version} with your # edits; the critic has not reviewed them.`,
+    one: t`Approving makes v${version} with your # edit; the critic has not reviewed it.`,
+    other: t`Approving makes v${version} with your # edits; the critic has not reviewed them.`,
   });
 }
 
@@ -1119,19 +1119,19 @@ export function ReviewWorkspace({
   const validationLabel = runInProgress
     ? (runStatusLine?.label ?? "")
     : !hasArtifact
-      ? "No draft artifact available"
+      ? t`No draft artifact available`
       : knownGapOverride !== null && state.approval !== "approved"
-        ? "Final CV checks fail only on known gaps"
+        ? t`Final CV checks fail only on known gaps`
         : approvalReadiness?.applicationReady === false && state.approval !== "approved"
           ? editNote !== null
-            ? "Final CV checks run again on your edits"
-            : "Final CV checks block approval"
+            ? t`Final CV checks run again on your edits`
+            : t`Final CV checks block approval`
           : roundLimitRecovery
-            ? "Round limit recovery required"
+            ? t`Round limit recovery required`
             : !state.reviewComplete
               ? (runStatusLine?.label ?? "")
               : state.state === "provider-error"
-                ? "Provider recovery remains before approval"
+                ? t`Provider recovery remains before approval`
                 : findingSummary.status === "blocked"
                   ? countedNouns.blockingFinding(blockingFindings.length)
                   : findingSummary.status === "warnings"
@@ -1139,7 +1139,7 @@ export function ReviewWorkspace({
                         one: "# unresolved warning",
                         other: "# unresolved warnings",
                       })
-                    : "No unresolved findings";
+                    : t`No unresolved findings`;
   const [jobUrl, setJobUrl] = useState("");
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
   const [exportTemplate, setExportTemplate] = useExportTemplate(
@@ -1320,7 +1320,7 @@ export function ReviewWorkspace({
     ...(state.coverage === undefined || state.coverage === null
       ? []
       : [coverageTabLabel(state.coverage)]),
-    ...(onReadJob === undefined ? [] : [jobTabLabel]),
+    ...(onReadJob === undefined ? [] : [jobTabLabel()]),
   ];
   const workTab = availableReviewWorkTab(chosenWorkTab, workTabs);
   const tabbedWork = workTabs.length > 1;
@@ -1357,12 +1357,12 @@ export function ReviewWorkspace({
     state.providerTransmissionPreflight.acknowledged;
   const retryRemainingMs = retryWaitMs(state.providerFailure?.retryNotBefore ?? null, nowMs);
   const gateConditions: readonly { id: string; label: string; met: boolean }[] = [
-    { id: "draft", label: "Draft artifact produced", met: hasArtifact },
+    { id: "draft", label: t`Draft artifact produced`, met: hasArtifact },
     // `reviewComplete` measures that a critique finished, not that it was
     // independent. Calling it "independent" here would restate the over-claim
     // the trust strip was corrected to avoid: an overridden shared-lineage run
     // completes a critique that was, by its own record, not independent.
-    { id: "critique", label: "Critique completed", met: state.reviewComplete },
+    { id: "critique", label: t`Critique completed`, met: state.reviewComplete },
     {
       id: "independence",
       label: independenceGateLabel(state.providerExposure.independentReview),
@@ -1370,7 +1370,7 @@ export function ReviewWorkspace({
     },
     {
       id: "blocking",
-      label: "Blocking findings resolved or overridden",
+      label: t`Blocking findings resolved or overridden`,
       met: hasArtifact && blockingFindings.length === 0,
     },
     ...(approvalReadiness !== null &&
@@ -1380,8 +1380,8 @@ export function ReviewWorkspace({
             id: "application-readiness",
             label:
               approvalReadiness.overridden === true
-                ? "Final CV checks overridden with a recorded reason"
-                : "Final CV checks passed",
+                ? t`Final CV checks overridden with a recorded reason`
+                : t`Final CV checks passed`,
             met: approvalReadiness.applicationReady || approvalReadiness.overridden === true,
           },
         ]
@@ -1390,7 +1390,7 @@ export function ReviewWorkspace({
       ? [
           {
             id: "transmission",
-            label: "Provider transmission acknowledged",
+            label: t`Provider transmission acknowledged`,
             met: state.providerTransmissionPreflight.acknowledged,
           },
         ]
@@ -1868,60 +1868,60 @@ export function ReviewWorkspace({
   );
   const pendingActionReason =
     readOnly && !chosenRunOpen
-      ? earlierRunRefusal
+      ? earlierRunRefusal()
       : pendingReviewAction === null
         ? null
-        : "Another review action is already running.";
+        : t`Another review action is already running.`;
   // On the chosen earlier run, approval and export are open but every other change is not.
-  const runChangeReason = chosenRunOpen ? chosenRunRefusal : pendingActionReason;
+  const runChangeReason = chosenRunOpen ? chosenRunRefusal() : pendingActionReason;
   const revisionReason = !hasArtifact
-    ? "No draft artifact available yet."
+    ? t`No draft artifact available yet.`
     : roundLimitRecovery
-      ? "Return to the last fully reviewed round before requesting another revision."
+      ? t`Return to the last fully reviewed round before requesting another revision.`
       : !state.reviewComplete
-        ? "Independent critique has not completed."
+        ? t`Independent critique has not completed.`
         : roundLimitReached
-          ? `Maximum of ${maximumRounds} rounds reached. Create a workspace with a higher limit to continue.`
+          ? t`Maximum of ${maximumRounds} rounds reached. Create a workspace with a higher limit to continue.`
           : state.state !== "awaiting-approval"
-            ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
+            ? t`The run is ${stateLabel(state.state)}, not awaiting approval.`
             : !transmissionReady
-              ? "Provider transmission has not been acknowledged."
+              ? t`Provider transmission has not been acknowledged.`
               : runChangeReason;
   // A revision that cannot happen in this run at all folds the directions field away, so a
   // greyed-out field never looks usable; a briefly blocked one keeps the field and its text.
   const lastingRevisionBlock = revisionUnavailableReason(state, maximumRounds);
   const comparisonReason = hasPreviousArtifact
     ? null
-    : "There is no previous version to compare with.";
+    : t`There is no previous version to compare with.`;
   const paletteCommands: readonly PaletteCommand[] = [
     {
       id: "approve",
-      label: "Approve artifact",
+      label: t`Approve artifact`,
       note: "Alt+A",
       disabledReason: !hasArtifact
-        ? "No draft artifact available yet."
+        ? t`No draft artifact available yet.`
         : !state.reviewComplete
-          ? "Independent critique has not completed."
+          ? t`Independent critique has not completed.`
           : blockingFindings.length > 0
             ? plural(blockingFindings.length, {
                 one: "# blocking finding still needs a decision.",
                 other: "# blocking findings still need a decision.",
               })
             : state.state !== "awaiting-approval"
-              ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
+              ? t`The run is ${stateLabel(state.state)}, not awaiting approval.`
               : pendingActionReason,
       run: approveArtifact,
     },
     {
       id: "recover-round-limit",
-      label: `Return to reviewed Round ${Math.max(1, state.round - 1)}`,
-      note: "Undo an empty round opened after the configured limit",
-      disabledReason: roundLimitRecovery ? runChangeReason : "Round-limit recovery is not needed.",
+      label: t`Return to reviewed Round ${Math.max(1, state.round - 1)}`,
+      note: t`Undo an empty round opened after the configured limit`,
+      disabledReason: roundLimitRecovery ? runChangeReason : t`Round-limit recovery is not needed.`,
       run: () => onAction({ type: "recover-round-limit" }),
     },
     {
       id: "request-revision",
-      label: "Request revision",
+      label: t`Request revision`,
       note: "Alt+R",
       disabledReason: revisionReason,
       run: requestRevision,
@@ -1933,42 +1933,42 @@ export function ReviewWorkspace({
       disabledReason: canExport
         ? null
         : !state.reviewComplete
-          ? "Independent critique has not completed."
+          ? t`Independent critique has not completed.`
           : state.state !== "approved" && state.state !== "exported"
-            ? "The artifact has not been approved."
-            : (pendingActionReason ?? "Export is unavailable right now."),
+            ? t`The artifact has not been approved.`
+            : (pendingActionReason ?? t`Export is unavailable right now.`),
       run: () => onAction(exportReviewAction(exportFormat, exportTemplate)),
     },
     {
       id: "resume",
-      label: "Resume",
-      note: "Continue this run from its durable step",
+      label: t`Resume`,
+      note: t`Continue this run from its durable step`,
       disabledReason:
         state.execution.status !== "interrupted" && state.state !== "paused"
-          ? "This run is neither paused nor interrupted."
+          ? t`This run is neither paused nor interrupted.`
           : !transmissionReady
-            ? "Provider transmission has not been acknowledged."
+            ? t`Provider transmission has not been acknowledged.`
             : runChangeReason,
       run: () => onAction({ type: "resume" }),
     },
     {
       id: "stop",
-      label: "Stop",
-      note: "End this run without losing its history",
+      label: t`Stop`,
+      note: t`End this run without losing its history`,
       disabledReason:
         state.execution.status !== "running" && state.execution.status !== "interrupted"
-          ? "Nothing is running to stop."
+          ? t`Nothing is running to stop.`
           : runChangeReason,
       run: () => onAction({ type: "stop" }),
     },
     {
       id: "start",
-      label: "Start a new review",
-      note: "Run the author–critic loop again",
+      label: t`Start a new review`,
+      note: t`Run the author–critic loop again`,
       disabledReason: !canStartNewReview(state)
-        ? "A review is already under way."
+        ? t`A review is already under way.`
         : !transmissionReady
-          ? "Provider transmission has not been acknowledged."
+          ? t`Provider transmission has not been acknowledged.`
           : startDisabledReason
             ? startDisabledReason
             : pendingActionReason,
@@ -1976,10 +1976,10 @@ export function ReviewWorkspace({
     },
     {
       id: "draft-view",
-      label: showChanges ? "Read the full draft" : "Read changes only",
+      label: showChanges ? t`Read the full draft` : t`Read changes only`,
       note: showChanges
-        ? "Drop the change marks and read the draft as it stands"
-        : "Mark every word that changed since the previous version",
+        ? t`Drop the change marks and read the draft as it stands`
+        : t`Mark every word that changed since the previous version`,
       disabledReason: comparisonReason,
       run: () => setDraftView(showChanges ? "full" : "changes"),
     },
@@ -1987,33 +1987,33 @@ export function ReviewWorkspace({
       id: "compare",
       label:
         state.previousArtifact === null
-          ? "Compare with the previous version"
-          : `Compare with v${state.previousArtifact.version}`,
+          ? t`Compare with the previous version`
+          : t`Compare with v${state.previousArtifact.version}`,
       note: compareVisible
-        ? "Close the previous version beside the draft"
-        : "Open the previous version beside the draft",
+        ? t`Close the previous version beside the draft`
+        : t`Open the previous version beside the draft`,
       disabledReason: comparisonReason,
       run: () => setCompareOpen((current) => !current),
     },
     {
       id: "sources",
-      label: "Open claim traceability",
-      note: "Show where each claim's wording came from",
+      label: t`Open claim traceability`,
+      note: t`Show where each claim's wording came from`,
       disabledReason: null,
       run: () => openTraceability(),
     },
     {
       id: "keys",
-      label: "Open provider authentication",
-      note: "Provider sign-in lives in Home, under Workspace settings",
+      label: t`Open provider authentication`,
+      note: t`Provider sign-in lives in Home, under Workspace settings`,
       disabledReason:
-        onOpenHome === undefined ? "This host has no Home to open provider sign-in from." : null,
+        onOpenHome === undefined ? t`This host has no Home to open provider sign-in from.` : null,
       run: () => onOpenHome?.(),
     },
     {
       id: "go-draft",
-      label: "Go to the draft",
-      note: "Move to the document under review",
+      label: t`Go to the draft`,
+      note: t`Move to the document under review`,
       disabledReason: null,
       run: () => {
         paletteFocusRequest.current = reviewColumnRef.current;
@@ -2021,8 +2021,8 @@ export function ReviewWorkspace({
     },
     {
       id: "go-findings",
-      label: "Go to the findings queue",
-      note: "Move to critique triage",
+      label: t`Go to the findings queue`,
+      note: t`Move to critique triage`,
       disabledReason: null,
       run: () => {
         expandFindings();
@@ -2117,13 +2117,13 @@ export function ReviewWorkspace({
                 (decision === "accepted" && acceptUnavailable(finding, decisionContext))
               }
               {...(decision === "accepted" && acceptUnavailable(finding, decisionContext)
-                ? { title: ACCEPT_UNAVAILABLE_NOTE }
+                ? { title: ACCEPT_UNAVAILABLE_NOTE() }
                 : {})}
               onFocus={highlight}
               onBlur={clearHighlight}
               onClick={() => decideFinding(finding.id, decision)}
             >
-              {decisionLabels[decision]}
+              {decisionLabels()[decision]}
             </button>
           ))}
           <button
@@ -2547,7 +2547,7 @@ export function ReviewWorkspace({
                   operations={briefOperations}
                   disabled={requirementsBinding.disabled}
                   label={
-                    latestBrief.status === "draft" ? "Review requirements" : "View requirements"
+                    latestBrief.status === "draft" ? t`Review requirements` : t`View requirements`
                   }
                   {...(requirementsBinding.onBriefChanged === undefined
                     ? {}
@@ -2585,7 +2585,7 @@ export function ReviewWorkspace({
               briefId={state.setup.reviewedOpportunity.briefId}
               operations={briefOperations}
               disabled={requirementsBinding.disabled}
-              label="View requirements"
+              label={t`View requirements`}
               {...(requirementsBinding.onBriefChanged === undefined
                 ? {}
                 : { onBriefChanged: requirementsBinding.onBriefChanged })}
@@ -3407,7 +3407,7 @@ export function ReviewWorkspace({
                 <div className="section-heading compact">
                   <div>
                     <PanelToggle
-                      label="Run progress"
+                      label={t`Run progress`}
                       collapsed={collapsedPanels.has("progress")}
                       controls="run-progress-events"
                       onToggle={() => togglePanel("progress")}
@@ -3535,7 +3535,7 @@ export function ReviewWorkspace({
                 </div>
                 <fieldset className="finding-filters">
                   <legend className="sr-only">{t`Finding filters`}</legend>
-                  {findingQueueFilters.map((filter) => {
+                  {findingQueueFilters().map((filter) => {
                     const count = findingQueueFilterCount(queueCounts, filter.id);
                     const isSelected = findingFilter === filter.id;
                     return (
@@ -3582,7 +3582,7 @@ export function ReviewWorkspace({
                     >
                       {knownGapsLabel}
                     </button>
-                    <p className="finding-bulk-note">{MARK_KNOWN_GAPS_NOTE}</p>
+                    <p className="finding-bulk-note">{MARK_KNOWN_GAPS_NOTE()}</p>
                   </div>
                 )}
                 {bulkDecisionAvailable ? (
@@ -3606,13 +3606,13 @@ export function ReviewWorkspace({
                           disabled={pendingReviewAction !== null || targetIds.length === 0}
                           onClick={() => onBulkFindingDecision(targetIds, decision)}
                         >
-                          {decisionLabels[decision]} {t`all`}
+                          {decisionLabels()[decision]} {t`all`}
                         </button>
                       );
                     })}
                     {bulkWordMatchNote === null ? null : (
                       <p className="finding-bulk-note">
-                        {bulkWordMatchNote} {BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE}.
+                        {bulkWordMatchNote} {BULK_ACCEPT_SKIPS_WORD_MATCH_NOTE()}.
                       </p>
                     )}
                     {bulkBlockingNote === null ? null : (
@@ -3718,7 +3718,7 @@ export function ReviewWorkspace({
                                 ? t`Accepted · no revision left`
                                 : finding.severity === "error" && finding.decision === "accepted"
                                   ? t`Accepted · revision required`
-                                  : decisionLabels[finding.decision]}
+                                  : decisionLabels()[finding.decision]}
                               <span className="finding-summary-chevron" aria-hidden="true">
                                 {isExpanded ? "⌃" : "⌄"}
                               </span>
@@ -3729,7 +3729,7 @@ export function ReviewWorkspace({
                           </span>
                         </button>
                         {acceptedWithoutRevision(finding, decisionContext) ? (
-                          <p className="finding-nudge">{ACCEPTED_WITHOUT_REVISION_NUDGE}</p>
+                          <p className="finding-nudge">{ACCEPTED_WITHOUT_REVISION_NUDGE()}</p>
                         ) : null}
                         {isExpanded ? (
                           <section
@@ -3775,7 +3775,7 @@ export function ReviewWorkspace({
                                   }
                                   onClick={() => decideFinding(finding.id, decision)}
                                 >
-                                  {decisionLabels[decision]}
+                                  {decisionLabels()[decision]}
                                 </button>
                               ))}
                               <button
@@ -3913,9 +3913,9 @@ export function ReviewWorkspace({
           <ReviewFooter
             blocker={
               comparing
-                ? comparingRunsBlocker
+                ? comparingRunsBlocker()
                 : draftEdits.unsaved && draftEditable
-                  ? savingEditsBlocker
+                  ? savingEditsBlocker()
                   : gateBlocker
             }
             readOnly={!approvalOpen}
@@ -4047,14 +4047,14 @@ export function ReviewWorkspace({
               pathLabel:
                 state.exportPath ??
                 (!state.reviewComplete
-                  ? "Unavailable until independent critique completes"
+                  ? t`Unavailable until independent critique completes`
                   : state.state === "exported"
-                    ? MISSING_EXPORT_LABEL
+                    ? MISSING_EXPORT_LABEL()
                     : canExport
-                      ? "Available now"
+                      ? t`Available now`
                       : state.state === "approved"
-                        ? "Unavailable while another action is pending"
-                        : "Available after approval"),
+                        ? t`Unavailable while another action is pending`
+                        : t`Available after approval`),
               pendingSeconds: exportPending ? pendingReviewAction.elapsedSeconds : null,
               format: exportFormat,
               onFormatChange: setExportFormat,

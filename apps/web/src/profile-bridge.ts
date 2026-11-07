@@ -43,7 +43,7 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 /** Why a hosted derivation ended without a version, in the desktop's words where it has them. */
 function derivationFailure(state: ApiSchemas["CareerProfileDerivation"]): never {
   if (state.status === "cancelled")
-    return refuse(canonicalCandidateProfileGenerationCancelledMessage);
+    return refuse(canonicalCandidateProfileGenerationCancelledMessage());
   if (state.status !== "failed") return refuse(t`The career profile could not be derived.`);
   if (state.reason === "consent-required") {
     return refuse(

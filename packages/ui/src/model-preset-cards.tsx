@@ -33,10 +33,10 @@ export function presetPriceText(
 ): { readonly short: string; readonly full: string } {
   return {
     short: `${presetRate(writer, "/")} · ${presetRate(reviewer, "/")} per M tokens`,
-    full: `Writer ${presetRate(writer, " / ")} · Reviewer ${presetRate(reviewer, " / ")} per million tokens (input / output)`,
+    full: t`Writer ${presetRate(writer, " / ")} · Reviewer ${presetRate(reviewer, " / ")} per million tokens (input / output)`,
   };
 }
-export const unsupportedSignInBadge = "Not available with your current sign-in";
+export const unsupportedSignInBadge = () => t`Not available with your current sign-in`;
 
 interface ModelPresetCardsProps {
   readonly groupName: string;
@@ -128,7 +128,7 @@ function PresetCard({
         ) : null}
         {unsupported ? (
           <span className="model-preset-badge model-preset-badge-unsupported">
-            {unsupportedSignInBadge}
+            {unsupportedSignInBadge()}
           </span>
         ) : null}
       </span>
@@ -147,7 +147,7 @@ export function ModelPresetCards({
   disabled,
   support,
   onSelect,
-  legend = "Choose a model pair",
+  legend = t`Choose a model pair`,
   leading = null,
   includeCustom = true,
   hideUnsupported = false,

@@ -65,7 +65,7 @@ export function careerInterviewTurnText(turn: CareerInterviewTurnView): {
   readonly speaker: string;
   readonly text: string;
 } {
-  const speaker = turn.role === "interviewer" ? t`Interviewer` : "You";
+  const speaker = turn.role === "interviewer" ? t`Interviewer` : t`You`;
   if (turn.mark === "skipped") return { speaker, text: t`Skipped this question.` };
   if (turn.mark === "unknown") return { speaker, text: t`Did not remember.` };
   return { speaker, text: turn.text };
@@ -82,8 +82,8 @@ export function careerInterviewActiveTopic(
 }
 
 /** What the screen says instead of offering topics when the server has no interviewer model. */
-export const careerInterviewUnavailableNotice =
-  "The interviewer is not set up on this server, so it cannot ask questions yet. Whoever runs the server can turn on its Claude route. You can still add career facts by hand.";
+export const careerInterviewUnavailableNotice = () =>
+  t`The interviewer is not set up on this server, so it cannot ask questions yet. Whoever runs the server can turn on its Claude route. You can still add career facts by hand.`;
 
 /** How many topics have been confirmed or set aside, of those the candidate took up. */
 export function careerInterviewProgress(session: CareerInterviewSessionView): {
@@ -96,17 +96,15 @@ export function careerInterviewProgress(session: CareerInterviewSessionView): {
   return { done: taken.filter((topic) => topic.status === "closed").length, taken: taken.length };
 }
 
-const refusals: Readonly<Record<string, string>> = {
-  consent_required:
-    "The interviewer is Claude, by Anthropic, so your answers go to Anthropic to write each question. The interview needs your permission for that.",
-  interview_model_unavailable:
-    "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route.",
-  topic_not_open: "This topic is no longer being discussed. Reload to see where it stands.",
-  topic_not_summarised: "This topic has no summary to confirm yet.",
-  too_many_topics: "This session has enough topics. Finish or set one aside first.",
-  invalid_answer: "Write your answer in a few words, up to 4,000 characters.",
-  session_not_found: "This conversation could not be found. Start a new one.",
-};
+const refusals = (): Readonly<Record<string, string>> => ({
+  consent_required: t`The interviewer is Claude, by Anthropic, so your answers go to Anthropic to write each question. The interview needs your permission for that.`,
+  interview_model_unavailable: t`This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route.`,
+  topic_not_open: t`This topic is no longer being discussed. Reload to see where it stands.`,
+  topic_not_summarised: t`This topic has no summary to confirm yet.`,
+  too_many_topics: t`This session has enough topics. Finish or set one aside first.`,
+  invalid_answer: t`Write your answer in a few words, up to 4,000 characters.`,
+  session_not_found: t`This conversation could not be found. Start a new one.`,
+});
 
 /** A refused call as the host reports it: the code lets the screen offer a way through. */
 export interface CareerInterviewRefused {
@@ -119,5 +117,5 @@ export type CareerInterviewProblem = string | CareerInterviewRefused | undefined
 
 /** The candidate-facing words for a refusal code, or the server's own message. */
 export function careerInterviewRefusal(code: string | undefined, message: string): string {
-  return (code === undefined ? undefined : refusals[code]) ?? message;
+  return (code === undefined ? undefined : refusals()[code]) ?? message;
 }

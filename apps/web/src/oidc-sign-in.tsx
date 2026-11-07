@@ -76,7 +76,7 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
       (error: unknown) => {
         navigation.clearQuery();
         if (!current) return;
-        setNotice(error instanceof SignInEndedError ? error.notice : signInNotices.failed);
+        setNotice(error instanceof SignInEndedError ? error.notice : signInNotices().failed);
         setPhase("signed-out");
       },
     );
@@ -123,7 +123,7 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
             (error: unknown) => {
               setLeaving(false);
               setNotice(
-                error instanceof SignInEndedError ? error.notice : signInNotices.unreachable,
+                error instanceof SignInEndedError ? error.notice : signInNotices().unreachable,
               );
             },
           );

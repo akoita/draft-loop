@@ -35,28 +35,30 @@ import { submitOnEnter } from "./submit-on-enter.js";
 
 export { credentialProviderLabels, providerAuthModeLabels };
 
-export const mistralCredentialNote =
-  "This key sends candidate material to Mistral AI (api.mistral.ai). Mistral Large 4 is a public preview.";
+export const mistralCredentialNote = () =>
+  t`This key sends candidate material to Mistral AI (api.mistral.ai). Mistral Large 4 is a public preview.`;
 
-export const googleCredentialNote =
-  "This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key.";
+export const googleCredentialNote = () =>
+  t`This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key.`;
 
-const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
-  app: "Configured in app",
-  env: "Configured via env",
-  "user-session": "Provider user session",
-  none: "Not configured",
-};
+const credentialSourceLabels = (): Readonly<Record<CredentialStatus["source"], string>> => ({
+  app: t`Configured in app`,
+  env: t`Configured via env`,
+  "user-session": t`Provider user session`,
+  none: t`Not configured`,
+});
 
-const credentialProtectionLabels: Readonly<Record<CredentialStatus["protection"], string>> = {
-  "os-backed": "OS-backed encryption",
-  "basic-text": "Linux basic_text (weak protection)",
-  "local-aes-gcm": "Local AES fallback (key stored beside app data)",
-  environment: "Environment variable",
-  "session-memory": "Session memory only",
-  "provider-managed-session": "Provider-managed session",
-  none: "No credential",
-};
+const credentialProtectionLabels = (): Readonly<
+  Record<CredentialStatus["protection"], string>
+> => ({
+  "os-backed": t`OS-backed encryption`,
+  "basic-text": t`Linux basic_text (weak protection)`,
+  "local-aes-gcm": t`Local AES fallback (key stored beside app data)`,
+  environment: t`Environment variable`,
+  "session-memory": t`Session memory only`,
+  "provider-managed-session": t`Provider-managed session`,
+  none: t`No credential`,
+});
 
 interface CredentialRowProps {
   readonly title: string;
@@ -100,10 +102,10 @@ export function CredentialRow({
       <div className="credential-row-header">
         <strong>{title}</strong>
         <span className={`status-badge status-${status.source}`}>
-          {credentialSourceLabels[status.source]}
+          {credentialSourceLabels()[status.source]}
         </span>
         <span className="credential-protection">
-          {credentialProtectionLabels[status.protection]}
+          {credentialProtectionLabels()[status.protection]}
         </span>
       </div>
       {note === undefined ? null : <p className="credential-note">{note}</p>}
@@ -173,7 +175,7 @@ export function ProviderAuthenticationMode({
   credentialStatus,
   onChange,
 }: ProviderAuthenticationModeProps) {
-  const modeLabel = providerAuthModeLabels[status.activeMode];
+  const modeLabel = providerAuthModeLabels()[status.activeMode];
   const modeChoiceDisabled = status.environmentOverride || onChange === undefined;
   return (
     <fieldset className="provider-auth-mode" aria-describedby="provider-auth-mode-copy">
@@ -192,7 +194,7 @@ export function ProviderAuthenticationMode({
           onChange={() => onChange?.("api-key")}
         />
         <span>
-          <strong>{providerAuthModeLabels["api-key"]}</strong>
+          <strong>{providerAuthModeLabels()["api-key"]}</strong>
           <small>{t`Use an OpenAI API key with direct API billing.`}</small>
         </span>
       </label>
@@ -206,13 +208,13 @@ export function ProviderAuthenticationMode({
           onChange={() => onChange?.("user-session")}
         />
         <span>
-          <strong>{providerAuthModeLabels["user-session"]}</strong>
+          <strong>{providerAuthModeLabels()["user-session"]}</strong>
           <small>{t`Use the local Codex CLI session with subscription billing.`}</small>
         </span>
       </label>
       <p className="credential-mode-status" role="status">
         {t`Active now:`} {modeLabel}
-        {t`. Saved preference:`} {providerAuthModeLabels[status.preferredMode]}.
+        {t`. Saved preference:`} {providerAuthModeLabels()[status.preferredMode]}.
       </p>
       {status.restartRequired ? (
         <p
@@ -241,30 +243,30 @@ export function ProviderAuthenticationMode({
   );
 }
 
-const credentialRows: readonly {
+const credentialRows = (): readonly {
   readonly provider: CredentialProvider;
   readonly title: string;
   readonly placeholder: string;
   readonly note?: string;
-}[] = [
-  { provider: "anthropic", title: "Anthropic API key (Claude)", placeholder: "sk-ant-api03-…" },
-  { provider: "openai", title: "OpenAI API key (GPT)", placeholder: "sk-proj-…" },
+}[] => [
+  { provider: "anthropic", title: t`Anthropic API key (Claude)`, placeholder: "sk-ant-api03-…" },
+  { provider: "openai", title: t`OpenAI API key (GPT)`, placeholder: "sk-proj-…" },
   {
     provider: "deepinfra",
-    title: "DeepInfra API key (Z.ai GLM)",
-    placeholder: "DeepInfra API key",
+    title: t`DeepInfra API key (Z.ai GLM)`,
+    placeholder: t`DeepInfra API key`,
   },
   {
     provider: "google",
-    title: "Google Gemini API key",
-    placeholder: "Gemini API key",
-    note: googleCredentialNote,
+    title: t`Google Gemini API key`,
+    placeholder: t`Gemini API key`,
+    note: googleCredentialNote(),
   },
   {
     provider: "mistral",
-    title: "Mistral API key",
-    placeholder: "Mistral API key",
-    note: mistralCredentialNote,
+    title: t`Mistral API key`,
+    placeholder: t`Mistral API key`,
+    note: mistralCredentialNote(),
   },
 ];
 
@@ -310,7 +312,7 @@ export function ProviderAuthenticationView({
 }: ProviderAuthenticationViewProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   useModalFocusTrap(true, dialogRef, onClose);
-  const rowFor = (row: (typeof credentialRows)[number]) => (
+  const rowFor = (row: ReturnType<typeof credentialRows>[number]) => (
     <CredentialRow
       key={row.provider}
       title={row.title}
@@ -333,7 +335,7 @@ export function ProviderAuthenticationView({
           })}
     />
   );
-  const [anthropic, openai, ...others] = credentialRows;
+  const [anthropic, openai, ...others] = credentialRows();
   return (
     // No dismiss-on-backdrop: a stray click must not discard a half-typed key.
     <div className="modal-backdrop">

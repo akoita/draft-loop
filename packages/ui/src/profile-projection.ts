@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The renderer's view of a saved career profile version, projected from the record a host's
  * service returns: the desktop's application service, or the hosted API's profile view (ADR 0011,
@@ -104,11 +105,11 @@ const canonicalCandidateProfileFactReferenceKeys = new Set([
 /** Thrown inside the projection; the exported function hands it to the host's failure. */
 class InvalidProfileRecord extends Error {}
 
-const invalidProfileRecordMessage =
-  "The canonical candidate profile service returned an invalid record.";
+const invalidProfileRecordMessage = () =>
+  t`The canonical candidate profile service returned an invalid record.`;
 
 function canonicalCandidateProfileFailure(): never {
-  throw new InvalidProfileRecord(invalidProfileRecordMessage);
+  throw new InvalidProfileRecord(invalidProfileRecordMessage());
 }
 
 function canonicalCandidateProfileText(value: unknown, maximum: number): string {

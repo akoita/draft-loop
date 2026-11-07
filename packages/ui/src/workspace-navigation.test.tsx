@@ -96,7 +96,7 @@ describe("desktop workspace navigation", () => {
 
   it("keeps a review from starting while candidate-profile work is pending", () => {
     expect(candidateProfileStartDisabledReason(true, null, false, true)).toBe(
-      candidateProfilePendingBlockerMessage,
+      candidateProfilePendingBlockerMessage(),
     );
   });
 

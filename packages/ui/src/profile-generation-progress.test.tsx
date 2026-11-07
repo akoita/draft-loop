@@ -103,10 +103,10 @@ describe("a generation that waits for a worker", () => {
     const queued = nextProfileGenerationProgress(undefined, { queued: true });
     expect(queued).toEqual({ queued: true });
     if (queued === undefined) throw new Error("expected the queued state");
-    expect(formatProfileGenerationPart(queued)).toBe(profileGenerationQueuedLabel);
+    expect(formatProfileGenerationPart(queued)).toBe(profileGenerationQueuedLabel());
     expect(
       renderToStaticMarkup(<ProfileGenerationProgress startedAt={0} now={0} progress={queued} />),
-    ).toContain(profileGenerationQueuedLabel);
+    ).toContain(profileGenerationQueuedLabel());
 
     // Started without counts yet: the wait is over, so the label goes.
     expect(nextProfileGenerationProgress(queued, {})).toBeUndefined();

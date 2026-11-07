@@ -62,8 +62,8 @@ describe("desktop saved model profiles", () => {
     );
 
     expect(appliedSelectionFromSaved(loaded)).toBeNull();
-    expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toBe(noModelProfilesWarning);
-    expect(noModelProfilesWarning).toBe(
+    expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toBe(noModelProfilesWarning());
+    expect(noModelProfilesWarning()).toBe(
       "No model profiles: provider defaults, unknown context windows.",
     );
     expect(savedModelProfilesNotice(loaded, "workspace-1", 1)).toBeNull();
@@ -99,7 +99,7 @@ describe("desktop saved model profiles", () => {
     const notice = savedModelProfilesNotice(loaded, "workspace-1", 1);
     expect(notice).toContain("author legacy-anthropic-author@1; critic legacy-openai-critic@1");
     expect(notice).toContain(reason);
-    expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toContain(noModelProfilesWarning);
+    expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toContain(noModelProfilesWarning());
   });
 
   it("reports an unreadable or invalid saved pair instead of treating it as empty", async () => {
@@ -117,7 +117,9 @@ describe("desktop saved model profiles", () => {
       expect(loaded).toEqual({ status: "unavailable", workspaceId: "workspace-1", generation: 1 });
       expect(appliedSelectionFromSaved(loaded)).toBeNull();
       expect(savedModelProfilesNotice(loaded, "workspace-1", 1)).toContain("could not be read");
-      expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toContain(noModelProfilesWarning);
+      expect(modelProfileWarning(null, loaded, "workspace-1", 1)).toContain(
+        noModelProfilesWarning(),
+      );
     }
   });
 

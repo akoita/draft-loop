@@ -222,7 +222,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       query,
     });
     return workspaceId === ownerWorkspaceId
-      ? { ...state, workspaceName: ownerWorkspaceName }
+      ? { ...state, workspaceName: ownerWorkspaceName() }
       : state;
   };
   const applications = async (workspaceId: string) =>

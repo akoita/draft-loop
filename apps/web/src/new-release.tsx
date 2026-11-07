@@ -50,7 +50,7 @@ export interface NewReleaseNoticeProps {
 export function NewReleaseNotice({ onReload }: NewReleaseNoticeProps) {
   return (
     <div className="notice new-release" role="status">
-      <span>{NEW_RELEASE_MESSAGE}</span>
+      <span>{NEW_RELEASE_MESSAGE()}</span>
       <button type="button" onClick={onReload}>{t`Reload`}</button>
     </div>
   );

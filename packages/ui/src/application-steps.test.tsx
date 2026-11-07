@@ -41,7 +41,7 @@ const noJob: StartChecklistInput = {
   setup: {
     ...allDone.setup,
     ready: false,
-    nextSteps: [jobDescriptionSteps[0] ?? ""],
+    nextSteps: [jobDescriptionSteps()[0] ?? ""],
     jobDescriptionReady: false,
     reviewedOpportunity: null,
   },
@@ -50,7 +50,7 @@ const noJob: StartChecklistInput = {
 const noProfile: StartChecklistInput = {
   ...allDone,
   candidateProfile: null,
-  startDisabledReason: candidateProfileStartBlockerMessage,
+  startDisabledReason: candidateProfileStartBlockerMessage(),
 };
 
 function states(input: StartChecklistInput) {
@@ -73,11 +73,11 @@ describe("application step states", () => {
       states({
         ...noJob,
         candidateProfile: null,
-        startDisabledReason: candidateProfileStartBlockerMessage,
+        startDisabledReason: candidateProfileStartBlockerMessage(),
       }),
     ).toEqual([
       "Current step",
-      `Blocked: ${candidateProfileStartBlockerMessage}`,
+      `Blocked: ${candidateProfileStartBlockerMessage()}`,
       "Blocked: finish steps 1 and 2 first.",
     ]);
   });
@@ -121,7 +121,7 @@ describe("application step states", () => {
         setup: {
           ...allDone.setup,
           ready: false,
-          nextSteps: [jobDescriptionSteps[1] ?? ""],
+          nextSteps: [jobDescriptionSteps()[1] ?? ""],
           reviewedOpportunity: null,
         },
       })[0],
@@ -130,7 +130,7 @@ describe("application step states", () => {
 
   it("keeps the profile step open while a profile operation is pending", () => {
     expect(
-      states({ ...allDone, startDisabledReason: candidateProfilePendingBlockerMessage })[1],
+      states({ ...allDone, startDisabledReason: candidateProfilePendingBlockerMessage() })[1],
     ).toBe("Current step");
   });
 
@@ -261,7 +261,7 @@ describe("ReviewWorkspace as three steps", () => {
         onAddUrl={() => undefined}
         startCandidateProfile={startCandidateProfile}
         startDisabledReason={
-          startCandidateProfile === null ? candidateProfileStartBlockerMessage : null
+          startCandidateProfile === null ? candidateProfileStartBlockerMessage() : null
         }
         onOpenHome={() => undefined}
         setupSummary={<div id="summary">SETUP SUMMARY</div>}
@@ -353,7 +353,7 @@ describe("ReviewWorkspace as three steps", () => {
             jobDescriptionReady: false,
             ready: false,
             reviewedOpportunity: null,
-            nextSteps: [jobDescriptionSteps[jobFromUrl ? 1 : 0] ?? ""],
+            nextSteps: [jobDescriptionSteps()[jobFromUrl ? 1 : 0] ?? ""],
           })}
           onAction={() => undefined}
           onSelectFiles={() => undefined}
@@ -371,10 +371,10 @@ describe("ReviewWorkspace as three steps", () => {
     it("offers Extract requirements in the start checklist and names the review on Start", () => {
       const html = renderScreen(true);
       const checklist = checklistHtml(html);
-      expect(checklist).toContain(approvedPageRequirementsDetail);
+      expect(checklist).toContain(approvedPageRequirementsDetail());
       expect(checklist).toMatch(/<button[^>]*>Extract requirements<\/button>/u);
       expect(checklist).not.toContain("Add job description");
-      expect(checklist).not.toContain(jobDescriptionSteps[1]);
+      expect(checklist).not.toContain(jobDescriptionSteps()[1]);
       expect(html).toContain("Start review · review the requirements first");
       expect(html).not.toContain("add the job description first");
     });

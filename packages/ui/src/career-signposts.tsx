@@ -2,19 +2,21 @@ import { t } from "@lingui/core/macro";
 import { type DragEvent, type ReactNode, useState } from "react";
 
 /** What each career page says about the other's job, so a person in the wrong place finds the right one. */
-export const profileSignpostText = {
-  lead: "Looking to add or replace a CV?",
-  body: "Documents live in Career evidence. The profile is rebuilt from them.",
-  action: "Go to Career evidence",
-  dragging: "Drop documents in Career evidence, not here.",
-  dropped: "Your file was not added: documents are added in Career evidence.",
-} as const;
+export const profileSignpostText = () =>
+  ({
+    lead: t`Looking to add or replace a CV?`,
+    body: t`Documents live in Career evidence. The profile is rebuilt from them.`,
+    action: t`Go to Career evidence`,
+    dragging: t`Drop documents in Career evidence, not here.`,
+    dropped: t`Your file was not added: documents are added in Career evidence.`,
+  }) as const;
 
-export const evidenceSignpostText = {
-  lead: "Looking for your facts?",
-  body: "Facts DraftLoop finds in these documents are reviewed and edited in Career profile.",
-  action: "Open Career profile",
-} as const;
+export const evidenceSignpostText = () =>
+  ({
+    lead: t`Looking for your facts?`,
+    body: t`Facts DraftLoop finds in these documents are reviewed and edited in Career profile.`,
+    action: t`Open Career profile`,
+  }) as const;
 
 function Signpost({
   tone = "neutral",
@@ -40,8 +42,8 @@ function Signpost({
 /** On the Career evidence page: facts are reviewed in Career profile. */
 export function EvidenceSignpost({ onOpenProfile }: { readonly onOpenProfile: () => void }) {
   return (
-    <Signpost action={evidenceSignpostText.action} onAction={onOpenProfile}>
-      <strong>{evidenceSignpostText.lead}</strong> {evidenceSignpostText.body}
+    <Signpost action={evidenceSignpostText().action} onAction={onOpenProfile}>
+      <strong>{evidenceSignpostText().lead}</strong> {evidenceSignpostText().body}
     </Signpost>
   );
 }
@@ -111,16 +113,16 @@ export function ProfileSignpostArea({
     >
       <Signpost
         tone={attention ? "attention" : "neutral"}
-        action={profileSignpostText.action}
+        action={profileSignpostText().action}
         onAction={onOpenEvidence}
       >
         {drop === "dragging" ? (
-          <strong>{profileSignpostText.dragging}</strong>
+          <strong>{profileSignpostText().dragging}</strong>
         ) : drop === "dropped" ? (
-          <strong role="status">{profileSignpostText.dropped}</strong>
+          <strong role="status">{profileSignpostText().dropped}</strong>
         ) : (
           <>
-            <strong>{profileSignpostText.lead}</strong> {profileSignpostText.body}
+            <strong>{profileSignpostText().lead}</strong> {profileSignpostText().body}
           </>
         )}
       </Signpost>

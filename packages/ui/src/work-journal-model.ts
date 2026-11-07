@@ -72,15 +72,15 @@ export interface WorkJournalScreeningView {
   readonly held: boolean;
 }
 
-const roleLabels: Readonly<Record<WorkJournalRole, string>> = {
-  designed: "Designed",
-  implemented: "Implemented",
-  directed: "Directed",
-  reviewed: "Reviewed",
-};
+const roleLabels = (): Readonly<Record<WorkJournalRole, string>> => ({
+  designed: t`Designed`,
+  implemented: t`Implemented`,
+  directed: t`Directed`,
+  reviewed: t`Reviewed`,
+});
 
 export function workJournalRoleLabel(role: WorkJournalRole): string {
-  return roleLabels[role];
+  return roleLabels()[role];
 }
 
 export function workJournalPeriod(period: WorkJournalContent["period"]): string {
@@ -176,16 +176,16 @@ export function workJournalEditedContent(
   };
 }
 
-const refusals: Readonly<Record<string, string>> = {
-  note_quarantined: "Screening holds this note. Edit it or discard it; it cannot be approved.",
-  note_not_pending: "This note was already reviewed. Reload to see its status.",
-  note_not_found: "This note is gone. Reload the list.",
-  approval_unavailable: "This server cannot turn notes into career evidence yet.",
-  invalid_note: "The server refused the edit. Check the title, summary and technologies.",
-  secret_like_content: "The edit looks like it holds a key or password. Remove it and save again.",
-};
+const refusals = (): Readonly<Record<string, string>> => ({
+  note_quarantined: t`Screening holds this note. Edit it or discard it; it cannot be approved.`,
+  note_not_pending: t`This note was already reviewed. Reload to see its status.`,
+  note_not_found: t`This note is gone. Reload the list.`,
+  approval_unavailable: t`This server cannot turn notes into career evidence yet.`,
+  invalid_note: t`The server refused the edit. Check the title, summary and technologies.`,
+  secret_like_content: t`The edit looks like it holds a key or password. Remove it and save again.`,
+});
 
 /** What to tell the candidate when the API refuses a review, from its content-free code. */
 export function workJournalRefusal(code: string, message: string): string {
-  return refusals[code] ?? message;
+  return refusals()[code] ?? message;
 }

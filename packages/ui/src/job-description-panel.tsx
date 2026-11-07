@@ -20,13 +20,13 @@ type JobLoad =
 export function jobOriginNote(job: ApplicationJobResult): string | null {
   switch (job.origin) {
     case "workspace-file":
-      return "From the workspace's job file.";
+      return t`From the workspace's job file.`;
     case "pasted-text":
-      return "The text pasted when this application was created.";
+      return t`The text pasted when this application was created.`;
     case "local-file":
-      return "From the file chosen for this application, as it reads now.";
+      return t`From the file chosen for this application, as it reads now.`;
     case "url":
-      return "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them.";
+      return t`From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them.`;
     case "unavailable":
       return null;
   }

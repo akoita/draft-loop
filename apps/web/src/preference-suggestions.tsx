@@ -3,6 +3,7 @@ import {
   PreferenceSuggestionsPanel,
   type PreferenceSuggestionView,
 } from "@draft-loop/ui/preference-suggestions-panel";
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
@@ -30,7 +31,7 @@ export async function decidePreferenceSuggestion(
     }
     return undefined;
   } catch (error) {
-    return `The preference could not be saved. ${describeError(error)}`;
+    return t`The preference could not be saved. ${describeError(error)}`;
   }
 }
 

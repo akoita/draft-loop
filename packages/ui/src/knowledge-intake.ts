@@ -64,11 +64,11 @@ export function knowledgeIntakeSummary(result: KnowledgeIntakeResult): string {
       : t`File import complete. An existing career-evidence source was reused.`;
   }
   const directoryText =
-    `Directory import ${result.status}: scanned ${result.scannedEntryCount} entries, ` +
+    t`Directory import ${result.status}: scanned ${result.scannedEntryCount} entries, ` +
     `found ${result.discoveredFileCount} files, skipped ${result.skippedEntryCount}, ` +
     `processed ${result.sourceCount} sources.`;
   return result.status === "partial"
-    ? `${directoryText} Some content may not be available.`
+    ? t`${directoryText} Some content may not be available.`
     : directoryText;
 }
 

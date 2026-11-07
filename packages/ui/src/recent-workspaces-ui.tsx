@@ -147,7 +147,7 @@ export function useRecentWorkspaces({
       })
       .catch(() => {
         if (!current) return;
-        setErrorMessage("Recent workspaces could not be loaded.");
+        setErrorMessage(t`Recent workspaces could not be loaded.`);
         setLoadState("ready");
       });
     return () => {
@@ -162,10 +162,10 @@ export function useRecentWorkspaces({
     setStatusMessage(null);
     try {
       if (!(await openRecentWorkspace(id))) {
-        setErrorMessage("This recent workspace could not be opened. Choose a folder to open it.");
+        setErrorMessage(t`This recent workspace could not be opened. Choose a folder to open it.`);
       }
     } catch {
-      setErrorMessage("This recent workspace could not be opened. Choose a folder to open it.");
+      setErrorMessage(t`This recent workspace could not be opened. Choose a folder to open it.`);
     } finally {
       setOpeningId(null);
     }
@@ -173,16 +173,16 @@ export function useRecentWorkspaces({
 
   const remove = async (id: string) => {
     if (busy || openingId !== null || updatingList || removeRecentWorkspace === undefined) return;
-    const name = workspaces.find((workspace) => workspace.id === id)?.name ?? "The workspace";
+    const name = workspaces.find((workspace) => workspace.id === id)?.name ?? t`The workspace`;
     setUpdatingList(true);
     setErrorMessage(null);
     setStatusMessage(null);
     try {
       await removeRecentWorkspace(id);
       setWorkspaces((current) => current.filter((workspace) => workspace.id !== id));
-      setStatusMessage(`${name} was removed from recent workspaces. Its files are unchanged.`);
+      setStatusMessage(t`${name} was removed from recent workspaces. Its files are unchanged.`);
     } catch {
-      setErrorMessage("This recent workspace could not be removed from the list.");
+      setErrorMessage(t`This recent workspace could not be removed from the list.`);
     } finally {
       setUpdatingList(false);
     }
@@ -196,9 +196,9 @@ export function useRecentWorkspaces({
     try {
       await clearRecentWorkspaces();
       setWorkspaces([]);
-      setStatusMessage("Recent workspace history cleared. Workspace files are unchanged.");
+      setStatusMessage(t`Recent workspace history cleared. Workspace files are unchanged.`);
     } catch {
-      setErrorMessage("Recent workspace history could not be cleared.");
+      setErrorMessage(t`Recent workspace history could not be cleared.`);
     } finally {
       setUpdatingList(false);
     }

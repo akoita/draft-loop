@@ -36,7 +36,7 @@ describe("Home: import from another workspace", () => {
     );
     expect(html).toContain('class="button button-outline"');
     expect(html).toContain('aria-describedby="home-import-explanation"');
-    expect(html).toContain(`id="home-import-explanation">${applicationImportExplanation}`);
+    expect(html).toContain(`id="home-import-explanation">${applicationImportExplanation()}`);
   });
 
   it("hides the action and its explanation when the host cannot import", () => {

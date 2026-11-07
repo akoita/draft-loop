@@ -103,7 +103,7 @@ describe("a new release while the tab is open (#1904)", () => {
 
   it("offers a reload with the notice", () => {
     const html = renderToStaticMarkup(<NewReleaseNotice onReload={() => undefined} />);
-    expect(html).toContain(NEW_RELEASE_MESSAGE);
+    expect(html).toContain(NEW_RELEASE_MESSAGE());
     expect(html).toContain('role="status"');
     expect(html).toContain(">Reload</button>");
   });

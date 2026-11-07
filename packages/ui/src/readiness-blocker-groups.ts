@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * The final CV checks' blockers grouped for reading. A run with six word-match misses records six
  * identical "deterministic-error" blockers; listing each one turned the approval panel into a wall
@@ -43,16 +44,16 @@ export function formatReadinessBlockerGroup(group: ReadinessBlockerGroup): strin
   switch (blocker.code) {
     case "deterministic-error":
       return blocker.check === undefined
-        ? `${count} validation checks failed`
-        : `${count} validation checks failed: ${approvalReadinessCheckLabels[blocker.check]}`;
+        ? t`${count} validation checks failed`
+        : t`${count} validation checks failed: ${approvalReadinessCheckLabels[blocker.check]}`;
     case "report-error":
       return blocker.dimension === undefined
-        ? `${count} readiness report findings block readiness`
-        : `${count} readiness report findings on ${blocker.dimension} block readiness`;
+        ? t`${count} readiness report findings block readiness`
+        : t`${count} readiness report findings on ${blocker.dimension} block readiness`;
     case "incomplete-report-inputs":
-      return `${count} readiness report inputs are missing`;
+      return t`${count} readiness report inputs are missing`;
     case "missing-revision-effect":
-      return `${count} required revision effects are missing`;
+      return t`${count} required revision effects are missing`;
     default:
       return `${formatApprovalReadinessBlocker(blocker)} (${count} times)`;
   }

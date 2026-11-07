@@ -113,7 +113,7 @@ export function SourceEvidenceKindList({ state, disabled, onChange }: SourceEvid
 function failureText(reason: unknown): string {
   return reason instanceof Error && reason.message !== ""
     ? reason.message
-    : "The evidence kind could not be saved.";
+    : t`The evidence kind could not be saved.`;
 }
 
 /**

@@ -1,15 +1,16 @@
+import { t } from "@lingui/core/macro";
 /** Pure display helpers that turn canonical profile keys into readable review text. */
 import { countedNouns } from "./counted-nouns.js";
 
-const issueCodeLabels: Readonly<Record<string, string>> = {
-  "conflict-date": "Conflicting dates",
-  "conflict-title": "Conflicting titles",
-  "conflict-duration": "Conflicting durations",
-  "conflict-metric": "Conflicting metrics",
-  "conflict-value": "Conflicting values",
-  duplicate: "Possible duplicate",
-  omission: "Omission",
-};
+const issueCodeLabels = (): Readonly<Record<string, string>> => ({
+  "conflict-date": t`Conflicting dates`,
+  "conflict-title": t`Conflicting titles`,
+  "conflict-duration": t`Conflicting durations`,
+  "conflict-metric": t`Conflicting metrics`,
+  "conflict-value": t`Conflicting values`,
+  duplicate: t`Possible duplicate`,
+  omission: t`Omission`,
+});
 
 const acronymPattern = /^[A-Z]{2,}$/u;
 
@@ -42,7 +43,7 @@ export function humanizeProfileCategory(category: string): string {
 }
 
 export function profileIssueCodeLabel(code: string): string {
-  return issueCodeLabels[code] ?? humanizeKey(code);
+  return issueCodeLabels()[code] ?? humanizeKey(code);
 }
 
 export function sourceCountLabel(count: number): string {

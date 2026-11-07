@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type { FooterBlocker } from "./review-footer.js";
 
@@ -41,14 +42,14 @@ export const DRAFT_EDIT_IDLE_MS = 800;
 /** How long a sent save may go unseen as pending before it counts as never started. */
 export const DRAFT_EDIT_LOST_MS = 3_000;
 
-export const SAVING_EDITS_NOTE = "Saving your edits…";
+export const SAVING_EDITS_NOTE = () => t`Saving your edits…`;
 
 /** The footer's line while typed text is unsaved: approving now would leave it out. */
-export const savingEditsBlocker: FooterBlocker = {
+export const savingEditsBlocker = (): FooterBlocker => ({
   kind: "waiting",
-  text: SAVING_EDITS_NOTE,
+  text: SAVING_EDITS_NOTE(),
   tone: "neutral",
-};
+});
 
 function withEntries(
   state: DraftEditBufferState,

@@ -21,15 +21,15 @@ import {
 import { createTokenStore } from "./session.js";
 
 /** What the sign-in screen tells the person when a session ends or a sign-in fails. */
-export const signInNotices = {
-  expired: "Your sign-in has expired. Sign in again.",
-  notMember:
-    "This account is not a member of an organisation yet. Ask your organisation's owner for an invite.",
-  refused: "The identity provider did not sign you in. Try again.",
-  mismatch: "This sign-in was not started from this tab. Sign in again.",
-  failed: "Sign-in could not be completed. Try again.",
-  unreachable: "The identity provider cannot be reached. Try again later.",
-} as const;
+export const signInNotices = () =>
+  ({
+    expired: t`Your sign-in has expired. Sign in again.`,
+    notMember: t`This account is not a member of an organisation yet. Ask your organisation's owner for an invite.`,
+    refused: t`The identity provider did not sign you in. Try again.`,
+    mismatch: t`This sign-in was not started from this tab. Sign in again.`,
+    failed: t`Sign-in could not be completed. Try again.`,
+    unreachable: t`The identity provider cannot be reached. Try again later.`,
+  }) as const;
 
 /** The session ended or a sign-in failed; `notice` says why, for the sign-in screen. */
 export class SignInEndedError extends Error {
@@ -151,9 +151,9 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
     const attempt = parseAttempt(attemptStore.read());
     // An attempt is answered once; a replayed address finds nothing to finish.
     attemptStore.clear();
-    if (answer.kind === "error") throw new SignInEndedError(signInNotices.refused);
+    if (answer.kind === "error") throw new SignInEndedError(signInNotices().refused);
     if (attempt === undefined || !isExpectedState(attempt.state, answer.state))
-      throw new SignInEndedError(signInNotices.mismatch);
+      throw new SignInEndedError(signInNotices().mismatch);
     try {
       await requestTokens(
         codeExchangeBody({
@@ -164,7 +164,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
         }),
       );
     } catch (error) {
-      throw new SignInEndedError(signInNotices.failed, { cause: error });
+      throw new SignInEndedError(signInNotices().failed, { cause: error });
     }
     return true;
   }
@@ -177,7 +177,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       try {
         found = await providerEndpoints();
       } catch (error) {
-        throw new SignInEndedError(signInNotices.unreachable, { cause: error });
+        throw new SignInEndedError(signInNotices().unreachable, { cause: error });
       }
       const state = randomValue(options.crypto);
       const codeVerifier = createCodeVerifier(options.crypto);
@@ -199,12 +199,12 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
 
     async accessToken() {
       const tokens = storedTokens();
-      if (tokens === undefined) throw new SignInEndedError(signInNotices.expired);
+      if (tokens === undefined) throw new SignInEndedError(signInNotices().expired);
       if (!needsRefresh(tokens, options.now())) return tokens.accessToken;
       if (tokens.refreshToken !== undefined) return session.refresh();
       if (options.now() < tokens.expiresAt) return tokens.accessToken;
       session.clear();
-      throw new SignInEndedError(signInNotices.expired);
+      throw new SignInEndedError(signInNotices().expired);
     },
 
     refresh() {
@@ -220,7 +220,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
             return tokens.accessToken;
           } catch (error) {
             session.clear();
-            throw new SignInEndedError(signInNotices.expired, { cause: error });
+            throw new SignInEndedError(signInNotices().expired, { cause: error });
           }
         })();
         refreshing = pending;
@@ -285,7 +285,7 @@ export function signedInClient(
     } catch (error) {
       if (!(error instanceof ApiRequestError)) throw error;
       if (error.status === 403) {
-        onEnd(signInNotices.notMember, true);
+        onEnd(signInNotices().notMember, true);
         throw error;
       }
       if (error.status !== 401) throw error;
@@ -304,7 +304,7 @@ export function signedInClient(
       if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
         const notMember = error.status === 403;
         if (!notMember) session.clear();
-        onEnd(notMember ? signInNotices.notMember : signInNotices.expired, notMember);
+        onEnd(notMember ? signInNotices().notMember : signInNotices().expired, notMember);
       }
       throw error;
     }

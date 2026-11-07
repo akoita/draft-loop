@@ -31,7 +31,7 @@ export interface ApplicationMaterialViewProps {
   readonly onDownload: () => void;
 }
 
-const kinds = Object.keys(applicationMaterialKindLabels) as ApplicationMaterialKind[];
+const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
 
 export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy } = props;
@@ -40,7 +40,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
       <h2 id="material-heading">{t`Prepare`}</h2>
       <fieldset disabled={busy}>
         <legend>{t`Draft for this application`}</legend>
-        {kinds.map((option) => (
+        {kinds().map((option) => (
           <label key={option}>
             <input
               type="radio"
@@ -49,11 +49,11 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               checked={kind === option}
               onChange={() => props.onKind(option)}
             />
-            {applicationMaterialKindLabels[option]}
+            {applicationMaterialKindLabels()[option]}
           </label>
         ))}
       </fieldset>
-      {draft === undefined ? <p className="muted">{applicationMaterialDisclosure}</p> : null}
+      {draft === undefined ? <p className="muted">{applicationMaterialDisclosure()}</p> : null}
       <button type="button" className="button" disabled={busy} onClick={props.onDraft}>
         {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
       </button>

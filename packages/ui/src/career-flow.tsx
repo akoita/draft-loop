@@ -7,35 +7,35 @@ import { t } from "@lingui/core/macro";
 
 export type CareerFlowStep = "evidence" | "profile" | "applications";
 
-const flowSteps: readonly { readonly step: CareerFlowStep; readonly label: string }[] = [
-  { step: "evidence", label: "Career evidence" },
-  { step: "profile", label: "Career profile" },
-  { step: "applications", label: "Applications" },
+const flowSteps = (): readonly { readonly step: CareerFlowStep; readonly label: string }[] => [
+  { step: "evidence", label: t`Career evidence` },
+  { step: "profile", label: t`Career profile` },
+  { step: "applications", label: t`Applications` },
 ];
 
-export const careerEvidenceIntro =
-  "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them.";
+export const careerEvidenceIntro = (): string =>
+  t`Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them.`;
 
-export const careerProfileIntro =
-  "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.";
+export const careerProfileIntro = (): string =>
+  t`Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version.`;
 
 /** Shown on the Career evidence page while a profile generation reads the evidence. */
-export const careerEvidenceLockedDuringGeneration =
-  "Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated.";
+export const careerEvidenceLockedDuringGeneration = (): string =>
+  t`Your career profile is being generated from this evidence. You can look around; changes to your evidence are available again once it is generated.`;
 
-export const careerEvidenceCardSubtitle =
-  "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them.";
+export const careerEvidenceCardSubtitle = (): string =>
+  t`Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them.`;
 
-export const careerProfileCardSubtitle =
-  "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them.";
+export const careerProfileCardSubtitle = (): string =>
+  t`The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them.`;
 
 /** The Your career panel on Home: one line on how the two steps relate. */
-export const careerPanelSummary =
-  "You give the documents, DraftLoop builds the facts, and every application reuses them.";
+export const careerPanelSummary = (): string =>
+  t`You give the documents, DraftLoop builds the facts, and every application reuses them.`;
 
 /** Who does the work in each step of the Your career panel. */
-export const careerEvidenceRole = "What you give";
-export const careerProfileRole = "What DraftLoop builds, you check";
+export const careerEvidenceRole = (): string => t`What you give`;
+export const careerProfileRole = (): string => t`What DraftLoop builds, you check`;
 
 /**
  * "Career evidence → Career profile → Applications", with the current step marked for assistive
@@ -51,7 +51,7 @@ export function CareerFlowStrip({
 }) {
   return (
     <ol className="career-flow" aria-label={t`Career flow`}>
-      {flowSteps.map(({ step, label }, index) => {
+      {flowSteps().map(({ step, label }, index) => {
         const open = step === current ? undefined : onOpen[step];
         return (
           <li

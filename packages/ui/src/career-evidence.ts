@@ -119,10 +119,19 @@ export function careerEvidenceReady(
     : status.kind !== "unavailable" && workspaceEvidenceSourceCount > 0;
 }
 
+/** The stored name of a workspace's default knowledge base. */
+const defaultCareerEvidenceName = "Career evidence";
+
+/** A knowledge base's name as shown: the default base keeps its stored English name, so translate it. */
+export function knowledgeBaseDisplayName(displayName: string): string {
+  return displayName === defaultCareerEvidenceName ? t`Career evidence` : displayName;
+}
+
 export function careerEvidenceSourcesText(
   status: Extract<CareerEvidenceStatus, { kind: "selected" }>,
 ): string {
-  return t`${status.displayName} · ${countedNouns.source(status.sourceCount)}`;
+  const name = knowledgeBaseDisplayName(status.displayName);
+  return t`${name} · ${countedNouns.source(status.sourceCount)}`;
 }
 
 export function careerEvidenceReadinessText(
@@ -154,7 +163,7 @@ function careerEvidenceAddLead(
 /** Says how many of the folder's files reached the base, and when the import stopped early. */
 function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
   const lead = t`Added ${countedNouns.source(result.sourceCount)} from the folder to ${displayName}.`;
-  return result.status === "partial" ? `${lead} Some files could not be imported.` : lead;
+  return result.status === "partial" ? t`${lead} Some files could not be imported.` : lead;
 }
 
 export type CareerEvidenceAddOutcome =

@@ -34,11 +34,11 @@ export const applicationStepIds: Readonly<Record<ApplicationStepId, string>> = {
   review: "application-step-review",
 };
 
-const titles: Readonly<Record<ApplicationStepId, string>> = {
-  job: "Job & requirements",
-  profile: "Profile",
-  review: "Review",
-};
+const titles = (): Readonly<Record<ApplicationStepId, string>> => ({
+  job: t`Job & requirements`,
+  profile: t`Profile`,
+  review: t`Review`,
+});
 
 function unmetDetail(condition: StartCondition): string {
   return condition.detail ?? condition.label;
@@ -57,7 +57,7 @@ function jobBlocker(conditions: readonly StartCondition[]): StartCondition | nul
       (condition) =>
         condition.id.startsWith("setup-") &&
         blocksStart(condition) &&
-        jobDescriptionSteps.includes(condition.label),
+        jobDescriptionSteps().includes(condition.label),
     ) ?? null
   );
 }
@@ -99,19 +99,19 @@ export function applicationStepStates(
     {
       id: "job",
       number: 1,
-      title: titles.job,
+      title: titles().job,
       status: status(1, job, () => (job === null ? "" : unmetDetail(job))),
     },
     {
       id: "profile",
       number: 2,
-      title: titles.profile,
+      title: titles().profile,
       status: status(2, profile, () => (profile === null ? "" : unmetDetail(profile))),
     },
     {
       id: "review",
       number: 3,
-      title: titles.review,
+      title: titles().review,
       status: status(3, null, () => `finish ${stepsLabel(open)} first.`),
     },
   ];

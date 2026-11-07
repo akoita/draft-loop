@@ -153,7 +153,7 @@ export function CareerInterviewPanel({
           <div className="interview-main">
             {session.interviewerAvailable === false && active?.status !== "summarised" ? (
               <p className="interview-unavailable" role="status">
-                {careerInterviewUnavailableNotice}
+                {careerInterviewUnavailableNotice()}
               </p>
             ) : active === undefined ? (
               <Proposal proposal={proposal} topics={proposed} pending={pending} onAction={act} />
@@ -263,15 +263,15 @@ export function careerInterviewTopicStatusLabel(
 ): string {
   switch (status) {
     case "proposed":
-      return "Suggested";
+      return t`Suggested`;
     case "declined":
-      return "Not now";
+      return t`Not now`;
     case "open":
-      return "Talking now";
+      return t`Talking now`;
     case "summarised":
-      return "Summary to confirm";
+      return t`Summary to confirm`;
     case "closed":
-      return "Finished";
+      return t`Finished`;
   }
 }
 

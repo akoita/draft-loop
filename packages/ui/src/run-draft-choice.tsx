@@ -76,7 +76,7 @@ export function RunDraftChoice({
           message:
             failure instanceof Error && failure.message !== ""
               ? failure.message
-              : "The run could not be chosen.",
+              : t`The run could not be chosen.`,
         }),
     );
   };

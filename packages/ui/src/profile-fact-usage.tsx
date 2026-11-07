@@ -13,14 +13,14 @@ import type { CanonicalCandidateProfileFactResult } from "./bridge.js";
 import type { FactUsageCapabilities } from "./fact-usage-capabilities.js";
 import type { FactUsageChangeView, FactUsageView } from "./fact-usage-contract.js";
 
-export const factUsageLevelLabels: Readonly<Record<FactUsageLevel, string>> = {
-  cv: "CV and interview",
-  "interview-only": "Interview only",
-  "never-say": "Never say",
-};
+export const factUsageLevelLabels = (): Readonly<Record<FactUsageLevel, string>> => ({
+  cv: t`CV and interview`,
+  "interview-only": t`Interview only`,
+  "never-say": t`Never say`,
+});
 
-export const factUsageExplanation =
-  "Usage says where a fact may appear: on your CV, only in interview answers, or never. It is separate from sensitivity, which decides what may be sent to a model provider.";
+export const factUsageExplanation = () =>
+  t`Usage says where a fact may appear: on your CV, only in interview answers, or never. It is separate from sensitivity, which decides what may be sent to a model provider.`;
 
 export interface ProfileFactUsageControls {
   readonly view: FactUsageView;
@@ -45,7 +45,7 @@ export function useProfileFactUsage(
         if (current) setView(loaded);
       },
       () => {
-        if (current) setError("Usage levels could not be loaded.");
+        if (current) setError(t`Usage levels could not be loaded.`);
       },
     );
     return () => {
@@ -60,7 +60,7 @@ export function useProfileFactUsage(
       setError(null);
       capabilities
         .setFactUsage(workspaceId, next)
-        .then(setView, () => setError("That usage level was not saved. Try again."))
+        .then(setView, () => setError(t`That usage level was not saved. Try again.`))
         .finally(() => setPending(false));
     },
     [capabilities, workspaceId],
@@ -72,7 +72,7 @@ export function useProfileFactUsage(
   };
 }
 
-const levels = Object.keys(factUsageLevelLabels) as FactUsageLevel[];
+const levels = () => Object.keys(factUsageLevelLabels()) as FactUsageLevel[];
 
 export function SectionUsageSelect({
   category,
@@ -96,9 +96,9 @@ export function SectionUsageSelect({
           controls.change({ kind: "section", category, level: chosen === "cv" ? null : chosen });
         }}
       >
-        {levels.map((option) => (
+        {levels().map((option) => (
           <option key={option} value={option}>
-            {factUsageLevelLabels[option]}
+            {factUsageLevelLabels()[option]}
           </option>
         ))}
       </select>
@@ -140,11 +140,11 @@ export function FactUsageSelect({
       >
         <option value="">
           {t`Like section (`}
-          {factUsageLevelLabels[inherited]})
+          {factUsageLevelLabels()[inherited]})
         </option>
-        {levels.map((option) => (
+        {levels().map((option) => (
           <option key={option} value={option}>
-            {factUsageLevelLabels[option]}
+            {factUsageLevelLabels()[option]}
           </option>
         ))}
       </select>

@@ -9,12 +9,12 @@ import {
 } from "./finding-decision-help.js";
 import type { ReviewFinding } from "./model.js";
 
-const hintLabels: Readonly<Record<ExplainedFindingDecision, string>> = {
-  accepted: "Accept",
-  rejected: "Reject",
-  overridden: "Override",
-  deferred: "Defer",
-};
+const hintLabels = (): Readonly<Record<ExplainedFindingDecision, string>> => ({
+  accepted: t`Accept`,
+  rejected: t`Reject`,
+  overridden: t`Override`,
+  deferred: t`Defer`,
+});
 
 const hintOrder: readonly ExplainedFindingDecision[] = [
   "accepted",
@@ -51,13 +51,13 @@ export function FindingDecisionHint({
     <>
       {acceptUnavailable(finding, context) ? (
         <p className="finding-accept-guard" id={findingAcceptGuardId(baseId)}>
-          {ACCEPT_UNAVAILABLE_NOTE}
+          {ACCEPT_UNAVAILABLE_NOTE()}
         </p>
       ) : null}
       <ul className="finding-decision-hint" aria-label={t`What each decision does`}>
         {hintOrder.map((decision) => (
           <li id={findingDecisionHintId(baseId, decision)} key={decision}>
-            <strong>{hintLabels[decision]}:</strong> {effects[decision]}
+            <strong>{hintLabels()[decision]}:</strong> {effects[decision]}
           </li>
         ))}
       </ul>

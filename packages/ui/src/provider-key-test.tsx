@@ -34,40 +34,39 @@ export function describeCredentialTest(result: CredentialTestResult): {
   switch (result.outcome) {
     case "works":
       return {
-        label: "Works",
+        label: t`Works`,
         tone: "works",
         detail:
           result.models.length === 0
-            ? "The provider accepts this key. The open workspace uses none of its models, so no model was checked."
-            : `The provider accepts this key, and ${listModels(result.models)} ${result.models.length > 1 ? "are" : "is"} available to it.`,
+            ? t`The provider accepts this key. The open workspace uses none of its models, so no model was checked.`
+            : t`The provider accepts this key, and it can use ${listModels(result.models)}.`,
       };
     case "rejected":
       return {
-        label: "Rejected",
+        label: t`Rejected`,
         tone: "rejected",
-        detail: "The provider does not accept this key. Check it for a typo or replace it.",
+        detail: t`The provider does not accept this key. Check it for a typo or replace it.`,
       };
     case "no-model-access":
       return {
-        label: "No access to the model",
+        label: t`No access to the model`,
         tone: "warning",
-        detail: `The key works, but ${listModels(result.models)} is not available to it. Choose another model or use a key from an account that has it.`,
+        detail: t`The key works, but ${listModels(result.models)} is not available to it. Choose another model or use a key from an account that has it.`,
       };
     case "limited":
       return {
-        label: "Quota or rate limit",
+        label: t`Quota or rate limit`,
         tone: "warning",
         detail:
           result.providerCode === null
-            ? "The provider accepted the request but refused it for now. Check the account's quota, or try again later."
-            : `The provider answered ${result.providerCode}. Check the account's quota, or try again later.`,
+            ? t`The provider accepted the request but refused it for now. Check the account's quota, or try again later.`
+            : t`The provider answered ${result.providerCode}. Check the account's quota, or try again later.`,
       };
     case "unreachable":
       return {
-        label: "Could not check",
+        label: t`Could not check`,
         tone: "unknown",
-        detail:
-          "DraftLoop could not reach the provider, so the key was not tested. Try again when you are online.",
+        detail: t`DraftLoop could not reach the provider, so the key was not tested. Try again when you are online.`,
       };
   }
 }
@@ -89,7 +88,7 @@ export function CredentialTestLine({ state }: { readonly state: CredentialTestSt
   const { label, detail, tone } =
     state.status === "done"
       ? describeCredentialTest(state.result)
-      : { label: "Could not check", detail: state.message, tone: "unknown" as const };
+      : { label: t`Could not check`, detail: state.message, tone: "unknown" as const };
   const checkedAt = state.status === "done" ? state.result.checkedAt : state.checkedAt;
   return (
     <p className={`credential-test-result credential-test-${tone}`} role="status">
@@ -136,7 +135,7 @@ export function createCredentialTestTracker(
       } catch (error: unknown) {
         next = {
           status: "failed",
-          message: error instanceof Error ? error.message : "The key could not be tested.",
+          message: error instanceof Error ? error.message : t`The key could not be tested.`,
           checkedAt: now().toISOString(),
         };
       }

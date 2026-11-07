@@ -168,7 +168,9 @@ export function profileApprovalText({
   fixtureMode = false,
 }: ProfileApprovalTextInput): string {
   if (fixtureMode) {
-    return `${mode === "update" ? t`Update` : t`Build`} the profile from my career evidence with local fixtures. Nothing is sent to a provider.`;
+    return mode === "update"
+      ? t`Update the profile from my career evidence with local fixtures. Nothing is sent to a provider.`
+      : t`Build the profile from my career evidence with local fixtures. Nothing is sent to a provider.`;
   }
   const sources =
     sourceCount === undefined || !Number.isSafeInteger(sourceCount) || sourceCount < 0
@@ -176,7 +178,7 @@ export function profileApprovalText({
       : ` ${t`(up to ${countedNouns.source(sourceCount)})`}`;
   const provider =
     providerName === undefined || providerName.trim() === ""
-      ? "the configured provider"
+      ? t`the configured provider`
       : providerName.trim();
   return mode === "update"
     ? t`Send my career evidence${sources} to ${provider} to update the profile.`

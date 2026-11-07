@@ -18,7 +18,7 @@ const editorialLabels = [
 
 export interface SendVerdict {
   readonly ready: boolean;
-  readonly headline: "Ready to send" | "Not ready to send yet";
+  readonly headline: string;
   /** Plain reasons, each naming what to resolve; empty when ready. */
   readonly reasons: readonly string[];
 }
@@ -52,6 +52,6 @@ export function sendVerdict(input: {
     if (count > 0) reasons.push(`${label} (${count})`);
   }
   return reasons.length === 0
-    ? { ready: true, headline: "Ready to send", reasons }
-    : { ready: false, headline: "Not ready to send yet", reasons };
+    ? { ready: true, headline: t`Ready to send`, reasons }
+    : { ready: false, headline: t`Not ready to send yet`, reasons };
 }

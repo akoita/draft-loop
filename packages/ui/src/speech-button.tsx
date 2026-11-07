@@ -30,12 +30,12 @@ type SpeechButtonState =
 export function speechProblem(error: unknown): string {
   if (error instanceof SpeechUnavailableError) return error.message;
   if (error instanceof Error && error.name === "NotAllowedError") {
-    return "The browser refused the microphone. Allow it for this site to answer by voice.";
+    return t`The browser refused the microphone. Allow it for this site to answer by voice.`;
   }
   if (error instanceof Error && error.name === "NotFoundError") {
-    return "No microphone was found on this device.";
+    return t`No microphone was found on this device.`;
   }
-  return "Voice input failed. Type your answer instead, or try again.";
+  return t`Voice input failed. Type your answer instead, or try again.`;
 }
 
 /**
@@ -53,7 +53,7 @@ export async function transcribeRecording(
       await speech.engine.transcribe(audio, { language: speech.language, onProgress }),
     );
     return text === ""
-      ? { problem: "No words were heard. Try again closer to the microphone." }
+      ? { problem: t`No words were heard. Try again closer to the microphone.` }
       : { text };
   } catch (error) {
     return { problem: speechProblem(error) };
