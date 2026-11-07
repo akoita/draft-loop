@@ -256,8 +256,9 @@ draft-loop work-journal discard <note>
 ```
 
 Coding agents reach the server through `draftloop-mcp`, with an agent token
-that `draftloop-mcp init` issues from the owner token and that reaches only
-the work journal. The address comes from `DRAFT_LOOP_SERVER_URL`. The
+that reaches only the work journal. **Connect a coding agent** in the panel
+creates one and shows the configuration to paste into the agent;
+`draftloop-mcp init` issues one from the owner token. The address comes from `DRAFT_LOOP_SERVER_URL`. The
 [agent channel](../reference/agent-channel.md) reference covers its setup per
 agent and what it records.
 
