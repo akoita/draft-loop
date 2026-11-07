@@ -70,6 +70,8 @@ candidate's target jobs ask for. The interviewer offers them like this:
   weak topic.
 - **Ground the candidate's own subject.** A subject they type gets the profile
   facts that share its words, at most 12, under the same sensitivity rules.
+  A broad subject that names no fact, such as "where is my profile thin?",
+  gets an overview instead: roles, employers and dates first.
 
 The screen numbers the proposed topics as the interviewer does, and **End
 this conversation** closes the session so the next one proposes afresh.

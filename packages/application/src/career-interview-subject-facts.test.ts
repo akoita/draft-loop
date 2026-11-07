@@ -21,11 +21,17 @@ describe("career interview subject facts", () => {
     expect(ids).toEqual(["d", "b", "a", "x"]);
   });
 
-  it("leaves out withheld facts, stops at the bound and needs a real word", () => {
+  it("leaves out withheld facts, and stops at the bound", () => {
     const allowed = (fact: CareerInterviewFact) => fact.id !== "x";
     expect(careerInterviewSubjectFacts("demo", facts, allowed, 2)).toEqual(["a", "b"]);
-    expect(careerInterviewSubjectFacts("the and", facts, () => true, 12)).toEqual([]);
     expect(careerInterviewSubjectFacts("leadership", facts, () => true, 12)).toEqual(["c"]);
+  });
+
+  it("gives a broad subject that names no fact an overview of the profile instead", () => {
+    const allowed = (fact: CareerInterviewFact) => fact.id !== "x";
+    const subject = "what part of my career profile needs deepening?";
+    expect(careerInterviewSubjectFacts(subject, facts, allowed, 12)).toEqual(["a", "b", "d", "c"]);
+    expect(careerInterviewSubjectFacts("the and", facts, allowed, 2)).toEqual(["a", "b"]);
   });
 
   it("hints names from the record to speech, minus withheld, long and repeated ones", () => {

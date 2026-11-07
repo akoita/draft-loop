@@ -13,8 +13,7 @@ export function careerInterviewSubjectFacts(
   maximum: number,
 ): string[] {
   const wanted = new Set(words(subject).filter((word) => !ignoredWords.has(word)));
-  if (wanted.size === 0) return [];
-  return facts
+  const matched = facts
     .filter(mayTransmit)
     .map((fact, order) => {
       const own = new Set(words(`${fact.field} ${fact.value}`));
@@ -26,6 +25,36 @@ export function careerInterviewSubjectFacts(
     .sort((left, right) => right.score - left.score || left.order - right.order)
     .slice(0, maximum)
     .map((entry) => entry.id);
+  return matched.length > 0 ? matched : careerInterviewProfileOverview(facts, mayTransmit, maximum);
+}
+
+/** The categories an overview leads with: the career's shape first, then its substance. */
+const overviewCategories = [
+  "role",
+  "employer",
+  "date",
+  "project",
+  "achievement",
+  "skill",
+  "certification",
+  "education",
+];
+
+/**
+ * A broad subject such as "where is my profile thin?" names no fact (#2426), so it gets an
+ * overview instead: roles, employers and dates, then projects and the rest, within the bound.
+ */
+export function careerInterviewProfileOverview(
+  facts: readonly CareerInterviewFact[],
+  mayTransmit: (fact: CareerInterviewFact) => boolean,
+  maximum: number,
+): string[] {
+  return facts
+    .map((fact, order) => ({ fact, order, rank: overviewCategories.indexOf(fact.category) }))
+    .filter((entry) => entry.rank >= 0 && mayTransmit(entry.fact))
+    .sort((left, right) => left.rank - right.rank || left.order - right.order)
+    .slice(0, maximum)
+    .map((entry) => entry.fact.id);
 }
 
 function words(text: string): string[] {
