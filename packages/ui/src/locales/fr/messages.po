@@ -891,6 +891,11 @@ msgstr "Actions"
 msgid "Active"
 msgstr "Actif"
 
+#. placeholder {0}: active.length
+#: packages/ui/src/agent-setup.tsx
+msgid "Active agent tokens: {0}"
+msgstr "Jetons d'agent actifs : {0}"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Active now:"
 msgstr "Actif maintenant :"
@@ -938,6 +943,14 @@ msgstr "Ajouter un fichier"
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add folder"
 msgstr "Ajouter un dossier"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add it to ~/.codex/config.toml."
+msgstr "Ajoutez-la à ~/.codex/config.toml."
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Add it to your agent's MCP settings file."
+msgstr "Ajoutez-la au fichier de réglages MCP de votre agent."
 
 #: packages/ui/src/application-steps.tsx
 #: packages/ui/src/start-checklist-model.ts
@@ -1913,6 +1926,10 @@ msgstr "session Codex"
 msgid "Codex session:"
 msgstr "Session Codex :"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Coding agent"
+msgstr "Agent de code"
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Coding agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Les agents de code peuvent noter les travaux marquants que vous avez livrés. Chaque note attend ici ; seules celles que vous approuvez deviennent des éléments de parcours."
@@ -2067,6 +2084,14 @@ msgstr "Intitulés contradictoires"
 msgid "Conflicting values"
 msgstr "Valeurs contradictoires"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Connect a coding agent"
+msgstr "Connecter un agent de code"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Connecting a coding agent to the hosted service is not available yet. It works today with a self-hosted server."
+msgstr "La connexion d'un agent de code au service hébergé n'est pas encore disponible. Elle fonctionne déjà avec un serveur auto-hébergé."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "Connecting…"
 msgstr "Connexion…"
@@ -2098,6 +2123,18 @@ msgstr "Reprenez là où vous en étiez, ou choisissez un autre espace de travai
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Conversation"
 msgstr "Conversation"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copied"
+msgstr "Copié"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copy"
+msgstr "Copier"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Copy the configuration into your agent, then ask it to run /log-work."
+msgstr "Copiez la configuration dans votre agent, puis demandez-lui d'exécuter /log-work."
 
 #: packages/ui/src/run-details.tsx
 msgid "core areas"
@@ -2156,6 +2193,14 @@ msgstr "Consignes d’évaluation de la couverture"
 msgid "Create a new workspace"
 msgstr "Créer un espace de travail"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Create a token for your agent. It can only add notes here and list their titles."
+msgstr "Créez un jeton pour votre agent. Il peut seulement ajouter des notes ici et lister leurs titres."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Create agent token"
+msgstr "Créer un jeton d'agent"
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Create application"
 msgstr "Créer la candidature"
@@ -2193,6 +2238,10 @@ msgstr "Créer l’espace de travail"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Created"
 msgstr "Créé"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "created {created}, expires {until}"
+msgstr "créé le {created}, expire le {until}"
 
 #: apps/web/src/evidence-file-model.ts
 msgid "Created {when}"
@@ -3305,6 +3354,10 @@ msgstr "Depuis le fichier de l’offre de l’espace de travail."
 msgid "Full draft"
 msgstr "Ébauche complète"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Full setup guide"
+msgstr "Guide d'installation complet"
+
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "full source"
 msgstr "source complète"
@@ -3567,6 +3620,10 @@ msgstr "Historique :"
 msgid "Home"
 msgstr "Accueil"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "How it works"
+msgstr "Comment ça marche"
+
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
 msgstr "Correspondance du titre"
@@ -3721,6 +3778,10 @@ msgstr "Jetons d’entrée par appel"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Inputs"
 msgstr "Entrées"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Install draftloop-mcp once on this computer."
+msgstr "Installez draftloop-mcp une fois sur cet ordinateur."
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Install model"
@@ -5269,6 +5330,10 @@ msgstr "Autre"
 msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
 msgstr "Les autres candidatures gardent la paire de l’espace de travail. Une exécution enregistre la paire utilisée : la changer ensuite ne modifie pas les relectures passées."
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Other MCP agents (JSON)"
+msgstr "Autres agents MCP (JSON)"
+
 #: packages/ui/src/app.tsx
 msgid "Other model…"
 msgstr "Autre modèle…"
@@ -6441,6 +6506,10 @@ msgstr "relectures"
 msgid "Revise"
 msgstr "Réviser"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Revoke"
+msgstr "Révoquer"
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Role"
 msgstr "Poste"
@@ -6537,6 +6606,10 @@ msgstr "Historique des exécutions"
 #: packages/ui/src/compact-history.tsx
 msgid "Run history compacted: {0} before, {1} after. The previous history is kept as {2}. {3} runs were checked to read back the same."
 msgstr "Historique des exécutions compacté : {0} avant, {1} après. L’ancien historique est conservé sous {2}. {3} exécutions ont été vérifiées pour relire la même chose."
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Run it in a terminal. It saves the server in your user settings."
+msgstr "Exécutez-la dans un terminal. Elle enregistre le serveur dans vos paramètres utilisateur."
 
 #: packages/ui/src/review.tsx
 msgid "run progress"
@@ -6887,6 +6960,10 @@ msgstr "Configurez votre espace de travail"
 msgid "Settings"
 msgstr "Réglages"
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Setup guide"
+msgstr "Guide d'installation"
+
 #: packages/ui/src/review.tsx
 msgid "Shared lineage overridden on a recorded rationale; critique was not independent"
 msgstr "Filiation partagée passée outre sur justification enregistrée ; la critique n’était pas indépendante"
@@ -6903,6 +6980,10 @@ msgstr "Afficher {0}"
 #: packages/ui/src/coverage-panel.tsx
 msgid "show all"
 msgstr "tout afficher"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Show and revoke"
+msgstr "Afficher et révoquer"
 
 #. placeholder {0}: shownArchived.length
 #: packages/ui/src/home.tsx
@@ -8109,6 +8190,11 @@ msgstr "Le texte est trop long. Restez sous {limit} caractères, ou ajoutez-le c
 msgid "The text pasted when this application was created."
 msgstr "Le texte collé à la création de cette candidature."
 
+#. placeholder {0}: answer.problem
+#: packages/ui/src/agent-setup.tsx
+msgid "The token could not be created. {0}"
+msgstr "Le jeton n'a pas pu être créé. {0}"
+
 #. placeholder {0}: response.status
 #: apps/web/src/oidc-session.ts
 msgid "The token endpoint answered {0}."
@@ -8453,6 +8539,10 @@ msgstr "Cette connexion n’a pas été lancée depuis cet onglet. Reconnectez-v
 #: apps/web/src/screening-model.ts
 msgid "This text was screened clear, so there is nothing to release."
 msgstr "Ce texte a passé le filtrage, il n’y a donc rien à libérer."
+
+#: packages/ui/src/agent-setup.tsx
+msgid "This token is shown once. Keep it in your user settings, not in a file you commit. It expires on {expires}; revoke it from this panel."
+msgstr "Ce jeton n'est affiché qu'une fois. Gardez-le dans vos paramètres utilisateur, pas dans un fichier que vous commitez. Il expire le {expires} ; révoquez-le depuis ce panneau."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "This topic has no summary to confirm yet."

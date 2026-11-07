@@ -67,6 +67,8 @@ beforeEach(async () => {
     payload: { enabled: true },
   });
   expect(enabled.statusCode).toBe(200);
+  // The screen offers a coding agent's setup only where agent tokens are issued (#2427).
+  expect(enabled.json()).toMatchObject({ enabled: true, agent_tokens: true });
 });
 
 afterEach(async () => {

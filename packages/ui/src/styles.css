@@ -9784,6 +9784,71 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin: 0.5rem 0;
 }
 
+/* Connect a coding agent, under the Work journal (#2427). */
+.agent-setup {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.agent-setup summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.agent-setup ol {
+  padding-left: 1.25rem;
+}
+
+.agent-setup ol li {
+  margin: 0.35rem 0;
+}
+
+.agent-setup-hosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+.agent-setup-hosts [aria-selected="true"] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.agent-setup-config {
+  overflow-x: auto;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre;
+}
+
+.agent-setup-config.pending {
+  opacity: 0.6;
+}
+
+.agent-setup-warning {
+  border-left: 3px solid var(--amber);
+  background: var(--amber-wash);
+  padding: 0.4rem 0.6rem;
+}
+
+.agent-setup-tokens {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.agent-setup-tokens li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* Suggested writing preferences under Workspace settings (#2265). */
 .preference-suggestion-list {
   list-style: none;

@@ -189,8 +189,12 @@ describe("work journal publishing", () => {
 
     expect(note.json()).toEqual(storedNote);
     expect(journal.get).toHaveBeenCalledWith("workspace-1", noteId);
-    expect(off.json()).toEqual({ enabled: false });
-    expect(on.json()).toEqual({ enabled: true, changed_at: "2026-01-02T00:00:00.000Z" });
+    expect(off.json()).toEqual({ enabled: false, agent_tokens: false });
+    expect(on.json()).toEqual({
+      agent_tokens: false,
+      enabled: true,
+      changed_at: "2026-01-02T00:00:00.000Z",
+    });
   });
 
   it("answers an intake change without a change time when the journal gives none", async () => {
@@ -203,6 +207,6 @@ describe("work journal publishing", () => {
       payload: { enabled: false },
     });
 
-    expect(response.json()).toEqual({ enabled: false });
+    expect(response.json()).toEqual({ enabled: false, agent_tokens: false });
   });
 });

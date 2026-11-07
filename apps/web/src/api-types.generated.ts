@@ -917,6 +917,7 @@ export interface ApiSchemas {
   "WorkJournalIntake": {
     readonly enabled: boolean;
     readonly changed_at?: string;
+    readonly agent_tokens: boolean;
   };
   "WorkJournalNoteList": {
     readonly notes?: readonly ({
