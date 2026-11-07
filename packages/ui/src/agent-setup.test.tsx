@@ -156,6 +156,40 @@ describe("AgentSetup", () => {
     );
   });
 
+  it("offers each scope with the journal ticked, and lists a token's scopes", () => {
+    const html = renderToStaticMarkup(
+      <AgentSetup
+        {...props}
+        open
+        tokens={[
+          {
+            id: "dlat_active01",
+            label: "Claude Code",
+            scopes: ["journal", "applications:read"],
+            created_at: "2026-11-07T10:00:00.000Z",
+            expires_at: "2027-02-05T10:00:00.000Z",
+            active: true,
+          },
+        ]}
+      />,
+    );
+    expect(html).toContain('id="coding-agents"');
+    expect(html).toContain("Coding agents");
+    expect(html).toContain('<details class="agent-setup" open="">');
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(3);
+    expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
+    expect(html).toContain("See your job applications");
+    expect(html).toContain("Add a job application from a pasted job description");
+    expect(html).toContain("Active agent tokens: 1");
+  });
+
+  it("points the Work journal to Coding agents only where it can open them", () => {
+    expect(renderToStaticMarkup(<AgentSetupLink />)).toBe("");
+    expect(renderToStaticMarkup(<AgentSetupLink onOpen={() => undefined} />)).toContain(
+      "under Coding agents in Workspace settings",
+    );
+  });
+
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} available={false} />);
     expect(html).toContain("is not available yet");
