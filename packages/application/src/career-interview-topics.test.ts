@@ -55,7 +55,7 @@ describe("findCareerInterviewTopics", () => {
       factIds: ["t", "e"],
       title: "Analyst, Example Bank",
       reason:
-        "Your record names Analyst at Example Bank but not when it happened, what changed thanks to your work and what the role covered.",
+        "For your role “Analyst at Example Bank”, your record does not say when it happened, what changed thanks to your work and what the role covered.",
     });
   });
 

@@ -2812,6 +2812,10 @@ msgstr "Vide : ajoutez un CV, un portfolio ou une autre source"
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Vide. Utilisez Déplacer vers dans le menu ⋯ d’une candidature pour la ranger ici."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "End this conversation"
+msgstr "Terminer la conversation"
+
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr "Terminer cette exécution sans perdre son historique"
