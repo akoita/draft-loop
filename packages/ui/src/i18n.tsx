@@ -9,7 +9,16 @@
  */
 import { i18n, type Messages } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
-import { createContext, type ReactNode, useContext, useEffect, useMemo } from "react";
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
 import { messages as englishMessages } from "./locales/en/messages.js";
 import { messages as frenchMessages } from "./locales/fr/messages.js";
 import { messages as pseudoMessages } from "./locales/pseudo/messages.js";
@@ -83,6 +92,16 @@ export function useScreenLocale(): ScreenLocaleChoice {
 }
 
 /**
+ * The children as new elements with the same type, key and props. A host passes its screens once,
+ * so without this React would skip them when only the locale changes, and text already on screen
+ * would keep the old language until a refresh. A new element re-renders its component, and so
+ * every screen below it, while keeping its state.
+ */
+export function rerenderedChildren(children: ReactNode): ReactNode {
+  return Children.map(children, (child) => (isValidElement(child) ? cloneElement(child) : child));
+}
+
+/**
  * Renders the screens in a locale, re-rendering them when it changes, and marks the page's
  * language for assistive technology and spelling. With `onChoose`, the screens offer the choice.
  */
@@ -107,7 +126,7 @@ export function ScreensI18nProvider({
       <ScreenLocaleContext.Provider
         value={onChoose === undefined ? { locale } : { locale, choose: onChoose }}
       >
-        {children}
+        {rerenderedChildren(children)}
       </ScreenLocaleContext.Provider>
     </I18nProvider>
   );
