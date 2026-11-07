@@ -97,6 +97,8 @@ export interface ApiSchemas {
     readonly url: string | null;
   };
   "ApplicationMaterialDraft": {
+    readonly id?: string;
+    readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions";
     readonly items: readonly ({
       readonly question: string;
@@ -112,6 +114,9 @@ export interface ApiSchemas {
     };
     readonly prompt_version: string;
     readonly cost_usd: number;
+  };
+  "ApplicationMaterialDraftList": {
+    readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
   };
   "ApplicationMaterialRequestInput": {
     readonly kind: "cover-letter" | "interview-questions";
@@ -2174,6 +2179,24 @@ export interface ApiOperations {
     };
     readonly body: ApiSchemas["ApplicationMaterialRequestInput"];
     readonly response: ApiSchemas["ApplicationMaterialDraft"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly query?: {
+      readonly kind?: "cover-letter" | "interview-questions";
+    };
+    readonly response: ApiSchemas["ApplicationMaterialDraftList"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly response: void;
   };
   "POST /v1/workspaces/{workspaceId}/agent-tokens": {
     readonly path: {

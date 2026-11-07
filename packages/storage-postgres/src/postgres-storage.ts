@@ -25,6 +25,7 @@ import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
+import { createSavedApplicationMaterialStore } from "./saved-application-material.js";
 import { createSourceEvidenceKindOverrides } from "./source-evidence-kinds.js";
 import {
   createSqlClient,
@@ -142,6 +143,7 @@ function tenantStorage(client: SqlSession) {
     workJournalNotes: createWorkJournalNoteStore(client),
     agentTokens: createAgentTokenStore(client),
     careerInterviewSessions: createCareerInterviewSessionStore(client),
+    savedApplicationMaterial: createSavedApplicationMaterialStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

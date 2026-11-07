@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { type ApplicationService, catalogModelPricing } from "@draft-loop/application";
 import {
   ApplicationMaterialError,
@@ -17,10 +19,18 @@ import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
+  type SavedApplicationMaterial,
+  savedApplicationMaterialIdSchema,
+} from "@draft-loop/schemas/saved-application-material";
+import {
   type ConsentLedger,
   type ConsentState,
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
+import {
+  type SavedApplicationMaterialStore,
+  savedApplicationMaterialListLimit,
+} from "@draft-loop/storage/saved-application-material";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -47,6 +57,10 @@ export interface ApplicationMaterialRoutesOptions {
   readonly screening?: Pick<ContentScreeningHooks, "assertRunMaterialClear">;
   /** Where each fact may be used (#2260); without it every fact may be used, as before. */
   readonly factUsage?: Pick<FactUsageService, "read">;
+  /** Where drafts are kept (#2477); without it a draft is returned and not stored, as before. */
+  readonly drafts?: SavedApplicationMaterialStore;
+  /** The clock a saved draft's time comes from; the system clock by default. */
+  readonly now?: () => Date;
 }
 
 /** The default cap on one request: two Sonnet calls with a full context stay well below it. */
@@ -63,6 +77,10 @@ const body = z
 
 const draftView = z
   .object({
+    id: savedApplicationMaterialIdSchema
+      .optional()
+      .describe("The saved draft's id; absent when this server keeps no drafts."),
+    created_at: z.string().optional().describe("When the draft was written and saved."),
     kind: z.enum(applicationMaterialKinds),
     items: z.array(
       z.object({
@@ -80,6 +98,30 @@ const draftView = z
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
   })
   .meta({ id: "ApplicationMaterialDraft" });
+
+const draftList = z
+  .strictObject({
+    drafts: z
+      .array(draftView)
+      .describe(
+        `The application's saved drafts, newest first, at most ${savedApplicationMaterialListLimit}.`,
+      ),
+  })
+  .meta({ id: "ApplicationMaterialDraftList" });
+
+const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).optional() });
+
+const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
+
+/** A saved draft as the API shows it: its stored fields without the workspace and application. */
+function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
+  const { workspace_id: _workspace, application_id: _application, ...view } = draft;
+  return view;
+}
+
+function newMaterialId(): string {
+  return `amd_${randomBytes(12).toString("base64url")}`;
+}
 
 const errors = {
   400: apiErrorSchema,
@@ -119,15 +161,17 @@ async function careerFacts(
 /**
  * Drafts a cover letter or interview questions for one application (#2216), under the career
  * interview's rules: the record's consent names Anthropic, the job's text passed screening, the
- * deployment has a Claude route, and a cost guard caps and records the spend. The draft is
- * returned, never stored. Logs carry ids, kinds, models and costs, never the draft.
+ * deployment has a Claude route, and a cost guard caps and records the spend. With a draft store
+ * the draft is saved as a new version (#2477) and can be listed and deleted. Logs carry ids, kinds,
+ * models and costs, never the draft.
  */
 export function registerApplicationMaterialRoutes(
   parent: FastifyInstance,
   options: ApplicationMaterialRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, material, consents, screening } = options;
+  const { service, workspaceRoot, material, consents, screening, drafts } = options;
+  const now = options.now ?? (() => new Date());
   const model = {
     company: "anthropic",
     modelId: applicationMaterialDefaultModelId,
@@ -143,7 +187,7 @@ export function registerApplicationMaterialRoutes(
       schema: {
         summary: "Draft a cover letter or interview questions for an application",
         description:
-          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations; nothing is stored. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
+          "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
         params,
         body,
         response: { 200: draftView, ...errors },
@@ -248,7 +292,7 @@ export function registerApplicationMaterialRoutes(
           { workspaceId, applicationId, kind: draft.kind, items: draft.items.length, spentUsd },
           "application material drafted",
         );
-        return reply.send({
+        const view = {
           kind: draft.kind,
           items: draft.items.map((item) => ({
             question: item.question,
@@ -261,7 +305,21 @@ export function registerApplicationMaterialRoutes(
           model: draft.model ?? { provider: model.company, model: model.modelId },
           prompt_version: applicationMaterialPromptVersion,
           cost_usd: spentUsd,
-        });
+        };
+        if (drafts === undefined) return reply.send(view);
+        const saved: SavedApplicationMaterial = {
+          id: newMaterialId(),
+          workspace_id: workspaceId,
+          application_id: applicationId,
+          created_at: now().toISOString(),
+          ...view,
+        };
+        await drafts.insert(saved);
+        request.log.info(
+          { workspaceId, applicationId, materialId: saved.id, kind: saved.kind },
+          "application material saved",
+        );
+        return reply.send(viewOf(saved));
       } catch (error) {
         if (error instanceof ApplicationMaterialError) {
           request.log.info(
@@ -306,6 +364,59 @@ export function registerApplicationMaterialRoutes(
         }
         throw error;
       }
+    },
+  );
+
+  if (drafts === undefined) return;
+
+  app.get(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/material",
+    {
+      schema: {
+        summary: "List an application's saved cover letters and interview questions",
+        description:
+          "Returns the application's saved drafts, newest first, each with its citations, model and cost. `kind` keeps one kind. Served only by a server that keeps drafts; 404 when there is no such application.",
+        params,
+        querystring: listQuery,
+        response: { 200: draftList, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId } = request.params;
+      const root = workspaceRoot(workspaceId);
+      if ((await service.getApplication({ root, applicationId })) === undefined) {
+        return reply.code(404).send(apiError("not_found", "There is no such application."));
+      }
+      const { kind } = request.query;
+      const saved = await drafts.list(
+        workspaceId,
+        applicationId,
+        kind === undefined ? {} : { kind },
+      );
+      return reply.send({ drafts: saved.map(viewOf) });
+    },
+  );
+
+  app.delete(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId",
+    {
+      schema: {
+        summary: "Delete one saved cover letter or interview question set",
+        description:
+          "Deletes one saved draft of the application for good. 404 when the application has no such draft.",
+        params: draftParams,
+        response: { 204: z.null(), 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId, materialId } = request.params;
+      const saved = await drafts.get(workspaceId, materialId);
+      if (saved === undefined || saved.application_id !== applicationId) {
+        return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
+      }
+      await drafts.delete(workspaceId, materialId);
+      request.log.info({ workspaceId, applicationId, materialId }, "application material deleted");
+      return reply.code(204).send(null);
     },
   );
 }

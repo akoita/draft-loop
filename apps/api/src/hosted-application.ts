@@ -114,6 +114,7 @@ export function composeHostedApplication(
     }),
     factUsage: createFactUsageService(settings),
     sourceEvidenceKinds: storage,
+    applicationMaterialDrafts: storage.savedApplicationMaterial,
     careerInterview: {
       sessions: storage.careerInterviewSessions,
       allowProviderData: parts.screening?.allowProviderData ?? false,

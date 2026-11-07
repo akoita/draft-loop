@@ -57,12 +57,13 @@ A record with no fact the draft may cite is refused before any model call
 
 `POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material` with
 `{"kind": "cover-letter"}` or `{"kind": "interview-questions"}` returns the
-draft. Each item carries its citations as the record stores them. It follows
-the career interview's rules:
+draft. Each item carries its citations as the record stores them. A hosted or
+self-hosted server saves each draft as a new version and returns its `id` and
+`created_at`. It follows the career interview's rules:
 
 | Answer                                              | When                                                                                      |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 200                                                 | A validated draft, its model, prompt version and recorded cost.                           |
+| 200                                                 | A validated draft, its id, model, prompt version and recorded cost.                       |
 | 404 `not_found`                                     | The application does not exist.                                                           |
 | 503 `material_model_unavailable`                    | The server has no Claude route (screening is not `rules+model`) or refuses provider data. |
 | 403 `consent_required`                              | The record's consent does not name Anthropic.                                             |
@@ -72,8 +73,22 @@ the career interview's rules:
 | 422 `invalid_draft`                                 | Both drafts broke the rules above.                                                        |
 | 502 `material_model_failed`                         | The model's answer could not be used, such as one cut off at its output limit.            |
 
-Each model call is logged with its model, tokens and cost, never the draft. The
-draft is not stored: download it or ask again.
+Each model call is logged with its model, tokens and cost, never the draft. A
+refused or failed draft is not saved.
+
+## Saved drafts
+
+Every draft is kept with its application, so you can reopen, compare and delete
+it. A saved draft never changes: drafting again adds a newer version.
+
+| Route                                                                  | Does                                                                                           |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET .../applications/{applicationId}/material?kind=cover-letter`      | Lists the application's saved drafts, newest first, at most 50. `kind` is optional.            |
+| `DELETE .../applications/{applicationId}/material/{materialId}`        | Deletes one saved draft for good. 404 when the application has no such draft.                  |
+
+Saved drafts are candidate material. They live in the record's Postgres table
+`application_material_drafts`, are part of the record archive, and are erased
+with the record or the organisation.
 
 ## The web panel
 
@@ -83,8 +98,11 @@ selects **Draft**. Before the first draft, the panel names what goes to
 Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
 
-Each paragraph or question shows its cited facts beside it. **Download
-Markdown** saves the draft with a `> Source:` line under each item. A refusal,
+Each paragraph or question shows its cited facts beside it. The newest saved
+draft of the chosen kind opens first. With two or more, a **Version** list
+names each by time and model; **Delete this version** removes the one on
+screen after a confirmation. **Download Markdown** saves the draft with a
+`> Source:` line under each item. A refusal,
 such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
 `apps/web/src/application-material.tsx` and fills the shared screens'

@@ -66,6 +66,10 @@
     "./application-language": {
       "types": "./src/application-language.ts",
       "import": "./src/application-language.ts"
+    },
+    "./saved-application-material": {
+      "types": "./src/saved-application-material.ts",
+      "import": "./src/saved-application-material.ts"
     }
   },
   "files": [

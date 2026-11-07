@@ -274,6 +274,7 @@ flowchart LR
 | Now     | CV quality parity ([milestone](https://github.com/akoita/draft-loop/milestone/31))                              | Make DraftLoop's CVs as good as the manual Claude/Codex loop before production (#1309)                                                     | On 3 of 4 private references: requirement coverage at least the manual CV's, recall at least 85%, no leaks, a sendable DOCX, and 3 or fewer edits before sending (#1302–#1307, #1108, #1112, #1113), with a two-page layout as dense as a hand-made CV (#1327) and rendering templates (#1328–#1331) |
 | Next    | [Client-server version](#next--client-server-version) ([ADR 0011, accepted](adr/0011-client-server-version.md)) | A professional, hosted version with traceability, reusing the local-first packages, while the local-first version keeps evolving beside it | A hosted parity run matches the local result under the [hosted parity rules](evaluation/hosted-parity.md) (#1358); the owner decisions phase 2 needs are recorded (#1357); deferred local-first issues are reassessed for either version                                                             |
 | Next    | [Manual parity: review and export](#next--manual-parity-review-and-export)                                      | Review and export at parity with the manual loop                                                                                           | See the section below                                                                                                                                                                                                                                                                                |
+| Next    | [Prepare an application](#next--prepare-an-application)                                                         | Cover letters you keep, then interview preparation in DraftLoop and in your agent                                                          | Milestone 91, then the agent read tools and answer practice                                                                                                                                                                                                                                          |
 | Later   | Production-ready beta                                                                                           | Distribute a safe, dependable desktop application                                                                                          | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                                                                                                                                                                                                   |
 | Later   | Controlled expansion                                                                                            | Extend a proven workflow without weakening trust boundaries                                                                                | Core CV evidence plus separate integration, privacy, and threat decisions                                                                                                                                                                                                                            |
 
@@ -546,6 +547,50 @@ subscription session reaches its limit; a professional two-page DOCX/PDF
 export; and an observation across all four references. Issues are created
 after the #878 stage decision.
 
+### Next — Prepare an application
+
+The career record can serve the interview as well as the CV
+([#1995](https://github.com/akoita/draft-loop/issues/1995)). It is shaped with
+the guided career interview (#1030), which shares its debrief and voice parts.
+
+**Built:** questions from the job post.
+A **Prepare** panel on each application on the web, built in
+[milestone 73](https://github.com/akoita/draft-loop/milestone/73) (issues
+2215 to 2218), drafts interview questions, each with a talking point, and a
+cover letter. Every item
+cites career facts, never a withheld fact or a number no fact holds, and facts
+join only within one role. Four capped
+[walks](evaluation/application-material-walk.md) cost US$0.089 in all; the
+fourth, on prompt `application-material-v4`, passed every check.
+
+**Building:** cover letters you keep, in
+[milestone 91](https://github.com/akoita/draft-loop/milestone/91). Each draft
+is saved with its application as a version you can reopen or delete (#2477).
+Then, in order: guidance on tone, length and emphasis (#2478), a human voice
+from your own writing samples (#2479), editing per paragraph (#2480), Word and
+PDF export (#2481), a research brief from your uploads and current public
+sources (#2482), and a capped walk with a blind writing test (#2483).
+
+**Built:** usage level, in
+[milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or
+section says where it may be used: CV and interview, interview only, or never
+said. This is separate from the tiers that control what reaches a provider.
+Interview questions use only interview-allowed facts, and a cover letter only
+CV facts. **Next:** CV runs leave out interview-only and never-say facts
+(#2304).
+
+After milestone 91, and not waiting for CV quality parity (#1309), since none
+of it claims CV quality:
+
+- **Agent channel first.** An approved-facts read tool on the local MCP
+  server (#1403) lets a candidate prepare inside Claude or another agent. It
+  needs an amendment to ADR 0011 D17, because today's tools cover CV runs only.
+- **Then DraftLoop's own steps.** The claim check run on written answers, debriefs saved as candidate-provided evidence after
+  approval, rehearsal, and answers to recurring application questions.
+
+A no-code test before two real interviews decides whether the rollup is
+admitted.
+
 ### Later — Harness observability and evaluation
 
 The author–critic harness is well guarded but hard to see into
@@ -592,47 +637,11 @@ open questions listed there go to the lawyer before phase 2.
 workspace history, and pass supported-platform acceptance with known
 limitations.
 
-### Later — Interview preparation
-
-The career record can serve the interview as well as the CV
-([#1995](https://github.com/akoita/draft-loop/issues/1995)). It is shaped with
-the guided career interview (#1030), which shares its debrief and voice parts.
-
-**Built:** questions from the job post.
-A **Prepare** panel on each application on the web, built in
-[milestone 73](https://github.com/akoita/draft-loop/milestone/73) (issues
-2215 to 2218), drafts interview questions, each with a talking point, and a
-cover letter. Every item
-cites career facts, never a withheld fact or a number no fact holds, and facts
-join only within one role. Four capped
-[walks](evaluation/application-material-walk.md) cost US$0.089 in all; the
-fourth, on prompt `application-material-v4`, passed every check. Drafts are not
-stored.
-
-**Built:** usage level, in
-[milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or
-section says where it may be used: CV and interview, interview only, or never
-said. This is separate from the tiers that control what reaches a provider.
-Interview questions use only interview-allowed facts, and a cover letter only
-CV facts. **Next:** CV runs leave out interview-only and never-say facts
-(#2304).
-
-The rest waits for CV quality parity (#1309):
-
-- **Agent channel first.** An approved-facts read tool on the local MCP
-  server (#1403) lets a candidate prepare inside Claude or another agent. It
-  needs an amendment to ADR 0011 D17, because today's tools cover CV runs only.
-- **Then DraftLoop's own steps.** The claim check run on written answers, debriefs saved as candidate-provided evidence after
-  approval, rehearsal, and answers to recurring application questions.
-
-A no-code test before two real interviews decides whether the rollup is
-admitted.
-
 ### Later — Controlled expansion
 
 Encrypted sync and coach review remain gated by the CV workflow;
 multilingual support moved to [Next](#next--multi-language-support). Cover letters are drafted by the Prepare panel (milestone 73,
-under Interview preparation), and application answers move there too.
+under [Prepare an application](#next--prepare-an-application)), and application answers move there too.
 Two items have their own rollups:
 
 - **Freelance mission dossiers**
@@ -707,6 +716,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Product implication                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-07 | Moved interview preparation from Later to Next as [Prepare an application](#next--prepare-an-application), and admitted [milestone 91](https://github.com/akoita/draft-loop/milestone/91), cover letters you keep (#2477–#2483), starting with saved drafts per application. | The owner writes cover letters and prepares interviews in general AI apps today; keeping both in DraftLoop raises its value. None of it claims CV quality, so it does not wait for #1309. |
 | 2026-11-07 | Admitted [milestone 90](https://github.com/akoita/draft-loop/milestone/90) (#2443–#2445): a [feature catalog](features/README.md) that replaces the Current state table, feature pages, and engineering guides for common changes, with no paid model run. | The owner asked for a catalog kept current with the project and guides that extend AGENTS.md as the codebase grows. `pnpm lint:docs` now fails when the catalog misses a feature page or an MCP tool. |
 | 2026-11-07 | Admitted [milestone 89](https://github.com/akoita/draft-loop/milestone/89) (#2437–#2442): scoped agent tokens, MCP tools for applications, job intake and run status, a Coding agents section in the workspace settings, and a Claude Code plugin. | The owner wants DraftLoop agent-friendly across its features, not only the Work journal, with the Claude Code plugin marketplace and Codex as first clients. Self-hosted only and no paid model run; runs, drafts and evidence tools come next. |
 | 2026-11-07 | Admitted [milestone 88](https://github.com/akoita/draft-loop/milestone/88) (#2427, #2428): the Work journal panel shows how to connect a coding agent, with a one-click agent token and a ready-to-copy MCP configuration for Claude Code, Codex and other agents. | The owner asked for setup help where the switch is, as other apps offer. Signed-in hosted accounts still get no agent token, so the panel says so; no paid model run. |
