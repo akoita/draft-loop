@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What changed and why? -->
+<!-- What changed and why? Check docs/engineering/change-checklist.md and name the lines that applied. -->
 
 ## Package and architecture impact
 

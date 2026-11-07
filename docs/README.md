@@ -34,6 +34,7 @@ contributors, maintainers, and operators to the current information they need.
 | Release DraftLoop                                                        | [Release procedure](operations/releasing.md)                                                                                                                                                                          |
 | Follow the hosted version's design and phases                            | [ADR 0011](adr/0011-client-server-version.md) · [Client-server delivery plan](architecture/client-server-delivery-plan.md)                                                                                            |
 | Translate a screen string                                               | [ADR 0012](adr/0012-screen-translations-with-lingui.md)                                                                                                                                                                 |
+| Make a common code change: API route, shared screen, checklist           | [Engineering guides](engineering/README.md)                                                                                                                                                                           |
 | Develop and test the server locally                                      | [Local server stack](operations/local-server-stack.md)                                                                                                                                                                |
 | Deploy the hosted service                                                | [Server deploy](operations/server-deploy.md)                                                                                                                                                                          |
 
@@ -43,6 +44,8 @@ contributors, maintainers, and operators to the current information they need.
   runtime flows. The overview is the stable entry point; its linked detail
   views are the canonical homes for their respective subjects. Keep them
   synchronized with package interfaces and executable behavior.
+- **Engineering guides:** `engineering/` shows how to make common changes
+  and what to check before a pull request. AGENTS.md links each guide.
 - **Feature catalog:** `features/` lists every capability with its status,
   where it runs and its agent access. Update its row with the change.
 - **Roadmap and status:** `roadmap.md` is the source for current stage, scope,
