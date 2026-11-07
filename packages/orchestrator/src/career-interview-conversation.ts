@@ -1,6 +1,7 @@
 import { careerInterviewPhrases } from "./career-interview-phrases.js";
 
 export { type CareerInterviewPhrases, careerInterviewPhrases } from "./career-interview-phrases.js";
+
 import {
   type CareerInterviewRule,
   type CareerInterviewTurnRefusal,
