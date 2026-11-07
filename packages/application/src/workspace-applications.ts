@@ -314,7 +314,7 @@ async function describeDefaultApplication(
   };
   if (storage === undefined) {
     return {
-      ...applicationSchema.parse({ ...base, status: "drafting" }),
+      ...applicationSchema.parse({ ...base, status: "collecting" }),
       briefs: [],
       runs: [],
       exports: [],

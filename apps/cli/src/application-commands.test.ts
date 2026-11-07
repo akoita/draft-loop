@@ -52,7 +52,7 @@ describe("application CLI", () => {
 
     expect(lines).toEqual([
       "applications: 1",
-      "default  Synthetic Platform Engineer  [drafting]  runs=0 briefs=0 exports=0",
+      "default  Synthetic Platform Engineer  [collecting]  runs=0 briefs=0 exports=0",
     ]);
   });
 
@@ -82,7 +82,7 @@ describe("application CLI", () => {
     );
 
     expect(lines[0]).toBe("application created:");
-    expect(lines[1]).toMatch(/^app-[0-9a-f]{12} {2}Beta — Designer {2}\[drafting\] {2}runs=0/u);
+    expect(lines[1]).toMatch(/^app-[0-9a-f]{12} {2}Beta — Designer {2}\[collecting\] {2}runs=0/u);
     expect(lines[2]).toMatch(/^Start a run with: draft-loop start .+ --application app-/u);
     const json = JSON.parse(lines[3] ?? "");
     expect(json).toMatchObject({
@@ -179,7 +179,7 @@ describe("application CLI", () => {
     expect(lines).toEqual([
       `application deleted: ${id}`,
       "applications: 1",
-      "default  Synthetic Platform Engineer  [drafting]  runs=0 briefs=0 exports=0",
+      "default  Synthetic Platform Engineer  [collecting]  runs=0 briefs=0 exports=0",
     ]);
     await expect(run("application", "delete", "default", root)).rejects.toBeInstanceOf(
       CliUserError,
@@ -311,7 +311,7 @@ describe("application CLI", () => {
     );
 
     expect(JSON.parse(target.lines[0] ?? "")).toMatchObject({
-      application: { name: "Hc4 — Platform", status: "drafting" },
+      application: { name: "Hc4 — Platform", status: "collecting" },
       counts: { runs: 0, briefs: 0, briefVersions: 0, exports: 0, skippedExports: 0 },
     });
   });

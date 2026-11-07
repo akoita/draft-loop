@@ -1962,6 +1962,7 @@ msgstr "Les agents de code peuvent noter les travaux marquants que vous avez liv
 msgid "Collapse all"
 msgstr "Tout replier"
 
+#: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Collecting inputs"
 msgstr "Collecte des entrées"

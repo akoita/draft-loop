@@ -48,7 +48,9 @@ describe("the prepare panel", () => {
     expect(html).toContain('<h2 id="material-heading">Prepare</h2>');
     expect(html).toContain("to Anthropic (Claude)");
     expect(html).toContain("name and contact details are never sent");
-    expect(html).toContain('checked="" value="cover-letter"');
+    expect(html).toContain('aria-pressed="true">Cover letter</button>');
+    expect(html).toContain('aria-pressed="false">Interview questions</button>');
+    expect(html).toContain('class="button button-primary"');
     expect(html).toContain("Interview questions");
     expect(html).not.toContain("Download Markdown");
   });

@@ -436,6 +436,57 @@ button.small:where(:not(.shared-screens *)) {
   padding: 0.15rem 0.6rem;
 }
 
+/* The prepare panel: its heading and the cover letter or interview questions toggle on one row,
+   the disclosure under them in small muted text, and Draft as the page's primary action. On the
+   job page it takes the setup card's column; on the review it keeps the run's column. */
+.application-material {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.main-column:has(> .onboarding-panel) > .application-material {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+.application-material-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.application-material-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.application-material-head .view-toggle {
+  margin: 0;
+  min-width: 0;
+}
+
+.application-material-note {
+  margin: 0;
+  max-width: 76ch;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.application-material-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.application-material [role="alert"] {
+  margin: 0;
+  color: var(--red);
+}
+
 /* The prepare panel shows each citation beside its paragraph, stacked on a narrow screen. */
 .application-material .material-items {
   padding-left: 1.25rem;

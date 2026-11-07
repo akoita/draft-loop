@@ -37,26 +37,36 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy } = props;
   return (
     <section className="panel host-panel application-material" aria-labelledby="material-heading">
-      <h2 id="material-heading">{t`Prepare`}</h2>
-      <fieldset disabled={busy}>
-        <legend>{t`Draft for this application`}</legend>
-        {kinds().map((option) => (
-          <label key={option}>
-            <input
-              type="radio"
-              name="application-material-kind"
-              value={option}
-              checked={kind === option}
-              onChange={() => props.onKind(option)}
-            />
-            {applicationMaterialKindLabels()[option]}
-          </label>
-        ))}
-      </fieldset>
-      {draft === undefined ? <p className="muted">{applicationMaterialDisclosure()}</p> : null}
-      <button type="button" className="button" disabled={busy} onClick={props.onDraft}>
-        {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
-      </button>
+      <div className="application-material-head">
+        <h2 id="material-heading">{t`Prepare`}</h2>
+        <fieldset className="view-toggle" disabled={busy}>
+          <legend className="sr-only">{t`Draft for this application`}</legend>
+          {kinds().map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="view-toggle-option"
+              aria-pressed={kind === option}
+              onClick={() => props.onKind(option)}
+            >
+              {applicationMaterialKindLabels()[option]}
+            </button>
+          ))}
+        </fieldset>
+      </div>
+      {draft === undefined ? (
+        <p className="application-material-note">{applicationMaterialDisclosure()}</p>
+      ) : null}
+      <div className="application-material-actions">
+        <button
+          type="button"
+          className="button button-primary"
+          disabled={busy}
+          onClick={props.onDraft}
+        >
+          {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
+        </button>
+      </div>
       {problem === undefined ? null : <p role="alert">{problem}</p>}
       {draft === undefined ? null : (
         <>
@@ -78,15 +88,17 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               </li>
             ))}
           </ol>
-          <p className="muted">
+          <p className="application-material-note">
             {t`Drafted by`} {draft.model.model}
             {t`. Check every sentence against its sources before you use it.`}
           </p>
-          <button
-            type="button"
-            className="button"
-            onClick={props.onDownload}
-          >{t`Download Markdown`}</button>
+          <div className="application-material-actions">
+            <button
+              type="button"
+              className="button button-outline"
+              onClick={props.onDownload}
+            >{t`Download Markdown`}</button>
+          </div>
         </>
       )}
     </section>

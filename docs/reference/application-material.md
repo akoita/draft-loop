@@ -77,8 +77,10 @@ draft is not stored: download it or ask again.
 ## The web panel
 
 Each application page on the web shows a **Prepare** panel under its header.
-The candidate picks a cover letter or interview questions and selects
-**Draft**. Before the first draft, the panel names what goes to Anthropic.
+The candidate picks a cover letter or interview questions on its toggle and
+selects **Draft**. Before the first draft, the panel names what goes to
+Anthropic. On the job page the panel takes the setup card's column; on a run's
+review it keeps the run's column.
 
 Each paragraph or question shows its cited facts beside it. **Download
 Markdown** saves the draft with a `> Source:` line under each item. A refusal,

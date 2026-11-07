@@ -1968,6 +1968,7 @@ msgstr ""
 msgid "Collapse all"
 msgstr ""
 
+#: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Collecting inputs"
 msgstr ""

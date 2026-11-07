@@ -380,7 +380,8 @@ derived from them, never stored:
 
 | Status      | Meaning                                                             |
 | ----------- | ------------------------------------------------------------------- |
-| `drafting`  | No run yet, or every run is still collecting, ingesting or drafting |
+| `collecting` | No run yet: the job and profile inputs are still being collected   |
+| `drafting`  | Every run is still collecting, ingesting or drafting                |
 | `in-review` | A run is past drafting, including paused, stopped or out of budget  |
 | `approved`  | A run was approved                                                  |
 | `exported`  | An export completed                                                 |
@@ -495,7 +496,7 @@ With more than six applications, Home shows a toolbar above the list:
 | Control      | What it does                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------ |
 | Search       | Keeps applications whose name holds every word typed, ignoring case and accents            |
-| Status chips | All, Drafting, In review, Approved or Exported, each with its count                        |
+| Status chips | All, Collecting inputs, Drafting, In review, Approved or Exported, each with its count      |
 | Sort         | Last activity (the default), Name (A to Z), Date created or Status                         |
 | View         | Cards, or List with one row per application and a "⋯" menu for Archive, Restore and Delete |
 

@@ -1968,6 +1968,7 @@ msgstr "Coding agents can record notable work you shipped. Each note waits here;
 msgid "Collapse all"
 msgstr "Collapse all"
 
+#: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Collecting inputs"
 msgstr "Collecting inputs"

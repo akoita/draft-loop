@@ -131,6 +131,7 @@ export function applicationStatusCounts(
 ): Readonly<Record<ApplicationStatusFilter, number>> {
   const counts: Record<ApplicationStatusFilter, number> = {
     all: 0,
+    collecting: 0,
     drafting: 0,
     "in-review": 0,
     approved: 0,

@@ -105,7 +105,7 @@ describe("workspace applications", () => {
     const [only, ...rest] = await service.listApplications({ root });
 
     expect(rest).toEqual([]);
-    expect(only).toMatchObject({ id: "default", status: "drafting", runs: [], briefs: [] });
+    expect(only).toMatchObject({ id: "default", status: "collecting", runs: [], briefs: [] });
     await expect(stat(join(root, ".draft-loop", "history.sqlite"))).rejects.toThrow();
     expect(await readFile(configPath, "utf8")).toBe(before);
   });
@@ -158,7 +158,11 @@ describe("workspace applications", () => {
       createdAt: "2030-01-04T00:00:00.000Z",
     });
 
-    expect(pasted).toMatchObject({ name: "Beta — Designer", status: "drafting", isDefault: false });
+    expect(pasted).toMatchObject({
+      name: "Beta — Designer",
+      status: "collecting",
+      isDefault: false,
+    });
     expect(pasted.jobSource.kind).toBe("pasted-text");
     if (pasted.jobSource.kind !== "pasted-text") throw new Error("unexpected source");
     expect(await readFile(join(root, pasted.jobSource.storedPath), "utf8")).toBe(

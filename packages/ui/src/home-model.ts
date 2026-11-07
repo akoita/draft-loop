@@ -278,6 +278,7 @@ export type HomeApplicationsState =
   | { readonly status: "ready"; readonly applications: readonly ApplicationSummaryView[] };
 
 const applicationStatusLabels = (): Readonly<Record<ApplicationStatus, string>> => ({
+  collecting: t`Collecting inputs`,
   drafting: t`Drafting`,
   "in-review": t`In review`,
   approved: t`Approved`,
@@ -298,6 +299,7 @@ export function applicationStatusTone(status: ApplicationStatus): HomeTone {
       return "ready";
     case "in-review":
       return "attention";
+    case "collecting":
     case "drafting":
       return "neutral";
   }

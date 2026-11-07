@@ -41,8 +41,12 @@ describe("deriveApplicationStatus", () => {
     }
   });
 
-  it("is drafting without runs or while runs are only drafting", () => {
-    expect(deriveApplicationStatus([], false)).toBe("drafting");
+  it("is collecting without runs", () => {
+    expect(deriveApplicationStatus([], false)).toBe("collecting");
+    expect(deriveApplicationStatus([], true)).toBe("exported");
+  });
+
+  it("is drafting while runs are only drafting", () => {
     expect(deriveApplicationStatus([{ state: "collecting" }, { state: "drafting" }], false)).toBe(
       "drafting",
     );
