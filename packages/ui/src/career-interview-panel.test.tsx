@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import type { CareerInterviewSessionView } from "./career-interview-model.js";
 import {
   careerInterviewActiveTopic,
+  careerInterviewOffer,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicReason,
   careerInterviewTopicTitle,
   careerInterviewTurnText,
 } from "./career-interview-model.js";
@@ -115,7 +117,7 @@ describe("CareerInterviewPanel", () => {
 
   it("offers a proposed topic, a no, and the candidate's own subject", () => {
     const html = render({ session: proposedSession });
-    expect(html).toContain("Would you like to talk about it?");
+    expect(html).toContain("Would you like to talk about it, or about something else?");
     expect(html).toContain("Talk about this");
     expect(html).toContain("Not now");
     expect(html).toContain("Or something else you would like to talk about");
@@ -174,6 +176,48 @@ describe("CareerInterviewPanel", () => {
     expect(html).not.toContain("interview-turn-latest");
   });
 
+  it("words each topic's reason from its own data, and falls back to the stored reason", () => {
+    const base = { key: "k", reason: "Stored reason.", status: "proposed" as const, turns: [] };
+    expect(
+      careerInterviewTopicReason({
+        ...base,
+        kind: "role-gap",
+        title: "Analyst, Example Bank",
+        missing: ["outcome", "scope"],
+      }),
+    ).toBe(
+      "Your record names Analyst, Example Bank but not what changed thanks to your work and what the role covered.",
+    );
+    expect(
+      careerInterviewTopicReason({ ...base, kind: "role-gap", title: "Analyst, Example Bank" }),
+    ).toBe("Your record names Analyst, Example Bank but leaves out part of this role.");
+    expect(careerInterviewTopicReason({ ...base, kind: "role-gap" })).toBe("Stored reason.");
+    expect(
+      careerInterviewTopicReason({
+        ...base,
+        kind: "untold-period",
+        key: "untold-period:2016-2016:ab",
+      }),
+    ).toBe("Your record says nothing about 2016.");
+    expect(careerInterviewTopicReason({ ...base, kind: "untold-theme", title: "mentoring" })).toBe(
+      "Mentoring: your record mentions it but tells no story about it.",
+    );
+    expect(
+      careerInterviewTopicReason({ ...base, kind: "candidate-subject", title: "a hackathon win" }),
+    ).toBe("You chose to talk about: a hackathon win");
+  });
+
+  it("words the opening offer from the proposed topics", () => {
+    const topic = proposedSession.topics[0];
+    if (topic === undefined) throw new Error("fixture");
+    expect(careerInterviewOffer([topic])).toBe(
+      "Your record says nothing between 2016 and 2017. Would you like to talk about it, or about something else?",
+    );
+    expect(careerInterviewOffer([topic, { ...topic, key: "untold-period:2020-2020" }])).toBe(
+      "Two things may be worth telling. 1. Your record says nothing between 2016 and 2017. 2. Your record says nothing about 2020. Would you like to talk about one of them, or about something else?",
+    );
+  });
+
   it("names a topic by its short title, worded for its kind, or by its reason without one", () => {
     const base = openSession.topics[0];
     if (base === undefined) throw new Error("fixture");
@@ -194,7 +238,7 @@ describe("CareerInterviewPanel", () => {
       },
     });
     expect(html).toContain("<h3>Analyst, Example Bank (2016–2019)</h3>");
-    expect(html).toContain(base.reason);
+    expect(html).toContain("but leaves out part of this role.");
   });
 
   it("sends on Enter but not on Shift+Enter or while composing a character", () => {

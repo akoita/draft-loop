@@ -576,6 +576,14 @@ msgstr "{draftOpen} points restent ouverts. Prenez-en acte ou résolvez-les, pui
 msgid "{fileName} is larger than this service accepts."
 msgstr "{fileName} dépasse la taille acceptée par ce service."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{first} and {second}"
+msgstr "{first} et {second}"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{first}, {second} and {third}"
+msgstr "{first}, {second} et {third}"
+
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Afficher # événement antérieur} other {Afficher # événements antérieurs}}"
@@ -665,6 +673,10 @@ msgstr "{needs}{has}. Demandez plus de crédits au propriétaire, ou attendez la
 msgid "{notDirectlyComparable}: judged under different coverage instructions"
 msgstr "{notDirectlyComparable} : évalué selon des consignes de couverture différentes"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "{one} Would you like to talk about it, or about something else?"
+msgstr "{one} Voulez-vous en parler, ou parler d’autre chose ?"
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Prenez d’abord acte du problème ouvert ou résolvez-le.} other {Prenez d’abord acte des # problèmes ouverts ou résolvez-les.}}"
@@ -705,6 +717,10 @@ msgstr "Appels prévus ({role})"
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
 msgstr "{shown}, et le modèle que vous avez choisi."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "{theme}: your record mentions it but tells no story about it."
+msgstr "{theme} : votre dossier en parle sans raconter d’histoire."
 
 #: packages/ui/src/model-suggestions.tsx
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
@@ -753,6 +769,10 @@ msgstr "Une sauvegarde complète de l’historique actuel est conservée à côt
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
 msgstr "Un chemin de titres compte au plus 12 titres."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
+msgstr "Une offre à laquelle vous avez postulé demande « {title} », et votre dossier ne le montre pas encore."
 
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
@@ -3564,7 +3584,7 @@ msgstr "J’autorise DraftLoop à récupérer cette page. Elle n’est lue que l
 msgid "I don't remember"
 msgstr "Je ne me souviens pas"
 
-#: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 msgstr "Je n’ai pas de sujet à vous proposer aujourd’hui. Y a-t-il un moment de votre parcours que vous aimeriez me raconter ?"
 
@@ -8496,6 +8516,10 @@ msgstr "Deux pages, nom centré, titres soulignés et place pour des historiques
 msgid "Two pages, left-aligned name, teal headings and dates, justified text."
 msgstr "Deux pages, nom aligné à gauche, titres et dates en bleu-vert, texte justifié."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
+msgstr "Deux choses mériteraient d’être racontées. 1. {one} 2. {two} Voulez-vous parler de l’une d’elles, ou d’autre chose ?"
+
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
 msgstr "Saisissez l’identifiant du dossier,"
@@ -8846,6 +8870,10 @@ msgstr "Avertissements"
 msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what changed thanks to your work"
+msgstr "ce qui a changé grâce à votre travail"
+
 #: packages/ui/src/career-flow.tsx
 msgid "What DraftLoop builds, you check"
 msgstr "Ce que DraftLoop construit, vous le vérifiez"
@@ -8882,6 +8910,10 @@ msgstr "Ce que le candidat a fait"
 msgid "What the critic asked to change"
 msgstr "Ce que le relecteur a demandé de changer"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "what the role covered"
+msgstr "ce que couvrait le rôle"
+
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "Que faire des sections correspondantes"
@@ -8889,6 +8921,10 @@ msgstr "Que faire des sections correspondantes"
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
 msgstr "Ce que vous fournissez"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "when it happened"
+msgstr "quand cela s’est passé"
 
 #: apps/web/src/consent.tsx
 msgid "Where the agreement is kept"
@@ -9070,6 +9106,10 @@ msgstr "Vous"
 msgid "You can edit the draft once this round finishes."
 msgstr "Vous pourrez modifier l’ébauche une fois ce tour terminé."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "You chose to talk about: {title}"
+msgstr "Vous avez choisi de parler de : {title}"
+
 #: packages/ui/src/career-flow.tsx
 msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
 msgstr "Vous fournissez les documents, DraftLoop en tire les faits, et chaque candidature les réutilise."
@@ -9193,6 +9233,22 @@ msgstr "La limite d’exécutions simultanées de votre offre est atteinte. Atte
 #: apps/web/src/credits-model.ts
 msgid "Your plan's runs for today are used. Try again later."
 msgstr "Les exécutions du jour de votre offre sont utilisées. Réessayez plus tard."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but leaves out part of this role."
+msgstr "Votre dossier cite {title} sans tout dire de ce rôle."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record names {title} but not {missing}."
+msgstr "Votre dossier cite {title}, mais pas {missing}."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing about {from}."
+msgstr "Votre dossier ne dit rien sur {from}."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your record says nothing between {from} and {to}."
+msgstr "Votre dossier ne dit rien entre {from} et {to}."
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."

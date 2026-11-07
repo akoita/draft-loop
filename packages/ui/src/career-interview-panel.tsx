@@ -13,8 +13,10 @@ import {
   type CareerInterviewTier,
   type CareerInterviewTopicView,
   careerInterviewActiveTopic,
+  careerInterviewOffer,
   careerInterviewProgress,
   careerInterviewRefusal,
+  careerInterviewTopicReason,
   careerInterviewTopicTitle,
   careerInterviewTurnText,
   careerInterviewUnavailableNotice,
@@ -321,10 +323,8 @@ function Proposal({
         {proposal === undefined ? null : (
           <li className="interview-turn interview-turn-interviewer">
             <span className="interview-speaker sr-only">{t`Interviewer`}: </span>
-            {/* With nothing to suggest, the screen words the offer itself, in its own language. */}
-            {topics.length === 0
-              ? t`I have no topic to suggest today. Is there anything from your career you would like to tell me about?`
-              : proposal}
+            {/* The screen words the offer itself, in its own language (#2418). */}
+            {careerInterviewOffer(topics)}
           </li>
         )}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
@@ -333,11 +333,11 @@ function Proposal({
         {topics.map((topic) => (
           <li key={topic.key}>
             {topic.title === undefined ? (
-              <p>{topic.reason}</p>
+              <p>{careerInterviewTopicReason(topic)}</p>
             ) : (
               <>
                 <p className="interview-topic-name">{careerInterviewTopicTitle(topic)}</p>
-                <p className="hint">{topic.reason}</p>
+                <p className="hint">{careerInterviewTopicReason(topic)}</p>
               </>
             )}
             <div className="interview-actions">
@@ -426,7 +426,9 @@ function TopicHeader({
     <header className="interview-topic-header">
       <div className="interview-topic-heading">
         <h3>{careerInterviewTopicTitle(topic)}</h3>
-        {topic.title === undefined ? null : <p className="hint">{topic.reason}</p>}
+        {topic.title === undefined ? null : (
+          <p className="hint">{careerInterviewTopicReason(topic)}</p>
+        )}
       </div>
       {onTalking === undefined ? null : (
         <fieldset className="interview-mode">
