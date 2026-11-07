@@ -10,6 +10,7 @@ import {
   CareerInterviewError,
   type CareerInterviewErrorCode,
   type CareerInterviewRecord,
+  careerInterviewSpeechHints,
   createCareerInterviewService,
 } from "@draft-loop/application/career-interview-service";
 import type {
@@ -564,11 +565,13 @@ export function registerCareerInterviewRoutes(
         return;
       }
       const interviewService = serviceFor(workspaceId, request, query.language);
+      const record = await loadRecord(service, workspaceRoot(workspaceId));
       request.log.info({ workspaceId, sessionId }, "live career interview started");
       await runLiveInterview({
         socket,
         speech: live,
         language: query.language,
+        phrases: careerInterviewSpeechHints(record.facts, record.mayTransmit),
         answer: async (text) => {
           const session = await interviewService.answer(workspaceId, sessionId, query.topic_key, {
             text,

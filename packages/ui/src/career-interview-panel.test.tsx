@@ -122,6 +122,14 @@ describe("CareerInterviewPanel", () => {
     expect(html).toContain("Not now");
     expect(html).toContain("Or something else you would like to talk about");
     expect(html).toContain("Pause for now");
+    expect(html).toContain("End this conversation");
+  });
+
+  it("numbers the suggested topics and hides the side list until one is taken", () => {
+    const html = render({ session: proposedSession });
+    expect(html).toContain('<span class="interview-topic-number" aria-hidden="true">1</span>');
+    expect(html).toContain("interview-layout interview-layout-single");
+    expect(html).not.toContain('aria-label="Topics in this conversation"');
   });
 
   it("shows the conversation, its choices and the model that wrote the questions", () => {

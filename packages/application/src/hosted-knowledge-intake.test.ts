@@ -83,6 +83,13 @@ function memoryRecords() {
       managed.push(input);
       writes.push("managed");
     },
+    getManagedCandidateKnowledgeSourceVersion: async (knowledgeBaseId, sourceId, versionId) =>
+      managed.find(
+        (entry) =>
+          entry.knowledgeBaseId === knowledgeBaseId &&
+          entry.sourceId === sourceId &&
+          entry.versionId === versionId,
+      ),
   };
   return { records, stores, managed, writes };
 }
@@ -277,5 +284,61 @@ describe("hosted knowledge intake", () => {
       code: "knowledge_base_not_found",
     });
     expect(writes).not.toContain("blob");
+  });
+});
+
+describe("reading a hosted knowledge source's file", () => {
+  const markdown = new TextEncoder().encode("# Example facts\n\nLed a fictional migration.\n");
+
+  it("returns the latest version's stored bytes with its metadata", async () => {
+    const { intake } = setup();
+    const base = await intake.createKnowledgeBase({ displayName: "Career" });
+    const added = await intake.addFileSource({
+      knowledgeBaseId: base.id,
+      displayName: "facts.md",
+      mediaType: "text/markdown",
+      bytes: markdown,
+    });
+
+    const file = await intake.readSourceFile(base.id, added.source.id);
+
+    expect(file.source.displayName).toBe("facts.md");
+    expect(file.latestVersion.mediaType).toBe("text/markdown");
+    expect(file.latestVersion.createdAt).toBe(at);
+    expect(new TextDecoder().decode(file.bytes)).toBe(new TextDecoder().decode(markdown));
+  });
+
+  it("refuses an unknown base or source as source_not_found", async () => {
+    const { intake } = setup();
+    const base = await intake.createKnowledgeBase({ displayName: "Career" });
+
+    await expect(intake.readSourceFile("missing", "any")).rejects.toMatchObject({
+      code: "source_not_found",
+    });
+    await expect(intake.readSourceFile(base.id, "missing")).rejects.toMatchObject({
+      code: "source_not_found",
+    });
+  });
+
+  it("never returns bytes that are missing or changed since upload", async () => {
+    const { intake, objects } = setup();
+    const base = await intake.createKnowledgeBase({ displayName: "Career" });
+    const added = await intake.addFileSource({
+      knowledgeBaseId: base.id,
+      displayName: "facts.md",
+      mediaType: "text/markdown",
+      bytes: markdown,
+    });
+    const [location] = [...objects.keys()];
+    if (location === undefined) throw new Error("no blob was written");
+
+    objects.set(location, new TextEncoder().encode("changed"));
+    await expect(intake.readSourceFile(base.id, added.source.id)).rejects.toMatchObject({
+      code: "source_file_unavailable",
+    });
+    objects.delete(location);
+    await expect(intake.readSourceFile(base.id, added.source.id)).rejects.toMatchObject({
+      code: "source_file_unavailable",
+    });
   });
 });

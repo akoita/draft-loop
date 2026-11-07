@@ -48,6 +48,8 @@ export interface LiveInterviewOptions {
   readonly socket: LiveSocket;
   readonly speech: LiveInterviewSpeech;
   readonly language?: LiveSpeechLanguage | undefined;
+  /** Names from the record the recogniser should expect (#2414). */
+  readonly phrases?: readonly string[] | undefined;
   /** Sends one answer to the interviewer, exactly as the actions route does. */
   readonly answer: (text: string) => Promise<LiveInterviewTurn>;
   /** Maps a failure to the refusal the candidate sees; rethrows what it does not know. */
@@ -248,7 +250,7 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
       if (stopped) break;
       const early = waiting;
       waiting = undefined;
-      const opened = speech.stt.open({ language: options.language });
+      const opened = speech.stt.open({ language: options.language, phrases: options.phrases });
       recognition = opened;
       const ended = collectLiveTurn(opened.events, (text) => send({ type: "partial", text }));
       for (const bytes of early) {
