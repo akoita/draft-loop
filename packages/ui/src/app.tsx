@@ -2813,12 +2813,8 @@ export function App({
       {...(application === null
         ? {}
         : {
-            headerNotice: (
-              <>
-                {applicationNameNudge(application)}
-                <HostApplicationPanel applicationId={application.applicationId} />
-              </>
-            ),
+            headerNotice: applicationNameNudge(application),
+            afterReview: <HostApplicationPanel applicationId={application.applicationId} />,
             startApplicationId: application.applicationId,
             ...(activePort.setApplicationModels === undefined ||
             applicationSummaries[application.applicationId]?.isDefault !== false

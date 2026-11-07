@@ -772,6 +772,10 @@ msgstr "1 responsibility"
 msgid "A contract with the candidate"
 msgstr "A contract with the candidate"
 
+#: apps/web/src/application-material.tsx
+msgid "A cover letter or interview questions for this application, when you need them. Your CV does not depend on them."
+msgstr "A cover letter or interview questions for this application, when you need them. Your CV does not depend on them."
+
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
 msgstr "A credential is required."
@@ -5331,6 +5335,10 @@ msgstr "Opening workspace…"
 #: packages/ui/src/review.tsx
 msgid "Optional"
 msgstr "Optional"
+
+#: apps/web/src/application-material.tsx
+msgid "Optional · cover letter or interview questions"
+msgstr "Optional · cover letter or interview questions"
 
 #: packages/ui/src/application-steps.tsx
 msgid "Or provide a public URL"

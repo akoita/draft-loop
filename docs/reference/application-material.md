@@ -76,7 +76,7 @@ draft is not stored: download it or ask again.
 
 ## The web panel
 
-Each application page on the web shows a **Prepare** panel under its header.
+Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it.
 The candidate picks a cover letter or interview questions on its toggle and
 selects **Draft**. Before the first draft, the panel names what goes to
 Anthropic. On the job page the panel takes the setup card's column; on a run's

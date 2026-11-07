@@ -447,25 +447,68 @@ button.small:where(:not(.shared-screens *)) {
 .main-column:has(> .onboarding-panel) > .application-material {
   max-width: 1000px;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-6);
+  padding-inline: var(--space-6);
 }
 
 .application-material-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
 }
 
-.application-material-head h2 {
+.application-material .application-material-head h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--text-md);
+  font-weight: 600;
 }
 
-.application-material-head .view-toggle {
+/* The heading is the disclosure: folded, the panel is one row that says what it holds. */
+.application-material-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.application-material-toggle[aria-expanded="false"] .panel-toggle-chevron {
+  transform: rotate(-90deg);
+}
+
+.application-material-hint {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.application-material[data-collapsed="true"] {
+  padding-block: var(--space-3);
+}
+
+.application-material-body {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.application-material-body[hidden] {
+  display: none;
+}
+
+.application-material-body .view-toggle {
+  justify-self: start;
   margin: 0;
   min-width: 0;
+}
+
+.application-material-lead {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
 }
 
 .application-material-note {

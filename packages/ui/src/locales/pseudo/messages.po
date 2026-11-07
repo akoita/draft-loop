@@ -772,6 +772,10 @@ msgstr ""
 msgid "A contract with the candidate"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "A cover letter or interview questions for this application, when you need them. Your CV does not depend on them."
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
 msgstr ""
@@ -5329,6 +5333,10 @@ msgstr ""
 #: apps/web/src/evidence-panels.tsx
 #: packages/ui/src/review.tsx
 msgid "Optional"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Optional · cover letter or interview questions"
 msgstr ""
 
 #: packages/ui/src/application-steps.tsx
