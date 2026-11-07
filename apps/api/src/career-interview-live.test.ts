@@ -151,4 +151,35 @@ describe("live career interview", () => {
     expect(usage.outcome).toBe("stopped");
     expect(socket.closed).toBeUndefined();
   });
+
+  it("opens each turn's recognition only once the candidate's audio arrives", async () => {
+    const socket = new FakeSocket();
+    socket.send = function (data) {
+      this.sent.push(data);
+      // The question plays with the microphone muted: no audio for a while, then a stop.
+      if (typeof data === "string" && JSON.parse(data).type === "ready") {
+        setTimeout(() => this.emit("message", JSON.stringify({ type: "stop" }), false), 5);
+      }
+    };
+    const scripted = createScriptedStreamingSpeechToText([]);
+    let opened = 0;
+    const usage = await runLiveInterview({
+      socket,
+      speech: {
+        stt: {
+          ...scripted,
+          open: (request) => {
+            opened += 1;
+            return scripted.open(request);
+          },
+        },
+        tts: createScriptedTextToSpeech(),
+        ...pricing,
+      },
+      answer: async () => ({ view: {}, question: undefined, open: false }),
+      refusal: () => ({ code: "x", message: "x" }),
+    });
+    expect(usage.outcome).toBe("stopped");
+    expect(opened).toBe(0);
+  });
 });
