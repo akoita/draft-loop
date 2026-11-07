@@ -103,6 +103,7 @@ export function CareerInterviewPanel({
 
   const active = session === undefined ? undefined : careerInterviewActiveTopic(session);
   const proposed = session?.topics.filter((topic) => topic.status === "proposed") ?? [];
+  const taken = session?.topics.some((topic) => topic.status !== "proposed") ?? false;
   const progress = session === undefined ? undefined : careerInterviewProgress(session);
 
   return (
@@ -134,26 +135,30 @@ export function CareerInterviewPanel({
           {problemNotice}
         </>
       ) : (
-        <div className="interview-layout">
-          <aside className="interview-sidebar" aria-label={t`Topics in this conversation`}>
-            {progress !== undefined && progress.taken > 0 ? (
-              <p className="hint">
-                {progress.done} {t`of`} {progress.taken} {t`topics finished in this conversation.`}
-              </p>
-            ) : null}
-            <ul className="interview-topic-list">
-              {session.topics.map((topic) => (
-                <li
-                  key={topic.key}
-                  className={`interview-topic-item interview-topic-${topic.status}`}
-                  aria-current={topic.key === active?.key ? "step" : undefined}
-                >
-                  <span>{careerInterviewTopicTitle(topic)}</span>
-                  <small>{careerInterviewTopicStatusLabel(topic.status)}</small>
-                </li>
-              ))}
-            </ul>
-          </aside>
+        <div className={`interview-layout${taken ? "" : " interview-layout-single"}`}>
+          {/* While topics are only suggested, the numbered cards list them; the side list would repeat them. */}
+          {!taken ? null : (
+            <aside className="interview-sidebar" aria-label={t`Topics in this conversation`}>
+              {progress !== undefined && progress.taken > 0 ? (
+                <p className="hint">
+                  {progress.done} {t`of`} {progress.taken}{" "}
+                  {t`topics finished in this conversation.`}
+                </p>
+              ) : null}
+              <ul className="interview-topic-list">
+                {session.topics.map((topic) => (
+                  <li
+                    key={topic.key}
+                    className={`interview-topic-item interview-topic-${topic.status}`}
+                    aria-current={topic.key === active?.key ? "step" : undefined}
+                  >
+                    <span>{careerInterviewTopicTitle(topic)}</span>
+                    <small>{careerInterviewTopicStatusLabel(topic.status)}</small>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
           <div className="interview-main">
             {session.interviewerAvailable === false && active?.status !== "summarised" ? (
               <p className="interview-unavailable" role="status">
@@ -186,6 +191,12 @@ export function CareerInterviewPanel({
                 disabled={busy}
                 onClick={() => void act({ action: "pause" })}
               >{t`Pause for now`}</button>
+              <button
+                type="button"
+                className="button button-outline"
+                disabled={busy}
+                onClick={() => void act({ action: "close" })}
+              >{t`End this conversation`}</button>
               {session.model === undefined ? null : (
                 <p className="hint">
                   {t`Questions written by`} {session.model.model} ({session.model.provider}).
@@ -329,9 +340,13 @@ function Proposal({
         )}
         {pending?.kind === "interviewer" ? <WritingIndicator /> : null}
       </ol>
-      <ul className="interview-topics">
-        {topics.map((topic) => (
+      <ol className="interview-topics">
+        {topics.map((topic, index) => (
           <li key={topic.key}>
+            {/* The interviewer's offer numbers the topics in this same order. */}
+            <span className="interview-topic-number" aria-hidden="true">
+              {index + 1}
+            </span>
             {topic.title === undefined ? (
               <p>{topic.reason}</p>
             ) : (
@@ -356,7 +371,7 @@ function Proposal({
             </div>
           </li>
         ))}
-      </ul>
+      </ol>
       <form
         className="interview-subject"
         onSubmit={(event) => {

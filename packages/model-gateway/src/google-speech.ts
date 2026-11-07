@@ -142,7 +142,10 @@ export interface GoogleStreamingSpeechToTextOptions {
 /** Chirp 3 streaming recognition in the EU, with partial words and a silence-based end of turn. */
 export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeechToTextOptions): {
   readonly identity: GoogleSpeechIdentity;
-  open(request: { readonly language?: Language | undefined }): GoogleLiveRecognition;
+  open(request: {
+    readonly language?: Language | undefined;
+    readonly phrases?: readonly string[] | undefined;
+  }): GoogleLiveRecognition;
 } {
   if (options.projectId.trim() === "") throw new RangeError("A Google Cloud project is required.");
   const silenceMs = options.endOfTurnSilenceMs ?? 1_500;
@@ -206,6 +209,20 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
             languageCodes:
               request.language === undefined ? ["auto"] : [languageCodes[request.language]],
             features: { enableAutomaticPunctuation: true },
+            // Names from the record, so an employer or a project is not heard as other words.
+            ...(request.phrases === undefined || request.phrases.length === 0
+              ? {}
+              : {
+                  adaptation: {
+                    phraseSets: [
+                      {
+                        inlinePhraseSet: {
+                          phrases: request.phrases.map((value) => ({ value, boost: 10 })),
+                        },
+                      },
+                    ],
+                  },
+                }),
           },
           streamingFeatures: { interimResults: true, enableVoiceActivityEvents: true },
         },

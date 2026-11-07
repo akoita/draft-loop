@@ -2806,6 +2806,10 @@ msgstr "Empty: add a CV, portfolio, or other source"
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
 msgstr "Empty. Use Move to in an application's ⋯ menu to put it here."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "End this conversation"
+msgstr "End this conversation"
+
 #: packages/ui/src/review.tsx
 msgid "End this run without losing its history"
 msgstr "End this run without losing its history"
