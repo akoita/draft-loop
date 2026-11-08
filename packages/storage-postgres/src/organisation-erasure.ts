@@ -61,10 +61,15 @@ export function createOrganisationErasure(client: SqlSession): OrganisationErasu
     },
 
     eraseRemainder: async () => {
-      const [row] = await client.transaction((executor) =>
-        executor.query("SELECT erase_tenant_remainder() AS removed"),
-      );
-      return { rowsRemoved: Number(row?.removed ?? 0) };
+      return client.transaction(async (executor) => {
+        const [row] = await executor.query("SELECT erase_tenant_remainder() AS removed");
+        // The beta invite that created the organisation holds an email, so it goes too; the
+        // account cap counts redeemed invites, so the seat is free again (#2501).
+        const invites = await executor.query(
+          "DELETE FROM beta_invites WHERE organisation_id = current_setting('draft_loop.tenant_id', true) RETURNING id",
+        );
+        return { rowsRemoved: Number(row?.removed ?? 0) + invites.length };
+      });
     },
   };
 }

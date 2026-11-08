@@ -1,3 +1,15 @@
+export {
+  type BetaInvite,
+  BetaInviteError,
+  type BetaInviteRefusal,
+  type BetaInvites,
+  type CreatedBetaInvite,
+  createBetaInvites,
+  newBetaInviteCode,
+  normalizeBetaInviteCode,
+  type RedeemBetaInviteInput,
+  type RedeemBetaInviteResult,
+} from "./beta-invites.js";
 export { createCandidateRecordAccess } from "./candidate-records.js";
 export { createCareerInterviewSessionStore } from "./career-interview-sessions.js";
 export {

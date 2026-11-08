@@ -605,6 +605,31 @@ People manage their organisation through the API once it has a tenant directory
   organisation, member and role, never an email. The hash-chained audit trail is
   per workspace, and membership belongs to none.
 
+### Beta invites
+
+The invite-only public beta (#2460) creates accounts from single-use invite
+codes, in the directory's `betaInvites` (`beta-invites.ts`). Routes and the
+sign-up screen come in #2502 and #2503.
+
+```mermaid
+flowchart LR
+  create["Operator creates a code<br/>for one email"] --> open["open"]
+  open -->|revoke| revoked["revoked"]
+  open -->|"redeem: same verified email,<br/>under the cap"| redeemed["redeemed:<br/>organisation + invited owner"]
+  redeemed -->|"sign-in claims the owner invite"| member["active owner"]
+  redeemed -->|"organisation erased"| gone["row deleted, seat free"]
+```
+
+- **Codes.** 16 characters without look-alike letters, stored as SHA-256
+  hashes. The plain code is returned once, at creation.
+- **Redemption.** One transaction, under an advisory lock, checks the code,
+  the email and the cap, then creates the organisation. Refusals are
+  `invite_unknown`, `invite_revoked`, `invite_used`, `invite_email_mismatch`
+  and `beta_full`.
+- **Cap.** It counts redeemed invites; 0 closes sign-up. Organisations the
+  operator creates directly are not counted.
+- **Data.** The table belongs to no tenant and holds an email and ids only.
+
 ### Plan limits
 
 In sign-in mode, the plan's `seats` and `candidateRecords` limit growth

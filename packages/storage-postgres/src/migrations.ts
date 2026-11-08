@@ -2,6 +2,7 @@ import { agentTokenExpiryMigration } from "./agent-token-expiry-migration.js";
 import { agentTokenScopesMigration } from "./agent-token-scopes-migration.js";
 import { agentTokensMigration } from "./agent-tokens-migration.js";
 import { applicationFoldersMigration } from "./application-folders-migration.js";
+import { betaInvitesMigration } from "./beta-invites-migration.js";
 import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import { careerInterviewMigration } from "./career-interview-migration.js";
 import { consentLedgerMigration } from "./consent-ledger-migration.js";
@@ -799,6 +800,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   memberSettingsMigration,
   agentTokenScopesMigration,
   spendPoolMigration,
+  betaInvitesMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */
