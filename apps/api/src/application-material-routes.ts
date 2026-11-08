@@ -5,17 +5,20 @@ import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
   type ApplicationMaterialRequirement,
+  type ApplicationMaterialVoice,
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
 } from "@draft-loop/application/application-material";
 import {
   applicationMaterialDefaultModelId,
+  applicationMaterialEconomyModelId,
   applicationMaterialPromptVersion,
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
+import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import { writingTells } from "@draft-loop/application/writing-tells";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
@@ -60,6 +63,8 @@ export interface ApplicationMaterialRoutesOptions {
   readonly screening?: Pick<ContentScreeningHooks, "assertRunMaterialClear">;
   /** Where each fact may be used (#2260); without it every fact may be used, as before. */
   readonly factUsage?: Pick<FactUsageService, "read">;
+  /** The candidate's writing samples (#2513); without them drafts follow the brief alone. */
+  readonly writingSamples?: Pick<WritingSamplesService, "read">;
   /** Where drafts are kept (#2477); without it a draft is returned and not stored, as before. */
   readonly drafts?: SavedApplicationMaterialStore;
   /** The clock a saved draft's time comes from; the system clock by default. */
@@ -74,9 +79,22 @@ const params = z.strictObject({
   applicationId: applicationIdSchema,
 });
 
+/** The models that may write application material: the default first, then the economy one. */
+export const applicationMaterialModelIds = [
+  applicationMaterialDefaultModelId,
+  applicationMaterialEconomyModelId,
+] as const;
+
+/** A typical draft's tokens, for the estimate the panel shows beside each model. */
+const typicalDraftTokens = { input: 6_000, output: 2_000 } as const;
+
 const body = z
   .strictObject({
     kind: z.enum(applicationMaterialKinds),
+    model: z
+      .enum(applicationMaterialModelIds)
+      .optional()
+      .describe("The model that writes the draft; the default model when absent."),
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe(
@@ -212,13 +230,13 @@ export function registerApplicationMaterialRoutes(
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, material, consents, screening, drafts } = options;
   const now = options.now ?? (() => new Date());
-  const model = {
-    company: "anthropic",
-    modelId: applicationMaterialDefaultModelId,
-    role: "author",
-    promptTemplateVersion: applicationMaterialPromptVersion,
-  } as const;
-  const pricing = catalogModelPricing(model);
+  const selectionOf = (modelId: (typeof applicationMaterialModelIds)[number]) =>
+    ({
+      company: "anthropic",
+      modelId,
+      role: "author",
+      promptTemplateVersion: applicationMaterialPromptVersion,
+    }) as const;
   const maxCostUsd = material.maxCostUsd ?? defaultApplicationMaterialMaxCostUsd;
 
   app.post(
@@ -282,8 +300,11 @@ export function registerApplicationMaterialRoutes(
         priority: requirement.priority,
       }));
       const facts = await careerFacts(service, root);
+      const voice = await candidateVoice(service, root, options.writingSamples);
       const usage = await options.factUsage?.read(root);
 
+      const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
+      const pricing = catalogModelPricing(model);
       let spentUsd = 0;
       const routed = material.route({
         configuredModel: model,
@@ -327,6 +348,7 @@ export function registerApplicationMaterialRoutes(
         const draft = await draftApplicationMaterial(writer, {
           kind: request.body.kind,
           ...(guidance === undefined ? {} : { guidance }),
+          ...(voice === undefined ? {} : { voice }),
           facts,
           requirements,
           ...(usage === undefined ? {} : { usage }),
@@ -420,6 +442,47 @@ export function registerApplicationMaterialRoutes(
     },
   );
 
+  app.get(
+    "/v1/application-material/models",
+    {
+      schema: {
+        summary: "List the models that can write application material",
+        description:
+          "The models a cover letter or interview questions can be drafted with, the default first, each with the estimated cost of a typical draft from the catalog's prices. An estimate is absent when the catalog has no price for the model.",
+        response: {
+          200: z
+            .strictObject({
+              models: z.array(
+                z.strictObject({
+                  model_id: z.enum(applicationMaterialModelIds),
+                  default: z.boolean(),
+                  estimated_cost_usd: z.number().optional(),
+                }),
+              ),
+            })
+            .meta({ id: "ApplicationMaterialModels" }),
+        },
+      },
+    },
+    async (_request, reply) =>
+      reply.send({
+        models: applicationMaterialModelIds.map((modelId) => {
+          const price = catalogModelPricing(selectionOf(modelId));
+          const estimate =
+            price === undefined
+              ? undefined
+              : (typicalDraftTokens.input * price.inputUsdPerMillionTokens +
+                  typicalDraftTokens.output * price.outputUsdPerMillionTokens) /
+                1_000_000;
+          return {
+            model_id: modelId,
+            default: modelId === applicationMaterialDefaultModelId,
+            ...(estimate === undefined ? {} : { estimated_cost_usd: Number(estimate.toFixed(4)) }),
+          };
+        }),
+      }),
+  );
+
   if (drafts === undefined) return;
 
   app.get(
@@ -472,6 +535,32 @@ export function registerApplicationMaterialRoutes(
       return reply.code(204).send(null);
     },
   );
+}
+
+/**
+ * How the candidate writes: their samples, and the writing policy's forbidden terms, tone and
+ * spelling. Each is style for the model, never a fact.
+ */
+async function candidateVoice(
+  service: ApplicationService,
+  root: string,
+  samples: Pick<WritingSamplesService, "read"> | undefined,
+): Promise<ApplicationMaterialVoice | undefined> {
+  const texts = (await samples?.read(root)) ?? [];
+  const policy = (await service.getWritingPolicy?.({ root, includeContent: false }))?.policy;
+  const avoidTerms = (policy?.rules ?? []).flatMap((rule) =>
+    rule.kind === "forbidden-term" ? [rule.term] : [],
+  );
+  const preferences = policy?.preferences;
+  const voice: ApplicationMaterialVoice = {
+    ...(texts.length === 0 ? {} : { samples: texts }),
+    ...(avoidTerms.length === 0 ? {} : { avoidTerms }),
+    ...(preferences?.tone === undefined ? {} : { tone: preferences.tone }),
+    ...(preferences?.spellingLocale === undefined
+      ? {}
+      : { spellingLocale: preferences.spellingLocale }),
+  };
+  return Object.keys(voice).length === 0 ? undefined : voice;
 }
 
 /** A provider adapter's failure, named by its code and diagnostics, never by its text. */

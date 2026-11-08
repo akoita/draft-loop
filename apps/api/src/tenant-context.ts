@@ -44,6 +44,7 @@ export type TenantApplication = Required<
     | "applicationMaterialDrafts"
     | "preferenceSuggestions"
     | "factUsage"
+    | "writingSamples"
   >
 > &
   Pick<
@@ -58,6 +59,7 @@ export type TenantApplication = Required<
     | "applicationMaterialDrafts"
     | "preferenceSuggestions"
     | "factUsage"
+    | "writingSamples"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -285,6 +287,11 @@ export function registerTenantApplications(
     preferenceSuggestions: forwarding(
       () => current().preferenceSuggestions ?? noPreferenceSuggestions,
     ),
+    writingSamples: forwarding(() => {
+      const samples = current().writingSamples;
+      if (samples === undefined) throw new TenantContextMissingError();
+      return samples;
+    }),
     factUsage: forwarding(() => {
       const factUsage = current().factUsage;
       if (factUsage === undefined) throw new TenantContextMissingError();

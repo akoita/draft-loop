@@ -17,6 +17,7 @@ export const workspaceSettingNames = [
   "preference-suggestions.json",
   "fact-usage.json",
   "application-languages.json",
+  "writing-samples.json",
 ] as const;
 
 export type WorkspaceSettingName = (typeof workspaceSettingNames)[number];

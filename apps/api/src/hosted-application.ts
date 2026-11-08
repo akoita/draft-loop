@@ -9,6 +9,7 @@ import {
 import { createFactUsageService } from "@draft-loop/application/fact-usage";
 import { createPreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { createWorkJournalService } from "@draft-loop/application/work-journal";
+import { createWritingSamplesService } from "@draft-loop/application/writing-samples";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import {
@@ -113,6 +114,7 @@ export function composeHostedApplication(
       service,
     }),
     factUsage: createFactUsageService(settings),
+    writingSamples: createWritingSamplesService(settings),
     sourceEvidenceKinds: storage,
     applicationMaterialDrafts: storage.savedApplicationMaterial,
     careerInterview: {

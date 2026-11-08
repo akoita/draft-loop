@@ -9,6 +9,7 @@ import {
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
+import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
@@ -89,6 +90,7 @@ import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
+import { registerWritingSamplesRoutes } from "./writing-samples-routes.js";
 
 export interface ApiOptions {
   /** The owner's token: the only credential in owner mode, the operator's in sign-in mode. */
@@ -152,6 +154,8 @@ export interface ApiOptions {
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
     readonly factUsage?: FactUsageService;
+    /** The candidate's writing samples (#2513); without them those routes are not served. */
+    readonly writingSamples?: WritingSamplesService;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -426,6 +430,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
       });
     }
+    if (application.writingSamples !== undefined) {
+      registerWritingSamplesRoutes(app, {
+        writingSamples: application.writingSamples,
+        workspaceRoot: application.workspaceRoot,
+      });
+    }
     if (application.factUsage !== undefined) {
       registerFactUsageRoutes(app, {
         factUsage: application.factUsage,
@@ -592,6 +602,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+        ...(application.writingSamples === undefined
+          ? {}
+          : { writingSamples: application.writingSamples }),
         ...(application.applicationMaterialDrafts === undefined
           ? {}
           : { drafts: application.applicationMaterialDrafts }),
