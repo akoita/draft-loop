@@ -166,7 +166,11 @@ export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): st
       lines.push(`## ${index + 1}. ${item.question}`, "");
     }
     lines.push(item.text, "");
-    lines.push(...item.citations.map((citation) => `> Source: ${citation.text}`), "");
+    lines.push(
+      ...item.citations.map((citation) => `> Source: ${citation.text}`),
+      ...(item.company_citations ?? []).map((citation) => `> About the company: ${citation.text}`),
+      "",
+    );
   });
   lines.push(`_Drafted by ${draft.model.model} (${draft.model.provider}). Check before use._`, "");
   return lines.join("\n");

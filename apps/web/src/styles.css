@@ -600,6 +600,52 @@ button.small:where(:not(.shared-screens *)) {
   color: var(--text-2);
 }
 
+.research-brief {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+
+.research-brief h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.research-brief-findings {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.research-brief-findings p {
+  margin: 0;
+}
+
+.research-brief-sources {
+  margin: var(--space-1) 0 0;
+  padding-left: 1rem;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.research-brief-sources a {
+  overflow-wrap: anywhere;
+}
+
+.research-brief-date {
+  white-space: nowrap;
+}
+
+.application-material-source-kind {
+  margin: var(--space-2) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
 .application-material-template {
   display: inline-flex;
   align-items: center;

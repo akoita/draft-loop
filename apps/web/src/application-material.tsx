@@ -5,7 +5,7 @@ import {
   exportTemplates,
 } from "@draft-loop/ui/export-template";
 import { t } from "@lingui/core/macro";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
@@ -27,6 +27,7 @@ import {
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 import { useRecordId } from "./record-context.js";
+import { ResearchBriefSection } from "./research-brief.js";
 import { saveFile } from "./save-file.js";
 
 /**
@@ -79,6 +80,8 @@ export interface ApplicationMaterialViewProps {
   readonly reviewing?: boolean;
   /** How the critic's check ended, once it did. */
   readonly reviewNote?: string | undefined;
+  /** Research about the employer (#2545), shown before the drafts when the server offers it. */
+  readonly research?: ReactNode;
 }
 
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
@@ -140,6 +143,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
           ))}
         </fieldset>
         <p className="application-material-lead">{t`A cover letter or interview questions for this application, when you need them. Your CV does not depend on them.`}</p>
+        {props.research}
         {draft === undefined ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
         ) : null}
@@ -327,6 +331,16 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                         <li key={citation.fact_id}>{citation.text}</li>
                       ))}
                     </ul>
+                    {item.company_citations === undefined ? null : (
+                      <>
+                        <p className="application-material-source-kind">{t`About the company`}</p>
+                        <ul>
+                          {item.company_citations.map((citation) => (
+                            <li key={citation.finding_id}>{citation.text}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </aside>
                 </li>
               ))}
@@ -569,6 +583,11 @@ export function ApplicationMaterialSection({
   return (
     <ApplicationMaterialView
       kind={kind}
+      research={
+        collapsed ? undefined : (
+          <ResearchBriefSection client={client} applicationId={applicationId} />
+        )
+      }
       draft={draft}
       versions={versions}
       problem={problem}

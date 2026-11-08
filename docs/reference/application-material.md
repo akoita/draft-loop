@@ -17,12 +17,13 @@ The drafter builds a bounded context, then asks the model behind
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
+| Company facts    | Optional: the newest research brief's findings, at most 12, each with its newest source date. About the employer only.     |
 | Refused rules    | Empty on the first call; the second call lists what the first draft broke.                                                  |
 
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v8`.
+`application-material-v9`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
@@ -111,6 +112,12 @@ Each paragraph, or each question with its talking point, must pass all rules:
 - Every number in the text appears in a cited fact, in digits or in words:
   "five" needs a fact holding "five" or "5". "One" is not read as a count. A
   question may also repeat a number from the job's requirements.
+- A company fact supports only a statement about the employer. It is cited
+  in `company_fact_ids`, never in `fact_ids`; one cited as a career fact is
+  `company_fact_as_candidate_fact`, and one the brief does not hold is
+  `unknown_company_fact`. A cited company fact may supply a number about the
+  employer. A paragraph still needs a career fact unless it is a courtesy
+  sentence.
 - A cover letter has at most 6 paragraphs and interview questions at most 10
   items, each at most 1,200 characters.
 
@@ -121,7 +128,10 @@ A record with no fact the draft may cite is refused before any model call
 
 `POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material` with
 `{"kind": "cover-letter"}` or `{"kind": "interview-questions"}` returns the
-draft. Each item carries its citations as the record stores them. A hosted or
+draft. Each item carries its citations as the record stores them, and
+`company_citations` when it uses the application's newest research brief,
+whose id is `research_brief_id`. The critic's revision keeps those citations
+and may not add new ones. A hosted or
 self-hosted server saves each draft as a new version and returns its `id` and
 `created_at`. It follows the career interview's rules:
 
@@ -161,8 +171,9 @@ with the record or the organisation.
 
 A research brief holds public facts about the employer, gathered after the
 candidate approves a research run (#2482). Each brief keeps what was searched,
-the sources kept, and short findings that cite those sources. The Prepare panel
-does not offer the run yet (#2545); the API does.
+the sources kept, and short findings that cite those sources. The candidate
+starts a run from the Prepare panel (see [The web panel](#the-web-panel)) or
+the API.
 
 ```mermaid
 flowchart LR
@@ -239,6 +250,15 @@ the same fields names each with its cost. Under a cover letter, **Writing check*
 flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
+
+**About the employer** opens the panel. **Research this application** first
+shows what the run searches, that excerpts go to Anthropic, that nothing about
+the candidate is sent, and the US$0.20 cap; nothing runs until **Approve and
+research**. The panel then asks every three seconds until the run ends. It
+lists each finding with its sources, each linked and dated, or marked
+**undated**, and offers **Research again** and **Delete this research**. A
+paragraph that cites a finding lists it under **About the company**, beside
+its career facts, and Markdown adds an `> About the company:` line.
 
 While the critic checks a new cover letter, the panel says so and asks every
 three seconds. A revised version then opens, named "revised after the critic's

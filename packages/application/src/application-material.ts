@@ -21,6 +21,13 @@ import {
   maximumApplicationMaterialEmphasisCharacters,
 } from "@draft-loop/schemas/saved-application-material";
 
+import {
+  type ApplicationMaterialCompanyFact,
+  boundedCompanyFacts,
+  type CompanyFactViolationCode,
+  companyFactViolations,
+} from "./application-material-company.js";
+
 /** The parts of a canonical profile fact the drafter reads. */
 export interface ApplicationMaterialFact {
   readonly id: string;
@@ -64,6 +71,8 @@ export interface ApplicationMaterialContext {
   readonly guidance?: ApplicationMaterialGuidance;
   /** The candidate's own voice (#2513): style to copy, never a source of facts. */
   readonly voice?: ApplicationMaterialVoice;
+  /** Facts about the employer from the newest research brief (#2544); never about the candidate. */
+  readonly company?: readonly ApplicationMaterialCompanyFact[];
 }
 
 /**
@@ -91,6 +100,8 @@ export interface ApplicationMaterialItem {
   readonly question: string;
   readonly text: string;
   readonly factIds: readonly string[];
+  /** The company facts a statement about the employer rests on (#2544); never a candidate claim. */
+  readonly companyFactIds?: readonly string[];
 }
 
 export interface ApplicationMaterialModelIdentity {
@@ -138,7 +149,8 @@ export type ApplicationMaterialViolationCode =
   | "record_language"
   | "unknown_fact"
   | "fact_not_allowed"
-  | "unsupported_number";
+  | "unsupported_number"
+  | CompanyFactViolationCode;
 
 export interface ApplicationMaterialViolation {
   readonly code: ApplicationMaterialViolationCode;
@@ -191,6 +203,8 @@ export interface ApplicationMaterialContextInput {
   readonly guidance?: ApplicationMaterialGuidance;
   /** The candidate's own voice (#2513); none when unset. */
   readonly voice?: ApplicationMaterialVoice;
+  /** The newest research brief's findings (#2544); none when unset. */
+  readonly companyFacts?: readonly ApplicationMaterialCompanyFact[];
 }
 
 /** The voice that reaches the model: samples and terms trimmed and capped, empty fields dropped. */
@@ -299,6 +313,7 @@ export function applicationMaterialContext(
     }));
   const guidance = boundedApplicationMaterialGuidance(input.kind, input.guidance);
   const voice = boundedApplicationMaterialVoice(input.voice);
+  const company = boundedCompanyFacts(input.companyFacts);
   return {
     kind: input.kind,
     facts,
@@ -306,6 +321,7 @@ export function applicationMaterialContext(
     ...(input.language === undefined ? {} : { language: input.language }),
     ...(guidance === undefined ? {} : { guidance }),
     ...(voice === undefined ? {} : { voice }),
+    ...(company.length === 0 ? {} : { company }),
   };
 }
 
@@ -500,6 +516,7 @@ export function applicationMaterialViolations(
   );
   const known = new Set(input.facts.map((fact) => fact.id));
   const requirementTexts = context.requirements.map((requirement) => requirement.text);
+  const company = new Map((context.company ?? []).map((fact) => [fact.id, fact.text]));
   const violations: ApplicationMaterialViolation[] = [];
   if (items.length === 0) {
     return [{ code: "empty_draft", detail: "The draft has no paragraph or question." }];
@@ -536,10 +553,13 @@ export function applicationMaterialViolations(
           "The item talks about the candidate's record, a list of skills or these rules; write it as the candidate would say it.",
       });
     }
+    const companyViolations = companyFactViolations(item, index, new Set(company.keys()));
+    violations.push(...companyViolations);
     const cited: ApplicationMaterialFact[] = [];
     for (const id of item.factIds) {
       const fact = allowed.get(id);
       if (fact !== undefined) cited.push(fact);
+      else if (company.has(id)) continue;
       else if (known.has(id)) {
         violations.push({
           code: "fact_not_allowed",
@@ -554,7 +574,11 @@ export function applicationMaterialViolations(
         });
       }
     }
-    const citedValues = cited.map((fact) => fact.value);
+    // A number about the employer may come from a cited company fact.
+    const citedValues = [
+      ...cited.map((fact) => fact.value),
+      ...(item.companyFactIds ?? []).flatMap((id) => company.get(id) ?? []),
+    ];
     for (const number of numbersIn(item.text)) {
       if (!supported(number, citedValues)) {
         violations.push({
@@ -606,6 +630,9 @@ export async function draftApplicationMaterial(
       question: item.question.trim(),
       text: item.text.trim(),
       factIds: [...new Set(item.factIds)],
+      ...(item.companyFactIds === undefined || item.companyFactIds.length === 0
+        ? {}
+        : { companyFactIds: [...new Set(item.companyFactIds)] }),
     }));
     violations = applicationMaterialViolations(input, items);
     if (violations.length === 0) {

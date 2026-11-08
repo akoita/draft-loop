@@ -74,11 +74,23 @@ export const savedApplicationMaterialSchema = z.strictObject({
             }),
           )
           .max(maximumSavedApplicationMaterialCitations),
+        /** The research brief's findings a statement about the employer rests on (#2544). */
+        company_citations: z
+          .array(
+            z.strictObject({
+              finding_id: shortText,
+              text: z.string().max(maximumSavedApplicationMaterialItemCharacters),
+            }),
+          )
+          .max(maximumSavedApplicationMaterialCitations)
+          .optional(),
       }),
     )
     .min(1)
     .max(maximumSavedApplicationMaterialItems),
   guidance: applicationMaterialGuidanceSchema.optional(),
+  /** The research brief the company citations come from (#2544); absent when none was used. */
+  research_brief_id: shortText.optional(),
   /** The saved draft this version was edited from (#2480); absent for a drafted version. */
   based_on: savedApplicationMaterialIdSchema.optional(),
   model: z.strictObject({ provider: shortText, model: shortText }),
