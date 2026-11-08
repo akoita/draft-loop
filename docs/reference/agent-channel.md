@@ -87,6 +87,23 @@ The desktop client shows its server's screens, so it offers the same steps when
 connected to a self-hosted server. On the hosted service, signed-in accounts
 get no agent token yet, so the section says so and links here.
 
+### Install it in another agent
+
+`plugins/draftloop` is also an
+[Agent Plugins 1.0.0](https://agent-plugins.org/specification) package. An
+agent that reads that format installs it from the folder and gets the tools
+and the skills, but not the Stop hook, which is Claude Code's own.
+
+| File                                                | Read by                     |
+| --------------------------------------------------- | --------------------------- |
+| `plugin.json`, `mcp.json`, `skills/`                | Agents that read the format |
+| `.claude-plugin/plugin.json`, `.mcp.json`, `hooks/` | Claude Code                 |
+
+The portable `mcp.json` sets no server address, because the format expands no
+variables. `draftloop-mcp` then calls `http://127.0.0.1:8080`, or the address
+in `DRAFT_LOOP_SERVER_URL` if your agent passes its environment on. Save the
+token with `draftloop-mcp save-token` as for the Claude Code plugin.
+
 ### Set it up with `init`
 
 `init` writes the project's files, including the `/log-work` skill and, for
