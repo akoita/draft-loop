@@ -19,6 +19,7 @@ let members: Map<string, SignedInMember>;
 
 const redeem = vi.fn<BetaInvites["redeem"]>();
 const assignPlan = vi.fn(async () => ({}) as never);
+const touch = vi.fn(async (_organisationId: string, _now: Date) => true);
 const invites: BetaInvites = {
   create: vi.fn<BetaInvites["create"]>(async ({ email }) => ({
     invite: { inviteId: "invite-1", email, createdAt: "2026-11-08T10:00:00.000Z", state: "open" },
@@ -53,6 +54,7 @@ beforeEach(() => {
     return { redeemed: true, organisationId: "beta-org", memberId: "m-new" };
   });
   assignPlan.mockClear();
+  touch.mockClear();
 });
 
 afterEach(async () => {
@@ -66,6 +68,7 @@ async function api(): Promise<FastifyInstance> {
     auth: signIn,
     directory: {} as TenantDirectory,
     betaInvites: { invites, cap: 25 },
+    organisationActivity: { touch },
     tenants: {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       // The tenant context composes a member's application; these routes read none of it.
@@ -168,6 +171,38 @@ describe("signing up with a beta invite", () => {
     });
 
     expect(response.statusCode).toBe(403);
+  });
+});
+
+describe("organisation activity (#2538)", () => {
+  const touched = () => touch.mock.calls.map(([organisationId]) => organisationId);
+
+  it("counts a new account as active from its sign-up", async () => {
+    const server = await api();
+
+    await signUp(server, `Bearer ${await token("new-person")}`);
+
+    expect(touched()).toEqual(["beta-org"]);
+  });
+
+  it("records a member's requests once an hour, and never the owner token's", async () => {
+    const server = await api();
+    const member = `Bearer ${await token("member-1")}`;
+
+    await signUp(server, member);
+    await signUp(server, member);
+    await signUp(server, `Bearer ${ownerToken}`);
+
+    expect(touched()).toEqual(["org-north"]);
+  });
+
+  it("keeps answering when the activity write fails", async () => {
+    touch.mockRejectedValueOnce(new Error("database unavailable"));
+    const server = await api();
+
+    const response = await signUp(server, `Bearer ${await token("member-1")}`);
+
+    expect(response.body.error.code).toBe("already_member");
   });
 });
 

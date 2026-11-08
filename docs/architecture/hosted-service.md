@@ -656,6 +656,12 @@ flowchart LR
 - **Cap.** It counts redeemed invites; 0 closes sign-up. Organisations the
   operator creates directly are not counted.
 - **Data.** The table belongs to no tenant and holds an email and ids only.
+- **Activity.** The directory's `organisationActivity` keeps, per
+  organisation, when a member last made a request and when its owners were
+  warned of erasure for inactivity (#2538). It is written at sign-up and then
+  at most once an hour, and never for owner-token, operator or agent-token
+  requests. Organisation erasure deletes the row. The retention job (#2540)
+  reads it.
 
 ### Plan limits
 

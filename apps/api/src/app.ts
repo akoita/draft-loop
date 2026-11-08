@@ -65,6 +65,10 @@ import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCallGate } from "./model-call-gate.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
+import {
+  type OrganisationActivityRecorder,
+  registerOrganisationActivity,
+} from "./organisation-activity.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
 import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes.js";
 import { registerOrganisationRoutes } from "./organisation-routes.js";
@@ -176,6 +180,8 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
   readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
+  /** When each organisation was last active (#2538); unset, activity is not recorded. */
+  readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
@@ -258,6 +264,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
   registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
+  const recordActivity =
+    options.organisationActivity === undefined
+      ? undefined
+      : registerOrganisationActivity(app, { activity: options.organisationActivity });
   // Before any route, so every route registered below is counted where it calls a model.
   if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
     registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
@@ -667,6 +677,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerBetaSignUpRoutes(app, {
       ...options.betaInvites,
       ...(auth.mode === "oidc" ? { resolveSignIn: auth.resolveSignIn } : {}),
+      ...(recordActivity === undefined ? {} : { recordActivity }),
       ...(operatorFor === undefined
         ? {}
         : {

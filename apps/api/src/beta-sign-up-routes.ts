@@ -16,6 +16,8 @@ export interface BetaSignUpOptions {
   readonly resolveSignIn?: ResolveSignIn;
   /** Assigns the new organisation the Beta plan. */
   readonly assignBetaPlan?: (organisationId: string, at: Date) => Promise<void>;
+  /** Records the new organisation's first activity, so retention counts from sign-up (#2538). */
+  readonly recordActivity?: (organisationId: string) => Promise<void>;
   readonly now?: () => Date;
   /** Refused redemptions one sign-in may make in a window before it waits (default 5). */
   readonly refusedAttempts?: number;
@@ -237,6 +239,7 @@ export function registerBetaSignUpRoutes(
           .send(apiError(result.refusal, refusalMessage[result.refusal]));
       }
       await options.assignBetaPlan?.(result.organisationId, at);
+      await options.recordActivity?.(result.organisationId);
       const member = await options.resolveSignIn(identity);
       request.log.info(
         {
