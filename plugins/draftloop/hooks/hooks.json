@@ -1,5 +1,5 @@
 {
-  "description": "One advisory line when a turn pushed or merged without recording notable work; it never blocks the turn.",
+  "description": "One advisory line when a turn merged work without recording it; it never blocks the turn.",
   "hooks": {
     "Stop": [
       {

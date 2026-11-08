@@ -33,6 +33,8 @@ export const serverInstructions = [
 export const recordWorkDescription = `File a note about notable work you just helped the candidate ship, for their career evidence. The note waits in DraftLoop's Work journal until the candidate approves, edits or discards it.
 
 Record when: a feature, integration or migration was merged or released; a named technology was adopted (for example a payments provider, a database, a protocol); a measured improvement landed (latency, cost, error rate), with how it was measured.
+One note per user-visible feature: do not fold unrelated small changes into a bigger note.
+Write the summary as career evidence a hiring manager reads: the problem in one sentence, what shipped in plain words, and the outcome or scale (users, languages, cost cap, error rate). Library and internal names go in technologies, not the summary.
 Never record: typo fixes, formatting, dependency bumps, refactors without an outcome, work still in progress, or work the candidate did not take part in.
 Never include: keys, tokens, passwords, connection strings, customer or personal data, or text from private documents. Links are stored and never fetched; a private project's repository is withheld from model providers.
 candidate_role says what the candidate did: designed, implemented, directed or reviewed. Do not overstate it.
@@ -51,6 +53,17 @@ Record notable work that a hiring manager would ask about, once it has shipped. 
 2. "Moved session storage from Redis to Postgres with no downtime" after the release: category migration, a metric only if it was measured, with how_measured.
 3. "Designed the event schema the three services now share" after the design was accepted and built: category design, role designed.
 
+## Write the summary as evidence
+
+Say the problem, what shipped in plain words, and the outcome or scale. Library and internal names go in technologies, not the summary.
+
+- Good: "Candidates waited for a support agent to change plans. Added self-serve plan changes with prorated card charges; plan-change tickets fell by about half in the first month."
+- Bad: "Wired the BillingService to the Stripe SDK via a new PlanChangeHandler and added a pg-boss job for proration." It names parts, not the problem or the result.
+
+## One note per feature
+
+Record one note per user-visible feature, integration or migration. A small unrelated change gets its own note, or none if it is not notable; never fold it into a bigger note.
+
 ## Do not record
 
 1. A typo fix, a lint fix or a dependency bump.
@@ -62,7 +75,7 @@ Record notable work that a hiring manager would ask about, once it has shipped. 
 Keys, tokens, passwords, connection strings, customer data, personal data or private document text. Links are stored, never fetched. For a private project, set visibility to private: its repository and links stay out of model input.
 `;
 
-export const logNotableWorkPrompt = `Look at what was merged or released in this session. If any of it is notable work by the record rule of draftloop://work-journal/guide, call list_work for the project first, then record_work once per piece of work that is not already recorded. Ask the candidate when their role or the project's visibility is unclear. If nothing is notable, record nothing and say so.`;
+export const logNotableWorkPrompt = `Look at what was merged or released in this session. If any of it is notable work by the record rule of draftloop://work-journal/guide, call list_work for the project first, then record_work once per user-visible feature that is not already recorded, with a summary that says the problem, what shipped and the outcome. Ask the candidate when their role or the project's visibility is unclear. If nothing is notable, record nothing and say so.`;
 
 /**
  * What the agent is told when a call fails: the code, one sentence, and whether trying again later

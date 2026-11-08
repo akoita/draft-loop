@@ -95,7 +95,7 @@ describe("draftloop-mcp init", () => {
     const written = files.map((file) => file.content).join("\n");
     expect(written).not.toMatch(/\/home\/|\/Users\/|[A-Z]:\\|Bearer|-----BEGIN/u);
     expect(logWorkSkill).toContain("list_work");
-    expect(instructionsSnippet.split("\n")).toHaveLength(8);
+    expect(instructionsSnippet.split("\n")).toHaveLength(9);
   });
 
   it("refuses an unknown host and a hook outside Claude Code", () => {

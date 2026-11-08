@@ -74,7 +74,7 @@ describe("the draftloop-mcp command", () => {
         {
           type: "assistant",
           message: {
-            content: [{ type: "tool_use", name: "Bash", input: { command: "git push" } }],
+            content: [{ type: "tool_use", name: "Bash", input: { command: "gh pr merge 7" } }],
           },
         },
       ]
