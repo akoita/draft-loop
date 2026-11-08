@@ -24,4 +24,12 @@ describe("refusal text", () => {
     expect(describeError(refused)).toBe("No such run.");
     expect(describeError(new TypeError("fetch failed"))).toContain("could not be reached");
   });
+
+  it("says when a plan's daily model calls outside runs come back (#2487)", () => {
+    expect(
+      refusalText({ code: "model_call_cap_reached", message: "x", params: { limit: 20 } }),
+    ).toBe(
+      "Your plan allows 20 interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC.",
+    );
+  });
 });

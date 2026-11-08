@@ -154,6 +154,7 @@ export function hostedEntitlementsFor(
       entitlements: storage.organisationPlans.currentEntitlements,
       assignment: storage.organisationPlans.currentPlanAssignment,
       ledger: storage.creditLedger,
+      modelCalls: storage.modelCalls,
       ...(spendPoolUsd === undefined
         ? {}
         : { spendPool: { limitUsd: spendPoolUsd, pool: storage.spendPool } }),

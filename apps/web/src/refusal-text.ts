@@ -34,6 +34,12 @@ function knownText(refusal: Refusal): string | undefined {
       return t`A credential is required.`;
     case "rate_limited":
       return t`Too many requests; retry later.`;
+    case "model_call_cap_reached": {
+      const limit = refusal.params?.limit;
+      return typeof limit === "number"
+        ? t`Your plan allows ${limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC.`
+        : t`Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC.`;
+    }
     case "not_ready":
       return t`The run is still being saved; retry in a moment.`;
     case "brief_version_stale":

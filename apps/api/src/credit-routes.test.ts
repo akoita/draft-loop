@@ -210,6 +210,7 @@ describe("GET /v1/organisation/credits", () => {
         modelTiers: resolveEntitlements("team", {}, { seats: 5 }).modelTiers,
         runsPerDay: resolveEntitlements("team", {}, { seats: 5 }).runsPerDay,
         concurrentRuns: resolveEntitlements("team", {}, { seats: 5 }).concurrentRuns,
+        modelCallsPerDay: null,
         seats: 5,
         candidateRecords: resolveEntitlements("team", {}, { seats: 5 }).candidateRecords,
       },

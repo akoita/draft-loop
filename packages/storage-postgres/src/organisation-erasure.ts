@@ -68,7 +68,9 @@ export function createOrganisationErasure(client: SqlSession): OrganisationErasu
         const invites = await executor.query(
           "DELETE FROM beta_invites WHERE organisation_id = current_setting('draft_loop.tenant_id', true) RETURNING id",
         );
-        return { rowsRemoved: Number(row?.removed ?? 0) + invites.length };
+        // The day counters of model calls (#2487) hold only dates and numbers, under the tenant.
+        const counters = await executor.query("DELETE FROM model_call_counts RETURNING day");
+        return { rowsRemoved: Number(row?.removed ?? 0) + invites.length + counters.length };
       });
     },
   };

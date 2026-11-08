@@ -61,6 +61,7 @@ export const entitlementsSchema: z.ZodType<Entitlements> = z.strictObject({
   candidateRecords: limitSchema,
   runsPerDay: limitSchema,
   concurrentRuns: limitSchema,
+  modelCallsPerDay: limitSchema,
   features: featureFlagsSchema,
 });
 
@@ -77,6 +78,7 @@ export const entitlementOverridesSchema = z.strictObject({
   candidateRecords: limitSchema.optional(),
   runsPerDay: limitSchema.optional(),
   concurrentRuns: limitSchema.optional(),
+  modelCallsPerDay: limitSchema.optional(),
   features: z
     .strictObject({
       provenanceReport: z.boolean().optional(),
@@ -147,7 +149,8 @@ function deepFreeze<T>(value: T): T {
 /**
  * Plan catalog v1: D13 working defaults. Business starts with no credits until overrides set them.
  * Beta is the free plan of the invite-only public test (#2456): three economy runs over three
- * months, two a day, one at a time, with no payment and no professional features.
+ * months, two a day, one at a time, with no payment and no professional features. Its 20 model
+ * calls a day outside runs (#2487) cover a short interview or a few drafts; paid plans have no cap.
  */
 export const planCatalogV1: PlanCatalog = deepFreeze(
   planCatalogSchema.parse({
@@ -164,6 +167,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 1,
           runsPerDay: 2,
           concurrentRuns: 1,
+          modelCallsPerDay: 20,
           features: noFeatures,
         },
       },
@@ -178,6 +182,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 1,
           runsPerDay: 5,
           concurrentRuns: 1,
+          modelCallsPerDay: null,
           features: noFeatures,
         },
       },
@@ -192,6 +197,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 1,
           runsPerDay: 5,
           concurrentRuns: 1,
+          modelCallsPerDay: null,
           features: noFeatures,
         },
       },
@@ -206,6 +212,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 3,
           runsPerDay: 10,
           concurrentRuns: 2,
+          modelCallsPerDay: null,
           features: professionalFeatures,
         },
       },
@@ -220,6 +227,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 25,
           runsPerDay: 50,
           concurrentRuns: 5,
+          modelCallsPerDay: null,
           features: professionalFeatures,
         },
       },
@@ -234,6 +242,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: 1,
           runsPerDay: 5,
           concurrentRuns: 1,
+          modelCallsPerDay: null,
           features: professionalFeatures,
         },
       },
@@ -248,6 +257,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
           candidateRecords: null,
           runsPerDay: null,
           concurrentRuns: null,
+          modelCallsPerDay: null,
           features: professionalFeatures,
         },
       },
@@ -319,6 +329,8 @@ export function resolveEntitlements(
     runsPerDay: override.runsPerDay !== undefined ? override.runsPerDay : base.runsPerDay,
     concurrentRuns:
       override.concurrentRuns !== undefined ? override.concurrentRuns : base.concurrentRuns,
+    modelCallsPerDay:
+      override.modelCallsPerDay !== undefined ? override.modelCallsPerDay : base.modelCallsPerDay,
     features: mergeFeatures(base.features, override.features),
   });
 }

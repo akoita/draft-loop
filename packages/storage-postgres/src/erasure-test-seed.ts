@@ -24,6 +24,8 @@ export const tenantWideTables = new Set([
   "spend_pool_entries",
   // Deployment-wide; organisation erasure removes the invite that created the organisation.
   "beta_invites",
+  // A tenant's daily model call counters (#2487); organisation erasure removes them.
+  "model_call_counts",
 ]);
 
 /**

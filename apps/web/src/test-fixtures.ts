@@ -109,6 +109,7 @@ export const syntheticCredits: ApiSchemas["MemberCredits"] = {
     modelTiers: ["economy", "standard"],
     runsPerDay: 10,
     concurrentRuns: 2,
+    modelCallsPerDay: null,
     seats: 3,
     candidateRecords: 20,
   },

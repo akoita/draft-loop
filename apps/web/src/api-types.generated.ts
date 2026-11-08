@@ -126,6 +126,7 @@ export interface ApiSchemas {
       readonly candidateRecords: number | null;
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly features: {
         readonly provenanceReport: boolean;
         readonly runComparison: boolean;
@@ -410,6 +411,7 @@ export interface ApiSchemas {
       readonly modelTiers: readonly ("premium" | "standard" | "economy")[];
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly seats: number | null;
       readonly candidateRecords: number | null;
     };
@@ -564,6 +566,7 @@ export interface ApiSchemas {
       readonly candidateRecords: number | null;
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly features: {
         readonly provenanceReport: boolean;
         readonly runComparison: boolean;
@@ -603,6 +606,7 @@ export interface ApiSchemas {
       readonly candidateRecords?: number | null;
       readonly runsPerDay?: number | null;
       readonly concurrentRuns?: number | null;
+      readonly modelCallsPerDay?: number | null;
       readonly features?: {
         readonly provenanceReport?: boolean;
         readonly runComparison?: boolean;
@@ -2313,6 +2317,7 @@ export interface ApiOperations {
         readonly candidateRecords?: number | null;
         readonly runsPerDay?: number | null;
         readonly concurrentRuns?: number | null;
+        readonly modelCallsPerDay?: number | null;
         readonly features?: {
           readonly provenanceReport?: boolean;
           readonly runComparison?: boolean;

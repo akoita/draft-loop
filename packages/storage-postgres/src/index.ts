@@ -63,6 +63,12 @@ export type {
   ManagedCandidateKnowledgeSourceVersionLocation,
 } from "./knowledge-run-records.js";
 export { migratePostgres, type PostgresMigration, postgresMigrations } from "./migrations.js";
+export {
+  createModelCallMeter,
+  type ModelCallMeter,
+  ModelCallMeterError,
+  type ModelCallTake,
+} from "./model-call-meter.js";
 export { createOrganisationErasure } from "./organisation-erasure.js";
 export {
   createOrganisationPlans,
