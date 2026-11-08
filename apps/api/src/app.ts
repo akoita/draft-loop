@@ -45,6 +45,7 @@ import {
   type CareerInterviewParts,
   registerCareerInterviewRoutes,
 } from "./career-interview-routes.js";
+import { registerClientErrorRoutes } from "./client-error-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -266,6 +267,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => ({ status: "ok" as const }),
   );
   registerAuthConfigRoutes(app, auth);
+  registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 
   app.get(

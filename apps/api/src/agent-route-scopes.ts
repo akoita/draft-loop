@@ -116,6 +116,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "PATCH /v1/workspaces/:workspaceId/opportunities/:briefId",
   "PATCH /v1/workspaces/:workspaceId/profiles/:profileId",
   "POST /v1/auth/proof",
+  "POST /v1/client-errors",
   "POST /v1/knowledge-bases",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sources",

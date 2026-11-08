@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { type ApiSchemas, createApiClient } from "./api-client.js";
 import { App } from "./app.js";
 import { desktopSignIn, withDesktopSignIn } from "./desktop-sign-in.js";
+import { installErrorReporting, sendErrorReport } from "./error-reporting.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
@@ -18,6 +19,14 @@ import { ServiceUnreachable } from "./sign-in.js";
 import "./styles.css";
 // After the web's own styles, so the shared screens keep the desktop's look.
 import "@draft-loop/ui/styles.css";
+
+// Before anything renders, so a crash at start-up is reported too (#2464).
+installErrorReporting({
+  target: window,
+  send: sendErrorReport(),
+  route: () => location.pathname,
+  build: document.querySelector('script[type="module"][src]')?.getAttribute("src") ?? "unknown",
+});
 
 const element = document.getElementById("root");
 if (element === null) throw new Error("The page has no root element.");

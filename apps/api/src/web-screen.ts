@@ -2,6 +2,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
 import { authConfigPath } from "./auth-config-routes.js";
+import { clientErrorsPath } from "./client-error-routes.js";
 import { ownerTokenProofPath } from "./owner-token-proof-routes.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 
@@ -34,10 +35,14 @@ export function contentSecurityPolicy(auth: ApiAuthOptions = { mode: "owner" }) 
   };
 }
 
-/** The `/v1` routes anyone may call: health, how the web screen signs in, and the token proof. */
+/**
+ * The `/v1` routes anyone may call: health, how the web screen signs in, the token proof, and the
+ * screen's crash reports.
+ */
 const publicApiRoutes: ReadonlySet<string> = new Set([
   "/v1/health",
   authConfigPath,
+  clientErrorsPath,
   ownerTokenProofPath,
 ]);
 
