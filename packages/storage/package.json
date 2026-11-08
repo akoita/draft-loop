@@ -145,7 +145,7 @@
   "dependencies": {
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
-    "drizzle-orm": "0.45.2"
+    "drizzle-orm": "0.45.4"
   },
   "optionalDependencies": {
     "better-sqlite3": "13.0.3"

@@ -36,6 +36,15 @@ describe("plan catalog v1", () => {
   it("holds the D13 working defaults", () => {
     const resolve = (id: string, seats?: number) =>
       resolveEntitlements(id, {}, seats === undefined ? {} : { seats });
+    expect(resolve("beta")).toMatchObject({
+      creditsPerPeriod: 3,
+      creditPeriodMonths: 3,
+      modelTiers: ["economy"],
+      seats: 1,
+      candidateRecords: 1,
+      runsPerDay: 2,
+      concurrentRuns: 1,
+    });
     expect(resolve("individual")).toMatchObject({
       creditsPerPeriod: 4,
       creditPeriodMonths: 1,

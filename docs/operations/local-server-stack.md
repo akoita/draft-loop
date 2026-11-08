@@ -157,8 +157,8 @@ Use the operator token for each step.
      -d '{"organisationId":"org-a","name":"Org A","firstOwnerEmail":"ada@org-a.example"}'
    ```
 
-2. Assign a plan. The plan id is one of `individual`, `job-search-pass`, `pro`,
-   `team`, `business` or `internal`; `team` and `business` also need `seats`:
+2. Assign a plan. The plan id is one of `beta`, `individual`, `job-search-pass`,
+   `pro`, `team`, `business` or `internal`; `team` and `business` also need `seats`:
 
    ```sh
    curl -X PUT http://127.0.0.1:58082/v1/operator/organisations/org-a/plan \
