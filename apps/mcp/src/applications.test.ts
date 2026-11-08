@@ -111,12 +111,13 @@ describe("application tools", () => {
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "add_job",
       "get_application",
+      "get_job_text",
       "get_run_status",
       "list_applications",
       "list_work",
       "record_work",
     ]);
-    for (const name of ["list_applications", "get_application", "get_run_status"]) {
+    for (const name of ["list_applications", "get_application", "get_job_text", "get_run_status"]) {
       expect(tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint, name).toBe(true);
     }
     expect(tools.find((tool) => tool.name === "add_job")?.description).toContain(
@@ -192,6 +193,31 @@ describe("application tools", () => {
     await client.close();
   });
 
+  it("read the job description an application keeps, as the candidate gave it", async () => {
+    const { config, requests } = scriptedServer({
+      [`GET ${base}/applications/app_fixture_0001/job`]: json({
+        origin: "pasted-text",
+        text: "A fictional job.",
+        url: null,
+      }),
+    });
+    const client = await connect(config);
+    const job = parsed(
+      await client.callTool({
+        name: "get_job_text",
+        arguments: { application_id: "app_fixture_0001" },
+      }),
+    );
+    expect(job).toEqual({
+      application_id: "app_fixture_0001",
+      origin: "pasted-text",
+      text: "A fictional job.",
+      url: null,
+    });
+    expect(requests.map((request) => request.method)).toEqual(["GET"]);
+    await client.close();
+  });
+
   it("pass on a missing-scope refusal so the agent can tell the candidate", async () => {
     const { config } = scriptedServer({
       [`GET ${base}/applications`]: json(
@@ -222,6 +248,37 @@ describe("application tools", () => {
     });
     expect(parsed(refused).error.code).toBe("invalid_id");
     expect(requests).toEqual([]);
+    await client.close();
+  });
+});
+
+describe("application prompts", () => {
+  it("offer the list and status tasks as commands, each naming only offered tools", async () => {
+    const client = await connect(scriptedServer({}).config);
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((prompt) => prompt.name).sort()).toEqual([
+      "application-status",
+      "applications",
+      "log-notable-work",
+    ]);
+    const offered = new Set((await client.listTools()).tools.map((tool) => tool.name));
+    const listed = await client.getPrompt({ name: "applications", arguments: { filter: "Paris" } });
+    const status = await client.getPrompt({
+      name: "application-status",
+      arguments: { application: "Platform engineer at Fernhill" },
+    });
+    const textOf = (answer: typeof listed) => {
+      const content = answer.messages[0]?.content as { text: string } | undefined;
+      return content?.text ?? "";
+    };
+    for (const answer of [listed, status]) {
+      const text = textOf(answer);
+      const named = [...text.matchAll(/\b[Cc]all ([a-z]+_[a-z_]+)/gu)].map((match) => match[1]);
+      expect(named.length).toBeGreaterThan(0);
+      for (const tool of named) expect(offered, tool).toContain(tool);
+    }
+    expect(textOf(listed)).toContain('"Paris"');
+    expect(textOf(status)).toContain("Platform engineer at Fernhill");
     await client.close();
   });
 });

@@ -5,9 +5,10 @@ import { WorkJournalApiError, type WorkspaceApiCall } from "./client.js";
 
 /**
  * The agent channel's application tools (ADR 0011 D17, #2440): list and read the candidate's job
- * applications, add one from pasted job text, and follow a run. Each returns only what was asked:
- * names, status and run state, never the draft, the career evidence or the job text itself. The
- * agent token's scopes decide what reaches the API: `applications:read` and `jobs:write`.
+ * applications, read the job description one keeps (#2535), add one from pasted job
+ * text, and follow a run. Each returns only what was asked, never the draft or the career
+ * evidence. The agent token's scopes decide what reaches the API: `applications:read` and
+ * `jobs:write`.
  */
 
 /** An application as an agent sees it: what it is called and where it stands. */
@@ -37,9 +38,18 @@ export interface AgentRunStatus {
   readonly next_step: string;
 }
 
+/** The job description an application keeps, as the candidate gave it. */
+export interface AgentJobText {
+  readonly application_id: string;
+  readonly origin: "pasted-text" | "url" | "unavailable";
+  readonly text: string | null;
+  readonly url: string | null;
+}
+
 export interface ApplicationsApi {
   list(): Promise<readonly AgentApplication[]>;
   get(applicationId: string): Promise<AgentApplication>;
+  jobText(applicationId: string): Promise<AgentJobText>;
   addJob(input: AddJobInput): Promise<AgentApplication>;
   runStatus(runId: string): Promise<AgentRunStatus>;
 }
@@ -151,6 +161,12 @@ export function createApplicationsApi(call: WorkspaceApiCall): ApplicationsApi {
           method: "GET",
         })) as ApplicationBody,
       ),
+    jobText: async (applicationId) => {
+      const body = (await call(`/applications/${pathId(applicationId, "application")}/job`, {
+        method: "GET",
+      })) as Omit<AgentJobText, "application_id">;
+      return { application_id: applicationId, origin: body.origin, text: body.text, url: body.url };
+    },
     addJob: async (input) =>
       applicationOf(
         (await call("/applications", {
@@ -174,6 +190,9 @@ export const listApplicationsDescription =
 export const getApplicationDescription =
   "Read one job application by id: name, status, folder, chosen run and latest run. Needs the applications:read scope.";
 
+export const getJobTextDescription =
+  "Read the job description one job application keeps, as the candidate gave it: the pasted text, or the approved job page's address when it was added by address. Use it to compare the job with the candidate's request; never rewrite it in DraftLoop. Needs the applications:read scope.";
+
 export const addJobDescription = `Add a job application to DraftLoop from a job description the candidate gave you, pasted as text. DraftLoop keeps the text and screens it like an upload; the candidate then extracts the requirements, reviews them and starts the CV run in DraftLoop.
 Pass the job text exactly as the candidate gave it; never invent or summarise requirements. A job page address is refused: fetching a page needs the candidate's approval in DraftLoop. Needs the jobs:write scope.`;
 
@@ -191,6 +210,13 @@ const applicationSchema = z.object({
   latest_run: z.object({ run_id: z.string(), state: z.string() }).nullable(),
   run_count: z.number().int(),
   export_count: z.number().int(),
+});
+
+const jobTextSchema = z.object({
+  application_id: z.string(),
+  origin: z.enum(["pasted-text", "url", "unavailable"]),
+  text: z.string().nullable(),
+  url: z.string().nullable(),
 });
 
 const runStatusSchema = z.object({
@@ -262,6 +288,24 @@ export function registerApplicationTools(
     async ({ application_id }) => {
       try {
         return answer({ ...(await api.get(application_id)) });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_job_text",
+    {
+      title: "Read a job description",
+      description: getJobTextDescription,
+      inputSchema: z.object({ application_id: z.string().min(1).max(192) }),
+      outputSchema: jobTextSchema,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ application_id }) => {
+      try {
+        return answer({ ...(await api.jobText(application_id)) });
       } catch (error) {
         return failure(error);
       }

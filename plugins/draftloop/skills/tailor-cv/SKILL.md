@@ -22,4 +22,4 @@ Use this when the candidate gives you a job description and wants a CV for it, o
 
 ## When a call is refused
 
-A refusal that names a scope, such as `applications:read` or `jobs:write`, means the candidate's agent token lacks it. Tell them to create a token with it under **Agents** in DraftLoop's Workspace settings, then run `draftloop-mcp save-token`.
+A refusal that names a scope, such as `applications:read` or `jobs:write`, means the candidate's agent token lacks it. Tell them to create a token with it ticked in DraftLoop's Workspace settings > Agents, then run `draftloop-mcp save-token`.

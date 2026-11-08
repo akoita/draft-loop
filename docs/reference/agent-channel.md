@@ -31,7 +31,7 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 
 | Way                          | For                     | What it adds                                          |
 | ---------------------------- | ----------------------- | ----------------------------------------------------- |
-| The Claude Code plugin       | Claude Code             | The tools, `/log-work`, `/tailor-cv` and the Stop hook |
+| The Claude Code plugin       | Claude Code             | The tools, the [commands](#commands), the Stop hook   |
 | A copied configuration       | Claude Code, Codex, any | The tools only                                        |
 | `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
 
@@ -202,13 +202,14 @@ sentence, and `fields` names the note fields to fix.
 ## Job applications and runs
 
 With the matching scopes, the agent can also see the candidate's job
-applications and add one. Each tool returns names, status and run state only,
-never a draft, career evidence or job text.
+applications, read the job description one keeps, and add one. No tool
+returns a draft or career evidence.
 
 | Tool                | Scope               | What it does                                                               |
 | ------------------- | ------------------- | -------------------------------------------------------------------------- |
 | `list_applications` | `applications:read` | Lists applications with status, folder and latest run; archived on request |
 | `get_application`   | `applications:read` | Reads one application by id                                                |
+| `get_job_text`      | `applications:read` | Reads the job text an application keeps, or its approved page's address    |
 | `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
 | `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
 
@@ -226,6 +227,23 @@ and hook it writes need:
 ```text
 draftloop-mcp init --host claude-code --hook --scope applications:read
 ```
+
+## Commands
+
+A host's command menu, such as Claude Code's `/` menu, lists skills and MCP
+prompts, never tools. To use a tool without a command, ask in plain words, for
+example "list my DraftLoop applications". In Claude Code, `/mcp` lists every
+tool the server offers.
+
+| Task                     | Plugin skill              | MCP prompt, any host | What it does                                        |
+| ------------------------ | ------------------------- | -------------------- | --------------------------------------------------- |
+| List applications        | `/draftloop:applications` | `applications`       | Lists applications with status and latest run state |
+| One application's status | `/draftloop:status`       | `application-status` | Says where one application stands and the next step |
+| Tailor a CV              | `/draftloop:tailor-cv`    | none                 | Adds a pasted job and follows its CV run            |
+| Log work                 | `/draftloop:log-work`     | `log-notable-work`   | Records notable merged work in the work journal     |
+
+With the plugin installed, Claude Code also lists each MCP prompt, as
+`/plugin:draftloop:draftloop:<prompt> (MCP)`.
 
 ## How the candidate reviews
 

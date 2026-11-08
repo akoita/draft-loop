@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { type ApplicationsApi, registerApplicationTools } from "./applications.js";
 import { type WorkJournalApi, WorkJournalApiError } from "./client.js";
+import { registerApplicationPrompts } from "./prompts.js";
 
 /**
  * The DraftLoop MCP server (ADR 0011 D17, #2023, #2440). A host agent records notable work it
@@ -24,7 +25,7 @@ export const serverInstructions = [
   "DraftLoop keeps the candidate's career evidence; record_work files a note about notable work you just helped ship, which waits for the candidate's review and never becomes a CV claim by itself.",
   "Call it after a merge or release that a hiring manager would care about, never for routine fixes, and never include secrets, customer data or anything the candidate asked you to keep private.",
   "Read draftloop://work-journal/guide when unsure, and use list_work to avoid recording the same work twice.",
-  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; add_job adds an application from a job description the candidate pasted.",
+  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; get_job_text reads the job description one keeps; add_job adds an application from a job description the candidate pasted.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
   "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
 ].join(" ");
@@ -175,7 +176,10 @@ export function createWorkJournalMcpServer(
     },
   );
 
-  if (applications !== undefined) registerApplicationTools(server, applications, failure);
+  if (applications !== undefined) {
+    registerApplicationTools(server, applications, failure);
+    registerApplicationPrompts(server);
+  }
 
   server.registerResource(
     "work-journal-guide",

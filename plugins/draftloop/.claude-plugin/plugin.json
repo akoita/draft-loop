@@ -1,6 +1,6 @@
 {
   "name": "draftloop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Record notable work as career evidence, see your job applications, add a job and follow a CV run in your DraftLoop server. Approvals stay in DraftLoop.",
   "author": { "name": "DraftLoop contributors" },
   "homepage": "https://github.com/akoita/draft-loop/blob/main/docs/reference/agent-channel.md",
