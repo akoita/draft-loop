@@ -113,6 +113,12 @@ export interface ApiSchemas {
       readonly provider: string;
       readonly model: string;
     };
+    readonly tells?: readonly ({
+      readonly code: "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
+      readonly paragraph?: number;
+      readonly sentence?: string;
+      readonly match?: string;
+    })[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };

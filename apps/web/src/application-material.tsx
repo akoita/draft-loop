@@ -13,6 +13,7 @@ import {
   applicationMaterialLengthLabels,
   applicationMaterialMarkdown,
   applicationMaterialProblem,
+  applicationMaterialTellReason,
   applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
@@ -221,6 +222,25 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 </li>
               ))}
             </ol>
+            {draft.tells === undefined ? null : (
+              <section className="application-material-tells" aria-labelledby="material-tells">
+                <h3 id="material-tells">{t`Writing check`}</h3>
+                {draft.tells.length === 0 ? (
+                  <p>{t`No common machine-writing habit found.`}</p>
+                ) : (
+                  <ul>
+                    {draft.tells.map((tell, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: tells are recomputed with the draft and never reorder.
+                      <li key={index}>
+                        {tell.sentence === undefined ? null : <q>{tell.sentence}</q>}{" "}
+                        {applicationMaterialTellReason(tell)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="application-material-note">{t`A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it.`}</p>
+              </section>
+            )}
             <p className="application-material-note">
               {t`Drafted by`} {draft.model.model}
               {t`. Check every sentence against its sources before you use it.`}

@@ -22,7 +22,7 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 
 export const applicationMaterialDefaultModelId = "claude-sonnet-5-5";
 export const applicationMaterialEconomyModelId = "claude-haiku-5-5";
-export const applicationMaterialPromptVersion = "application-material-v5";
+export const applicationMaterialPromptVersion = "application-material-v6";
 /**
  * Room for the longest valid draft: ten items of up to 1,200 characters, each with a question and
  * its fact ids, in a language such as French that spends more tokens per character. A smaller
@@ -81,6 +81,8 @@ const systemPrompt = [
   "`candidate_guidance`, when present, is the candidate's own instruction for this draft: follow its `emphasis`, `tone` (formal, warm or direct), `length` and `addressee`. It is never a fact: never cite it, and never take a claim, a skill or a number from it that no cited fact states. When guidance asks for something the facts do not support, leave it out.",
   "`length` short means two or three cover letter paragraphs or four or five questions; long means five or six paragraphs or eight to ten questions; standard or absent keeps the counts above.",
   "When `addressee` is present, open the cover letter by addressing that person or team.",
+  "A cover letter must read as the candidate wrote it, not as a model did: 250 to 350 words in all, plain everyday words, sentences of varied length, and at least one concrete detail from a cited fact, such as what was built or fixed.",
+  "In a cover letter, never use stock phrases such as 'I am writing to express', 'passionate', 'thrilled', 'leverage', 'delve', 'proven track record', 'fast-paced' or 'dynamic team', nor their equivalents in the document language. Do not list three adjectives or nouns in a row, do not start two paragraphs with the same words, use at most one dash in the whole letter, and end with a plain sentence, not a flattering one.",
   "When `refused_rules` is not empty, your previous draft broke those rules: avoid them.",
 ].join("\n");
 
