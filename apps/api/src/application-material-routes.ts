@@ -16,6 +16,7 @@ import {
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
+import { writingTells } from "@draft-loop/application/writing-tells";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
@@ -106,6 +107,25 @@ const draftView = z
       }),
     ),
     model: z.object({ provider: z.string(), model: z.string() }),
+    tells: z
+      .array(
+        z.object({
+          code: z.enum([
+            "stock_phrase",
+            "heavy_dashes",
+            "list_of_three",
+            "mirrored_openings",
+            "word_count",
+          ]),
+          paragraph: z.number().int().optional(),
+          sentence: z.string().optional(),
+          match: z.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+      ),
     prompt_version: z.string(),
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
   })
@@ -128,7 +148,15 @@ const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
 function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
-  return view;
+  return withTells(view);
+}
+
+/** A cover letter's view with its machine-writing tells, computed on read and never stored. */
+function withTells<View extends Pick<z.infer<typeof draftView>, "kind" | "items">>(
+  view: View,
+): View & { tells?: ReturnType<typeof writingTells> } {
+  if (view.kind !== "cover-letter") return view;
+  return { ...view, tells: writingTells(view.items.map((item) => item.text)) };
 }
 
 function newMaterialId(): string {
@@ -331,7 +359,7 @@ export function registerApplicationMaterialRoutes(
           prompt_version: applicationMaterialPromptVersion,
           cost_usd: spentUsd,
         };
-        if (drafts === undefined) return reply.send(view);
+        if (drafts === undefined) return reply.send(withTells(view));
         const saved: SavedApplicationMaterial = {
           id: newMaterialId(),
           workspace_id: workspaceId,

@@ -78,6 +78,24 @@ export function applicationMaterialVersionLabel(
   return `${when} · ${draft.model.model}`;
 }
 
+export type ApplicationMaterialTell = NonNullable<ApplicationMaterialDraft["tells"]>[number];
+
+/** Why a sentence was flagged, in the candidate's words. */
+export function applicationMaterialTellReason(tell: ApplicationMaterialTell): string {
+  switch (tell.code) {
+    case "stock_phrase":
+      return t`Stock phrase "${tell.match ?? ""}": say it in your own words.`;
+    case "heavy_dashes":
+      return t`Dashes are used often in this letter: try a full stop or a comma.`;
+    case "list_of_three":
+      return t`A list of three ("${tell.match ?? ""}") reads as a formula: keep the one that matters.`;
+    case "mirrored_openings":
+      return t`This paragraph opens like an earlier one: vary the start.`;
+    case "word_count":
+      return t`The letter has ${tell.match ?? ""} words: aim for 250 to 350.`;
+  }
+}
+
 /** What to tell the candidate when the draft is refused; the API's words for any other code. */
 export function applicationMaterialProblem(error: unknown): string {
   if (error instanceof ApiRequestError) return refusals()[error.code] ?? error.message;

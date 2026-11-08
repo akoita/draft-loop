@@ -67,6 +67,10 @@
       "types": "./src/application-material.ts",
       "import": "./src/application-material.ts"
     },
+    "./writing-tells": {
+      "types": "./src/writing-tells.ts",
+      "import": "./src/writing-tells.ts"
+    },
     "./application-material-model": {
       "types": "./src/application-material-model.ts",
       "import": "./src/application-material-model.ts"
