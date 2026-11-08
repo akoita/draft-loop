@@ -4,6 +4,7 @@ import { AccountScreenLanguage } from "./account-screen-language.js";
 import type { ApiClient } from "./api-client.js";
 import { Shell } from "./app.js";
 import { BetaSignUp } from "./beta-sign-up.js";
+import { Landing } from "./landing.js";
 import { readAuthorizationResponse } from "./oidc-model.js";
 import {
   type OidcSession,
@@ -20,11 +21,10 @@ export interface OidcSignInProps {
   readonly onSignIn: () => void;
 }
 
-/** Sends the person to the identity provider to sign in. */
-export function OidcSignIn({ notice, busy = false, onSignIn }: OidcSignInProps) {
+/** The sign-in text, the last notice and the button, without the page around them. */
+function SignInBlock({ notice, busy = false, onSignIn }: OidcSignInProps) {
   return (
-    <main className="sign-in">
-      <h1>{t`DraftLoop`}</h1>
+    <>
       <p>{t`Sign in with your organisation account. You stay signed in until you close this tab.`}</p>
       {notice === undefined ? null : (
         <p className="notice" role="status">
@@ -34,6 +34,19 @@ export function OidcSignIn({ notice, busy = false, onSignIn }: OidcSignInProps) 
       <button type="button" disabled={busy} onClick={onSignIn}>
         {busy ? t`Signing in` : t`Sign in`}
       </button>
+    </>
+  );
+}
+
+/** Sends the person to the identity provider to sign in. */
+export function OidcSignIn(props: OidcSignInProps & { readonly waitlist?: boolean }) {
+  const { waitlist = false, ...signIn } = props;
+  // While the beta is open, a visitor who is not signed in sees the landing page (#2567).
+  if (waitlist && signIn.busy !== true) return <Landing signIn={<SignInBlock {...signIn} />} />;
+  return (
+    <main className="sign-in">
+      <h1>{t`DraftLoop`}</h1>
+      <SignInBlock {...signIn} />
     </main>
   );
 }
@@ -50,12 +63,14 @@ export interface OidcAppProps {
   readonly session: OidcSession;
   readonly createClient: (token: string) => ApiClient;
   readonly navigation: ScreenNavigation;
+  /** The public beta is open: a signed-out visitor sees the landing page and waitlist. */
+  readonly waitlist?: boolean;
 }
 
 type Phase = "completing" | "signed-out" | "signed-in";
 
 /** The web screen when the API signs people in through the identity provider (ADR 0011, D6). */
-export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
+export function OidcApp({ session, createClient, navigation, waitlist = false }: OidcAppProps) {
   const [phase, setPhase] = useState<Phase>(() =>
     readAuthorizationResponse(navigation.search) !== undefined
       ? "completing"
@@ -118,6 +133,7 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
   if (client === undefined || leaving)
     return (
       <OidcSignIn
+        waitlist={waitlist}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || leaving}
         onSignIn={() => {

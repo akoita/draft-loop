@@ -669,6 +669,13 @@ A visitor without an invite joins the waitlist, in the directory's
 `betaWaitlist` (`beta-waitlist.ts`, #2566). The operator turns an entry into
 an invite and sends the code.
 
+The waitlist exists only while the beta is open (`DRAFT_LOOP_BETA_ACCOUNT_CAP`
+above 0). Then `GET /v1/auth/config` answers `waitlist: true`, and a signed-out
+visitor sees the landing page (`landing.tsx`, #2567) instead of the bare
+sign-in. It says what DraftLoop does, that it is a test that sends material
+outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads
+no analytics or third-party script, so it needs no cookie banner.
+
 | Route                                         | Who      | What it does                                                         |
 | --------------------------------------------- | -------- | -------------------------------------------------------------------- |
 | `POST /v1/waitlist`                           | Anyone   | Lists an email with consent; answers 202 whether new or listed       |

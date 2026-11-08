@@ -1,3 +1,4 @@
+import type { BetaWaitlist } from "@draft-loop/storage-postgres";
 import { describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
@@ -17,8 +18,12 @@ const oidc: ApiAuthOptions = {
   },
 };
 
-async function answer(auth?: ApiAuthOptions) {
-  const app = await buildApi({ ownerToken, ...(auth === undefined ? {} : { auth }) });
+async function answer(auth?: ApiAuthOptions, waitlist = false) {
+  const app = await buildApi({
+    ownerToken,
+    ...(auth === undefined ? {} : { auth }),
+    ...(waitlist ? { betaWaitlist: {} as BetaWaitlist } : {}),
+  });
   try {
     return await app.inject({ method: "GET", url: "/v1/auth/config" });
   } finally {
@@ -43,6 +48,10 @@ describe("sign-in configuration", () => {
       issuer: "https://id.example.test/realms/draft-loop",
       clientId: "draft-loop-web",
     });
+  });
+
+  it("tells the screen to show the waitlist while the beta is open (#2567)", async () => {
+    expect((await answer(oidc, true)).json()).toMatchObject({ mode: "oidc", waitlist: true });
   });
 
   it("allows the browser to reach the identity provider only in sign-in mode", async () => {

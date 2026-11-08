@@ -200,6 +200,7 @@ export interface ApiSchemas {
     readonly mode: "oidc";
     readonly issuer: string;
     readonly clientId: string;
+    readonly waitlist?: boolean;
   };
   "BetaInvite": {
     readonly inviteId: string;
