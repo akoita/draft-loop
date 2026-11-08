@@ -4,8 +4,6 @@ import { type ApplicationService, catalogModelPricing } from "@draft-loop/applic
 import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
-  type ApplicationMaterialRequirement,
-  type ApplicationMaterialVoice,
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
@@ -16,6 +14,7 @@ import {
   defaultApplicationMaterialTemplateId,
   renderApplicationMaterialDocument,
 } from "@draft-loop/application/application-material-document";
+import { applicationMaterialRecordInput } from "@draft-loop/application/application-material-input";
 import {
   applicationMaterialDefaultModelId,
   applicationMaterialEconomyModelId,
@@ -252,23 +251,6 @@ function permitsAnthropic(state: ConsentState): boolean {
 }
 
 /** The newest career profile's facts, which were extracted under the sensitivity tiers. */
-async function careerFacts(
-  service: ApplicationService,
-  root: string,
-): Promise<ApplicationMaterialFact[]> {
-  const profiles = await service.listCanonicalCandidateProfileVersions({ root });
-  const newest = [...profiles].sort((left, right) =>
-    right.profile.updatedAt.localeCompare(left.profile.updatedAt),
-  )[0];
-  return (newest?.profile.facts ?? []).map((fact) => ({
-    id: fact.id,
-    category: fact.category,
-    ...(fact.subjectId === undefined ? {} : { subjectId: fact.subjectId }),
-    field: fact.field,
-    value: fact.value,
-  }));
-}
-
 /**
  * Drafts a cover letter or interview questions for one application (#2216), under the career
  * interview's rules: the record's consent names Anthropic, the job's text passed screening, the
@@ -341,20 +323,13 @@ export function registerApplicationMaterialRoutes(
           opportunityBrief: { briefId: brief.briefId, version: brief.latestVersion },
         });
       }
-      const opportunity =
-        brief === undefined
-          ? undefined
-          : await service.getOpportunity({ root, briefId: brief.briefId });
-      const requirements: ApplicationMaterialRequirement[] = (
-        opportunity?.brief.requirements ?? []
-      ).map((requirement) => ({
-        id: requirement.id,
-        text: requirement.text,
-        priority: requirement.priority,
-      }));
-      const facts = await careerFacts(service, root);
-      const voice = await candidateVoice(service, root, options.writingSamples);
-      const usage = await options.factUsage?.read(root);
+      const { facts, requirements, voice, usage } = await applicationMaterialRecordInput({
+        service,
+        root,
+        briefId: brief?.briefId,
+        writingSamples: options.writingSamples,
+        factUsage: options.factUsage,
+      });
 
       const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
       const pricing = catalogModelPricing(model);
@@ -706,32 +681,6 @@ export function registerApplicationMaterialRoutes(
       return reply.code(204).send(null);
     },
   );
-}
-
-/**
- * How the candidate writes: their samples, and the writing policy's forbidden terms, tone and
- * spelling. Each is style for the model, never a fact.
- */
-async function candidateVoice(
-  service: ApplicationService,
-  root: string,
-  samples: Pick<WritingSamplesService, "read"> | undefined,
-): Promise<ApplicationMaterialVoice | undefined> {
-  const texts = (await samples?.read(root)) ?? [];
-  const policy = (await service.getWritingPolicy?.({ root, includeContent: false }))?.policy;
-  const avoidTerms = (policy?.rules ?? []).flatMap((rule) =>
-    rule.kind === "forbidden-term" ? [rule.term] : [],
-  );
-  const preferences = policy?.preferences;
-  const voice: ApplicationMaterialVoice = {
-    ...(texts.length === 0 ? {} : { samples: texts }),
-    ...(avoidTerms.length === 0 ? {} : { avoidTerms }),
-    ...(preferences?.tone === undefined ? {} : { tone: preferences.tone }),
-    ...(preferences?.spellingLocale === undefined
-      ? {}
-      : { spellingLocale: preferences.spellingLocale }),
-  };
-  return Object.keys(voice).length === 0 ? undefined : voice;
 }
 
 /** A provider adapter's failure, named by its code and diagnostics, never by its text. */
