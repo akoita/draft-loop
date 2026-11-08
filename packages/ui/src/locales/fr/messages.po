@@ -1166,6 +1166,10 @@ msgstr "Autoriser ce dépôt"
 msgid "Already in {displayName}."
 msgstr "Déjà dans {displayName}."
 
+#: apps/web/src/landing.tsx
+msgid "Already invited?"
+msgstr "Déjà invité ?"
+
 #: apps/web/src/sensitivity-model.ts
 msgid "Always allow"
 msgstr "Toujours autoriser"
@@ -2862,6 +2866,7 @@ msgstr "La rédaction envoie à Anthropic (Claude) les exigences du poste de cet
 msgid "Drafting…"
 msgstr "Rédaction…"
 
+#: apps/web/src/landing.tsx
 #: apps/web/src/oidc-sign-in.tsx
 #: apps/web/src/sign-in.tsx
 #: packages/ui/src/app.tsx
@@ -2892,6 +2897,10 @@ msgstr "DraftLoop ne peut pas encore chiffrer l’un des modèles de l’espace 
 #: packages/ui/src/provider-key-test.tsx
 msgid "DraftLoop could not reach the provider, so the key was not tested. Try again when you are online."
 msgstr "DraftLoop n’a pas pu joindre le fournisseur, la clé n’a donc pas été testée. Réessayez une fois en ligne."
+
+#: apps/web/src/landing.tsx
+msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
+msgstr "DraftLoop rédige un CV et une lettre de motivation pour chaque offre à partir de vos propres documents. Un modèle d'IA écrit, un modèle d'une autre entreprise vérifie chaque affirmation dans vos sources, et vous validez ce qui part."
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
@@ -3048,6 +3057,10 @@ msgstr "effort"
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
 msgstr "Écoulé"
+
+#: apps/web/src/landing.tsx
+msgid "Email address"
+msgstr "Adresse e-mail"
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "EmbeddingGemma 2 (text, experimental)"
@@ -4145,6 +4158,14 @@ msgstr "Exigences du poste relues"
 msgid "Join the DraftLoop beta"
 msgstr "Rejoindre la bêta de DraftLoop"
 
+#: apps/web/src/landing.tsx
+msgid "Join the waitlist"
+msgstr "Rejoindre la liste d'attente"
+
+#: apps/web/src/landing.tsx
+msgid "Joining"
+msgstr "Inscription en cours"
+
 #: packages/ui/src/application-name.tsx
 msgid "Keep “"
 msgstr "Garder « "
@@ -4160,6 +4181,10 @@ msgstr "Gardez au moins une exigence."
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep each heading to 200 characters or fewer."
 msgstr "Limitez chaque titre à 200 caractères."
+
+#: apps/web/src/landing.tsx
+msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
+msgstr "Conserver mon adresse e-mail pour m'inviter à la bêta de DraftLoop. Elle est supprimée dès que je suis invité, ou au bout de six mois."
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
@@ -5833,6 +5858,10 @@ msgstr "Version précédente : {percent} % de la largeur"
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Priority"
 msgstr "Priorité"
+
+#: apps/web/src/landing.tsx
+msgid "Privacy policy"
+msgstr "Politique de confidentialité"
 
 #: apps/web/src/private-sections.tsx
 msgid "Private sections"
@@ -7731,6 +7760,10 @@ msgstr "Technologies, séparées par des virgules"
 msgid "Template"
 msgstr "Modèle de mise en page"
 
+#: apps/web/src/landing.tsx
+msgid "Terms of use"
+msgstr "Conditions d'utilisation"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Test key"
 msgstr "Tester la clé"
@@ -7742,6 +7775,14 @@ msgstr "Test de la clé auprès du fournisseur…"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
 msgstr "Texte"
+
+#: apps/web/src/waitlist-model.ts
+msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
+msgstr "Merci. Vous êtes sur la liste d'attente, et nous vous enverrons une invitation par e-mail dès qu'une place se libère."
+
+#: apps/web/src/waitlist-model.ts
+msgid "That does not look like an email address. Check it and try again."
+msgstr "Cela ne ressemble pas à une adresse e-mail. Vérifiez-la et réessayez."
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
@@ -8624,6 +8665,10 @@ msgstr "Les modèles mis à jour exigent une nouvelle acceptation de la transmis
 msgid "The URL could not be imported."
 msgstr "L’URL n’a pas pu être importée."
 
+#: apps/web/src/waitlist-model.ts
+msgid "The waitlist could not be reached. Try again in a few minutes."
+msgstr "La liste d'attente est injoignable. Réessayez dans quelques minutes."
+
 #. placeholder {0}: workJournalProblem(error)
 #: apps/web/src/work-journal.tsx
 msgid "The work journal could not be read. {0}"
@@ -8803,6 +8848,10 @@ msgstr "Cet hôte n’a pas d’Accueil depuis lequel ouvrir la connexion aux fo
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This is a draft: it has not been reviewed and cannot start a run yet."
 msgstr "Ceci est un brouillon : il n’a pas été relu et ne peut pas encore lancer d’exécution."
+
+#: apps/web/src/landing.tsx
+msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
+msgstr "Ceci est un test public gratuit, sur invitation. Il peut changer ou s'interrompre sans préavis. La rédaction envoie les documents que vous choisissez à des fournisseurs d'IA, dont certains hors de l'UE."
 
 #: packages/ui/src/earlier-run.ts
 msgid "This is an earlier run. Open the latest run to change it."
@@ -9058,6 +9107,10 @@ msgstr "jetons ; réflexion"
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Tone"
 msgstr "Ton"
+
+#: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then try again."
+msgstr "Trop de tentatives depuis cette connexion. Attendez une heure, puis réessayez."
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "Too many attempts. Wait 15 minutes, then try again."

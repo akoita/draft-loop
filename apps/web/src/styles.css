@@ -141,6 +141,35 @@ label:where(:not(.shared-screens *)) {
   margin-top: 1rem;
 }
 
+/* The public beta's landing page (#2567): the sign-in column, a little wider, with sections. */
+.landing {
+  max-width: 36rem;
+  margin-top: 6vh;
+}
+
+.landing section {
+  margin-top: 2rem;
+}
+
+.landing .waitlist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing .consent {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+}
+
+.landing footer {
+  margin-top: 2.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
 /* The shared screens size their own columns, as in a desktop window; this caps very wide screens. */
 .shell {
   max-width: 120rem;

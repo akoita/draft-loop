@@ -2678,6 +2678,10 @@
               "clientId": {
                 "type": "string",
                 "description": "The web screen's public client id at that provider."
+              },
+              "waitlist": {
+                "description": "True when the public beta is open: signed-out visitors see the waitlist.",
+                "type": "boolean"
               }
             },
             "required": [
@@ -10294,6 +10298,10 @@
               "clientId": {
                 "type": "string",
                 "description": "The web screen's public client id at that provider."
+              },
+              "waitlist": {
+                "description": "True when the public beta is open: signed-out visitors see the waitlist.",
+                "type": "boolean"
               }
             },
             "required": [

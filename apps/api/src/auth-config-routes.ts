@@ -15,6 +15,10 @@ const authConfigSchema = z
         mode: z.literal("oidc"),
         issuer: z.string().describe("The identity provider's issuer."),
         clientId: z.string().describe("The web screen's public client id at that provider."),
+        waitlist: z
+          .boolean()
+          .optional()
+          .describe("True when the public beta is open: signed-out visitors see the waitlist."),
       })
       .describe("Sign in through the identity provider, with the authorization code and PKCE."),
   ])
@@ -23,15 +27,24 @@ const authConfigSchema = z
 export type AuthConfig = z.infer<typeof authConfigSchema>;
 
 /** What the screen needs to sign in; never the audience, keys or any secret. */
-export function authConfig(auth: ApiAuthOptions): AuthConfig {
+export function authConfig(auth: ApiAuthOptions, waitlist = false): AuthConfig {
   return auth.mode === "owner"
     ? { mode: "owner" }
-    : { mode: "oidc", issuer: auth.issuer, clientId: auth.webClientId };
+    : {
+        mode: "oidc",
+        issuer: auth.issuer,
+        clientId: auth.webClientId,
+        ...(waitlist ? { waitlist: true } : {}),
+      };
 }
 
 /** Tells the web screen how this deployment signs people in (ADR 0011, D6 and D9). */
-export function registerAuthConfigRoutes(app: FastifyInstance, auth: ApiAuthOptions): void {
-  const config = authConfig(auth);
+export function registerAuthConfigRoutes(
+  app: FastifyInstance,
+  auth: ApiAuthOptions,
+  waitlist = false,
+): void {
+  const config = authConfig(auth, waitlist);
   app.withTypeProvider<ZodTypeProvider>().get(
     authConfigPath,
     {
