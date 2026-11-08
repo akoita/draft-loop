@@ -82,19 +82,26 @@ export function createResearchHandler(options: ResearchHandlerOptions): Research
     if (!options.allowProviderData || workspace.fixtureMode) return refused("unavailable");
     const ports = options.portsFor(job);
     if (ports === undefined) return refused("unavailable");
-    const brief = await runResearch({
-      workspaceId: job.workspaceId,
-      applicationId: job.applicationId,
-      subject: { employer, role: opportunity?.brief.role?.value ?? "" },
-      language: application.language ?? workspace.language,
-      ...(job.windowMonths === undefined ? {} : { windowMonths: job.windowMonths }),
-      search: ports.search,
-      screen: ports.screen,
-      findings: ports.findings,
-      findingsSpentUsd: ports.findingsSpentUsd,
-      newId: options.newId,
-      now: options.now ?? (() => new Date()),
-    });
+    let brief: Awaited<ReturnType<typeof runResearch>>;
+    try {
+      brief = await runResearch({
+        workspaceId: job.workspaceId,
+        applicationId: job.applicationId,
+        subject: { employer, role: opportunity?.brief.role?.value ?? "" },
+        language: application.language ?? workspace.language,
+        ...(job.windowMonths === undefined ? {} : { windowMonths: job.windowMonths }),
+        search: ports.search,
+        screen: ports.screen,
+        findings: ports.findings,
+        findingsSpentUsd: ports.findingsSpentUsd,
+        newId: options.newId,
+        now: options.now ?? (() => new Date()),
+      });
+    } catch (error) {
+      // A search provider with no key configured is a deployment state, not a failure to retry.
+      if (hasCode(error, "no_key")) return refused("unavailable");
+      throw error;
+    }
     await options.briefsFor(job).insert(brief);
     return {
       result: { outcome: "researched", briefId: brief.id },
@@ -111,4 +118,8 @@ export function createResearchHandler(options: ResearchHandlerOptions): Research
     options.onOutcome?.(job, result, detail);
     return result;
   };
+}
+
+function hasCode(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === code;
 }

@@ -36,6 +36,7 @@ import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import type { ProfileDerivations } from "./profile-routes.js";
 import { apiProviderOptions } from "./provider-boundary.js";
+import type { ResearchRuns } from "./research-runs.js";
 import type { TenantApplication, TenantApplications } from "./tenant-context.js";
 import { enqueueThenWake, noWake, type WakeWorker } from "./worker-wake.js";
 
@@ -60,6 +61,8 @@ export interface HostedApplicationParts {
   readonly profileDerivations?: ProfileDerivations;
   /** The worker's critic pass on saved cover letters; a letter stands as drafted without it. */
   readonly materialReviews?: MaterialReviews;
+  /** The worker's research runs; nothing is researched without it. */
+  readonly researchRuns?: ResearchRuns;
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
@@ -90,6 +93,7 @@ export function composeHostedApplication(
       ? {}
       : { profileDerivations: parts.profileDerivations }),
     ...(parts.materialReviews === undefined ? {} : { materialReviews: parts.materialReviews }),
+    ...(parts.researchRuns === undefined ? {} : { researchRuns: parts.researchRuns }),
     budgetCeiling,
     monthUsage: storage.monthUsage,
     idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
@@ -251,6 +255,15 @@ export async function openHostedTenants(
                 return queued;
               },
               state: (address) => queue.materialReviewState({ tenantId, ...address }),
+            },
+            researchRuns: {
+              // Queued, then the worker woken as for a run; a wake failure only delays it.
+              queue: async (address) => {
+                const queued = await queue.enqueueResearch({ tenantId, ...address });
+                if (queued) await worker.wake().catch(worker.onWakeError);
+                return queued ? "queued" : "waiting";
+              },
+              state: (address) => queue.researchState({ tenantId, ...address }),
             },
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
             screening,

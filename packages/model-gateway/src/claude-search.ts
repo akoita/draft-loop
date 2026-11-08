@@ -53,7 +53,10 @@ export const defaultClaudeSearchModel = "claude-haiku-5-5";
 /** US$10 per 1,000 searches, on top of the call's tokens. */
 export const claudeWebSearchUsdPerSearch = 0.01;
 /** Claude Haiku 5.5's list prices, in US dollars per million tokens. */
-const defaultTokenPricing = { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 } as const;
+export const claudeSearchTokenPricing = {
+  inputUsdPerMillion: 0.1,
+  outputUsdPerMillion: 0.5,
+} as const;
 /** The searches one brief query may run. */
 const maximumSearchesPerQuery = 3;
 
@@ -111,7 +114,7 @@ export function createClaudeResearchSearch(options: ClaudeSearchOptions): {
   search(request: ClaudeSearchRequest): Promise<ClaudeSearchReply>;
 } {
   const model = options.model ?? defaultClaudeSearchModel;
-  const pricing = options.tokenPricing ?? defaultTokenPricing;
+  const pricing = options.tokenPricing ?? claudeSearchTokenPricing;
   return {
     search: async (request) => {
       const client = await options.clientFor();

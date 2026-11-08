@@ -748,6 +748,11 @@ export interface ApiSchemas {
     readonly text: string;
     readonly source_ids: readonly (string)[];
   };
+  "ResearchRunState": {
+    readonly status: "none" | "pending" | "done" | "failed";
+    readonly outcome?: "researched" | "missing" | "no-employer" | "consent-required" | "record-erased" | "unavailable";
+    readonly brief_id?: string;
+  };
   "ResearchSource": {
     readonly id: string;
     readonly kind: "upload" | "company-page" | "web-result";
@@ -755,6 +760,10 @@ export interface ApiSchemas {
     readonly title: string;
     readonly excerpt: string;
     readonly published_on?: string;
+  };
+  "ResearchStartInput": {
+    readonly approved: true;
+    readonly window_months?: number;
   };
   "ReviewDraft": {
     readonly id: string;
@@ -2378,6 +2387,21 @@ export interface ApiOperations {
       readonly materialId: string;
     };
     readonly response: void;
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: ApiSchemas["ResearchStartInput"];
+    readonly response: ApiSchemas["ResearchRunState"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["ResearchRunState"];
   };
   "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs": {
     readonly path: {

@@ -139,6 +139,9 @@ export const humanOnlyRoutes: readonly string[] = [
   // Research briefs reach agents only with the drafts' read tool, if ever.
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs/:briefId",
+  // A research run searches the web, so only the person approves it (#2560).
+  "GET /v1/workspaces/:workspaceId/applications/:applicationId/research",
+  "POST /v1/workspaces/:workspaceId/applications/:applicationId/research",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",

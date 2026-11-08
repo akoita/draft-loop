@@ -61,7 +61,7 @@ describe("Linkup research search", () => {
       createLinkupResearchSearch({ resolveCredential: async () => undefined, fetch }).search(
         request,
       ),
-    ).rejects.toThrow(LinkupSearchError);
+    ).rejects.toMatchObject({ name: "LinkupSearchError", code: "no_key" });
     expect(calls).toHaveLength(0);
     const failure = await createLinkupResearchSearch({
       resolveCredential: async () => secret,
@@ -70,7 +70,7 @@ describe("Linkup research search", () => {
       .search(request)
       .catch((error: unknown) => error as LinkupSearchError);
     expect(failure).toBeInstanceOf(LinkupSearchError);
-    expect((failure as LinkupSearchError).status).toBe(401);
+    expect(failure).toMatchObject({ status: 401, code: "status_401" });
     expect(String((failure as Error).message)).not.toContain(secret);
   });
 });

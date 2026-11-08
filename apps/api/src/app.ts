@@ -89,6 +89,7 @@ import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerResearchBriefRoutes } from "./research-brief-routes.js";
+import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
@@ -163,6 +164,8 @@ export interface ApiOptions {
     readonly materialReviews?: MaterialReviews;
     /** Research briefs kept with each application (#2542); without them those routes are not served. */
     readonly researchBriefs?: ResearchBriefStore;
+    /** The worker's research runs the candidate approves (#2560); without them none is queued. */
+    readonly researchRuns?: ResearchRuns;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
@@ -642,6 +645,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         briefs: application.researchBriefs,
+        ...(application.researchRuns === undefined ? {} : { runs: application.researchRuns }),
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {

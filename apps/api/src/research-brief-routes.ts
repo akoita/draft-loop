@@ -1,4 +1,5 @@
 import type { ApplicationService } from "@draft-loop/application";
+import { type ResearchState, researchOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
   type ResearchBrief,
@@ -15,15 +16,19 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { ResearchRuns } from "./research-runs.js";
 
 /**
- * Research briefs kept with an application (#2542): list, read and delete. A research run adds
- * briefs on the worker (#2543); these routes only read and remove them, for the person only.
+ * Research briefs kept with an application (#2542): list, read and delete, for the person only.
+ * The candidate starts a run with an explicit approval (#2560); the worker searches and adds the
+ * brief, and nothing is searched before that approval.
  */
 export interface ResearchBriefRoutesOptions {
   readonly service: Pick<ApplicationService, "getApplication">;
   readonly workspaceRoot: (workspaceId: string) => string;
   readonly briefs: ResearchBriefStore;
+  /** The worker's research runs; without them a start answers 503. */
+  readonly runs?: ResearchRuns;
 }
 
 const params = z.strictObject({
@@ -67,6 +72,48 @@ const briefList = z
   })
   .meta({ id: "ResearchBriefList" });
 
+const researchStart = z
+  .strictObject({
+    approved: z
+      .literal(true)
+      .describe("The candidate's approval to search the web about the employer; required."),
+    window_months: z
+      .number()
+      .int()
+      .min(1)
+      .max(36)
+      .optional()
+      .describe("How many months back a source may date. Defaults to 12."),
+  })
+  .meta({ id: "ResearchStart" });
+
+const researchView = z
+  .strictObject({
+    status: z
+      .enum(["none", "pending", "done", "failed"])
+      .describe(
+        "`pending` while the worker researches; `done` once the run ended; `failed` when it failed its retry and saved nothing; `none` when no run was queued.",
+      ),
+    outcome: z
+      .enum(researchOutcomes)
+      .optional()
+      .describe(
+        "How a `done` run ended: `researched` saved a brief; `no-employer`, `consent-required`, `unavailable` and the rest ended before any search.",
+      ),
+    brief_id: researchBriefIdSchema.optional().describe("The brief a `researched` run saved."),
+  })
+  .meta({ id: "ResearchRunState" });
+
+function stateView(state: ResearchState | undefined): z.infer<typeof researchView> {
+  if (state === undefined) return { status: "none" };
+  if (state.status !== "done") return { status: state.status };
+  return {
+    status: "done",
+    outcome: state.outcome,
+    ...(state.briefId === undefined ? {} : { brief_id: state.briefId }),
+  };
+}
+
 function viewOf(brief: ResearchBrief): z.infer<typeof briefView> {
   const { workspace_id: _workspace, ...view } = brief;
   return view;
@@ -79,6 +126,65 @@ export function registerResearchBriefRoutes(
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, briefs } = options;
   const route = "/v1/workspaces/:workspaceId/applications/:applicationId/research-briefs";
+  const runRoute = "/v1/workspaces/:workspaceId/applications/:applicationId/research";
+
+  app.post(
+    runRoute,
+    {
+      schema: {
+        summary: "Research an application's employer, with the candidate's approval",
+        description:
+          "Queues one research run on the worker: a few web searches about the employer and role, each source screened for prompt injection, sources older than the window dropped, and short findings that cite the kept sources. It reads nothing about the candidate and costs at most US$0.20. `approved` must be `true`. Answers the run's state; a run already waiting is not queued twice. 404 when there is no such application; 503 when this deployment researches nothing.",
+        params,
+        body: researchStart,
+        response: { 202: researchView, 404: apiErrorSchema, 503: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId } = request.params;
+      const root = workspaceRoot(workspaceId);
+      if ((await service.getApplication({ root, applicationId })) === undefined) {
+        return reply.code(404).send(apiError("not_found", "There is no such application."));
+      }
+      const address = { workspaceId, applicationId };
+      const windowMonths = request.body.window_months;
+      const queued =
+        options.runs === undefined
+          ? "unavailable"
+          : await options.runs.queue({
+              ...address,
+              ...(windowMonths === undefined ? {} : { windowMonths }),
+            });
+      if (queued === "unavailable") {
+        return reply
+          .code(503)
+          .send(apiError("research_unavailable", "This server does not research applications."));
+      }
+      const state = await options.runs?.state(address);
+      return reply.code(202).send(stateView(state ?? { status: "pending" }));
+    },
+  );
+
+  app.get(
+    runRoute,
+    {
+      schema: {
+        summary: "Read where an application's research run stands",
+        description:
+          "The newest run's state, as the Prepare panel polls it; `brief_id` names the saved brief once it is `done` with `researched`. 404 when there is no such application.",
+        params,
+        response: { 200: researchView, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId } = request.params;
+      const root = workspaceRoot(workspaceId);
+      if ((await service.getApplication({ root, applicationId })) === undefined) {
+        return reply.code(404).send(apiError("not_found", "There is no such application."));
+      }
+      return reply.send(stateView(await options.runs?.state({ workspaceId, applicationId })));
+    },
+  );
 
   app.get(
     route,
