@@ -1,6 +1,7 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
 import { type FactUsageSettings, factUsageKey } from "@draft-loop/application/fact-usage";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
+import type { MaterialReviewState } from "@draft-loop/run-queue";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
 import {
@@ -11,6 +12,7 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { MaterialReviews } from "./material-reviews.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const authorization = `Bearer ${ownerToken}`;
@@ -26,10 +28,12 @@ const profile = {
   ],
 };
 
+let workspaceCritic: { company: string; model: string } | undefined;
+
 const service = {
   readWorkspace: async (root: string) => {
     if (root !== "/tenants/owner/workspaces/owner") throw new WorkspaceNotFoundError(root);
-    return { id: "owner" };
+    return { id: "owner", ...(workspaceCritic === undefined ? {} : { critic: workspaceCritic }) };
   },
   listCanonicalCandidateProfileVersions: async () => [{ workspaceId: "owner", profile }],
   listApplications: async () => [],
@@ -110,6 +114,7 @@ async function build(options: {
   usage?: FactUsageSettings;
   drafts?: SavedApplicationMaterialStore;
   samples?: readonly string[];
+  reviews?: MaterialReviews;
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
@@ -132,6 +137,7 @@ async function build(options: {
             },
           }),
       ...(options.drafts === undefined ? {} : { applicationMaterialDrafts: options.drafts }),
+      ...(options.reviews === undefined ? {} : { materialReviews: options.reviews }),
       ...(options.samples === undefined
         ? {}
         : {
@@ -153,6 +159,7 @@ const draft = (kind: string, target = url) =>
   app.inject({ method: "POST", url: target, headers: { authorization }, payload: { kind } });
 
 afterEach(async () => {
+  workspaceCritic = undefined;
   await app.close();
 });
 
@@ -191,7 +198,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v7",
+      prompt_version: "application-material-v8",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -586,6 +593,112 @@ describe("application material route", () => {
       payload: { samples: [sample] },
     });
     expect(saved.json()).toEqual({ samples: [sample] });
+  });
+
+  it("queues the critic pass for a saved cover letter and reports where it stands", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const queued: unknown[] = [];
+    const states = new Map<string, MaterialReviewState>();
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+      ],
+    };
+    const questions = {
+      items: [{ question: "Why SQL?", text: "I cut report time by 40%.", fact_ids: ["o"] }],
+    };
+    workspaceCritic = { company: "openai", model: "critic-model" };
+    await build({
+      consent: granted,
+      route: scriptedRoute([letter, questions], []),
+      drafts,
+      reviews: {
+        queue: async (job) => {
+          queued.push(job);
+          states.set(job.materialId, { status: "pending" });
+          return true;
+        },
+        state: async ({ materialId }) => states.get(materialId),
+      },
+    });
+    const saved = await draft("cover-letter");
+    expect(saved.json()).toMatchObject({ review: { status: "pending" } });
+    const id = saved.json().id as string;
+    expect(queued).toEqual([
+      { workspaceId: "owner", applicationId: "app_fixture0001", materialId: id },
+    ]);
+    const questionSet = await draft("interview-questions");
+    expect(questionSet.json()).not.toHaveProperty("review");
+    expect(queued).toHaveLength(1);
+
+    const review = async (materialId: string) =>
+      app.inject({ method: "GET", url: `${url}/${materialId}/review`, headers: { authorization } });
+    expect((await review(id)).json()).toEqual({ status: "pending" });
+    expect((await review(questionSet.json().id)).json()).toEqual({ status: "none" });
+
+    const base = await drafts.get("owner", id);
+    if (base === undefined) throw new Error("The letter was saved.");
+    await drafts.insert({
+      ...base,
+      id: "amd_revisionfixture1",
+      created_at: "2099-01-01T00:00:00.000Z",
+      based_on: id,
+      critic_findings: [{ paragraph: 0, sentence: "As a Data Analyst", reason: "flat" }],
+      critic_model: { provider: "openai", model: "critic-model" },
+    });
+    states.set(id, { status: "done", outcome: "revised" });
+    expect((await review(id)).json()).toEqual({
+      status: "done",
+      outcome: "revised",
+      revision_id: "amd_revisionfixture1",
+    });
+    const list = (await app.inject({ method: "GET", url, headers: { authorization } })).json();
+    expect(list.drafts[0]).toMatchObject({
+      id: "amd_revisionfixture1",
+      critic_findings: [{ paragraph: 0, sentence: "As a Data Analyst", reason: "flat" }],
+      critic_model: { provider: "openai", model: "critic-model" },
+    });
+    expect((await review("amd_doesnotexist01")).statusCode).toBe(404);
+  });
+
+  it("queues no critic pass without the critic company's consent or with a same-company critic", async () => {
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+      ],
+    };
+    const queued: unknown[] = [];
+    const reviews: MaterialReviews = {
+      queue: async (job) => {
+        queued.push(job);
+        return true;
+      },
+      state: async () => undefined,
+    };
+    const anthropicOnly: ConsentState = {
+      "provider-transmission": {
+        ...(granted["provider-transmission"] as NonNullable<ConsentState["provider-transmission"]>),
+        providers: ["anthropic"],
+      },
+    } as ConsentState;
+    workspaceCritic = { company: "openai", model: "critic-model" };
+    await build({
+      consent: anthropicOnly,
+      route: scriptedRoute([letter], []),
+      drafts: createMemorySavedApplicationMaterialStore(),
+      reviews,
+    });
+    expect((await draft("cover-letter")).json()).not.toHaveProperty("review");
+    await app.close();
+    workspaceCritic = { company: "anthropic", model: "claude-haiku-5-5" };
+    await build({
+      consent: granted,
+      route: scriptedRoute([letter], []),
+      drafts: createMemorySavedApplicationMaterialStore(),
+      reviews,
+    });
+    expect((await draft("cover-letter")).json()).not.toHaveProperty("review");
+    expect(queued).toEqual([]);
   });
 
   it("serves no list when the server keeps no drafts", async () => {

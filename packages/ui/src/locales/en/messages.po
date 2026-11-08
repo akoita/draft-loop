@@ -772,6 +772,10 @@ msgstr "{value, plural, one {Your plan allows # seat, and it is taken.} other {Y
 msgid "{when} · edited by you"
 msgstr "{when} · edited by you"
 
+#: apps/web/src/application-material-model.ts
+msgid "{when} · revised after the critic's check"
+msgstr "{when} · revised after the critic's check"
+
 #: packages/ui/src/provider-recovery.tsx
 msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
 msgstr "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
@@ -807,6 +811,10 @@ msgstr "A cover letter or interview questions for this application, when you nee
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
 msgstr "A credential is required."
+
+#: apps/web/src/application-material.tsx
+msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
+msgstr "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -7904,6 +7912,18 @@ msgstr "The critic asked for changes and the author revised the plan once."
 msgid "The critic did not finish checking it. Resume or retry the review; approval and export need a finished critique."
 msgstr "The critic did not finish checking it. Resume or retry the review; approval and export need a finished critique."
 
+#: apps/web/src/application-material-model.ts
+msgid "The critic flagged sentences that read as machine-written. The revised version is open; your first draft stays in the version list."
+msgstr "The critic flagged sentences that read as machine-written. The revised version is open; your first draft stays in the version list."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic flagged sentences, but the rewrite cited something your record does not support, so your letter stands as drafted."
+msgstr "The critic flagged sentences, but the rewrite cited something your record does not support, so your letter stands as drafted."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic found no sentence that reads as machine-written."
+msgstr "The critic found no sentence that reads as machine-written."
+
 #: packages/ui/src/run-application-plan.ts
 msgid "The critic had not reviewed this plan when the run stopped."
 msgstr "The critic had not reviewed this plan when the run stopped."
@@ -7911,6 +7931,10 @@ msgstr "The critic had not reviewed this plan when the run stopped."
 #: packages/ui/src/review-run-status.ts
 msgid "The critic is checking version {version}."
 msgstr "The critic is checking version {version}."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic's check did not finish, so your letter stands as drafted."
+msgstr "The critic's check did not finish, so your letter stands as drafted."
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-model-settings.ts
@@ -8622,6 +8646,10 @@ msgstr "These are the template's pages as a PDF. Word lays out the same text, bu
 #: apps/web/src/credits-model.ts
 msgid "These models"
 msgstr "These models"
+
+#: apps/web/src/application-material.tsx
+msgid "These sentences of the first draft read as machine-written; this version rewrites them."
+msgstr "These sentences of the first draft read as machine-written; this version rewrites them."
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "This account already exists. Reload the page."
@@ -9438,6 +9466,10 @@ msgstr "What the candidate did"
 #: packages/ui/src/run-details.tsx
 msgid "What the critic asked to change"
 msgstr "What the critic asked to change"
+
+#: apps/web/src/application-material.tsx
+msgid "What the critic flagged"
+msgstr "What the critic flagged"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "what the role covered"

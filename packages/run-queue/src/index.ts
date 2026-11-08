@@ -5,6 +5,17 @@ export {
   briefExtractionJobSchema,
 } from "./brief-extraction-job.js";
 export {
+  type MaterialReviewJob,
+  type MaterialReviewJobOutcome,
+  type MaterialReviewQueue,
+  type MaterialReviewState,
+  materialReviewJobKey,
+  materialReviewJobSchema,
+  materialReviewOutcomes,
+  materialReviewQueueName,
+  materialReviewQueueSettings,
+} from "./material-review-queue.js";
+export {
   briefExtractionQueueName,
   briefExtractionQueueSettings,
   type EnqueueRunOptions,
@@ -18,6 +29,7 @@ export {
 } from "./pg-boss-run-queue.js";
 export {
   type BriefExtractionJobHandler,
+  type MaterialReviewJobHandler,
   type ProfileDerivationJobControl,
   type ProfileDerivationJobHandler,
   type RunJobControl,

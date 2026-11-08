@@ -2402,6 +2402,60 @@
               "model"
             ]
           },
+          "critic_findings": {
+            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paragraph",
+                "sentence",
+                "reason"
+              ]
+            }
+          },
+          "critic_model": {
+            "description": "The critic that found them, from another company than the author.",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          "review": {
+            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
           "tells": {
             "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
             "type": "array",
@@ -2466,6 +2520,43 @@
           "drafts"
         ],
         "additionalProperties": false
+      },
+      "ApplicationMaterialReviewInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ]
+          },
+          "outcome": {
+            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
+            "type": "string",
+            "enum": [
+              "revised",
+              "clean",
+              "kept",
+              "missing",
+              "skipped",
+              "superseded",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "revision_id": {
+            "description": "The version the pass saved, when it revised the letter.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "ApplicationMaterialEditInput": {
         "type": "object",
@@ -9632,6 +9723,63 @@
             ],
             "additionalProperties": false
           },
+          "critic_findings": {
+            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paragraph",
+                "sentence",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "critic_model": {
+            "description": "The critic that found them, from another company than the author.",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ],
+            "additionalProperties": false
+          },
+          "review": {
+            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          },
           "tells": {
             "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
             "type": "array",
@@ -9696,6 +9844,44 @@
         },
         "required": [
           "drafts"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialReview": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ]
+          },
+          "outcome": {
+            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
+            "type": "string",
+            "enum": [
+              "revised",
+              "clean",
+              "kept",
+              "missing",
+              "skipped",
+              "superseded",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "revision_id": {
+            "description": "The version the pass saved, when it revised the letter.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       },
@@ -23751,6 +23937,63 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApplicationMaterialModels"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/review": {
+      "get": {
+        "summary": "Read where a saved cover letter's critic pass stands",
+        "description": "`pending` while the worker reviews the letter; `done` with its outcome once it ended, and `revision_id` when the pass saved a revised version; `failed` when the pass failed its retries, so the letter stands as drafted; `none` when no pass was queued. 404 when the application has no such draft.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "materialId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialReview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

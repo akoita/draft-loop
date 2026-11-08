@@ -77,7 +77,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 
 | Feature                                                     | Status      | Where it runs | Agent access | What it does                                                   |
 | ----------------------------------------------------------- | ----------- | ------------- | ------------ | -------------------------------------------------------------- |
-| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis. |
+| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis; a critic from another company flags machine-sounding sentences for one revision. |
 | [Interview questions](../reference/application-material.md) | `available` | server        | `none`       | Drafts likely interview questions for one application.         |
 | [Saved drafts](../reference/application-material.md#saved-drafts) | `available` | server | `none` | Keeps each cover letter and question set with its application, to reopen, edit as a new version, download as Word or PDF, or delete. |
 

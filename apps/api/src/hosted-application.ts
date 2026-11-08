@@ -31,6 +31,7 @@ import {
   rulesScreeningSetup,
 } from "./content-screening-service.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
+import type { MaterialReviews } from "./material-reviews.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import type { ProfileDerivations } from "./profile-routes.js";
@@ -57,6 +58,8 @@ export interface HostedApplicationParts {
   readonly briefExtractions?: BriefExtractions;
   /** The worker's derivation of career profiles; a derivation start answers 503 without it. */
   readonly profileDerivations?: ProfileDerivations;
+  /** The worker's critic pass on saved cover letters; a letter stands as drafted without it. */
+  readonly materialReviews?: MaterialReviews;
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
@@ -86,6 +89,7 @@ export function composeHostedApplication(
     ...(parts.profileDerivations === undefined
       ? {}
       : { profileDerivations: parts.profileDerivations }),
+    ...(parts.materialReviews === undefined ? {} : { materialReviews: parts.materialReviews }),
     budgetCeiling,
     monthUsage: storage.monthUsage,
     idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
@@ -237,6 +241,15 @@ export async function openHostedTenants(
               },
               state: (address) => queue.profileDerivationState({ tenantId, ...address }),
               cancel: (address) => queue.cancelProfileDerivation({ tenantId, ...address }),
+            },
+            materialReviews: {
+              // Queued, then the worker woken as for a run; a wake failure only delays it.
+              queue: async (job) => {
+                const queued = await queue.enqueueMaterialReview({ tenantId, ...job });
+                if (queued) await worker.wake().catch(worker.onWakeError);
+                return queued;
+              },
+              state: (address) => queue.materialReviewState({ tenantId, ...address }),
             },
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
             screening,

@@ -22,7 +22,7 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v7`.
+`application-material-v8`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
@@ -58,6 +58,25 @@ detector, and the app never says a letter would pass one.
 | `list_of_three`     | Three single words in a row, such as "fast, reliable and calm"                 |
 | `mirrored_openings` | A paragraph that opens with the same two words as an earlier one               |
 | `word_count`        | A letter under 250 or over 350 words                                           |
+
+**Critic pass.** Saving a cover letter queues one check on the worker. A critic
+from another company, the workspace's critic (OpenAI by default), quotes the
+sentences that read as machine-written. The author then revises the letter
+once.
+
+- **When it runs:** the server has a queue, the record's consent names both
+  companies, and the critic's company differs from the author's. Otherwise no
+  pass is queued and the letter stands as drafted.
+- **What it saves:** a revision that passes every citation rule becomes the
+  next version, with `based_on`, `critic_findings` and `critic_model`. A
+  finding that does not quote the letter is dropped.
+- **What it skips:** edited versions, interview questions and versions the
+  pass already wrote. A newer version the candidate saved meanwhile wins.
+- **Cost:** two calls under one US$0.30 cap; a failed job is retried once.
+
+The draft's view carries `review: {status: "pending"}` when a pass was queued.
+`GET .../material/:materialId/review` answers `none`, `pending`, `failed` or
+`done` with its `outcome` and, for `revised`, the new version's `revision_id`.
 
 The default model is Claude Sonnet; Claude Haiku is the economy option. The
 request's optional `model` picks one, and the saved draft records it.
@@ -165,6 +184,11 @@ the same fields names each with its cost. Under a cover letter, **Writing check*
 flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
+
+While the critic checks a new cover letter, the panel says so and asks every
+three seconds. A revised version then opens, named "revised after the critic's
+check", with **What the critic flagged** listing each sentence and why. The
+first draft stays in the version list.
 
 Each paragraph or question shows its cited facts beside it. The newest saved
 draft of the chosen kind opens first. With two or more, a **Version** list

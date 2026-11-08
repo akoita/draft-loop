@@ -116,6 +116,18 @@ export interface ApiSchemas {
       readonly provider: string;
       readonly model: string;
     };
+    readonly critic_findings?: readonly ({
+      readonly paragraph: number;
+      readonly sentence: string;
+      readonly reason: string;
+    })[];
+    readonly critic_model?: {
+      readonly provider: string;
+      readonly model: string;
+    };
+    readonly review?: {
+      readonly status: "pending";
+    };
     readonly tells?: readonly ({
       readonly code: "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
       readonly paragraph?: number;
@@ -156,6 +168,11 @@ export interface ApiSchemas {
     readonly kind: "cover-letter" | "interview-questions";
     readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
+  };
+  "ApplicationMaterialReview": {
+    readonly status: "none" | "pending" | "done" | "failed";
+    readonly outcome?: "revised" | "clean" | "kept" | "missing" | "skipped" | "superseded" | "consent-required" | "record-erased" | "unavailable";
+    readonly revision_id?: string;
   };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];
@@ -2289,6 +2306,14 @@ export interface ApiOperations {
   };
   "GET /v1/application-material/models": {
     readonly response: ApiSchemas["ApplicationMaterialModels"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/review": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly response: ApiSchemas["ApplicationMaterialReview"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
     readonly path: {

@@ -60,6 +60,7 @@ import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempoten
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
+import type { MaterialReviews } from "./material-reviews.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCallGate } from "./model-call-gate.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
@@ -152,6 +153,8 @@ export interface ApiOptions {
     readonly careerInterview?: CareerInterviewParts;
     /** Saved cover letters and interview questions (#2477); without them drafts are not kept. */
     readonly applicationMaterialDrafts?: SavedApplicationMaterialStore;
+    /** The worker's critic pass on saved cover letters (#2525); without it none runs. */
+    readonly materialReviews?: MaterialReviews;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
@@ -615,6 +618,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.applicationMaterialDrafts === undefined
           ? {}
           : { drafts: application.applicationMaterialDrafts }),
+        ...(application.materialReviews === undefined
+          ? {}
+          : { reviews: application.materialReviews }),
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {

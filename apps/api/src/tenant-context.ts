@@ -16,6 +16,7 @@ import { noContentScreening } from "./content-screening-service.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
+import { noMaterialReviews } from "./material-reviews.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { noProfileDerivations } from "./profile-routes.js";
 import type { RecordAccessFor } from "./record-access.js";
@@ -42,6 +43,7 @@ export type TenantApplication = Required<
     | "sourceEvidenceKinds"
     | "careerInterview"
     | "applicationMaterialDrafts"
+    | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
     | "writingSamples"
@@ -57,6 +59,7 @@ export type TenantApplication = Required<
     | "sourceEvidenceKinds"
     | "careerInterview"
     | "applicationMaterialDrafts"
+    | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
     | "writingSamples"
@@ -257,6 +260,8 @@ export function registerTenantApplications(
     briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
     // Nor does it derive career profiles there.
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
+    // Nor does it review saved cover letters there.
+    materialReviews: forwarding(() => current().materialReviews ?? noMaterialReviews),
     // An application composed without a journal refuses every note as unavailable.
     workJournal: forwarding(() => current().workJournal ?? unavailableWorkJournal),
     sourceEvidenceKinds: forwarding(() => {

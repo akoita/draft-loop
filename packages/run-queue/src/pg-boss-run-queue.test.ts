@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
+import { materialReviewQueueName } from "./material-review-queue.js";
 import {
   briefExtractionQueueName,
   grantRunQueueAccess,
@@ -217,6 +217,40 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     expect(await queue.cancelProfileDerivation(key)).toBe(true);
     expect(await queue.profileDerivationState(key)).toEqual({ status: "cancelled" });
     expect(await queue.cancelProfileDerivation(key)).toBe(false);
+  });
+
+  it("queues one critic pass per saved draft, carrying only ids, and reports its outcome", async () => {
+    const key = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      materialId: "amd_letterfixture01",
+    };
+    const job = { ...key, applicationId: "app_fixture0001" };
+    const keyed = (sql: string, values: unknown[] = []) =>
+      admin.query(sql, [
+        materialReviewQueueName,
+        "tenant-a/workspace-1/amd_letterfixture01",
+        ...values,
+      ]);
+
+    expect(await queue.materialReviewState(key)).toBeUndefined();
+    expect(await queue.enqueueMaterialReview(job)).toBe(true);
+    expect(await queue.enqueueMaterialReview(job)).toBe(false);
+    expect(
+      (await keyed(`SELECT data FROM ${schema}.job WHERE name = $1 AND singleton_key = $2`)).rows,
+    ).toEqual([{ data: job }]);
+    await expect(
+      queue.enqueueMaterialReview({ ...job, letter: "candidate material" } as never),
+    ).rejects.toThrow();
+    expect(await queue.materialReviewState(key)).toEqual({ status: "pending" });
+
+    await keyed(
+      `UPDATE ${schema}.job SET state = 'completed', output = $3 WHERE name = $1 AND singleton_key = $2`,
+      [JSON.stringify({ outcome: "revised" })],
+    );
+    expect(await queue.materialReviewState(key)).toEqual({ status: "done", outcome: "revised" });
+    await keyed(`UPDATE ${schema}.job SET state = 'failed' WHERE name = $1 AND singleton_key = $2`);
+    expect(await queue.materialReviewState(key)).toEqual({ status: "failed" });
   });
 
   it("does not let the runtime role change the queue's schema", async () => {

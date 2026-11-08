@@ -94,6 +94,22 @@
     "./application-material-document": {
       "types": "./src/application-material-document.ts",
       "import": "./src/application-material-document.ts"
+    },
+    "./material-critic": {
+      "types": "./src/material-critic.ts",
+      "import": "./src/material-critic.ts"
+    },
+    "./material-review": {
+      "types": "./src/material-review.ts",
+      "import": "./src/material-review.ts"
+    },
+    "./material-review-ports": {
+      "types": "./src/material-review-ports.ts",
+      "import": "./src/material-review-ports.ts"
+    },
+    "./application-material-input": {
+      "types": "./src/application-material-input.ts",
+      "import": "./src/application-material-input.ts"
     }
   },
   "files": [
