@@ -571,6 +571,54 @@ describe("hosted application driver", () => {
     await expect(read("missing")).rejects.toMatchObject({ code: "export_not_found" });
   }, 120_000);
 
+  it("previews an approved run's export without storing it or changing the run (#2497)", async () => {
+    const { service, resumed } = await approvedRun();
+    const stored = exportedDocuments.size;
+    const preview = (format: "docx" | "markdown" | "pdf", templateId?: string) =>
+      service.previewExport?.({
+        root: workspace,
+        runId: resumed.runId,
+        format,
+        ...(templateId === undefined ? {} : { templateId }),
+      });
+
+    const pdf = await preview("pdf", "compact");
+    const markdown = await preview("markdown");
+    const status = await service.status({ root: workspace, runId: resumed.runId }, silent);
+    const exports = await service.listRunExports?.({ root: workspace, runId: resumed.runId });
+
+    expect(pdf).toMatchObject({
+      format: "pdf",
+      mimeType: "application/pdf",
+      templateId: "compact",
+    });
+    expect(new TextDecoder().decode(pdf?.content.slice(0, 5))).toBe("%PDF-");
+    expect(pdf?.pageCount).toBeGreaterThanOrEqual(1);
+    expect(pdf?.targetPageCount).toBe(1);
+    expect(markdown).toMatchObject({ format: "markdown", pageCount: null });
+    expect(markdown?.content.byteLength).toBeGreaterThan(0);
+    expect(status?.state).toBe("approved");
+    expect(exports).toEqual([]);
+    expect(exportedDocuments.size).toBe(stored);
+  }, 120_000);
+
+  it("refuses to preview a run before approval, or an unknown template", async () => {
+    const ready = await awaitingApprovalRun();
+    await expect(
+      ready.service.previewExport?.({ root: workspace, runId: ready.resumed.runId, format: "pdf" }),
+    ).rejects.toBeInstanceOf(RunTransitionError);
+
+    const { service, resumed } = await approvedRun();
+    await expect(
+      service.previewExport?.({
+        root: workspace,
+        runId: resumed.runId,
+        format: "pdf",
+        templateId: "fancy",
+      }),
+    ).rejects.toThrow("Unknown template");
+  }, 120_000);
+
   it("refuses to export a run before approval, or at a path the client names", async () => {
     const { service, resumed } = await awaitingApprovalRun();
 

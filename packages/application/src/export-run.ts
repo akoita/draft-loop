@@ -4,6 +4,7 @@ import {
   createOrchestrationEngine,
   createStorageRunStore,
   hasCompletedIndependentCritique,
+  type RunSnapshot,
 } from "@draft-loop/orchestrator";
 import {
   builtInRenderingTemplates,
@@ -92,6 +93,98 @@ async function renderChecked(
   return { rendered, qa: assertExportRenderingQa(artifact, rendered) };
 }
 
+/** What `readExportReadyRun` hands a caller about to render an approved run. */
+interface ExportReadyRun {
+  readonly runId: string;
+  readonly format: OutputFormat;
+  readonly snapshot: RunSnapshot;
+  readonly artifact: DraftArtifact;
+  readonly renderOptions: RenderOptions;
+}
+
+/**
+ * Checks that a run may be exported and settles how it renders: its approved artifact, the format
+ * and the render options with the chosen or page-target template. Export and preview share it, so
+ * a preview shows exactly what an export of the same choices would save.
+ */
+async function readExportReadyRun(
+  config: WorkspaceConfig,
+  storage: RunHistoryStorage,
+  runIdInput: string | undefined,
+  formatInput: string,
+  templateId: string | undefined,
+): Promise<ExportReadyRun> {
+  const runId = runIdInput ?? config.latestRunId;
+  if (runId === undefined) throw new CliUserError("No run is configured. Start a run first.");
+  assertKnownTemplate(templateId);
+  const snapshot = await createStorageRunStore(storage).loadRun(runId);
+  if (snapshot === undefined) throw runNotFound(runId);
+  if (snapshot.state !== "approved" && snapshot.state !== "exported") {
+    throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
+  }
+  if (!hasCompletedIndependentCritique(snapshot)) {
+    throw new CliUserError("A completed independent critic review is required before export.");
+  }
+  if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
+  const readinessFailure = exactApprovedArtifactFailure(snapshot);
+  if (readinessFailure !== null) throw new CliUserError(readinessFailure);
+  const format = parseExportFormat(formatInput);
+  if (format === undefined) throw new CliUserError(`Unsupported export format: ${formatInput}.`);
+  const renderOptions: RenderOptions = {
+    requiredSections: config.requiredSections,
+    ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
+    ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
+    allowUnbackedClaims: false,
+    generatedAt: timestamp(),
+    templateId:
+      templateId ??
+      defaultExportTemplateId(await readRunPageTarget(storage, snapshot.contextSnapshotId)),
+  };
+  return { runId, format, snapshot, artifact: snapshot.artifact, renderOptions };
+}
+
+/** An approved run rendered and checked as an export would be, without saving anything. */
+export interface RenderedExport {
+  readonly runId: string;
+  readonly format: OutputFormat;
+  readonly rendered: RenderedDocument;
+  readonly qa: ExportRenderingQaResult;
+}
+
+/**
+ * Renders an approved run exactly as `exportApprovedRun` would, with the same checks and rendering
+ * QA, but writes no document, records no export and leaves the run's state alone (#2497).
+ */
+export async function renderApprovedRun(
+  dependencies: Omit<ExportRunDependencies, "exportBlobs">,
+  rootInput: string,
+  runIdInput: string | undefined,
+  formatInput: string,
+  options: ExportRunOptions = {},
+): Promise<RenderedExport> {
+  const root = resolve(rootInput);
+  const config = await dependencies.readWorkspace(root);
+  const storage = await dependencies.openStorage(root);
+  try {
+    const ready = await readExportReadyRun(
+      config,
+      storage,
+      runIdInput,
+      formatInput,
+      options.templateId,
+    );
+    const { rendered, qa } = await renderChecked(
+      ready.artifact,
+      ready.format,
+      ready.renderOptions,
+      options.printPdf,
+    );
+    return { runId: ready.runId, format: ready.format, rendered, qa };
+  } finally {
+    await storage.close();
+  }
+}
+
 /**
  * Render an approved run to a local document, record the export, and mark the run exported. The
  * chosen template is recorded on the export, and the length warning measures against its page
@@ -108,52 +201,28 @@ export async function exportApprovedRun(
 ): Promise<string> {
   const root = resolve(rootInput);
   const config = await dependencies.readWorkspace(root);
-  const runId = runIdInput ?? config.latestRunId;
-  if (runId === undefined) throw new CliUserError("No run is configured. Start a run first.");
-  assertKnownTemplate(options.templateId);
   const storage = await dependencies.openStorage(root);
   try {
     const runStore = createStorageRunStore(storage);
-    const snapshot = await runStore.loadRun(runId);
-    if (snapshot === undefined) throw runNotFound(runId);
-    if (snapshot.state !== "approved" && snapshot.state !== "exported") {
-      throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
-    }
-    if (!hasCompletedIndependentCritique(snapshot)) {
-      throw new CliUserError("A completed independent critic review is required before export.");
-    }
-    if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
-    const readinessFailure = exactApprovedArtifactFailure(snapshot);
-    if (readinessFailure !== null) throw new CliUserError(readinessFailure);
-    const format = parseExportFormat(formatInput);
-    if (format === undefined) throw new CliUserError(`Unsupported export format: ${formatInput}.`);
+    const { runId, format, snapshot, artifact, renderOptions } = await readExportReadyRun(
+      config,
+      storage,
+      runIdInput,
+      formatInput,
+      options.templateId,
+    );
     const outputPath =
       outputPathInput === undefined
         ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
         : resolve(root, outputPathInput);
-    const renderOptions: RenderOptions = {
-      requiredSections: config.requiredSections,
-      ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
-      ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
-      allowUnbackedClaims: false,
-      generatedAt: timestamp(),
-      templateId:
-        options.templateId ??
-        defaultExportTemplateId(await readRunPageTarget(storage, snapshot.contextSnapshotId)),
-    };
-    const { rendered, qa } = await renderChecked(
-      snapshot.artifact,
-      format,
-      renderOptions,
-      options.printPdf,
-    );
+    const { rendered, qa } = await renderChecked(artifact, format, renderOptions, options.printPdf);
     const stored = await dependencies.exportBlobs.put(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
       id: exportRecordId(runId, outputChecksum, outputPath, rendered.metadata.generatedAt),
       workspaceId: config.id,
       runId,
-      artifactId: snapshot.artifact.id,
+      artifactId: artifact.id,
       format,
       status: "completed",
       outputPath,
@@ -180,7 +249,7 @@ export async function exportApprovedRun(
       explicit: options.templateId !== undefined,
     });
     if (lengthWarning !== undefined) io.write(lengthWarning);
-    const placeholderWarning = exportPlaceholderWarningLine(snapshot.artifact);
+    const placeholderWarning = exportPlaceholderWarningLine(artifact);
     if (placeholderWarning !== undefined) io.write(placeholderWarning);
     return outputPath;
   } finally {

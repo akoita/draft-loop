@@ -44,6 +44,7 @@ import type { CanonicalProfileExtractionProgressListener } from "./canonical-pro
 import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
+import type { ExportPreview, ExportPreviewCommand } from "./export-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
 import type { ChoosableModelProfileEffort } from "./model-profile-efforts.js";
 import type {
@@ -658,6 +659,11 @@ export interface ApplicationDriver {
   /** One export's document, verified against its recorded checksum. The hosted driver offers it. */
   readonly readRunExport?: (command: RunExportContentCommand) => Promise<RunExportContent>;
   /**
+   * An approved run's export rendered for preview, saved nowhere (#2497). The hosted driver
+   * offers it.
+   */
+  readonly previewExport?: (command: ExportPreviewCommand) => Promise<ExportPreview>;
+  /**
    * The evidence a run started now would send, decided as the start decides it but without
    * starting a run or calling a provider; `undefined` without a candidate knowledge selection.
    */
@@ -906,6 +912,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
         throw new CliUserError("This application driver keeps exports as local files.");
       return driver.readRunExport({ ...command, root: requireRoot(command.root) });
     },
+    previewExport: async (command) => {
+      if (driver.previewExport === undefined)
+        throw new CliUserError("This application driver does not preview exports.");
+      return driver.previewExport({ ...command, root: requireRoot(command.root) });
+    },
     readRunReview: async (command) =>
       driver.readRunReview === undefined
         ? undefined
@@ -1037,6 +1048,11 @@ export {
   previewEvidenceMode,
 } from "./evidence-mode-preview.js";
 export { exportLengthWarningPrefix } from "./export-document.js";
+export {
+  type ExportPreview,
+  type ExportPreviewCommand,
+  previewRunExport,
+} from "./export-preview.js";
 export { ExportRenderingQaError, failedRenderingQaChecks } from "./export-qa.js";
 export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./history-compaction.js";
