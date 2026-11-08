@@ -515,6 +515,10 @@ msgstr "{count, plural, one {Inclut # constat de couverture par mots-clés ; l�
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr "{count, plural, one {Marquer # lacune confirmée comme connue} other {Marquer # lacunes confirmées comme connues}}"
 
+#: apps/web/src/research-brief-model.ts
+msgid "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
+msgstr "{count, plural, one {Afficher # fait sur l’employeur} other {Afficher # faits sur l’employeur}}"
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "{count} / {limit}"
 msgstr "{count} / {limit}"
@@ -2785,7 +2789,6 @@ msgstr "Téléchargement du modèle…"
 msgid "Downloading the local model."
 msgstr "Téléchargement du modèle local."
 
-#: apps/web/src/application-material.tsx
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Draft"
@@ -2795,9 +2798,9 @@ msgstr "Ébauche"
 msgid "Draft {width} pixels wide"
 msgstr "Ébauche de {width} pixels de large"
 
-#: apps/web/src/application-material.tsx
-msgid "Draft again"
-msgstr "Rédiger à nouveau"
+#: apps/web/src/application-material-model.ts
+msgid "Draft a new cover letter"
+msgstr "Rédiger une nouvelle lettre"
 
 #: packages/ui/src/review.tsx
 msgid "Draft artifact produced"
@@ -2812,9 +2815,21 @@ msgstr "Blocs de l’ébauche cités pour {0}"
 msgid "Draft brief saved"
 msgstr "Brief en brouillon enregistré"
 
+#: apps/web/src/application-material-model.ts
+msgid "Draft cover letter"
+msgstr "Rédiger la lettre"
+
 #: apps/web/src/application-material.tsx
 msgid "Draft for this application"
 msgstr "Ébauche pour cette candidature"
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft interview questions"
+msgstr "Préparer les questions d’entretien"
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft new interview questions"
+msgstr "Préparer de nouvelles questions d’entretien"
 
 #. placeholder {0}: record.version
 #: packages/ui/src/profile-outcome.ts

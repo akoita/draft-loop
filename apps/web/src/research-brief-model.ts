@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 
 import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 
@@ -76,6 +76,14 @@ export function researchFindings(brief: ResearchBrief): ResearchFindingView[] {
       ];
     }),
   }));
+}
+
+/** The folded findings' summary line. */
+export function researchFindingsLabel(count: number): string {
+  return plural(count, {
+    one: "Show # fact about the employer",
+    other: "Show # facts about the employer",
+  });
 }
 
 /** The line under the brief: when it was made, what it kept and dropped, and its cost. */
