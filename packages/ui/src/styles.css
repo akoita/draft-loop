@@ -9801,6 +9801,14 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   overflow-wrap: anywhere;
 }
 
+.work-journal-links summary {
+  cursor: pointer;
+}
+
+.work-journal-links ul {
+  margin: 0.25rem 0 0;
+}
+
 .work-journal-form {
   display: grid;
   gap: 0.35rem;

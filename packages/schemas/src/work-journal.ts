@@ -381,10 +381,29 @@ function periodEnd(period: WorkJournalNoteContent["period"]): string {
   return period.end ?? period.start;
 }
 
+/** The words of a title that carry meaning: three letters or more, lower case. */
+function titleWords(title: string): Set<string> {
+  return new Set(
+    normalized(title)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length >= 3),
+  );
+}
+
+/** Whether two titles name the same work: at least 60% of their meaningful words are shared. */
+function similarTitles(left: string, right: string): boolean {
+  const leftWords = titleWords(left);
+  const rightWords = titleWords(right);
+  if (leftWords.size === 0 || rightWords.size === 0) return normalized(left) === normalized(right);
+  const shared = [...leftWords].filter((word) => rightWords.has(word)).length;
+  return shared / new Set([...leftWords, ...rightWords]).size >= 0.6;
+}
+
 /**
  * Whether two notes likely describe the same work: the same project with overlapping periods and
- * either two shared technologies or one shared link. Shown side by side for the candidate to
- * merge, never merged by itself.
+ * either one shared link or nearly the same title. Shared technologies do not count: one
+ * project's notes all share its stack. Shown side by side for the candidate to merge, never
+ * merged by itself.
  */
 export function isLikelyWorkJournalDuplicate(
   left: WorkJournalNoteContent,
@@ -395,13 +414,9 @@ export function isLikelyWorkJournalDuplicate(
     left.period.start.slice(0, 7) <= periodEnd(right.period).slice(0, 7) &&
     right.period.start.slice(0, 7) <= periodEnd(left.period).slice(0, 7);
   if (!overlaps) return false;
-  const technologies = new Set(left.technologies.map(normalized));
-  const sharedTechnologies = right.technologies.filter((item) =>
-    technologies.has(normalized(item)),
-  ).length;
   const links = new Set(left.links.map((link) => link.url.trim().toLowerCase()));
   const sharedLink = right.links.some((link) => links.has(link.url.trim().toLowerCase()));
-  return sharedTechnologies >= 2 || sharedLink;
+  return sharedLink || similarTitles(left.title, right.title);
 }
 
 /** Projects a stored note to the list view, which carries no summary, links or metrics. */

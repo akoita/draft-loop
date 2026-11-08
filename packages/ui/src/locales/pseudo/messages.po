@@ -234,6 +234,11 @@ msgstr ""
 msgid "{0, plural, one {# export} other {# exports}}"
 msgstr ""
 
+#. placeholder {0}: content.links.length
+#: packages/ui/src/work-journal-panel.tsx
+msgid "{0, plural, one {# link} other {# links}}"
+msgstr ""
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -3353,6 +3358,10 @@ msgstr ""
 
 #: packages/ui/src/knowledge-intake.ts
 msgid "File import complete. An existing career-evidence source was reused."
+msgstr ""
+
+#: packages/ui/src/work-journal-model.ts
+msgid "Filed by {filer}"
 msgstr ""
 
 #. placeholder {0}: note.agent_token_id
