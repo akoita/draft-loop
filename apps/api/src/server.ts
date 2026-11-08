@@ -80,6 +80,7 @@ const app = await buildApi({
         directory,
         memberSettings: directory.memberSettings,
         betaInvites: { invites: directory.betaInvites, cap: readBetaAccountCap(process.env) },
+        organisationActivity: directory.organisationActivity,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),

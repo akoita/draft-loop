@@ -26,6 +26,8 @@ export const tenantWideTables = new Set([
   "beta_invites",
   // A tenant's daily model call counters (#2487); organisation erasure removes them.
   "model_call_counts",
+  // Deployment-wide, keyed by the organisation (#2538); organisation erasure removes its row.
+  "organisation_activity",
 ]);
 
 /**

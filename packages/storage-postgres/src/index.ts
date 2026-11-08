@@ -69,6 +69,13 @@ export {
   ModelCallMeterError,
   type ModelCallTake,
 } from "./model-call-meter.js";
+export {
+  createOrganisationActivity,
+  type OrganisationActivity,
+  OrganisationActivityError,
+  type OrganisationActivityRow,
+  organisationActivityIntervalMs,
+} from "./organisation-activity.js";
 export { createOrganisationErasure } from "./organisation-erasure.js";
 export {
   createOrganisationPlans,
