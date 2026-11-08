@@ -94,6 +94,10 @@
     "./application-material-document": {
       "types": "./src/application-material-document.ts",
       "import": "./src/application-material-document.ts"
+    },
+    "./material-critic": {
+      "types": "./src/material-critic.ts",
+      "import": "./src/material-critic.ts"
     }
   },
   "files": [

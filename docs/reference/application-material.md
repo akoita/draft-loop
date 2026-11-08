@@ -22,7 +22,7 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v7`.
+`application-material-v8`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
@@ -58,6 +58,14 @@ detector, and the app never says a letter would pass one.
 | `list_of_three`     | Three single words in a row, such as "fast, reliable and calm"                 |
 | `mirrored_openings` | A paragraph that opens with the same two words as an earlier one               |
 | `word_count`        | A letter under 250 or over 350 words                                           |
+
+**Critic pass (in progress, #2514).** `runCriticPass` in
+`packages/application/src/material-critic.ts` asks a critic from another
+company to quote the sentences that read as machine-written. The author then
+revises the letter once. The revision is kept only if it passes every citation
+rule; otherwise the first draft stands. A finding that does not quote the
+letter is dropped. The worker job (#2525) and the panel (#2526) are not built
+yet, so no request runs the pass today.
 
 The default model is Claude Sonnet; Claude Haiku is the economy option. The
 request's optional `model` picks one, and the saved draft records it.

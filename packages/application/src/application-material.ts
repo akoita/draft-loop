@@ -102,6 +102,15 @@ export interface ApplicationMaterialRequest {
   readonly context: ApplicationMaterialContext;
   /** Rules the previous attempt broke, so the model can avoid them; empty on the first call. */
   readonly refusedRules: readonly string[];
+  /** A valid letter and the critic's machine-writing findings, to revise once (#2524). */
+  readonly revision?: {
+    readonly previous: readonly ApplicationMaterialItem[];
+    readonly findings: readonly {
+      readonly paragraph: number;
+      readonly sentence: string;
+      readonly reason: string;
+    }[];
+  };
 }
 
 export interface ApplicationMaterialReply {
