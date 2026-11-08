@@ -882,6 +882,14 @@ msgstr "A requirement cannot be empty. Write it out or drop it."
 msgid "A review is already under way."
 msgstr "A review is already under way."
 
+#: apps/web/src/application-material.tsx
+msgid "About the company"
+msgstr "About the company"
+
+#: apps/web/src/research-brief.tsx
+msgid "About the employer"
+msgstr "About the employer"
+
 #: packages/ui/src/run-details.tsx
 msgid "absent"
 msgstr "absent"
@@ -1310,6 +1318,10 @@ msgstr "Approve"
 msgid "Approve and export it here; revisions are made on the latest run."
 msgstr "Approve and export it here; revisions are made on the latest run."
 
+#: apps/web/src/research-brief.tsx
+msgid "Approve and research"
+msgstr "Approve and research"
+
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 msgid "Approve artifact"
@@ -1630,6 +1642,7 @@ msgid "Can't start yet: {0}"
 msgstr "Can't start yet: {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -2585,6 +2598,14 @@ msgstr "Delete record"
 #: packages/ui/src/home-folder-model.ts
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr "Delete the folder “{0}”? {what} No application is deleted."
+
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research"
+msgstr "Delete this research"
+
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research for good?"
+msgstr "Delete this research for good?"
 
 #: apps/web/src/application-material.tsx
 msgid "Delete this version"
@@ -6186,6 +6207,10 @@ msgstr "Record notable work in the Work journal and list their titles"
 msgid "Record permission to send career material to Anthropic in this record's consent, then draft again."
 msgstr "Record permission to send career material to Anthropic in this record's consent, then draft again."
 
+#: apps/web/src/research-brief-model.ts
+msgid "Record permission to send material to Anthropic in this record's consent, then research again."
+msgstr "Record permission to send material to Anthropic in this record's consent, then research again."
+
 #. placeholder {0}: providerList(providers)
 #: apps/web/src/consent-model.ts
 msgid "Record the candidate's consent to send material to {0} first."
@@ -6443,6 +6468,30 @@ msgstr "Requirements reviewed (version"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Requirements were not extracted"
 msgstr "Requirements were not extracted"
+
+#: apps/web/src/research-brief.tsx
+msgid "Research again"
+msgstr "Research again"
+
+#: apps/web/src/research-brief.tsx
+msgid "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
+msgstr "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
+
+#: apps/web/src/research-brief.tsx
+msgid "Research this application"
+msgstr "Research this application"
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researched on {day}: {kept} sources kept, {dropped} dropped as unsafe or older than {from}. Cost {cost}."
+msgstr "Researched on {day}: {kept} sources kept, {dropped} dropped as unsafe or older than {from}. Cost {cost}."
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
+msgstr "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching… this usually takes a minute or two."
+msgstr "Researching… this usually takes a minute or two."
 
 #: packages/ui/src/draft-width.tsx
 msgid "Resize draft"
@@ -7410,6 +7459,7 @@ msgid "Source links show where wording came from; they do not independently veri
 msgstr "Source links show where wording came from; they do not independently verify it."
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 msgid "Sources"
 msgstr "Sources"
 
@@ -8138,6 +8188,10 @@ msgstr "The job brief"
 msgid "The job brief has a newer version; reload it."
 msgstr "The job brief has a newer version; reload it."
 
+#: apps/web/src/research-brief-model.ts
+msgid "The job brief names no employer yet. Add it to the brief, then research again."
+msgstr "The job brief names no employer yet. Add it to the brief, then research again."
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The job description could not be read."
 msgstr "The job description could not be read."
@@ -8402,6 +8456,10 @@ msgstr "The requirements could not be extracted. Extract them again, or paste th
 msgid "The requirements could not be saved. Nothing was changed."
 msgstr "The requirements could not be saved. Nothing was changed."
 
+#: apps/web/src/research-brief-model.ts
+msgid "The research failed and nothing was saved. Try again later."
+msgstr "The research failed and nothing was saved. Try again later."
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "The retrieval mode could not be read."
 msgstr "The retrieval mode could not be read."
@@ -8542,6 +8600,10 @@ msgstr "The service could not be reached. Check your connection and try again."
 msgid "The source could not be added to the knowledge base."
 msgstr "The source could not be added to the knowledge base."
 
+#: apps/web/src/research-brief.tsx
+msgid "The sources said nothing useful about this employer."
+msgstr "The sources said nothing useful about this employer."
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
 msgstr "The summary says"
@@ -8675,6 +8737,10 @@ msgstr "This account already exists. Reload the page."
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
+
+#: apps/web/src/research-brief-model.ts
+msgid "This application could not be researched."
+msgstr "This application could not be researched."
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "This application uses"
@@ -8896,6 +8962,14 @@ msgstr "This screening result was not found on this record. Reload the page and 
 msgid "This server cannot turn notes into career evidence yet."
 msgstr "This server cannot turn notes into career evidence yet."
 
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications, so nothing was searched."
+msgstr "This server does not research applications, so nothing was searched."
+
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications."
+msgstr "This server does not research applications."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route."
 msgstr "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route."
@@ -9094,6 +9168,10 @@ msgstr "Unavailable until independent critique completes"
 #: packages/ui/src/review.tsx
 msgid "Unavailable while another action is pending"
 msgstr "Unavailable while another action is pending"
+
+#: apps/web/src/research-brief.tsx
+msgid "undated"
+msgstr "undated"
 
 #: packages/ui/src/review.tsx
 msgid "Undo an empty round opened after the configured limit"
@@ -9439,6 +9517,10 @@ msgstr "Warnings"
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
 msgstr "was opened after the configured maximum of"
+
+#: apps/web/src/research-brief.tsx
+msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
+msgstr "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"

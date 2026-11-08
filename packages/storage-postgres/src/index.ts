@@ -10,6 +10,11 @@ export {
   type RedeemBetaInviteInput,
   type RedeemBetaInviteResult,
 } from "./beta-invites.js";
+export {
+  type BetaWaitlist,
+  type BetaWaitlistEntry,
+  createBetaWaitlist,
+} from "./beta-waitlist.js";
 export { createCandidateRecordAccess } from "./candidate-records.js";
 export { createCareerInterviewSessionStore } from "./career-interview-sessions.js";
 export {

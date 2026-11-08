@@ -105,6 +105,9 @@ export async function runCriticPass(
     question: item.question.trim(),
     text: item.text.trim(),
     factIds: [...new Set(item.factIds)],
+    ...(item.companyFactIds === undefined || item.companyFactIds.length === 0
+      ? {}
+      : { companyFactIds: [...new Set(item.companyFactIds)] }),
   }));
   if (applicationMaterialViolations(input, items).length > 0) {
     return { draft, findings, revised: false, ...criticModel };

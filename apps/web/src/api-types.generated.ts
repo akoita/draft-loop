@@ -110,7 +110,12 @@ export interface ApiSchemas {
         readonly fact_id: string;
         readonly text: string;
       })[];
+      readonly company_citations?: readonly ({
+        readonly finding_id: string;
+        readonly text: string;
+      })[];
     })[];
+    readonly research_brief_id?: string;
     readonly based_on?: string;
     readonly model: {
       readonly provider: string;
@@ -209,6 +214,12 @@ export interface ApiSchemas {
     readonly organisationId?: string;
     readonly redeemedAt?: string;
     readonly revokedAt?: string;
+  };
+  "BetaWaitlistEntry": {
+    readonly entryId: string;
+    readonly email: string;
+    readonly consentVersion: string;
+    readonly joinedAt: string;
   };
   "CareerInterviewActionInput": {
     readonly action: "accept";
@@ -2592,6 +2603,34 @@ export interface ApiOperations {
       readonly code: string;
     };
     readonly response: ApiSchemas["SignedUp"];
+  };
+  "POST /v1/waitlist": {
+    readonly body: {
+      readonly email: string;
+      readonly consent: true;
+    };
+    readonly response: {
+      readonly listed: true;
+    };
+  };
+  "GET /v1/operator/waitlist": {
+    readonly response: {
+      readonly entries: readonly (ApiSchemas["BetaWaitlistEntry"])[];
+    };
+  };
+  "POST /v1/operator/waitlist/{entryId}/invite": {
+    readonly path: {
+      readonly entryId: string;
+    };
+    readonly response: {
+      readonly invite: {
+        readonly inviteId: string;
+        readonly email: string;
+        readonly createdAt: string;
+        readonly state: "open" | "revoked" | "redeemed";
+      };
+      readonly code: string;
+    };
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

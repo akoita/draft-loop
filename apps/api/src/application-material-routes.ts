@@ -9,6 +9,7 @@ import {
   draftApplicationMaterial,
   unsupportedNumbers,
 } from "@draft-loop/application/application-material";
+import { researchCompanyFacts } from "@draft-loop/application/application-material-company";
 import {
   applicationMaterialDocumentFormats,
   defaultApplicationMaterialTemplateId,
@@ -41,6 +42,7 @@ import {
   type ConsentState,
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
+import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import {
   type SavedApplicationMaterialStore,
   savedApplicationMaterialListLimit,
@@ -48,7 +50,6 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
@@ -81,6 +82,11 @@ export interface ApplicationMaterialRoutesOptions {
    * queued only when the record's consent names the workspace's critic company.
    */
   readonly reviews?: MaterialReviews;
+  /**
+   * The application's research briefs (#2544); the newest one's findings reach the drafter as
+   * company facts. Without them a draft cites career facts only, as before.
+   */
+  readonly researchBriefs?: Pick<ResearchBriefStore, "list">;
   /** The clock a saved draft's time comes from; the system clock by default. */
   readonly now?: () => Date;
 }
@@ -146,8 +152,18 @@ const draftView = z
         citations: z
           .array(z.object({ fact_id: z.string(), text: z.string() }))
           .describe("The career record facts the item relies on, as the candidate stored them."),
+        company_citations: z
+          .array(z.object({ finding_id: z.string(), text: z.string() }))
+          .optional()
+          .describe(
+            "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+          ),
       }),
     ),
+    research_brief_id: z
+      .string()
+      .optional()
+      .describe("The research brief the company citations come from."),
     based_on: savedApplicationMaterialIdSchema
       .optional()
       .describe("The saved draft this version was edited from; absent for a drafted version."),
@@ -248,7 +264,10 @@ const editBody = z
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
 function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
-  const sources = view.items.flatMap((item) => item.citations.map((citation) => citation.text));
+  const sources = view.items.flatMap((item) => [
+    ...item.citations.map((citation) => citation.text),
+    ...(item.company_citations ?? []).map((citation) => citation.text),
+  ]);
   return withTells({
     ...view,
     items: view.items.map((item) => {
@@ -439,6 +458,9 @@ export function registerApplicationMaterialRoutes(
           request.body.kind,
           request.body.guidance,
         );
+        // The newest research brief, when the candidate ran one, gives facts about the employer.
+        const [research] = (await options.researchBriefs?.list(workspaceId, applicationId)) ?? [];
+        const companyFacts = research === undefined ? [] : researchCompanyFacts(research);
         const draft = await draftApplicationMaterial(writer, {
           kind: request.body.kind,
           ...(guidance === undefined ? {} : { guidance }),
@@ -447,7 +469,10 @@ export function registerApplicationMaterialRoutes(
           requirements,
           ...(usage === undefined ? {} : { usage }),
           language: application.language ?? workspace.language,
+          ...(companyFacts.length === 0 ? {} : { companyFacts }),
         });
+        const companyById = new Map(companyFacts.map((fact) => [fact.id, fact.text]));
+        const usesResearch = draft.items.some((item) => (item.companyFactIds ?? []).length > 0);
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
         request.log.info(
           {
@@ -456,6 +481,7 @@ export function registerApplicationMaterialRoutes(
             kind: draft.kind,
             items: draft.items.length,
             guided: guidance !== undefined,
+            companyFacts: companyFacts.length,
             spentUsd,
           },
           "application material drafted",
@@ -470,7 +496,16 @@ export function registerApplicationMaterialRoutes(
               const fact = byId.get(id) as ApplicationMaterialFact;
               return { fact_id: id, text: `${fact.category} ${fact.field}: ${fact.value}` };
             }),
+            ...((item.companyFactIds ?? []).length === 0
+              ? {}
+              : {
+                  company_citations: (item.companyFactIds ?? []).map((id) => ({
+                    finding_id: id,
+                    text: companyById.get(id) ?? id,
+                  })),
+                }),
           })),
+          ...(usesResearch && research !== undefined ? { research_brief_id: research.id } : {}),
           model: draft.model ?? { provider: model.company, model: model.modelId },
           prompt_version: applicationMaterialPromptVersion,
           cost_usd: spentUsd,

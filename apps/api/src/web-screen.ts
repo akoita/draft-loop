@@ -2,6 +2,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
 import { authConfigPath } from "./auth-config-routes.js";
+import { waitlistPath } from "./beta-waitlist-routes.js";
 import { clientErrorsPath } from "./client-error-routes.js";
 import { ownerTokenProofPath } from "./owner-token-proof-routes.js";
 import type { ApiAuthOptions } from "./request-auth.js";
@@ -44,6 +45,7 @@ const publicApiRoutes: ReadonlySet<string> = new Set([
   authConfigPath,
   clientErrorsPath,
   ownerTokenProofPath,
+  waitlistPath,
 ]);
 
 /**
