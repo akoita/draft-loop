@@ -110,7 +110,12 @@ export interface ApiSchemas {
         readonly fact_id: string;
         readonly text: string;
       })[];
+      readonly company_citations?: readonly ({
+        readonly finding_id: string;
+        readonly text: string;
+      })[];
     })[];
+    readonly research_brief_id?: string;
     readonly based_on?: string;
     readonly model: {
       readonly provider: string;

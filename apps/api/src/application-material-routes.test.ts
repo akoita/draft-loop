@@ -5,6 +5,10 @@ import type { MaterialReviewState } from "@draft-loop/run-queue";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
 import {
+  createMemoryResearchBriefStore,
+  type ResearchBriefStore,
+} from "@draft-loop/storage/research-briefs";
+import {
   createMemorySavedApplicationMaterialStore,
   type SavedApplicationMaterialStore,
 } from "@draft-loop/storage/saved-application-material";
@@ -115,6 +119,7 @@ async function build(options: {
   drafts?: SavedApplicationMaterialStore;
   samples?: readonly string[];
   reviews?: MaterialReviews;
+  researchBriefs?: ResearchBriefStore;
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
@@ -138,6 +143,7 @@ async function build(options: {
           }),
       ...(options.drafts === undefined ? {} : { applicationMaterialDrafts: options.drafts }),
       ...(options.reviews === undefined ? {} : { materialReviews: options.reviews }),
+      ...(options.researchBriefs === undefined ? {} : { researchBriefs: options.researchBriefs }),
       ...(options.samples === undefined
         ? {}
         : {
@@ -198,7 +204,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v8",
+      prompt_version: "application-material-v9",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -699,6 +705,76 @@ describe("application material route", () => {
     });
     expect((await draft("cover-letter")).json()).not.toHaveProperty("review");
     expect(queued).toEqual([]);
+  });
+
+  it("offers the newest research brief as company facts and saves their citations", async () => {
+    const researchBriefs = createMemoryResearchBriefStore();
+    await researchBriefs.insert({
+      id: "rbr_fixture0001",
+      workspace_id: "owner",
+      application_id: "app_fixture0001",
+      queries: ["Example Corp news"],
+      from_date: "2025-11-08",
+      sources: [
+        {
+          id: "src_1",
+          kind: "web-result",
+          url: "https://example.org/news",
+          title: "News",
+          excerpt: "A fictional page.",
+          published_on: "2026-10-03",
+        },
+      ],
+      findings: [
+        { id: "fnd_1", text: "Example Corp builds tools for clinics.", source_ids: ["src_1"] },
+      ],
+      dropped: { flagged: 0, outdated: 0 },
+      search_provider: "scripted",
+      model: { provider: "anthropic", model: "claude-haiku-5-5" },
+      cost_usd: 0.05,
+      created_at: "2026-11-08T09:00:00.000Z",
+    });
+    const seen: unknown[] = [];
+    const drafts = createMemorySavedApplicationMaterialStore();
+    await build({
+      consent: granted,
+      drafts,
+      researchBriefs,
+      route: scriptedRoute(
+        [
+          {
+            items: [
+              {
+                question: "",
+                text: "As a Data Analyst I cut report time by 40%, and clinic tools appeal to me.",
+                fact_ids: ["t", "o"],
+                company_fact_ids: ["fnd_1"],
+              },
+            ],
+          },
+        ],
+        seen,
+      ),
+    });
+    const response = await draft("cover-letter");
+    expect(response.statusCode).toBe(200);
+    expect(seen[0]).toMatchObject({
+      company_facts: [
+        { id: "fnd_1", text: "Example Corp builds tools for clinics.", published_on: "2026-10-03" },
+      ],
+    });
+    expect(response.json()).toMatchObject({
+      research_brief_id: "rbr_fixture0001",
+      items: [
+        {
+          company_citations: [
+            { finding_id: "fnd_1", text: "Example Corp builds tools for clinics." },
+          ],
+        },
+      ],
+    });
+    const [saved] = await drafts.list("owner", "app_fixture0001");
+    expect(saved?.items[0]?.company_citations).toHaveLength(1);
   });
 
   it("serves no list when the server keeps no drafts", async () => {
