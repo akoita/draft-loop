@@ -83,6 +83,10 @@
       "types": "./src/record-archive.ts",
       "import": "./src/record-archive.ts"
     },
+    "./organisation-erasure-flow": {
+      "types": "./src/organisation-erasure-flow.ts",
+      "import": "./src/organisation-erasure-flow.ts"
+    },
     "./record-erasure": {
       "types": "./src/record-erasure.ts",
       "import": "./src/record-erasure.ts"
