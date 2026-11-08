@@ -188,7 +188,9 @@ describe("material critic pass", () => {
         findings: [{ paragraph: 0, sentence: "I am a passionate Data Analyst.", reason: "stock" }],
       },
     });
-    expect((requests[0]?.input as Record<string, unknown>).revise_machine_writing).toEqual({
+    expect(
+      (requests[0]?.input as Record<string, unknown> | undefined)?.revise_machine_writing,
+    ).toEqual({
       previous_items: letter.items.map((item) => ({
         question: item.question,
         text: item.text,
