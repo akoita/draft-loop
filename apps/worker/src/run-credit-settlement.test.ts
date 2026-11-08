@@ -69,10 +69,12 @@ function fakeTenancy(initial: readonly CreditReservation[], saved: Record<string
     const saved_ = saved[key.replace("draft-loop:orchestration:run:", "")];
     return saved_ === undefined ? undefined : JSON.stringify(saved_);
   });
+  const spendPool = { close: vi.fn(async () => true) };
   return {
     reservations,
     creditLedger,
-    tenancy: { forTenant: () => ({ creditLedger, get }) as never },
+    spendPool,
+    tenancy: { forTenant: () => ({ creditLedger, spendPool, get }) as never },
   };
 }
 
@@ -191,7 +193,7 @@ describe("run credits after a job", () => {
   });
 
   it("refunds a run that failed before its first draft", async () => {
-    const { handler, closed, reservations } = credits([reservation("run-1")]);
+    const { handler, closed, reservations, spendPool } = credits([reservation("run-1")]);
 
     await handler.afterJob(
       job,
@@ -201,6 +203,8 @@ describe("run credits after a job", () => {
 
     expect(reservations.get("run-1")?.state).toBe("refunded");
     expect(closed).toMatchObject([{ outcome: "refunded", credits: 2, estimatedUsd: 0 }]);
+    // A refunded run still spent model money, so the pool entry closes with its cost.
+    expect(spendPool.close).toHaveBeenCalledExactlyOnceWith({ runId: "run-1", usd: 0, now });
   });
 
   it.each<[string, RunJobOutcome, RunSnapshot | undefined]>([

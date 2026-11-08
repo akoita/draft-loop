@@ -4,6 +4,7 @@ import {
   DeploymentAuthModeConfigError,
   readDeploymentAuthMode,
 } from "@draft-loop/application";
+import { readSpendPoolLimitUsd } from "@draft-loop/storage-postgres";
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { isProviderUrl, type OidcSettings } from "./oidc-sign-in.js";
 import { ownerTokenMinimumLength } from "./owner-access.js";
@@ -188,6 +189,16 @@ export interface HostedStorageConfig {
   readonly blobs: BlobBackendConfig;
   /** The largest candidate source file the API takes; intake's default when unset. */
   readonly maxSourceBytes?: number;
+  /** The deployment's monthly model spend ceiling across organisations (#2459); none when unset. */
+  readonly spendPoolUsd?: number;
+}
+
+function spendPoolLimit(env: NodeJS.ProcessEnv): number | undefined {
+  try {
+    return readSpendPoolLimitUsd(env);
+  } catch (error) {
+    throw new ApiConfigError((error as Error).message);
+  }
 }
 
 /** Cloud Run refuses requests over 32 MiB, so a larger limit could never be reached. */
@@ -234,6 +245,7 @@ export function readHostedStorageConfig(
     throw new ApiConfigError("DRAFT_LOOP_TENANT_ID must be a safe identifier.");
   }
   const maxSourceBytes = optionalSourceLimit(env);
+  const spendPoolUsd = spendPoolLimit(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -241,5 +253,6 @@ export function readHostedStorageConfig(
     ...(tenantId === "" ? {} : { tenantId }),
     blobs: readBlobBackend(env),
     ...(maxSourceBytes === undefined ? {} : { maxSourceBytes }),
+    ...(spendPoolUsd === undefined ? {} : { spendPoolUsd }),
   };
 }

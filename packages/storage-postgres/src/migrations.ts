@@ -2,6 +2,7 @@ import { agentTokenExpiryMigration } from "./agent-token-expiry-migration.js";
 import { agentTokenScopesMigration } from "./agent-token-scopes-migration.js";
 import { agentTokensMigration } from "./agent-tokens-migration.js";
 import { applicationFoldersMigration } from "./application-folders-migration.js";
+import { betaInvitesMigration } from "./beta-invites-migration.js";
 import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import { careerInterviewMigration } from "./career-interview-migration.js";
 import { consentLedgerMigration } from "./consent-ledger-migration.js";
@@ -15,6 +16,7 @@ import { organisationPlansMigration } from "./organisation-plans-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import { savedApplicationMaterialMigration } from "./saved-application-material-migration.js";
 import { sourceEvidenceKindsMigration } from "./source-evidence-kinds-migration.js";
+import { spendPoolMigration } from "./spend-pool-migration.js";
 import type { SqlClient } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 import { workJournalMigration } from "./work-journal-migration.js";
@@ -798,6 +800,8 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   applicationFoldersMigration,
   memberSettingsMigration,
   agentTokenScopesMigration,
+  spendPoolMigration,
+  betaInvitesMigration,
   savedApplicationMaterialMigration,
 ];
 

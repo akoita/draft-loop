@@ -43,7 +43,7 @@ const tenantErasure = withErasureSteps(
 );
 
 export const savedApplicationMaterialMigration: PostgresMigration = {
-  version: 31,
+  version: 33,
   name: "saved application material",
   sql: `${table}
     DO $migration$

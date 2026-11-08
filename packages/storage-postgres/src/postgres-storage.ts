@@ -27,6 +27,7 @@ import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
 import { createSavedApplicationMaterialStore } from "./saved-application-material.js";
 import { createSourceEvidenceKindOverrides } from "./source-evidence-kinds.js";
+import { createSpendPool } from "./spend-pool.js";
 import {
   createSqlClient,
   createSqlPool,
@@ -137,6 +138,7 @@ function tenantStorage(client: SqlSession) {
     organisationErasure: createOrganisationErasure(client),
     organisationPlans: createOrganisationPlans(client),
     creditLedger: createCreditLedger(client),
+    spendPool: createSpendPool(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),

@@ -37,6 +37,7 @@ import {
 } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { formatElapsedDuration } from "./elapsed-duration.js";
+import { ExportPreviewDialog } from "./export-preview.js";
 import {
   defaultExportTemplate,
   type ExportTemplate,
@@ -66,6 +67,7 @@ import {
   type SentRevisionDirection,
   sentRevisionDirection,
 } from "./footer-running-round.js";
+import { useExportPreview } from "./host-panels.js";
 import { JobDescriptionPanel } from "./job-description-panel.js";
 import {
   briefOperationsOf,
@@ -1107,6 +1109,8 @@ export function ReviewWorkspace({
     knownGapOverride === null &&
     !draftEdits.unsaved;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
+  const loadExportPreview = useExportPreview();
+  const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const exportPending = pendingReviewAction?.action === "export";
   // An action's error shows once: in the footer, beside the buttons that act, or at the top
   // while a provider failure's Retry is there (#1939).
@@ -1723,6 +1727,11 @@ export function ReviewWorkspace({
             event.preventDefault();
             onAction(exportReviewAction(exportFormat, exportTemplate));
           }
+        } else if (event.key === "p" || event.key === "P") {
+          if (canExport && loadExportPreview !== undefined) {
+            event.preventDefault();
+            setExportPreviewOpen(true);
+          }
         }
         return;
       }
@@ -1827,6 +1836,7 @@ export function ReviewWorkspace({
     canExport,
     exportFormat,
     exportTemplate,
+    loadExportPreview,
     decideFinding,
     decisionContext,
     editingBlockId,
@@ -4080,8 +4090,28 @@ export function ReviewWorkspace({
               note: state.exportNote ?? null,
               downloads: exportsDownload,
               onExport: () => onAction(exportReviewAction(exportFormat, exportTemplate)),
+              ...(loadExportPreview === undefined
+                ? {}
+                : { onPreview: () => setExportPreviewOpen(true) }),
             }}
           />
+          {exportPreviewOpen && loadExportPreview !== undefined ? (
+            <ExportPreviewDialog
+              workspaceId={state.workspaceId}
+              runId={state.runId}
+              format={exportFormat}
+              template={exportTemplate}
+              onFormatChange={setExportFormat}
+              onTemplateChange={setExportTemplate}
+              load={loadExportPreview}
+              exportDisabled={!canExport}
+              onExport={() => {
+                setExportPreviewOpen(false);
+                onAction(exportReviewAction(exportFormat, exportTemplate));
+              }}
+              onClose={() => setExportPreviewOpen(false)}
+            />
+          ) : null}
         </aside>
       </main>
     </div>

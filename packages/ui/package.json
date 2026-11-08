@@ -90,6 +90,7 @@
     "@draft-loop/providers": "workspace:*",
     "@lingui/core": "6.10.1",
     "@lingui/react": "6.10.1",
+    "pdfjs-dist": "6.4.299",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

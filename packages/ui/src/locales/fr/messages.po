@@ -689,6 +689,14 @@ msgstr "{one} Voulez-vous en parler, ou parler d’autre chose ?"
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Prenez d’abord acte du problème ouvert ou résolvez-le.} other {Prenez d’abord acte des # problèmes ouverts ou résolvez-les.}}"
 
+#: packages/ui/src/export-preview.tsx
+msgid "{pageCount, plural, one {# page} other {# pages}}"
+msgstr "{pageCount, plural, one {# page} other {# pages}}"
+
+#: packages/ui/src/export-preview.tsx
+msgid "{pages} · {name} aims for {target}"
+msgstr "{pages} · {name} vise {target}"
+
 #: packages/ui/src/review.tsx
 msgid "{pendingBulkFindingCount} finding decisions"
 msgstr "{pendingBulkFindingCount} décisions sur des constats"
@@ -1942,6 +1950,7 @@ msgstr "Effacez le filtre pour voir les {total}, ou choisissez « Autre modèle�
 msgid "close"
 msgstr "fermer"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -1956,6 +1965,10 @@ msgstr "Fermez et rouvrez DraftLoop pour l’appliquer ; l’hôte actif reste i
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
 msgstr "Fermer la comparaison"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Close the preview"
+msgstr "Fermer l’aperçu"
 
 #: packages/ui/src/review.tsx
 msgid "Close the previous version beside the draft"
@@ -2824,6 +2837,14 @@ msgstr "DraftLoop accepte les fichiers PDF, DOCX, Markdown et texte, ainsi que l
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr "DraftLoop téléchargera ce modèle une fois et le gardera sur cet ordinateur. Rien n’est téléchargé avant votre confirmation, et votre contenu de candidat n’est jamais envoyé."
 
+#: apps/web/src/credits-model.ts
+msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+msgstr "Le budget de modèles de DraftLoop pour ce mois est épuisé : aucune nouvelle exécution ne peut démarrer. Elles reprennent le 1er du mois prochain."
+
+#: packages/ui/src/export-preview.tsx
+msgid "Drawing the preview…"
+msgstr "Préparation de l’aperçu…"
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Drop"
@@ -3091,6 +3112,7 @@ msgstr "Exporter la comparaison"
 msgid "Export everything"
 msgstr "Tout exporter"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
 msgstr "Format d’export"
@@ -3106,6 +3128,10 @@ msgstr "Exporter en local"
 #: apps/web/src/record-actions.tsx
 msgid "Export or delete this record"
 msgstr "Exporter ou supprimer ce dossier"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Export this file…"
+msgstr "Exporter ce fichier…"
 
 #: packages/ui/src/review-footer.tsx
 msgid "Export…"
@@ -5139,6 +5165,10 @@ msgstr "Notes"
 msgid "Nothing is running to stop."
 msgstr "Rien n’est en cours à arrêter."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Nothing is saved until you export."
+msgstr "Rien n’est enregistré tant que vous n’exportez pas."
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Nothing is sent to a provider from this workspace."
 msgstr "Rien n’est envoyé à un fournisseur depuis cet espace de travail."
@@ -5462,6 +5492,10 @@ msgstr "Jeton propriétaire"
 msgid "Owners and admins of your organisation assign members."
 msgstr "Les propriétaires et administrateurs de votre organisation attribuent les membres."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Page {page} of {pageCount}"
+msgstr "Page {page} sur {pageCount}"
+
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Page target"
@@ -5615,6 +5649,16 @@ msgstr "Préréglages"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
 msgstr "Les préréglages ne sont pas validés pour de vrais CV et ne fonctionnent pas avec les sessions utilisateur OpenAI Codex."
+
+#: packages/ui/src/export-preview.tsx
+#: packages/ui/src/review-footer.tsx
+msgid "Preview"
+msgstr "Aperçu"
+
+#. placeholder {0}: exportFormatLabels[exportAction.format]
+#: packages/ui/src/review-footer.tsx
+msgid "Preview the {0} file before exporting (Alt+P)"
+msgstr "Voir l’aperçu du fichier {0} avant d’exporter (Alt+P)"
 
 #: packages/ui/src/review.tsx
 msgid "Previous version"
@@ -7467,6 +7511,7 @@ msgstr "Enseignement"
 msgid "Technologies, separated by commas"
 msgstr "Technologies, séparées par des virgules"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
 msgstr "Modèle de mise en page"
@@ -8070,6 +8115,10 @@ msgstr "La version de la politique n’a pas pu être chargée."
 msgid "The preference could not be saved. {0}"
 msgstr "La préférence n’a pas pu être enregistrée. {0}"
 
+#: packages/ui/src/export-preview.tsx
+msgid "The preview could not be drawn. Nothing was saved; you can still export."
+msgstr "L’aperçu n’a pas pu être affiché. Rien n’a été enregistré ; vous pouvez quand même exporter."
+
 #: packages/ui/src/review-footer.tsx
 msgid "The previous export can't be found. Export again to save a new copy."
 msgstr "L’export précédent est introuvable. Exportez de nouveau pour enregistrer une nouvelle copie."
@@ -8390,6 +8439,10 @@ msgstr "Il n’y a aucun consentement à retirer."
 #: packages/ui/src/review.tsx
 msgid "There is no previous version to compare with."
 msgstr "Il n’y a pas de version précédente à comparer."
+
+#: packages/ui/src/export-preview.tsx
+msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
+msgstr "Voici les pages du modèle en PDF. Word met en page le même texte, mais ses retours à la ligne peuvent légèrement différer."
 
 #: apps/web/src/credits-model.ts
 msgid "These models"
