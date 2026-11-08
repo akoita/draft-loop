@@ -876,6 +876,14 @@ msgstr "Une exigence ne peut pas être vide. Rédigez-la ou supprimez-la."
 msgid "A review is already under way."
 msgstr "Une relecture est déjà en cours."
 
+#: apps/web/src/application-material.tsx
+msgid "About the company"
+msgstr "Sur l'entreprise"
+
+#: apps/web/src/research-brief.tsx
+msgid "About the employer"
+msgstr "Sur l'employeur"
+
 #: packages/ui/src/run-details.tsx
 msgid "absent"
 msgstr "absent"
@@ -1304,6 +1312,10 @@ msgstr "Approuver"
 msgid "Approve and export it here; revisions are made on the latest run."
 msgstr "Approuvez-la et exportez-la ici ; les révisions se font sur la dernière exécution."
 
+#: apps/web/src/research-brief.tsx
+msgid "Approve and research"
+msgstr "Approuver et lancer la recherche"
+
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 msgid "Approve artifact"
@@ -1624,6 +1636,7 @@ msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -2579,6 +2592,14 @@ msgstr "Supprimer le dossier candidat"
 #: packages/ui/src/home-folder-model.ts
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr "Supprimer le dossier « {0} » ? {what} Aucune candidature n’est supprimée."
+
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research"
+msgstr "Supprimer cette recherche"
+
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research for good?"
+msgstr "Supprimer définitivement cette recherche ?"
 
 #: apps/web/src/application-material.tsx
 msgid "Delete this version"
@@ -6172,6 +6193,10 @@ msgstr "Noter des travaux marquants dans le Journal de travail et lister leurs t
 msgid "Record permission to send career material to Anthropic in this record's consent, then draft again."
 msgstr "Enregistrez l’autorisation d’envoyer les éléments de parcours à Anthropic dans le consentement de ce dossier, puis relancez la rédaction."
 
+#: apps/web/src/research-brief-model.ts
+msgid "Record permission to send material to Anthropic in this record's consent, then research again."
+msgstr "Autorisez l'envoi de contenu à Anthropic dans le consentement de ce dossier, puis relancez la recherche."
+
 #. placeholder {0}: providerList(providers)
 #: apps/web/src/consent-model.ts
 msgid "Record the candidate's consent to send material to {0} first."
@@ -6429,6 +6454,30 @@ msgstr "Exigences relues (version"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Requirements were not extracted"
 msgstr "Les exigences n’ont pas été extraites"
+
+#: apps/web/src/research-brief.tsx
+msgid "Research again"
+msgstr "Relancer la recherche"
+
+#: apps/web/src/research-brief.tsx
+msgid "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
+msgstr "Renseignez-vous sur l'employeur avant de rédiger : des faits récents et datés qu'une lettre de motivation ou une réponse d'entretien peut citer."
+
+#: apps/web/src/research-brief.tsx
+msgid "Research this application"
+msgstr "Rechercher sur cette candidature"
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researched on {day}: {kept} sources kept, {dropped} dropped as unsafe or older than {from}. Cost {cost}."
+msgstr "Recherche du {day} : {kept} sources gardées, {dropped} écartées comme risquées ou antérieures au {from}. Coût {cost}."
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
+msgstr "La recherche interroge le web public sur cet employeur et ce poste avec le moteur de recherche du serveur (la recherche web de Claude, sauf si le serveur en a choisi un autre), contrôle chaque page, puis envoie les extraits gardés à Anthropic (Claude) pour rédiger de courts faits qui les citent. Rien à votre sujet n'est envoyé. Elle coûte au plus {researchMaxCostLabel} et le résultat est enregistré avec cette candidature."
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching… this usually takes a minute or two."
+msgstr "Recherche en cours… cela prend en général une ou deux minutes."
 
 #: packages/ui/src/draft-width.tsx
 msgid "Resize draft"
@@ -7396,6 +7445,7 @@ msgid "Source links show where wording came from; they do not independently veri
 msgstr "Les liens vers les sources montrent d’où vient la formulation ; ils ne la vérifient pas de manière indépendante."
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 msgid "Sources"
 msgstr "Sources"
 
@@ -8124,6 +8174,10 @@ msgstr "Le brief de l’offre"
 msgid "The job brief has a newer version; reload it."
 msgstr "Le brief de l’offre a une version plus récente ; rechargez-le."
 
+#: apps/web/src/research-brief-model.ts
+msgid "The job brief names no employer yet. Add it to the brief, then research again."
+msgstr "La fiche de poste ne nomme pas encore d'employeur. Ajoutez-le à la fiche, puis relancez la recherche."
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The job description could not be read."
 msgstr "L’offre d’emploi n’a pas pu être lue."
@@ -8388,6 +8442,10 @@ msgstr "Les exigences n’ont pas pu être extraites. Extrayez-les de nouveau, o
 msgid "The requirements could not be saved. Nothing was changed."
 msgstr "Les exigences n’ont pas pu être enregistrées. Rien n’a été modifié."
 
+#: apps/web/src/research-brief-model.ts
+msgid "The research failed and nothing was saved. Try again later."
+msgstr "La recherche a échoué et rien n'a été enregistré. Réessayez plus tard."
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "The retrieval mode could not be read."
 msgstr "Le mode de recherche n’a pas pu être lu."
@@ -8528,6 +8586,10 @@ msgstr "Le service n’a pas pu être joint. Vérifiez votre connexion et réess
 msgid "The source could not be added to the knowledge base."
 msgstr "La source n’a pas pu être ajoutée à la base de connaissances."
 
+#: apps/web/src/research-brief.tsx
+msgid "The sources said nothing useful about this employer."
+msgstr "Les sources ne disaient rien d'utile sur cet employeur."
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
 msgstr "Le résumé indique"
@@ -8661,6 +8723,10 @@ msgstr "Ce compte existe déjà. Rechargez la page."
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "Ce compte n’est encore membre d’aucune organisation. Demandez une invitation au propriétaire de votre organisation."
+
+#: apps/web/src/research-brief-model.ts
+msgid "This application could not be researched."
+msgstr "La recherche sur cette candidature n'a pas pu être faite."
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "This application uses"
@@ -8882,6 +8948,14 @@ msgstr "Ce résultat de filtrage est introuvable pour ce dossier. Rechargez la p
 msgid "This server cannot turn notes into career evidence yet."
 msgstr "Ce serveur ne peut pas encore transformer des notes en éléments de parcours."
 
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications, so nothing was searched."
+msgstr "Ce serveur ne fait pas de recherches sur les candidatures : rien n'a été cherché."
+
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications."
+msgstr "Ce serveur ne fait pas de recherches sur les candidatures."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route."
 msgstr "Ce serveur n’a pas de modèle configuré pour l’entretien de parcours. Demandez à la personne qui le gère d’activer l’accès à Claude."
@@ -9080,6 +9154,10 @@ msgstr "Indisponible tant que la critique indépendante n’est pas terminée"
 #: packages/ui/src/review.tsx
 msgid "Unavailable while another action is pending"
 msgstr "Indisponible pendant qu’une autre action est en attente"
+
+#: apps/web/src/research-brief.tsx
+msgid "undated"
+msgstr "non daté"
 
 #: packages/ui/src/review.tsx
 msgid "Undo an empty round opened after the configured limit"
@@ -9425,6 +9503,10 @@ msgstr "Avertissements"
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
+
+#: apps/web/src/research-brief.tsx
+msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
+msgstr "Une page web peut être fausse ou périmée. Vérifiez un fait à sa source avant de vous y fier."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"

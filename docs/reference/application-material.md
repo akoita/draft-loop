@@ -171,8 +171,9 @@ with the record or the organisation.
 
 A research brief holds public facts about the employer, gathered after the
 candidate approves a research run (#2482). Each brief keeps what was searched,
-the sources kept, and short findings that cite those sources. The Prepare panel
-does not offer the run yet (#2545); the API does.
+the sources kept, and short findings that cite those sources. The candidate
+starts a run from the Prepare panel (see [The web panel](#the-web-panel)) or
+the API.
 
 ```mermaid
 flowchart LR
@@ -249,6 +250,15 @@ the same fields names each with its cost. Under a cover letter, **Writing check*
 flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
+
+**About the employer** opens the panel. **Research this application** first
+shows what the run searches, that excerpts go to Anthropic, that nothing about
+the candidate is sent, and the US$0.20 cap; nothing runs until **Approve and
+research**. The panel then asks every three seconds until the run ends. It
+lists each finding with its sources, each linked and dated, or marked
+**undated**, and offers **Research again** and **Delete this research**. A
+paragraph that cites a finding lists it under **About the company**, beside
+its career facts, and Markdown adds an `> About the company:` line.
 
 While the critic checks a new cover letter, the panel says so and asks every
 three seconds. A revised version then opens, named "revised after the critic's
