@@ -1862,6 +1862,17 @@ export interface ApiOperations {
     };
     readonly response: Blob;
   };
+  "POST /v1/workspaces/{workspaceId}/runs/{runId}/export-preview": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly body: {
+      readonly format: "markdown" | "docx" | "pdf";
+      readonly templateId?: string;
+    };
+    readonly response: Blob;
+  };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/usage": {
     readonly path: {
       readonly workspaceId: string;

@@ -49,6 +49,7 @@ even while a call is running.
   demo mode drafts with no provider call.
 - Focused tests: `apps/api/src/review-routes.test.ts`,
   `apps/api/src/export-routes.test.ts`,
+  `apps/api/src/export-preview-routes.test.ts`,
   `apps/api/src/preference-suggestion-routes.test.ts`,
   `packages/ui/src/export-template.test.ts`,
   `packages/ui/src/provider-recovery.test.tsx` and
@@ -61,7 +62,7 @@ even while a call is running.
 | Screen | Review page, Export area, run details, Home's writing policy                                             |
 | API    | `/v1/workspaces/{id}/runs/{runId}/review`, `.../findings/{findingId}/decision`                           |
 | API    | `.../runs/{runId}/edits/{blockId}`, `.../approve`, `.../revision`, `.../pause`, `.../resume`, `.../stop` |
-| API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`                                             |
+| API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`, `.../export-preview` (saves nothing)       |
 | API    | `/v1/workspaces/{id}/writing-policy`, `/v1/workspaces/{id}/preference-suggestions`                       |
 | API    | `/v1/workspaces/{id}/models`, `.../budget`, `.../autopilot`, `.../runs/estimate`                         |
 | MCP    | none yet; run status is planned in [#2440](https://github.com/akoita/draft-loop/issues/2440)             |
