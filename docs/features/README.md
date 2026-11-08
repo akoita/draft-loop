@@ -80,6 +80,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis; a critic from another company flags machine-sounding sentences for one revision. |
 | [Interview questions](../reference/application-material.md) | `available` | server        | `none`       | Drafts likely interview questions for one application.         |
 | [Saved drafts](../reference/application-material.md#saved-drafts) | `available` | server | `none` | Keeps each cover letter and question set with its application, to reopen, edit as a new version, download as Word or PDF, or delete. |
+| [Research brief](../reference/application-material.md#research-briefs) | `partial` | server | `none` | Keeps dated, cited facts about the employer with each application, to read or delete. The research run (#2543) and its panel (#2545) are not built yet. |
 
 ## Agent channel
 

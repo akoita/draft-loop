@@ -66,6 +66,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "DELETE /v1/workspaces/:workspaceId/agent-tokens/:tokenId",
   "DELETE /v1/workspaces/:workspaceId/application-folders/:folderId",
   "DELETE /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId",
+  "DELETE /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs/:briefId",
   "DELETE /v1/workspaces/:workspaceId/members/:memberId",
   "DELETE /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
   "GET /speech-models/manifest.json",
@@ -135,6 +136,9 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/application-imports",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
+  // Research briefs reach agents only with the drafts' read tool, if ever.
+  "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs",
+  "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs/:briefId",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",

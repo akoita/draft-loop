@@ -121,6 +121,7 @@ export function composeHostedApplication(
     writingSamples: createWritingSamplesService(settings),
     sourceEvidenceKinds: storage,
     applicationMaterialDrafts: storage.savedApplicationMaterial,
+    researchBriefs: storage.researchBriefs,
     careerInterview: {
       sessions: storage.careerInterviewSessions,
       allowProviderData: parts.screening?.allowProviderData ?? false,

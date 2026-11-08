@@ -319,6 +319,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO application_research_briefs (tenant_id, id, workspace_id, application_id, brief, created_at)
+       VALUES ($1, 'rbr_' || md5($1 || $2), $2, 'application-1', '{}', $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO idempotency_keys (tenant_id, scope, key, fingerprint, expires_at)
        VALUES ($1, 'runs:' || $2, 'key-1', $3, now() + interval '1 day'),
               ($1, 'exports:' || $2 || ':' || $4, 'key-1', $3, now() + interval '1 day')`,
