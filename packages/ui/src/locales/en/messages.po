@@ -2525,6 +2525,14 @@ msgstr "Delete record"
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr "Delete the folder “{0}”? {what} No application is deleted."
 
+#: apps/web/src/application-material.tsx
+msgid "Delete this version"
+msgstr "Delete this version"
+
+#: apps/web/src/application-material.tsx
+msgid "Delete this version for good?"
+msgstr "Delete this version for good?"
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Deleted \"{name}\"."
 msgstr "Deleted \"{name}\"."
@@ -2759,8 +2767,8 @@ msgid "Drafting is not available on this server: it has no Claude route. The res
 msgstr "Drafting is not available on this server: it has no Claude route. The rest of the application works as before."
 
 #: apps/web/src/application-material-model.ts
-msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server."
-msgstr "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server."
+msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it."
+msgstr "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it."
 
 #: apps/web/src/application-material.tsx
 msgid "Drafting…"
@@ -8880,6 +8888,10 @@ msgstr "Unlimited credits"
 msgid "Unlisted source"
 msgstr "Unlisted source"
 
+#: apps/web/src/application-material-model.ts
+msgid "Unsaved draft"
+msgstr "Unsaved draft"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
 msgstr "Unsupported"
@@ -9083,6 +9095,7 @@ msgstr "Verbosity"
 msgid "version"
 msgstr "version"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx

@@ -134,6 +134,10 @@
     "./career-interview-sessions": {
       "types": "./src/career-interview-sessions.ts",
       "import": "./src/career-interview-sessions.ts"
+    },
+    "./saved-application-material": {
+      "types": "./src/saved-application-material.ts",
+      "import": "./src/saved-application-material.ts"
     }
   },
   "files": [

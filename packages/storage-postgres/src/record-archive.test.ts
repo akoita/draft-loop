@@ -326,6 +326,17 @@ async function seedRecord(
       at,
     ],
   );
+  // A saved cover letter, keyed by the API's workspace id like the sessions.
+  await q(
+    `INSERT INTO application_material_drafts (id, workspace_id, application_id, kind, draft, created_at)
+     VALUES ($1, $2, 'application-1', 'cover-letter', $3::jsonb, $4)`,
+    [
+      `amd_draft-${run}`,
+      workspaceId,
+      JSON.stringify({ items: [{ text: `A fictional paragraph for ${marker}.` }] }),
+      at,
+    ],
+  );
   // Never archived: command results and the tenant's store list.
   await q(
     `INSERT INTO idempotency_keys (scope, key, fingerprint, result_json, expires_at)

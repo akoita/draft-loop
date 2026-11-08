@@ -2519,6 +2519,14 @@ msgstr "Supprimer le dossier candidat"
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr "Supprimer le dossier « {0} » ? {what} Aucune candidature n’est supprimée."
 
+#: apps/web/src/application-material.tsx
+msgid "Delete this version"
+msgstr "Supprimer cette version"
+
+#: apps/web/src/application-material.tsx
+msgid "Delete this version for good?"
+msgstr "Supprimer définitivement cette version ?"
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Deleted \"{name}\"."
 msgstr "« {name} » supprimé."
@@ -2753,8 +2761,8 @@ msgid "Drafting is not available on this server: it has no Claude route. The res
 msgstr "La rédaction n’est pas disponible sur ce serveur : il n’a pas d’accès à Claude. Le reste de la candidature fonctionne comme avant."
 
 #: apps/web/src/application-material-model.ts
-msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server."
-msgstr "La rédaction envoie les exigences du poste de cette candidature et les faits de votre profil professionnel à Anthropic (Claude). Vos nom et coordonnées ne sont jamais envoyés, et l’ébauche n’est pas stockée sur le serveur."
+msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it."
+msgstr "La rédaction envoie à Anthropic (Claude) les exigences du poste de cette candidature et les faits de votre profil de carrière. Votre nom et vos coordonnées ne sont jamais envoyés. Chaque brouillon est enregistré avec cette candidature, où vous pouvez le rouvrir ou le supprimer."
 
 #: apps/web/src/application-material.tsx
 msgid "Drafting…"
@@ -8874,6 +8882,10 @@ msgstr "Crédits illimités"
 msgid "Unlisted source"
 msgstr "Source non listée"
 
+#: apps/web/src/application-material-model.ts
+msgid "Unsaved draft"
+msgstr "Brouillon non enregistré"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
 msgstr "Non pris en charge"
@@ -9077,6 +9089,7 @@ msgstr "Verbosité"
 msgid "version"
 msgstr "version"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
