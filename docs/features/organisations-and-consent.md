@@ -17,7 +17,9 @@ organisation; it erases everything with `draft-loop-server`
 
 ## How to use it
 
-1. An operator creates an organisation and invites its first owner. Owners
+1. An operator creates an organisation and invites its first owner, or, on
+   the public beta, sends a person an invite code that creates their own
+   organisation on first sign-in. Owners
    and admins invite people by email; each active member or pending invitation
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
@@ -32,6 +34,7 @@ organisation; it erases everything with `draft-loop-server`
 ## How to test it
 
 - Focused tests: `apps/api/src/organisation-routes.test.ts`,
+  `apps/api/src/beta-sign-up-routes.test.ts`,
   `apps/api/src/consent-routes.test.ts`,
   `apps/api/src/record-erasure-routes.test.ts` and
   `apps/web/src/consent.test.tsx`.
@@ -44,6 +47,7 @@ organisation; it erases everything with `draft-loop-server`
 | ------ | -------------------------------------------------------------- |
 | Screen | Credits and consent, organisation members                      |
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`       |
+| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`                |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`  |
 | API    | `/v1/workspaces/{id}/archive`, record and organisation erasure |
 | MCP    | none                                                           |
@@ -53,6 +57,7 @@ organisation; it erases everything with `draft-loop-server`
 - Sign-in uses Keycloak, which is not hosted yet, so staging signs in with the
   owner token.
 - Consent covers one candidate record; each record records its own.
+- Partial: beta sign-up has routes but no screen yet (#2503).
 
 ## Related
 

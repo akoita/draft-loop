@@ -7,6 +7,7 @@ import {
 } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
+import { readBetaAccountCap } from "./beta-sign-up-routes.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
@@ -73,7 +74,13 @@ const app = await buildApi({
       ? {}
       : { jobPageFetcher: hostedJobPageFetcher({ endpoint: config.pageFetcherUrl }) }),
   },
-  ...(directory === undefined ? {} : { directory, memberSettings: directory.memberSettings }),
+  ...(directory === undefined
+    ? {}
+    : {
+        directory,
+        memberSettings: directory.memberSettings,
+        betaInvites: { invites: directory.betaInvites, cap: readBetaAccountCap(process.env) },
+      }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),

@@ -2424,6 +2424,105 @@
           }
         ]
       },
+      "OwnerTokenProofRequestInput": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "32 random bytes as lower-case hex, fresh for each check."
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "additionalProperties": false
+      },
+      "OwnerTokenProofInput": {
+        "type": "object",
+        "properties": {
+          "proof": {
+            "type": "string",
+            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
+          }
+        },
+        "required": [
+          "proof"
+        ]
+      },
+      "BetaInviteInput": {
+        "type": "object",
+        "properties": {
+          "inviteId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "revoked",
+              "redeemed"
+            ]
+          },
+          "organisationId": {
+            "type": "string"
+          },
+          "redeemedAt": {
+            "type": "string"
+          },
+          "revokedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "inviteId",
+          "email",
+          "createdAt",
+          "state"
+        ]
+      },
+      "CreatedBetaInviteInput": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/BetaInviteInput"
+          },
+          "code": {
+            "type": "string",
+            "description": "The plain code, shown once: it is stored only as a hash."
+          }
+        },
+        "required": [
+          "invite",
+          "code"
+        ]
+      },
+      "SignedUpInput": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "const": "owner"
+          }
+        },
+        "required": [
+          "organisationId",
+          "memberId",
+          "role"
+        ]
+      },
       "CareerInterviewActionInput": {
         "oneOf": [
           {
@@ -5062,32 +5161,6 @@
           "assignment",
           "entitlements",
           "balance"
-        ]
-      },
-      "OwnerTokenProofRequestInput": {
-        "type": "object",
-        "properties": {
-          "challenge": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$",
-            "description": "32 random bytes as lower-case hex, fresh for each check."
-          }
-        },
-        "required": [
-          "challenge"
-        ],
-        "additionalProperties": false
-      },
-      "OwnerTokenProofInput": {
-        "type": "object",
-        "properties": {
-          "proof": {
-            "type": "string",
-            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
-          }
-        },
-        "required": [
-          "proof"
         ]
       },
       "OrganisationMemberInput": {
@@ -9332,6 +9405,109 @@
           }
         ]
       },
+      "OwnerTokenProofRequest": {
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "32 random bytes as lower-case hex, fresh for each check."
+          }
+        },
+        "required": [
+          "challenge"
+        ],
+        "additionalProperties": false
+      },
+      "OwnerTokenProof": {
+        "type": "object",
+        "properties": {
+          "proof": {
+            "type": "string",
+            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
+          }
+        },
+        "required": [
+          "proof"
+        ],
+        "additionalProperties": false
+      },
+      "BetaInvite": {
+        "type": "object",
+        "properties": {
+          "inviteId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "revoked",
+              "redeemed"
+            ]
+          },
+          "organisationId": {
+            "type": "string"
+          },
+          "redeemedAt": {
+            "type": "string"
+          },
+          "revokedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "inviteId",
+          "email",
+          "createdAt",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "CreatedBetaInvite": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "$ref": "#/components/schemas/BetaInvite"
+          },
+          "code": {
+            "type": "string",
+            "description": "The plain code, shown once: it is stored only as a hash."
+          }
+        },
+        "required": [
+          "invite",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "SignedUp": {
+        "type": "object",
+        "properties": {
+          "organisationId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "const": "owner"
+          }
+        },
+        "required": [
+          "organisationId",
+          "memberId",
+          "role"
+        ],
+        "additionalProperties": false
+      },
       "CareerInterviewAction": {
         "oneOf": [
           {
@@ -11345,33 +11521,6 @@
           "assignment",
           "entitlements",
           "balance"
-        ],
-        "additionalProperties": false
-      },
-      "OwnerTokenProofRequest": {
-        "type": "object",
-        "properties": {
-          "challenge": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$",
-            "description": "32 random bytes as lower-case hex, fresh for each check."
-          }
-        },
-        "required": [
-          "challenge"
-        ],
-        "additionalProperties": false
-      },
-      "OwnerTokenProof": {
-        "type": "object",
-        "properties": {
-          "proof": {
-            "type": "string",
-            "description": "HMAC-SHA256 of the label and the challenge, keyed by the owner token, as hex."
-          }
-        },
-        "required": [
-          "proof"
         ],
         "additionalProperties": false
       },
@@ -24049,6 +24198,246 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/beta-invites": {
+      "post": {
+        "summary": "Create a single-use beta invite code for one email",
+        "description": "Operator only. The answer carries the plain code once.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 320
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedBetaInvite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List beta invites, the accounts they created and the cap",
+        "description": "Operator only. Codes are never listed.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invites": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BetaInvite"
+                      }
+                    },
+                    "redeemed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "cap": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "invites",
+                    "redeemed",
+                    "cap"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/beta-invites/{inviteId}": {
+      "delete": {
+        "summary": "Revoke an open beta invite",
+        "description": "Operator only. A redeemed or revoked invite answers 404.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "inviteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sign-up": {
+      "post": {
+        "summary": "Create your account from a beta invite code",
+        "description": "Takes a verified sign-in that has no account yet. The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Default Response",
             "content": {
               "application/json": {
