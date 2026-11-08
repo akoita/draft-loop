@@ -232,6 +232,27 @@ describe("the prepare panel", () => {
     expect(editing).toContain("Sources");
   });
 
+  it("offers Word and PDF downloads of a saved draft with the template, Modern first", () => {
+    const saved = { ...draft, id: "amd_savedversion001", created_at: "2026-11-08T03:00:00.000Z" };
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={saved}
+        versions={[saved]}
+        template="modern"
+        onDocument={() => {}}
+      />,
+    );
+    expect(html).toContain(">Download Word</button>");
+    expect(html).toContain(">Download PDF</button>");
+    expect(html).toContain('<option value="modern" selected="">Modern</option>');
+    expect(
+      renderToStaticMarkup(
+        <ApplicationMaterialView {...props} draft={draft} onDocument={() => {}} />,
+      ),
+    ).not.toContain("Download Word");
+  });
+
   it("shows a refusal in the panel while the controls stay usable", () => {
     const problem = applicationMaterialProblem(
       new ApiRequestError(503, "material_model_unavailable", "No route."),

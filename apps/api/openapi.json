@@ -23731,6 +23731,90 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/document": {
+      "get": {
+        "summary": "Download a saved cover letter or question set as Word or PDF",
+        "description": "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "docx",
+                "pdf"
+              ]
+            },
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "description": "Word (`docx`) or `pdf`."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "classic",
+                "compact",
+                "modern"
+              ]
+            },
+            "in": "query",
+            "name": "template",
+            "required": false,
+            "description": "The CV template the document is drawn with; modern by default."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "materialId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The document's bytes, in its media type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The document's bytes, in its media type."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
       "delete": {
         "summary": "Delete one saved cover letter or interview question set",

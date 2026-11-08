@@ -131,6 +131,7 @@ newer version.
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `GET .../applications/{applicationId}/material?kind=cover-letter`      | Lists the application's saved drafts, newest first, at most 50. `kind` is optional.            |
 | `POST .../applications/{applicationId}/material/{materialId}/versions` | Saves the candidate's edit as a new version. Body: `{"items":[{"text":...}]}`, one per item. |
+| `GET .../material/{materialId}/document?format=docx&template=modern`  | Draws the saved draft as Word or PDF with a CV template, Modern by default. Nothing is stored. |
 | `DELETE .../applications/{applicationId}/material/{materialId}`        | Deletes one saved draft for good. 404 when the application has no such draft.                  |
 
 Saved drafts are candidate material. They live in the record's Postgres table
@@ -170,7 +171,10 @@ draft of the chosen kind opens first. With two or more, a **Version** list
 names each by time and model; **Delete this version** removes the one on
 screen after a confirmation. **Edit** turns each item into a text box;
 **Save as a new version** keeps the edit, marks changed items **Edited by
-you** and names any number no source states. **Download Markdown** saves the draft with a
+you** and names any number no source states. **Download Word** and
+**Download PDF** draw a saved draft with the **Template** chosen beside them:
+a cover letter opens with the application's name, and each interview question
+is a heading. **Download Markdown** saves the draft with a
 `> Source:` line under each item. A refusal,
 such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
