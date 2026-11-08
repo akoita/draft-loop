@@ -695,6 +695,14 @@ msgstr "{one} Would you like to talk about it, or about something else?"
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 
+#: packages/ui/src/export-preview.tsx
+msgid "{pageCount, plural, one {# page} other {# pages}}"
+msgstr "{pageCount, plural, one {# page} other {# pages}}"
+
+#: packages/ui/src/export-preview.tsx
+msgid "{pages} · {name} aims for {target}"
+msgstr "{pages} · {name} aims for {target}"
+
 #: packages/ui/src/review.tsx
 msgid "{pendingBulkFindingCount} finding decisions"
 msgstr "{pendingBulkFindingCount} finding decisions"
@@ -1948,6 +1956,7 @@ msgstr "Clear the filter to see all {total}, or choose “Other model…” to t
 msgid "close"
 msgstr "close"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -1962,6 +1971,10 @@ msgstr "Close and reopen DraftLoop to apply it; the active host remains unchange
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
 msgstr "Close comparison"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Close the preview"
+msgstr "Close the preview"
 
 #: packages/ui/src/review.tsx
 msgid "Close the previous version beside the draft"
@@ -2822,6 +2835,10 @@ msgstr "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lis
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Drawing the preview…"
+msgstr "Drawing the preview…"
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Drop"
@@ -3089,6 +3106,7 @@ msgstr "Export comparison"
 msgid "Export everything"
 msgstr "Export everything"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
 msgstr "Export format"
@@ -3104,6 +3122,10 @@ msgstr "Export locally"
 #: apps/web/src/record-actions.tsx
 msgid "Export or delete this record"
 msgstr "Export or delete this record"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Export this file…"
+msgstr "Export this file…"
 
 #: packages/ui/src/review-footer.tsx
 msgid "Export…"
@@ -5137,6 +5159,10 @@ msgstr "Notes"
 msgid "Nothing is running to stop."
 msgstr "Nothing is running to stop."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Nothing is saved until you export."
+msgstr "Nothing is saved until you export."
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Nothing is sent to a provider from this workspace."
 msgstr "Nothing is sent to a provider from this workspace."
@@ -5460,6 +5486,10 @@ msgstr "Owner token"
 msgid "Owners and admins of your organisation assign members."
 msgstr "Owners and admins of your organisation assign members."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Page {page} of {pageCount}"
+msgstr "Page {page} of {pageCount}"
+
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Page target"
@@ -5613,6 +5643,16 @@ msgstr "Presets"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
 msgstr "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
+
+#: packages/ui/src/export-preview.tsx
+#: packages/ui/src/review-footer.tsx
+msgid "Preview"
+msgstr "Preview"
+
+#. placeholder {0}: exportFormatLabels[exportAction.format]
+#: packages/ui/src/review-footer.tsx
+msgid "Preview the {0} file before exporting (Alt+P)"
+msgstr "Preview the {0} file before exporting (Alt+P)"
 
 #: packages/ui/src/review.tsx
 msgid "Previous version"
@@ -7465,6 +7505,7 @@ msgstr "Teaching"
 msgid "Technologies, separated by commas"
 msgstr "Technologies, separated by commas"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
 msgstr "Template"
@@ -8067,6 +8108,10 @@ msgstr "The policy version could not be loaded."
 #: apps/web/src/preference-suggestions.tsx
 msgid "The preference could not be saved. {0}"
 msgstr "The preference could not be saved. {0}"
+
+#: packages/ui/src/export-preview.tsx
+msgid "The preview could not be drawn. Nothing was saved; you can still export."
+msgstr "The preview could not be drawn. Nothing was saved; you can still export."
 
 #: packages/ui/src/review-footer.tsx
 msgid "The previous export can't be found. Export again to save a new copy."
@@ -9234,6 +9279,10 @@ msgstr "Withdrawn"
 #: apps/web/src/consent-model.ts
 msgid "Withdrawn on {when}."
 msgstr "Withdrawn on {when}."
+
+#: packages/ui/src/export-preview.tsx
+msgid "Word files can't be shown here yet. Preview the PDF to see the template's pages."
+msgstr "Word files can't be shown here yet. Preview the PDF to see the template's pages."
 
 #: packages/ui/src/agent-setup-model.ts
 #: packages/ui/src/source-evidence-kind-contract.ts

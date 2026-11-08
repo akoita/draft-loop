@@ -342,6 +342,8 @@ export interface ReviewFooterProps {
     /** The browser downloads the export instead of a Save As dialog writing it (hosted). */
     readonly downloads?: boolean;
     readonly onExport: () => void;
+    /** Opens the preview of the file Export would save; absent when the host cannot preview. */
+    readonly onPreview?: () => void;
   };
 }
 
@@ -601,6 +603,19 @@ export function ReviewFooter({
                   ))}
                 </select>
               </label>
+              {exportAction.onPreview === undefined ? null : (
+                <button
+                  className="button button-outline"
+                  type="button"
+                  aria-keyshortcuts="Alt+P"
+                  title={t`Preview the ${exportFormatLabels[exportAction.format]} file before exporting (Alt+P)`}
+                  disabled={exportAction.disabled}
+                  onClick={exportAction.onPreview}
+                >
+                  {t`Preview`}
+                  <kbd>Alt+P</kbd>
+                </button>
+              )}
               <button
                 className="button button-primary"
                 type="button"

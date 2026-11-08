@@ -15,7 +15,7 @@ import { StartPanel } from "./start-panels.js";
  * the owner token, the work journal review (#2024) and its waiting notes on Home (#2151); on
  * every application, the prepare panel for a cover letter or interview questions (#2217); and
  * the writing preferences suggested from review choices and Agents (#2439) in Workspace
- * settings.
+ * settings; and the review's preview of the file an export would save (#2498).
  */
 export function webHostPanels(
   client: ApiClient,
@@ -53,5 +53,10 @@ export function webHostPanels(
           ),
         }
       : {}),
+    exportPreview: ({ workspaceId, runId, format, template }) =>
+      client.call("POST /v1/workspaces/{workspaceId}/runs/{runId}/export-preview", {
+        path: { workspaceId, runId },
+        body: format === "markdown" ? { format } : { format, templateId: template },
+      }),
   };
 }
