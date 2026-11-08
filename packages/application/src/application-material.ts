@@ -425,6 +425,20 @@ function supported(number: StatedNumber, sources: readonly string[]): boolean {
 }
 
 /**
+ * The numbers in a candidate's own edit that none of the item's sources state (#2480). An edit is
+ * the candidate's text, so it is flagged for them to check rather than refused.
+ */
+export function unsupportedNumbers(text: string, sources: readonly string[]): string[] {
+  return [
+    ...new Set(
+      numbersIn(text)
+        .filter((number) => !supported(number, sources))
+        .map((number) => number.written),
+    ),
+  ];
+}
+
+/**
  * Wording that talks about the career record or the drafting rules instead of the candidate's
  * work (#2218's second walk: "SQL is one of my listed skills", "without claiming more than the
  * record shows"). A candidate would never send it.

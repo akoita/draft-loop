@@ -2344,6 +2344,17 @@
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
                 },
+                "edited": {
+                  "description": "True when the candidate rewrote this item; the text is then theirs.",
+                  "type": "boolean"
+                },
+                "unsupported_numbers": {
+                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "citations": {
                   "type": "array",
                   "items": {
@@ -2370,6 +2381,11 @@
                 "citations"
               ]
             }
+          },
+          "based_on": {
+            "description": "The saved draft this version was edited from; absent for a drafted version.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
           },
           "model": {
             "type": "object",
@@ -2448,6 +2464,35 @@
         },
         "required": [
           "drafts"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialEditInput": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          }
+        },
+        "required": [
+          "items"
         ],
         "additionalProperties": false
       },
@@ -9474,6 +9519,17 @@
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
                 },
+                "edited": {
+                  "description": "True when the candidate rewrote this item; the text is then theirs.",
+                  "type": "boolean"
+                },
+                "unsupported_numbers": {
+                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "citations": {
                   "type": "array",
                   "items": {
@@ -9502,6 +9558,11 @@
               ],
               "additionalProperties": false
             }
+          },
+          "based_on": {
+            "description": "The saved draft this version was edited from; absent for a drafted version.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
           },
           "model": {
             "type": "object",
@@ -9583,6 +9644,35 @@
         },
         "required": [
           "drafts"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialEdit": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          }
+        },
+        "required": [
+          "items"
         ],
         "additionalProperties": false
       },
@@ -13703,6 +13793,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/client-errors": {
+      "post": {
+        "summary": "Report a crash in the web screen",
+        "description": "Takes an uncaught error or rejected promise from the web screen: its kind, message, stack frames, the screen's path and the build. The API removes quoted text, addresses, numbers, queries and ids before it logs one line. 429 rate_limited after 10 reports in 10 minutes from one address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "error",
+                      "unhandled_rejection"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "stack": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  },
+                  "route": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "build": {
+                    "type": "string",
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "kind",
+                  "message",
+                  "route",
+                  "build"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -23489,6 +23647,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApplicationMaterialModels"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
+      "post": {
+        "summary": "Save the candidate's edit of a draft as a new version",
+        "description": "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationMaterialEditInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "materialId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

@@ -124,16 +124,34 @@ refused or failed draft is not saved.
 ## Saved drafts
 
 Every draft is kept with its application, so you can reopen, compare and delete
-it. A saved draft never changes: drafting again adds a newer version.
+it. A saved draft never changes: drafting again, or saving an edit, adds a
+newer version.
 
 | Route                                                                  | Does                                                                                           |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `GET .../applications/{applicationId}/material?kind=cover-letter`      | Lists the application's saved drafts, newest first, at most 50. `kind` is optional.            |
+| `POST .../applications/{applicationId}/material/{materialId}/versions` | Saves the candidate's edit as a new version. Body: `{"items":[{"text":...}]}`, one per item. |
 | `DELETE .../applications/{applicationId}/material/{materialId}`        | Deletes one saved draft for good. 404 when the application has no such draft.                  |
 
 Saved drafts are candidate material. They live in the record's Postgres table
 `application_material_drafts`, are part of the record archive, and are erased
 with the record or the organisation.
+
+## Editing a draft
+
+An edit is the candidate's own text, so it is checked and flagged, never
+refused. The new version copies the draft, keeps every citation and calls no
+model, so it costs nothing.
+
+| Field                         | Means                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `items[].edited`              | The candidate rewrote this item.                                         |
+| `items[].unsupported_numbers` | Numbers in an edited item that none of the draft's cited facts states.   |
+| `based_on`                    | The saved draft this version was edited from.                            |
+| `tells`                       | The writing check, run again on the edited cover letter.                 |
+
+The request must send one text for each item, in order; another count answers
+400. The route is for the person only: agents cannot reach it.
 
 ## The web panel
 
@@ -150,7 +168,9 @@ review it keeps the run's column.
 Each paragraph or question shows its cited facts beside it. The newest saved
 draft of the chosen kind opens first. With two or more, a **Version** list
 names each by time and model; **Delete this version** removes the one on
-screen after a confirmation. **Download Markdown** saves the draft with a
+screen after a confirmation. **Edit** turns each item into a text box;
+**Save as a new version** keeps the edit, marks changed items **Edited by
+you** and names any number no source states. **Download Markdown** saves the draft with a
 `> Source:` line under each item. A refusal,
 such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in

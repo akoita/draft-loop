@@ -201,6 +201,37 @@ describe("the prepare panel", () => {
     );
   });
 
+  it("edits each paragraph in place and marks the candidate's own text", () => {
+    const saved = {
+      ...draft,
+      id: "amd_editedversion01",
+      created_at: "2026-11-08T03:00:00.000Z",
+      based_on: "amd_draftedversion1",
+      items: draft.items.map((item, index) =>
+        index === 0 ? { ...item, edited: true, unsupported_numbers: ["12"] } : item,
+      ),
+    };
+    const shown = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={saved} versions={[saved]} onEdit={() => {}} />,
+    );
+    expect(shown).toContain("Edited by you");
+    expect(shown).toContain("none of the sources states 12");
+    expect(shown).toContain(">Edit</button>");
+    const editing = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={saved}
+        versions={[saved]}
+        onEdit={() => {}}
+        edits={saved.items.map((item) => item.text)}
+      />,
+    );
+    expect(editing.match(/aria-label="Item \d"/gu)).toHaveLength(saved.items.length);
+    expect(editing).toContain(">Save as a new version</button>");
+    expect(editing).not.toContain(">Edit</button>");
+    expect(editing).toContain("Sources");
+  });
+
   it("shows a refusal in the panel while the controls stay usable", () => {
     const problem = applicationMaterialProblem(
       new ApiRequestError(503, "material_model_unavailable", "No route."),
