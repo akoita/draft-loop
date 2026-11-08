@@ -15,6 +15,11 @@ import {
   factUsageAllows,
   resolveFactUsage,
 } from "@draft-loop/domain/fact-usage";
+import {
+  type ApplicationMaterialGuidance,
+  maximumApplicationMaterialAddresseeCharacters,
+  maximumApplicationMaterialEmphasisCharacters,
+} from "@draft-loop/schemas/saved-application-material";
 
 /** The parts of a canonical profile fact the drafter reads. */
 export interface ApplicationMaterialFact {
@@ -55,6 +60,8 @@ export interface ApplicationMaterialContext {
   }[];
   /** The language the material is written in; absent or English adds nothing to the prompt. */
   readonly language?: string;
+  /** The candidate's guidance (#2478): it steers the writing and is never a fact. */
+  readonly guidance?: ApplicationMaterialGuidance;
 }
 
 /**
@@ -152,6 +159,31 @@ export interface ApplicationMaterialContextInput {
   readonly usage?: FactUsageSettings;
   /** The application's document language (#2316); English when unset. */
   readonly language?: string;
+  /** The candidate's guidance (#2478); none when unset. */
+  readonly guidance?: ApplicationMaterialGuidance;
+}
+
+/**
+ * The guidance that reaches the model: trimmed, capped, without empty fields, and without an
+ * addressee for interview questions. Undefined when nothing is left.
+ */
+export function boundedApplicationMaterialGuidance(
+  kind: ApplicationMaterialKind,
+  guidance: ApplicationMaterialGuidance | undefined,
+): ApplicationMaterialGuidance | undefined {
+  if (guidance === undefined) return undefined;
+  const emphasis = guidance.emphasis?.trim().slice(0, maximumApplicationMaterialEmphasisCharacters);
+  const addressee =
+    kind === "cover-letter"
+      ? guidance.addressee?.trim().slice(0, maximumApplicationMaterialAddresseeCharacters)
+      : undefined;
+  const bounded = {
+    ...(emphasis ? { emphasis } : {}),
+    ...(guidance.tone === undefined ? {} : { tone: guidance.tone }),
+    ...(guidance.length === undefined ? {} : { length: guidance.length }),
+    ...(addressee ? { addressee } : {}),
+  };
+  return Object.keys(bounded).length === 0 ? undefined : bounded;
 }
 
 /**
@@ -214,11 +246,13 @@ export function applicationMaterialContext(
       text: requirement.text.slice(0, maximumContextCharacters),
       priority: requirement.priority,
     }));
+  const guidance = boundedApplicationMaterialGuidance(input.kind, input.guidance);
   return {
     kind: input.kind,
     facts,
     requirements,
     ...(input.language === undefined ? {} : { language: input.language }),
+    ...(guidance === undefined ? {} : { guidance }),
   };
 }
 

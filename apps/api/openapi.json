@@ -2117,6 +2117,38 @@
           "url"
         ]
       },
+      "ApplicationMaterialGuidanceInput": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntryInput": {
         "type": "object",
         "properties": {
@@ -2257,6 +2289,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
           }
         },
         "required": [
@@ -2282,6 +2318,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
           },
           "items": {
             "type": "array",
@@ -9110,6 +9150,38 @@
         ],
         "additionalProperties": false
       },
+      "ApplicationMaterialGuidance": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntry": {
         "type": "object",
         "properties": {
@@ -9255,6 +9327,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
           }
         },
         "required": [
@@ -9280,6 +9356,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
           },
           "items": {
             "type": "array",

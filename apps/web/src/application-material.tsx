@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import type { ApiClient } from "./api-client.js";
 import {
   type ApplicationMaterialDraft,
+  type ApplicationMaterialGuidance,
   type ApplicationMaterialKind,
   applicationMaterialDisclosure,
   applicationMaterialFileName,
+  applicationMaterialGuidanceFor,
   applicationMaterialKindLabels,
+  applicationMaterialLengthLabels,
   applicationMaterialMarkdown,
   applicationMaterialProblem,
+  applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 import { useRecordId } from "./record-context.js";
@@ -31,6 +35,9 @@ export interface ApplicationMaterialViewProps {
   readonly versions: readonly ApplicationMaterialDraft[];
   readonly problem: string | undefined;
   readonly busy: boolean;
+  /** What the candidate asked the next draft to stress, its tone, length and addressee. */
+  readonly guidance: ApplicationMaterialGuidance;
+  readonly onGuidance: (guidance: ApplicationMaterialGuidance) => void;
   /** Folded to its heading row, so a feature the candidate does not use takes one line. */
   readonly collapsed: boolean;
   readonly onToggle: () => void;
@@ -44,7 +51,11 @@ export interface ApplicationMaterialViewProps {
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
 
 export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
-  const { kind, draft, problem, busy, versions } = props;
+  const { kind, draft, problem, busy, versions, guidance } = props;
+  const change = (field: keyof ApplicationMaterialGuidance, value: string) => {
+    const { [field]: _dropped, ...rest } = guidance;
+    props.onGuidance(value === "" ? rest : { ...rest, [field]: value });
+  };
   return (
     <section
       className="panel host-panel application-material"
@@ -99,6 +110,69 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
         {draft === undefined ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
         ) : null}
+        <details className="application-material-guidance">
+          <summary>{t`Guide this draft (optional)`}</summary>
+          <label>
+            {t`What to stress`}
+            <textarea
+              className="input"
+              rows={2}
+              maxLength={400}
+              disabled={busy}
+              value={guidance.emphasis ?? ""}
+              placeholder={t`For example: my move into team leadership`}
+              onChange={(event) => change("emphasis", event.currentTarget.value)}
+            />
+          </label>
+          <div className="application-material-guidance-row">
+            <label>
+              {t`Tone`}
+              <select
+                className="input"
+                disabled={busy}
+                value={guidance.tone ?? ""}
+                onChange={(event) => change("tone", event.currentTarget.value)}
+              >
+                <option value="">{t`Default`}</option>
+                {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t`Length`}
+              <select
+                className="input"
+                disabled={busy}
+                value={guidance.length ?? ""}
+                onChange={(event) => change("length", event.currentTarget.value)}
+              >
+                <option value="">{t`Default`}</option>
+                {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {kind === "cover-letter" ? (
+              <label>
+                {t`Address it to`}
+                <input
+                  className="input"
+                  maxLength={120}
+                  disabled={busy}
+                  value={guidance.addressee ?? ""}
+                  placeholder={t`For example: the hiring team`}
+                  onChange={(event) => change("addressee", event.currentTarget.value)}
+                />
+              </label>
+            ) : null}
+          </div>
+          <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
+        </details>
         <div className="application-material-actions">
           <button
             type="button"
@@ -189,6 +263,7 @@ export function ApplicationMaterialSection({
   const [unsaved, setUnsaved] = useState<ApplicationMaterialDraft | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [guidance, setGuidance] = useState<ApplicationMaterialGuidance>({});
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
 
@@ -221,6 +296,8 @@ export function ApplicationMaterialSection({
       draft={draft}
       versions={versions}
       problem={problem}
+      guidance={guidance}
+      onGuidance={setGuidance}
       busy={busy}
       collapsed={collapsed}
       onToggle={() => {
@@ -241,7 +318,10 @@ export function ApplicationMaterialSection({
         try {
           const drafted = await client.call(
             "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material",
-            { path: { workspaceId, applicationId }, body: { kind } },
+            {
+              path: { workspaceId, applicationId },
+              body: { kind, ...guidanceBody(kind, guidance) },
+            },
           );
           if (drafted.id === undefined) {
             setUnsaved(drafted);
@@ -307,4 +387,9 @@ function savePrepareCollapsed(collapsed: boolean): void {
   } catch {
     // Storage may be blocked; the panel then starts folded each time.
   }
+}
+
+function guidanceBody(kind: ApplicationMaterialKind, guidance: ApplicationMaterialGuidance) {
+  const chosen = applicationMaterialGuidanceFor(kind, guidance);
+  return chosen === undefined ? {} : { guidance: chosen };
 }

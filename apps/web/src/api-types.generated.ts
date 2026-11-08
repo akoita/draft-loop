@@ -100,6 +100,7 @@ export interface ApiSchemas {
     readonly id?: string;
     readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
@@ -118,8 +119,21 @@ export interface ApiSchemas {
   "ApplicationMaterialDraftList": {
     readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
   };
+  "ApplicationMaterialGuidance": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
+  "ApplicationMaterialGuidanceInput": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
   "ApplicationMaterialRequestInput": {
     readonly kind: "cover-letter" | "interview-questions";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
   };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];

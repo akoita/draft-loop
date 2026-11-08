@@ -1042,6 +1042,10 @@ msgstr "Nouvelle version de ce fichier ajoutée à {displayName}."
 msgid "Added to {displayName}."
 msgstr "Ajouté à {displayName}."
 
+#: apps/web/src/application-material.tsx
+msgid "Address it to"
+msgstr "Destinataire"
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Advanced: requirements for this run"
 msgstr "Avancé : exigences pour cette exécution"
@@ -2472,6 +2476,7 @@ msgstr "DeepInfra a renvoyé un flux GLM mal formé. Vérifiez la compatibilité
 msgid "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
 msgstr "DeepInfra a renvoyé un flux GLM mal formé. Vérifiez la compatibilité fournisseur/modèle et mettez DraftLoop à jour vers la dernière version prise en charge ; aucun fait n’a été enregistré."
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Default"
 msgstr "Par défaut"
@@ -2596,6 +2601,10 @@ msgstr "Différences avec votre dossier"
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Different {noun}: {0} vs {1}"
 msgstr "{noun} différent : {0} contre {1}"
+
+#: apps/web/src/application-material-model.ts
+msgid "Direct"
+msgstr "Direct"
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Directed"
@@ -3414,6 +3423,18 @@ msgstr "Dossier"
 msgid "Follow system"
 msgstr "Suivre le système"
 
+#: apps/web/src/application-material.tsx
+msgid "For example: my move into team leadership"
+msgstr "Par exemple : mon passage au management d'équipe"
+
+#: apps/web/src/application-material.tsx
+msgid "For example: the hiring team"
+msgstr "Par exemple : l'équipe de recrutement"
+
+#: apps/web/src/application-material-model.ts
+msgid "Formal"
+msgstr "Formel"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
 msgstr "Formule : appels × (jetons d’entrée × tarif d’entrée + jetons de sortie × tarif de sortie) ÷ 1 000 000 ; rédacteur et relecteur s’additionnent. La part de sortie inclut les jetons de raisonnement facturables le cas échéant, sans modifier les contrôles d’exécution."
@@ -3659,6 +3680,14 @@ msgstr "Accordé le {when}{providers}. Base légale : {0}."
 #: packages/ui/src/home-folders.tsx
 msgid "Group applications"
 msgstr "Regrouper les candidatures"
+
+#: apps/web/src/application-material.tsx
+msgid "Guidance shapes the writing only. Every claim still comes from your career record."
+msgstr "Ces consignes orientent seulement l'écriture. Chaque affirmation vient toujours de votre dossier de carrière."
+
+#: apps/web/src/application-material.tsx
+msgid "Guide this draft (optional)"
+msgstr "Orienter ce brouillon (facultatif)"
 
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
@@ -4144,6 +4173,7 @@ msgstr "URL d’éléments de l’ancien espace de travail"
 msgid "Legitimate interest"
 msgstr "Intérêt légitime"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Length"
 msgstr "Longueur"
@@ -4297,6 +4327,10 @@ msgstr "Local uniquement"
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval."
 msgstr "La recherche sémantique locale n’est pas disponible dans cet hôte de bureau. Les exécutions utilisent la recherche par mots-clés."
+
+#: apps/web/src/application-material-model.ts
+msgid "Long"
+msgstr "Long"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
@@ -7123,6 +7157,10 @@ msgstr "Guide d'installation"
 msgid "Shared lineage overridden on a recorded rationale; critique was not independent"
 msgstr "Filiation partagée passée outre sur justification enregistrée ; la critique n’était pas indépendante"
 
+#: apps/web/src/application-material-model.ts
+msgid "Short"
+msgstr "Court"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Show"
 msgstr "Afficher"
@@ -7287,6 +7325,7 @@ msgstr "Langue d’orthographe"
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr "Découpage du texte de l’offre avec les données d’exemple locales. Rien n’est envoyé à un fournisseur."
 
+#: apps/web/src/application-material-model.ts
 #: packages/ui/src/start-confirmation.tsx
 msgid "Standard"
 msgstr "Standard"
@@ -8810,6 +8849,7 @@ msgstr "Jeton :"
 msgid "tokens; thinking"
 msgstr "jetons ; réflexion"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Tone"
@@ -9234,6 +9274,10 @@ msgstr "En attente du démarrage d’un exécutant…"
 msgid "Waiting for you"
 msgstr "En attente de votre action"
 
+#: apps/web/src/application-material-model.ts
+msgid "Warm"
+msgstr "Chaleureux"
+
 #: packages/ui/src/review.tsx
 msgid "warning"
 msgstr "avertissement"
@@ -9303,6 +9347,10 @@ msgstr "ce que couvrait le rôle"
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "Que faire des sections correspondantes"
+
+#: apps/web/src/application-material.tsx
+msgid "What to stress"
+msgstr "Ce qu'il faut mettre en avant"
 
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
