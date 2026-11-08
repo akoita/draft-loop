@@ -6,6 +6,7 @@ import {
   type ApplicationMaterialFact,
   type ApplicationMaterialRequirement,
   applicationMaterialKinds,
+  boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
 } from "@draft-loop/application/application-material";
 import {
@@ -19,6 +20,7 @@ import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
+  applicationMaterialGuidanceSchema,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
 } from "@draft-loop/schemas/saved-application-material";
@@ -72,7 +74,14 @@ const params = z.strictObject({
 });
 
 const body = z
-  .strictObject({ kind: z.enum(applicationMaterialKinds) })
+  .strictObject({
+    kind: z.enum(applicationMaterialKinds),
+    guidance: applicationMaterialGuidanceSchema
+      .optional()
+      .describe(
+        "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+      ),
+  })
   .meta({ id: "ApplicationMaterialRequest" });
 
 const draftView = z
@@ -82,6 +91,9 @@ const draftView = z
       .describe("The saved draft's id; absent when this server keeps no drafts."),
     created_at: z.string().optional().describe("When the draft was written and saved."),
     kind: z.enum(applicationMaterialKinds),
+    guidance: applicationMaterialGuidanceSchema
+      .optional()
+      .describe("The guidance the draft was written with, as the model received it."),
     items: z.array(
       z.object({
         question: z
@@ -280,8 +292,13 @@ export function registerApplicationMaterialRoutes(
         applicationId,
       });
       try {
+        const guidance = boundedApplicationMaterialGuidance(
+          request.body.kind,
+          request.body.guidance,
+        );
         const draft = await draftApplicationMaterial(writer, {
           kind: request.body.kind,
+          ...(guidance === undefined ? {} : { guidance }),
           facts,
           requirements,
           ...(usage === undefined ? {} : { usage }),
@@ -289,11 +306,19 @@ export function registerApplicationMaterialRoutes(
         });
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
         request.log.info(
-          { workspaceId, applicationId, kind: draft.kind, items: draft.items.length, spentUsd },
+          {
+            workspaceId,
+            applicationId,
+            kind: draft.kind,
+            items: draft.items.length,
+            guided: guidance !== undefined,
+            spentUsd,
+          },
           "application material drafted",
         );
         const view = {
           kind: draft.kind,
+          ...(guidance === undefined ? {} : { guidance }),
           items: draft.items.map((item) => ({
             question: item.question,
             text: item.text,

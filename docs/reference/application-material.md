@@ -15,7 +15,13 @@ The drafter builds a bounded context, then asks the model behind
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. At most 60, each cut to 300 characters. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
+| Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Refused rules    | Empty on the first call; the second call lists what the first draft broke.                                                  |
+
+Guidance steers the writing and is never a fact. The model may not cite it,
+and the refusal rules below check claims and numbers against cited facts
+only, so a number stated only in the guidance is refused. The prompt is
+`application-material-v5`.
 
 The default model is Claude Sonnet; Claude Haiku is the economy option. The
 host picks the model and records it with the draft.
@@ -94,8 +100,10 @@ with the record or the organisation.
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it.
 The candidate picks a cover letter or interview questions on its toggle and
-selects **Draft**. Before the first draft, the panel names what goes to
-Anthropic. On the job page the panel takes the setup card's column; on a run's
+selects **Draft**. **Guide this draft** opens optional fields: what to stress,
+tone, length and, for a cover letter, whom to address. A saved draft keeps the
+guidance it was written with. Before the first draft, the panel names what goes
+to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
 
 Each paragraph or question shows its cited facts beside it. The newest saved
@@ -113,4 +121,5 @@ rest of the page keeps working. The panel lives in
 The [application material walk](../evaluation/application-material-walk.md)
 drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
 runs only with the owner's go. Its fourth run, on prompt
-`application-material-v4`, passed every check.
+`application-material-v4`, passed every check; `v5` adds guidance and has not
+been walked yet (#2483).

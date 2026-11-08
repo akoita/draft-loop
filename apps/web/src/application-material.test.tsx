@@ -10,6 +10,7 @@ import {
 import {
   type ApplicationMaterialDraft,
   applicationMaterialFileName,
+  applicationMaterialGuidanceFor,
   applicationMaterialMarkdown,
   applicationMaterialProblem,
   applicationMaterialVersionLabel,
@@ -39,6 +40,8 @@ const props: ApplicationMaterialViewProps = {
   versions: [],
   problem: undefined,
   busy: false,
+  guidance: {},
+  onGuidance: () => {},
   collapsed: false,
   onToggle: () => {},
   onKind: () => {},
@@ -105,10 +108,25 @@ describe("the prepare panel", () => {
     const single = renderToStaticMarkup(
       <ApplicationMaterialView {...props} draft={newest} versions={[newest]} />,
     );
-    expect(single).not.toContain("<select");
+    expect(single).not.toContain("Version<select");
     expect(single).toContain("Delete this version");
     const unsaved = renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />);
     expect(unsaved).not.toContain("Delete this version");
+  });
+
+  it("offers guidance, with an addressee for a cover letter only", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} guidance={{ emphasis: "Leadership", tone: "warm" }} />,
+    );
+    expect(html).toContain("Guide this draft (optional)");
+    expect(html).toContain(">Leadership</textarea>");
+    expect(html).toContain('<option value="warm" selected="">Warm</option>');
+    expect(html).toContain("Address it to");
+    expect(html).toContain("Every claim still comes from your career record.");
+    const questions = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} kind="interview-questions" />,
+    );
+    expect(questions).not.toContain("Address it to");
   });
 
   it("shows a refusal in the panel while the controls stay usable", () => {
@@ -157,6 +175,18 @@ describe("the prepare panel's model", () => {
       }),
     ).toBe("7 Nov 2026, 09:05 · claude-sonnet-5-5");
     expect(applicationMaterialVersionLabel(draft)).toBe("Unsaved draft");
+  });
+
+  it("sends only the guidance the candidate filled in for the kind", () => {
+    expect(applicationMaterialGuidanceFor("cover-letter", {})).toBeUndefined();
+    expect(applicationMaterialGuidanceFor("cover-letter", { emphasis: "  " })).toBeUndefined();
+    expect(
+      applicationMaterialGuidanceFor("interview-questions", {
+        emphasis: " Leadership ",
+        addressee: "Team",
+        length: "short",
+      }),
+    ).toEqual({ emphasis: "Leadership", length: "short" });
   });
 
   it("downloads the draft as Markdown with its sources under each item", () => {

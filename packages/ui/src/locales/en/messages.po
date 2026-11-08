@@ -1048,6 +1048,10 @@ msgstr "Added a new version of that file to {displayName}."
 msgid "Added to {displayName}."
 msgstr "Added to {displayName}."
 
+#: apps/web/src/application-material.tsx
+msgid "Address it to"
+msgstr "Address it to"
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Advanced: requirements for this run"
 msgstr "Advanced: requirements for this run"
@@ -2470,6 +2474,7 @@ msgstr "DeepInfra returned a malformed GLM stream. Check provider or model compa
 msgid "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
 msgstr "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Default"
 msgstr "Default"
@@ -2594,6 +2599,10 @@ msgstr "Differences from your record"
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Different {noun}: {0} vs {1}"
 msgstr "Different {noun}: {0} vs {1}"
+
+#: apps/web/src/application-material-model.ts
+msgid "Direct"
+msgstr "Direct"
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Directed"
@@ -3412,6 +3421,18 @@ msgstr "Folder"
 msgid "Follow system"
 msgstr "Follow system"
 
+#: apps/web/src/application-material.tsx
+msgid "For example: my move into team leadership"
+msgstr "For example: my move into team leadership"
+
+#: apps/web/src/application-material.tsx
+msgid "For example: the hiring team"
+msgstr "For example: the hiring team"
+
+#: apps/web/src/application-material-model.ts
+msgid "Formal"
+msgstr "Formal"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
 msgstr "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
@@ -3657,6 +3678,14 @@ msgstr "Granted on {when}{providers}. Basis: {0}."
 #: packages/ui/src/home-folders.tsx
 msgid "Group applications"
 msgstr "Group applications"
+
+#: apps/web/src/application-material.tsx
+msgid "Guidance shapes the writing only. Every claim still comes from your career record."
+msgstr "Guidance shapes the writing only. Every claim still comes from your career record."
+
+#: apps/web/src/application-material.tsx
+msgid "Guide this draft (optional)"
+msgstr "Guide this draft (optional)"
 
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
@@ -4134,6 +4163,7 @@ msgstr "Legacy workspace evidence URLs"
 msgid "Legitimate interest"
 msgstr "Legitimate interest"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Length"
 msgstr "Length"
@@ -4287,6 +4317,10 @@ msgstr "Local only"
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval."
 msgstr "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval."
+
+#: apps/web/src/application-material-model.ts
+msgid "Long"
+msgstr "Long"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
@@ -7105,6 +7139,10 @@ msgstr "Setup guide"
 msgid "Shared lineage overridden on a recorded rationale; critique was not independent"
 msgstr "Shared lineage overridden on a recorded rationale; critique was not independent"
 
+#: apps/web/src/application-material-model.ts
+msgid "Short"
+msgstr "Short"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Show"
 msgstr "Show"
@@ -7268,6 +7306,7 @@ msgstr "Spelling locale"
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr "Splitting the job text with local fixtures. Nothing is sent to a provider."
 
+#: apps/web/src/application-material-model.ts
 #: packages/ui/src/start-confirmation.tsx
 msgid "Standard"
 msgstr "Standard"
@@ -8771,6 +8810,7 @@ msgstr "Token:"
 msgid "tokens; thinking"
 msgstr "tokens; thinking"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Tone"
@@ -9187,6 +9227,10 @@ msgstr "Waiting for a worker to start…"
 msgid "Waiting for you"
 msgstr "Waiting for you"
 
+#: apps/web/src/application-material-model.ts
+msgid "Warm"
+msgstr "Warm"
+
 #: packages/ui/src/review.tsx
 msgid "warning"
 msgstr "warning"
@@ -9256,6 +9300,10 @@ msgstr "what the role covered"
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "What to do with matching sections"
+
+#: apps/web/src/application-material.tsx
+msgid "What to stress"
+msgstr "What to stress"
 
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"

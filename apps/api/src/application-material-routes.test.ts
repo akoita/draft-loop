@@ -168,7 +168,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v4",
+      prompt_version: "application-material-v5",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -313,6 +313,41 @@ describe("application material route", () => {
     expect((await remove(`${url}/${first.json().id}`)).statusCode).toBe(404);
     expect(((await list()).json() as { drafts: unknown[] }).drafts).toHaveLength(2);
     expect(logs.join("\n")).not.toContain("cut report time");
+  });
+
+  it("sends the candidate's guidance to the model and saves it with the draft", async () => {
+    const seen: unknown[] = [];
+    const drafts = createMemorySavedApplicationMaterialStore();
+    await build({
+      consent: granted,
+      route: scriptedRoute(
+        [{ items: [{ question: "", text: "As a Data Analyst I report.", fact_ids: ["t"] }] }],
+        seen,
+      ),
+      drafts,
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: {
+        kind: "cover-letter",
+        guidance: { emphasis: " Stress reporting. ", tone: "direct", addressee: "The data team" },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const guidance = { emphasis: "Stress reporting.", tone: "direct", addressee: "The data team" };
+    expect(response.json().guidance).toEqual(guidance);
+    expect(seen[0]).toMatchObject({ candidate_guidance: guidance });
+    expect((await drafts.get("owner", response.json().id))?.guidance).toEqual(guidance);
+    expect(logs.join("\n")).not.toContain("Stress reporting");
+    const refused = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "cover-letter", guidance: { tone: "angry" } },
+    });
+    expect(refused.statusCode).toBe(400);
   });
 
   it("serves no list when the server keeps no drafts", async () => {
