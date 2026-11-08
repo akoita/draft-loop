@@ -2313,6 +2313,10 @@ msgstr "Créer une base de connaissances"
 msgid "Create knowledge store"
 msgstr "Créer un stockage de connaissances"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Create my account"
+msgstr "Créer mon compte"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Create or choose a knowledge base"
 msgstr "Créer ou choisir une base de connaissances"
@@ -2351,6 +2355,10 @@ msgstr "Base de connaissances « {shown} » créée."
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Creating a knowledge base is unavailable"
 msgstr "La création d’une base de connaissances est indisponible"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Creating your account"
+msgstr "Création de votre compte"
 
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -4007,6 +4015,10 @@ msgstr "Horodatage non valide."
 msgid "Invalid workspace name."
 msgstr "Nom d’espace de travail non valide."
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Invite code"
+msgstr "Code d’invitation"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
 msgstr "est marqué contre"
@@ -4090,6 +4102,10 @@ msgstr "Exigences lues dans l’offre d’emploi"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
 msgstr "Exigences du poste relues"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Join the DraftLoop beta"
+msgstr "Rejoindre la bêta de DraftLoop"
 
 #: packages/ui/src/application-name.tsx
 msgid "Keep “"
@@ -4998,6 +5014,14 @@ msgstr "Pas encore de constats : la critique n’a pas eu lieu"
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
 msgstr "Sans dossier"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "No invite has that code. Check it for typos, or ask for a new invite."
+msgstr "Aucune invitation ne correspond à ce code. Vérifiez qu’il n’y a pas de faute de frappe, ou demandez une nouvelle invitation."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "No invite? The beta is invite-only for now."
+msgstr "Pas d’invitation ? La bêta est pour l’instant sur invitation uniquement."
 
 #: packages/ui/src/profile.tsx
 msgid "No issues are recorded in this version."
@@ -7303,6 +7327,7 @@ msgstr "Connectez-vous avec le jeton propriétaire de ce déploiement. Il reste 
 msgid "Sign in with your organisation account. You stay signed in until you close this tab."
 msgstr "Connectez-vous avec le compte de votre organisation. Vous restez connecté jusqu’à la fermeture de cet onglet."
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/shell-actions.tsx
 msgid "Sign out"
 msgstr "Se déconnecter"
@@ -7651,6 +7676,18 @@ msgstr "Test de la clé auprès du fournisseur…"
 msgid "Text"
 msgstr "Texte"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
+msgstr "Cette invitation a déjà été utilisée. Chaque code ouvre un seul compte ; demandez une nouvelle invitation si ce n’était pas vous."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
+msgstr "Cette invitation est destinée à une autre adresse e-mail. Déconnectez-vous, puis connectez-vous avec l’adresse qui a reçu l’invitation."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite was withdrawn. Ask for a new invite."
+msgstr "Cette invitation a été retirée. Demandez une nouvelle invitation."
+
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
 msgstr "Ce stockage de connaissances n’est pas sur ce service."
@@ -7745,6 +7782,10 @@ msgstr "Le rédacteur écrit l’ébauche."
 #: packages/ui/src/autopilot-toggle.tsx
 msgid "The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you."
 msgstr "Le rédacteur révise seul à partir de chaque constat du relecteur. La relecture ne s’arrête plus tôt que si l’ébauche est prête, si une affirmation est contestée ou si un constat bloquant indique que l’ébauche contredit vos contenus. L’approbation finale vous revient."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The beta is full for now. Your code stays valid: try again when places open."
+msgstr "La bêta est complète pour le moment. Votre code reste valable : réessayez quand des places se libèrent."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -8576,6 +8617,10 @@ msgstr "Voici les pages du modèle en PDF. Word met en page le même texte, mais
 msgid "These models"
 msgstr "Ces modèles"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "This account already exists. Reload the page."
+msgstr "Ce compte existe déjà. Rechargez la page."
+
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "Ce compte n’est encore membre d’aucune organisation. Demandez une invitation au propriétaire de votre organisation."
@@ -8903,6 +8948,10 @@ msgstr "jetons ; réflexion"
 msgid "Tone"
 msgstr "Ton"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Too many attempts. Wait 15 minutes, then try again."
+msgstr "Trop de tentatives. Attendez 15 minutes, puis réessayez."
+
 #: apps/web/src/refusal-text.ts
 msgid "Too many requests; retry later."
 msgstr "Trop de requêtes ; réessayez plus tard."
@@ -9217,6 +9266,10 @@ msgstr "Valeur du fait {0}"
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Verbosity"
 msgstr "Verbosité"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Verify your email address with the sign-in provider, then try again."
+msgstr "Vérifiez votre adresse e-mail auprès du service de connexion, puis réessayez."
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "version"
@@ -9586,6 +9639,10 @@ msgstr "Texte {0}"
 msgid "You"
 msgstr "Vous"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
+
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
 msgstr "Vous pourrez modifier l’ébauche une fois ce tour terminé."
@@ -9606,6 +9663,10 @@ msgstr "Vous avez des modifications non enregistrées. Choisissez Abandonner les
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr "Vous avez des modifications non enregistrées. Enregistrez-les avant de marquer le brief comme relu."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Your account could not be created. Try again."
+msgstr "Votre compte n’a pas pu être créé. Réessayez."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Your answer"

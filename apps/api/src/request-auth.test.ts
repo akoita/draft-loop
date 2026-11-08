@@ -118,7 +118,7 @@ describe("sign-in mode", () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toEqual({
       error: {
-        code: "forbidden",
+        code: "no_account",
         message: "The signed-in account is not a member of an organisation.",
       },
     });

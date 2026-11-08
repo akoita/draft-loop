@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Retries you can see, and an export preview",
+  "releaseName": "Cover letters you keep",
   "stageIssue": 1359,
-  "milestone": 93,
-  "summary": "A failed step now says whether DraftLoop retries it on its own and when, or that it cannot recover (#2495). Draft edits lock while a step retries (#2496), and Stop keeps a run stopped even when a step finishes after it (#2494). An approved run's export can be previewed in a dialog before you save it, for PDF and for Word from the same template's pages (#2505 to #2507). Groundwork for the invite-only public test, not yet reachable from the screen: a Beta plan with three economy runs (#2491), a deployment-wide monthly spend pool that refuses new runs past its ceiling when DRAFT_LOOP_SPEND_POOL_USD is set (#2500), and single-use invite codes under an account cap (#2504).",
-  "knownLimitations": "Beta invites have no routes or screen yet, and the spend pool is off unless configured. Agents cannot approve or export: those stay in DraftLoop. French is beta until the French quality gate (milestone 83) runs. The screening shadow only logs. Live speech and the career interview still need DRAFT_LOOP_SCREENING=rules+model and a Claude key on staging. The local-first desktop has no career interview."
+  "milestone": 91,
+  "summary": "Every cover letter and interview question set is now saved with its application as a version you can reopen, compare or delete (#2492). Optional guidance steers a draft's emphasis, tone, length and addressee (#2511). Cover letters follow a 250 to 350 word brief, and a Writing check flags sentences with common machine-writing habits; it is not an AI detector (#2517). You can pick Sonnet or the cheaper Haiku, each shown with its estimated cost (#2518), and paste up to three of your own texts so drafts copy how you write (#2519). Each paragraph can be edited and saved as a free new version; numbers no cited fact states are flagged, not refused (#2520). A saved draft downloads as Word or PDF with the CV templates, Modern by default (#2522).",
+  "knownLimitations": "The research brief before drafting (#2482) waits on the choice of a web search provider, and the second critic pass for machine-sounding sentences (#2514) is not built yet. Drafting still needs DRAFT_LOOP_SCREENING=rules+model and a Claude route on staging. Beta invites have no routes or screen yet, and the spend pool is off unless configured. Agents cannot approve or export, and saved drafts are not yet reachable from agents. French is beta until the French quality gate (milestone 83) runs. The local-first desktop has no career interview or Prepare panel."
 }
