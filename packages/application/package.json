@@ -71,6 +71,14 @@
       "types": "./src/writing-tells.ts",
       "import": "./src/writing-tells.ts"
     },
+    "./cover-letter-claims": {
+      "types": "./src/cover-letter-claims.ts",
+      "import": "./src/cover-letter-claims.ts"
+    },
+    "./cover-letter-claims-model": {
+      "types": "./src/cover-letter-claims-model.ts",
+      "import": "./src/cover-letter-claims-model.ts"
+    },
     "./cover-letter-facts": {
       "types": "./src/cover-letter-facts.ts",
       "import": "./src/cover-letter-facts.ts"

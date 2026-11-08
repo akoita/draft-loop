@@ -537,7 +537,7 @@ export function unsupportedNumbers(text: string, sources: readonly string[]): st
  * work (#2218's second walk: "SQL is one of my listed skills", "without claiming more than the
  * record shows"). A candidate would never send it.
  */
-const recordLanguage =
+export const recordLanguage =
   /\b(?:my|the|your|on) record\b|\blisted (?:skills?|as)\b|\b(?:named|listed) skill\b|\bclaim(?:ing)? more than\b|\bcitations?\b/iu;
 
 /** The longest courtesy sentence a cover letter may open or close with, uncited. */
