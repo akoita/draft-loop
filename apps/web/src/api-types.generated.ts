@@ -721,6 +721,41 @@ export interface ApiSchemas {
     readonly workspaceId: string;
     readonly members: readonly (ApiSchemas["RecordMember"])[];
   };
+  "ResearchBrief": {
+    readonly id: string;
+    readonly application_id: string;
+    readonly queries: readonly (string)[];
+    readonly from_date: string;
+    readonly sources: readonly (ApiSchemas["ResearchSource"])[];
+    readonly findings: readonly (ApiSchemas["ResearchFinding"])[];
+    readonly dropped: {
+      readonly flagged: number;
+      readonly outdated: number;
+    };
+    readonly search_provider: string;
+    readonly model: {
+      readonly provider: string;
+      readonly model: string;
+    };
+    readonly cost_usd: number;
+    readonly created_at: string;
+  };
+  "ResearchBriefList": {
+    readonly briefs: readonly (ApiSchemas["ResearchBrief"])[];
+  };
+  "ResearchFinding": {
+    readonly id: string;
+    readonly text: string;
+    readonly source_ids: readonly (string)[];
+  };
+  "ResearchSource": {
+    readonly id: string;
+    readonly kind: "upload" | "company-page" | "web-result";
+    readonly url?: string;
+    readonly title: string;
+    readonly excerpt: string;
+    readonly published_on?: string;
+  };
   "ReviewDraft": {
     readonly id: string;
     readonly version: number;
@@ -2341,6 +2376,29 @@ export interface ApiOperations {
       readonly workspaceId: string;
       readonly applicationId: string;
       readonly materialId: string;
+    };
+    readonly response: void;
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["ResearchBriefList"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs/{briefId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly briefId: string;
+    };
+    readonly response: ApiSchemas["ResearchBrief"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs/{briefId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly briefId: string;
     };
     readonly response: void;
   };

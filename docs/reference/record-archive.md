@@ -52,7 +52,8 @@ once.
 The screening tables, `content_screening_results` and
 `content_screening_releases`, and the work journal tables,
 `work_journal_intake`, `work_journal_notes` and `work_journal_forgotten_keys`,
-and `career_interview_sessions` were added to v1 as more table files. Readers that skip table files they do not
+`career_interview_sessions`, `application_material_drafts` and
+`application_research_briefs` were added to v1 as more table files. Readers that skip table files they do not
 know are unaffected, so the version stays 1.
 
 ## What it never holds

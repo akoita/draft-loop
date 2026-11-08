@@ -232,6 +232,11 @@ const tableQueries: Readonly<
     `SELECT * FROM application_material_drafts WHERE workspace_id = $1
      ORDER BY created_at, id COLLATE "C"`,
     [s.workspaceId],
+  ], // Research briefs, keyed like the saved drafts.
+  application_research_briefs: (s) => [
+    `SELECT * FROM application_research_briefs WHERE workspace_id = $1
+     ORDER BY created_at, id COLLATE "C"`,
+    [s.workspaceId],
   ],
 };
 

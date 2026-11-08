@@ -157,6 +157,32 @@ Saved drafts are candidate material. They live in the record's Postgres table
 `application_material_drafts`, are part of the record archive, and are erased
 with the record or the organisation.
 
+## Research briefs
+
+A research brief holds public facts about the employer, gathered after the
+candidate approves a research run (#2482). Each brief keeps what was searched,
+the sources kept, and short findings that cite those sources. The run itself is
+not built yet (#2543), so briefs exist only once it ships.
+
+| Field       | Holds                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| `queries`   | What the run searched for.                                                                     |
+| `from_date` | The oldest publication date kept; older sources are dropped and counted in `dropped.outdated`. |
+| `sources`   | Uploads, company pages and web results, each with an excerpt; no `published_on` means undated. |
+| `findings`  | Facts about the employer, each citing one to five of the brief's sources.                      |
+| `dropped`   | Sources the run dropped: `flagged` by screening, `outdated` by the window.                     |
+| `cost_usd`  | What the run's searches and model calls cost.                                                  |
+
+| Route                                                         | Does                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `GET .../applications/{applicationId}/research-briefs`        | Lists the application's briefs, newest first, at most 20.  |
+| `GET .../research-briefs/{briefId}`                           | Reads one brief. 404 when the application has no such one. |
+| `DELETE .../applications/{applicationId}/research-briefs/{briefId}` | Deletes one brief for good.                          |
+
+These routes are for the person only; agent tokens cannot reach them. Briefs
+live in the record's Postgres table `application_research_briefs`, are part of
+the record archive, and are erased with the record or the organisation.
+
 ## Editing a draft
 
 An edit is the candidate's own text, so it is checked and flagged, never
