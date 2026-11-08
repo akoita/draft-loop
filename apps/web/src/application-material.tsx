@@ -21,6 +21,7 @@ import {
   applicationMaterialMarkdown,
   applicationMaterialModelLabel,
   applicationMaterialProblem,
+  applicationMaterialReviewNote,
   applicationMaterialTellReason,
   applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
@@ -74,6 +75,10 @@ export interface ApplicationMaterialViewProps {
   readonly onEditText?: (index: number, text: string) => void;
   readonly onSaveEdit?: () => void;
   readonly onCancelEdit?: () => void;
+  /** True while a critic from another company checks the newest cover letter (#2526). */
+  readonly reviewing?: boolean;
+  /** How the critic's check ended, once it did. */
+  readonly reviewNote?: string | undefined;
 }
 
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
@@ -260,6 +265,15 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
           </button>
         </div>
         {problem === undefined ? null : <p role="alert">{problem}</p>}
+        {props.reviewing === true ? (
+          <p className="application-material-note" role="status">
+            {t`A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any.`}
+          </p>
+        ) : props.reviewNote === undefined ? null : (
+          <p className="application-material-note" role="status">
+            {props.reviewNote}
+          </p>
+        )}
         {draft === undefined ? null : (
           <>
             {versions.length > 1 && draft.id !== undefined ? (
@@ -317,6 +331,19 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 </li>
               ))}
             </ol>
+            {draft.critic_findings === undefined ? null : (
+              <section className="application-material-tells" aria-labelledby="material-critic">
+                <h3 id="material-critic">{t`What the critic flagged`}</h3>
+                <p>{t`These sentences of the first draft read as machine-written; this version rewrites them.`}</p>
+                <ul>
+                  {draft.critic_findings.map((finding) => (
+                    <li key={`${finding.paragraph}:${finding.sentence}`}>
+                      <q>{finding.sentence}</q> {finding.reason}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {draft.tells === undefined ? null : (
               <section className="application-material-tells" aria-labelledby="material-tells">
                 <h3 id="material-tells">{t`Writing check`}</h3>
@@ -445,6 +472,8 @@ export function ApplicationMaterialSection({
   const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
+  const [reviewing, setReviewing] = useState<string | undefined>(undefined);
+  const [reviewNote, setReviewNote] = useState<string | undefined>(undefined);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
 
   // The candidate's writing samples; a server that keeps none leaves the fields hidden.
@@ -477,6 +506,43 @@ export function ApplicationMaterialSection({
     };
   }, [client, collapsed, models.length]);
 
+  // The critic pass on a cover letter just drafted (#2526): polled until it ends, then the
+  // revised version, if any, is loaded and opened.
+  useEffect(() => {
+    if (reviewing === undefined) return;
+    let current = true;
+    const poll = async () => {
+      const review = await client
+        .call(
+          "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/review",
+          { path: { workspaceId, applicationId, materialId: reviewing } },
+        )
+        .catch(() => undefined);
+      if (!current) return;
+      if (review?.status === "pending") {
+        timer = setTimeout(poll, reviewPollMs);
+        return;
+      }
+      setReviewing(undefined);
+      setReviewNote(review === undefined ? undefined : applicationMaterialReviewNote(review));
+      if (review?.revision_id === undefined) return;
+      const listed = await client
+        .call("GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material", {
+          path: { workspaceId, applicationId },
+          query: { kind: "cover-letter" },
+        })
+        .catch(() => undefined);
+      if (!current || listed === undefined) return;
+      setVersions(listed.drafts);
+      setSelectedId(review.revision_id);
+    };
+    let timer = setTimeout(poll, reviewPollMs);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [client, workspaceId, applicationId, reviewing]);
+
   // The saved versions of the chosen kind, loaded once the panel is open. A server that keeps
   // no drafts answers 404, and the panel then shows only what it drafts in this visit.
   useEffect(() => {
@@ -506,6 +572,8 @@ export function ApplicationMaterialSection({
       draft={draft}
       versions={versions}
       problem={problem}
+      reviewing={reviewing !== undefined && kind === "cover-letter"}
+      reviewNote={kind === "cover-letter" ? reviewNote : undefined}
       guidance={guidance}
       onGuidance={setGuidance}
       models={models}
@@ -613,6 +681,8 @@ export function ApplicationMaterialSection({
             setUnsaved(undefined);
             setVersions((saved) => [drafted, ...saved]);
             setSelectedId(drafted.id);
+            setReviewNote(undefined);
+            setReviewing(drafted.review?.status === "pending" ? drafted.id : undefined);
           }
         } catch (error) {
           setProblem(applicationMaterialProblem(error));
@@ -654,6 +724,9 @@ export function ApplicationMaterialSection({
     />
   );
 }
+
+/** How often the panel asks whether the critic's check has ended. */
+const reviewPollMs = 3_000;
 
 /** Whether the candidate opened the panel, remembered per browser; it starts folded. */
 const prepareOpenKey = "draft-loop.prepare-panel.open";

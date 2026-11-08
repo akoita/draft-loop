@@ -14,6 +14,7 @@ import {
   applicationMaterialMarkdown,
   applicationMaterialModelLabel,
   applicationMaterialProblem,
+  applicationMaterialReviewNote,
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 
@@ -289,6 +290,41 @@ describe("the prepare panel's model", () => {
     expect(applicationMaterialProblem(new TypeError("fetch failed"))).toContain(
       "could not be reached",
     );
+  });
+
+  it("says while the critic checks a letter, then shows what it flagged", () => {
+    const checking = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={{ ...draft, kind: "cover-letter" }} reviewing />,
+    );
+    expect(checking).toContain("A critic from another company is checking this letter");
+    const revised: ApplicationMaterialDraft = {
+      ...saved("amd_revisionfixture1", "2026-11-07T09:06:00.000Z"),
+      kind: "cover-letter",
+      based_on: "amd_fixture0001",
+      critic_findings: [
+        { paragraph: 0, sentence: "I am a passionate analyst.", reason: "stock word" },
+      ],
+      critic_model: { provider: "openai", model: "critic-model" },
+    };
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={revised}
+        reviewNote={applicationMaterialReviewNote({ status: "done", outcome: "revised" })}
+      />,
+    );
+    expect(html).toContain("What the critic flagged");
+    expect(html).toContain("<q>I am a passionate analyst.</q> stock word");
+    expect(html).toContain("The revised version is open");
+    expect(applicationMaterialVersionLabel(revised, { locale: "en-GB", timeZone: "UTC" })).toBe(
+      "7 Nov 2026, 09:06 · revised after the critic's check",
+    );
+    expect(applicationMaterialReviewNote({ status: "failed" })).toContain("stands as drafted");
+    expect(applicationMaterialReviewNote({ status: "done", outcome: "kept" })).toContain(
+      "does not support",
+    );
+    expect(applicationMaterialReviewNote({ status: "done", outcome: "skipped" })).toBeUndefined();
+    expect(applicationMaterialReviewNote({ status: "none" })).toBeUndefined();
   });
 
   it("names a saved version by its time and model", () => {
