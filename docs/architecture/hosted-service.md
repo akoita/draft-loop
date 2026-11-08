@@ -670,6 +670,27 @@ In sign-in mode, the plan's `seats` and `candidateRecords` limit growth
 Past a limit, the answer is 409 `plan_limit_reached` with `limit` and `value`.
 An organisation with no plan gets 403 `plan_required`.
 
+### Model calls outside runs
+
+The plan's `modelCallsPerDay` bounds what a member's model calls outside runs
+can cost (`model-call-gate.ts`, #2487). Beta allows 20 a UTC day; the other
+plans have no cap.
+
+| Counted call                 | Route                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| An interview turn            | `POST .../career-interview/sessions/:sessionId/actions` with `accept`, `answer` or `own_subject` |
+| A live interview             | `GET .../career-interview/sessions/:sessionId/live`, once per session                            |
+| Drafted application material | `POST .../applications/:applicationId/material`                                                  |
+| A profile derivation         | `POST .../profiles/:profileId/derivation`                                                        |
+
+- **Free.** Brief extraction, since a run needs a brief. Owner-token calls
+  are not counted.
+- **Refusal.** 429 `model_call_cap_reached` with `limit`, and `Retry-After`
+  until midnight UTC. The API logs `model call cap reached`.
+- **Counting.** `model_call_counts` holds one counter per organisation and
+  day. The check and the increment are one statement, so racing calls cannot
+  pass the cap. A call the route then refuses for another reason still counts.
+
 ### Operator routes
 
 Operator routes take only the deployment's owner token, in both auth modes,

@@ -4181,6 +4181,19 @@
                 ],
                 "description": "Runs in flight; null is unlimited."
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Model calls outside runs per UTC day (interview turns, drafts, profile derivations); null is unlimited."
+              },
               "seats": {
                 "anyOf": [
                   {
@@ -4212,6 +4225,7 @@
               "modelTiers",
               "runsPerDay",
               "concurrentRuns",
+              "modelCallsPerDay",
               "seats",
               "candidateRecords"
             ],
@@ -4967,6 +4981,18 @@
                   }
                 ]
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "features": {
                 "type": "object",
                 "properties": {
@@ -5163,6 +5189,18 @@
                   }
                 ]
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "features": {
                 "type": "object",
                 "properties": {
@@ -5200,6 +5238,7 @@
               "candidateRecords",
               "runsPerDay",
               "concurrentRuns",
+              "modelCallsPerDay",
               "features"
             ],
             "additionalProperties": false
@@ -5348,6 +5387,18 @@
                       }
                     ]
                   },
+                  "modelCallsPerDay": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "features": {
                     "type": "object",
                     "properties": {
@@ -5385,6 +5436,7 @@
                   "candidateRecords",
                   "runsPerDay",
                   "concurrentRuns",
+                  "modelCallsPerDay",
                   "features"
                 ],
                 "additionalProperties": false
@@ -10817,6 +10869,19 @@
                 ],
                 "description": "Runs in flight; null is unlimited."
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Model calls outside runs per UTC day (interview turns, drafts, profile derivations); null is unlimited."
+              },
               "seats": {
                 "anyOf": [
                   {
@@ -10848,6 +10913,7 @@
               "modelTiers",
               "runsPerDay",
               "concurrentRuns",
+              "modelCallsPerDay",
               "seats",
               "candidateRecords"
             ],
@@ -11620,6 +11686,18 @@
                   }
                 ]
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "features": {
                 "type": "object",
                 "properties": {
@@ -11818,6 +11896,18 @@
                   }
                 ]
               },
+              "modelCallsPerDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "features": {
                 "type": "object",
                 "properties": {
@@ -11855,6 +11945,7 @@
               "candidateRecords",
               "runsPerDay",
               "concurrentRuns",
+              "modelCallsPerDay",
               "features"
             ],
             "additionalProperties": false
@@ -12006,6 +12097,18 @@
                       }
                     ]
                   },
+                  "modelCallsPerDay": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "features": {
                     "type": "object",
                     "properties": {
@@ -12043,6 +12146,7 @@
                   "candidateRecords",
                   "runsPerDay",
                   "concurrentRuns",
+                  "modelCallsPerDay",
                   "features"
                 ],
                 "additionalProperties": false
@@ -25156,6 +25260,18 @@
                         ]
                       },
                       "concurrentRuns": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "modelCallsPerDay": {
                         "anyOf": [
                           {
                             "type": "integer",

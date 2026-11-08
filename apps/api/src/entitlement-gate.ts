@@ -5,7 +5,12 @@ import type {
   WorkspaceDescriptor,
 } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
-import type { CreditLedger, OrganisationPlans, SpendPool } from "@draft-loop/storage-postgres";
+import type {
+  CreditLedger,
+  ModelCallMeter,
+  OrganisationPlans,
+  SpendPool,
+} from "@draft-loop/storage-postgres";
 import type { FastifyBaseLogger } from "fastify";
 
 import { logCreditCrossings } from "./credit-usage.js";
@@ -28,6 +33,8 @@ export interface TenantEntitlements {
     readonly limitUsd: number;
     readonly pool: Pick<SpendPool, "reserve" | "close">;
   };
+  /** The organisation's daily count of model calls outside runs (#2487); uncounted when absent. */
+  readonly modelCalls?: Pick<ModelCallMeter, "take">;
 }
 
 /** One organisation's entitlements and ledger, by organisation id. */

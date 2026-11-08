@@ -9800,6 +9800,10 @@ msgstr "Your organisation has no plan yet."
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Your organisation has no plan yet. Ask the owner to choose one."
 
+#: apps/web/src/refusal-text.ts
+msgid "Your plan allows {limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC."
+msgstr "Your plan allows {limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC."
+
 #. placeholder {0}: models.toLowerCase()
 #: apps/web/src/credits-model.ts
 msgid "Your plan does not include {0}{who}. Choose another preset or model."
@@ -9808,6 +9812,10 @@ msgstr "Your plan does not include {0}{who}. Choose another preset or model."
 #: apps/web/src/credits-model.ts
 msgid "Your plan has unlimited credits."
 msgstr "Your plan has unlimited credits."
+
+#: apps/web/src/refusal-text.ts
+msgid "Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC."
+msgstr "Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC."
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan's limit is reached. Ask the owner for a bigger plan."

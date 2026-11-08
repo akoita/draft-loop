@@ -16,6 +16,7 @@ import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
+import { createModelCallMeter } from "./model-call-meter.js";
 import { createOrganisationErasure } from "./organisation-erasure.js";
 import { organisationErasureGrant } from "./organisation-erasure-migration.js";
 import { createOrganisationPlans } from "./organisation-plans.js";
@@ -139,6 +140,7 @@ function tenantStorage(client: SqlSession) {
     organisationPlans: createOrganisationPlans(client),
     creditLedger: createCreditLedger(client),
     spendPool: createSpendPool(client),
+    modelCalls: createModelCallMeter(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),

@@ -27,6 +27,13 @@ const memberCreditsSchema = z
         modelTiers: z.array(tierSchema).describe("The model tiers a run may use."),
         runsPerDay: z.number().int().nullable().describe("Runs per UTC day; null is unlimited."),
         concurrentRuns: z.number().int().nullable().describe("Runs in flight; null is unlimited."),
+        modelCallsPerDay: z
+          .number()
+          .int()
+          .nullable()
+          .describe(
+            "Model calls outside runs per UTC day (interview turns, drafts, profile derivations); null is unlimited.",
+          ),
         seats: z
           .number()
           .int()
@@ -173,6 +180,7 @@ export function registerMemberCreditsRoute(
           modelTiers: [...entitlements.modelTiers],
           runsPerDay: entitlements.runsPerDay,
           concurrentRuns: entitlements.concurrentRuns,
+          modelCallsPerDay: entitlements.modelCallsPerDay,
           seats: entitlements.seats,
           candidateRecords: entitlements.candidateRecords,
         },

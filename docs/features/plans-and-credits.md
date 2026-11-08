@@ -37,6 +37,7 @@ A plan sets these entitlements:
 | Seats                 | Active members plus pending invitations                              |
 | Candidate records     | Records the organisation may hold                                    |
 | Runs per day, at once | Daily and concurrent run limits                                      |
+| Model calls per day   | Interview turns, drafts and profile derivations outside runs         |
 | Features              | Switches such as run comparison or bring-your-own-key                |
 
 ## How to test it
@@ -61,7 +62,8 @@ A plan sets these entitlements:
 ## Limits
 
 - Partial: prices and self-service sign-up are not live, and production is held.
-- Beta credits cover runs only; other model calls are bounded separately (#2456).
+- Beta allows 20 model calls a day outside runs; past that, those routes answer
+  `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - An organisation with no plan answers `403 plan_required`.
 - A deployment can set a monthly spend pool across organisations; when it is
   used, run starts answer `503 spend_pool_exhausted` until the next month.

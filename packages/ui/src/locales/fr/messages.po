@@ -9794,6 +9794,10 @@ msgstr "Votre organisation n’a pas encore d’offre."
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Votre organisation n’a pas encore d’offre. Demandez au propriétaire d’en choisir une."
 
+#: apps/web/src/refusal-text.ts
+msgid "Your plan allows {limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC."
+msgstr "Votre offre permet {limit} échanges d’entretien, brouillons et mises à jour de profil par jour, et ceux d’aujourd’hui sont utilisés. Ils reviennent à minuit UTC."
+
 #. placeholder {0}: models.toLowerCase()
 #: apps/web/src/credits-model.ts
 msgid "Your plan does not include {0}{who}. Choose another preset or model."
@@ -9802,6 +9806,10 @@ msgstr "Votre offre n’inclut pas {0}{who}. Choisissez un autre préréglage ou
 #: apps/web/src/credits-model.ts
 msgid "Your plan has unlimited credits."
 msgstr "Votre offre dispose de crédits illimités."
+
+#: apps/web/src/refusal-text.ts
+msgid "Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC."
+msgstr "Les échanges d’entretien, brouillons et mises à jour de profil de votre offre pour aujourd’hui sont utilisés. Ils reviennent à minuit UTC."
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan's limit is reached. Ask the owner for a bigger plan."

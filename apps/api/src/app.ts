@@ -62,6 +62,7 @@ import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
 import type { MaterialReviews } from "./material-reviews.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
+import { registerModelCallGate } from "./model-call-gate.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
@@ -257,6 +258,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
   registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
+  // Before any route, so every route registered below is counted where it calls a model.
+  if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
+    registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
+  }
 
   app.get(
     "/v1/health",

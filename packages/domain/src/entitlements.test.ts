@@ -16,6 +16,7 @@ const economyPlan: Entitlements = {
   candidateRecords: 1,
   runsPerDay: 5,
   concurrentRuns: 1,
+  modelCallsPerDay: null,
   features: {
     provenanceReport: false,
     runComparison: true,
