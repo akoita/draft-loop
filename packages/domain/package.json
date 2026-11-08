@@ -11,6 +11,10 @@
       "types": "./src/model-profile.ts",
       "import": "./src/model-profile.ts"
     },
+    "./client-error-report": {
+      "types": "./src/client-error-report.ts",
+      "import": "./src/client-error-report.ts"
+    },
     "./entitlements": {
       "types": "./src/entitlements.ts",
       "import": "./src/entitlements.ts"

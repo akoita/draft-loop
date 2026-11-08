@@ -571,6 +571,12 @@ button.small:where(:not(.shared-screens *)) {
   color: var(--text-2);
 }
 
+.application-material-edited {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
 .application-material-samples {
   display: grid;
   gap: var(--space-2);

@@ -62,6 +62,8 @@ export const savedApplicationMaterialSchema = z.strictObject({
       z.strictObject({
         question: z.string().max(maximumSavedApplicationMaterialItemCharacters),
         text: z.string().min(1).max(maximumSavedApplicationMaterialItemCharacters),
+        /** True when the candidate rewrote this item's text (#2480). */
+        edited: z.boolean().optional(),
         citations: z
           .array(
             z.strictObject({
@@ -75,6 +77,8 @@ export const savedApplicationMaterialSchema = z.strictObject({
     .min(1)
     .max(maximumSavedApplicationMaterialItems),
   guidance: applicationMaterialGuidanceSchema.optional(),
+  /** The saved draft this version was edited from (#2480); absent for a drafted version. */
+  based_on: savedApplicationMaterialIdSchema.optional(),
   model: z.strictObject({ provider: shortText, model: shortText }),
   prompt_version: shortText,
   cost_usd: z.number().min(0),

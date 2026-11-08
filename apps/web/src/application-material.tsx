@@ -58,6 +58,12 @@ export interface ApplicationMaterialViewProps {
   readonly onDownload: () => void;
   readonly onSelect: (id: string) => void;
   readonly onDelete: () => void;
+  /** The texts being edited, one per item, or undefined when the draft is not being edited. */
+  readonly edits?: readonly string[] | undefined;
+  readonly onEdit?: () => void;
+  readonly onEditText?: (index: number, text: string) => void;
+  readonly onSaveEdit?: () => void;
+  readonly onCancelEdit?: () => void;
 }
 
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
@@ -269,7 +275,27 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 <li key={index} className="material-item">
                   <div>
                     {item.question === "" ? null : <h3>{item.question}</h3>}
-                    <p>{item.text}</p>
+                    {props.edits === undefined ? (
+                      <p>{item.text}</p>
+                    ) : (
+                      <textarea
+                        className="input"
+                        rows={5}
+                        maxLength={4000}
+                        aria-label={t`Item ${index + 1}`}
+                        value={props.edits[index] ?? ""}
+                        disabled={busy}
+                        onChange={(event) => props.onEditText?.(index, event.currentTarget.value)}
+                      />
+                    )}
+                    {item.edited === true && props.edits === undefined ? (
+                      <p className="application-material-edited">{t`Edited by you`}</p>
+                    ) : null}
+                    {item.unsupported_numbers === undefined || props.edits !== undefined ? null : (
+                      <p className="application-material-note" role="note">
+                        {t`Check these numbers: none of the sources states ${item.unsupported_numbers.join(", ")}.`}
+                      </p>
+                    )}
                   </div>
                   <aside aria-label={t`Sources`}>
                     <ul>
@@ -304,7 +330,33 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               {t`Drafted by`} {draft.model.model}
               {t`. Check every sentence against its sources before you use it.`}
             </p>
+            {props.edits === undefined ? null : (
+              <div className="application-material-actions">
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={busy || props.edits.some((text) => text.trim() === "")}
+                  onClick={props.onSaveEdit}
+                >{t`Save as a new version`}</button>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={busy}
+                  onClick={props.onCancelEdit}
+                >{t`Cancel`}</button>
+              </div>
+            )}
             <div className="application-material-actions">
+              {draft.id === undefined ||
+              props.edits !== undefined ||
+              props.onEdit === undefined ? null : (
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={busy}
+                  onClick={props.onEdit}
+                >{t`Edit`}</button>
+              )}
               <button
                 type="button"
                 className="button button-outline"
@@ -346,6 +398,7 @@ export function ApplicationMaterialSection({
   const [models, setModels] = useState<readonly ApplicationMaterialModel[]>([]);
   const [samples, setSamples] = useState<readonly string[] | undefined>(undefined);
   const [samplesSaved, setSamplesSaved] = useState(true);
+  const [edits, setEdits] = useState<readonly string[] | undefined>(undefined);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
@@ -446,6 +499,35 @@ export function ApplicationMaterialSection({
         setSelectedId(undefined);
         setUnsaved(undefined);
         setProblem(undefined);
+        setEdits(undefined);
+      }}
+      edits={edits}
+      onEdit={() => setEdits(draft?.items.map((item) => item.text))}
+      onEditText={(index, text) =>
+        setEdits((current) => current?.map((value, slot) => (slot === index ? text : value)))
+      }
+      onCancelEdit={() => setEdits(undefined)}
+      onSaveEdit={async () => {
+        const id = draft?.id;
+        if (id === undefined || edits === undefined) return;
+        setBusy(true);
+        setProblem(undefined);
+        try {
+          const version = await client.call(
+            "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions",
+            {
+              path: { workspaceId, applicationId, materialId: id },
+              body: { items: edits.map((text) => ({ text })) },
+            },
+          );
+          setVersions((saved) => [version, ...saved]);
+          setSelectedId(version.id);
+          setEdits(undefined);
+        } catch (error) {
+          setProblem(applicationMaterialProblem(error));
+        } finally {
+          setBusy(false);
+        }
       }}
       onDraft={async () => {
         setBusy(true);
@@ -484,6 +566,7 @@ export function ApplicationMaterialSection({
       }}
       onSelect={(id) => {
         setUnsaved(undefined);
+        setEdits(undefined);
         setSelectedId(id);
       }}
       onDelete={async () => {

@@ -92,7 +92,9 @@ export function applicationMaterialVersionLabel(
     timeStyle: "short",
     ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
   }).format(new Date(draft.created_at));
-  return `${when} · ${draft.model.model}`;
+  return draft.based_on === undefined
+    ? `${when} · ${draft.model.model}`
+    : t`${when} · edited by you`;
 }
 
 export type ApplicationMaterialTell = NonNullable<ApplicationMaterialDraft["tells"]>[number];

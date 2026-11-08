@@ -768,6 +768,10 @@ msgstr ""
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr ""
 
+#: apps/web/src/application-material-model.ts
+msgid "{when} · edited by you"
+msgstr ""
+
 #: packages/ui/src/provider-recovery.tsx
 msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
 msgstr ""
@@ -1612,6 +1616,7 @@ msgstr ""
 msgid "Can't start yet: {0}"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -1750,6 +1755,11 @@ msgstr ""
 
 #: packages/ui/src/profile-status.ts
 msgid "Check the facts below, then mark the profile reviewed so applications can use it."
+msgstr ""
+
+#. placeholder {0}: item.unsupported_numbers.join(", ")
+#: apps/web/src/application-material.tsx
+msgid "Check these numbers: none of the sources states {0}."
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -2939,6 +2949,7 @@ msgstr ""
 msgid "Economy"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -2963,6 +2974,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "edited"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Edited by you"
 msgstr ""
 
 #. placeholder {0}: record.version
@@ -4003,6 +4018,11 @@ msgstr ""
 
 #: packages/ui/src/home-folder-model.ts
 msgid "It is empty."
+msgstr ""
+
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Item {0}"
 msgstr ""
 
 #: packages/ui/src/home-folder-model.ts
@@ -6871,6 +6891,10 @@ msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Save as a new version"
 msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx

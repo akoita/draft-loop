@@ -104,11 +104,14 @@ export interface ApiSchemas {
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
+      readonly edited?: boolean;
+      readonly unsupported_numbers?: readonly (string)[];
       readonly citations: readonly ({
         readonly fact_id: string;
         readonly text: string;
       })[];
     })[];
+    readonly based_on?: string;
     readonly model: {
       readonly provider: string;
       readonly model: string;
@@ -124,6 +127,11 @@ export interface ApiSchemas {
   };
   "ApplicationMaterialDraftList": {
     readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
+  };
+  "ApplicationMaterialEditInput": {
+    readonly items: readonly ({
+      readonly text: string;
+    })[];
   };
   "ApplicationMaterialGuidance": {
     readonly emphasis?: string;
@@ -1137,6 +1145,16 @@ export interface ApiOperations {
   };
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
+  };
+  "POST /v1/client-errors": {
+    readonly body: {
+      readonly kind: "error" | "unhandled_rejection";
+      readonly message: string;
+      readonly stack?: readonly (string)[];
+      readonly route: string;
+      readonly build: string;
+    };
+    readonly response: void;
   };
   "POST /v1/auth/proof": {
     readonly body: ApiSchemas["OwnerTokenProofRequestInput"];
@@ -2271,6 +2289,15 @@ export interface ApiOperations {
   };
   "GET /v1/application-material/models": {
     readonly response: ApiSchemas["ApplicationMaterialModels"];
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly body: ApiSchemas["ApplicationMaterialEditInput"];
+    readonly response: ApiSchemas["ApplicationMaterialDraft"];
   };
   "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
     readonly path: {

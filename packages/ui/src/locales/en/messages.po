@@ -768,6 +768,10 @@ msgstr "{value, plural, one {Your plan allows # candidate record, and it is in u
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{when} · edited by you"
+msgstr "{when} · edited by you"
+
 #: packages/ui/src/provider-recovery.tsx
 msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
 msgstr "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
@@ -1612,6 +1616,7 @@ msgstr "Can't recover"
 msgid "Can't start yet: {0}"
 msgstr "Can't start yet: {0}"
 
+#: apps/web/src/application-material.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -1751,6 +1756,11 @@ msgstr "Check that the selected career evidence includes the facts you need, the
 #: packages/ui/src/profile-status.ts
 msgid "Check the facts below, then mark the profile reviewed so applications can use it."
 msgstr "Check the facts below, then mark the profile reviewed so applications can use it."
+
+#. placeholder {0}: item.unsupported_numbers.join(", ")
+#: apps/web/src/application-material.tsx
+msgid "Check these numbers: none of the sources states {0}."
+msgstr "Check these numbers: none of the sources states {0}."
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Check what the run will use. No provider call is made until you start."
@@ -2939,6 +2949,7 @@ msgstr "economy"
 msgid "Economy"
 msgstr "Economy"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -2964,6 +2975,10 @@ msgstr "Edit writing policy"
 #: packages/ui/src/review.tsx
 msgid "edited"
 msgstr "edited"
+
+#: apps/web/src/application-material.tsx
+msgid "Edited by you"
+msgstr "Edited by you"
 
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -4005,6 +4020,11 @@ msgstr "Issues by severity and status"
 #: packages/ui/src/home-folder-model.ts
 msgid "It is empty."
 msgstr "It is empty."
+
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Item {0}"
+msgstr "Item {0}"
 
 #: packages/ui/src/home-folder-model.ts
 msgid "Its {held} applications move to No folder."
@@ -6873,6 +6893,10 @@ msgstr "Samples saved"
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Save"
+
+#: apps/web/src/application-material.tsx
+msgid "Save as a new version"
+msgstr "Save as a new version"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save as first version"
