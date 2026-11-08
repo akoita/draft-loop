@@ -92,9 +92,35 @@ export function applicationMaterialVersionLabel(
     timeStyle: "short",
     ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
   }).format(new Date(draft.created_at));
-  return draft.based_on === undefined
-    ? `${when} · ${draft.model.model}`
-    : t`${when} · edited by you`;
+  if (draft.based_on === undefined) return `${when} · ${draft.model.model}`;
+  return draft.critic_findings === undefined
+    ? t`${when} · edited by you`
+    : t`${when} · revised after the critic's check`;
+}
+
+export type ApplicationMaterialReview = ApiSchemas["ApplicationMaterialReview"];
+
+/**
+ * What the panel says once a cover letter's critic pass ended (#2526); undefined when there is
+ * nothing to say, as for a pass that was skipped.
+ */
+export function applicationMaterialReviewNote(
+  review: ApplicationMaterialReview,
+): string | undefined {
+  if (review.status === "failed") {
+    return t`The critic's check did not finish, so your letter stands as drafted.`;
+  }
+  if (review.status !== "done") return undefined;
+  switch (review.outcome) {
+    case "revised":
+      return t`The critic flagged sentences that read as machine-written. The revised version is open; your first draft stays in the version list.`;
+    case "clean":
+      return t`The critic found no sentence that reads as machine-written.`;
+    case "kept":
+      return t`The critic flagged sentences, but the rewrite cited something your record does not support, so your letter stands as drafted.`;
+    default:
+      return undefined;
+  }
 }
 
 export type ApplicationMaterialTell = NonNullable<ApplicationMaterialDraft["tells"]>[number];

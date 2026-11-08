@@ -27,6 +27,7 @@ import type { WritingSamplesService } from "@draft-loop/application/writing-samp
 import { writingTells } from "@draft-loop/application/writing-tells";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
+import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
   applicationMaterialGuidanceSchema,
@@ -51,6 +52,7 @@ import { z } from "zod";
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { MaterialReviews } from "./material-reviews.js";
 
 /** What drafting application material needs from a deployment (#2216). */
 export interface ApplicationMaterialParts {
@@ -74,6 +76,11 @@ export interface ApplicationMaterialRoutesOptions {
   readonly writingSamples?: Pick<WritingSamplesService, "read">;
   /** Where drafts are kept (#2477); without it a draft is returned and not stored, as before. */
   readonly drafts?: SavedApplicationMaterialStore;
+  /**
+   * The critic pass on saved cover letters (#2525); without it a letter stands as drafted. A pass is
+   * queued only when the record's consent names the workspace's critic company.
+   */
+  readonly reviews?: MaterialReviews;
   /** The clock a saved draft's time comes from; the system clock by default. */
   readonly now?: () => Date;
 }
@@ -145,6 +152,22 @@ const draftView = z
       .optional()
       .describe("The saved draft this version was edited from; absent for a drafted version."),
     model: z.object({ provider: z.string(), model: z.string() }),
+    critic_findings: z
+      .array(z.object({ paragraph: z.number().int(), sentence: z.string(), reason: z.string() }))
+      .optional()
+      .describe(
+        "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
+      ),
+    critic_model: z
+      .object({ provider: z.string(), model: z.string() })
+      .optional()
+      .describe("The critic that found them, from another company than the author."),
+    review: z
+      .object({ status: z.literal("pending") })
+      .optional()
+      .describe(
+        "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
+      ),
     tells: z
       .array(
         z.object({
@@ -182,6 +205,21 @@ const draftList = z
 const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).optional() });
 
 const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
+
+const reviewView = z
+  .object({
+    status: z.enum(["none", "pending", "done", "failed"]),
+    outcome: z
+      .enum(materialReviewOutcomes)
+      .optional()
+      .describe(
+        "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
+      ),
+    revision_id: savedApplicationMaterialIdSchema
+      .optional()
+      .describe("The version the pass saved, when it revised the letter."),
+  })
+  .meta({ id: "ApplicationMaterialReview" });
 
 const documentQuery = z.strictObject({
   format: z.enum(applicationMaterialDocumentFormats).describe("Word (`docx`) or `pdf`."),
@@ -273,6 +311,34 @@ export function registerApplicationMaterialRoutes(
       promptTemplateVersion: applicationMaterialPromptVersion,
     }) as const;
   const maxCostUsd = material.maxCostUsd ?? defaultApplicationMaterialMaxCostUsd;
+  // A cover letter gets one critic pass on the worker when the deployment queues it and the
+  // record's consent names the workspace's critic company, which must differ from the author's.
+  const queueReview = async (
+    saved: SavedApplicationMaterial,
+    workspace: { readonly critic?: { readonly company: string } },
+    recordId: string,
+  ): Promise<boolean> => {
+    const { reviews } = options;
+    if (reviews === undefined || saved.kind !== "cover-letter") return false;
+    const criticCompany = workspace.critic?.company;
+    if (
+      criticCompany === undefined ||
+      criticCompany === saved.model.provider ||
+      consents === undefined
+    )
+      return false;
+    const consent = await consents.current(recordId);
+    const permitted = permitsTransmission(consent, {
+      author: { company: saved.model.provider },
+      critic: { company: criticCompany },
+    });
+    if (!permitted) return false;
+    return reviews.queue({
+      workspaceId: saved.workspace_id,
+      applicationId: saved.application_id,
+      materialId: saved.id,
+    });
+  };
 
   app.post(
     "/v1/workspaces/:workspaceId/applications/:applicationId/material",
@@ -422,7 +488,10 @@ export function registerApplicationMaterialRoutes(
           { workspaceId, applicationId, materialId: saved.id, kind: saved.kind },
           "application material saved",
         );
-        return reply.send(viewOf(saved));
+        const reviewed = await queueReview(saved, workspace, recordId);
+        return reply.send(
+          reviewed ? { ...viewOf(saved), review: { status: "pending" } } : viewOf(saved),
+        );
       } catch (error) {
         if (error instanceof ApplicationMaterialError) {
           request.log.info(
@@ -538,6 +607,40 @@ export function registerApplicationMaterialRoutes(
         kind === undefined ? {} : { kind },
       );
       return reply.send({ drafts: saved.map(viewOf) });
+    },
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/review",
+    {
+      schema: {
+        summary: "Read where a saved cover letter's critic pass stands",
+        description:
+          "`pending` while the worker reviews the letter; `done` with its outcome once it ended, and `revision_id` when the pass saved a revised version; `failed` when the pass failed its retries, so the letter stands as drafted; `none` when no pass was queued. 404 when the application has no such draft.",
+        params: draftParams,
+        response: { 200: reviewView, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId, materialId } = request.params;
+      const base = await drafts.get(workspaceId, materialId);
+      if (base === undefined || base.application_id !== applicationId) {
+        return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
+      }
+      const state = await options.reviews?.state({ workspaceId, materialId });
+      if (state === undefined) return reply.send({ status: "none" as const });
+      if (state.status !== "done") return reply.send({ status: state.status });
+      const revision =
+        state.outcome === "revised"
+          ? (await drafts.list(workspaceId, applicationId, { kind: base.kind })).find(
+              (draft) => draft.based_on === base.id && draft.critic_findings !== undefined,
+            )
+          : undefined;
+      return reply.send({
+        status: "done" as const,
+        outcome: state.outcome,
+        ...(revision === undefined ? {} : { revision_id: revision.id }),
+      });
     },
   );
 

@@ -163,7 +163,8 @@ person's choices only.
   that passes every citation rule is saved as the next version with the
   findings. Edited versions, interview questions and a critic from the
   author's company are skipped without a call, and one failed attempt is
-  retried once. Nothing queues it yet: the API's enqueue comes with #2526.
+  retried once. Saving a cover letter queues it, and
+  `GET .../material/:materialId/review` reads its state.
 - **Derivation routes.** `/v1/workspaces/:id/profiles/:profileId/derivation`
   starts (POST), reads (GET) and cancels (DELETE) a derivation. A start needs
   the record's transmission consent in sign-in mode. The profile's own routes
