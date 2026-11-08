@@ -34,11 +34,14 @@ const endpoint = "https://api.linkup.so/v1/search";
 export class LinkupSearchError extends Error {
   override readonly name = "LinkupSearchError";
   readonly status: number | undefined;
+  /** `no_key` when no key is configured, else `status_<n>` or `request_failed`. */
+  readonly code: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, code?: string) {
     // Content-free: never the key, the query or the provider's reply body.
     super(message);
     this.status = status;
+    this.code = code ?? (status === undefined ? "request_failed" : `status_${status}`);
   }
 }
 
@@ -56,7 +59,7 @@ export function createLinkupResearchSearch(options: LinkupSearchOptions): {
     search: async (request) => {
       const key = await options.resolveCredential("linkup");
       if (key === undefined || key === "") {
-        throw new LinkupSearchError("No Linkup key is configured.");
+        throw new LinkupSearchError("No Linkup key is configured.", undefined, "no_key");
       }
       const body = {
         q: request.query,

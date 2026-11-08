@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
+import type { ResearchRuns } from "./research-runs.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const headers = { authorization: `Bearer ${ownerToken}` };
@@ -52,7 +53,7 @@ function brief(id: string, overrides: Partial<ResearchBrief> = {}): ResearchBrie
 
 let app: FastifyInstance;
 
-async function build() {
+async function build(researchRuns?: ResearchRuns) {
   const briefs = createMemoryResearchBriefStore();
   await briefs.insert(brief("rbr_fixture0001"));
   await briefs.insert(brief("rbr_fixture0002", { created_at: "2026-11-08T10:00:00.000Z" }));
@@ -67,6 +68,7 @@ async function build() {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
       researchBriefs: briefs,
+      ...(researchRuns === undefined ? {} : { researchRuns }),
     },
   });
   return briefs;
@@ -116,5 +118,64 @@ describe("research brief routes", () => {
     });
     expect(wrongApplication.statusCode).toBe(404);
     expect(await briefs.get("owner", "rbr_fixture0003")).toBeDefined();
+  });
+
+  it("queues research only with the candidate's approval and answers its state", async () => {
+    const queued: unknown[] = [];
+    let state: Awaited<ReturnType<ResearchRuns["state"]>>;
+    await build({
+      queue: async (job) => {
+        queued.push(job);
+        const answer = state === undefined ? "queued" : "waiting";
+        state = { status: "pending" };
+        return answer;
+      },
+      state: async () => state,
+    });
+    const run = "/v1/workspaces/owner/applications/app_fixture0001/research";
+    expect((await app.inject({ method: "GET", url: run, headers })).json()).toEqual({
+      status: "none",
+    });
+    for (const payload of [{}, { approved: false }, { approved: "yes" }]) {
+      const refused = await app.inject({ method: "POST", url: run, headers, payload });
+      expect(refused.statusCode).toBe(400);
+    }
+    expect(queued).toEqual([]);
+    const started = await app.inject({
+      method: "POST",
+      url: run,
+      headers,
+      payload: { approved: true, window_months: 6 },
+    });
+    expect(started.statusCode).toBe(202);
+    expect(started.json()).toEqual({ status: "pending" });
+    expect(queued).toEqual([
+      { workspaceId: "owner", applicationId: "app_fixture0001", windowMonths: 6 },
+    ]);
+    state = { status: "done", outcome: "researched", briefId: "rbr_fixture0002" };
+    expect((await app.inject({ method: "GET", url: run, headers })).json()).toEqual({
+      status: "done",
+      outcome: "researched",
+      brief_id: "rbr_fixture0002",
+    });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/owner/applications/app_fixture0009/research",
+      headers,
+      payload: { approved: true },
+    });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it("answers 503 when the deployment researches nothing", async () => {
+    await build();
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/owner/applications/app_fixture0001/research",
+      headers,
+      payload: { approved: true },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({ error: { code: "research_unavailable" } });
   });
 });

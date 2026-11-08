@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import process from "node:process";
 import { createFactUsageService } from "@draft-loop/application/fact-usage";
 import { materialReviewPorts } from "@draft-loop/application/material-review-ports";
+import { researchFindingsPorts, researchScreen } from "@draft-loop/application/research-ports";
 import { createWritingSamplesService } from "@draft-loop/application/writing-samples";
 import {
   hostedWorkspaceReference,
@@ -25,6 +26,7 @@ import {
   runOutcomeFields,
 } from "./logging.js";
 import { readMailConfig } from "./mail.js";
+import { researchSearchFor } from "./research-search-wiring.js";
 import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
@@ -68,6 +70,9 @@ const blobs = openTenantBlobs(config.blobs);
 // deployment's own endpoint.
 const local = withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint);
 const serviceFor = tenantServices({ tenancy, blobsFor: blobs.storageFor, local });
+// The research brief's web search (#2560), from DRAFT_LOOP_RESEARCH_SEARCH; none searches nothing.
+const researchSearch = researchSearchFor(process.env, config.modelRoutes, local);
+const screenSource = researchScreen();
 
 const workspaceRoot = (job: WorkspaceJob) =>
   hostedWorkspaceReference(job.tenantId, job.workspaceId);
@@ -175,6 +180,34 @@ const worker = await startWorker({
     // Ids, counts and the outcome's word only: no candidate material.
     onOutcome: (job, outcome, detail) =>
       console.info(logLine("INFO", "material review finished", { ...job, outcome, ...detail })),
+  },
+  // An application the candidate approved is researched here once the API queues it (#2560).
+  research: {
+    serviceFor: (job) => serviceFor(job.tenantId),
+    briefsFor: (job) => tenancy.forTenant(job.tenantId).researchBriefs,
+    workspaceRoot,
+    allowProviderData: config.allowProviderData,
+    ...(consentFor === undefined ? {} : { consentFor }),
+    recordErased,
+    portsFor: (job) => {
+      if (researchSearch === undefined) return undefined;
+      const model = researchFindingsPorts({
+        applicationId: job.applicationId,
+        allowProviderData: config.allowProviderData,
+        local,
+        onCall: (call) => console.info(logLine("INFO", "research model call", { ...job, ...call })),
+      });
+      return {
+        search: researchSearch,
+        screen: screenSource,
+        findings: model.findings,
+        findingsSpentUsd: model.spentUsd,
+      };
+    },
+    newId: () => `rbr_${randomBytes(12).toString("base64url")}`,
+    // Ids, counts, cost and the outcome's word only: never the sources or findings.
+    onOutcome: (job, result, detail) =>
+      console.info(logLine("INFO", "research finished", { ...job, ...result, ...detail })),
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);

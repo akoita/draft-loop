@@ -109,4 +109,21 @@ describe("research job", () => {
       await createResearchHandler(missing.options)({ ...job, applicationId: "app_fixture0009" }),
     ).toEqual({ outcome: "missing" });
   });
+
+  it("ends as unavailable when the search has no key, and fails on other errors", async () => {
+    const failing = (code: string) => ({
+      search: async () => {
+        throw Object.assign(new Error("Search failed."), { code });
+      },
+    });
+    const ports = (code: string) => {
+      const base = options().options.portsFor(job);
+      return base === undefined ? undefined : { ...base, search: failing(code) };
+    };
+    const noKey = options({ portsFor: () => ports("no_key") });
+    expect(await createResearchHandler(noKey.options)(job)).toEqual({ outcome: "unavailable" });
+    const down = options({ portsFor: () => ports("status_500") });
+    await expect(createResearchHandler(down.options)(job)).rejects.toThrow("Search failed.");
+    expect(await down.store.list(job.workspaceId, job.applicationId)).toEqual([]);
+  });
 });

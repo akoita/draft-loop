@@ -22,6 +22,7 @@ import { noProfileDerivations } from "./profile-routes.js";
 import type { RecordAccessFor } from "./record-access.js";
 import type { TenantErasureFor } from "./record-erasure-routes.js";
 import type { Caller } from "./request-auth.js";
+import { noResearchRuns } from "./research-runs.js";
 
 /** The application the routes serve: one tenant's, or one that dispatches to the caller's. */
 export type ApiApplication = NonNullable<ApiOptions["application"]>;
@@ -44,6 +45,7 @@ export type TenantApplication = Required<
     | "careerInterview"
     | "applicationMaterialDrafts"
     | "researchBriefs"
+    | "researchRuns"
     | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
@@ -61,6 +63,7 @@ export type TenantApplication = Required<
     | "careerInterview"
     | "applicationMaterialDrafts"
     | "researchBriefs"
+    | "researchRuns"
     | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
@@ -264,6 +267,8 @@ export function registerTenantApplications(
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
     // Nor does it review saved cover letters there.
     materialReviews: forwarding(() => current().materialReviews ?? noMaterialReviews),
+    // Nor does it research applications there.
+    researchRuns: forwarding(() => current().researchRuns ?? noResearchRuns),
     // An application composed without a journal refuses every note as unavailable.
     workJournal: forwarding(() => current().workJournal ?? unavailableWorkJournal),
     sourceEvidenceKinds: forwarding(() => {

@@ -161,8 +161,35 @@ with the record or the organisation.
 
 A research brief holds public facts about the employer, gathered after the
 candidate approves a research run (#2482). Each brief keeps what was searched,
-the sources kept, and short findings that cite those sources. The run itself is
-not built yet (#2543), so briefs exist only once it ships.
+the sources kept, and short findings that cite those sources. The Prepare panel
+does not offer the run yet (#2545); the API does.
+
+```mermaid
+flowchart LR
+  A["POST .../research<br/>approved: true"] --> Q[Research queue]
+  Q --> W[Worker]
+  W -->|erased, no consent,<br/>no employer, off| E[Ends, no call]
+  W --> S["3 web searches<br/>DRAFT_LOOP_RESEARCH_SEARCH"]
+  S --> F["Drop old sources,<br/>screen each one"]
+  F --> M[Claude Haiku writes<br/>cited findings]
+  M --> B[(Research brief)]
+```
+
+A run reads the employer and role from the application's newest job brief,
+never the candidate's material. It searches the employer with the role, its
+news, and its culture and values. Sources older than the window (12 months by
+default) are dropped, and the rule screener drops any source that reads like an
+injection. The searches and the findings call share a US$0.20 cap.
+
+| `DRAFT_LOOP_RESEARCH_SEARCH` | Searches with                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `claude` (default)           | Claude's web search on the deployment's Claude route; no other account        |
+| `linkup`                     | Linkup, with the key `linkup` (`keys/linkup_api_key` on a self-hosted stack)  |
+| `off`                        | Nothing: each run ends as `unavailable`                                       |
+
+A run ends as `unavailable` without a call when the setting is `off`, the
+search has no key, provider data is not allowed, or the workspace runs on
+fixtures. The worker logs ids, counts and cost only, never sources or findings.
 
 | Field       | Holds                                                                                          |
 | ----------- | ---------------------------------------------------------------------------------------------- |
@@ -178,6 +205,8 @@ not built yet (#2543), so briefs exist only once it ships.
 | `GET .../applications/{applicationId}/research-briefs`        | Lists the application's briefs, newest first, at most 20.  |
 | `GET .../research-briefs/{briefId}`                           | Reads one brief. 404 when the application has no such one. |
 | `DELETE .../applications/{applicationId}/research-briefs/{briefId}` | Deletes one brief for good.                          |
+| `POST .../applications/{applicationId}/research`              | Queues a run; the body needs `"approved": true`. 503 when the server researches nothing. |
+| `GET .../applications/{applicationId}/research`               | The newest run's state: `none`, `pending`, `done` with its outcome and `brief_id`, or `failed`. |
 
 These routes are for the person only; agent tokens cannot reach them. Briefs
 live in the record's Postgres table `application_research_briefs`, are part of

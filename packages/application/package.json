@@ -103,6 +103,10 @@
       "types": "./src/material-review.ts",
       "import": "./src/material-review.ts"
     },
+    "./research-ports": {
+      "types": "./src/research-ports.ts",
+      "import": "./src/research-ports.ts"
+    },
     "./research-run": {
       "types": "./src/research-run.ts",
       "import": "./src/research-run.ts"

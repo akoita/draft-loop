@@ -169,6 +169,9 @@ services:
       DRAFT_LOOP_OPENAI_ENDPOINT: ${DRAFT_LOOP_OPENAI_ENDPOINT:-global}
       # Where the declared local models answer, such as Ollama at http://host.docker.internal:11434/v1.
       DRAFT_LOOP_LOCAL_MODEL_ENDPOINT: ${DRAFT_LOOP_LOCAL_MODEL_ENDPOINT:-}
+      # The research brief's web search: `claude` with keys/anthropic_api_key, `linkup` with
+      # keys/linkup_api_key, or `off`.
+      DRAFT_LOOP_RESEARCH_SEARCH: ${DRAFT_LOOP_RESEARCH_SEARCH:-claude}
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes:

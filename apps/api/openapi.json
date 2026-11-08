@@ -5921,6 +5921,62 @@
         ],
         "additionalProperties": false
       },
+      "ResearchStartInput": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "const": true,
+            "description": "The candidate's approval to search the web about the employer; required."
+          },
+          "window_months": {
+            "description": "How many months back a source may date. Defaults to 12.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 36
+          }
+        },
+        "required": [
+          "approved"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchRunStateInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ],
+            "description": "`pending` while the worker researches; `done` once the run ended; `failed` when it failed its retry and saved nothing; `none` when no run was queued."
+          },
+          "outcome": {
+            "description": "How a `done` run ended: `researched` saved a brief; `no-employer`, `consent-required`, `unavailable` and the rest ended before any search.",
+            "type": "string",
+            "enum": [
+              "researched",
+              "missing",
+              "no-employer",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "brief_id": {
+            "description": "The brief a `researched` run saved.",
+            "type": "string",
+            "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "ReviewDraftInput": {
         "type": "object",
         "properties": {
@@ -12825,6 +12881,62 @@
         },
         "required": [
           "briefs"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchStart": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "const": true,
+            "description": "The candidate's approval to search the web about the employer; required."
+          },
+          "window_months": {
+            "description": "How many months back a source may date. Defaults to 12.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 36
+          }
+        },
+        "required": [
+          "approved"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchRunState": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ],
+            "description": "`pending` while the worker researches; `done` once the run ended; `failed` when it failed its retry and saved nothing; `none` when no run was queued."
+          },
+          "outcome": {
+            "description": "How a `done` run ended: `researched` saved a brief; `no-employer`, `consent-required`, `unavailable` and the rest ended before any search.",
+            "type": "string",
+            "enum": [
+              "researched",
+              "missing",
+              "no-employer",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "brief_id": {
+            "description": "The brief a `researched` run saved.",
+            "type": "string",
+            "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       },
@@ -24567,6 +24679,120 @@
         "responses": {
           "204": {
             "description": "Default Response"
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
+      "post": {
+        "summary": "Research an application's employer, with the candidate's approval",
+        "description": "Queues one research run on the worker: a few web searches about the employer and role, each source screened for prompt injection, sources older than the window dropped, and short findings that cite the kept sources. It reads nothing about the candidate and costs at most US$0.20. `approved` must be `true`. Answers the run's state; a run already waiting is not queued twice. 404 when there is no such application; 503 when this deployment researches nothing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchStartInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchRunState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Read where an application's research run stands",
+        "description": "The newest run's state, as the Prepare panel polls it; `brief_id` names the saved brief once it is `done` with `researched`. 404 when there is no such application.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchRunState"
+                }
+              }
+            }
           },
           "404": {
             "description": "Default Response",
