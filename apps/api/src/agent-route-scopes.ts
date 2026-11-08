@@ -16,6 +16,13 @@ export interface AgentRouteRule {
 
 const workspace = "/v1/workspaces/:workspaceId";
 
+/** Each scope as the token form in Workspace settings > Agents names it, for a refusal (#2534). */
+const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
+  journal: "Work journal",
+  "applications:read": "Read applications",
+  "jobs:write": "Add jobs",
+};
+
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
 export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`POST ${workspace}/work-journal/notes`]: { scope: "journal" },
@@ -195,7 +202,7 @@ export function admitAgentRoute(
   if (!token.scopes.includes(rule.scope)) {
     return {
       outcome: "refused",
-      message: `This agent token lacks the "${rule.scope}" scope; create a token with it under Agents in the workspace settings.`,
+      message: `This agent token lacks the "${rule.scope}" scope (${agentScopeNames[rule.scope]} on the token form); create a token with it in Workspace settings > Agents.`,
     };
   }
   if (request.method === "GET" && rule.allows !== undefined && !rule.allows(request)) {

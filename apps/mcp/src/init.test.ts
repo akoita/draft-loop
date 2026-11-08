@@ -109,6 +109,7 @@ describe("draftloop-mcp init", () => {
       hook: false,
       dryRun: true,
       token: true,
+      scopes: ["journal", "applications:read", "jobs:write"],
     });
   });
 });
@@ -244,7 +245,10 @@ describe("draftloop-mcp init's agent token", () => {
     expect(
       parseInitArguments(["--host", "codex", "--scope", "jobs:write", "--scope", "journal"]),
     ).toMatchObject({ scopes: ["jobs:write", "journal"] });
-    expect(parseInitArguments(["--host", "codex"])).not.toHaveProperty("scopes");
+    // Without --scope, the token can do everything the plugin offers (#2534).
+    expect(parseInitArguments(["--host", "codex"])).toMatchObject({
+      scopes: ["journal", "applications:read", "jobs:write"],
+    });
     expect(parseInitArguments(["--host", "codex", "--scope", "runs"])).toHaveProperty("problem");
   });
 });

@@ -60,8 +60,9 @@ the Work journal panel links to it.
 
 2. In the Work journal panel, turn on **Accept notes from agents**; the
    server refuses notes while intake is off. Then, under **Agents** in
-   Workspace settings, open **Connect an agent**, tick what the agent
-   may do and select **Create agent token**.
+   Workspace settings, open **Connect an agent** and select **Create agent
+   token**. All three scopes are ticked by default, which is what the plugin
+   uses; untick any the agent should not have.
 3. Pick your agent's tab and copy what it shows:
 
    | Tab                     | What to do                                                             |
@@ -215,13 +216,15 @@ never a draft, career evidence or job text.
 candidate's approval in DraftLoop. The job text is screened like an upload
 when its requirements are extracted. Approving a draft, deciding findings,
 exporting and every setting stay with the candidate in DraftLoop. A token
-without the scope a tool needs is refused with a message naming that scope.
+without the scope a tool needs is refused with a message naming that scope,
+its name on the token form, and where to create a new token.
 
-`init` asks for scopes with `--scope`, repeated. Its token always keeps
-`journal`, which the skill and hook it writes need:
+`init` issues a token with all three scopes. To narrow it, name the scopes
+with `--scope`, repeated. Its token always keeps `journal`, which the skill
+and hook it writes need:
 
 ```text
-draftloop-mcp init --host claude-code --hook --scope applications:read --scope jobs:write
+draftloop-mcp init --host claude-code --hook --scope applications:read
 ```
 
 ## How the candidate reviews
