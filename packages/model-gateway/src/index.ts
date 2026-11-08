@@ -3,6 +3,7 @@ export * from "./decision-screening-shadow.js";
 export * from "./file-credentials.js";
 export * from "./google-speech.js";
 export * from "./hosted-routes.js";
+export * from "./linkup-search.js";
 export * from "./routed-adapter.js";
 export * from "./secret-credentials.js";
 export * from "./vertex-client.js";
