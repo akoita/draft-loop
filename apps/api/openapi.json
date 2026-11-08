@@ -2373,6 +2373,25 @@
                     ]
                   },
                   "description": "The career record facts the item relies on, as the candidate stored them."
+                },
+                "company_citations": {
+                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "finding_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "finding_id",
+                      "text"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -2381,6 +2400,10 @@
                 "citations"
               ]
             }
+          },
+          "research_brief_id": {
+            "description": "The research brief the company citations come from.",
+            "type": "string"
           },
           "based_on": {
             "description": "The saved draft this version was edited from; absent for a drafted version.",
@@ -9931,6 +9954,26 @@
                     "additionalProperties": false
                   },
                   "description": "The career record facts the item relies on, as the candidate stored them."
+                },
+                "company_citations": {
+                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "finding_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "finding_id",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               },
               "required": [
@@ -9940,6 +9983,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "research_brief_id": {
+            "description": "The research brief the company citations come from.",
+            "type": "string"
           },
           "based_on": {
             "description": "The saved draft this version was edited from; absent for a drafted version.",
