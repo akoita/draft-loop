@@ -2533,6 +2533,14 @@ msgstr ""
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "Delete this version"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Delete this version for good?"
+msgstr ""
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Deleted \"{name}\"."
 msgstr ""
@@ -2767,7 +2775,7 @@ msgid "Drafting is not available on this server: it has no Claude route. The res
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
-msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server."
+msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it."
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -8928,6 +8936,10 @@ msgstr ""
 msgid "Unlisted source"
 msgstr ""
 
+#: apps/web/src/application-material-model.ts
+msgid "Unsaved draft"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
 msgstr ""
@@ -9135,6 +9147,7 @@ msgstr ""
 msgid "version"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
