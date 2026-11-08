@@ -20,6 +20,12 @@ import {
   profileDerivationQueueName,
   profileDerivationQueueSettings,
 } from "./profile-derivation-queue.js";
+import {
+  type ResearchQueue,
+  researchQueue,
+  researchQueueName,
+  researchQueueSettings,
+} from "./research-queue.js";
 import { type RunJob, runJobKey, runJobSchema } from "./run-job.js";
 
 export const runQueueName = "draft-loop-runs";
@@ -37,7 +43,7 @@ export interface EnqueueRunOptions {
 }
 
 /** The producer side of the run queue, as the API uses it. */
-export interface RunQueue extends ProfileDerivationQueue, MaterialReviewQueue {
+export interface RunQueue extends ProfileDerivationQueue, MaterialReviewQueue, ResearchQueue {
   /**
    * Queues the run unless a job for it is already waiting. Safe to repeat: a retried request
    * queues nothing new while the first job waits, and a worker skips a run that is already done.
@@ -118,8 +124,8 @@ export function bossOptions(
 }
 
 /**
- * Creates or upgrades the queue's schema, the run, brief extraction, profile derivation and
- * material review queues and the derivations' progress table, as the role that owns the database objects. Like storage migrations, it runs at deploy time, never from
+ * Creates or upgrades the queue's schema, the run, brief extraction, profile derivation,
+ * material review and research queues and the derivations' progress table, as the role that owns the database objects. Like storage migrations, it runs at deploy time, never from
  * the running service.
  */
 export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
@@ -133,6 +139,7 @@ export async function migrateRunQueue(options: RunQueueOptions): Promise<void> {
       [briefExtractionQueueName, briefExtractionQueueSettings],
       [profileDerivationQueueName, profileDerivationQueueSettings],
       [materialReviewQueueName, materialReviewQueueSettings],
+      [researchQueueName, researchQueueSettings],
     ] as const) {
       if ((await boss.getQueue(name)) === null) {
         await boss.createQueue(name, settings);
@@ -208,6 +215,7 @@ export async function openRunQueue(options: RunQueueOptions): Promise<RunQueue> 
     },
     ...profileDerivationQueue(boss, queueSchema(options)),
     ...materialReviewQueue(boss),
+    ...researchQueue(boss),
     close: () => boss.stop({ graceful: false, close: true }),
   };
 }

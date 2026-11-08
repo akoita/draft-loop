@@ -17,6 +17,7 @@ import {
   createProfileDerivationHandler,
   type ProfileDerivationHandlerOptions,
 } from "./profile-derivation-handler.js";
+import { createResearchHandler, type ResearchHandlerOptions } from "./research-handler.js";
 import { createRunJobHandler, type RunJobHandlerOptions } from "./run-job-handler.js";
 
 export interface WorkerOptions {
@@ -28,6 +29,8 @@ export interface WorkerOptions {
   readonly profiles?: ProfileDerivationHandlerOptions;
   /** Critic passes on saved cover letters (#2525); unset, the worker takes none. */
   readonly reviews?: MaterialReviewHandlerOptions;
+  /** Research runs the candidate approved (#2560); unset, the worker takes none. */
+  readonly research?: ResearchHandlerOptions;
 }
 
 export interface Worker extends RunWorker {
@@ -50,6 +53,8 @@ export async function startWorker(
     options.profiles === undefined ? undefined : createProfileDerivationHandler(options.profiles);
   const review =
     options.reviews === undefined ? undefined : createMaterialReviewHandler(options.reviews);
+  const research =
+    options.research === undefined ? undefined : createResearchHandler(options.research);
   let running = 0;
   let lastActiveAt = now();
   const tracked = async <Result>(work: () => Promise<Result>): Promise<Result> => {
@@ -70,6 +75,7 @@ export async function startWorker(
         ? {}
         : { profileDerivation: (job, control) => tracked(() => derive(job, control)) }),
       ...(review === undefined ? {} : { materialReview: (job) => tracked(() => review(job)) }),
+      ...(research === undefined ? {} : { research: (job) => tracked(() => research(job)) }),
     },
   );
   return {

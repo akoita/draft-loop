@@ -11,6 +11,7 @@ import {
   runQueueName,
 } from "./pg-boss-run-queue.js";
 import { profileDerivationQueueName } from "./profile-derivation-queue.js";
+import { researchQueueName } from "./research-queue.js";
 
 /** Set by the CI `Server storage` job and by developers with a local server; skipped otherwise. */
 const connectionString = process.env.DRAFT_LOOP_TEST_POSTGRES_URL;
@@ -251,6 +252,39 @@ describe.runIf(connectionString !== undefined)("Postgres run queue", () => {
     expect(await queue.materialReviewState(key)).toEqual({ status: "done", outcome: "revised" });
     await keyed(`UPDATE ${schema}.job SET state = 'failed' WHERE name = $1 AND singleton_key = $2`);
     expect(await queue.materialReviewState(key)).toEqual({ status: "failed" });
+  });
+
+  it("queues one research run per application, carrying only ids, and reports its brief", async () => {
+    const key = {
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      applicationId: "app_fixture0001",
+    };
+    const keyed = (sql: string, values: unknown[] = []) =>
+      admin.query(sql, [researchQueueName, "tenant-a/workspace-1/app_fixture0001", ...values]);
+
+    expect(await queue.researchState(key)).toBeUndefined();
+    expect(await queue.enqueueResearch({ ...key, windowMonths: 6 })).toBe(true);
+    expect(await queue.enqueueResearch(key)).toBe(false);
+    expect(
+      (await keyed(`SELECT data FROM ${schema}.job WHERE name = $1 AND singleton_key = $2`)).rows,
+    ).toEqual([{ data: { ...key, windowMonths: 6 } }]);
+    await expect(
+      queue.enqueueResearch({ ...key, employer: "Example Corp" } as never),
+    ).rejects.toThrow();
+    expect(await queue.researchState(key)).toEqual({ status: "pending" });
+
+    await keyed(
+      `UPDATE ${schema}.job SET state = 'completed', output = $3 WHERE name = $1 AND singleton_key = $2`,
+      [JSON.stringify({ outcome: "researched", briefId: "rbr_fixture0001" })],
+    );
+    expect(await queue.researchState(key)).toEqual({
+      status: "done",
+      outcome: "researched",
+      briefId: "rbr_fixture0001",
+    });
+    await keyed(`UPDATE ${schema}.job SET state = 'failed' WHERE name = $1 AND singleton_key = $2`);
+    expect(await queue.researchState(key)).toEqual({ status: "failed" });
   });
 
   it("does not let the runtime role change the queue's schema", async () => {
