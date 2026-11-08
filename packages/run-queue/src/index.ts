@@ -32,6 +32,7 @@ export {
   type MaterialReviewJobHandler,
   type ProfileDerivationJobControl,
   type ProfileDerivationJobHandler,
+  type ResearchJobHandler,
   type RunJobControl,
   type RunJobHandler,
   type RunWorker,
@@ -54,4 +55,16 @@ export {
   profileDerivationQueueName,
   profileDerivationQueueSettings,
 } from "./profile-derivation-queue.js";
+export {
+  type ResearchJob,
+  type ResearchJobOutcome,
+  type ResearchJobResult,
+  type ResearchQueue,
+  type ResearchState,
+  researchJobKey,
+  researchJobSchema,
+  researchOutcomes,
+  researchQueueName,
+  researchQueueSettings,
+} from "./research-queue.js";
 export { type RunJob, runJobKey, runJobSchema } from "./run-job.js";

@@ -27,6 +27,12 @@ import {
   profileDerivationQueueName,
   writeProfileDerivationProgress,
 } from "./profile-derivation-queue.js";
+import {
+  type ResearchJob,
+  type ResearchJobResult,
+  researchJobSchema,
+  researchQueueName,
+} from "./research-queue.js";
 import { type RunJob, runJobSchema } from "./run-job.js";
 
 export interface RunWorkerOptions extends RunQueueOptions {
@@ -76,11 +82,18 @@ export type MaterialReviewJobHandler = (
   job: MaterialReviewJob,
 ) => Promise<MaterialReviewJobOutcome>;
 
+/**
+ * Researches one claimed application and says how it ended; the queue keeps that as the job's
+ * output. A throw fails the attempt, and the queue retries it once.
+ */
+export type ResearchJobHandler = (job: ResearchJob) => Promise<ResearchJobResult>;
+
 /** The queues besides runs a worker takes, each when given its handler. */
 export interface RunWorkerHandlers {
   readonly briefExtraction?: BriefExtractionJobHandler;
   readonly profileDerivation?: ProfileDerivationJobHandler;
   readonly materialReview?: MaterialReviewJobHandler;
+  readonly research?: ResearchJobHandler;
 }
 
 export interface StopRunWorkerOptions {
@@ -132,7 +145,13 @@ export async function startRunWorker(
         });
       }
     });
-    const { briefExtraction, profileDerivation, materialReview } = handlers;
+    const { briefExtraction, profileDerivation, materialReview, research } = handlers;
+    if (research !== undefined) {
+      await boss.work<ResearchJob>(researchQueueName, claim, async ([claimed]) => {
+        if (claimed === undefined) return undefined;
+        return { ...(await research(researchJobSchema.parse(claimed.data))) };
+      });
+    }
     if (materialReview !== undefined) {
       await boss.work<MaterialReviewJob>(materialReviewQueueName, claim, async ([claimed]) => {
         if (claimed === undefined) return undefined;
