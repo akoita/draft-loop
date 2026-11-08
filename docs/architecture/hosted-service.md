@@ -686,8 +686,9 @@ no analytics or third-party script, so it needs no cookie banner.
   the text beside the checkbox, and the day. Change the version with the text.
 - **Privacy.** The same answer for a new and a listed email reveals nobody.
   Log lines carry no address. One address may join 5 times an hour.
-- **Retention.** An invited entry is deleted at once; any other entry after
-  six months (#2568).
+- **Retention.** An invited entry is deleted at once. Any other entry is
+  deleted 183 days after it was made, by the worker's sweep at each start
+  (`waitlist-retention.ts`, #2568), which logs only the count.
 
 ### Transactional email
 
