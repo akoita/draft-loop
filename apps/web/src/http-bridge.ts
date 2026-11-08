@@ -277,12 +277,18 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           { path: { workspaceId, applicationId: scoped.id } },
         );
         const truncated = job.text !== null && job.text.length > maximumApplicationJobTextLength;
+        const { earlier } = job;
         return {
           workspaceId,
           origin: job.origin,
           text: truncated ? job.text?.slice(0, maximumApplicationJobTextLength) : job.text,
           truncated,
           url: job.url,
+          savedAt: job.savedAt,
+          earlier:
+            earlier === null
+              ? null
+              : { ...earlier, text: earlier.text.slice(0, maximumApplicationJobTextLength) },
         };
       }
       case "application.create": {

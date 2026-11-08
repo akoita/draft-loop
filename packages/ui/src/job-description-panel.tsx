@@ -9,6 +9,7 @@ import { t } from "@lingui/core/macro";
 
 import { type JSX, useEffect, useRef, useState } from "react";
 import type { ApplicationJobResult } from "./application-job-contract.js";
+import { formatDate } from "./locale-format.js";
 import type { ReviewWorkPanelProps } from "./review-work-tabs.js";
 
 type JobLoad =
@@ -25,11 +26,41 @@ export function jobOriginNote(job: ApplicationJobResult): string | null {
       return t`The text pasted when this application was created.`;
     case "local-file":
       return t`From the file chosen for this application, as it reads now.`;
-    case "url":
-      return t`From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them.`;
+    case "url": {
+      if (job.text === null) {
+        return t`From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it.`;
+      }
+      const date = formatDate(job.savedAt ?? "") ?? "";
+      return t`Saved from the job page on ${date}, so it stays readable after the page expires.`;
+    }
     case "unavailable":
       return null;
   }
+}
+
+/** A job page's address, the copy saved when it was read, and its first copy when it differs. */
+function SavedJobPage({ job }: { readonly job: ApplicationJobResult }): JSX.Element {
+  const { earlier } = job;
+  const earlierDate = earlier === null ? "" : (formatDate(earlier.savedAt) ?? "");
+  return (
+    <>
+      <p className="job-url">
+        <a href={job.url ?? undefined} rel="noreferrer noopener" target="_blank">
+          {job.url}
+        </a>
+      </p>
+      {job.text === null ? null : <div className="job-text">{job.text}</div>}
+      {job.truncated ? (
+        <p className="job-status">{t`The job description is longer than shown here.`}</p>
+      ) : null}
+      {earlier === null ? null : (
+        <details className="job-earlier">
+          <summary>{t`Earlier copy, saved on ${earlierDate}`}</summary>
+          <div className="job-text">{earlier.text}</div>
+        </details>
+      )}
+    </>
+  );
 }
 
 export function JobDescriptionView({
@@ -65,7 +96,7 @@ export function JobDescriptionView({
       ) : load.job.origin === "unavailable" ? (
         <p className="job-status">{t`This application's job description could not be read. Its file may have been moved or emptied.`}</p>
       ) : load.job.origin === "url" ? (
-        <p className="job-url">{load.job.url}</p>
+        <SavedJobPage job={load.job} />
       ) : (
         <>
           <div className="job-text">{load.job.text}</div>

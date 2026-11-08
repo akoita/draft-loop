@@ -3367,6 +3367,17 @@ input[type="text"].workspace-title-input {
   user-select: text;
 }
 
+/* The first copy of a job page, kept when a later read differed (#2592). */
+.job-earlier {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.job-earlier summary {
+  cursor: pointer;
+}
+
 /* Coverage never blocks approval, so its cards fold behind one tally line. */
 .coverage-fold {
   margin: 0 0 var(--space-3);

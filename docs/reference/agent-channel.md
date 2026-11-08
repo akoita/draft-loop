@@ -234,7 +234,7 @@ returns a run's open draft, its findings or career evidence.
 | ------------------- | ------------------- | -------------------------------------------------------------------------- |
 | `list_applications` | `applications:read` | Lists applications with status, folder and latest run; archived on request |
 | `get_application`   | `applications:read` | Reads one application by id                                                |
-| `get_job_text`      | `applications:read` | Reads the job text an application keeps, or its approved page's address    |
+| `get_job_text`      | `applications:read` | Reads the job text an application keeps, or its page's address and copy    |
 | `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
 | `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
 | `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
