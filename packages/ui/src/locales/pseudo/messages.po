@@ -695,6 +695,14 @@ msgstr ""
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
+msgid "{pageCount, plural, one {# page} other {# pages}}"
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+msgid "{pages} · {name} aims for {target}"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "{pendingBulkFindingCount} finding decisions"
 msgstr ""
@@ -1948,6 +1956,7 @@ msgstr ""
 msgid "close"
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -1961,6 +1970,10 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+msgid "Close the preview"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2822,6 +2835,10 @@ msgstr ""
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
+msgid "Drawing the preview…"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Drop"
@@ -3089,6 +3106,7 @@ msgstr ""
 msgid "Export everything"
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
 msgstr ""
@@ -3103,6 +3121,10 @@ msgstr ""
 
 #: apps/web/src/record-actions.tsx
 msgid "Export or delete this record"
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+msgid "Export this file…"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -5136,6 +5158,10 @@ msgstr ""
 msgid "Nothing is running to stop."
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
+msgid "Nothing is saved until you export."
+msgstr ""
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Nothing is sent to a provider from this workspace."
 msgstr ""
@@ -5459,6 +5485,10 @@ msgstr ""
 msgid "Owners and admins of your organisation assign members."
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
+msgid "Page {page} of {pageCount}"
+msgstr ""
+
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Page target"
@@ -5611,6 +5641,16 @@ msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+#: packages/ui/src/review-footer.tsx
+msgid "Preview"
+msgstr ""
+
+#. placeholder {0}: exportFormatLabels[exportAction.format]
+#: packages/ui/src/review-footer.tsx
+msgid "Preview the {0} file before exporting (Alt+P)"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -7464,6 +7504,7 @@ msgstr ""
 msgid "Technologies, separated by commas"
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
 msgstr ""
@@ -8065,6 +8106,10 @@ msgstr ""
 #. placeholder {0}: describeError(error)
 #: apps/web/src/preference-suggestions.tsx
 msgid "The preference could not be saved. {0}"
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+msgid "The preview could not be drawn. Nothing was saved; you can still export."
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -9232,6 +9277,10 @@ msgstr ""
 
 #: apps/web/src/consent-model.ts
 msgid "Withdrawn on {when}."
+msgstr ""
+
+#: packages/ui/src/export-preview.tsx
+msgid "Word files can't be shown here yet. Preview the PDF to see the template's pages."
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts

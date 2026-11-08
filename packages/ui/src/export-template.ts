@@ -30,6 +30,13 @@ export const exportTemplateDescriptions = (): Readonly<Record<ExportTemplate, st
   modern: t`Two pages, left-aligned name, teal headings and dates, justified text.`,
 });
 
+/** The pages each template aims for, as the rendering package's layout profiles set them. */
+export const exportTemplatePageTargets: Readonly<Record<ExportTemplate, number>> = {
+  classic: 2,
+  compact: 1,
+  modern: 2,
+};
+
 /** `localStorage` key prefix; the application key follows it. */
 export const exportTemplateStorageKeyPrefix = "draft-loop.export.template.";
 
