@@ -441,7 +441,20 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     list: async (workspaceId, listOptions) =>
       (await list(workspaceId, listOptions)).map(workJournalNoteListItem),
 
-    listFull: async (workspaceId, listOptions) => [...(await list(workspaceId, listOptions))],
+    // A note's likely duplicates are found when it is recorded; reading checks them again under
+    // the current rule, so notes recorded under an older, looser rule stop pairing up.
+    listFull: async (workspaceId, listOptions) => {
+      const notes = await list(workspaceId, listOptions);
+      if (!notes.some((note) => note.possible_duplicate_of.length > 0)) return [...notes];
+      const pending = new Map((await store.pending(workspaceId)).map((note) => [note.id, note]));
+      return notes.map((note) => ({
+        ...note,
+        possible_duplicate_of: note.possible_duplicate_of.filter((id) => {
+          const other = pending.get(id);
+          return other !== undefined && isLikelyWorkJournalDuplicate(other.content, note.content);
+        }),
+      }));
+    },
 
     get: requireNote,
 

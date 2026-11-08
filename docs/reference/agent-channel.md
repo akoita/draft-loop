@@ -184,8 +184,10 @@ Run `init` again to issue a new one. The
   default branch from the local git history, and records each notable piece
   once, after `list_work` shows it is not already recorded.
 - **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
-  when a turn pushed or merged without calling `record_work`. It never blocks
-  the turn, and nothing calls the tool by itself.
+  when a turn merged work without calling `record_work`: `gh pr merge`, a push
+  to `main` or `master`, or a `merge_pull_request` tool call. A push to a
+  feature branch stays quiet. It never blocks the turn, and nothing calls the
+  tool by itself.
 
 ## What the agent records
 
@@ -194,6 +196,10 @@ notes by title, dates, technologies and status, never summaries or links. The
 rule travels with the server, in the tool description, the
 `draftloop://work-journal/guide` resource and the `log-notable-work` prompt.
 
+- **One note per user-visible feature.** A small unrelated change gets its
+  own note or none, never a place in a bigger one.
+- **Summaries read as evidence:** the problem, what shipped in plain words,
+  and the outcome or scale. Library names go in `technologies`.
 - **Record** shipped work a hiring manager would ask about: a merged feature,
   integration or migration, an adopted technology, or a measured improvement
   with how it was measured.
@@ -264,8 +270,9 @@ With the plugin installed, Claude Code also lists each MCP prompt, as
 
 ## How the candidate reviews
 
-Each pending note shows its title, period, project, technologies, role, links,
-summary and screening result. The candidate can:
+Each pending note shows its title, period, project, technologies, role,
+summary, screening result and the agent that filed it, by its token's name.
+Its links are folded behind a count. Approve is preselected. The candidate can:
 
 - **Approve** it into a knowledge base. It becomes a Markdown source of the
   `work-journal` evidence kind, so runs can cite it like any other source.
@@ -284,8 +291,9 @@ with `draft-loop work-journal`; see the
 
 - **Duplicates.** The same pull request in the same repository, or the same
   title in the same project, is recorded once. A note about the same project
-  over overlapping dates with shared technologies or links is recorded and
-  shown as a likely duplicate.
+  over overlapping dates that shares a link or nearly the same title is
+  recorded and shown as a likely duplicate. Shared technologies alone do not
+  count, since one project's notes share its stack.
 - **Screening.** Each note is screened for instructions to a model, like an
   upload. A held note cannot be approved until an edit screens clear.
 - **Default tiers.** An approved note from a public project is `normal`, and

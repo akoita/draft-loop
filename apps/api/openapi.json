@@ -4890,6 +4890,78 @@
           "localModels"
         ]
       },
+      "ResearchSourceInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFindingInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
       "PlanAssignmentInput": {
         "type": "object",
         "properties": {
@@ -5737,6 +5809,117 @@
           "assignedAt",
           "workspaceId"
         ]
+      },
+      "ResearchBriefInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "queries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What the run searched for."
+          },
+          "from_date": {
+            "type": "string",
+            "description": "The oldest publication date the run kept, `YYYY-MM-DD`."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchSourceInput"
+            },
+            "description": "The public sources the run kept. A source without `published_on` is undated; its excerpt is third-party text."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchFindingInput"
+            },
+            "description": "Short facts about the employer, each citing the sources it rests on."
+          },
+          "dropped": {
+            "type": "object",
+            "properties": {
+              "flagged": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "outdated": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "flagged",
+              "outdated"
+            ],
+            "description": "Sources the run dropped: flagged by screening, or older than `from_date`."
+          },
+          "search_provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "What the run's searches and model calls cost."
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "application_id",
+          "queries",
+          "from_date",
+          "sources",
+          "findings",
+          "dropped",
+          "search_provider",
+          "model",
+          "cost_usd",
+          "created_at"
+        ]
+      },
+      "ResearchBriefListInput": {
+        "type": "object",
+        "properties": {
+          "briefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchBriefInput"
+            },
+            "description": "The application's research briefs, newest first, at most 20."
+          }
+        },
+        "required": [
+          "briefs"
+        ],
+        "additionalProperties": false
       },
       "ReviewDraftInput": {
         "type": "object",
@@ -11595,6 +11778,78 @@
         ],
         "additionalProperties": false
       },
+      "ResearchSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
       "PlanAssignment": {
         "type": "object",
         "properties": {
@@ -12456,6 +12711,120 @@
           "status",
           "assignedAt",
           "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchBrief": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+          },
+          "application_id": {
+            "type": "string"
+          },
+          "queries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What the run searched for."
+          },
+          "from_date": {
+            "type": "string",
+            "description": "The oldest publication date the run kept, `YYYY-MM-DD`."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchSource"
+            },
+            "description": "The public sources the run kept. A source without `published_on` is undated; its excerpt is third-party text."
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchFinding"
+            },
+            "description": "Short facts about the employer, each citing the sources it rests on."
+          },
+          "dropped": {
+            "type": "object",
+            "properties": {
+              "flagged": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "outdated": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "flagged",
+              "outdated"
+            ],
+            "additionalProperties": false,
+            "description": "Sources the run dropped: flagged by screening, or older than `from_date`."
+          },
+          "search_provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ],
+            "additionalProperties": false
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "What the run's searches and model calls cost."
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "application_id",
+          "queries",
+          "from_date",
+          "sources",
+          "findings",
+          "dropped",
+          "search_provider",
+          "model",
+          "cost_usd",
+          "created_at"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchBriefList": {
+        "type": "object",
+        "properties": {
+          "briefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResearchBrief"
+            },
+            "description": "The application's research briefs, newest first, at most 20."
+          }
+        },
+        "required": [
+          "briefs"
         ],
         "additionalProperties": false
       },
@@ -24192,6 +24561,159 @@
             },
             "in": "path",
             "name": "materialId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs": {
+      "get": {
+        "summary": "List an application's research briefs",
+        "description": "Returns the application's research briefs, newest first, each with its sources, findings and cost. 404 when there is no such application.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchBriefList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/research-briefs/{briefId}": {
+      "get": {
+        "summary": "Read one research brief",
+        "description": "Returns one brief of the application. 404 when the application has no such brief.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "briefId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchBrief"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete one research brief",
+        "description": "Deletes one brief of the application for good. 404 when the application has no such brief.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^rbr_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "briefId",
             "required": true
           }
         ],

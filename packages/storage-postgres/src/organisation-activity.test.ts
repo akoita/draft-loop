@@ -39,7 +39,11 @@ describe.runIf(connectionString !== undefined)("Postgres organisation activity (
         warnedAt: null,
       });
 
-      await activity.markWarned("org-a", later(1000));
+      await expect(activity.markWarned("org-a", later(1000))).resolves.toBe(true);
+      await expect(activity.markWarned("org-a", later(2000))).resolves.toBe(false);
+      await activity.clearWarning("org-a");
+      await expect(activity.read("org-a")).resolves.toMatchObject({ warnedAt: null });
+      await expect(activity.markWarned("org-a", later(1000))).resolves.toBe(true);
       const next = later(organisationActivityIntervalMs);
       await expect(activity.touch("org-a", next)).resolves.toBe(true);
       await expect(activity.read("org-a")).resolves.toEqual({

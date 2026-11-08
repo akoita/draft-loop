@@ -83,6 +83,10 @@
       "types": "./src/record-archive.ts",
       "import": "./src/record-archive.ts"
     },
+    "./organisation-erasure-flow": {
+      "types": "./src/organisation-erasure-flow.ts",
+      "import": "./src/organisation-erasure-flow.ts"
+    },
     "./record-erasure": {
       "types": "./src/record-erasure.ts",
       "import": "./src/record-erasure.ts"
@@ -134,6 +138,10 @@
     "./career-interview-sessions": {
       "types": "./src/career-interview-sessions.ts",
       "import": "./src/career-interview-sessions.ts"
+    },
+    "./research-briefs": {
+      "types": "./src/research-briefs.ts",
+      "import": "./src/research-briefs.ts"
     },
     "./saved-application-material": {
       "types": "./src/saved-application-material.ts",

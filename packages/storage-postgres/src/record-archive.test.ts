@@ -337,6 +337,17 @@ async function seedRecord(
       at,
     ],
   );
+  // A research brief, keyed like the saved drafts.
+  await q(
+    `INSERT INTO application_research_briefs (id, workspace_id, application_id, brief, created_at)
+     VALUES ($1, $2, 'application-1', $3::jsonb, $4)`,
+    [
+      `rbr_brief-${run}`,
+      workspaceId,
+      JSON.stringify({ findings: [{ text: `A fictional finding for ${marker}.` }] }),
+      at,
+    ],
+  );
   // Never archived: command results and the tenant's store list.
   await q(
     `INSERT INTO idempotency_keys (scope, key, fingerprint, result_json, expires_at)

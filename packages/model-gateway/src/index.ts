@@ -1,3 +1,4 @@
+export * from "./claude-search.js";
 export * from "./content-screener.js";
 export * from "./decision-screening-shadow.js";
 export * from "./file-credentials.js";

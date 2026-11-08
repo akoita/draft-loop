@@ -15,6 +15,7 @@ import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
@@ -87,6 +88,7 @@ import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
+import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
@@ -159,6 +161,8 @@ export interface ApiOptions {
     readonly applicationMaterialDrafts?: SavedApplicationMaterialStore;
     /** The worker's critic pass on saved cover letters (#2525); without it none runs. */
     readonly materialReviews?: MaterialReviews;
+    /** Research briefs kept with each application (#2542); without them those routes are not served. */
+    readonly researchBriefs?: ResearchBriefStore;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
@@ -631,6 +635,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.materialReviews === undefined
           ? {}
           : { reviews: application.materialReviews }),
+      });
+    }
+    if (application.researchBriefs !== undefined) {
+      registerResearchBriefRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        briefs: application.researchBriefs,
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {

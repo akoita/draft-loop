@@ -228,6 +228,11 @@ msgstr "{0, plural, one {# version du brief} other {# versions du brief}}"
 msgid "{0, plural, one {# export} other {# exports}}"
 msgstr "{0, plural, one {# export} other {# exports}}"
 
+#. placeholder {0}: content.links.length
+#: packages/ui/src/work-journal-panel.tsx
+msgid "{0, plural, one {# link} other {# links}}"
+msgstr "{0, plural, one {# lien} other {# liens}}"
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -3348,6 +3353,10 @@ msgstr "Import terminé. Une source d’éléments de parcours a été ajoutée.
 #: packages/ui/src/knowledge-intake.ts
 msgid "File import complete. An existing career-evidence source was reused."
 msgstr "Import terminé. Une source d’éléments de parcours existante a été réutilisée."
+
+#: packages/ui/src/work-journal-model.ts
+msgid "Filed by {filer}"
+msgstr "Déposée par {filer}"
 
 #. placeholder {0}: note.agent_token_id
 #: packages/ui/src/work-journal-model.ts

@@ -40,17 +40,30 @@ export interface WorkJournalReviewNote {
   readonly amended_by_agent_token_ids?: readonly string[] | undefined;
 }
 
-/** Which agent tokens sent a note, in words; null when the owner filed it. */
-export function workJournalProvenance(note: WorkJournalReviewNote): string | null {
+/** Agent token names by token id, as Workspace settings' Agents list labels them. */
+export type WorkJournalAgentNames = ReadonlyMap<string, string>;
+
+/**
+ * Which agents sent a note, in words; null when the owner filed it. A token the host can name
+ * shows by its name, such as "Claude Code on my laptop"; any other by its id.
+ */
+export function workJournalProvenance(
+  note: WorkJournalReviewNote,
+  names: WorkJournalAgentNames = new Map(),
+): string | null {
   const amending = (note.amended_by_agent_token_ids ?? []).filter(
     (id) => id !== note.agent_token_id,
   );
   if (note.agent_token_id === undefined && amending.length === 0) return null;
+  const filer = note.agent_token_id === undefined ? undefined : names.get(note.agent_token_id);
   const filed =
     note.agent_token_id === undefined
       ? t`Filed without an agent token`
-      : t`Filed by agent token ${note.agent_token_id}`;
-  return amending.length === 0 ? `${filed}.` : `${filed}; amended by ${amending.join(", ")}.`;
+      : filer === undefined
+        ? t`Filed by agent token ${note.agent_token_id}`
+        : t`Filed by ${filer}`;
+  const amenders = amending.map((id) => names.get(id) ?? id).join(", ");
+  return amending.length === 0 ? `${filed}.` : `${filed}; amended by ${amenders}.`;
 }
 
 /** What the review sends to the API's review route. */
@@ -106,8 +119,6 @@ export function workJournalScreening(
 export interface WorkJournalReviewItem {
   readonly note: WorkJournalReviewNote;
   readonly duplicates: readonly WorkJournalReviewNote[];
-  /** Merge when a likely duplicate is pending, so the candidate keeps one note for one piece of work. */
-  readonly suggested: "merge" | "approve";
 }
 
 /** The pending notes, newest first, each with its pending likely duplicates side by side. */
@@ -123,7 +134,7 @@ export function workJournalReviewItems(
         const other = byId.get(id);
         return other === undefined ? [] : [other];
       });
-      return { note, duplicates, suggested: duplicates.length > 0 ? "merge" : "approve" };
+      return { note, duplicates };
     });
 }
 

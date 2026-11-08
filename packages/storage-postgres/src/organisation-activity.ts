@@ -27,8 +27,13 @@ export interface OrganisationActivity {
     cutoff: Date,
     limit: number,
   ) => Promise<readonly OrganisationActivityRow[]>;
-  /** Records that the organisation's owners were warned at `now`. */
-  readonly markWarned: (organisationId: string, now: Date) => Promise<void>;
+  /**
+   * Records that the organisation's owners are being warned at `now`, unless a warning is already
+   * recorded. Resolves whether this call recorded it, so concurrent sweeps warn once.
+   */
+  readonly markWarned: (organisationId: string, now: Date) => Promise<boolean>;
+  /** Forgets a warning that could not be sent, so the next sweep tries again. */
+  readonly clearWarning: (organisationId: string) => Promise<void>;
 }
 
 export class OrganisationActivityError extends Error {
@@ -102,9 +107,19 @@ export function createOrganisationActivity(client: SqlSession): OrganisationActi
     markWarned: async (organisationId, now) => {
       requireOrganisationId(organisationId);
       requireDate(now);
-      await client.query(
-        "UPDATE organisation_activity SET warned_at = $2 WHERE organisation_id = $1",
+      const rows = await client.query(
+        `UPDATE organisation_activity SET warned_at = $2
+         WHERE organisation_id = $1 AND warned_at IS NULL RETURNING organisation_id`,
         [organisationId, now.toISOString()],
+      );
+      return rows.length > 0;
+    },
+
+    clearWarning: async (organisationId) => {
+      requireOrganisationId(organisationId);
+      await client.query(
+        "UPDATE organisation_activity SET warned_at = NULL WHERE organisation_id = $1",
+        [organisationId],
       );
     },
   };

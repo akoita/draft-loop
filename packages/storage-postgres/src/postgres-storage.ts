@@ -24,6 +24,7 @@ import { organisationPlanGrants } from "./organisation-plans-migration.js";
 import { createRecordArchiveRows } from "./record-archive.js";
 import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
+import { createResearchBriefStore } from "./research-briefs.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
 import { createSavedApplicationMaterialStore } from "./saved-application-material.js";
@@ -148,6 +149,7 @@ function tenantStorage(client: SqlSession) {
     agentTokens: createAgentTokenStore(client),
     careerInterviewSessions: createCareerInterviewSessionStore(client),
     savedApplicationMaterial: createSavedApplicationMaterialStore(client),
+    researchBriefs: createResearchBriefStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

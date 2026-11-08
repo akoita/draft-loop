@@ -1,8 +1,9 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useId, useState } from "react";
 import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
 import { workJournalPanelId } from "./shared-link.js";
 import {
+  type WorkJournalAgentNames,
   type WorkJournalEditDraft,
   type WorkJournalReviewAction,
   type WorkJournalReviewItem,
@@ -47,6 +48,8 @@ export interface WorkJournalPanelProps {
   ) => Promise<string | undefined>;
   /** How to connect an agent (#2427), from a host that can issue its token. */
   readonly agentSetup?: ReactNode;
+  /** Agent token names by id, so a note says which agent filed it; ids show without it. */
+  readonly agentNames?: WorkJournalAgentNames | undefined;
 }
 
 export function WorkJournalPanel({
@@ -57,6 +60,7 @@ export function WorkJournalPanel({
   onSetIntake,
   onReview,
   agentSetup,
+  agentNames,
 }: WorkJournalPanelProps) {
   const id = useId();
   const [intakeProblem, setIntakeProblem] = useState<string | undefined>(undefined);
@@ -110,6 +114,7 @@ export function WorkJournalPanel({
                 item={item}
                 knowledgeBases={knowledgeBases}
                 onReview={onReview}
+                agentNames={agentNames}
               />
             </li>
           ))}
@@ -120,10 +125,16 @@ export function WorkJournalPanel({
   );
 }
 
-export function WorkJournalNoteDetails({ note }: { readonly note: WorkJournalReviewNote }) {
+export function WorkJournalNoteDetails({
+  note,
+  agentNames,
+}: {
+  readonly note: WorkJournalReviewNote;
+  readonly agentNames?: WorkJournalAgentNames | undefined;
+}) {
   const { content } = note;
   const screening = workJournalScreening(note.screening);
-  const provenance = workJournalProvenance(note);
+  const provenance = workJournalProvenance(note, agentNames);
   return (
     <div className="work-journal-note">
       <h3>{content.title}</h3>
@@ -143,16 +154,19 @@ export function WorkJournalNoteDetails({ note }: { readonly note: WorkJournalRev
         {content.candidate_role.map(workJournalRoleLabel).join(", ")}
       </p>
       {content.links.length === 0 ? null : (
-        <ul className="work-journal-links">
-          {content.links.map((link) => (
-            <li key={link.url}>
-              {link.kind}:{" "}
-              <a href={link.url} rel="noreferrer noopener" target="_blank">
-                {link.url}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <details className="work-journal-links">
+          <summary>{plural(content.links.length, { one: "# link", other: "# links" })}</summary>
+          <ul>
+            {content.links.map((link) => (
+              <li key={link.url}>
+                {link.kind}:{" "}
+                <a href={link.url} rel="noreferrer noopener" target="_blank">
+                  {link.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
@@ -173,20 +187,22 @@ interface WorkJournalReviewCardProps {
   readonly item: WorkJournalReviewItem;
   readonly knowledgeBases: readonly WorkJournalKnowledgeBase[];
   readonly onReview: WorkJournalPanelProps["onReview"];
+  readonly agentNames?: WorkJournalAgentNames | undefined;
 }
 
-/** One pending note, its likely duplicates beside it, and the four review actions. */
+/** One pending note, its likely duplicates beside it, and the review actions, Approve first. */
 export function WorkJournalReviewCard({
   item,
   knowledgeBases,
   onReview,
+  agentNames,
 }: WorkJournalReviewCardProps) {
   const id = useId();
   const { note, duplicates } = item;
   const held = workJournalScreening(note.screening).held;
-  const [chosen, setChosen] = useState<Mode>(
-    item.suggested === "merge" ? "merge" : held ? "edit" : "approve",
-  );
+  // Approve by default: a likely duplicate is only a hint, and merging two distinct pieces of
+  // work by one click loses one of them.
+  const [chosen, setChosen] = useState<Mode>(held ? "edit" : "approve");
   const [chosenKnowledgeBaseId, setKnowledgeBaseId] = useState("");
   const knowledgeBaseId = knowledgeBaseChoice(knowledgeBases, chosenKnowledgeBaseId);
   const [tier, setTier] = useState<WorkJournalTier | "">("");
@@ -198,8 +214,8 @@ export function WorkJournalReviewCard({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const modes: readonly Mode[] = [
-    ...(duplicates.length > 0 ? (["merge"] as const) : []),
     ...(held ? [] : (["approve"] as const)),
+    ...(duplicates.length > 0 ? (["merge"] as const) : []),
     "edit",
     "discard",
   ];
@@ -246,11 +262,11 @@ export function WorkJournalReviewCard({
   return (
     <article className="work-journal-card" aria-label={note.content.title}>
       <div className={duplicates.length > 0 ? "work-journal-compare" : undefined}>
-        <WorkJournalNoteDetails note={note} />
+        <WorkJournalNoteDetails note={note} agentNames={agentNames} />
         {duplicates.map((duplicate) => (
           <div key={duplicate.id} className="work-journal-duplicate">
             <p className="muted">{t`Likely the same work:`}</p>
-            <WorkJournalNoteDetails note={duplicate} />
+            <WorkJournalNoteDetails note={duplicate} agentNames={agentNames} />
           </div>
         ))}
       </div>

@@ -677,6 +677,29 @@ an inactive beta account is erased (#2463), through `apps/worker/src/mail.ts`.
 - **Logs.** One `mail sent` or `mail not sent` line per message, with the
   template and the provider's status, never the address or the text.
 
+### Beta retention
+
+Each worker start sweeps inactive Beta-plan organisations
+(`apps/worker/src/beta-retention.ts`, #2540). It runs only where mail is
+configured, because nobody may be erased without a warning.
+
+```mermaid
+flowchart LR
+  active["Member request<br/>(activity written, warning cleared)"] --> idle["76 days inactive"]
+  idle -->|"owners emailed;<br/>warned_at set"| warned["Warned"]
+  warned -->|"member signs in"| active
+  warned -->|"90 days inactive and<br/>14 days since the warning"| erased["Erased like<br/>DELETE /v1/organisation"]
+```
+
+- **Scope.** Only organisations whose current plan is `beta`.
+- **Warning.** Active owners get the inactivity email in their screen
+  language, naming the deletion day. A warning no owner received is cleared
+  and retried at the next sweep.
+- **Erasure.** It uses `@draft-loop/storage/organisation-erasure-flow`, as
+  the API does. An active run postpones it to a later sweep.
+- **Logs.** `inactive beta organisation warned` and `inactive beta
+  organisation erased` carry the organisation id, a date and counts only.
+
 ### Plan limits
 
 In sign-in mode, the plan's `seats` and `candidateRecords` limit growth
