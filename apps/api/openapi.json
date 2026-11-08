@@ -2378,6 +2378,39 @@
               "model"
             ]
           },
+          "tells": {
+            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "match": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ]
+            }
+          },
           "prompt_version": {
             "type": "string"
           },
@@ -9418,6 +9451,40 @@
               "model"
             ],
             "additionalProperties": false
+          },
+          "tells": {
+            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "match": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
           },
           "prompt_version": {
             "type": "string"

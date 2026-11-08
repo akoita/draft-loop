@@ -780,6 +780,10 @@ msgstr "↺ round"
 msgid "1 responsibility"
 msgstr "1 responsibility"
 
+#: apps/web/src/application-material.tsx
+msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
+msgstr "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
+
 #: apps/web/src/consent-model.ts
 msgid "A contract with the candidate"
 msgstr "A contract with the candidate"
@@ -807,6 +811,11 @@ msgstr "A job you applied for asks for \"{title}\", and your record does not sho
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
 msgstr "A line covering this requirement was removed: "
+
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "A list of three (\"{0}\") reads as a formula: keep the one that matters."
+msgstr "A list of three (\"{0}\") reads as a formula: keep the one that matters."
 
 #: packages/ui/src/app.tsx
 msgid "A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default."
@@ -2444,6 +2453,10 @@ msgstr "CV language"
 #: packages/ui/src/theme.tsx
 msgid "Dark"
 msgstr "Dark"
+
+#: apps/web/src/application-material-model.ts
+msgid "Dashes are used often in this letter: try a full stop or a comma."
+msgstr "Dashes are used often in this letter: try a full stop or a comma."
 
 #: packages/ui/src/review.tsx
 msgid "Data class"
@@ -4889,6 +4902,10 @@ msgstr "No career evidence yet. Adding the first source creates a knowledge base
 #: packages/ui/src/review.tsx
 msgid "No command matches that search."
 msgstr "No command matches that search."
+
+#: apps/web/src/application-material.tsx
+msgid "No common machine-writing habit found."
+msgstr "No common machine-writing habit found."
 
 #: packages/ui/src/review.tsx
 msgid "no cost cap"
@@ -7415,6 +7432,11 @@ msgstr "Steers selection and framing for the next round. It is not evidence: the
 msgid "step where it stopped."
 msgstr "step where it stopped."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "Stock phrase \"{0}\": say it in your own words."
+msgstr "Stock phrase \"{0}\": say it in your own words."
+
 #: packages/ui/src/review.tsx
 msgid "Stop"
 msgstr "Stop"
@@ -8071,6 +8093,11 @@ msgstr "The last attempt saved no facts. Fix the cause below, then try again."
 msgid "The last run on this application used {0} → {1}."
 msgstr "The last run on this application used {0} → {1}."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "The letter has {0} words: aim for 250 to 350."
+msgstr "The letter has {0} words: aim for 250 to 350."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "The live conversation ended."
 msgstr "The live conversation ended."
@@ -8670,6 +8697,10 @@ msgstr "This note's"
 #: packages/ui/src/app.tsx
 msgid "This pairing could not be checked. {0} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded."
 msgstr "This pairing could not be checked. {0} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded."
+
+#: apps/web/src/application-material-model.ts
+msgid "This paragraph opens like an earlier one: vary the start."
+msgstr "This paragraph opens like an earlier one: vary the start."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "This profile does not have supported public pricing metadata for the displayed estimate scope."
@@ -9521,6 +9552,10 @@ msgstr "Writer reasoning"
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
 msgstr "writes ·"
+
+#: apps/web/src/application-material.tsx
+msgid "Writing check"
+msgstr "Writing check"
 
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-comparison-facts.ts

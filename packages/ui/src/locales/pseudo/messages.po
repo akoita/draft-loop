@@ -780,6 +780,10 @@ msgstr ""
 msgid "1 responsibility"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
+msgstr ""
+
 #: apps/web/src/consent-model.ts
 msgid "A contract with the candidate"
 msgstr ""
@@ -806,6 +810,11 @@ msgstr ""
 
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
+msgstr ""
+
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "A list of three (\"{0}\") reads as a formula: keep the one that matters."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -2443,6 +2452,10 @@ msgstr ""
 
 #: packages/ui/src/theme.tsx
 msgid "Dark"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Dashes are used often in this letter: try a full stop or a comma."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -4887,6 +4900,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "No command matches that search."
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "No common machine-writing habit found."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -7414,6 +7431,11 @@ msgstr ""
 msgid "step where it stopped."
 msgstr ""
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "Stock phrase \"{0}\": say it in your own words."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Stop"
 msgstr ""
@@ -8070,6 +8092,11 @@ msgstr ""
 msgid "The last run on this application used {0} → {1}."
 msgstr ""
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "The letter has {0} words: aim for 250 to 350."
+msgstr ""
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "The live conversation ended."
 msgstr ""
@@ -8668,6 +8695,10 @@ msgstr ""
 #. placeholder {0}: preview.reason
 #: packages/ui/src/app.tsx
 msgid "This pairing could not be checked. {0} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "This paragraph opens like an earlier one: vary the start."
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -9519,6 +9550,10 @@ msgstr ""
 #: packages/ui/src/application-model-pair.tsx
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Writing check"
 msgstr ""
 
 #: packages/ui/src/review.tsx

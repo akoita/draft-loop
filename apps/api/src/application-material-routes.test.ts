@@ -168,7 +168,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v5",
+      prompt_version: "application-material-v6",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -348,6 +348,45 @@ describe("application material route", () => {
       payload: { kind: "cover-letter", guidance: { tone: "angry" } },
     });
     expect(refused.statusCode).toBe(400);
+  });
+
+  it("flags machine-writing tells in a cover letter and not in interview questions", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    await build({
+      consent: granted,
+      route: scriptedRoute(
+        [
+          {
+            items: [
+              {
+                question: "",
+                text: "As a Data Analyst I am passionate about reporting.",
+                fact_ids: ["t"],
+              },
+            ],
+          },
+          { items: [{ question: "Why?", text: "As a Data Analyst I report.", fact_ids: ["t"] }] },
+        ],
+        [],
+      ),
+      drafts,
+    });
+    const letter = (await draft("cover-letter")).json();
+    expect(letter.tells).toEqual([
+      {
+        code: "stock_phrase",
+        paragraph: 0,
+        sentence: "As a Data Analyst I am passionate about reporting.",
+        match: "passionate about",
+      },
+      { code: "word_count", match: "9" },
+    ]);
+    expect((await drafts.get("owner", letter.id))?.items).toHaveLength(1);
+    expect((await drafts.get("owner", letter.id)) as object).not.toHaveProperty("tells");
+    expect((await draft("interview-questions")).json()).not.toHaveProperty("tells");
+    const listed = await app.inject({ method: "GET", url, headers: { authorization } });
+    const kinds = (listed.json() as { drafts: { kind: string; tells?: unknown[] }[] }).drafts;
+    expect(kinds.find((entry) => entry.kind === "cover-letter")?.tells).toHaveLength(2);
   });
 
   it("serves no list when the server keeps no drafts", async () => {

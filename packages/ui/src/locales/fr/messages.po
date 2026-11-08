@@ -774,6 +774,10 @@ msgstr "↺ tour"
 msgid "1 responsibility"
 msgstr "1 responsabilité"
 
+#: apps/web/src/application-material.tsx
+msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
+msgstr "Une vérification des tics que les lecteurs remarquent dans un texte écrit par un modèle, pas un détecteur d'IA. Réécrivez avec vos propres mots avant d'envoyer."
+
 #: apps/web/src/consent-model.ts
 msgid "A contract with the candidate"
 msgstr "Un contrat avec le candidat"
@@ -801,6 +805,11 @@ msgstr "Une offre à laquelle vous avez postulé demande « {title} », et votre
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
 msgstr "Une ligne couvrant cette exigence a été supprimée : "
+
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "A list of three (\"{0}\") reads as a formula: keep the one that matters."
+msgstr "Une liste de trois (« {0} ») sonne comme une formule : gardez ce qui compte."
 
 #: packages/ui/src/app.tsx
 msgid "A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default."
@@ -2438,6 +2447,10 @@ msgstr "Langue du CV"
 #: packages/ui/src/theme.tsx
 msgid "Dark"
 msgstr "Sombre"
+
+#: apps/web/src/application-material-model.ts
+msgid "Dashes are used often in this letter: try a full stop or a comma."
+msgstr "Cette lettre utilise souvent des tirets : essayez un point ou une virgule."
 
 #: packages/ui/src/review.tsx
 msgid "Data class"
@@ -4883,6 +4896,10 @@ msgstr "Aucun élément de parcours pour l’instant. Ajouter la première sourc
 #: packages/ui/src/review.tsx
 msgid "No command matches that search."
 msgstr "Aucune commande ne correspond à cette recherche."
+
+#: apps/web/src/application-material.tsx
+msgid "No common machine-writing habit found."
+msgstr "Aucun tic d'écriture automatique courant trouvé."
 
 #: packages/ui/src/review.tsx
 msgid "no cost cap"
@@ -7409,6 +7426,11 @@ msgstr "Oriente la sélection et la présentation au prochain tour. Ce n’est p
 msgid "step where it stopped."
 msgstr "l’étape où elle s’est arrêtée."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "Stock phrase \"{0}\": say it in your own words."
+msgstr "Formule toute faite « {0} » : dites-le avec vos mots."
+
 #: packages/ui/src/review.tsx
 msgid "Stop"
 msgstr "Arrêter"
@@ -8065,6 +8087,11 @@ msgstr "La dernière tentative n’a enregistré aucun fait. Corrigez la cause c
 msgid "The last run on this application used {0} → {1}."
 msgstr "La dernière exécution de cette candidature a utilisé {0} → {1}."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "The letter has {0} words: aim for 250 to 350."
+msgstr "La lettre compte {0} mots : visez 250 à 350."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "The live conversation ended."
 msgstr "La conversation en direct est terminée."
@@ -8664,6 +8691,10 @@ msgstr "Celui de cette note :"
 #: packages/ui/src/app.tsx
 msgid "This pairing could not be checked. {0} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded."
 msgstr "Cette paire n’a pas pu être vérifiée. {0} L’espace de travail peut quand même être créé, et l’exécution elle-même refuse une filiation partagée sans justification enregistrée."
+
+#: apps/web/src/application-material-model.ts
+msgid "This paragraph opens like an earlier one: vary the start."
+msgstr "Ce paragraphe commence comme un précédent : variez le début."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "This profile does not have supported public pricing metadata for the displayed estimate scope."
@@ -9515,6 +9546,10 @@ msgstr "Raisonnement du rédacteur"
 #: packages/ui/src/model-preset-cards.tsx
 msgid "writes ·"
 msgstr "rédige ·"
+
+#: apps/web/src/application-material.tsx
+msgid "Writing check"
+msgstr "Vérification de l'écriture"
 
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-comparison-facts.ts
