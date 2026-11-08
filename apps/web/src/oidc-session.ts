@@ -262,6 +262,11 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
 /** How a signed-in client ends the session: `atProvider` also signs out at the provider. */
 export type EndSession = (notice: string, atProvider: boolean) => void;
 
+/** True for the API's answer to a verified sign-in that has no account yet (#2503). */
+function isNoAccount(error: ApiRequestError): boolean {
+  return error.status === 403 && error.code === "no_account";
+}
+
 /**
  * A client that sends the current access token, refreshes it once when the API refuses it, and
  * ends the session when it cannot: an expired sign-in returns to the sign-in screen, and an account
@@ -271,7 +276,14 @@ export function signedInClient(
   session: OidcSession,
   createClient: (token: string) => ApiClient,
   onEnd: EndSession,
+  /**
+   * Called instead of ending the session when the sign-in has no account, so the screen can offer
+   * beta sign-up with an invite code (#2503). Without it, such a person is signed out.
+   */
+  onNoAccount?: () => void,
 ): ApiClient {
+  const noAccount = () =>
+    onNoAccount === undefined ? onEnd(signInNotices().notMember, true) : onNoAccount();
   async function currentToken(): Promise<string> {
     try {
       return await session.accessToken();
@@ -287,10 +299,12 @@ export function signedInClient(
       return await call(createClient(token));
     } catch (error) {
       if (!(error instanceof ApiRequestError)) throw error;
-      if (error.status === 403) {
-        onEnd(signInNotices().notMember, true);
+      // Other 403 answers, such as a member's role or a sign-up refusal, are the route's own.
+      if (isNoAccount(error)) {
+        noAccount();
         throw error;
       }
+      if (error.status === 403) throw error;
       if (error.status !== 401) throw error;
     }
     // The API refused the token before running the route, so one retry with a fresh one is safe.
@@ -304,10 +318,10 @@ export function signedInClient(
     try {
       return await call(createClient(fresh));
     } catch (error) {
-      if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
-        const notMember = error.status === 403;
-        if (!notMember) session.clear();
-        onEnd(notMember ? signInNotices().notMember : signInNotices().expired, notMember);
+      if (error instanceof ApiRequestError && isNoAccount(error)) noAccount();
+      else if (error instanceof ApiRequestError && error.status === 401) {
+        session.clear();
+        onEnd(signInNotices().expired, false);
       }
       throw error;
     }

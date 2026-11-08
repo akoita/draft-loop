@@ -2284,6 +2284,10 @@ msgstr ""
 msgid "Create knowledge store"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Create my account"
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Create or choose a knowledge base"
 msgstr ""
@@ -2321,6 +2325,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Creating a knowledge base is unavailable"
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Creating your account"
 msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
@@ -3923,6 +3931,10 @@ msgstr ""
 msgid "Invalid workspace name."
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Invite code"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
 msgstr ""
@@ -4000,6 +4012,10 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Join the DraftLoop beta"
 msgstr ""
 
 #: packages/ui/src/application-name.tsx
@@ -4898,6 +4914,14 @@ msgstr ""
 #: packages/ui/src/home-folder-model.ts
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "No invite has that code. Check it for typos, or ask for a new invite."
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "No invite? The beta is invite-only for now."
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -7184,6 +7208,7 @@ msgstr ""
 msgid "Sign in with your organisation account. You stay signed in until you close this tab."
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/shell-actions.tsx
 msgid "Sign out"
 msgstr ""
@@ -7525,6 +7550,18 @@ msgstr ""
 msgid "Text"
 msgstr ""
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite was withdrawn. Ask for a new invite."
+msgstr ""
+
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
 msgstr ""
@@ -7618,6 +7655,10 @@ msgstr ""
 
 #: packages/ui/src/autopilot-toggle.tsx
 msgid "The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you."
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The beta is full for now. Your code stays valid: try again when places open."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -8445,6 +8486,10 @@ msgstr ""
 msgid "These models"
 msgstr ""
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "This account already exists. Reload the page."
+msgstr ""
+
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr ""
@@ -8767,6 +8812,10 @@ msgstr ""
 msgid "Tone"
 msgstr ""
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Too many attempts. Wait 15 minutes, then try again."
+msgstr ""
+
 #: apps/web/src/refusal-text.ts
 msgid "Too many requests; retry later."
 msgstr ""
@@ -9076,6 +9125,10 @@ msgstr ""
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Verbosity"
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Verify your email address with the sign-in provider, then try again."
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -9428,6 +9481,10 @@ msgstr ""
 msgid "You"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
 msgstr ""
@@ -9447,6 +9504,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Your account could not be created. Try again."
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx

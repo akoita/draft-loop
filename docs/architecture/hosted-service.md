@@ -608,8 +608,10 @@ People manage their organisation through the API once it has a tenant directory
 ### Beta invites
 
 The invite-only public beta (#2460) creates accounts from single-use invite
-codes, in the directory's `betaInvites` (`beta-invites.ts`). The sign-up
-screen comes in #2503.
+codes, in the directory's `betaInvites` (`beta-invites.ts`). A signed-in
+person with no account gets 403 `no_account` from every other route; the web
+screen then shows **Join the DraftLoop beta** (`beta-sign-up.tsx`), which asks
+for the code and words each refusal.
 
 | Route                                        | Who                                | What it does                                                         |
 | -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |

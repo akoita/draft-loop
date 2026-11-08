@@ -210,13 +210,14 @@ describe("refresh", () => {
 });
 
 describe("signed-in client", () => {
-  function api(answers: Array<"ok" | 401 | 403>) {
+  function api(answers: Array<"ok" | 401 | 403 | "no_account">) {
     const seen: string[] = [];
     const createClient = (token: string): ApiClient => ({
       call: async () => {
         seen.push(token);
         const answer = answers.shift();
         if (answer === "ok") return { status: "ok" } as never;
+        if (answer === "no_account") throw new ApiRequestError(403, "no_account", "No account.");
         throw new ApiRequestError(answer ?? 500, "refused", "Refused.");
       },
     });
@@ -284,10 +285,42 @@ describe("signed-in client", () => {
     const context = setup([tokens("access-1", "refresh-1")]);
     const session = await signIn(context);
     const ended: unknown[] = [];
-    const client = signedInClient(session, api([403]).createClient, (...args) => ended.push(args));
+    const client = signedInClient(session, api(["no_account"]).createClient, (...args) =>
+      ended.push(args),
+    );
 
     await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ status: 403 });
     expect(ended).toEqual([[signInNotices().notMember, true]]);
+  });
+
+  it("offers sign-up instead when the screen handles an account-less sign-in (#2503)", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    const session = await signIn(context);
+    const ended: unknown[] = [];
+    let offered = 0;
+    const client = signedInClient(
+      session,
+      api(["no_account"]).createClient,
+      (...args) => ended.push(args),
+      () => {
+        offered += 1;
+      },
+    );
+
+    await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ code: "no_account" });
+    expect(offered).toBe(1);
+    expect(ended).toEqual([]);
+    expect(session.isSignedIn()).toBe(true);
+  });
+
+  it("leaves another refusal to the route, keeping the session", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    const session = await signIn(context);
+    const ended: unknown[] = [];
+    const client = signedInClient(session, api([403]).createClient, (...args) => ended.push(args));
+
+    await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({ status: 403 });
+    expect(ended).toEqual([]);
   });
 });
 

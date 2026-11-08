@@ -2284,6 +2284,10 @@ msgstr "Create knowledge base"
 msgid "Create knowledge store"
 msgstr "Create knowledge store"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Create my account"
+msgstr "Create my account"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Create or choose a knowledge base"
 msgstr "Create or choose a knowledge base"
@@ -2322,6 +2326,10 @@ msgstr "Created knowledge base “{shown}”."
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Creating a knowledge base is unavailable"
 msgstr "Creating a knowledge base is unavailable"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Creating your account"
+msgstr "Creating your account"
 
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -3924,6 +3932,10 @@ msgstr "Invalid timestamp."
 msgid "Invalid workspace name."
 msgstr "Invalid workspace name."
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Invite code"
+msgstr "Invite code"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
 msgstr "is marked against"
@@ -4002,6 +4014,10 @@ msgstr "Job requirements read from the job description"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
 msgstr "Job requirements reviewed"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Join the DraftLoop beta"
+msgstr "Join the DraftLoop beta"
 
 #: packages/ui/src/application-name.tsx
 msgid "Keep “"
@@ -4900,6 +4916,14 @@ msgstr "No findings yet: the critique has not run"
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
 msgstr "No folder"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "No invite has that code. Check it for typos, or ask for a new invite."
+msgstr "No invite has that code. Check it for typos, or ask for a new invite."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "No invite? The beta is invite-only for now."
+msgstr "No invite? The beta is invite-only for now."
 
 #: packages/ui/src/profile.tsx
 msgid "No issues are recorded in this version."
@@ -7185,6 +7209,7 @@ msgstr "Sign in with the owner token of this deployment. It stays in this tab un
 msgid "Sign in with your organisation account. You stay signed in until you close this tab."
 msgstr "Sign in with your organisation account. You stay signed in until you close this tab."
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/shell-actions.tsx
 msgid "Sign out"
 msgstr "Sign out"
@@ -7526,6 +7551,18 @@ msgstr "Testing the key with the provider…"
 msgid "Text"
 msgstr "Text"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
+msgstr "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
+msgstr "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite was withdrawn. Ask for a new invite."
+msgstr "That invite was withdrawn. Ask for a new invite."
+
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
 msgstr "That knowledge store is not on this service."
@@ -7620,6 +7657,10 @@ msgstr "The author is writing the draft."
 #: packages/ui/src/autopilot-toggle.tsx
 msgid "The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you."
 msgstr "The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The beta is full for now. Your code stays valid: try again when places open."
+msgstr "The beta is full for now. Your code stays valid: try again when places open."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -8446,6 +8487,10 @@ msgstr "These are the template's pages as a PDF. Word lays out the same text, bu
 msgid "These models"
 msgstr "These models"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "This account already exists. Reload the page."
+msgstr "This account already exists. Reload the page."
+
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
@@ -8768,6 +8813,10 @@ msgstr "tokens; thinking"
 msgid "Tone"
 msgstr "Tone"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Too many attempts. Wait 15 minutes, then try again."
+msgstr "Too many attempts. Wait 15 minutes, then try again."
+
 #: apps/web/src/refusal-text.ts
 msgid "Too many requests; retry later."
 msgstr "Too many requests; retry later."
@@ -9078,6 +9127,10 @@ msgstr "Value for fact {0}"
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Verbosity"
 msgstr "Verbosity"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Verify your email address with the sign-in provider, then try again."
+msgstr "Verify your email address with the sign-in provider, then try again."
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "version"
@@ -9429,6 +9482,10 @@ msgstr "Writing policy versions"
 msgid "You"
 msgstr "You"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
 msgstr "You can edit the draft once this round finishes."
@@ -9449,6 +9506,10 @@ msgstr "You have unsaved changes. Choose Discard changes to close without saving
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr "You have unsaved changes. Save them before marking the brief reviewed."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Your account could not be created. Try again."
+msgstr "Your account could not be created. Try again."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Your answer"
