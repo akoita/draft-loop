@@ -127,6 +127,40 @@ Each paragraph, or each question with its talking point, must pass all rules:
 A record with no fact the draft may cite is refused before any model call
 (`no_facts`). The drafter never stores a draft.
 
+## Free-form cover letters
+
+With `DRAFT_LOOP_COVER_LETTER_WRITER=free-form` on the API, a cover letter is
+written as prose first and checked afterwards (#2586). Interview questions
+always use the cited items above. The default, `items`, keeps them for
+letters too.
+
+```mermaid
+flowchart LR
+  pick[Pick 8 to 12 facts] --> write[Writer: plain letter]
+  write --> check[Claim check]
+  check -- every sentence holds --> keep[Paragraphs with citations]
+  check -- some fail --> revise[Writer revises those sentences once]
+  revise --> check2[Claim check]
+  check2 --> drop[Drop what still fails]
+  drop --> keep
+```
+
+| Step         | What happens                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project.   |
+| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v1`.        |
+| Check        | Claude Haiku links each sentence to the facts behind it; `cover-letter-claims.ts` decides whether the link holds. |
+| Revise       | One more call rewrites only the failing sentences, with why they failed.                                      |
+| Drop         | Sentences that still fail are left out and listed in the view's `dropped_sentences`.                          |
+
+A candidate sentence holds when it cites a picked fact, all its facts share
+one group, it states no number they do not, and it never talks about the
+record. An employer sentence cites research findings only, and a courtesy
+sentence is short and states no number. A letter with no supported claim
+about the candidate is refused as `invalid_draft`. The writer and the check
+share the request's cost cap, and the saved draft's `prompt_version` is
+`cover-letter-free-form-v1`.
+
 ## The hosted route
 
 `POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material` with

@@ -139,6 +139,7 @@ export interface ApiSchemas {
       readonly sentence?: string;
       readonly match?: string;
     })[];
+    readonly dropped_sentences?: readonly (string)[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };

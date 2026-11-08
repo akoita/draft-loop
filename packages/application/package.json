@@ -79,6 +79,14 @@
       "types": "./src/cover-letter-claims-model.ts",
       "import": "./src/cover-letter-claims-model.ts"
     },
+    "./cover-letter-free-form": {
+      "types": "./src/cover-letter-free-form.ts",
+      "import": "./src/cover-letter-free-form.ts"
+    },
+    "./cover-letter-free-form-model": {
+      "types": "./src/cover-letter-free-form-model.ts",
+      "import": "./src/cover-letter-free-form-model.ts"
+    },
     "./cover-letter-facts": {
       "types": "./src/cover-letter-facts.ts",
       "import": "./src/cover-letter-facts.ts"

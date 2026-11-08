@@ -85,6 +85,7 @@ clone, which Git ignores:
 | `DRAFT_LOOP_SCREENING`            | `rules`  | `rules+model` also asks Claude Haiku to screen uploads and turns on the career interview |
 | `DRAFT_LOOP_LIVE_SPEECH`          | `off`    | `google` offers the live voice interview, with `keys/google_speech_api_key` ([voice input](../reference/voice-input.md#live-conversation)) |
 | `DRAFT_LOOP_SPEECH_PROJECT_ID`    | none     | The Google Cloud project live speech bills to                                  |
+| `DRAFT_LOOP_COVER_LETTER_WRITER`  | `items`  | `free-form` writes a cover letter as prose, then checks each sentence against your facts ([free-form letters](../reference/application-material.md#free-form-cover-letters)) |
 | `DRAFT_LOOP_RESEARCH_SEARCH`      | `claude` | The research brief's web search: `claude` with `keys/anthropic_api_key`, `linkup` with `keys/linkup_api_key`, or `off` ([research briefs](../reference/application-material.md#research-briefs)) |
 | `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`      | The most one run may spend on provider calls                                   |
 | `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`      | The most revision rounds one run may take                                      |

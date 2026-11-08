@@ -4291,6 +4291,10 @@ msgstr "latest"
 msgid "Leadership"
 msgstr "Leadership"
 
+#: apps/web/src/application-material.tsx
+msgid "Left out"
+msgstr "Left out"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr "Legacy evidence takes one URL at a time"
@@ -5050,6 +5054,10 @@ msgstr "No eligible chunks for full source, so retrieval was used"
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
 msgstr "No evidence found for: "
+
+#: apps/web/src/application-material.tsx
+msgid "No fact in your career record supports these sentences, so they are not in the letter."
+msgstr "No fact in your career record supports these sentences, so they are not in the letter."
 
 #: packages/ui/src/profile.tsx
 msgid "No facts are recorded in this version."

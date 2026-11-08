@@ -2514,6 +2514,13 @@
               ]
             }
           },
+          "dropped_sentences": {
+            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "prompt_version": {
             "type": "string"
           },
@@ -10129,6 +10136,13 @@
                 "code"
               ],
               "additionalProperties": false
+            }
+          },
+          "dropped_sentences": {
+            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           },
           "prompt_version": {

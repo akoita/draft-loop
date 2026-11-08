@@ -36,7 +36,10 @@ import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
-import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
+import {
+  type CoverLetterWriter,
+  registerApplicationMaterialRoutes,
+} from "./application-material-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { type BetaSignUpOptions, registerBetaSignUpRoutes } from "./beta-sign-up-routes.js";
@@ -208,6 +211,8 @@ export interface ApiOptions {
   readonly localModels?: readonly string[];
   /** Speech for the live career interview (#2361); unset, the live route is not served. */
   readonly liveSpeech?: LiveInterviewSpeech;
+  /** How cover letters are written (#2586); cited paragraphs when unset. */
+  readonly coverLetterWriter?: CoverLetterWriter;
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
@@ -634,6 +639,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           get allowProviderData() {
             return interview.allowProviderData;
           },
+          ...(options.coverLetterWriter === undefined
+            ? {}
+            : { coverLetterWriter: options.coverLetterWriter }),
         },
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
