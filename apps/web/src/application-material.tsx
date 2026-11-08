@@ -4,6 +4,7 @@ import {
   exportTemplateLabels,
   exportTemplates,
 } from "@draft-loop/ui/export-template";
+import { openApplicationPanelEvent } from "@draft-loop/ui/host-panels";
 import { t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useState } from "react";
 
@@ -486,6 +487,22 @@ export function ApplicationMaterialSection({
   const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
+
+  // The review's "Cover letter or interview" button opens the panel and brings it into view
+  // (#2578); the panel stays where it is, under the draft.
+  useEffect(() => {
+    const open = () => {
+      setCollapsed(false);
+      savePrepareCollapsed(false);
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("material-heading");
+        heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+        heading?.querySelector("button")?.focus({ preventScroll: true });
+      });
+    };
+    globalThis.addEventListener(openApplicationPanelEvent, open);
+    return () => globalThis.removeEventListener(openApplicationPanelEvent, open);
+  }, []);
   const [reviewing, setReviewing] = useState<string | undefined>(undefined);
   const [reviewNote, setReviewNote] = useState<string | undefined>(undefined);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];

@@ -2312,6 +2312,10 @@ msgstr ""
 msgid "Cover letter"
 msgstr ""
 
+#: packages/ui/src/review.tsx
+msgid "Cover letter or interview"
+msgstr ""
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr ""
@@ -5544,6 +5548,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
+msgstr ""
+
+#: packages/ui/src/review.tsx
+msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 msgstr ""
 
 #: packages/ui/src/review.tsx
