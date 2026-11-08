@@ -657,6 +657,20 @@ flowchart LR
   operator creates directly are not counted.
 - **Data.** The table belongs to no tenant and holds an email and ids only.
 
+### Transactional email
+
+The worker sends the few emails the service needs, such as the warning before
+an inactive beta account is erased (#2463), through `apps/worker/src/mail.ts`.
+
+- **Sender.** Brevo's transactional API, a French provider in the EU, as
+  plain text without tracking. The port (`MailSender`) hides the provider.
+- **Settings.** `DRAFT_LOOP_MAIL_FROM` (a sender on a domain Brevo has
+  verified), `DRAFT_LOOP_MAIL_KEY_SECRET` (the Secret Manager version holding
+  the API key) and `DRAFT_LOOP_PUBLIC_URL` (the only link a message carries).
+  All unset turns mail off; a partial set stops the worker at start.
+- **Logs.** One `mail sent` or `mail not sent` line per message, with the
+  template and the provider's status, never the address or the text.
+
 ### Plan limits
 
 In sign-in mode, the plan's `seats` and `candidateRecords` limit growth
