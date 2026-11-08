@@ -6049,6 +6049,10 @@ msgstr "Lire les candidatures"
 msgid "Read changes only"
 msgstr "Lire uniquement les modifications"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read CVs and drafts"
+msgstr "Lire les CV et les brouillons"
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr "Lu depuis le texte de l’offre (pas de brief d’exigences)"
@@ -6068,6 +6072,10 @@ msgstr "Lire l’ébauche complète"
 #: packages/ui/src/review.tsx
 msgid "Read the job"
 msgstr "Lire l’offre"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read your exported CVs and saved cover letters and interview questions"
+msgstr "Lire vos CV exportés et vos lettres de motivation et questions d'entretien enregistrées"
 
 #: packages/ui/src/career-evidence.ts
 #: packages/ui/src/knowledge.tsx

@@ -10,9 +10,15 @@
 /**
  * What an agent token may do (ADR 0011 D17, #2438). `journal` reaches the work journal intake and
  * title listing; `applications:read` lists and reads job applications and run state;
- * `jobs:write` creates a job application from pasted job text.
+ * `jobs:write` creates a job application from pasted job text; `drafts:read` (#2569) reads a
+ * run's exports and the application's saved cover letters and interview questions.
  */
-export const agentTokenScopes = ["journal", "applications:read", "jobs:write"] as const;
+export const agentTokenScopes = [
+  "journal",
+  "applications:read",
+  "jobs:write",
+  "drafts:read",
+] as const;
 export type AgentTokenScope = (typeof agentTokenScopes)[number];
 
 /** The scopes of a token issued without any, and of every token issued before scopes existed. */

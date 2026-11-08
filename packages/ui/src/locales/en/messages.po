@@ -6055,6 +6055,10 @@ msgstr "Read applications"
 msgid "Read changes only"
 msgstr "Read changes only"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read CVs and drafts"
+msgstr "Read CVs and drafts"
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr "Read from the job text (no requirements brief)"
@@ -6074,6 +6078,10 @@ msgstr "Read the full draft"
 #: packages/ui/src/review.tsx
 msgid "Read the job"
 msgstr "Read the job"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read your exported CVs and saved cover letters and interview questions"
+msgstr "Read your exported CVs and saved cover letters and interview questions"
 
 #: packages/ui/src/career-evidence.ts
 #: packages/ui/src/knowledge.tsx

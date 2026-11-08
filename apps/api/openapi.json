@@ -621,9 +621,10 @@
               "enum": [
                 "journal",
                 "applications:read",
-                "jobs:write"
+                "jobs:write",
+                "drafts:read"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
             },
             "description": "What the token may do."
           },
@@ -667,9 +668,10 @@
               "enum": [
                 "journal",
                 "applications:read",
-                "jobs:write"
+                "jobs:write",
+                "drafts:read"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
             },
             "description": "What the token may do."
           },
@@ -8210,9 +8212,10 @@
               "enum": [
                 "journal",
                 "applications:read",
-                "jobs:write"
+                "jobs:write",
+                "drafts:read"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
             },
             "description": "What the token may do."
           },
@@ -8257,9 +8260,10 @@
               "enum": [
                 "journal",
                 "applications:read",
-                "jobs:write"
+                "jobs:write",
+                "drafts:read"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
             },
             "description": "What the token may do."
           },
@@ -25065,7 +25069,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) and drafts:read (a run's exports and the saved cover letters and interview questions). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -25088,16 +25092,17 @@
                   "scopes": {
                     "description": "What the token may do; [\"journal\"] by default.",
                     "minItems": 1,
-                    "maxItems": 3,
+                    "maxItems": 4,
                     "type": "array",
                     "items": {
                       "type": "string",
                       "enum": [
                         "journal",
                         "applications:read",
-                        "jobs:write"
+                        "jobs:write",
+                        "drafts:read"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
                     }
                   }
                 },

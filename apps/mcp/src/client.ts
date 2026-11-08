@@ -111,8 +111,15 @@ interface ErrorBody {
   };
 }
 
-/** Calls the API under the configured workspace, `path` starting with `/`; refusals throw. */
-export type WorkspaceApiCall = (path: string, init: RequestInit) => Promise<unknown>;
+/**
+ * Calls the API under the configured workspace, `path` starting with `/`; refusals throw. The
+ * answer is parsed JSON, or the body's text when `as` is `text`, as for an exported document.
+ */
+export type WorkspaceApiCall = (
+  path: string,
+  init: RequestInit,
+  as?: "json" | "text",
+) => Promise<unknown>;
 
 /**
  * One authenticated call under `/v1/workspaces/{workspace}`: the token read on each call, a
@@ -122,7 +129,7 @@ export function createWorkspaceApiCall(config: WorkJournalApiConfig): WorkspaceA
   const fetcher = config.fetch ?? fetch;
   const base = `${config.baseUrl.replace(/\/+$/u, "")}/v1/workspaces/${encodeURIComponent(config.workspaceId)}`;
 
-  return async (path, init) => {
+  return async (path, init, as = "json") => {
     const token = await config.token();
     if (token === undefined) throw notSignedIn();
     let response: Response;
@@ -139,6 +146,7 @@ export function createWorkspaceApiCall(config: WorkJournalApiConfig): WorkspaceA
         true,
       );
     }
+    if (response.ok && as === "text") return await response.text();
     const body = (await response.json().catch(() => ({}))) as unknown;
     if (response.status === 401) throw notSignedIn();
     if (!response.ok) {

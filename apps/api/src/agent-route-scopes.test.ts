@@ -154,6 +154,27 @@ describe("agent route scopes", () => {
     ]);
   });
 
+  it("read exports and saved material only with drafts:read, which no token gets unasked", async () => {
+    const reader = await agentWith(["applications:read"]);
+    for (const url of [
+      "/v1/workspaces/owner/runs/run-1/exports",
+      "/v1/workspaces/owner/runs/run-1/exports/export-1/content",
+    ]) {
+      const refused = await app.inject({ method: "GET", url, headers: reader.headers });
+      expect(refused.statusCode, url).toBe(403);
+      expect(refused.json().error.message, url).toContain('"drafts:read" scope');
+    }
+    // This test API keeps no drafts, so the material route is checked by its rule.
+    expect(
+      agentRoutes["GET /v1/workspaces/:workspaceId/applications/:applicationId/material"]?.scope,
+    ).toBe("drafts:read");
+    expect(agentRoutes["GET /v1/workspaces/:workspaceId/runs/:runId/review"]).toBeUndefined();
+    expect(humanOnlyRoutes).toContain("GET /v1/workspaces/:workspaceId/runs/:runId/review");
+    expect(humanOnlyRoutes).toContain(
+      "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
+    );
+  });
+
   it("refuse an unknown scope at issue", async () => {
     const refused = await app.inject({
       method: "POST",

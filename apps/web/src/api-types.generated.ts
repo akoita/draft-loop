@@ -4,7 +4,7 @@ export interface ApiSchemas {
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -438,7 +438,7 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -2445,7 +2445,7 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
   };

@@ -142,7 +142,9 @@ describe("AgentSetup", () => {
     expect(html).toContain('id="coding-agents"');
     expect(html).toContain("<h3>Agents</h3>");
     expect(html).toContain('<details class="agent-setup" open="">');
-    expect(html.match(/type="checkbox"/gu)).toHaveLength(3);
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(4);
+    expect(html.match(/checked=""/gu)).toHaveLength(3);
+    expect(html).not.toMatch(/checked=""[^>]*\/> Read your exported CVs/u);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
     expect(html).toContain("See your job applications");
     expect(html).toContain("Add a job application from a pasted job description");
