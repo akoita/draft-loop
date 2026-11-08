@@ -1647,6 +1647,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -5729,6 +5730,10 @@ msgstr "Coller le texte"
 msgid "Paste text as career evidence"
 msgstr "Coller du texte comme élément de parcours"
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the description"
+msgstr "Coller la description"
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
 msgstr "Collez l’offre d’emploi"
@@ -5740,6 +5745,10 @@ msgstr "Collez d’abord l’offre d’emploi."
 #: packages/ui/src/new-application-model.ts
 msgid "Paste the job description to work from."
 msgstr "Collez la description de poste à utiliser."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the job description, as the page showed it"
+msgstr "Collez la description du poste, telle que la page l’affichait"
 
 #: apps/web/src/session.ts
 msgid "Paste the owner token."
@@ -5756,6 +5765,10 @@ msgstr "Collez jusqu'à trois textes que vous avez écrits, comme une ancienne l
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Texte de l’offre collé"
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Pasted on {date} as this job page's copy, so it stays readable after the page expires."
+msgstr "Collée le {date} comme copie de cette page d’offre, pour rester lisible après l’expiration de la page."
 
 #: apps/web/src/evidence-panels.tsx
 msgid "Pasted text"
@@ -6125,6 +6138,7 @@ msgstr "Lecture de l’ébauche de"
 msgid "Reading the job description…"
 msgstr "Lecture de l’offre d’emploi…"
 
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Reading the job page…"
 msgstr "Lecture de la page de l’offre…"
@@ -7043,6 +7057,10 @@ msgstr "Textes enregistrés"
 msgid "Save"
 msgstr "Enregistrer"
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save a copy now"
+msgstr "Enregistrer une copie maintenant"
+
 #: apps/web/src/application-material.tsx
 msgid "Save as a new version"
 msgstr "Enregistrer comme nouvelle version"
@@ -7078,6 +7096,10 @@ msgstr "Enregistrer la dérogation"
 #: apps/web/src/application-material.tsx
 msgid "Save samples"
 msgstr "Enregistrer les textes"
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save the description"
+msgstr "Enregistrer la description"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
@@ -8017,6 +8039,10 @@ msgstr "Le consentement ne mentionne pas"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
 msgstr "La conversation est en pause. Vos réponses sont enregistrées ; reprenez quand vous voulez."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "The copy could not be saved."
+msgstr "La copie n’a pas pu être enregistrée."
 
 #: apps/web/src/credits-model.ts
 msgid "The credit estimate could not be read."

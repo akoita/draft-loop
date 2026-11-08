@@ -25,6 +25,8 @@ export const applicationJobPageSchema = z
     text: z.string().trim().min(1).max(applicationPastedJobMaxLength),
     finalUrl: z.url({ protocol: /^https?$/u }),
     fetchedAt: strictTimestampSchema,
+    /** True when the person pasted this copy because the page could no longer be read (#2593). */
+    pasted: z.literal(true).optional(),
   })
   .strict();
 export type ApplicationJobPage = z.infer<typeof applicationJobPageSchema>;

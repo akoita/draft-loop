@@ -2888,6 +2888,9 @@ export function App({
       {...(activePort.getApplicationJob === undefined
         ? {}
         : { onReadJob: activePort.getApplicationJob })}
+      {...(activePort.saveApplicationJobCopy === undefined
+        ? {}
+        : { onSaveJobCopy: activePort.saveApplicationJobCopy })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
       providerSignInReadiness={providerSignInReadiness}
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")

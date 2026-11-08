@@ -1653,6 +1653,7 @@ msgstr ""
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -5734,6 +5735,10 @@ msgstr ""
 msgid "Paste text as career evidence"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the description"
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
 msgstr ""
@@ -5744,6 +5749,10 @@ msgstr ""
 
 #: packages/ui/src/new-application-model.ts
 msgid "Paste the job description to work from."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the job description, as the page showed it"
 msgstr ""
 
 #: apps/web/src/session.ts
@@ -5760,6 +5769,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Pasted on {date} as this job page's copy, so it stays readable after the page expires."
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
@@ -6130,6 +6143,7 @@ msgstr ""
 msgid "Reading the job description…"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Reading the job page…"
 msgstr ""
@@ -7048,6 +7062,10 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save a copy now"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Save as a new version"
 msgstr ""
@@ -7082,6 +7100,10 @@ msgstr ""
 
 #: apps/web/src/application-material.tsx
 msgid "Save samples"
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save the description"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -8021,6 +8043,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "The copy could not be saved."
 msgstr ""
 
 #: apps/web/src/credits-model.ts

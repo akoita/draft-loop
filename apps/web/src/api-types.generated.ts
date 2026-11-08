@@ -96,6 +96,7 @@ export interface ApiSchemas {
     readonly text: string | null;
     readonly url: string | null;
     readonly savedAt: string | null;
+    readonly copySource: "page" | "pasted" | null;
     readonly earlier: {
       readonly text: string;
       readonly savedAt: string;
@@ -1838,6 +1839,16 @@ export interface ApiOperations {
     readonly path: {
       readonly workspaceId: string;
       readonly applicationId: string;
+    };
+    readonly response: ApiSchemas["ApplicationJob"];
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/job/copy": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly text?: string;
     };
     readonly response: ApiSchemas["ApplicationJob"];
   };

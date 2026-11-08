@@ -17,7 +17,13 @@ import {
 } from "@draft-loop/ui/opportunity-projection";
 import { t } from "@lingui/core/macro";
 
-import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import {
+  type ApiClient,
+  ApiRequestError,
+  type ApiResponse,
+  type ApiSchemas,
+  describeError,
+} from "./api-client.js";
 import {
   createApplicationFolderAnswers,
   hostedApplicationFolderCapabilities,
@@ -56,6 +62,7 @@ export const hostedBridgeCapabilities = [
   "application.list",
   "application.get",
   "application.job",
+  "application.job-copy",
   "application.create",
   "application.archive",
   "application.rename",
@@ -188,6 +195,28 @@ function reviewedBrief(application: Application) {
 
 /** Until the shared review reaches the web (sprint 1p), only a start goes through the screens. */
 
+/** The API's job read back as the shared screens' answer, cut to what crosses the bridge. */
+function applicationJobResult(
+  workspaceId: string,
+  job: ApiResponse<"GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job">,
+) {
+  const truncated = job.text !== null && job.text.length > maximumApplicationJobTextLength;
+  const { earlier } = job;
+  return {
+    workspaceId,
+    origin: job.origin,
+    text: truncated ? (job.text?.slice(0, maximumApplicationJobTextLength) ?? null) : job.text,
+    truncated,
+    url: job.url,
+    savedAt: job.savedAt,
+    copySource: job.copySource,
+    earlier:
+      earlier === null
+        ? null
+        : { ...earlier, text: earlier.text.slice(0, maximumApplicationJobTextLength) },
+  };
+}
+
 /** The API's own source kinds; a URL, a file or a job file needs the desktop. */
 /**
  * A source the hosted service takes as the screens send it. A job page comes only as the
@@ -276,20 +305,19 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
           "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job",
           { path: { workspaceId, applicationId: scoped.id } },
         );
-        const truncated = job.text !== null && job.text.length > maximumApplicationJobTextLength;
-        const { earlier } = job;
-        return {
-          workspaceId,
-          origin: job.origin,
-          text: truncated ? job.text?.slice(0, maximumApplicationJobTextLength) : job.text,
-          truncated,
-          url: job.url,
-          savedAt: job.savedAt,
-          earlier:
-            earlier === null
-              ? null
-              : { ...earlier, text: earlier.text.slice(0, maximumApplicationJobTextLength) },
-        };
+        return applicationJobResult(workspaceId, job);
+      }
+      case "application.job-copy": {
+        const { workspaceId, text } = command.input;
+        const scoped = await scopedApplication(workspaceId, command.input.applicationId);
+        const job = await client.call(
+          "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/job/copy",
+          {
+            path: { workspaceId, applicationId: scoped.id },
+            body: text === undefined ? {} : { text },
+          },
+        );
+        return applicationJobResult(workspaceId, job);
       }
       case "application.create": {
         const { workspaceId, name, jobText, jobFile, jobUrl } = command.input;

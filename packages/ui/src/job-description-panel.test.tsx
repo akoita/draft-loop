@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApplicationJobResult } from "./application-job-contract.js";
-import { JobDescriptionView, jobOriginNote } from "./job-description-panel.js";
+import { JobCopyActions, JobDescriptionView, jobOriginNote } from "./job-description-panel.js";
 import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
@@ -18,6 +18,7 @@ const pasted: ApplicationJobResult = {
   truncated: false,
   url: null,
   savedAt: null,
+  copySource: null,
   earlier: null,
 };
 
@@ -117,5 +118,54 @@ describe("the Job tab", () => {
     // The draft's toolbar says where the job went once the setup steps left the screen (#1832).
     expect(withTab).toMatch(/class="button button-outline doc-toolbar-job"[^>]*>Read the job</u);
     expect(withoutTab).not.toContain("Read the job");
+  });
+});
+
+describe("saving a copy of a job page that has none (#2593)", () => {
+  const noCopy: ApplicationJobResult = {
+    ...pasted,
+    origin: "url",
+    text: null,
+    url: "https://jobs.example.com/staff-engineer",
+  };
+
+  it("offers to save a copy now or paste it, only where the host can save one", () => {
+    const html = renderToStaticMarkup(
+      <JobDescriptionView
+        load={{ kind: "ready", job: noCopy }}
+        onRetry={() => undefined}
+        onSaveCopy={async () => undefined}
+      />,
+    );
+    expect(html).toContain("Save a copy now");
+    expect(html).toContain("Paste the description");
+    expect(view(noCopy)).not.toContain("Save a copy now");
+  });
+
+  it("shows nothing to save once a copy exists, and says when the copy was pasted", () => {
+    const pastedCopy: ApplicationJobResult = {
+      ...noCopy,
+      text: "Staff Engineer",
+      savedAt: "2030-01-05T12:00:00.000Z",
+      copySource: "pasted",
+    };
+    const html = renderToStaticMarkup(
+      <JobDescriptionView
+        load={{ kind: "ready", job: pastedCopy }}
+        onRetry={() => undefined}
+        onSaveCopy={async () => undefined}
+      />,
+    );
+    expect(html).toContain("Pasted on 5 Jan 2030");
+    expect(html).not.toContain("Save a copy now");
+  });
+
+  it("asks for the pasted description in a text box", () => {
+    const html = renderToStaticMarkup(
+      <JobCopyActions save={async () => undefined} initialPasting />,
+    );
+    expect(html).toContain("<textarea");
+    expect(html).toContain("Save the description");
+    expect(html).toContain("Cancel");
   });
 });

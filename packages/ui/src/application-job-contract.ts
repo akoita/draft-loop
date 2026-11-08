@@ -32,6 +32,16 @@ export interface ApplicationJobInput {
   readonly applicationId?: string;
 }
 
+export type JobPageCopySource = "page" | "pasted";
+
+/**
+ * Saves a copy of a URL job's page (#2593): read once more from the approved address, or the
+ * text the person pasted when the page can no longer be read.
+ */
+export interface ApplicationJobCopyInput extends ApplicationJobInput {
+  readonly text?: string;
+}
+
 /** An earlier copy of a job page, kept when a later read of the page gave different text. */
 export interface SavedJobPageCopy {
   readonly text: string;
@@ -49,6 +59,8 @@ export interface ApplicationJobResult {
   readonly url: string | null;
   /** When a URL job's copy was saved; null otherwise. */
   readonly savedAt: string | null;
+  /** Whether a URL job's copy was read from the page or pasted by the person; null otherwise. */
+  readonly copySource: JobPageCopySource | null;
   /** The first copy of a URL job's page, kept when a later read differed; null otherwise. */
   readonly earlier: SavedJobPageCopy | null;
 }
@@ -69,6 +81,11 @@ export const applicationJobInputKeys = exactKeys<ApplicationJobInput>()([
   "workspaceId",
   "applicationId",
 ]);
+export const applicationJobCopyInputKeys = exactKeys<ApplicationJobCopyInput>()([
+  "workspaceId",
+  "applicationId",
+  "text",
+]);
 const resultKeys = exactKeys<ApplicationJobResult>()([
   "workspaceId",
   "origin",
@@ -76,6 +93,7 @@ const resultKeys = exactKeys<ApplicationJobResult>()([
   "truncated",
   "url",
   "savedAt",
+  "copySource",
   "earlier",
 ]);
 
@@ -148,7 +166,15 @@ export function normalizeApplicationJobResult(value: unknown): ApplicationJobRes
     origin === "url" && hasText ? timestamp(raw.savedAt) : raw.savedAt === null ? null : undefined;
   const earlier =
     origin === "url" && hasText ? savedCopy(raw.earlier) : raw.earlier === null ? null : undefined;
-  if (savedAt === undefined || earlier === undefined) return undefined;
+  const copySource =
+    origin === "url" && hasText
+      ? raw.copySource === "page" || raw.copySource === "pasted"
+        ? raw.copySource
+        : undefined
+      : raw.copySource === null
+        ? null
+        : undefined;
+  if (savedAt === undefined || earlier === undefined || copySource === undefined) return undefined;
   return {
     workspaceId,
     origin,
@@ -156,6 +182,7 @@ export function normalizeApplicationJobResult(value: unknown): ApplicationJobRes
     truncated: raw.truncated,
     url,
     savedAt,
+    copySource,
     earlier,
   };
 }

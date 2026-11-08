@@ -143,6 +143,8 @@ export const humanOnlyRoutes: readonly string[] = [
   // A research run searches the web, so only the person approves it (#2560).
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/research",
+  // Reading a job page needs the person's approval in DraftLoop, as adding one by address does.
+  "POST /v1/workspaces/:workspaceId/applications/:applicationId/job/copy",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",
