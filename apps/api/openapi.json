@@ -19893,6 +19893,113 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/export-preview": {
+      "post": {
+        "summary": "Preview the approved draft's export without saving it",
+        "description": "Answers the document an export with the same format and template would save, inline, with its page count for a PDF in X-Page-Count and the template's page target in X-Target-Page-Count. Nothing is stored, no export is recorded and the run's state does not change. A run not yet approved answers 409.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "markdown",
+                      "docx",
+                      "pdf"
+                    ]
+                  },
+                  "templateId": {
+                    "description": "A built-in rendering template, such as classic, modern or compact.",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                  }
+                },
+                "required": [
+                  "format"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The document's bytes, in its media type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The document's bytes, in its media type."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/runs/{runId}/usage": {
       "get": {
         "summary": "Read what a run used and cost, by company, model and route",

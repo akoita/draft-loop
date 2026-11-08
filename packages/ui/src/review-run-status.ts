@@ -10,7 +10,8 @@ export interface ReviewStatusLine {
 type RunStatusInput = Pick<
   DesktopReviewState,
   "state" | "execution" | "round" | "artifact" | "setup" | "reviewComplete"
->;
+> &
+  Partial<Pick<DesktopReviewState, "providerFailure">>;
 
 /**
  * Whether the author–critic loop is working right now. While it is, a missing critique is
@@ -24,6 +25,16 @@ export function reviewInProgress(state: Pick<DesktopReviewState, "state" | "exec
     state.state === "reviewing" ||
     state.state === "revising"
   );
+}
+
+/**
+ * Whether the host is retrying a failed step on its own (#2490). The run waits on nothing from the
+ * person, so the draft stays locked and the screen says the review is still going.
+ */
+export function hostRetrying(
+  state: Pick<DesktopReviewState, "state"> & Partial<Pick<DesktopReviewState, "providerFailure">>,
+): boolean {
+  return state.state === "provider-error" && state.providerFailure?.automaticRetry === true;
 }
 
 /** Whether the person has approved this run, so it is done rather than in progress. */
@@ -46,6 +57,14 @@ export function finishedRunTitle(state: Pick<DesktopReviewState, "state">): stri
 
 /** What the running review is doing, e.g. "The author is revising version 1 for round 2." */
 export function runActivity(state: RunStatusInput): string {
+  if (hostRetrying(state) && state.providerFailure != null) {
+    const failed = state.providerFailure.step;
+    return failed === "critic"
+      ? t`DraftLoop retries the critic on version ${state.artifact.version} shortly.`
+      : failed === "revision"
+        ? t`DraftLoop retries the revision for round ${state.round} shortly.`
+        : t`DraftLoop retries the draft shortly.`;
+  }
   const step =
     state.execution.step ??
     (state.state === "drafting"

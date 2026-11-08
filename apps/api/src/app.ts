@@ -50,6 +50,7 @@ import type { HostedContentScreening } from "./content-screening-service.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
+import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
@@ -493,6 +494,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       idempotency,
+    });
+    registerExportPreviewRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
     });
     registerUsageRoutes(app, {
       service: application.service,
