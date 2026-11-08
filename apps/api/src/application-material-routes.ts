@@ -4,6 +4,7 @@ import { type ApplicationService, catalogModelPricing } from "@draft-loop/applic
 import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
+  applicationMaterialFactText,
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
@@ -494,7 +495,7 @@ export function registerApplicationMaterialRoutes(
             text: item.text,
             citations: item.factIds.map((id) => {
               const fact = byId.get(id) as ApplicationMaterialFact;
-              return { fact_id: id, text: `${fact.category} ${fact.field}: ${fact.value}` };
+              return { fact_id: id, text: applicationMaterialFactText(fact) };
             }),
             ...((item.companyFactIds ?? []).length === 0
               ? {}

@@ -29,6 +29,21 @@ import {
 } from "./application-material-company.js";
 
 /** The parts of a canonical profile fact the drafter reads. */
+/**
+ * A fact as one line, "category field: value", without repeating a field that only restates its
+ * category (an achievement stored as "achievement achievement" reads "achievement: …").
+ */
+export function applicationMaterialFactText(
+  fact: Pick<ApplicationMaterialFact, "category" | "field" | "value">,
+): string {
+  const field = fact.field.trim();
+  const label =
+    field === "" || field.toLowerCase() === fact.category.trim().toLowerCase()
+      ? fact.category
+      : `${fact.category} ${field}`;
+  return `${label}: ${fact.value}`;
+}
+
 export interface ApplicationMaterialFact {
   readonly id: string;
   readonly category: string;
@@ -285,6 +300,50 @@ function allowedFact(input: ApplicationMaterialContextInput, fact: ApplicationMa
 }
 
 const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 } as const;
+
+/** Words too common to tell a fact's match to a requirement. English and French. */
+const commonWords = new Set(
+  "and the for with that this from your our are has have will you who its their into over able about such other more most also then than when what which while within across using used use work works working experience years year team teams role strong good knowledge skills skill les des une pour avec dans sur par aux est sont votre vos nos".split(
+    " ",
+  ),
+);
+
+function matchWords(text: string): Set<string> {
+  return new Set(
+    (text.toLowerCase().match(/\p{L}[\p{L}\p{N}+#.-]*/gu) ?? [])
+      .map((word) => word.replace(/[.-]+$/u, ""))
+      .filter((word) => word.length >= 3 && !commonWords.has(word)),
+  );
+}
+
+/**
+ * Facts most relevant to the job first (#2583): each fact scores the words it shares with each
+ * requirement, weighted by the requirement's priority. Ties keep the record's order, so a record
+ * larger than the bound keeps its best matches rather than its first entries.
+ */
+export function rankApplicationMaterialFacts<T extends ApplicationMaterialFact>(
+  facts: readonly T[],
+  requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
+): T[] {
+  const wanted = requirements.map((requirement) => ({
+    words: matchWords(requirement.text),
+    weight: priorityWeight[requirement.priority],
+  }));
+  const scored = facts.map((fact, index) => {
+    const words = matchWords(`${fact.field} ${fact.value}`);
+    let score = 0;
+    for (const requirement of wanted) {
+      let shared = 0;
+      for (const word of words) if (requirement.words.has(word)) shared += 1;
+      score += shared * requirement.weight;
+    }
+    return { fact, index, score };
+  });
+  return scored
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((entry) => entry.fact);
+}
 
 /**
  * The bounded context: allowed facts, then the job's requirements by priority. Each entry is
@@ -293,12 +352,14 @@ const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 export function applicationMaterialContext(
   input: ApplicationMaterialContextInput,
 ): ApplicationMaterialContext {
-  const facts = input.facts
-    .filter((fact) => allowedFact(input, fact))
+  const facts = rankApplicationMaterialFacts(
+    input.facts.filter((fact) => allowedFact(input, fact)),
+    input.requirements,
+  )
     .slice(0, maximumApplicationMaterialFacts)
     .map((fact) => ({
       id: fact.id,
-      text: `${fact.category} ${fact.field}: ${fact.value}`.slice(0, maximumContextCharacters),
+      text: applicationMaterialFactText(fact).slice(0, maximumContextCharacters),
       ...(fact.subjectId === undefined || fact.subjectId === ""
         ? {}
         : { group: fact.subjectId.slice(0, 64) }),

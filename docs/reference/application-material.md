@@ -13,7 +13,7 @@ The drafter builds a bounded context, then asks the model behind
 
 | Input            | Rule                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. At most 60, each cut to 300 characters. |
+| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
@@ -23,11 +23,14 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v9`.
+`application-material-v10`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
 phrase, no list of three, no paragraphs that open alike, and at most one dash.
+It builds on the facts that meet critical and high requirements, joins facts of
+one role or project in a sentence, paraphrases them, and never writes a
+sentence that only names a skill.
 
 ## Your own voice
 
@@ -54,7 +57,7 @@ detector, and the app never says a letter would pass one.
 
 | Tell                | Flags                                                                          |
 | ------------------- | ------------------------------------------------------------------------------ |
-| `stock_phrase`      | Phrases such as "I am writing to express", "passionate about" or "tirer parti" |
+| `stock_phrase`      | Phrases such as "I am writing to express", "passionate about", "is one of my skills" or "tirer parti" |
 | `heavy_dashes`      | Every sentence with a dash, once the letter uses two or more                   |
 | `list_of_three`     | Three single words in a row, such as "fast, reliable and calm"                 |
 | `mirrored_openings` | A paragraph that opens with the same two words as an earlier one               |

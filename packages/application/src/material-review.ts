@@ -1,10 +1,11 @@
 import type { SavedApplicationMaterial } from "@draft-loop/schemas/saved-application-material";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 
-import type {
-  ApplicationMaterialDraft,
-  ApplicationMaterialPort,
-  DraftApplicationMaterialInput,
+import {
+  type ApplicationMaterialDraft,
+  type ApplicationMaterialPort,
+  applicationMaterialFactText,
+  type DraftApplicationMaterialInput,
 } from "./application-material.js";
 import type { ApplicationMaterialRecordInput } from "./application-material-input.js";
 import { type MaterialCriticPort, runCriticPass } from "./material-critic.js";
@@ -141,7 +142,7 @@ export async function reviewSavedApplicationMaterial(
         const fact = byId.get(id);
         return {
           fact_id: id,
-          text: fact === undefined ? id : `${fact.category} ${fact.field}: ${fact.value}`,
+          text: fact === undefined ? id : applicationMaterialFactText(fact),
         };
       }),
       ...((item.companyFactIds ?? []).length === 0

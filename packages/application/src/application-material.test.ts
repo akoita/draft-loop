@@ -10,8 +10,10 @@ import {
   type ApplicationMaterialRequest,
   type ApplicationMaterialRequirement,
   applicationMaterialContext,
+  applicationMaterialFactText,
   applicationMaterialViolations,
   draftApplicationMaterial,
+  rankApplicationMaterialFacts,
 } from "./application-material.js";
 import {
   applicationMaterialDefaultModelId,
@@ -52,7 +54,8 @@ function scripted(items: unknown[][]) {
 describe("applicationMaterialContext", () => {
   it("withholds identity, contact and facts the host's rules refuse, and orders requirements", () => {
     const context = applicationMaterialContext(coverLetter);
-    expect(context.facts.map((fact) => fact.id)).toEqual(["f1", "f2", "f3"]);
+    // SQL matches the critical requirement, so it comes first; the rest keep the record's order.
+    expect(context.facts.map((fact) => fact.id)).toEqual(["f3", "f1", "f2"]);
     expect(JSON.stringify(context)).not.toContain("candidate@example.test");
     expect(JSON.stringify(context)).not.toContain("Sample Candidate");
     expect(context.requirements.map((requirement) => requirement.id)).toEqual(["r1", "r2"]);
@@ -434,5 +437,50 @@ describe("fact groups", () => {
     });
     expect(requests[0]?.systemPrompt).toContain("Never join facts from different groups");
     expect(requests[0]?.systemPrompt).toContain("proudest");
+  });
+});
+
+describe("facts ranked for the job (#2583)", () => {
+  const record: ApplicationMaterialFact[] = [
+    { id: "n1", category: "achievement", field: "achievement", value: "Fixed a flaky test" },
+    { id: "n2", category: "skill", field: "skill", value: "Gardening" },
+    {
+      id: "r1",
+      category: "role",
+      field: "outcome",
+      value: "Designed DvP settlement on Hyperledger",
+    },
+    { id: "r2", category: "skill", field: "name", value: "Kafka" },
+  ];
+  const wanted: ApplicationMaterialRequirement[] = [
+    { id: "q1", text: "Kafka streaming", priority: "low" },
+    { id: "q2", text: "Hyperledger and DvP settlement design", priority: "critical" },
+  ];
+
+  it("puts the best match to the weightiest requirements first and keeps ties in order", () => {
+    expect(rankApplicationMaterialFacts(record, wanted).map((fact) => fact.id)).toEqual([
+      "r1",
+      "r2",
+      "n1",
+      "n2",
+    ]);
+  });
+
+  it("orders the model's context the same way", () => {
+    const context = applicationMaterialContext({
+      kind: "cover-letter",
+      facts: record,
+      requirements: wanted,
+    });
+    expect(context.facts.map((fact) => fact.id)).toEqual(["r1", "r2", "n1", "n2"]);
+  });
+
+  it("names a category once when the field only repeats it", () => {
+    expect(applicationMaterialFactText(record[0] as ApplicationMaterialFact)).toBe(
+      "achievement: Fixed a flaky test",
+    );
+    expect(applicationMaterialFactText(record[2] as ApplicationMaterialFact)).toBe(
+      "role outcome: Designed DvP settlement on Hyperledger",
+    );
   });
 });

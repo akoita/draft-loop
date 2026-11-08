@@ -204,7 +204,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v9",
+      prompt_version: "application-material-v10",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
