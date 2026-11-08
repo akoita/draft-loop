@@ -121,6 +121,39 @@ describe("the draft's edit lock (#1925)", () => {
     expect(html).toContain("You can edit the draft once this round finishes.");
   });
 
+  it("locks the draft while DraftLoop retries a failed step, and says the review is still going", () => {
+    const retrying: DesktopReviewState = {
+      ...fixture,
+      state: "provider-error",
+      reviewComplete: false,
+      providerFailure: {
+        code: "invalid-response",
+        explanation: "The provider returned a response that could not be validated.",
+        provider: "openai",
+        model: "critic-test",
+        step: "critic",
+        role: "critic",
+        attempt: 1,
+        maxAttempts: 3,
+        retryAvailable: false,
+        automaticRetry: true,
+        retryNotBefore: null,
+        availableActions: ["stop"],
+        diagnostics: [],
+      },
+    };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={retrying} onAction={() => undefined} />,
+    );
+    expect(html).toContain("read-only</span>");
+    expect(html).toContain("You can edit the draft once this round finishes.");
+    expect(html).toContain("Review in progress · nothing to do yet");
+    expect(html).toContain(
+      `DraftLoop retries the critic on version ${fixture.artifact.version} shortly.`,
+    );
+    expect(html).not.toContain("has not been critiqued yet");
+  });
+
   it("locks the draft once the run is approved", () => {
     const approved: DesktopReviewState = { ...fixture, state: "approved", approval: "approved" };
     const html = renderToStaticMarkup(

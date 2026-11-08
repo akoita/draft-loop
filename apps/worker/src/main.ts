@@ -1,5 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import process from "node:process";
+import { createFactUsageService } from "@draft-loop/application/fact-usage";
+import { materialReviewPorts } from "@draft-loop/application/material-review-ports";
+import { createWritingSamplesService } from "@draft-loop/application/writing-samples";
 import {
   hostedWorkspaceReference,
   openPostgresTenancy,
@@ -55,14 +59,11 @@ const tenancy = await openPostgresTenancy({
   schema: config.databaseSchema,
 });
 const blobs = openTenantBlobs(config.blobs);
-const serviceFor = tenantServices({
-  tenancy,
-  blobsFor: blobs.storageFor,
-  // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
-  // direct routes with keys from files, or none on the dev stack; local models go to the
-  // deployment's own endpoint.
-  local: withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint),
-});
+// Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
+// direct routes with keys from files, or none on the dev stack; local models go to the
+// deployment's own endpoint.
+const local = withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint);
+const serviceFor = tenantServices({ tenancy, blobsFor: blobs.storageFor, local });
 
 const workspaceRoot = (job: WorkspaceJob) =>
   hostedWorkspaceReference(job.tenantId, job.workspaceId);
@@ -143,6 +144,33 @@ const worker = await startWorker({
     // Ids, flags and the outcome's fixed words only: no candidate material.
     onOutcome: (job, outcome) =>
       console.info(logLine("INFO", "profile derivation finished", { ...job, ...outcome })),
+  },
+  // A saved cover letter gets one critic pass here once the API queues it (#2525).
+  reviews: {
+    serviceFor: (job) => serviceFor(job.tenantId),
+    draftsFor: (job) => tenancy.forTenant(job.tenantId).savedApplicationMaterial,
+    settingsFor: (job) => {
+      const settings = tenancy.forTenant(job.tenantId).workspaceSettings;
+      return {
+        writingSamples: createWritingSamplesService(settings),
+        factUsage: createFactUsageService(settings),
+      };
+    },
+    workspaceRoot,
+    allowProviderData: config.allowProviderData,
+    ...(consentFor === undefined ? {} : { consentFor }),
+    recordErased,
+    portsFor: (job, models) =>
+      materialReviewPorts({
+        ...models,
+        local,
+        onCall: (call) =>
+          console.info(logLine("INFO", "material review model call", { ...job, ...call })),
+      }),
+    newId: () => `amd_${randomBytes(12).toString("base64url")}`,
+    // Ids, counts and the outcome's word only: no candidate material.
+    onOutcome: (job, outcome, detail) =>
+      console.info(logLine("INFO", "material review finished", { ...job, outcome, ...detail })),
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);

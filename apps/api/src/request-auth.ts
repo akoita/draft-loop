@@ -10,6 +10,7 @@ import {
   type ResolveSignIn,
   remoteSignInKeys,
   type SignedInMember,
+  type SignInIdentity,
   signInTokenVerifier,
   type VerifySignInToken,
 } from "./oidc-sign-in.js";
@@ -23,8 +24,16 @@ declare module "fastify" {
   interface FastifyRequest {
     /** Who made the request; unset on public requests, such as health and the web screen. */
     caller: Caller | undefined;
+    /**
+     * A verified sign-in with no membership, set only on the sign-up route (#2502), which may
+     * create the person's account from an invite code.
+     */
+    signUpIdentity: SignInIdentity | undefined;
   }
 }
+
+/** The one route a verified sign-in without a membership reaches. */
+export const signUpRoute = "/v1/sign-up";
 
 /** How the API authenticates requests, from `DRAFT_LOOP_AUTH_MODE`. */
 export type ApiAuthOptions =
@@ -40,7 +49,7 @@ export type ApiAuthOptions =
 type Authentication =
   | { readonly outcome: "authenticated"; readonly caller: Caller }
   | { readonly outcome: "unauthenticated"; readonly reason?: string }
-  | { readonly outcome: "forbidden" };
+  | { readonly outcome: "forbidden"; readonly identity?: SignInIdentity };
 
 type Authenticator = (authorization: string | undefined) => Promise<Authentication>;
 
@@ -81,7 +90,7 @@ function signInAuthenticator(verify: VerifySignInToken, resolve: ResolveSignIn):
       return { outcome: "unauthenticated", reason: verification.reason };
     }
     const member = await resolve(verification.identity);
-    if (member === undefined) return { outcome: "forbidden" };
+    if (member === undefined) return { outcome: "forbidden", identity: verification.identity };
     return {
       outcome: "authenticated",
       caller: {
@@ -144,6 +153,7 @@ export function registerRequestAuthentication(
   const agents = auth.mode === "owner" ? agentTokens : undefined;
   app.decorateRequest("caller", undefined);
   app.decorateRequest("agentToken", undefined);
+  app.decorateRequest("signUpIdentity", undefined);
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     if (isPublicRequest(request.routeOptions.url, request.url)) return;
     const operator = isOperatorRequest(request.routeOptions.url, request.url);
@@ -199,9 +209,17 @@ export function registerRequestAuthentication(
       return;
     }
     if (authentication.outcome === "forbidden") {
+      if (
+        authentication.identity !== undefined &&
+        request.method === "POST" &&
+        request.routeOptions.url === signUpRoute
+      ) {
+        request.signUpIdentity = authentication.identity;
+        return;
+      }
       await reply
         .code(403)
-        .send(apiError("forbidden", "The signed-in account is not a member of an organisation."));
+        .send(apiError("no_account", "The signed-in account is not a member of an organisation."));
       return;
     }
     if (authentication.reason !== undefined) {

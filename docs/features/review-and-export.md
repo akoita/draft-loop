@@ -21,7 +21,11 @@ source-only CLI has its own review and export commands
 2. Approve the draft, or ask for another round; a worker drafts it. You can
    pause, resume or stop a run.
 3. Export the approved draft as Markdown, DOCX or PDF, from the `classic`,
-   `compact` or `modern` template (`modern` is the default).
+   `compact` or `modern` template (`modern` is the default). **Preview**
+   (Alt+P) shows the exact file first, page by page, with the page count
+   against the template's target; nothing is saved until you export. A
+   Word preview shows the same template's PDF pages, since a browser has no
+   Word viewer.
 4. Accept or dismiss the **writing preferences** that DraftLoop suggests from
    your review choices. An accepted one joins the writing policy, which keeps
    every version.
@@ -32,23 +36,38 @@ source-only CLI has its own review and export commands
 | Run budget | Round, cost and duration limits for new runs, under the deployment's ceiling; an estimate shows before a run starts |
 | Autopilot  | Keeps revising through blocking findings up to the round limit, pausing early only when needed                      |
 
+### When a model call fails
+
+The failure card says what the run needs from you. Stop always ends the run,
+even while a call is running.
+
+| Card                | Meaning                                                                                     | What to do                    |
+| ------------------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| Retrying on its own | The server retries the step, up to 3 attempts; the card names the next attempt and its time | Wait; Stop asks to confirm    |
+| Waiting for you     | A retry or another action needs you, as after a key problem                                 | Fix the cause, then Retry     |
+| Can't recover       | No attempt is left                                                                          | Stop, then start a new review |
+
 ## How to test it
 
 - Walk steps 4 and 5 of the [local server stack](../operations/local-server-stack.md);
   demo mode drafts with no provider call.
 - Focused tests: `apps/api/src/review-routes.test.ts`,
   `apps/api/src/export-routes.test.ts`,
-  `apps/api/src/preference-suggestion-routes.test.ts` and
-  `packages/ui/src/export-template.test.ts`.
+  `apps/api/src/export-preview-routes.test.ts`,
+  `apps/api/src/preference-suggestion-routes.test.ts`,
+  `packages/ui/src/export-template.test.ts`,
+  `packages/ui/src/export-preview.test.tsx`,
+  `packages/ui/src/provider-recovery.test.tsx` and
+  `packages/orchestrator/src/person-hold.test.ts`.
 
 ## Surfaces
 
 | Kind   | Surface                                                                                                  |
 | ------ | -------------------------------------------------------------------------------------------------------- |
-| Screen | Review page, Export area, run details, Home's writing policy                                             |
+| Screen | Review page, Export area and its preview, run details, Home's writing policy                             |
 | API    | `/v1/workspaces/{id}/runs/{runId}/review`, `.../findings/{findingId}/decision`                           |
 | API    | `.../runs/{runId}/edits/{blockId}`, `.../approve`, `.../revision`, `.../pause`, `.../resume`, `.../stop` |
-| API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`                                             |
+| API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`, `.../export-preview` (saves nothing)       |
 | API    | `/v1/workspaces/{id}/writing-policy`, `/v1/workspaces/{id}/preference-suggestions`                       |
 | API    | `/v1/workspaces/{id}/models`, `.../budget`, `.../autopilot`, `.../runs/estimate`                         |
 | MCP    | none yet; run status is planned in [#2440](https://github.com/akoita/draft-loop/issues/2440)             |

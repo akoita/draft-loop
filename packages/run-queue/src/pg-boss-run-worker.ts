@@ -2,6 +2,12 @@ import { PgBoss } from "pg-boss";
 
 import { type BriefExtractionJob, briefExtractionJobSchema } from "./brief-extraction-job.js";
 import {
+  type MaterialReviewJob,
+  type MaterialReviewJobOutcome,
+  materialReviewJobSchema,
+  materialReviewQueueName,
+} from "./material-review-queue.js";
+import {
   bossOptions,
   briefExtractionQueueName,
   queueSchema,
@@ -62,10 +68,19 @@ export type ProfileDerivationJobHandler = (
   control: ProfileDerivationJobControl,
 ) => Promise<ProfileDerivationOutcome>;
 
+/**
+ * Runs the critic pass on one claimed draft and says how it ended; the queue keeps that as the
+ * job's output. A throw fails the attempt, and the queue retries it once.
+ */
+export type MaterialReviewJobHandler = (
+  job: MaterialReviewJob,
+) => Promise<MaterialReviewJobOutcome>;
+
 /** The queues besides runs a worker takes, each when given its handler. */
 export interface RunWorkerHandlers {
   readonly briefExtraction?: BriefExtractionJobHandler;
   readonly profileDerivation?: ProfileDerivationJobHandler;
+  readonly materialReview?: MaterialReviewJobHandler;
 }
 
 export interface StopRunWorkerOptions {
@@ -117,7 +132,13 @@ export async function startRunWorker(
         });
       }
     });
-    const { briefExtraction, profileDerivation } = handlers;
+    const { briefExtraction, profileDerivation, materialReview } = handlers;
+    if (materialReview !== undefined) {
+      await boss.work<MaterialReviewJob>(materialReviewQueueName, claim, async ([claimed]) => {
+        if (claimed === undefined) return undefined;
+        return { outcome: await materialReview(materialReviewJobSchema.parse(claimed.data)) };
+      });
+    }
     if (briefExtraction !== undefined) {
       await boss.work<BriefExtractionJob>(briefExtractionQueueName, claim, async (jobs) => {
         for (const claimed of jobs) {

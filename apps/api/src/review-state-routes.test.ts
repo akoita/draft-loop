@@ -509,6 +509,51 @@ describe("review state", () => {
     },
   );
 
+  it("names when the worker's retry starts, counted from the failure", async () => {
+    const failedAt = "2026-10-25T10:00:00.000Z";
+    const failed = (code: string, retryNotBefore?: string) =>
+      ({
+        ...snapshot,
+        state: "provider-error",
+        currentStep: "critic",
+        updatedAt: failedAt,
+        lastError: {
+          code,
+          retryable: true,
+          attempt: 1,
+          message: "provider text",
+          provider: "openai",
+          modelId: "critic-test",
+          step: "critic",
+          maxAttempts: 3,
+          providerRequestId: null,
+          ...(retryNotBefore === undefined ? {} : { retryNotBefore }),
+        },
+      }) as unknown as RunSnapshot;
+    const retryTime = async (run: RunSnapshot) => {
+      await build({
+        status: async () => run,
+        readRunReview: async () => review,
+        readRunRequirements: async () => [],
+      });
+      const response = await app.inject({
+        method: "GET",
+        url: `${url}?runId=run-1`,
+        headers: { authorization },
+      });
+      await app.close();
+      return response.json().providerFailure.retryNotBefore;
+    };
+
+    expect(await retryTime(failed("invalid-response"))).toBe("2026-10-25T10:00:10.000Z");
+    expect(await retryTime(failed("rate-limit", "2026-10-25T10:00:05.000Z"))).toBe(
+      "2026-10-25T10:01:00.000Z",
+    );
+    expect(await retryTime(failed("timeout", "2026-10-25T10:00:30.000Z"))).toBe(
+      "2026-10-25T10:00:30.000Z",
+    );
+  });
+
   it("refuses an unknown run named without an application", async () => {
     await build({ status: async () => undefined });
 

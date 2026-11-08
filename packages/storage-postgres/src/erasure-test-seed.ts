@@ -20,6 +20,12 @@ export const tenantWideTables = new Set([
   "credit_ledger",
   "candidate_knowledge_stores",
   "candidate_record_erasures",
+  // Deployment-wide, with no tenant or record id: erasure never returns spent money (#2459).
+  "spend_pool_entries",
+  // Deployment-wide; organisation erasure removes the invite that created the organisation.
+  "beta_invites",
+  // A tenant's daily model call counters (#2487); organisation erasure removes them.
+  "model_call_counts",
 ]);
 
 /**
@@ -303,6 +309,11 @@ export async function seedRecord(
     [
       `INSERT INTO career_interview_sessions (tenant_id, id, workspace_id, status, session, created_at, updated_at)
        VALUES ($1, 'cis_' || md5($1 || $2), $2, 'open', '{}', $3, $3)`,
+      [tenant, record, at],
+    ],
+    [
+      `INSERT INTO application_material_drafts (tenant_id, id, workspace_id, application_id, kind, draft, created_at)
+       VALUES ($1, 'amd_' || md5($1 || $2), $2, 'application-1', 'cover-letter', '{}', $3)`,
       [tenant, record, at],
     ],
     [

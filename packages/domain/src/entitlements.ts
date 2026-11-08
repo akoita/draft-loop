@@ -39,6 +39,12 @@ export interface Entitlements {
   readonly runsPerDay: EntitlementLimit;
   /** Runs an organisation may have in flight at once. */
   readonly concurrentRuns: EntitlementLimit;
+  /**
+   * Model calls outside runs an organisation may make per UTC day (#2487): interview turns, a live
+   * interview, drafted application material and profile derivations. Brief extraction is free,
+   * since a run needs a brief.
+   */
+  readonly modelCallsPerDay: EntitlementLimit;
   readonly features: EntitlementFeatureFlags;
 }
 

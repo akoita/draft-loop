@@ -67,6 +67,10 @@
       "types": "./src/application-material.ts",
       "import": "./src/application-material.ts"
     },
+    "./writing-tells": {
+      "types": "./src/writing-tells.ts",
+      "import": "./src/writing-tells.ts"
+    },
     "./application-material-model": {
       "types": "./src/application-material-model.ts",
       "import": "./src/application-material-model.ts"
@@ -79,9 +83,33 @@
       "types": "./src/preference-suggestions.ts",
       "import": "./src/preference-suggestions.ts"
     },
+    "./writing-samples": {
+      "types": "./src/writing-samples.ts",
+      "import": "./src/writing-samples.ts"
+    },
     "./fact-usage": {
       "types": "./src/fact-usage.ts",
       "import": "./src/fact-usage.ts"
+    },
+    "./application-material-document": {
+      "types": "./src/application-material-document.ts",
+      "import": "./src/application-material-document.ts"
+    },
+    "./material-critic": {
+      "types": "./src/material-critic.ts",
+      "import": "./src/material-critic.ts"
+    },
+    "./material-review": {
+      "types": "./src/material-review.ts",
+      "import": "./src/material-review.ts"
+    },
+    "./material-review-ports": {
+      "types": "./src/material-review-ports.ts",
+      "import": "./src/material-review-ports.ts"
+    },
+    "./application-material-input": {
+      "types": "./src/application-material-input.ts",
+      "import": "./src/application-material-input.ts"
     }
   },
   "files": [

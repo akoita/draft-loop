@@ -85,6 +85,12 @@ the identity provider (authorization code with PKCE), and is kept in the tab.
   about. The screen words known codes in its own language
   (`refusal-text.ts`) and shows the message for any other; the MCP server
   shows the message.
+- **Crash reports.** An uncaught error or rejected promise in the tab is
+  posted to the public `POST /v1/client-errors` (`error-reporting.ts`). The
+  screen and the API both scrub it (`@draft-loop/domain/client-error-report`):
+  quoted text, addresses, numbers, queries and ids are removed, and only stack
+  frames are kept. The API logs one `client_error` line at `ERROR` severity.
+  One tab sends at most 5 reports, and one address at most 10 per 10 minutes.
 - **Exports** download under the name the review state shows
   (`@draft-loop/ui/export-file-name`), Modern unless another template is
   chosen.
@@ -133,10 +139,10 @@ sequenceDiagram
   and `grantRunQueueAccess` gives the runtime role table and function access
   only.
 
-### Brief and profile jobs
+### Brief, profile and material review jobs
 
-The same queue carries two other jobs. Their payloads hold ids and the person's
-choices only.
+The same queue carries three other jobs. Their payloads hold ids and the
+person's choices only.
 
 - **Brief extraction.** A live workspace's brief made from job text is saved
   without extraction. Once screening clears the text,
@@ -151,6 +157,14 @@ choices only.
   content-free progress (calls done of calls planned). A cancel stops it before
   its next provider call, and the job keeps how it ended: the saved version, or
   a fixed message the person can act on.
+- **Material review.** The critic pass on a saved cover letter (#2525). The
+  workspace's critic, from another company than the draft's author, lists the
+  sentences that read as machine-written; the author revises once. A revision
+  that passes every citation rule is saved as the next version with the
+  findings. Edited versions, interview questions and a critic from the
+  author's company are skipped without a call, and one failed attempt is
+  retried once. Saving a cover letter queues it, and
+  `GET .../material/:materialId/review` reads its state.
 - **Derivation routes.** `/v1/workspaces/:id/profiles/:profileId/derivation`
   starts (POST), reads (GET) and cancels (DELETE) a derivation. A start needs
   the record's transmission consent in sign-in mode. The profile's own routes
@@ -193,15 +207,31 @@ D13). `entitlement-gate.ts` checks this after the budget ceiling, screening and
 consent. Owner-token mode skips it, because its tenant has no organisation row
 to hold a plan or a ledger.
 
-| Order | Status and code              | Cause                                      | Fields                  |
-| ----- | ---------------------------- | ------------------------------------------ | ----------------------- |
-| 1     | 403 `plan_required`          | The organisation has no plan               | none                    |
-| 2     | 422 `model_tier_unknown`     | A model's tier cannot be determined        | `role`                  |
-| 3     | 403 `model_tier_not_in_plan` | The plan lacks a model's tier              | `role`, `tier`          |
-| 4     | 429 `run_cap_reached`        | The concurrent or daily run cap is reached | `cap`, `limit`          |
-| 5     | 402 `credits_insufficient`   | The balance does not cover the estimate    | `estimate`, `remaining` |
+| Order | Status and code              | Cause                                       | Fields                  |
+| ----- | ---------------------------- | ------------------------------------------- | ----------------------- |
+| 1     | 403 `plan_required`          | The organisation has no plan                | none                    |
+| 2     | 422 `model_tier_unknown`     | A model's tier cannot be determined         | `role`                  |
+| 3     | 403 `model_tier_not_in_plan` | The plan lacks a model's tier               | `role`, `tier`          |
+| 4     | 429 `run_cap_reached`        | The concurrent or daily run cap is reached  | `cap`, `limit`          |
+| 5     | 402 `credits_insufficient`   | The balance does not cover the estimate     | `estimate`, `remaining` |
+| 6     | 503 `spend_pool_exhausted`   | The deployment's monthly spend pool is used | none                    |
 
 Refusals carry codes, a role, a tier and numbers only.
+
+### Monthly spend pool
+
+A deployment can cap what all organisations' runs cost in a UTC month with
+`DRAFT_LOOP_SPEND_POOL_USD` (#2459). The public beta uses it so free credits
+cannot spend past a fixed budget.
+
+- **Reserve.** After the credits, the gate holds the run's own cost limit
+  (`maxCostUsd`) in `spend_pool_entries`. A start that would pass the ceiling
+  is refused and its credits are refunded.
+- **Close.** When the worker settles or refunds the run's credits, it replaces
+  the hold with the run's estimated cost. A run that could not begin closes at
+  zero.
+- **Shared.** The table is deployment-wide and content-free: run ids and
+  dollars only. Erasing an organisation does not give its spend back.
 
 ### Pricing a run
 
@@ -523,14 +553,14 @@ Sources reach a hosted store through `createHostedKnowledgeIntake` in
   version are recorded, so a recorded version always has its bytes.
 - **Duplicates.** The same bytes in the same base return the existing source.
 
-| Route                                                                         | What it does                                                                                                                                                                               | Refusals                                                               |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `POST /v1/knowledge-bases`, `GET`                                             | Creates a base, or lists them                                                                                                                                                              | none                                                                   |
-| `GET /v1/knowledge-bases/:id/sources`                                         | Lists sources with the latest file's name, media type, size, checksum and date, never content                                                                                              | none                                                                   |
+| Route                                                                         | What it does                                                                                                                                                                                                                                                                                              | Refusals                                                               |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `POST /v1/knowledge-bases`, `GET`                                             | Creates a base, or lists them                                                                                                                                                                                                                                                                             | none                                                                   |
+| `GET /v1/knowledge-bases/:id/sources`                                         | Lists sources with the latest file's name, media type, size, checksum and date, never content                                                                                                                                                                                                             | none                                                                   |
 | `POST /v1/knowledge-bases/:id/sources?name=<file name>`                       | Uploads one file as the raw body, with its media type as `Content-Type`. A JSON or CSV pull request list is stored as Markdown, one heading per pull request (`normalizeHostedUpload`). The answer carries its `screening`. The same bytes again answer 200 with the existing source, so a retry is safe. | Another type answers 415. Over the limit answers 413.                  |
-| `GET /v1/knowledge-bases/:id/sensitivity-rules`, `POST`, `DELETE .../:ruleId` | Lists, adds or removes a rule that marks sections under a heading as `sensitive` or `never-share`. Each change saves a new list version, and runs withhold the marked sections.            | A duplicate rule answers 422                                           |
-| `PUT /v1/workspaces/:id/knowledge-selection`                                  | Selects the bases a workspace's runs use, by id. The API names the tenant's store itself, and the workspace view lists `knowledgeBaseIds`.                                                 | An unknown base answers 404. Several bases need `combinationApproved`. |
-| `GET /v1/workspaces/:id/fact-usage`, `PUT`                                    | Reads or sets where career facts may be used: `cv`, `interview-only` or `never-say`, by section (fact category) or by fact usage key, never fact text. `null` clears a level; unset reads as `cv` (`fact-usage-routes.ts`). | Fact text as a key, or an unknown level, answers 400                   |
+| `GET /v1/knowledge-bases/:id/sensitivity-rules`, `POST`, `DELETE .../:ruleId` | Lists, adds or removes a rule that marks sections under a heading as `sensitive` or `never-share`. Each change saves a new list version, and runs withhold the marked sections.                                                                                                                           | A duplicate rule answers 422                                           |
+| `PUT /v1/workspaces/:id/knowledge-selection`                                  | Selects the bases a workspace's runs use, by id. The API names the tenant's store itself, and the workspace view lists `knowledgeBaseIds`.                                                                                                                                                                | An unknown base answers 404. Several bases need `combinationApproved`. |
+| `GET /v1/workspaces/:id/fact-usage`, `PUT`                                    | Reads or sets where career facts may be used: `cv`, `interview-only` or `never-say`, by section (fact category) or by fact usage key, never fact text. `null` clears a level; unset reads as `cv` (`fact-usage-routes.ts`).                                                                               | Fact text as a key, or an unknown level, answers 400                   |
 
 Every route except the upload parses JSON.
 
@@ -572,12 +602,12 @@ People manage their organisation through the API once it has a tenant directory
 
 ### Members and roles
 
-| Route                                                | What it does                                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /v1/me`                                         | Who the caller is: a member's organisation, id, role and email, or `{ "kind": "owner" }` for the owner token, which belongs to no organisation |
-| `GET`, `PUT /v1/me/screen-language`                   | A member's saved screen language (`en`, `fr` or null), read after sign-in and saved on each change; 404 for the owner token, whose screen keeps the browser's choice |
-| `GET`, `POST /v1/organisation/members`               | Lists the organisation, or invites a person by email                                                                                           |
-| `PATCH`, `DELETE /v1/organisation/members/:memberId` | Changes a role, or removes a member                                                                                                            |
+| Route                                                | What it does                                                                                                                                                         |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/me`                                         | Who the caller is: a member's organisation, id, role and email, or `{ "kind": "owner" }` for the owner token, which belongs to no organisation                       |
+| `GET`, `PUT /v1/me/screen-language`                  | A member's saved screen language (`en`, `fr` or null), read after sign-in and saved on each change; 404 for the owner token, whose screen keeps the browser's choice |
+| `GET`, `POST /v1/organisation/members`               | Lists the organisation, or invites a person by email                                                                                                                 |
+| `PATCH`, `DELETE /v1/organisation/members/:memberId` | Changes a role, or removes a member                                                                                                                                  |
 
 - **Who may manage.** Owners and admins manage members, and members get 403.
 - **The owner role.** Only an owner grants, takes away or removes it. The last
@@ -588,6 +618,44 @@ People manage their organisation through the API once it has a tenant directory
 - **Logs.** Each change logs one content-free line with the action,
   organisation, member and role, never an email. The hash-chained audit trail is
   per workspace, and membership belongs to none.
+
+### Beta invites
+
+The invite-only public beta (#2460) creates accounts from single-use invite
+codes, in the directory's `betaInvites` (`beta-invites.ts`). A signed-in
+person with no account gets 403 `no_account` from every other route; the web
+screen then shows **Join the DraftLoop beta** (`beta-sign-up.tsx`), which asks
+for the code and words each refusal.
+
+| Route                                        | Who                                | What it does                                                         |
+| -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once |
+| `GET /v1/operator/beta-invites`              | Operator                           | Lists invites without codes, the accounts they created and the cap   |
+| `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                |
+| `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner |
+
+`POST /v1/sign-up` is the one route a sign-in without a membership reaches
+(`request-auth.ts`). After five refused codes in 15 minutes, one sign-in gets
+429 `rate_limited` with `Retry-After`. The cap is `DRAFT_LOOP_BETA_ACCOUNT_CAP`.
+
+```mermaid
+flowchart LR
+  create["Operator creates a code<br/>for one email"] --> open["open"]
+  open -->|revoke| revoked["revoked"]
+  open -->|"redeem: same verified email,<br/>under the cap"| redeemed["redeemed:<br/>organisation + invited owner"]
+  redeemed -->|"sign-in claims the owner invite"| member["active owner"]
+  redeemed -->|"organisation erased"| gone["row deleted, seat free"]
+```
+
+- **Codes.** 16 characters without look-alike letters, stored as SHA-256
+  hashes. The plain code is returned once, at creation.
+- **Redemption.** One transaction, under an advisory lock, checks the code,
+  the email and the cap, then creates the organisation. Refusals are
+  `invite_unknown`, `invite_revoked`, `invite_used`, `invite_email_mismatch`
+  and `beta_full`.
+- **Cap.** It counts redeemed invites; 0 closes sign-up. Organisations the
+  operator creates directly are not counted.
+- **Data.** The table belongs to no tenant and holds an email and ids only.
 
 ### Plan limits
 
@@ -601,6 +669,27 @@ In sign-in mode, the plan's `seats` and `candidateRecords` limit growth
 
 Past a limit, the answer is 409 `plan_limit_reached` with `limit` and `value`.
 An organisation with no plan gets 403 `plan_required`.
+
+### Model calls outside runs
+
+The plan's `modelCallsPerDay` bounds what a member's model calls outside runs
+can cost (`model-call-gate.ts`, #2487). Beta allows 20 a UTC day; the other
+plans have no cap.
+
+| Counted call                 | Route                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| An interview turn            | `POST .../career-interview/sessions/:sessionId/actions` with `accept`, `answer` or `own_subject` |
+| A live interview             | `GET .../career-interview/sessions/:sessionId/live`, once per session                            |
+| Drafted application material | `POST .../applications/:applicationId/material`                                                  |
+| A profile derivation         | `POST .../profiles/:profileId/derivation`                                                        |
+
+- **Free.** Brief extraction, since a run needs a brief. Owner-token calls
+  are not counted.
+- **Refusal.** 429 `model_call_cap_reached` with `limit`, and `Retry-After`
+  until midnight UTC. The API logs `model call cap reached`.
+- **Counting.** `model_call_counts` holds one counter per organisation and
+  day. The check and the increment are one statement, so racing calls cannot
+  pass the cap. A call the route then refuses for another reason still counts.
 
 ### Operator routes
 

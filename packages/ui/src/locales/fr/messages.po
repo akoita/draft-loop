@@ -669,6 +669,14 @@ msgstr "{matched} (choix non valide)"
 msgid "{name} · {0}"
 msgstr "{name} · {0}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), about {cost} a draft"
+msgstr "{name} ({role}), environ {cost} par brouillon"
+
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), under US$0.01 a draft"
+msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr "{name} a été retiré des espaces de travail récents. Ses fichiers sont inchangés."
@@ -688,6 +696,14 @@ msgstr "{one} Voulez-vous en parler, ou parler d’autre chose ?"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Prenez d’abord acte du problème ouvert ou résolvez-le.} other {Prenez d’abord acte des # problèmes ouverts ou résolvez-les.}}"
+
+#: packages/ui/src/export-preview.tsx
+msgid "{pageCount, plural, one {# page} other {# pages}}"
+msgstr "{pageCount, plural, one {# page} other {# pages}}"
+
+#: packages/ui/src/export-preview.tsx
+msgid "{pages} · {name} aims for {target}"
+msgstr "{pages} · {name} vise {target}"
 
 #: packages/ui/src/review.tsx
 msgid "{pendingBulkFindingCount} finding decisions"
@@ -746,6 +762,18 @@ msgstr "{value, plural, one {Votre offre permet # dossier candidat, et il est ut
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr "{value, plural, one {Votre offre permet # place, et elle est prise.} other {Votre offre permet # places, et toutes sont prises.}}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{when} · edited by you"
+msgstr "{when} · modifié par vous"
+
+#: apps/web/src/application-material-model.ts
+msgid "{when} · revised after the critic's check"
+msgstr "{when} · révisée après la relecture du critique"
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
+msgstr "{when} Vous n’avez rien à faire : attendre ne risque rien, et DraftLoop ne vous sollicite que si la dernière tentative échoue aussi."
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr "/1M en entrée · $"
@@ -762,6 +790,10 @@ msgstr "↺ tour"
 msgid "1 responsibility"
 msgstr "1 responsabilité"
 
+#: apps/web/src/application-material.tsx
+msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
+msgstr "Une vérification des tics que les lecteurs remarquent dans un texte écrit par un modèle, pas un détecteur d'IA. Réécrivez avec vos propres mots avant d'envoyer."
+
 #: apps/web/src/consent-model.ts
 msgid "A contract with the candidate"
 msgstr "Un contrat avec le candidat"
@@ -773,6 +805,10 @@ msgstr "Une lettre de motivation ou des questions d'entretien pour cette candida
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
 msgstr "Un identifiant est requis."
+
+#: apps/web/src/application-material.tsx
+msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
+msgstr "Un critique d'une autre entreprise relit cette lettre pour repérer les phrases qui semblent écrites par une machine. S'il en trouve, une version révisée s'ouvrira ici."
 
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -789,6 +825,11 @@ msgstr "Une offre à laquelle vous avez postulé demande « {title} », et votre
 #: packages/ui/src/finding-title.ts
 msgid "A line covering this requirement was removed: "
 msgstr "Une ligne couvrant cette exigence a été supprimée : "
+
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "A list of three (\"{0}\") reads as a formula: keep the one that matters."
+msgstr "Une liste de trois (« {0} ») sonne comme une formule : gardez ce qui compte."
 
 #: packages/ui/src/app.tsx
 msgid "A local model must be served from this machine, so only a loopback address is accepted, with no username or password. Leave this empty to use the workspace default."
@@ -1029,6 +1070,10 @@ msgstr "Nouvelle version de ce fichier ajoutée à {displayName}."
 #: packages/ui/src/career-evidence.ts
 msgid "Added to {displayName}."
 msgstr "Ajouté à {displayName}."
+
+#: apps/web/src/application-material.tsx
+msgid "Address it to"
+msgstr "Destinataire"
 
 #: packages/ui/src/start-requirements.tsx
 msgid "Advanced: requirements for this run"
@@ -1355,6 +1400,17 @@ msgstr "Joindre un fichier"
 msgid "Attach the job description file."
 msgstr "Joignez le fichier de la description de poste."
 
+#. placeholder {0}: failure.maxAttempts
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} is starting."
+msgstr "La tentative {next} sur {0} démarre."
+
+#. placeholder {0}: failure.maxAttempts
+#. placeholder {1}: waitLabel(remainingMs)
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} starts in {1}."
+msgstr "La tentative {next} sur {0} démarre dans {1}."
+
 #: packages/ui/src/provider-authentication-actions.ts
 msgid "Authenticated Codex / ChatGPT subscription"
 msgstr "Abonnement Codex / ChatGPT authentifié"
@@ -1502,6 +1558,10 @@ msgstr "Avant de commencer"
 msgid "Before your edits, the final CV checks failed:"
 msgstr "Avant vos modifications, les vérifications finales du CV avaient échoué :"
 
+#: apps/web/src/application-material-model.ts
+msgid "best writing"
+msgstr "meilleure écriture"
+
 #. placeholder {0}: status.reason
 #: packages/ui/src/application-steps-model.ts
 msgid "Blocked: {0}"
@@ -1547,6 +1607,10 @@ msgstr "Par dossier"
 msgid "Call limit"
 msgstr "Limite d’appels"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Can't recover"
+msgstr "Reprise impossible"
+
 #. placeholder {0}: first.detail ?? first.label
 #. placeholder {0}: unmet.map((condition) => condition.detail ?? condition.label).join(" ")
 #: packages/ui/src/start-checklist-model.ts
@@ -1554,6 +1618,7 @@ msgstr "Limite d’appels"
 msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
+#: apps/web/src/application-material.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -1693,6 +1758,11 @@ msgstr "Vérifiez que les éléments de parcours choisis contiennent les faits n
 #: packages/ui/src/profile-status.ts
 msgid "Check the facts below, then mark the profile reviewed so applications can use it."
 msgstr "Vérifiez les faits ci-dessous, puis marquez le profil comme relu pour que les candidatures puissent l’utiliser."
+
+#. placeholder {0}: item.unsupported_numbers.join(", ")
+#: apps/web/src/application-material.tsx
+msgid "Check these numbers: none of the sources states {0}."
+msgstr "Vérifiez ces chiffres : aucune source n'indique {0}."
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Check what the run will use. No provider call is made until you start."
@@ -1923,6 +1993,7 @@ msgstr "Effacez le filtre pour voir les {total}, ou choisissez « Autre modèle�
 msgid "close"
 msgstr "fermer"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -1937,6 +2008,10 @@ msgstr "Fermez et rouvrez DraftLoop pour l’appliquer ; l’hôte actif reste i
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
 msgstr "Fermer la comparaison"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Close the preview"
+msgstr "Fermer l’aperçu"
 
 #: packages/ui/src/review.tsx
 msgid "Close the previous version beside the draft"
@@ -2246,6 +2321,10 @@ msgstr "Créer une base de connaissances"
 msgid "Create knowledge store"
 msgstr "Créer un stockage de connaissances"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Create my account"
+msgstr "Créer mon compte"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Create or choose a knowledge base"
 msgstr "Créer ou choisir une base de connaissances"
@@ -2284,6 +2363,10 @@ msgstr "Base de connaissances « {shown} » créée."
 #: packages/ui/src/career-evidence-setup.ts
 msgid "Creating a knowledge base is unavailable"
 msgstr "La création d’une base de connaissances est indisponible"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Creating your account"
+msgstr "Création de votre compte"
 
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -2395,6 +2478,10 @@ msgstr "Langue du CV"
 msgid "Dark"
 msgstr "Sombre"
 
+#: apps/web/src/application-material-model.ts
+msgid "Dashes are used often in this letter: try a full stop or a comma."
+msgstr "Cette lettre utilise souvent des tirets : essayez un point ou une virgule."
+
 #: packages/ui/src/review.tsx
 msgid "Data class"
 msgstr "Classe de données"
@@ -2432,6 +2519,7 @@ msgstr "DeepInfra a renvoyé un flux GLM mal formé. Vérifiez la compatibilité
 msgid "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved."
 msgstr "DeepInfra a renvoyé un flux GLM mal formé. Vérifiez la compatibilité fournisseur/modèle et mettez DraftLoop à jour vers la dernière version prise en charge ; aucun fait n’a été enregistré."
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Default"
 msgstr "Par défaut"
@@ -2486,6 +2574,14 @@ msgstr "Supprimer le dossier candidat"
 #: packages/ui/src/home-folder-model.ts
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr "Supprimer le dossier « {0} » ? {what} Aucune candidature n’est supprimée."
+
+#: apps/web/src/application-material.tsx
+msgid "Delete this version"
+msgstr "Supprimer cette version"
+
+#: apps/web/src/application-material.tsx
+msgid "Delete this version for good?"
+msgstr "Supprimer définitivement cette version ?"
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Deleted \"{name}\"."
@@ -2548,6 +2644,10 @@ msgstr "Différences avec votre dossier"
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Different {noun}: {0} vs {1}"
 msgstr "{noun} différent : {0} contre {1}"
+
+#: apps/web/src/application-material-model.ts
+msgid "Direct"
+msgstr "Direct"
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Directed"
@@ -2631,9 +2731,17 @@ msgstr "Téléchargement annulé. Rien n’a été installé."
 msgid "Download Markdown"
 msgstr "Télécharger en Markdown"
 
+#: apps/web/src/application-material.tsx
+msgid "Download PDF"
+msgstr "Télécharger en PDF"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download size"
 msgstr "Taille du téléchargement"
+
+#: apps/web/src/application-material.tsx
+msgid "Download Word"
+msgstr "Télécharger en Word"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Downloading model…"
@@ -2721,8 +2829,8 @@ msgid "Drafting is not available on this server: it has no Claude route. The res
 msgstr "La rédaction n’est pas disponible sur ce serveur : il n’a pas d’accès à Claude. Le reste de la candidature fonctionne comme avant."
 
 #: apps/web/src/application-material-model.ts
-msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server."
-msgstr "La rédaction envoie les exigences du poste de cette candidature et les faits de votre profil professionnel à Anthropic (Claude). Vos nom et coordonnées ne sont jamais envoyés, et l’ébauche n’est pas stockée sur le serveur."
+msgid "Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it."
+msgstr "La rédaction envoie à Anthropic (Claude) les exigences du poste de cette candidature et les faits de votre profil de carrière. Votre nom et vos coordonnées ne sont jamais envoyés. Chaque brouillon est enregistré avec cette candidature, où vous pouvez le rouvrir ou le supprimer."
 
 #: apps/web/src/application-material.tsx
 msgid "Drafting…"
@@ -2763,20 +2871,27 @@ msgstr "DraftLoop n’a pas pu joindre le fournisseur, la clé n’a donc pas é
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr "DraftLoop récupère la page de l’offre que vous avez approuvée. Son texte est ensuite envoyé à {providerName} ({modelName}) pour être découpé en exigences."
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
+msgstr "DraftLoop réessaie encore. Arrêter met fin à cette relecture pour de bon ; il faudrait en démarrer une nouvelle."
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr "DraftLoop a repéré ces habitudes dans vos choix de relecture. Vous décidez : en accepter une l’ajoute à votre politique de rédaction pour les nouvelles exécutions."
 
-#. placeholder {0}: state.providerFailure.step
-#. placeholder {1}: retryWaitLabel(retryRemainingMs)
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically in {1}."
-msgstr "DraftLoop relance automatiquement {0} dans {1}."
+#. placeholder {0}: state.artifact.version
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the critic on version {0} shortly."
+msgstr "DraftLoop relance bientôt le relecteur sur la version {0}."
 
-#. placeholder {0}: state.providerFailure.step
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically."
-msgstr "DraftLoop relance automatiquement {0}."
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the draft shortly."
+msgstr "DraftLoop relance bientôt la rédaction."
+
+#. placeholder {0}: state.round
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the revision for round {0} shortly."
+msgstr "DraftLoop relance bientôt la révision du tour {0}."
 
 #: apps/web/src/consent.tsx
 msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
@@ -2789,6 +2904,14 @@ msgstr "DraftLoop accepte les fichiers PDF, DOCX, Markdown et texte, ainsi que l
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr "DraftLoop téléchargera ce modèle une fois et le gardera sur cet ordinateur. Rien n’est téléchargé avant votre confirmation, et votre contenu de candidat n’est jamais envoyé."
+
+#: apps/web/src/credits-model.ts
+msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+msgstr "Le budget de modèles de DraftLoop pour ce mois est épuisé : aucune nouvelle exécution ne peut démarrer. Elles reprennent le 1er du mois prochain."
+
+#: packages/ui/src/export-preview.tsx
+msgid "Drawing the preview…"
+msgstr "Préparation de l’aperçu…"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
@@ -2836,10 +2959,15 @@ msgstr "exécution antérieure"
 msgid "Earlier versions cannot be edited."
 msgstr "Les versions antérieures ne sont pas modifiables."
 
+#: apps/web/src/application-material-model.ts
+msgid "economy"
+msgstr "économique"
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Economy"
 msgstr "Économique"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -2865,6 +2993,10 @@ msgstr "Modifier la politique de rédaction"
 #: packages/ui/src/review.tsx
 msgid "edited"
 msgstr "modifié"
+
+#: apps/web/src/application-material.tsx
+msgid "Edited by you"
+msgstr "Modifié par vous"
 
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -3057,6 +3189,7 @@ msgstr "Exporter la comparaison"
 msgid "Export everything"
 msgstr "Tout exporter"
 
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
 msgstr "Format d’export"
@@ -3072,6 +3205,10 @@ msgstr "Exporter en local"
 #: apps/web/src/record-actions.tsx
 msgid "Export or delete this record"
 msgstr "Exporter ou supprimer ce dossier"
+
+#: packages/ui/src/export-preview.tsx
+msgid "Export this file…"
+msgstr "Exporter ce fichier…"
 
 #: packages/ui/src/review-footer.tsx
 msgid "Export…"
@@ -3346,6 +3483,18 @@ msgstr "Dossier"
 msgid "Follow system"
 msgstr "Suivre le système"
 
+#: apps/web/src/application-material.tsx
+msgid "For example: my move into team leadership"
+msgstr "Par exemple : mon passage au management d'équipe"
+
+#: apps/web/src/application-material.tsx
+msgid "For example: the hiring team"
+msgstr "Par exemple : l'équipe de recrutement"
+
+#: apps/web/src/application-material-model.ts
+msgid "Formal"
+msgstr "Formel"
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
 msgstr "Formule : appels × (jetons d’entrée × tarif d’entrée + jetons de sortie × tarif de sortie) ÷ 1 000 000 ; rédacteur et relecteur s’additionnent. La part de sortie inclut les jetons de raisonnement facturables le cas échéant, sans modifier les contrôles d’exécution."
@@ -3591,6 +3740,14 @@ msgstr "Accordé le {when}{providers}. Base légale : {0}."
 #: packages/ui/src/home-folders.tsx
 msgid "Group applications"
 msgstr "Regrouper les candidatures"
+
+#: apps/web/src/application-material.tsx
+msgid "Guidance shapes the writing only. Every claim still comes from your career record."
+msgstr "Ces consignes orientent seulement l'écriture. Chaque affirmation vient toujours de votre dossier de carrière."
+
+#: apps/web/src/application-material.tsx
+msgid "Guide this draft (optional)"
+msgstr "Orienter ce brouillon (facultatif)"
 
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
@@ -3866,6 +4023,10 @@ msgstr "Horodatage non valide."
 msgid "Invalid workspace name."
 msgstr "Nom d’espace de travail non valide."
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Invite code"
+msgstr "Code d’invitation"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
 msgstr "est marqué contre"
@@ -3881,6 +4042,11 @@ msgstr "Problèmes par gravité et état"
 #: packages/ui/src/home-folder-model.ts
 msgid "It is empty."
 msgstr "Il est vide."
+
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Item {0}"
+msgstr "Élément {0}"
 
 #: packages/ui/src/home-folder-model.ts
 msgid "Its {held} applications move to No folder."
@@ -3945,6 +4111,10 @@ msgstr "Exigences lues dans l’offre d’emploi"
 msgid "Job requirements reviewed"
 msgstr "Exigences du poste relues"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "Join the DraftLoop beta"
+msgstr "Rejoindre la bêta de DraftLoop"
+
 #: packages/ui/src/application-name.tsx
 msgid "Keep “"
 msgstr "Garder « "
@@ -3976,6 +4146,10 @@ msgstr "Limitez la note à {maximumConsentNoteLength} caractères."
 #: apps/web/src/screening-model.ts
 msgid "Keep the reason to {maximumReleaseReasonLength} characters or fewer."
 msgstr "Limitez le motif à {maximumReleaseReasonLength} caractères."
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Keep waiting"
+msgstr "Continuer d’attendre"
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Keyword search over your candidate knowledge. Needs no model."
@@ -4064,6 +4238,7 @@ msgstr "URL d’éléments de l’ancien espace de travail"
 msgid "Legitimate interest"
 msgstr "Intérêt légitime"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Length"
 msgstr "Longueur"
@@ -4217,6 +4392,10 @@ msgstr "Local uniquement"
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval."
 msgstr "La recherche sémantique locale n’est pas disponible dans cet hôte de bureau. Les exécutions utilisent la recherche par mots-clés."
+
+#: apps/web/src/application-material-model.ts
+msgid "Long"
+msgstr "Long"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
@@ -4380,6 +4559,7 @@ msgstr "Mistral Large 4 (préversion)"
 msgid "model"
 msgstr "modèle"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/app.tsx
 msgid "Model"
 msgstr "Modèle"
@@ -4770,6 +4950,10 @@ msgstr "Aucun élément de parcours pour l’instant. Ajouter la première sourc
 msgid "No command matches that search."
 msgstr "Aucune commande ne correspond à cette recherche."
 
+#: apps/web/src/application-material.tsx
+msgid "No common machine-writing habit found."
+msgstr "Aucun tic d'écriture automatique courant trouvé."
+
 #: packages/ui/src/review.tsx
 msgid "no cost cap"
 msgstr "pas de plafond de coût"
@@ -4838,6 +5022,14 @@ msgstr "Pas encore de constats : la critique n’a pas eu lieu"
 #: packages/ui/src/new-application-form.tsx
 msgid "No folder"
 msgstr "Sans dossier"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "No invite has that code. Check it for typos, or ask for a new invite."
+msgstr "Aucune invitation ne correspond à ce code. Vérifiez qu’il n’y a pas de faute de frappe, ou demandez une nouvelle invitation."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "No invite? The beta is invite-only for now."
+msgstr "Pas d’invitation ? La bêta est pour l’instant sur invitation uniquement."
 
 #: packages/ui/src/profile.tsx
 msgid "No issues are recorded in this version."
@@ -5100,6 +5292,10 @@ msgstr "Notes"
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr "Rien n’est en cours à arrêter."
+
+#: packages/ui/src/export-preview.tsx
+msgid "Nothing is saved until you export."
+msgstr "Rien n’est enregistré tant que vous n’exportez pas."
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Nothing is sent to a provider from this workspace."
@@ -5424,6 +5620,10 @@ msgstr "Jeton propriétaire"
 msgid "Owners and admins of your organisation assign members."
 msgstr "Les propriétaires et administrateurs de votre organisation attribuent les membres."
 
+#: packages/ui/src/export-preview.tsx
+msgid "Page {page} of {pageCount}"
+msgstr "Page {page} sur {pageCount}"
+
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Page target"
@@ -5473,6 +5673,10 @@ msgstr "Collez le jeton propriétaire."
 #: apps/web/src/http-bridge.ts
 msgid "Paste this application's job description first."
 msgstr "Collez d’abord l’offre d’emploi de cette candidature."
+
+#: apps/web/src/application-material.tsx
+msgid "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+msgstr "Collez jusqu'à trois textes que vous avez écrits, comme une ancienne lettre ou un long e-mail. Les brouillons reprennent votre façon d'écrire, jamais le contenu des textes."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
@@ -5577,6 +5781,16 @@ msgstr "Préréglages"
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Presets are unvalidated for real CVs and do not work with OpenAI Codex user sessions."
 msgstr "Les préréglages ne sont pas validés pour de vrais CV et ne fonctionnent pas avec les sessions utilisateur OpenAI Codex."
+
+#: packages/ui/src/export-preview.tsx
+#: packages/ui/src/review-footer.tsx
+msgid "Preview"
+msgstr "Aperçu"
+
+#. placeholder {0}: exportFormatLabels[exportAction.format]
+#: packages/ui/src/review-footer.tsx
+msgid "Preview the {0} file before exporting (Alt+P)"
+msgstr "Voir l’aperçu du fichier {0} avant d’exporter (Alt+P)"
 
 #: packages/ui/src/review.tsx
 msgid "Previous version"
@@ -5685,10 +5899,6 @@ msgstr "échec du fournisseur"
 #: packages/ui/src/review.tsx
 msgid "Provider recovery remains before approval"
 msgstr "Une reprise après erreur du fournisseur reste à faire avant l’approbation"
-
-#: packages/ui/src/review.tsx
-msgid "Provider request failed"
-msgstr "La requête au fournisseur a échoué"
 
 #: packages/ui/src/review.tsx
 msgid "Provider sign-in lives in Home, under Workspace settings"
@@ -6370,6 +6580,10 @@ msgstr "Relancer la vérification du profil"
 msgid "Retry profile generation"
 msgstr "Relancer la génération du profil"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Retrying on its own"
+msgstr "Nouvelle tentative automatique"
+
 #: packages/ui/src/review.tsx
 msgid "Return to review"
 msgstr "Revenir à la relecture"
@@ -6706,9 +6920,17 @@ msgstr "{noun} identique"
 msgid "Same text as the active version."
 msgstr "Même texte que la version active."
 
+#: apps/web/src/application-material.tsx
+msgid "Samples saved"
+msgstr "Textes enregistrés"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Enregistrer"
+
+#: apps/web/src/application-material.tsx
+msgid "Save as a new version"
+msgstr "Enregistrer comme nouvelle version"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save as first version"
@@ -6737,6 +6959,10 @@ msgstr "Nouvelle version"
 #: packages/ui/src/review.tsx
 msgid "Save override"
 msgstr "Enregistrer la dérogation"
+
+#: apps/web/src/application-material.tsx
+msgid "Save samples"
+msgstr "Enregistrer les textes"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
@@ -7017,6 +7243,10 @@ msgstr "Guide d'installation"
 msgid "Shared lineage overridden on a recorded rationale; critique was not independent"
 msgstr "Filiation partagée passée outre sur justification enregistrée ; la critique n’était pas indépendante"
 
+#: apps/web/src/application-material-model.ts
+msgid "Short"
+msgstr "Court"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Show"
 msgstr "Afficher"
@@ -7105,6 +7335,7 @@ msgstr "Connectez-vous avec le jeton propriétaire de ce déploiement. Il reste 
 msgid "Sign in with your organisation account. You stay signed in until you close this tab."
 msgstr "Connectez-vous avec le compte de votre organisation. Vous restez connecté jusqu’à la fermeture de cet onglet."
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/shell-actions.tsx
 msgid "Sign out"
 msgstr "Se déconnecter"
@@ -7180,6 +7411,7 @@ msgstr "Langue d’orthographe"
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr "Découpage du texte de l’offre avec les données d’exemple locales. Rien n’est envoyé à un fournisseur."
 
+#: apps/web/src/application-material-model.ts
 #: packages/ui/src/start-confirmation.tsx
 msgid "Standard"
 msgstr "Standard"
@@ -7263,6 +7495,11 @@ msgstr "Oriente la sélection et la présentation au prochain tour. Ce n’est p
 msgid "step where it stopped."
 msgstr "l’étape où elle s’est arrêtée."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "Stock phrase \"{0}\": say it in your own words."
+msgstr "Formule toute faite « {0} » : dites-le avec vos mots."
+
 #: packages/ui/src/review.tsx
 msgid "Stop"
 msgstr "Arrêter"
@@ -7271,12 +7508,16 @@ msgstr "Arrêter"
 msgid "Stop and transcribe"
 msgstr "Arrêter et transcrire"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Stop for good"
+msgstr "Arrêter pour de bon"
+
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/review.tsx
 msgid "Stop review"
 msgstr "Arrêter la relecture"
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/provider-recovery.tsx
 msgid "Stop run"
 msgstr "Arrêter l’exécution"
 
@@ -7425,6 +7666,8 @@ msgstr "Enseignement"
 msgid "Technologies, separated by commas"
 msgstr "Technologies, séparées par des virgules"
 
+#: apps/web/src/application-material.tsx
+#: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"
 msgstr "Modèle de mise en page"
@@ -7440,6 +7683,18 @@ msgstr "Test de la clé auprès du fournisseur…"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
 msgstr "Texte"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
+msgstr "Cette invitation a déjà été utilisée. Chaque code ouvre un seul compte ; demandez une nouvelle invitation si ce n’était pas vous."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
+msgstr "Cette invitation est destinée à une autre adresse e-mail. Déconnectez-vous, puis connectez-vous avec l’adresse qui a reçu l’invitation."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "That invite was withdrawn. Ask for a new invite."
+msgstr "Cette invitation a été retirée. Demandez une nouvelle invitation."
 
 #: apps/web/src/knowledge-bridge.ts
 msgid "That knowledge store is not on this service."
@@ -7535,6 +7790,10 @@ msgstr "Le rédacteur écrit l’ébauche."
 #: packages/ui/src/autopilot-toggle.tsx
 msgid "The author revises from every critic finding on its own. The review pauses early only when the draft is ready, a claim is disputed, or a blocking finding says the draft contradicts your materials. Final approval stays with you."
 msgstr "Le rédacteur révise seul à partir de chaque constat du relecteur. La relecture ne s’arrête plus tôt que si l’ébauche est prête, si une affirmation est contestée ou si un constat bloquant indique que l’ébauche contredit vos contenus. L’approbation finale vous revient."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The beta is full for now. Your code stays valid: try again when places open."
+msgstr "La bêta est complète pour le moment. Votre code reste valable : réessayez quand des places se libèrent."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -7647,6 +7906,18 @@ msgstr "Le relecteur a demandé des changements et le rédacteur a révisé le p
 msgid "The critic did not finish checking it. Resume or retry the review; approval and export need a finished critique."
 msgstr "Le relecteur n’a pas fini de la vérifier. Reprenez ou relancez la relecture ; l’approbation et l’export demandent une critique terminée."
 
+#: apps/web/src/application-material-model.ts
+msgid "The critic flagged sentences that read as machine-written. The revised version is open; your first draft stays in the version list."
+msgstr "Le critique a relevé des phrases qui semblent écrites par une machine. La version révisée est ouverte ; votre premier brouillon reste dans la liste des versions."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic flagged sentences, but the rewrite cited something your record does not support, so your letter stands as drafted."
+msgstr "Le critique a relevé des phrases, mais la réécriture citait un élément que votre dossier n'appuie pas : votre lettre reste telle qu'elle a été rédigée."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic found no sentence that reads as machine-written."
+msgstr "Le critique n'a trouvé aucune phrase qui semble écrite par une machine."
+
 #: packages/ui/src/run-application-plan.ts
 msgid "The critic had not reviewed this plan when the run stopped."
 msgstr "Le relecteur n’avait pas relu ce plan quand l’exécution s’est arrêtée."
@@ -7654,6 +7925,10 @@ msgstr "Le relecteur n’avait pas relu ce plan quand l’exécution s’est arr
 #: packages/ui/src/review-run-status.ts
 msgid "The critic is checking version {version}."
 msgstr "Le relecteur vérifie la version {version}."
+
+#: apps/web/src/application-material-model.ts
+msgid "The critic's check did not finish, so your letter stands as drafted."
+msgstr "La relecture du critique n'a pas abouti : votre lettre reste telle qu'elle a été rédigée."
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-model-settings.ts
@@ -7898,6 +8173,11 @@ msgstr "La dernière tentative n’a enregistré aucun fait. Corrigez la cause c
 msgid "The last run on this application used {0} → {1}."
 msgstr "La dernière exécution de cette candidature a utilisé {0} → {1}."
 
+#. placeholder {0}: tell.match ?? ""
+#: apps/web/src/application-material-model.ts
+msgid "The letter has {0} words: aim for 250 to 350."
+msgstr "La lettre compte {0} mots : visez 250 à 350."
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "The live conversation ended."
 msgstr "La conversation en direct est terminée."
@@ -8028,6 +8308,10 @@ msgstr "La version de la politique n’a pas pu être chargée."
 msgid "The preference could not be saved. {0}"
 msgstr "La préférence n’a pas pu être enregistrée. {0}"
 
+#: packages/ui/src/export-preview.tsx
+msgid "The preview could not be drawn. Nothing was saved; you can still export."
+msgstr "L’aperçu n’a pas pu être affiché. Rien n’a été enregistré ; vous pouvez quand même exporter."
+
 #: packages/ui/src/review-footer.tsx
 msgid "The previous export can't be found. Export again to save a new copy."
 msgstr "L’export précédent est introuvable. Exportez de nouveau pour enregistrer une nouvelle copie."
@@ -8118,6 +8402,10 @@ msgstr "La relecture est en cours."
 #: packages/ui/src/review.tsx
 msgid "The review is still running, so nothing here needs you yet. It pauses when it needs your decisions."
 msgstr "La relecture est toujours en cours, rien ne vous attend ici pour l’instant. Elle s’arrête quand elle a besoin de vos décisions."
+
+#: apps/web/src/review-actions.ts
+msgid "The review is still running, so this change was not saved. Make it once the round finishes."
+msgstr "La relecture est toujours en cours : cette modification n’a pas été enregistrée. Refaites-la une fois le tour terminé."
 
 #: packages/ui/src/review-run-status.ts
 msgid "The review pauses here when it needs your decision."
@@ -8345,9 +8633,21 @@ msgstr "Il n’y a aucun consentement à retirer."
 msgid "There is no previous version to compare with."
 msgstr "Il n’y a pas de version précédente à comparer."
 
+#: packages/ui/src/export-preview.tsx
+msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
+msgstr "Voici les pages du modèle en PDF. Word met en page le même texte, mais ses retours à la ligne peuvent légèrement différer."
+
 #: apps/web/src/credits-model.ts
 msgid "These models"
 msgstr "Ces modèles"
+
+#: apps/web/src/application-material.tsx
+msgid "These sentences of the first draft read as machine-written; this version rewrites them."
+msgstr "Ces phrases du premier brouillon semblaient écrites par une machine ; cette version les réécrit."
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "This account already exists. Reload the page."
+msgstr "Ce compte existe déjà. Rechargez la page."
 
 #: apps/web/src/oidc-session.ts
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
@@ -8482,6 +8782,10 @@ msgstr "Celui de cette note :"
 msgid "This pairing could not be checked. {0} The workspace can still be created, and the run itself refuses a shared lineage unless a rationale is recorded."
 msgstr "Cette paire n’a pas pu être vérifiée. {0} L’espace de travail peut quand même être créé, et l’exécution elle-même refuse une filiation partagée sans justification enregistrée."
 
+#: apps/web/src/application-material-model.ts
+msgid "This paragraph opens like an earlier one: vary the start."
+msgstr "Ce paragraphe commence comme un précédent : variez le début."
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "This profile does not have supported public pricing metadata for the displayed estimate scope."
 msgstr "Ce profil n’a pas de données tarifaires publiques prises en charge pour l’estimation affichée."
@@ -8527,8 +8831,8 @@ msgid "This rewrites the run history stored with this workspace so it takes less
 msgstr "Ceci réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Chaque ébauche et chaque étape sont enregistrées une seule fois au lieu d’être recopiées à chaque étape d’une exécution. Vos exécutions, ébauches et journal d’audit se relisent à l’identique, et la chaîne d’audit est reconstruite et vérifiée."
 
 #: packages/ui/src/review.tsx
-msgid "This run has no retry left. Stop it, then start a new run."
-msgstr "Cette exécution n’a plus de relance possible. Arrêtez-la, puis lancez-en une nouvelle."
+msgid "This run has no retry left. Stop it, then start a new review."
+msgstr "Cette exécution n’a plus de tentative. Arrêtez-la, puis démarrez une nouvelle relecture."
 
 #: packages/ui/src/review.tsx
 msgid "This run is neither paused nor interrupted."
@@ -8666,10 +8970,15 @@ msgstr "Jeton :"
 msgid "tokens; thinking"
 msgstr "jetons ; réflexion"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Tone"
 msgstr "Ton"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Too many attempts. Wait 15 minutes, then try again."
+msgstr "Trop de tentatives. Attendez 15 minutes, puis réessayez."
 
 #: apps/web/src/refusal-text.ts
 msgid "Too many requests; retry later."
@@ -8782,6 +9091,10 @@ msgstr "Crédits illimités"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Unlisted source"
 msgstr "Source non listée"
+
+#: apps/web/src/application-material-model.ts
+msgid "Unsaved draft"
+msgstr "Brouillon non enregistré"
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Unsupported"
@@ -8982,10 +9295,15 @@ msgstr "Valeur du fait {0}"
 msgid "Verbosity"
 msgstr "Verbosité"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "Verify your email address with the sign-in provider, then try again."
+msgstr "Vérifiez votre adresse e-mail auprès du service de connexion, puis réessayez."
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "version"
 msgstr "version"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
@@ -9073,6 +9391,14 @@ msgstr "En attente de {providerName} ({modelName}). Cela peut prendre une minute
 msgid "Waiting for a worker to start…"
 msgstr "En attente du démarrage d’un exécutant…"
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Waiting for you"
+msgstr "En attente de votre action"
+
+#: apps/web/src/application-material-model.ts
+msgid "Warm"
+msgstr "Chaleureux"
+
 #: packages/ui/src/review.tsx
 msgid "warning"
 msgstr "avertissement"
@@ -9135,6 +9461,10 @@ msgstr "Ce que le candidat a fait"
 msgid "What the critic asked to change"
 msgstr "Ce que le relecteur a demandé de changer"
 
+#: apps/web/src/application-material.tsx
+msgid "What the critic flagged"
+msgstr "Ce que le critique a relevé"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what the role covered"
 msgstr "ce que couvrait le rôle"
@@ -9142,6 +9472,10 @@ msgstr "ce que couvrait le rôle"
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "Que faire des sections correspondantes"
+
+#: apps/web/src/application-material.tsx
+msgid "What to stress"
+msgstr "Ce qu'il faut mettre en avant"
 
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
@@ -9307,6 +9641,10 @@ msgstr "Raisonnement du rédacteur"
 msgid "writes ·"
 msgstr "rédige ·"
 
+#: apps/web/src/application-material.tsx
+msgid "Writing check"
+msgstr "Vérification de l'écriture"
+
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-comparison-facts.ts
 #: packages/ui/src/run-details.tsx
@@ -9322,11 +9660,20 @@ msgstr "La politique de rédaction demande votre attention : elle est illisible.
 msgid "Writing policy versions"
 msgstr "Versions de la politique de rédaction"
 
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Writing sample {0}"
+msgstr "Texte {0}"
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
 msgid "You"
 msgstr "Vous"
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
 
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
@@ -9348,6 +9695,10 @@ msgstr "Vous avez des modifications non enregistrées. Choisissez Abandonner les
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr "Vous avez des modifications non enregistrées. Enregistrez-les avant de marquer le brief comme relu."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "Your account could not be created. Try again."
+msgstr "Votre compte n’a pas pu être créé. Réessayez."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Your answer"
@@ -9443,6 +9794,10 @@ msgstr "Votre organisation n’a pas encore d’offre."
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Votre organisation n’a pas encore d’offre. Demandez au propriétaire d’en choisir une."
 
+#: apps/web/src/refusal-text.ts
+msgid "Your plan allows {limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC."
+msgstr "Votre offre permet {limit} échanges d’entretien, brouillons et mises à jour de profil par jour, et ceux d’aujourd’hui sont utilisés. Ils reviennent à minuit UTC."
+
 #. placeholder {0}: models.toLowerCase()
 #: apps/web/src/credits-model.ts
 msgid "Your plan does not include {0}{who}. Choose another preset or model."
@@ -9451,6 +9806,10 @@ msgstr "Votre offre n’inclut pas {0}{who}. Choisissez un autre préréglage ou
 #: apps/web/src/credits-model.ts
 msgid "Your plan has unlimited credits."
 msgstr "Votre offre dispose de crédits illimités."
+
+#: apps/web/src/refusal-text.ts
+msgid "Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC."
+msgstr "Les échanges d’entretien, brouillons et mises à jour de profil de votre offre pour aujourd’hui sont utilisés. Ils reviennent à minuit UTC."
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan's limit is reached. Ask the owner for a bigger plan."
@@ -9496,3 +9855,7 @@ msgstr "Votre espace de travail"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."
 msgstr "Votre modèle de rédaction découpe la page de l’offre en exigences que vous relisez."
+
+#: apps/web/src/application-material.tsx
+msgid "Your writing samples"
+msgstr "Vos textes"

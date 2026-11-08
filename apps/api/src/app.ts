@@ -9,11 +9,13 @@ import {
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
+import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
@@ -36,12 +38,14 @@ import { registerApplicationLifecycleRoutes } from "./application-lifecycle-rout
 import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
+import { type BetaSignUpOptions, registerBetaSignUpRoutes } from "./beta-sign-up-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
   type CareerInterviewParts,
   registerCareerInterviewRoutes,
 } from "./career-interview-routes.js";
+import { registerClientErrorRoutes } from "./client-error-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -49,13 +53,16 @@ import type { HostedContentScreening } from "./content-screening-service.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
+import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
+import type { MaterialReviews } from "./material-reviews.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
+import { registerModelCallGate } from "./model-call-gate.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import { registerOrganisationClosing } from "./organisation-closing.js";
@@ -86,6 +93,7 @@ import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
+import { registerWritingSamplesRoutes } from "./writing-samples-routes.js";
 
 export interface ApiOptions {
   /** The owner's token: the only credential in owner mode, the operator's in sign-in mode. */
@@ -143,10 +151,16 @@ export interface ApiOptions {
     readonly sourceEvidenceKinds?: SourceEvidenceKinds;
     /** The guided career interview (#1030); without it those routes are not served. */
     readonly careerInterview?: CareerInterviewParts;
+    /** Saved cover letters and interview questions (#2477); without them drafts are not kept. */
+    readonly applicationMaterialDrafts?: SavedApplicationMaterialStore;
+    /** The worker's critic pass on saved cover letters (#2525); without it none runs. */
+    readonly materialReviews?: MaterialReviews;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
     readonly factUsage?: FactUsageService;
+    /** The candidate's writing samples (#2513); without them those routes are not served. */
+    readonly writingSamples?: WritingSamplesService;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -160,6 +174,8 @@ export interface ApiOptions {
    * routes are not served. The server opens it with per-request tenancy (#1591).
    */
   readonly directory?: TenantDirectory;
+  /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
+  readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
@@ -242,6 +258,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
   registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
+  // Before any route, so every route registered below is counted where it calls a model.
+  if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
+    registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
+  }
 
   app.get(
     "/v1/health",
@@ -255,6 +275,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => ({ status: "ok" as const }),
   );
   registerAuthConfigRoutes(app, auth);
+  registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 
   app.get(
@@ -419,6 +440,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
       });
     }
+    if (application.writingSamples !== undefined) {
+      registerWritingSamplesRoutes(app, {
+        writingSamples: application.writingSamples,
+        workspaceRoot: application.workspaceRoot,
+      });
+    }
     if (application.factUsage !== undefined) {
       registerFactUsageRoutes(app, {
         factUsage: application.factUsage,
@@ -490,6 +517,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       idempotency,
+    });
+    registerExportPreviewRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
     });
     registerUsageRoutes(app, {
       service: application.service,
@@ -581,6 +612,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+        ...(application.writingSamples === undefined
+          ? {}
+          : { writingSamples: application.writingSamples }),
+        ...(application.applicationMaterialDrafts === undefined
+          ? {}
+          : { drafts: application.applicationMaterialDrafts }),
+        ...(application.materialReviews === undefined
+          ? {}
+          : { reviews: application.materialReviews }),
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {
@@ -621,6 +661,24 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (options.tenants?.operatorFor !== undefined) {
     registerOperatorPlanRoutes(app, { operatorFor: options.tenants.operatorFor });
+  }
+  if (options.betaInvites !== undefined) {
+    const operatorFor = options.tenants?.operatorFor;
+    registerBetaSignUpRoutes(app, {
+      ...options.betaInvites,
+      ...(auth.mode === "oidc" ? { resolveSignIn: auth.resolveSignIn } : {}),
+      ...(operatorFor === undefined
+        ? {}
+        : {
+            assignBetaPlan: async (organisationId: string, at: Date) => {
+              await operatorFor(organisationId).plans.assignPlan({
+                planId: "beta",
+                periodStart: at.toISOString().slice(0, 10),
+                assignedAt: at.toISOString(),
+              });
+            },
+          }),
+    });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);

@@ -1,3 +1,15 @@
+export {
+  type BetaInvite,
+  BetaInviteError,
+  type BetaInviteRefusal,
+  type BetaInvites,
+  type CreatedBetaInvite,
+  createBetaInvites,
+  newBetaInviteCode,
+  normalizeBetaInviteCode,
+  type RedeemBetaInviteInput,
+  type RedeemBetaInviteResult,
+} from "./beta-invites.js";
 export { createCandidateRecordAccess } from "./candidate-records.js";
 export { createCareerInterviewSessionStore } from "./career-interview-sessions.js";
 export {
@@ -51,6 +63,12 @@ export type {
   ManagedCandidateKnowledgeSourceVersionLocation,
 } from "./knowledge-run-records.js";
 export { migratePostgres, type PostgresMigration, postgresMigrations } from "./migrations.js";
+export {
+  createModelCallMeter,
+  type ModelCallMeter,
+  ModelCallMeterError,
+  type ModelCallTake,
+} from "./model-call-meter.js";
 export { createOrganisationErasure } from "./organisation-erasure.js";
 export {
   createOrganisationPlans,
@@ -81,6 +99,15 @@ export {
 } from "./record-archive.js";
 export { createCandidateRecordErasure, objectKeyOf } from "./record-erasure.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
+export {
+  createSpendPool,
+  type ReserveSpendInput,
+  type ReserveSpendResult,
+  readSpendPoolLimitUsd,
+  type SpendPool,
+  SpendPoolError,
+  spendPoolMonth,
+} from "./spend-pool.js";
 export {
   createSqlClient,
   createSqlPool,

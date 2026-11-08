@@ -182,6 +182,12 @@ describe("plan refusal messages", () => {
     expect(planRefusalMessage(refusal(422, "model_tier_unknown"))).toContain("cannot price");
   });
 
+  it("says a spent deployment budget recovers next month", () => {
+    expect(planRefusalMessage(refusal(503, "spend_pool_exhausted"))).toContain(
+      "They open again on the 1st of next month.",
+    );
+  });
+
   it("explains each run cap", () => {
     expect(
       planRefusalMessage(refusal(429, "run_cap_reached", { cap: "concurrent", limit: 2 })),

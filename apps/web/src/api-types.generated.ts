@@ -97,24 +97,82 @@ export interface ApiSchemas {
     readonly url: string | null;
   };
   "ApplicationMaterialDraft": {
+    readonly id?: string;
+    readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
+      readonly edited?: boolean;
+      readonly unsupported_numbers?: readonly (string)[];
       readonly citations: readonly ({
         readonly fact_id: string;
         readonly text: string;
       })[];
     })[];
+    readonly based_on?: string;
     readonly model: {
       readonly provider: string;
       readonly model: string;
     };
+    readonly critic_findings?: readonly ({
+      readonly paragraph: number;
+      readonly sentence: string;
+      readonly reason: string;
+    })[];
+    readonly critic_model?: {
+      readonly provider: string;
+      readonly model: string;
+    };
+    readonly review?: {
+      readonly status: "pending";
+    };
+    readonly tells?: readonly ({
+      readonly code: "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
+      readonly paragraph?: number;
+      readonly sentence?: string;
+      readonly match?: string;
+    })[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
+  "ApplicationMaterialDraftList": {
+    readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
+  };
+  "ApplicationMaterialEditInput": {
+    readonly items: readonly ({
+      readonly text: string;
+    })[];
+  };
+  "ApplicationMaterialGuidance": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
+  "ApplicationMaterialGuidanceInput": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
+  "ApplicationMaterialModels": {
+    readonly models: readonly ({
+      readonly model_id: "claude-sonnet-5-5" | "claude-haiku-5-5";
+      readonly default: boolean;
+      readonly estimated_cost_usd?: number;
+    })[];
+  };
   "ApplicationMaterialRequestInput": {
     readonly kind: "cover-letter" | "interview-questions";
+    readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
+  };
+  "ApplicationMaterialReview": {
+    readonly status: "none" | "pending" | "done" | "failed";
+    readonly outcome?: "revised" | "clean" | "kept" | "missing" | "skipped" | "superseded" | "consent-required" | "record-erased" | "unavailable";
+    readonly revision_id?: string;
   };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];
@@ -126,6 +184,7 @@ export interface ApiSchemas {
       readonly candidateRecords: number | null;
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly features: {
         readonly provenanceReport: boolean;
         readonly runComparison: boolean;
@@ -141,6 +200,15 @@ export interface ApiSchemas {
     readonly mode: "oidc";
     readonly issuer: string;
     readonly clientId: string;
+  };
+  "BetaInvite": {
+    readonly inviteId: string;
+    readonly email: string;
+    readonly createdAt: string;
+    readonly state: "open" | "revoked" | "redeemed";
+    readonly organisationId?: string;
+    readonly redeemedAt?: string;
+    readonly revokedAt?: string;
   };
   "CareerInterviewActionInput": {
     readonly action: "accept";
@@ -313,6 +381,10 @@ export interface ApiSchemas {
     };
     readonly history: readonly (ApiSchemas["ConsentEntry"])[];
   };
+  "CreatedBetaInvite": {
+    readonly invite: ApiSchemas["BetaInvite"];
+    readonly code: string;
+  };
   "CreatedOrganisation": {
     readonly organisation: {
       readonly organisationId: string;
@@ -397,6 +469,7 @@ export interface ApiSchemas {
       readonly modelTiers: readonly ("premium" | "standard" | "economy")[];
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly seats: number | null;
       readonly candidateRecords: number | null;
     };
@@ -551,6 +624,7 @@ export interface ApiSchemas {
       readonly candidateRecords: number | null;
       readonly runsPerDay: number | null;
       readonly concurrentRuns: number | null;
+      readonly modelCallsPerDay: number | null;
       readonly features: {
         readonly provenanceReport: boolean;
         readonly runComparison: boolean;
@@ -590,6 +664,7 @@ export interface ApiSchemas {
       readonly candidateRecords?: number | null;
       readonly runsPerDay?: number | null;
       readonly concurrentRuns?: number | null;
+      readonly modelCallsPerDay?: number | null;
       readonly features?: {
         readonly provenanceReport?: boolean;
         readonly runComparison?: boolean;
@@ -883,6 +958,11 @@ export interface ApiSchemas {
     readonly createdAt: string | null;
     readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
   };
+  "SignedUp": {
+    readonly organisationId: string;
+    readonly memberId: string;
+    readonly role: "owner";
+  };
   "SpeechModelManifest": {
     readonly available: boolean;
     readonly model: string;
@@ -1071,6 +1151,9 @@ export interface ApiSchemas {
     readonly createdAt: string;
     readonly priorChecksum: string | null;
   };
+  "WritingSamples": {
+    readonly samples: readonly (string)[];
+  };
 }
 
 export interface ApiOperations {
@@ -1079,6 +1162,16 @@ export interface ApiOperations {
   };
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
+  };
+  "POST /v1/client-errors": {
+    readonly body: {
+      readonly kind: "error" | "unhandled_rejection";
+      readonly message: string;
+      readonly stack?: readonly (string)[];
+      readonly route: string;
+      readonly build: string;
+    };
+    readonly response: void;
   };
   "POST /v1/auth/proof": {
     readonly body: ApiSchemas["OwnerTokenProofRequestInput"];
@@ -1270,6 +1363,21 @@ export interface ApiOperations {
     readonly response: {
       readonly dismissed: string;
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/writing-samples": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["WritingSamples"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/writing-samples": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly samples: readonly (string)[];
+    };
+    readonly response: ApiSchemas["WritingSamples"];
   };
   "GET /v1/workspaces/{workspaceId}/fact-usage": {
     readonly path: {
@@ -1862,6 +1970,17 @@ export interface ApiOperations {
     };
     readonly response: Blob;
   };
+  "POST /v1/workspaces/{workspaceId}/runs/{runId}/export-preview": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly body: {
+      readonly format: "markdown" | "docx" | "pdf";
+      readonly templateId?: string;
+    };
+    readonly response: Blob;
+  };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/usage": {
     readonly path: {
       readonly workspaceId: string;
@@ -2175,6 +2294,56 @@ export interface ApiOperations {
     readonly body: ApiSchemas["ApplicationMaterialRequestInput"];
     readonly response: ApiSchemas["ApplicationMaterialDraft"];
   };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly query?: {
+      readonly kind?: "cover-letter" | "interview-questions";
+    };
+    readonly response: ApiSchemas["ApplicationMaterialDraftList"];
+  };
+  "GET /v1/application-material/models": {
+    readonly response: ApiSchemas["ApplicationMaterialModels"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/review": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly response: ApiSchemas["ApplicationMaterialReview"];
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/versions": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly body: ApiSchemas["ApplicationMaterialEditInput"];
+    readonly response: ApiSchemas["ApplicationMaterialDraft"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/document": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly query: {
+      readonly format: "docx" | "pdf";
+      readonly template?: "classic" | "compact" | "modern";
+    };
+    readonly response: Blob;
+  };
+  "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly response: void;
+  };
   "POST /v1/workspaces/{workspaceId}/agent-tokens": {
     readonly path: {
       readonly workspaceId: string;
@@ -2284,6 +2453,7 @@ export interface ApiOperations {
         readonly candidateRecords?: number | null;
         readonly runsPerDay?: number | null;
         readonly concurrentRuns?: number | null;
+        readonly modelCallsPerDay?: number | null;
         readonly features?: {
           readonly provenanceReport?: boolean;
           readonly runComparison?: boolean;
@@ -2315,6 +2485,31 @@ export interface ApiOperations {
       readonly organisationId: string;
     };
     readonly response: ApiSchemas["OrganisationCredits"];
+  };
+  "POST /v1/operator/beta-invites": {
+    readonly body: {
+      readonly email: string;
+    };
+    readonly response: ApiSchemas["CreatedBetaInvite"];
+  };
+  "GET /v1/operator/beta-invites": {
+    readonly response: {
+      readonly invites: readonly (ApiSchemas["BetaInvite"])[];
+      readonly redeemed: number;
+      readonly cap: number;
+    };
+  };
+  "DELETE /v1/operator/beta-invites/{inviteId}": {
+    readonly path: {
+      readonly inviteId: string;
+    };
+    readonly response: void;
+  };
+  "POST /v1/sign-up": {
+    readonly body: {
+      readonly code: string;
+    };
+    readonly response: ApiSchemas["SignedUp"];
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

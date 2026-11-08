@@ -519,6 +519,98 @@ button.small:where(:not(.shared-screens *)) {
   line-height: 1.5;
 }
 
+.application-material-guidance {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.application-material-guidance summary {
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.application-material-guidance label {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-2);
+}
+
+.application-material-guidance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.application-material-guidance-row label {
+  flex: 1 1 10rem;
+}
+
+.application-material-tells {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+
+.application-material-tells h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.application-material-tells ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.application-material-tells q {
+  color: var(--text-2);
+}
+
+.application-material-template {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.application-material-edited {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.application-material-samples {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.application-material-samples legend {
+  padding: 0 var(--space-1);
+  color: var(--text-2);
+}
+
+.application-material-versions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.application-material-versions select {
+  width: auto;
+  max-width: 100%;
+}
+
 .application-material-actions {
   display: flex;
   flex-wrap: wrap;

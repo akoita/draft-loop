@@ -71,14 +71,15 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Writing preferences](review-and-export.md)                                  | `available` | server        | `none`       | Saves preferences you approve from review and applies them to later drafts.                             |
 | [Model pair and run budget](review-and-export.md)                            | `available` | server        | `none`       | Choose author and critic models from two companies and the limits a run may spend.                      |
 | [Autopilot](review-and-export.md)                                            | `available` | server        | `none`       | Keeps revising through blocking findings and pauses only when a person is needed.                       |
-| [Review and export](review-and-export.md)                                    | `available` | server, CLI   | `none`       | Review findings, approve the draft, export Markdown, DOCX or PDF from templates.                        |
+| [Review and export](review-and-export.md)                                    | `available` | server, CLI   | `none`       | Review findings, approve the draft, preview and export Markdown, DOCX or PDF from templates.            |
 
 ## Application material
 
 | Feature                                                     | Status      | Where it runs | Agent access | What it does                                                   |
 | ----------------------------------------------------------- | ----------- | ------------- | ------------ | -------------------------------------------------------------- |
-| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter for one application from approved facts. |
+| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis; a critic from another company flags machine-sounding sentences for one revision. |
 | [Interview questions](../reference/application-material.md) | `available` | server        | `none`       | Drafts likely interview questions for one application.         |
+| [Saved drafts](../reference/application-material.md#saved-drafts) | `available` | server | `none` | Keeps each cover letter and question set with its application, to reopen, edit as a new version, download as Word or PDF, or delete. |
 
 ## Agent channel
 

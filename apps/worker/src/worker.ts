@@ -10,6 +10,10 @@ import {
   createBriefExtractionHandler,
 } from "./brief-extraction-handler.js";
 import {
+  createMaterialReviewHandler,
+  type MaterialReviewHandlerOptions,
+} from "./material-review-handler.js";
+import {
   createProfileDerivationHandler,
   type ProfileDerivationHandlerOptions,
 } from "./profile-derivation-handler.js";
@@ -22,6 +26,8 @@ export interface WorkerOptions {
   readonly briefs?: BriefExtractionHandlerOptions;
   /** Career profiles to derive (ADR 0011, D9); unset, the worker takes none. */
   readonly profiles?: ProfileDerivationHandlerOptions;
+  /** Critic passes on saved cover letters (#2525); unset, the worker takes none. */
+  readonly reviews?: MaterialReviewHandlerOptions;
 }
 
 export interface Worker extends RunWorker {
@@ -42,6 +48,8 @@ export async function startWorker(
     options.briefs === undefined ? undefined : createBriefExtractionHandler(options.briefs);
   const derive =
     options.profiles === undefined ? undefined : createProfileDerivationHandler(options.profiles);
+  const review =
+    options.reviews === undefined ? undefined : createMaterialReviewHandler(options.reviews);
   let running = 0;
   let lastActiveAt = now();
   const tracked = async <Result>(work: () => Promise<Result>): Promise<Result> => {
@@ -61,6 +69,7 @@ export async function startWorker(
       ...(derive === undefined
         ? {}
         : { profileDerivation: (job, control) => tracked(() => derive(job, control)) }),
+      ...(review === undefined ? {} : { materialReview: (job) => tracked(() => review(job)) }),
     },
   );
   return {

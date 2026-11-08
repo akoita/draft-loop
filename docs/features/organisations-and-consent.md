@@ -17,7 +17,9 @@ organisation; it erases everything with `draft-loop-server`
 
 ## How to use it
 
-1. An operator creates an organisation and invites its first owner. Owners
+1. An operator creates an organisation and invites its first owner, or, on
+   the public beta, sends a person an invite code that creates their own
+   organisation on first sign-in. Owners
    and admins invite people by email; each active member or pending invitation
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
@@ -32,6 +34,7 @@ organisation; it erases everything with `draft-loop-server`
 ## How to test it
 
 - Focused tests: `apps/api/src/organisation-routes.test.ts`,
+  `apps/api/src/beta-sign-up-routes.test.ts`, `apps/web/src/beta-sign-up.test.tsx`,
   `apps/api/src/consent-routes.test.ts`,
   `apps/api/src/record-erasure-routes.test.ts` and
   `apps/web/src/consent.test.tsx`.
@@ -42,8 +45,9 @@ organisation; it erases everything with `draft-loop-server`
 
 | Kind   | Surface                                                        |
 | ------ | -------------------------------------------------------------- |
-| Screen | Credits and consent, organisation members                      |
+| Screen | Credits and consent, organisation members, beta sign-up        |
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`       |
+| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`                |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`  |
 | API    | `/v1/workspaces/{id}/archive`, record and organisation erasure |
 | MCP    | none                                                           |

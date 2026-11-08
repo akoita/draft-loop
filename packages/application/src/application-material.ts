@@ -15,6 +15,11 @@ import {
   factUsageAllows,
   resolveFactUsage,
 } from "@draft-loop/domain/fact-usage";
+import {
+  type ApplicationMaterialGuidance,
+  maximumApplicationMaterialAddresseeCharacters,
+  maximumApplicationMaterialEmphasisCharacters,
+} from "@draft-loop/schemas/saved-application-material";
 
 /** The parts of a canonical profile fact the drafter reads. */
 export interface ApplicationMaterialFact {
@@ -55,7 +60,28 @@ export interface ApplicationMaterialContext {
   }[];
   /** The language the material is written in; absent or English adds nothing to the prompt. */
   readonly language?: string;
+  /** The candidate's guidance (#2478): it steers the writing and is never a fact. */
+  readonly guidance?: ApplicationMaterialGuidance;
+  /** The candidate's own voice (#2513): style to copy, never a source of facts. */
+  readonly voice?: ApplicationMaterialVoice;
 }
+
+/**
+ * How the candidate writes: texts they wrote, and the workspace writing preferences that apply to
+ * any document. Every field is style; none may supply a claim, a name or a number.
+ */
+export interface ApplicationMaterialVoice {
+  readonly samples?: readonly string[];
+  /** Words and phrases the candidate's writing policy forbids. */
+  readonly avoidTerms?: readonly string[];
+  readonly tone?: string;
+  readonly spellingLocale?: string;
+}
+
+/** The most of each sample, and of the avoid list, that reaches the model. */
+export const maximumVoiceSampleCharacters = 2_000;
+export const maximumVoiceSamples = 3;
+export const maximumVoiceAvoidTerms = 40;
 
 /**
  * One paragraph of a cover letter, or one interview question with its talking point. `question`
@@ -76,6 +102,15 @@ export interface ApplicationMaterialRequest {
   readonly context: ApplicationMaterialContext;
   /** Rules the previous attempt broke, so the model can avoid them; empty on the first call. */
   readonly refusedRules: readonly string[];
+  /** A valid letter and the critic's machine-writing findings, to revise once (#2524). */
+  readonly revision?: {
+    readonly previous: readonly ApplicationMaterialItem[];
+    readonly findings: readonly {
+      readonly paragraph: number;
+      readonly sentence: string;
+      readonly reason: string;
+    }[];
+  };
 }
 
 export interface ApplicationMaterialReply {
@@ -152,6 +187,54 @@ export interface ApplicationMaterialContextInput {
   readonly usage?: FactUsageSettings;
   /** The application's document language (#2316); English when unset. */
   readonly language?: string;
+  /** The candidate's guidance (#2478); none when unset. */
+  readonly guidance?: ApplicationMaterialGuidance;
+  /** The candidate's own voice (#2513); none when unset. */
+  readonly voice?: ApplicationMaterialVoice;
+}
+
+/** The voice that reaches the model: samples and terms trimmed and capped, empty fields dropped. */
+export function boundedApplicationMaterialVoice(
+  voice: ApplicationMaterialVoice | undefined,
+): ApplicationMaterialVoice | undefined {
+  if (voice === undefined) return undefined;
+  const samples = (voice.samples ?? [])
+    .map((sample) => sample.trim().slice(0, maximumVoiceSampleCharacters))
+    .filter((sample) => sample !== "")
+    .slice(0, maximumVoiceSamples);
+  const avoidTerms = [...new Set((voice.avoidTerms ?? []).map((term) => term.trim().slice(0, 60)))]
+    .filter((term) => term !== "")
+    .slice(0, maximumVoiceAvoidTerms);
+  const bounded: ApplicationMaterialVoice = {
+    ...(samples.length === 0 ? {} : { samples }),
+    ...(avoidTerms.length === 0 ? {} : { avoidTerms }),
+    ...(voice.tone ? { tone: voice.tone.slice(0, 40) } : {}),
+    ...(voice.spellingLocale ? { spellingLocale: voice.spellingLocale.slice(0, 20) } : {}),
+  };
+  return Object.keys(bounded).length === 0 ? undefined : bounded;
+}
+
+/**
+ * The guidance that reaches the model: trimmed, capped, without empty fields, and without an
+ * addressee for interview questions. Undefined when nothing is left.
+ */
+export function boundedApplicationMaterialGuidance(
+  kind: ApplicationMaterialKind,
+  guidance: ApplicationMaterialGuidance | undefined,
+): ApplicationMaterialGuidance | undefined {
+  if (guidance === undefined) return undefined;
+  const emphasis = guidance.emphasis?.trim().slice(0, maximumApplicationMaterialEmphasisCharacters);
+  const addressee =
+    kind === "cover-letter"
+      ? guidance.addressee?.trim().slice(0, maximumApplicationMaterialAddresseeCharacters)
+      : undefined;
+  const bounded = {
+    ...(emphasis ? { emphasis } : {}),
+    ...(guidance.tone === undefined ? {} : { tone: guidance.tone }),
+    ...(guidance.length === undefined ? {} : { length: guidance.length }),
+    ...(addressee ? { addressee } : {}),
+  };
+  return Object.keys(bounded).length === 0 ? undefined : bounded;
 }
 
 /**
@@ -214,11 +297,15 @@ export function applicationMaterialContext(
       text: requirement.text.slice(0, maximumContextCharacters),
       priority: requirement.priority,
     }));
+  const guidance = boundedApplicationMaterialGuidance(input.kind, input.guidance);
+  const voice = boundedApplicationMaterialVoice(input.voice);
   return {
     kind: input.kind,
     facts,
     requirements,
     ...(input.language === undefined ? {} : { language: input.language }),
+    ...(guidance === undefined ? {} : { guidance }),
+    ...(voice === undefined ? {} : { voice }),
   };
 }
 
@@ -344,6 +431,20 @@ function supported(number: StatedNumber, sources: readonly string[]): boolean {
       (written !== undefined && wordIn(source, written)) ||
       words.some((word) => wordIn(source, word)),
   );
+}
+
+/**
+ * The numbers in a candidate's own edit that none of the item's sources state (#2480). An edit is
+ * the candidate's text, so it is flagged for them to check rather than refused.
+ */
+export function unsupportedNumbers(text: string, sources: readonly string[]): string[] {
+  return [
+    ...new Set(
+      numbersIn(text)
+        .filter((number) => !supported(number, sources))
+        .map((number) => number.written),
+    ),
+  ];
 }
 
 /**

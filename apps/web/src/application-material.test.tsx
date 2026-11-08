@@ -10,8 +10,12 @@ import {
 import {
   type ApplicationMaterialDraft,
   applicationMaterialFileName,
+  applicationMaterialGuidanceFor,
   applicationMaterialMarkdown,
+  applicationMaterialModelLabel,
   applicationMaterialProblem,
+  applicationMaterialReviewNote,
+  applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 
 // An invented draft.
@@ -35,14 +39,32 @@ const draft: ApplicationMaterialDraft = {
 const props: ApplicationMaterialViewProps = {
   kind: "cover-letter",
   draft: undefined,
+  versions: [],
   problem: undefined,
   busy: false,
+  guidance: {},
+  onGuidance: () => {},
+  models: [],
+  modelId: undefined,
+  onModel: () => {},
+  samples: undefined,
+  samplesSaved: true,
+  onSamples: () => {},
+  onSaveSamples: () => {},
   collapsed: false,
   onToggle: () => {},
   onKind: () => {},
   onDraft: () => {},
   onDownload: () => {},
+  onSelect: () => {},
+  onDelete: () => {},
 };
+
+const saved = (id: string, created_at: string): ApplicationMaterialDraft => ({
+  ...draft,
+  id,
+  created_at,
+});
 
 describe("the prepare panel", () => {
   it("names what it sends to Anthropic before the first draft", () => {
@@ -51,6 +73,7 @@ describe("the prepare panel", () => {
     expect(html).toContain("Optional · cover letter or interview questions");
     expect(html).toContain("to Anthropic (Claude)");
     expect(html).toContain("name and contact details are never sent");
+    expect(html).toContain("saved with this application");
     expect(html).toContain('aria-pressed="true">Cover letter</button>');
     expect(html).toContain('aria-pressed="false">Interview questions</button>');
     expect(html).toContain('class="button button-primary"');
@@ -74,6 +97,161 @@ describe("the prepare panel", () => {
     expect(html).toContain("Download Markdown");
     expect(html).toContain("Draft again");
     expect(html).not.toContain("to Anthropic (Claude)");
+  });
+
+  it("offers earlier saved versions and deletes the one on screen", () => {
+    const newest = saved("amd_fixture0002", "2026-11-07T10:00:00.000Z");
+    const versions = [newest, saved("amd_fixture0001", "2026-11-07T09:00:00.000Z")];
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        kind="interview-questions"
+        draft={newest}
+        versions={versions}
+      />,
+    );
+    expect(html).toContain("Version<select");
+    expect(html).toContain('<option value="amd_fixture0002" selected="">');
+    expect(html).toContain('<option value="amd_fixture0001">');
+    expect(html).toContain("Delete this version");
+    const single = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={newest} versions={[newest]} />,
+    );
+    expect(single).not.toContain("Version<select");
+    expect(single).toContain("Delete this version");
+    const unsaved = renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />);
+    expect(unsaved).not.toContain("Delete this version");
+  });
+
+  it("offers guidance, with an addressee for a cover letter only", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} guidance={{ emphasis: "Leadership", tone: "warm" }} />,
+    );
+    expect(html).toContain("Guide this draft (optional)");
+    expect(html).toContain(">Leadership</textarea>");
+    expect(html).toContain('<option value="warm" selected="">Warm</option>');
+    expect(html).toContain("Address it to");
+    expect(html).toContain("Every claim still comes from your career record.");
+    const questions = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} kind="interview-questions" />,
+    );
+    expect(questions).not.toContain("Address it to");
+  });
+
+  it("shows a cover letter's writing check, and says it is not an AI detector", () => {
+    const letter: ApplicationMaterialDraft = {
+      ...draft,
+      kind: "cover-letter",
+      tells: [
+        {
+          code: "stock_phrase",
+          paragraph: 0,
+          sentence: "I am passionate about data.",
+          match: "passionate about",
+        },
+        { code: "word_count", match: "120" },
+      ],
+    };
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} draft={letter} />);
+    expect(html).toContain("<q>I am passionate about data.</q>");
+    expect(html).toContain("Stock phrase &quot;passionate about&quot;");
+    expect(html).toContain("The letter has 120 words: aim for 250 to 350.");
+    expect(html).toContain("not an AI detector");
+    const clean = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={{ ...letter, tells: [] }} />,
+    );
+    expect(clean).toContain("No common machine-writing habit found.");
+    expect(
+      renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
+    ).not.toContain("Writing check");
+  });
+
+  it("offers the server's models with their cost, the default selected", () => {
+    const models = [
+      { model_id: "claude-sonnet-5-5" as const, default: true, estimated_cost_usd: 0.048 },
+      { model_id: "claude-haiku-5-5" as const, default: false, estimated_cost_usd: 0.004 },
+    ];
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} models={models} />);
+    expect(html).toContain(
+      '<option value="claude-sonnet-5-5" selected="">Claude Sonnet (best writing), about US$0.05 a draft</option>',
+    );
+    expect(html).toContain("Claude Haiku (economy), under US$0.01 a draft");
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "Model<select",
+    );
+    expect(applicationMaterialModelLabel({ model_id: "claude-haiku-5-5", default: false })).toBe(
+      "Claude Haiku (economy)",
+    );
+  });
+
+  it("offers three sample fields when the server keeps samples, saved or not", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        samples={["An old letter I wrote."]}
+        samplesSaved={false}
+      />,
+    );
+    expect(html).toContain("Your writing samples");
+    expect(html).toContain(">An old letter I wrote.</textarea>");
+    expect(html.match(/aria-label="Writing sample \d"/gu)).toHaveLength(3);
+    expect(html).toContain(">Save samples</button>");
+    expect(html).toContain("never what the samples say");
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "Your writing samples",
+    );
+  });
+
+  it("edits each paragraph in place and marks the candidate's own text", () => {
+    const saved = {
+      ...draft,
+      id: "amd_editedversion01",
+      created_at: "2026-11-08T03:00:00.000Z",
+      based_on: "amd_draftedversion1",
+      items: draft.items.map((item, index) =>
+        index === 0 ? { ...item, edited: true, unsupported_numbers: ["12"] } : item,
+      ),
+    };
+    const shown = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={saved} versions={[saved]} onEdit={() => {}} />,
+    );
+    expect(shown).toContain("Edited by you");
+    expect(shown).toContain("none of the sources states 12");
+    expect(shown).toContain(">Edit</button>");
+    const editing = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={saved}
+        versions={[saved]}
+        onEdit={() => {}}
+        edits={saved.items.map((item) => item.text)}
+      />,
+    );
+    expect(editing.match(/aria-label="Item \d"/gu)).toHaveLength(saved.items.length);
+    expect(editing).toContain(">Save as a new version</button>");
+    expect(editing).not.toContain(">Edit</button>");
+    expect(editing).toContain("Sources");
+  });
+
+  it("offers Word and PDF downloads of a saved draft with the template, Modern first", () => {
+    const saved = { ...draft, id: "amd_savedversion001", created_at: "2026-11-08T03:00:00.000Z" };
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={saved}
+        versions={[saved]}
+        template="modern"
+        onDocument={() => {}}
+      />,
+    );
+    expect(html).toContain(">Download Word</button>");
+    expect(html).toContain(">Download PDF</button>");
+    expect(html).toContain('<option value="modern" selected="">Modern</option>');
+    expect(
+      renderToStaticMarkup(
+        <ApplicationMaterialView {...props} draft={draft} onDocument={() => {}} />,
+      ),
+    ).not.toContain("Download Word");
   });
 
   it("shows a refusal in the panel while the controls stay usable", () => {
@@ -112,6 +290,63 @@ describe("the prepare panel's model", () => {
     expect(applicationMaterialProblem(new TypeError("fetch failed"))).toContain(
       "could not be reached",
     );
+  });
+
+  it("says while the critic checks a letter, then shows what it flagged", () => {
+    const checking = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={{ ...draft, kind: "cover-letter" }} reviewing />,
+    );
+    expect(checking).toContain("A critic from another company is checking this letter");
+    const revised: ApplicationMaterialDraft = {
+      ...saved("amd_revisionfixture1", "2026-11-07T09:06:00.000Z"),
+      kind: "cover-letter",
+      based_on: "amd_fixture0001",
+      critic_findings: [
+        { paragraph: 0, sentence: "I am a passionate analyst.", reason: "stock word" },
+      ],
+      critic_model: { provider: "openai", model: "critic-model" },
+    };
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={revised}
+        reviewNote={applicationMaterialReviewNote({ status: "done", outcome: "revised" })}
+      />,
+    );
+    expect(html).toContain("What the critic flagged");
+    expect(html).toContain("<q>I am a passionate analyst.</q> stock word");
+    expect(html).toContain("The revised version is open");
+    expect(applicationMaterialVersionLabel(revised, { locale: "en-GB", timeZone: "UTC" })).toBe(
+      "7 Nov 2026, 09:06 · revised after the critic's check",
+    );
+    expect(applicationMaterialReviewNote({ status: "failed" })).toContain("stands as drafted");
+    expect(applicationMaterialReviewNote({ status: "done", outcome: "kept" })).toContain(
+      "does not support",
+    );
+    expect(applicationMaterialReviewNote({ status: "done", outcome: "skipped" })).toBeUndefined();
+    expect(applicationMaterialReviewNote({ status: "none" })).toBeUndefined();
+  });
+
+  it("names a saved version by its time and model", () => {
+    expect(
+      applicationMaterialVersionLabel(saved("amd_fixture0001", "2026-11-07T09:05:00.000Z"), {
+        locale: "en-GB",
+        timeZone: "UTC",
+      }),
+    ).toBe("7 Nov 2026, 09:05 · claude-sonnet-5-5");
+    expect(applicationMaterialVersionLabel(draft)).toBe("Unsaved draft");
+  });
+
+  it("sends only the guidance the candidate filled in for the kind", () => {
+    expect(applicationMaterialGuidanceFor("cover-letter", {})).toBeUndefined();
+    expect(applicationMaterialGuidanceFor("cover-letter", { emphasis: "  " })).toBeUndefined();
+    expect(
+      applicationMaterialGuidanceFor("interview-questions", {
+        emphasis: " Leadership ",
+        addressee: "Team",
+        length: "short",
+      }),
+    ).toEqual({ emphasis: "Leadership", length: "short" });
   });
 
   it("downloads the draft as Markdown with its sources under each item", () => {

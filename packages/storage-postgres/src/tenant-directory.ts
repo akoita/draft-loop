@@ -16,6 +16,7 @@ import {
   TenantDirectoryError,
   verifiedSignInEmail,
 } from "@draft-loop/storage/tenant-directory";
+import { type BetaInvites, createBetaInvites } from "./beta-invites.js";
 import { createPostgresMemberSettings } from "./member-settings.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
 import { createSqlClient, type SqlClient, type SqlExecutor, type SqlRow } from "./sql-client.js";
@@ -24,6 +25,8 @@ import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 /** The tenant directory on Postgres, with the pool it opened and its members' settings. */
 export interface PostgresTenantDirectory extends TenantDirectory {
   readonly memberSettings: MemberSettingsStore;
+  /** The public beta's invite codes (#2501). */
+  readonly betaInvites: BetaInvites;
   readonly close: () => Promise<void>;
 }
 
@@ -284,6 +287,7 @@ export async function createPostgresTenantDirectory(
     },
 
     memberSettings: createPostgresMemberSettings(client),
+    betaInvites: createBetaInvites(client),
     close: () => client.close(),
   };
 }

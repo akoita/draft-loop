@@ -9,6 +9,7 @@ import {
 import { createFactUsageService } from "@draft-loop/application/fact-usage";
 import { createPreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { createWorkJournalService } from "@draft-loop/application/work-journal";
+import { createWritingSamplesService } from "@draft-loop/application/writing-samples";
 import { openRunQueue } from "@draft-loop/run-queue";
 import type { BlobStoragePort } from "@draft-loop/storage";
 import {
@@ -30,6 +31,7 @@ import {
   rulesScreeningSetup,
 } from "./content-screening-service.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
+import type { MaterialReviews } from "./material-reviews.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { createPostgresIdempotencyStore } from "./postgres-idempotency.js";
 import type { ProfileDerivations } from "./profile-routes.js";
@@ -56,6 +58,8 @@ export interface HostedApplicationParts {
   readonly briefExtractions?: BriefExtractions;
   /** The worker's derivation of career profiles; a derivation start answers 503 without it. */
   readonly profileDerivations?: ProfileDerivations;
+  /** The worker's critic pass on saved cover letters; a letter stands as drafted without it. */
+  readonly materialReviews?: MaterialReviews;
   /** Where a knowledge source version's bytes go in `blobs`. */
   readonly knowledgeLocation: (versionId: string) => string;
   readonly maxSourceBytes?: number;
@@ -85,6 +89,7 @@ export function composeHostedApplication(
     ...(parts.profileDerivations === undefined
       ? {}
       : { profileDerivations: parts.profileDerivations }),
+    ...(parts.materialReviews === undefined ? {} : { materialReviews: parts.materialReviews }),
     budgetCeiling,
     monthUsage: storage.monthUsage,
     idempotency: createPostgresIdempotencyStore({ keys: storage.idempotencyKeys }),
@@ -113,7 +118,9 @@ export function composeHostedApplication(
       service,
     }),
     factUsage: createFactUsageService(settings),
+    writingSamples: createWritingSamplesService(settings),
     sourceEvidenceKinds: storage,
+    applicationMaterialDrafts: storage.savedApplicationMaterial,
     careerInterview: {
       sessions: storage.careerInterviewSessions,
       allowProviderData: parts.screening?.allowProviderData ?? false,
@@ -144,13 +151,20 @@ export function hostedOperatorFor(tenancy: PostgresTenancy): OperatorTenantFor {
 }
 
 /** The organisation's plan entitlements and credit ledger, which a run start is checked against. */
-export function hostedEntitlementsFor(tenancy: PostgresTenancy): TenantEntitlementsFor {
+export function hostedEntitlementsFor(
+  tenancy: PostgresTenancy,
+  spendPoolUsd?: number,
+): TenantEntitlementsFor {
   return (tenantId) => {
     const storage = tenancy.forTenant(tenantId);
     return {
       entitlements: storage.organisationPlans.currentEntitlements,
       assignment: storage.organisationPlans.currentPlanAssignment,
       ledger: storage.creditLedger,
+      modelCalls: storage.modelCalls,
+      ...(spendPoolUsd === undefined
+        ? {}
+        : { spendPool: { limitUsd: spendPoolUsd, pool: storage.spendPool } }),
     };
   };
 }
@@ -197,7 +211,7 @@ export async function openHostedTenants(
           objectPrefix: blobs.prefixFor(tenantId),
         }),
         operatorFor: hostedOperatorFor(tenancy),
-        entitlementsFor: hostedEntitlementsFor(tenancy),
+        entitlementsFor: hostedEntitlementsFor(tenancy, config.spendPoolUsd),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),
@@ -227,6 +241,15 @@ export async function openHostedTenants(
               },
               state: (address) => queue.profileDerivationState({ tenantId, ...address }),
               cancel: (address) => queue.cancelProfileDerivation({ tenantId, ...address }),
+            },
+            materialReviews: {
+              // Queued, then the worker woken as for a run; a wake failure only delays it.
+              queue: async (job) => {
+                const queued = await queue.enqueueMaterialReview({ tenantId, ...job });
+                if (queued) await worker.wake().catch(worker.onWakeError);
+                return queued;
+              },
+              state: (address) => queue.materialReviewState({ tenantId, ...address }),
             },
             knowledgeLocation: (versionId) => hostedKnowledgeLocation(tenantId, versionId),
             screening,

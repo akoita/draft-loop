@@ -3607,6 +3607,29 @@ input[type="text"].workspace-title-input {
   background: var(--red-wash);
 }
 
+/* A failure the host retries on its own needs no action, so it reads calm, not alarming (#2489). */
+.provider-failure-panel.provider-failure-retrying {
+  border-color: var(--border);
+  background: var(--surface-inset);
+}
+
+.provider-failure-retrying .approval-actions .button {
+  flex: 0 0 auto;
+}
+
+.provider-stop-confirm {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.provider-stop-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .provider-failure-panel h2 {
   margin-bottom: var(--space-2);
   max-width: 54ch;
@@ -10694,6 +10717,236 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   .interview-stage-thinking .interview-orb-core,
   .interview-stage-connecting .interview-orb-core,
   .interview-orb-dots span {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   Export preview (#2498): the file Export would save, page by page
+   ========================================================================= */
+
+.export-preview {
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  height: min(900px, calc(100vh - var(--space-8)));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+  animation: rise var(--dur) var(--ease);
+}
+
+.export-preview-header,
+.export-preview-tools,
+.export-preview-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+}
+
+.export-preview-header {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.export-preview-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.export-preview-close {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.export-preview-tools {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.export-preview-templates {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-inline-size: 0;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0;
+  overflow: hidden;
+}
+
+.export-preview-template {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.export-preview-template + .export-preview-template {
+  border-left: 1px solid var(--border-strong);
+}
+
+.export-preview-template input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.export-preview-template.is-chosen {
+  background: var(--teal);
+  color: var(--teal-ink);
+}
+
+.export-preview-template:has(input:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.export-preview-tools .export-preview-format {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 8rem;
+}
+
+.export-preview-fit {
+  margin-left: auto;
+  border: 1px solid var(--teal-line);
+  border-radius: 999px;
+  padding: 2px var(--space-3);
+  background: var(--teal-wash);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.export-preview-fit.is-over {
+  border-color: var(--amber-line);
+  background: var(--amber-wash);
+}
+
+.export-preview-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-5);
+  background: var(--surface-inset);
+}
+
+.export-preview-pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.export-preview-page {
+  margin: 0;
+  text-align: center;
+}
+
+.export-preview-page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
+}
+
+.export-preview-page figcaption {
+  margin-top: var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.export-preview-message {
+  margin: 0 auto var(--space-4);
+  max-width: 60ch;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.export-preview-text {
+  margin: 0 auto;
+  max-width: 80ch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.export-preview-footer {
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+
+.export-preview-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.export-preview-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* A phone gets the whole screen, pages stacked and the buttons full width. The review's own
+   phone rules stay the stylesheet's last 640px block (#1833). */
+@media (width <= 640px) {
+  .export-preview-backdrop {
+    padding: 0;
+  }
+
+  .export-preview {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .export-preview-header,
+  .export-preview-tools,
+  .export-preview-footer {
+    padding: var(--space-3);
+  }
+
+  .export-preview-tools .export-preview-format {
+    flex: 1 1 auto;
+  }
+
+  .export-preview-fit {
+    margin-left: 0;
+  }
+
+  .export-preview-canvas {
+    padding: var(--space-3);
+  }
+
+  .export-preview-actions {
+    width: 100%;
+  }
+
+  .export-preview-actions .button {
+    flex: 1 1 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .export-preview {
     animation: none;
   }
 }

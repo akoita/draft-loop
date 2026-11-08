@@ -23,20 +23,27 @@ owner token, has no organisation and answers `404` on these routes.
 - Before a run starts, DraftLoop estimates the credits it would reserve; a
   started run counts at once.
 
+The catalog's plans are Beta, Individual, Job-search pass, Pro, Team,
+Business and Internal. **Beta** is the free plan of the invite-only public
+test: three economy runs over three months, at most two a day and one at a
+time, one candidate record and no professional features.
+
 A plan sets these entitlements:
 
-| Entitlement           | Meaning                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| Credits per period    | Credits granted each period (one month, or three for a pass) |
-| Model tiers           | The model tiers a run may use                                |
-| Seats                 | Active members plus pending invitations                      |
-| Candidate records     | Records the organisation may hold                            |
-| Runs per day, at once | Daily and concurrent run limits                              |
-| Features              | Switches such as run comparison or bring-your-own-key        |
+| Entitlement           | Meaning                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| Credits per period    | Credits granted each period (one month, or three for a pass or Beta) |
+| Model tiers           | The model tiers a run may use                                        |
+| Seats                 | Active members plus pending invitations                              |
+| Candidate records     | Records the organisation may hold                                    |
+| Runs per day, at once | Daily and concurrent run limits                                      |
+| Model calls per day   | Interview turns, drafts and profile derivations outside runs         |
+| Features              | Switches such as run comparison or bring-your-own-key                |
 
 ## How to test it
 
 - Focused tests: `packages/domain/src/entitlements.test.ts`,
+  `packages/schemas/src/entitlements.test.ts`,
   `apps/api/src/credit-routes.test.ts`,
   `apps/api/src/operator-plan-routes.test.ts` and
   `apps/web/src/credits.test.tsx`.
@@ -55,7 +62,11 @@ A plan sets these entitlements:
 ## Limits
 
 - Partial: prices and self-service sign-up are not live, and production is held.
+- Beta allows 20 model calls a day outside runs; past that, those routes answer
+  `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - An organisation with no plan answers `403 plan_required`.
+- A deployment can set a monthly spend pool across organisations; when it is
+  used, run starts answer `503 spend_pool_exhausted` until the next month.
 
 ## Related
 

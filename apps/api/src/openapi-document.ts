@@ -9,6 +9,7 @@ import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
+import type { BetaInvites } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
 import type { TenantEntitlements } from "./entitlement-gate.js";
@@ -47,6 +48,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     },
     directory: {} as TenantDirectory,
     memberSettings: {} as MemberSettingsStore,
+    betaInvites: { invites: {} as BetaInvites, cap: 0 },
   });
   try {
     await app.ready();

@@ -16,6 +16,7 @@ import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
 import { createKnowledgeRunRecords } from "./knowledge-run-records.js";
 import { createLexicalIndex } from "./lexical-index.js";
 import { migratePostgres, postgresMigrations } from "./migrations.js";
+import { createModelCallMeter } from "./model-call-meter.js";
 import { createOrganisationErasure } from "./organisation-erasure.js";
 import { organisationErasureGrant } from "./organisation-erasure-migration.js";
 import { createOrganisationPlans } from "./organisation-plans.js";
@@ -25,7 +26,9 @@ import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunState } from "./run-state.js";
+import { createSavedApplicationMaterialStore } from "./saved-application-material.js";
 import { createSourceEvidenceKindOverrides } from "./source-evidence-kinds.js";
+import { createSpendPool } from "./spend-pool.js";
 import {
   createSqlClient,
   createSqlPool,
@@ -136,12 +139,15 @@ function tenantStorage(client: SqlSession) {
     organisationErasure: createOrganisationErasure(client),
     organisationPlans: createOrganisationPlans(client),
     creditLedger: createCreditLedger(client),
+    spendPool: createSpendPool(client),
+    modelCalls: createModelCallMeter(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),
     workJournalNotes: createWorkJournalNoteStore(client),
     agentTokens: createAgentTokenStore(client),
     careerInterviewSessions: createCareerInterviewSessionStore(client),
+    savedApplicationMaterial: createSavedApplicationMaterialStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>

@@ -16,6 +16,7 @@ import { noContentScreening } from "./content-screening-service.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import type { KnowledgeOwnersFor } from "./knowledge-access.js";
+import { noMaterialReviews } from "./material-reviews.js";
 import type { OperatorTenantFor } from "./operator-plan-routes.js";
 import { noProfileDerivations } from "./profile-routes.js";
 import type { RecordAccessFor } from "./record-access.js";
@@ -41,8 +42,11 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "applicationMaterialDrafts"
+    | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
+    | "writingSamples"
   >
 > &
   Pick<
@@ -54,8 +58,11 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "applicationMaterialDrafts"
+    | "materialReviews"
     | "preferenceSuggestions"
     | "factUsage"
+    | "writingSamples"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -253,12 +260,19 @@ export function registerTenantApplications(
     briefExtractions: forwarding(() => current().briefExtractions ?? noBriefExtractions),
     // Nor does it derive career profiles there.
     profileDerivations: forwarding(() => current().profileDerivations ?? noProfileDerivations),
+    // Nor does it review saved cover letters there.
+    materialReviews: forwarding(() => current().materialReviews ?? noMaterialReviews),
     // An application composed without a journal refuses every note as unavailable.
     workJournal: forwarding(() => current().workJournal ?? unavailableWorkJournal),
     sourceEvidenceKinds: forwarding(() => {
       const kinds = current().sourceEvidenceKinds;
       if (kinds === undefined) throw new TenantContextMissingError();
       return kinds;
+    }),
+    applicationMaterialDrafts: forwarding(() => {
+      const drafts = current().applicationMaterialDrafts;
+      if (drafts === undefined) throw new TenantContextMissingError();
+      return drafts;
     }),
     // Read per request: the tenant's sessions, and the deployment's Claude route and ceiling.
     careerInterview: {
@@ -278,6 +292,11 @@ export function registerTenantApplications(
     preferenceSuggestions: forwarding(
       () => current().preferenceSuggestions ?? noPreferenceSuggestions,
     ),
+    writingSamples: forwarding(() => {
+      const samples = current().writingSamples;
+      if (samples === undefined) throw new TenantContextMissingError();
+      return samples;
+    }),
     factUsage: forwarding(() => {
       const factUsage = current().factUsage;
       if (factUsage === undefined) throw new TenantContextMissingError();
