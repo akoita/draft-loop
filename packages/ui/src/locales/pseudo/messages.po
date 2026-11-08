@@ -2796,6 +2796,20 @@ msgstr ""
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr ""
 
+#. placeholder {0}: state.artifact.version
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the critic on version {0} shortly."
+msgstr ""
+
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the draft shortly."
+msgstr ""
+
+#. placeholder {0}: state.round
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the revision for round {0} shortly."
+msgstr ""
+
 #: apps/web/src/consent.tsx
 msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
 msgstr ""
@@ -8142,6 +8156,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "The review is still running, so nothing here needs you yet. It pauses when it needs your decisions."
+msgstr ""
+
+#: apps/web/src/review-actions.ts
+msgid "The review is still running, so this change was not saved. Make it once the round finishes."
 msgstr ""
 
 #: packages/ui/src/review-run-status.ts

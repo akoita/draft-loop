@@ -2790,6 +2790,20 @@ msgstr "DraftLoop réessaie encore. Arrêter met fin à cette relecture pour de 
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr "DraftLoop a repéré ces habitudes dans vos choix de relecture. Vous décidez : en accepter une l’ajoute à votre politique de rédaction pour les nouvelles exécutions."
 
+#. placeholder {0}: state.artifact.version
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the critic on version {0} shortly."
+msgstr "DraftLoop relance bientôt le relecteur sur la version {0}."
+
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the draft shortly."
+msgstr "DraftLoop relance bientôt la rédaction."
+
+#. placeholder {0}: state.round
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the revision for round {0} shortly."
+msgstr "DraftLoop relance bientôt la révision du tour {0}."
+
 #: apps/web/src/consent.tsx
 msgid "DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU."
 msgstr "DraftLoop conserve dans l’UE les CV, notes et dossiers que vous importez pour ce candidat."
@@ -8138,6 +8152,10 @@ msgstr "La relecture est en cours."
 #: packages/ui/src/review.tsx
 msgid "The review is still running, so nothing here needs you yet. It pauses when it needs your decisions."
 msgstr "La relecture est toujours en cours, rien ne vous attend ici pour l’instant. Elle s’arrête quand elle a besoin de vos décisions."
+
+#: apps/web/src/review-actions.ts
+msgid "The review is still running, so this change was not saved. Make it once the round finishes."
+msgstr "La relecture est toujours en cours : cette modification n’a pas été enregistrée. Refaites-la une fois le tour terminé."
 
 #: packages/ui/src/review-run-status.ts
 msgid "The review pauses here when it needs your decision."
