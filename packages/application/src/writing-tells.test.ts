@@ -53,4 +53,11 @@ describe("writingTells", () => {
     expect(tells[2]).toMatchObject({ paragraph: 1, match: "i am" });
     expect(tells[3]).toEqual({ code: "word_count", match: "17" });
   });
+
+  it("flags sentences that only recite a skill (#2583)", () => {
+    const tells = writingTells([
+      "The OpenAI API is one of my skills. SSRF protection and LLM security are skills I bring.",
+    ]).filter((tell) => tell.code === "stock_phrase");
+    expect(tells.map((tell) => tell.match)).toEqual(["is one of my skills", "skills i bring"]);
+  });
 });
