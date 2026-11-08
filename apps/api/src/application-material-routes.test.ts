@@ -40,6 +40,20 @@ const service = {
           briefs: [{ briefId: "brief-1", latestVersion: 2, status: "reviewed", createdAt: "2026" }],
         }
       : undefined,
+  getWritingPolicy: async () => ({
+    policy: {
+      rules: [
+        {
+          id: "rule-1",
+          kind: "forbidden-term",
+          term: "synergy",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+      ],
+      preferences: { tone: "direct" },
+    },
+  }),
   getOpportunity: async () => ({
     brief: {
       requirements: [
@@ -95,6 +109,7 @@ async function build(options: {
   consent?: ConsentState;
   usage?: FactUsageSettings;
   drafts?: SavedApplicationMaterialStore;
+  samples?: readonly string[];
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
@@ -117,6 +132,14 @@ async function build(options: {
             },
           }),
       ...(options.drafts === undefined ? {} : { applicationMaterialDrafts: options.drafts }),
+      ...(options.samples === undefined
+        ? {}
+        : {
+            writingSamples: {
+              read: async () => options.samples ?? [],
+              replace: async (_root: string, samples: readonly string[]) => samples,
+            },
+          }),
       careerInterview: {
         sessions: createMemoryCareerInterviewSessionStore(),
         allowProviderData: true,
@@ -168,7 +191,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v6",
+      prompt_version: "application-material-v7",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -387,6 +410,88 @@ describe("application material route", () => {
     const listed = await app.inject({ method: "GET", url, headers: { authorization } });
     const kinds = (listed.json() as { drafts: { kind: string; tells?: unknown[] }[] }).drafts;
     expect(kinds.find((entry) => entry.kind === "cover-letter")?.tells).toHaveLength(2);
+  });
+
+  it("drafts with the economy model when asked and lists the models with estimates", async () => {
+    const seen: unknown[] = [];
+    let configured: string | undefined;
+    const scripted = scriptedRoute(
+      [{ items: [{ question: "Why?", text: "As a Data Analyst I report.", fact_ids: ["t"] }] }],
+      seen,
+    );
+    await build({
+      consent: granted,
+      route: (options) => {
+        configured = options.configuredModel.modelId;
+        return scripted(options);
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "interview-questions", model: "claude-haiku-5-5" },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(configured).toBe("claude-haiku-5-5");
+    const refused = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "interview-questions", model: "gpt-unknown" },
+    });
+    expect(refused.statusCode).toBe(400);
+    const models = await app.inject({
+      method: "GET",
+      url: "/v1/application-material/models",
+      headers: { authorization },
+    });
+    const listed = (
+      models.json() as {
+        models: { model_id: string; default: boolean; estimated_cost_usd?: number }[];
+      }
+    ).models;
+    expect(listed.map((entry) => [entry.model_id, entry.default])).toEqual([
+      ["claude-sonnet-5-5", true],
+      ["claude-haiku-5-5", false],
+    ]);
+    const [sonnet, haiku] = listed;
+    expect(sonnet?.estimated_cost_usd).toBeGreaterThan(haiku?.estimated_cost_usd ?? Infinity);
+  });
+
+  it("sends the candidate's samples and policy terms as voice, never as facts", async () => {
+    const seen: unknown[] = [];
+    const sample =
+      "I fixed the nightly report on a Tuesday, then told the team over coffee. Nothing fancy.";
+    await build({
+      consent: granted,
+      route: scriptedRoute(
+        [{ items: [{ question: "", text: "As a Data Analyst I report.", fact_ids: ["t"] }] }],
+        seen,
+      ),
+      samples: [sample],
+    });
+    const response = await draft("cover-letter");
+    expect(response.statusCode).toBe(200);
+    expect(seen[0]).toMatchObject({
+      candidate_voice: { samples: [sample], avoid_terms: ["synergy"], tone: "direct" },
+    });
+    expect(JSON.stringify((seen[0] as { facts: unknown }).facts)).not.toContain("nightly");
+    expect(logs.join("\n")).not.toContain("nightly");
+    const stored = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/owner/writing-samples",
+      headers: { authorization },
+      payload: { samples: ["Too short."] },
+    });
+    expect(stored.statusCode).toBe(400);
+    const saved = await app.inject({
+      method: "PUT",
+      url: "/v1/workspaces/owner/writing-samples",
+      headers: { authorization },
+      payload: { samples: [sample] },
+    });
+    expect(saved.json()).toEqual({ samples: [sample] });
   });
 
   it("serves no list when the server keeps no drafts", async () => {

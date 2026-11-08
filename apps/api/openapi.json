@@ -2290,6 +2290,14 @@
               "interview-questions"
             ]
           },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
           "guidance": {
             "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
@@ -7065,6 +7073,22 @@
           "content"
         ]
       },
+      "WritingSamplesInput": {
+        "type": "object",
+        "properties": {
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Texts the candidate wrote, used as style only, never as a source of facts."
+          }
+        },
+        "required": [
+          "samples"
+        ],
+        "additionalProperties": false
+      },
       "HealthInput": {
         "type": "object",
         "properties": {
@@ -7101,6 +7125,41 @@
         "required": [
           "exports"
         ]
+      },
+      "ApplicationMaterialModelsInput": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model_id": {
+                  "type": "string",
+                  "enum": [
+                    "claude-sonnet-5-5",
+                    "claude-haiku-5-5"
+                  ]
+                },
+                "default": {
+                  "type": "boolean"
+                },
+                "estimated_cost_usd": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "model_id",
+                "default"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "models"
+        ],
+        "additionalProperties": false
       },
       "ScreeningOutcome": {
         "type": "object",
@@ -9411,6 +9470,14 @@
             "enum": [
               "cover-letter",
               "interview-questions"
+            ]
+          },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
             ]
           },
           "guidance": {
@@ -13617,6 +13684,22 @@
         ],
         "additionalProperties": false
       },
+      "WritingSamples": {
+        "type": "object",
+        "properties": {
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Texts the candidate wrote, used as style only, never as a source of facts."
+          }
+        },
+        "required": [
+          "samples"
+        ],
+        "additionalProperties": false
+      },
       "Health": {
         "type": "object",
         "properties": {
@@ -13654,6 +13737,41 @@
         },
         "required": [
           "exports"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialModels": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model_id": {
+                  "type": "string",
+                  "enum": [
+                    "claude-sonnet-5-5",
+                    "claude-haiku-5-5"
+                  ]
+                },
+                "default": {
+                  "type": "boolean"
+                },
+                "estimated_cost_usd": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "model_id",
+                "default"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "models"
         ],
         "additionalProperties": false
       }
@@ -15185,6 +15303,147 @@
                     "dismissed"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/writing-samples": {
+      "get": {
+        "summary": "Read the candidate's writing samples",
+        "description": "The texts application material copies the candidate's style from.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingSamples"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace the candidate's writing samples",
+        "description": "Replaces every sample with at most 3 texts of up to 4000 characters; an empty list removes them. Drafts copy their sentence length, tone and words, and never take a fact, a name or a number from them.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "samples": {
+                    "maxItems": 3,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 80,
+                      "maxLength": 4000
+                    }
+                  }
+                },
+                "required": [
+                  "samples"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingSamples"
                 }
               }
             }
@@ -23316,6 +23575,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/application-material/models": {
+      "get": {
+        "summary": "List the models that can write application material",
+        "description": "The models a cover letter or interview questions can be drafted with, the default first, each with the estimated cost of a typical draft from the catalog's prices. An estimate is absent when the catalog has no price for the model.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialModels"
                 }
               }
             }

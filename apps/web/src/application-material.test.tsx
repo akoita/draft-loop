@@ -12,6 +12,7 @@ import {
   applicationMaterialFileName,
   applicationMaterialGuidanceFor,
   applicationMaterialMarkdown,
+  applicationMaterialModelLabel,
   applicationMaterialProblem,
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
@@ -42,6 +43,13 @@ const props: ApplicationMaterialViewProps = {
   busy: false,
   guidance: {},
   onGuidance: () => {},
+  models: [],
+  modelId: undefined,
+  onModel: () => {},
+  samples: undefined,
+  samplesSaved: true,
+  onSamples: () => {},
+  onSaveSamples: () => {},
   collapsed: false,
   onToggle: () => {},
   onKind: () => {},
@@ -155,6 +163,42 @@ describe("the prepare panel", () => {
     expect(
       renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
     ).not.toContain("Writing check");
+  });
+
+  it("offers the server's models with their cost, the default selected", () => {
+    const models = [
+      { model_id: "claude-sonnet-5-5" as const, default: true, estimated_cost_usd: 0.048 },
+      { model_id: "claude-haiku-5-5" as const, default: false, estimated_cost_usd: 0.004 },
+    ];
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} models={models} />);
+    expect(html).toContain(
+      '<option value="claude-sonnet-5-5" selected="">Claude Sonnet (best writing), about US$0.05 a draft</option>',
+    );
+    expect(html).toContain("Claude Haiku (economy), under US$0.01 a draft");
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "Model<select",
+    );
+    expect(applicationMaterialModelLabel({ model_id: "claude-haiku-5-5", default: false })).toBe(
+      "Claude Haiku (economy)",
+    );
+  });
+
+  it("offers three sample fields when the server keeps samples, saved or not", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        samples={["An old letter I wrote."]}
+        samplesSaved={false}
+      />,
+    );
+    expect(html).toContain("Your writing samples");
+    expect(html).toContain(">An old letter I wrote.</textarea>");
+    expect(html.match(/aria-label="Writing sample \d"/gu)).toHaveLength(3);
+    expect(html).toContain(">Save samples</button>");
+    expect(html).toContain("never what the samples say");
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "Your writing samples",
+    );
   });
 
   it("shows a refusal in the panel while the controls stay usable", () => {

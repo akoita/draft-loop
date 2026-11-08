@@ -83,6 +83,10 @@
       "types": "./src/preference-suggestions.ts",
       "import": "./src/preference-suggestions.ts"
     },
+    "./writing-samples": {
+      "types": "./src/writing-samples.ts",
+      "import": "./src/writing-samples.ts"
+    },
     "./fact-usage": {
       "types": "./src/fact-usage.ts",
       "import": "./src/fact-usage.ts"

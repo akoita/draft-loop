@@ -675,6 +675,14 @@ msgstr "{matched} (not a valid choice)"
 msgid "{name} · {0}"
 msgstr "{name} · {0}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), about {cost} a draft"
+msgstr "{name} ({role}), about {cost} a draft"
+
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), under US$0.01 a draft"
+msgstr "{name} ({role}), under US$0.01 a draft"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr "{name} was removed from recent workspaces. Its files are unchanged."
@@ -1543,6 +1551,10 @@ msgstr "Before you can start"
 #: packages/ui/src/review.tsx
 msgid "Before your edits, the final CV checks failed:"
 msgstr "Before your edits, the final CV checks failed:"
+
+#: apps/web/src/application-material-model.ts
+msgid "best writing"
+msgstr "best writing"
 
 #. placeholder {0}: status.reason
 #: packages/ui/src/application-steps-model.ts
@@ -2918,6 +2930,10 @@ msgstr "earlier run"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Earlier versions cannot be edited."
 msgstr "Earlier versions cannot be edited."
+
+#: apps/web/src/application-material-model.ts
+msgid "economy"
+msgstr "economy"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Economy"
@@ -4497,6 +4513,7 @@ msgstr "Mistral Large 4 (preview)"
 msgid "model"
 msgstr "model"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/app.tsx
 msgid "Model"
 msgstr "Model"
@@ -5602,6 +5619,10 @@ msgstr "Paste the owner token."
 #: apps/web/src/http-bridge.ts
 msgid "Paste this application's job description first."
 msgstr "Paste this application's job description first."
+
+#: apps/web/src/application-material.tsx
+msgid "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+msgstr "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
@@ -6845,6 +6866,10 @@ msgstr "Same {noun}"
 msgid "Same text as the active version."
 msgstr "Same text as the active version."
 
+#: apps/web/src/application-material.tsx
+msgid "Samples saved"
+msgstr "Samples saved"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Save"
@@ -6876,6 +6901,10 @@ msgstr "Save new version"
 #: packages/ui/src/review.tsx
 msgid "Save override"
 msgstr "Save override"
+
+#: apps/web/src/application-material.tsx
+msgid "Save samples"
+msgstr "Save samples"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
@@ -9519,6 +9548,11 @@ msgstr "Writing policy needs attention: it cannot be read."
 msgid "Writing policy versions"
 msgstr "Writing policy versions"
 
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Writing sample {0}"
+msgstr "Writing sample {0}"
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -9701,3 +9735,7 @@ msgstr "Your workspace"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."
 msgstr "Your writing model splits the job page into requirements you review."
+
+#: apps/web/src/application-material.tsx
+msgid "Your writing samples"
+msgstr "Your writing samples"
