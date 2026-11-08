@@ -13592,6 +13592,74 @@
         }
       }
     },
+    "/v1/client-errors": {
+      "post": {
+        "summary": "Report a crash in the web screen",
+        "description": "Takes an uncaught error or rejected promise from the web screen: its kind, message, stack frames, the screen's path and the build. The API removes quoted text, addresses, numbers, queries and ids before it logs one line. 429 rate_limited after 10 reports in 10 minutes from one address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "error",
+                      "unhandled_rejection"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "stack": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  },
+                  "route": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "build": {
+                    "type": "string",
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "kind",
+                  "message",
+                  "route",
+                  "build"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/proof": {
       "post": {
         "summary": "Prove this server holds the owner token, without either side sending it",

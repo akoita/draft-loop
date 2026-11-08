@@ -85,6 +85,12 @@ the identity provider (authorization code with PKCE), and is kept in the tab.
   about. The screen words known codes in its own language
   (`refusal-text.ts`) and shows the message for any other; the MCP server
   shows the message.
+- **Crash reports.** An uncaught error or rejected promise in the tab is
+  posted to the public `POST /v1/client-errors` (`error-reporting.ts`). The
+  screen and the API both scrub it (`@draft-loop/domain/client-error-report`):
+  quoted text, addresses, numbers, queries and ids are removed, and only stack
+  frames are kept. The API logs one `client_error` line at `ERROR` severity.
+  One tab sends at most 5 reports, and one address at most 10 per 10 minutes.
 - **Exports** download under the name the review state shows
   (`@draft-loop/ui/export-file-name`), Modern unless another template is
   chosen.

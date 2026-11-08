@@ -1123,6 +1123,16 @@ export interface ApiOperations {
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
   };
+  "POST /v1/client-errors": {
+    readonly body: {
+      readonly kind: "error" | "unhandled_rejection";
+      readonly message: string;
+      readonly stack?: readonly (string)[];
+      readonly route: string;
+      readonly build: string;
+    };
+    readonly response: void;
+  };
   "POST /v1/auth/proof": {
     readonly body: ApiSchemas["OwnerTokenProofRequestInput"];
     readonly response: ApiSchemas["OwnerTokenProof"];
