@@ -89,7 +89,14 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
     storage: () => globalThis.sessionStorage,
     now: () => Date.now(),
   });
-  return <OidcApp session={session} createClient={createClient} navigation={navigation} />;
+  return (
+    <OidcApp
+      session={session}
+      createClient={createClient}
+      navigation={navigation}
+      waitlist={config.waitlist === true}
+    />
+  );
 }
 
 // The API says how this deployment signs people in: the owner token, or the identity provider.

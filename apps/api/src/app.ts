@@ -191,7 +191,10 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
   readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
-  /** The beta waitlist; without it `/v1/waitlist` and its operator routes are absent (#2566). */
+  /**
+   * The beta waitlist; without it `/v1/waitlist` and its operator routes are absent (#2566).
+   * With it, the auth config tells the signed-out screen to show the landing page (#2567).
+   */
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
@@ -297,7 +300,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     },
     async () => ({ status: "ok" as const }),
   );
-  registerAuthConfigRoutes(app, auth);
+  registerAuthConfigRoutes(app, auth, options.betaWaitlist !== undefined);
   registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 

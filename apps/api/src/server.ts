@@ -22,6 +22,7 @@ import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
 const localModels = readLocalModels(process.env);
+const betaAccountCap = readBetaAccountCap(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
@@ -79,8 +80,9 @@ const app = await buildApi({
     : {
         directory,
         memberSettings: directory.memberSettings,
-        betaInvites: { invites: directory.betaInvites, cap: readBetaAccountCap(process.env) },
-        betaWaitlist: directory.betaWaitlist,
+        betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
+        // The waitlist and the public landing page exist only while the beta is open (#2567).
+        ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
