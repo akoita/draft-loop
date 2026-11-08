@@ -37,8 +37,11 @@ export type AgentScope = "journal" | "applications:read" | "jobs:write";
 
 export const agentScopes: readonly AgentScope[] = ["journal", "applications:read", "jobs:write"];
 
-/** A new token's scopes until the person changes them. */
-export const defaultAgentScopes: readonly AgentScope[] = ["journal"];
+/**
+ * A new token's scopes until the person changes them: everything the plugin's skills and tools
+ * use (#2534), so a first token is not refused; the person can still untick any of them.
+ */
+export const defaultAgentScopes: readonly AgentScope[] = agentScopes;
 
 export function agentScopeLabel(scope: AgentScope): string {
   switch (scope) {

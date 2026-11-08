@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -72,7 +72,13 @@ describe("the DraftLoop Claude Code plugin", () => {
       logWorkSkill,
     );
     const offered = new Set(await toolNames());
-    for (const skill of ["log-work", "tailor-cv"]) {
+    expect((await readdir(join(plugin, "skills"))).sort()).toEqual([
+      "applications",
+      "log-work",
+      "status",
+      "tailor-cv",
+    ]);
+    for (const skill of ["log-work", "tailor-cv", "applications", "status"]) {
       const text = await readFile(join(plugin, "skills", skill, "SKILL.md"), "utf8");
       expect(text, skill).toMatch(
         new RegExp(`^---\\nname: ${skill}\\ndescription: .+\\n---\\n`, "u"),
