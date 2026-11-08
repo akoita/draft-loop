@@ -1,3 +1,9 @@
+import {
+  defaultExportTemplate,
+  type ExportTemplate,
+  exportTemplateLabels,
+  exportTemplates,
+} from "@draft-loop/ui/export-template";
 import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
@@ -58,6 +64,10 @@ export interface ApplicationMaterialViewProps {
   readonly onDownload: () => void;
   readonly onSelect: (id: string) => void;
   readonly onDelete: () => void;
+  /** The CV template a saved draft downloads with; absent where documents are not offered. */
+  readonly template?: ExportTemplate;
+  readonly onTemplate?: (template: ExportTemplate) => void;
+  readonly onDocument?: (format: "docx" | "pdf") => void;
   /** The texts being edited, one per item, or undefined when the draft is not being edited. */
   readonly edits?: readonly string[] | undefined;
   readonly onEdit?: () => void;
@@ -357,6 +367,39 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                   onClick={props.onEdit}
                 >{t`Edit`}</button>
               )}
+              {draft.id === undefined || props.onDocument === undefined ? null : (
+                <>
+                  <label className="application-material-template">
+                    {t`Template`}
+                    <select
+                      className="input"
+                      value={props.template ?? defaultExportTemplate}
+                      disabled={busy}
+                      onChange={(event) =>
+                        props.onTemplate?.(event.currentTarget.value as ExportTemplate)
+                      }
+                    >
+                      {exportTemplates.map((template) => (
+                        <option key={template} value={template}>
+                          {exportTemplateLabels()[template]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    disabled={busy}
+                    onClick={() => props.onDocument?.("docx")}
+                  >{t`Download Word`}</button>
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    disabled={busy}
+                    onClick={() => props.onDocument?.("pdf")}
+                  >{t`Download PDF`}</button>
+                </>
+              )}
               <button
                 type="button"
                 className="button button-outline"
@@ -399,6 +442,7 @@ export function ApplicationMaterialSection({
   const [samples, setSamples] = useState<readonly string[] | undefined>(undefined);
   const [samplesSaved, setSamplesSaved] = useState(true);
   const [edits, setEdits] = useState<readonly string[] | undefined>(undefined);
+  const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
@@ -500,6 +544,25 @@ export function ApplicationMaterialSection({
         setUnsaved(undefined);
         setProblem(undefined);
         setEdits(undefined);
+      }}
+      template={template}
+      onTemplate={setTemplate}
+      onDocument={async (format) => {
+        const id = draft?.id;
+        if (id === undefined || draft === undefined) return;
+        setBusy(true);
+        setProblem(undefined);
+        try {
+          const bytes = await client.call(
+            "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/document",
+            { path: { workspaceId, applicationId, materialId: id }, query: { format, template } },
+          );
+          saveFile(bytes as Blob, applicationMaterialFileName(draft.kind, format));
+        } catch (error) {
+          setProblem(applicationMaterialProblem(error));
+        } finally {
+          setBusy(false);
+        }
       }}
       edits={edits}
       onEdit={() => setEdits(draft?.items.map((item) => item.text))}
