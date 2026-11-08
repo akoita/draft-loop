@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext } from "react";
+import type { LoadExportPreview } from "./export-preview.js";
 
 /**
  * Panels a host adds to the shared screens. Every slot is optional and renders nothing when the
@@ -29,6 +30,11 @@ export interface HostPanels {
   readonly application?: (context: ApplicationPanelContext) => ReactNode;
   /** Shown under Home's Workspace settings actions, such as suggested preferences (#2265). */
   readonly workspaceSettings?: () => ReactNode;
+  /**
+   * Reads the file an export would save without saving it, for the review's Preview (#2498).
+   * Without it the review offers no preview.
+   */
+  readonly exportPreview?: LoadExportPreview;
 }
 
 /** What the host's panel below the Career evidence page's knowledge panel is given. */
@@ -84,4 +90,9 @@ export function HostApplicationPanel(context: ApplicationPanelContext) {
 /** The host's panel under Home's Workspace settings actions; nothing without one. */
 export function HostWorkspaceSettings() {
   return useContext(HostPanelsContext).workspaceSettings?.() ?? null;
+}
+
+/** The host's export preview reader, or undefined when the host offers no preview (#2498). */
+export function useExportPreview(): LoadExportPreview | undefined {
+  return useContext(HostPanelsContext).exportPreview;
 }
