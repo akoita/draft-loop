@@ -12,6 +12,23 @@ type ReviewAction = Exclude<ReviewDispatch["action"], { type: "start" }>;
 export type DownloadFile = (bytes: Blob, fileName: string) => void;
 
 /**
+ * Sends a review decision, and words the refusal of a run still being reviewed for the person: a
+ * screen read before a step failed and was retried can still offer an edit (#2490).
+ */
+async function whileReviewOpen(send: () => Promise<unknown>): Promise<void> {
+  try {
+    await send();
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.code === "review_closed") {
+      refuse(
+        t`The review is still running, so this change was not saved. Make it once the round finishes.`,
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * Carries out one of the shared review screen's actions on a run through the review routes
  * (ADR 0011, D9). The server decides each one as the desktop host does; the caller then reads the
  * review state again, so the screens see what the server recorded.
@@ -35,20 +52,24 @@ export function createReviewActions(
     switch (action.type) {
       case "finding-decision": {
         const { findingId, decision, rationale } = action;
-        await client.call(
-          "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
-          {
-            path: { ...path, findingId },
-            body: { decision, ...(rationale === undefined ? {} : { rationale }) },
-          },
+        await whileReviewOpen(() =>
+          client.call(
+            "PUT /v1/workspaces/{workspaceId}/runs/{runId}/findings/{findingId}/decision",
+            {
+              path: { ...path, findingId },
+              body: { decision, ...(rationale === undefined ? {} : { rationale }) },
+            },
+          ),
         );
         return;
       }
       case "edit-block":
-        await client.call("PUT /v1/workspaces/{workspaceId}/runs/{runId}/edits/{blockId}", {
-          path: { ...path, blockId: action.blockId },
-          body: { text: action.text },
-        });
+        await whileReviewOpen(() =>
+          client.call("PUT /v1/workspaces/{workspaceId}/runs/{runId}/edits/{blockId}", {
+            path: { ...path, blockId: action.blockId },
+            body: { text: action.text },
+          }),
+        );
         return;
       case "approve": {
         const rationale = action.readinessOverrideRationale;

@@ -11,6 +11,7 @@ import type {
   WorkspaceDescriptor,
 } from "@draft-loop/application";
 import {
+  automaticRetryTime,
   candidateEditedBlockIds,
   hasCompletedIndependentCritique,
   type RunSnapshot,
@@ -180,11 +181,15 @@ function providerFailure(
     snapshot.lastError.retryable && snapshot.lastError.attempt < snapshot.lastError.maxAttempts;
   const retryAvailable = retryable && !retriedByHost;
   const automaticRetry = retriedByHost && retryable && retriesAutomatically(snapshot);
+  const failedAt = Date.parse(snapshot.updatedAt);
+  // A host retry names when it starts, so the screen can say how long to wait (#2489).
   const retryNotBefore =
-    snapshot.lastError.retryNotBefore !== undefined &&
-    Number.isFinite(Date.parse(snapshot.lastError.retryNotBefore))
-      ? new Date(snapshot.lastError.retryNotBefore).toISOString()
-      : null;
+    automaticRetry && Number.isFinite(failedAt)
+      ? automaticRetryTime(snapshot, new Date(failedAt)).toISOString()
+      : snapshot.lastError.retryNotBefore !== undefined &&
+          Number.isFinite(Date.parse(snapshot.lastError.retryNotBefore))
+        ? new Date(snapshot.lastError.retryNotBefore).toISOString()
+        : null;
   return {
     code,
     explanation: providerSessionModelFeedback({

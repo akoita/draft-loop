@@ -134,6 +134,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/review",
   "POST /v1/workspaces/:workspaceId/runs",
   "POST /v1/workspaces/:workspaceId/runs/:runId/approve",
+  "POST /v1/workspaces/:workspaceId/runs/:runId/export-preview",
   "POST /v1/workspaces/:workspaceId/runs/:runId/exports",
   "POST /v1/workspaces/:workspaceId/runs/:runId/pause",
   "POST /v1/workspaces/:workspaceId/runs/:runId/resume",

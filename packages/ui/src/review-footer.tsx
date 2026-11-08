@@ -42,7 +42,12 @@ import {
   groupReadinessBlockers,
   type ReadinessBlockerGroup,
 } from "./readiness-blocker-groups.js";
-import { inProgressStatus, reviewInProgress, uncritiquedStatus } from "./review-run-status.js";
+import {
+  hostRetrying,
+  inProgressStatus,
+  reviewInProgress,
+  uncritiquedStatus,
+} from "./review-run-status.js";
 import {
   maximumRevisionDirectionLength,
   revisionDirectionsUnavailableNote,
@@ -167,7 +172,7 @@ export function footerBlocker(
       tone: "warning",
     };
   }
-  if (reviewInProgress(state)) {
+  if (reviewInProgress(state) || hostRetrying(state)) {
     return { kind: "waiting", text: inProgressStatus(state).label, tone: "neutral" };
   }
   if (!state.reviewComplete) {

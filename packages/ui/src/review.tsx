@@ -93,6 +93,12 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import {
+  automaticRetryLine,
+  ProviderFailureStopButton,
+  providerRecoveryEyebrow,
+  providerRecoveryKind,
+} from "./provider-recovery.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
@@ -105,6 +111,7 @@ import {
 import { PanelToggle, RunTimeline, useCollapsedReviewPanels } from "./review-panels.js";
 import {
   canStartNewReview,
+  hostRetrying,
   inProgressStatus,
   notIndexedRetrievalText,
   reviewFinished,
@@ -1052,7 +1059,8 @@ export function ReviewWorkspace({
   const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
   // Edits apply at approval, so the draft locks once it is approved, and while a round runs the
   // next version would replace them (#1925).
-  const draftEditable = !readOnly && !reviewFinished(state) && !reviewInProgress(state);
+  const draftEditable =
+    !readOnly && !reviewFinished(state) && !reviewInProgress(state) && !hostRetrying(state);
   const savedBlockText = useMemo(
     () =>
       new Map(
@@ -1108,21 +1116,23 @@ export function ReviewWorkspace({
     state.state !== "collecting" &&
     state.state !== "provider-error";
   const runInProgress = reviewInProgress(state);
+  // A step the host retries on its own reads as a review still going, not one waiting on the person.
+  const reviewWorking = runInProgress || hostRetrying(state);
   // Only a reviewed, still unapproved draft gets a verdict; elsewhere the gate explains the state.
   const verdict =
     hasArtifact &&
     state.reviewComplete &&
-    !runInProgress &&
+    !reviewWorking &&
     !roundLimitRecovery &&
     state.approval !== "approved"
       ? sendVerdict({ blocking: blockingFindings, warnings, readiness: approvalReadiness })
       : null;
-  const runStatusLine = runInProgress
+  const runStatusLine = reviewWorking
     ? inProgressStatus(state)
     : !state.reviewComplete
       ? uncritiquedStatus(state)
       : null;
-  const validationLabel = runInProgress
+  const validationLabel = reviewWorking
     ? (runStatusLine?.label ?? "")
     : !hasArtifact
       ? t`No draft artifact available`
@@ -2964,11 +2974,13 @@ export function ReviewWorkspace({
 
           {state.state === "provider-error" && state.providerFailure !== null ? (
             <section
-              className="panel provider-failure-panel"
-              role="alert"
+              className={`panel provider-failure-panel${state.providerFailure.automaticRetry ? " provider-failure-retrying" : ""}`}
+              role={state.providerFailure.automaticRetry ? "status" : "alert"}
               aria-label={t`provider failure`}
             >
-              <p className="eyebrow">{t`Provider request failed`}</p>
+              <p className="eyebrow">
+                {providerRecoveryEyebrow(providerRecoveryKind(state.providerFailure))}
+              </p>
               <h2>{state.providerFailure.explanation}</h2>
               <p className="subtle">
                 {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
@@ -3011,19 +3023,16 @@ export function ReviewWorkspace({
                     >{t`Return to review`}</button>
                   ) : null}
                   {state.providerFailure.availableActions.includes("stop") ? (
-                    <button
-                      className="button button-quiet"
-                      type="button"
-                      onClick={() => onAction({ type: "stop" })}
-                    >{t`Stop run`}</button>
+                    <ProviderFailureStopButton
+                      confirm={state.providerFailure.automaticRetry}
+                      onStop={() => onAction({ type: "stop" })}
+                    />
                   ) : null}
                 </div>
               )}
               {state.providerFailure.automaticRetry ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
-                  {retryRemainingMs > 0
-                    ? t`DraftLoop retries the ${state.providerFailure.step} automatically in ${retryWaitLabel(retryRemainingMs)}.`
-                    : t`DraftLoop retries the ${state.providerFailure.step} automatically.`}
+                  {automaticRetryLine(state.providerFailure, retryRemainingMs)}
                 </p>
               ) : retryRemainingMs > 0 && state.providerFailure.retryAvailable ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
@@ -3031,7 +3040,7 @@ export function ReviewWorkspace({
                   {retryWaitLabel(retryRemainingMs)}).
                 </p>
               ) : !state.providerFailure.availableActions.some((action) => action !== "stop") ? (
-                <p className="subtle">{t`This run has no retry left. Stop it, then start a new run.`}</p>
+                <p className="subtle">{t`This run has no retry left. Stop it, then start a new review.`}</p>
               ) : null}
             </section>
           ) : null}
@@ -3043,14 +3052,14 @@ export function ReviewWorkspace({
 
           <section
             hidden={comparing}
-            className={`validation-banner validation-${runInProgress ? "in-progress" : findingSummary.status}`}
+            className={`validation-banner validation-${reviewWorking ? "in-progress" : findingSummary.status}`}
             aria-label={t`validation status`}
             role="status"
             aria-live="polite"
           >
             <strong>{validationLabel}</strong>
             <span>
-              {runInProgress
+              {reviewWorking
                 ? runStatusLine?.detail
                 : !hasArtifact
                   ? t`Complete or recover the author step before reviewing findings or approving an artifact.`

@@ -752,6 +752,10 @@ msgstr ""
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr ""
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr ""
@@ -1361,6 +1365,17 @@ msgstr ""
 msgid "Attach the job description file."
 msgstr ""
 
+#. placeholder {0}: failure.maxAttempts
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} is starting."
+msgstr ""
+
+#. placeholder {0}: failure.maxAttempts
+#. placeholder {1}: waitLabel(remainingMs)
+#: packages/ui/src/provider-recovery.tsx
+msgid "Attempt {next} of {0} starts in {1}."
+msgstr ""
+
 #: packages/ui/src/provider-authentication-actions.ts
 msgid "Authenticated Codex / ChatGPT subscription"
 msgstr ""
@@ -1551,6 +1566,10 @@ msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Call limit"
+msgstr ""
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Can't recover"
 msgstr ""
 
 #. placeholder {0}: first.detail ?? first.label
@@ -2777,19 +2796,26 @@ msgstr ""
 msgid "DraftLoop is fetching the job page you approved. Its text then goes to {providerName} ({modelName}) to split into requirements."
 msgstr ""
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
+msgstr ""
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr ""
 
-#. placeholder {0}: state.providerFailure.step
-#. placeholder {1}: retryWaitLabel(retryRemainingMs)
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically in {1}."
+#. placeholder {0}: state.artifact.version
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the critic on version {0} shortly."
 msgstr ""
 
-#. placeholder {0}: state.providerFailure.step
-#: packages/ui/src/review.tsx
-msgid "DraftLoop retries the {0} automatically."
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the draft shortly."
+msgstr ""
+
+#. placeholder {0}: state.round
+#: packages/ui/src/review-run-status.ts
+msgid "DraftLoop retries the revision for round {0} shortly."
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -3988,6 +4014,10 @@ msgstr ""
 
 #: apps/web/src/screening-model.ts
 msgid "Keep the reason to {maximumReleaseReasonLength} characters or fewer."
+msgstr ""
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Keep waiting"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -5700,10 +5730,6 @@ msgid "Provider recovery remains before approval"
 msgstr ""
 
 #: packages/ui/src/review.tsx
-msgid "Provider request failed"
-msgstr ""
-
-#: packages/ui/src/review.tsx
 msgid "Provider sign-in lives in Home, under Workspace settings"
 msgstr ""
 
@@ -6381,6 +6407,10 @@ msgstr ""
 
 #: packages/ui/src/profile-status-view.tsx
 msgid "Retry profile generation"
+msgstr ""
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Retrying on its own"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -7284,12 +7314,16 @@ msgstr ""
 msgid "Stop and transcribe"
 msgstr ""
 
+#: packages/ui/src/provider-recovery.tsx
+msgid "Stop for good"
+msgstr ""
+
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/review.tsx
 msgid "Stop review"
 msgstr ""
 
-#: packages/ui/src/review.tsx
+#: packages/ui/src/provider-recovery.tsx
 msgid "Stop run"
 msgstr ""
 
@@ -8132,6 +8166,10 @@ msgstr ""
 msgid "The review is still running, so nothing here needs you yet. It pauses when it needs your decisions."
 msgstr ""
 
+#: apps/web/src/review-actions.ts
+msgid "The review is still running, so this change was not saved. Make it once the round finishes."
+msgstr ""
+
 #: packages/ui/src/review-run-status.ts
 msgid "The review pauses here when it needs your decision."
 msgstr ""
@@ -8540,7 +8578,7 @@ msgid "This rewrites the run history stored with this workspace so it takes less
 msgstr ""
 
 #: packages/ui/src/review.tsx
-msgid "This run has no retry left. Stop it, then start a new run."
+msgid "This run has no retry left. Stop it, then start a new review."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9089,6 +9127,10 @@ msgstr ""
 
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Waiting for a worker to start…"
+msgstr ""
+
+#: packages/ui/src/provider-recovery.tsx
+msgid "Waiting for you"
 msgstr ""
 
 #: packages/ui/src/review.tsx

@@ -544,7 +544,7 @@ describe("desktop trust-centered review", () => {
       />,
     );
 
-    expect(html).toContain("Provider request failed");
+    expect(html).toContain("Waiting for you");
     expect(html).toContain('class="error-banner" role="alert"');
     expect(html).toContain("The review action could not be completed.");
     expect(html).toContain("Retry critic");
@@ -616,9 +616,12 @@ describe("desktop trust-centered review", () => {
       <ReviewWorkspace state={state(noRetry())} onAction={() => undefined} />,
     );
 
-    expect(retrying).toContain("DraftLoop retries the author automatically.");
+    expect(retrying).toContain("Retrying on its own");
+    expect(retrying).toContain("Attempt 2 of 3 is starting.");
+    expect(retrying).toContain("waiting is safe");
     expect(retrying).not.toContain("Retry author");
-    expect(exhausted).toContain("This run has no retry left. Stop it, then start a new run.");
+    expect(exhausted).toContain("Can&#x27;t recover");
+    expect(exhausted).toContain("This run has no retry left. Stop it, then start a new review.");
     expect(exhausted).not.toContain("Retry author");
     expect(exhausted).toContain("Stop run");
   });

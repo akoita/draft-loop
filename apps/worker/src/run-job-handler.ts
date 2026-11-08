@@ -3,7 +3,13 @@ import {
   type RunBudgetCeiling,
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
-import { type RunSnapshot, type RunState, retriesAutomatically } from "@draft-loop/orchestrator";
+import {
+  automaticRetryTime,
+  defaultAutomaticRetryDelays,
+  type RunSnapshot,
+  type RunState,
+  retriesAutomatically,
+} from "@draft-loop/orchestrator";
 import type { RunJob, RunJobHandler } from "@draft-loop/run-queue";
 
 import type { RunCredits } from "./run-credit-settlement.js";
@@ -124,8 +130,6 @@ const executableStates: ReadonlySet<RunState> = new Set([
 ]);
 
 const defaultUsageLimitRetryMs = 15 * 60 * 1000;
-const defaultRateLimitRetryMs = 60 * 1000;
-const defaultFailureRetryMs = 10 * 1000;
 
 function pausedForUsageLimit(snapshot: RunSnapshot): boolean {
   return snapshot.state === "paused" && snapshot.lastError?.code === "usage-limit";
@@ -140,8 +144,10 @@ function pausedForUsageLimit(snapshot: RunSnapshot): boolean {
 export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandler {
   const now = options.now ?? (() => new Date());
   const retryMs = options.usageLimitRetryMs ?? defaultUsageLimitRetryMs;
-  const rateLimitRetryMs = options.rateLimitRetryMs ?? defaultRateLimitRetryMs;
-  const failureRetryMs = options.failureRetryMs ?? defaultFailureRetryMs;
+  const retryDelays = {
+    rateLimitMs: options.rateLimitRetryMs ?? defaultAutomaticRetryDelays.rateLimitMs,
+    failureMs: options.failureRetryMs ?? defaultAutomaticRetryDelays.failureMs,
+  };
 
   /** When the limit resets, or a fixed wait when it names no time or a time already past. */
   const resumeTime = (snapshot: RunSnapshot): Date => {
@@ -152,14 +158,11 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
 
   /**
    * The later of the provider's retry time and a fixed wait: a per-minute token limit can refuse a
-   * retry the provider's short hint allows, and resume does nothing before the retry time.
+   * retry the provider's short hint allows, and resume does nothing before the retry time. The
+   * review screen names the same time from the shared rule.
    */
-  const retryTime = (snapshot: RunSnapshot): Date => {
-    const notBefore = Date.parse(snapshot.lastError?.retryNotBefore ?? "");
-    const wait = snapshot.lastError?.code === "rate-limit" ? rateLimitRetryMs : failureRetryMs;
-    const fixed = now().getTime() + wait;
-    return new Date(Number.isNaN(notBefore) ? fixed : Math.max(notBefore, fixed));
-  };
+  const retryTime = (snapshot: RunSnapshot): Date =>
+    automaticRetryTime(snapshot, now(), retryDelays);
 
   const run = async (
     job: RunJob,

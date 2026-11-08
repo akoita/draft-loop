@@ -20,6 +20,7 @@ import { modelProfileTiers } from "@draft-loop/domain/model-profile";
 import { z } from "zod";
 
 export const planIds = [
+  "beta",
   "individual",
   "job-search-pass",
   "pro",
@@ -106,6 +107,7 @@ export type PlanDefinition = z.infer<typeof planDefinitionSchema>;
 export const planCatalogSchema = z.strictObject({
   version: z.literal(1),
   plans: z.strictObject({
+    beta: planDefinitionSchema,
     individual: planDefinitionSchema,
     "job-search-pass": planDefinitionSchema,
     pro: planDefinitionSchema,
@@ -142,11 +144,29 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-/** Plan catalog v1: D13 working defaults. Business starts with no credits until overrides set them. */
+/**
+ * Plan catalog v1: D13 working defaults. Business starts with no credits until overrides set them.
+ * Beta is the free plan of the invite-only public test (#2456): three economy runs over three
+ * months, two a day, one at a time, with no payment and no professional features.
+ */
 export const planCatalogV1: PlanCatalog = deepFreeze(
   planCatalogSchema.parse({
     version: 1,
     plans: {
+      beta: {
+        label: "Beta",
+        seatPriced: false,
+        entitlements: {
+          creditsPerPeriod: 3,
+          creditPeriodMonths: 3,
+          modelTiers: economyOnly,
+          seats: 1,
+          candidateRecords: 1,
+          runsPerDay: 2,
+          concurrentRuns: 1,
+          features: noFeatures,
+        },
+      },
       individual: {
         label: "Individual",
         seatPriced: false,

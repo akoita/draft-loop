@@ -44,6 +44,29 @@ const reload = {
 };
 
 describe("the shared review screen's actions over HTTP", () => {
+  it("words the refusal of an edit made while the run is still being reviewed", async () => {
+    const { dispatch } = portOver({
+      ...reviewState,
+      "PUT /v1/workspaces/{workspaceId}/runs/{runId}/edits/{blockId}": () => {
+        throw new ApiRequestError(
+          409,
+          "review_closed",
+          "Only a run awaiting approval takes review decisions.",
+        );
+      },
+    });
+
+    const result = await dispatch({ type: "edit-block", blockId: "summary-1", text: "New text." });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        message:
+          "The review is still running, so this change was not saved. Make it once the round finishes.",
+      },
+    });
+  });
+
   it("records a finding decision with its reason, then reads the run again", async () => {
     const { dispatch, calls } = portOver({
       ...reviewState,
