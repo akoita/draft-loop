@@ -2723,9 +2723,17 @@ msgstr "Téléchargement annulé. Rien n’a été installé."
 msgid "Download Markdown"
 msgstr "Télécharger en Markdown"
 
+#: apps/web/src/application-material.tsx
+msgid "Download PDF"
+msgstr "Télécharger en PDF"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download size"
 msgstr "Taille du téléchargement"
+
+#: apps/web/src/application-material.tsx
+msgid "Download Word"
+msgstr "Télécharger en Word"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Downloading model…"
@@ -7650,6 +7658,7 @@ msgstr "Enseignement"
 msgid "Technologies, separated by commas"
 msgstr "Technologies, séparées par des virgules"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"

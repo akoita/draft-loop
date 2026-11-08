@@ -6,6 +6,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./application-material-document": {
+      "types": "./src/application-material-document.ts",
+      "import": "./src/application-material-document.ts"
     }
   },
   "files": [

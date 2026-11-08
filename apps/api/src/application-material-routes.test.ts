@@ -394,6 +394,44 @@ describe("application material route", () => {
     expect(logs.join("\n")).not.toContain("12 teams");
   });
 
+  it("downloads a saved draft as Word or PDF with a template, Modern by default", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+      ],
+    };
+    await build({ consent: granted, route: scriptedRoute([letter], []), drafts });
+    const saved = (await draft("cover-letter")).json() as { id: string; created_at: string };
+    const download = (query: string, target = `${url}/${saved.id}/document`) =>
+      app.inject({ method: "GET", url: `${target}${query}`, headers: { authorization } });
+
+    const word = await download("?format=docx");
+    expect(word.statusCode).toBe(200);
+    expect(word.headers["content-type"]).toContain("wordprocessingml");
+    expect(word.headers["content-disposition"]).toBe(
+      `attachment; filename="cover-letter-${saved.created_at.slice(0, 10)}.docx"`,
+    );
+    expect(word.rawPayload.subarray(0, 2).toString()).toBe("PK");
+    const pdf = await download("?format=pdf&template=classic");
+    expect(pdf.statusCode).toBe(200);
+    expect(pdf.headers["content-type"]).toBe("application/pdf");
+    expect(pdf.rawPayload.subarray(0, 4).toString()).toBe("%PDF");
+    expect(logs.join("\n")).toContain('"template":"modern"');
+    expect(logs.join("\n")).toContain('"template":"classic"');
+    expect((await download("?format=odt")).statusCode).toBe(400);
+    expect((await download("?format=pdf&template=neon")).statusCode).toBe(400);
+    expect(
+      (
+        await download(
+          "?format=pdf",
+          `/v1/workspaces/owner/applications/app_fixture0002/material/${saved.id}/document`,
+        )
+      ).statusCode,
+    ).toBe(404);
+    expect(logs.join("\n")).not.toContain("cut report time");
+  });
+
   it("sends the candidate's guidance to the model and saves it with the draft", async () => {
     const seen: unknown[] = [];
     const drafts = createMemorySavedApplicationMaterialStore();

@@ -2295,6 +2295,18 @@ export interface ApiOperations {
     readonly body: ApiSchemas["ApplicationMaterialEditInput"];
     readonly response: ApiSchemas["ApplicationMaterialDraft"];
   };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}/document": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly query: {
+      readonly format: "docx" | "pdf";
+      readonly template?: "classic" | "compact" | "modern";
+    };
+    readonly response: Blob;
+  };
   "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
     readonly path: {
       readonly workspaceId: string;
