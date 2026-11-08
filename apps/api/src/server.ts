@@ -7,6 +7,7 @@ import {
 } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
+import { readCoverLetterWriter } from "./application-material-routes.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
@@ -24,6 +25,7 @@ const config = readApiConfig(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
+const coverLetterWriter = readCoverLetterWriter(process.env);
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
 const screening = {
@@ -89,6 +91,7 @@ const app = await buildApi({
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),
+  coverLetterWriter,
 });
 
 // Cloud Run sends SIGTERM before stopping an instance; finish in-flight requests, then exit.

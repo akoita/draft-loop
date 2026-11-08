@@ -4285,6 +4285,10 @@ msgstr "dernière"
 msgid "Leadership"
 msgstr "Leadership"
 
+#: apps/web/src/application-material.tsx
+msgid "Left out"
+msgstr "Retiré de la lettre"
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr "Les éléments hérités n’acceptent qu’une URL à la fois"
@@ -5044,6 +5048,10 @@ msgstr "Aucun fragment éligible pour la source complète ; la recherche a donc 
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
 msgstr "Aucun élément trouvé pour : "
+
+#: apps/web/src/application-material.tsx
+msgid "No fact in your career record supports these sentences, so they are not in the letter."
+msgstr "Aucun fait de votre parcours ne soutient ces phrases : elles ne figurent donc pas dans la lettre."
 
 #: packages/ui/src/profile.tsx
 msgid "No facts are recorded in this version."

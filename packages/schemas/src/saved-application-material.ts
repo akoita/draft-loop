@@ -114,6 +114,14 @@ export const savedApplicationMaterialSchema = z.strictObject({
     .optional(),
   /** The critic that found them, from another company than the author. */
   critic_model: z.strictObject({ provider: shortText, model: shortText }).optional(),
+  /**
+   * A free-form cover letter's sentences left out because no career fact supported them, even
+   * after one revision (#2586). Absent when none was dropped.
+   */
+  dropped_sentences: z
+    .array(z.string().min(1).max(maximumSavedApplicationMaterialItemCharacters))
+    .max(maximumSavedApplicationMaterialItems * 4)
+    .optional(),
   prompt_version: shortText,
   cost_usd: z.number().min(0),
   created_at: z.iso.datetime({ offset: true }),

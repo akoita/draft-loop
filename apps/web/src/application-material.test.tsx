@@ -327,6 +327,20 @@ describe("the prepare panel's model", () => {
     expect(applicationMaterialReviewNote({ status: "none" })).toBeUndefined();
   });
 
+  it("lists the sentences a free-form letter left out", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={{ ...draft, kind: "cover-letter", dropped_sentences: ["I led a team of 40."] }}
+      />,
+    );
+    expect(html).toContain("Left out");
+    expect(html).toContain("<q>I led a team of 40.</q>");
+    expect(
+      renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
+    ).not.toContain("Left out");
+  });
+
   it("names a saved version by its time and model", () => {
     expect(
       applicationMaterialVersionLabel(saved("amd_fixture0001", "2026-11-07T09:05:00.000Z"), {

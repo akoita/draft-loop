@@ -4290,6 +4290,10 @@ msgstr ""
 msgid "Leadership"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "Left out"
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy evidence takes one URL at a time"
 msgstr ""
@@ -5048,6 +5052,10 @@ msgstr ""
 
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "No fact in your career record supports these sentences, so they are not in the letter."
 msgstr ""
 
 #: packages/ui/src/profile.tsx

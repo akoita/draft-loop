@@ -24,6 +24,16 @@ import {
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
+import {
+  coverLetterClaimCheckModelId,
+  coverLetterClaimCheckPromptVersion,
+  createModelCoverLetterClaimChecker,
+} from "@draft-loop/application/cover-letter-claims-model";
+import { draftFreeFormCoverLetter } from "@draft-loop/application/cover-letter-free-form";
+import {
+  createModelFreeFormCoverLetterWriter,
+  freeFormCoverLetterPromptVersion,
+} from "@draft-loop/application/cover-letter-free-form-model";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import { writingTells } from "@draft-loop/application/writing-tells";
@@ -64,6 +74,25 @@ export interface ApplicationMaterialParts {
   readonly allowProviderData: boolean;
   /** The most one request may spend across its attempts, in US dollars. */
   readonly maxCostUsd?: number;
+  /**
+   * How a cover letter is written (#2586): `items`, cited paragraphs (the default), or
+   * `free-form`, prose checked sentence by sentence against the facts afterwards.
+   */
+  readonly coverLetterWriter?: CoverLetterWriter;
+}
+
+export const coverLetterWriters = ["items", "free-form"] as const;
+export type CoverLetterWriter = (typeof coverLetterWriters)[number];
+
+/** `DRAFT_LOOP_COVER_LETTER_WRITER`: `items` when unset; anything else stops the start. */
+export function readCoverLetterWriter(env: NodeJS.ProcessEnv): CoverLetterWriter {
+  const value = env.DRAFT_LOOP_COVER_LETTER_WRITER?.trim() || "items";
+  if (!(coverLetterWriters as readonly string[]).includes(value)) {
+    throw new Error(
+      `DRAFT_LOOP_COVER_LETTER_WRITER must be one of ${coverLetterWriters.join(", ")}.`,
+    );
+  }
+  return value as CoverLetterWriter;
 }
 
 export interface ApplicationMaterialRoutesOptions {
@@ -203,6 +232,12 @@ const draftView = z
       .optional()
       .describe(
         "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+      ),
+    dropped_sentences: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
       ),
     prompt_version: z.string(),
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
@@ -418,15 +453,30 @@ export function registerApplicationMaterialRoutes(
       });
 
       const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
-      const pricing = catalogModelPricing(model);
+      const buildRoute = material.route;
       let spentUsd = 0;
-      const routed = material.route({
-        configuredModel: model,
-        ...(pricing === undefined ? {} : { pricing }),
-      });
+      const freeForm =
+        request.body.kind === "cover-letter" && material.coverLetterWriter === "free-form";
+      const checkerModel = {
+        company: "anthropic",
+        modelId: coverLetterClaimCheckModelId,
+        role: "author",
+        promptTemplateVersion: coverLetterClaimCheckPromptVersion,
+      } as const;
+      const routeOf = (configuredModel: typeof model | typeof checkerModel) => {
+        const price = catalogModelPricing(configuredModel);
+        return buildRoute({
+          configuredModel,
+          ...(price === undefined ? {} : { pricing: price }),
+        });
+      };
+      const routed = routeOf(model);
+      // The claim check runs on its own model; both share the request's cost cap.
+      const checkRoute = freeForm ? routeOf(checkerModel) : routed;
       const recording = {
         execute: async (modelRequest: Parameters<typeof routed.execute>[0]) => {
-          const response = await routed.execute(modelRequest);
+          const target = modelRequest.model.modelId === model.modelId ? routed : checkRoute;
+          const response = await target.execute(modelRequest);
           const cost = response.cost.estimatedUsd ?? 0;
           spentUsd += cost;
           request.log.info(
@@ -443,15 +493,17 @@ export function registerApplicationMaterialRoutes(
           return response;
         },
       };
+      const executor = guardCallCost(recording, maxCostUsd) as never;
+      const dataPolicy = {
+        allowTransmission: true,
+        allowedCompanies: ["anthropic" as const],
+        sensitiveData: true,
+        sensitiveDataAcknowledged: true,
+      };
       const writer = createModelApplicationMaterialWriter({
-        executor: guardCallCost(recording, maxCostUsd) as never,
+        executor,
         model,
-        dataPolicy: {
-          allowTransmission: true,
-          allowedCompanies: ["anthropic"],
-          sensitiveData: true,
-          sensitiveDataAcknowledged: true,
-        },
+        dataPolicy,
         applicationId,
       });
       try {
@@ -462,7 +514,7 @@ export function registerApplicationMaterialRoutes(
         // The newest research brief, when the candidate ran one, gives facts about the employer.
         const [research] = (await options.researchBriefs?.list(workspaceId, applicationId)) ?? [];
         const companyFacts = research === undefined ? [] : researchCompanyFacts(research);
-        const draft = await draftApplicationMaterial(writer, {
+        const draftInput = {
           kind: request.body.kind,
           ...(guidance === undefined ? {} : { guidance }),
           ...(voice === undefined ? {} : { voice }),
@@ -471,7 +523,26 @@ export function registerApplicationMaterialRoutes(
           ...(usage === undefined ? {} : { usage }),
           language: application.language ?? workspace.language,
           ...(companyFacts.length === 0 ? {} : { companyFacts }),
-        });
+        };
+        const draft = freeForm
+          ? await draftFreeFormCoverLetter(
+              createModelFreeFormCoverLetterWriter({
+                executor,
+                model: { ...model, promptTemplateVersion: freeFormCoverLetterPromptVersion },
+                dataPolicy,
+                applicationId,
+              }),
+              createModelCoverLetterClaimChecker({
+                executor,
+                model: checkerModel,
+                dataPolicy,
+                applicationId,
+              }),
+              draftInput,
+            )
+          : await draftApplicationMaterial(writer, draftInput);
+        const droppedSentences: readonly string[] =
+          (draft as { readonly droppedSentences?: readonly string[] }).droppedSentences ?? [];
         const companyById = new Map(companyFacts.map((fact) => [fact.id, fact.text]));
         const usesResearch = draft.items.some((item) => (item.companyFactIds ?? []).length > 0);
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
@@ -483,6 +554,8 @@ export function registerApplicationMaterialRoutes(
             items: draft.items.length,
             guided: guidance !== undefined,
             companyFacts: companyFacts.length,
+            writer: freeForm ? "free-form" : "items",
+            droppedSentences: droppedSentences.length,
             spentUsd,
           },
           "application material drafted",
@@ -508,7 +581,10 @@ export function registerApplicationMaterialRoutes(
           })),
           ...(usesResearch && research !== undefined ? { research_brief_id: research.id } : {}),
           model: draft.model ?? { provider: model.company, model: model.modelId },
-          prompt_version: applicationMaterialPromptVersion,
+          ...(droppedSentences.length === 0 ? {} : { dropped_sentences: [...droppedSentences] }),
+          prompt_version: freeForm
+            ? freeFormCoverLetterPromptVersion
+            : applicationMaterialPromptVersion,
           cost_usd: spentUsd,
         };
         if (drafts === undefined) return reply.send(withTells(view));

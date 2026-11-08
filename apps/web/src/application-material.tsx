@@ -346,6 +346,19 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 </li>
               ))}
             </ol>
+            {draft.dropped_sentences === undefined ? null : (
+              <section className="application-material-tells" aria-labelledby="material-dropped">
+                <h3 id="material-dropped">{t`Left out`}</h3>
+                <p>{t`No fact in your career record supports these sentences, so they are not in the letter.`}</p>
+                <ul>
+                  {draft.dropped_sentences.map((sentence) => (
+                    <li key={sentence}>
+                      <q>{sentence}</q>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {draft.critic_findings === undefined ? null : (
               <section className="application-material-tells" aria-labelledby="material-critic">
                 <h3 id="material-critic">{t`What the critic flagged`}</h3>

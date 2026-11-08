@@ -120,12 +120,16 @@ async function build(options: {
   samples?: readonly string[];
   reviews?: MaterialReviews;
   researchBriefs?: ResearchBriefStore;
+  coverLetterWriter?: "items" | "free-form";
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
   app = await buildApi({
     ownerToken,
     logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
+    ...(options.coverLetterWriter === undefined
+      ? {}
+      : { coverLetterWriter: options.coverLetterWriter }),
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -775,6 +779,50 @@ describe("application material route", () => {
     });
     const [saved] = await drafts.list("owner", "app_fixture0001");
     expect(saved?.items[0]?.company_citations).toHaveLength(1);
+  });
+
+  it("writes a free-form letter, checks it with the checker model and reports dropped sentences", async () => {
+    const seen: unknown[] = [];
+    const models: string[] = [];
+    const writerOutputs = [
+      { letter: "I cut report time by 45%.\n\nIn my last role I cut report time by 40%." },
+      { letter: "I cut report time by 45% again.\n\nIn my last role I cut report time by 40%." },
+    ];
+    const links = {
+      links: [
+        { sentence_id: "p0.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+        { sentence_id: "p1.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+      ],
+    };
+    const writer = scriptedRoute(writerOutputs, seen);
+    const checker = scriptedRoute([links], seen);
+    await build({
+      consent: granted,
+      coverLetterWriter: "free-form",
+      route: (input) => {
+        models.push(input.configuredModel.modelId);
+        return input.configuredModel.modelId === "claude-haiku-5-5"
+          ? checker(input)
+          : writer(input);
+      },
+    });
+    const response = await draft("cover-letter");
+    expect(response.statusCode).toBe(200);
+    expect(models).toEqual(["claude-sonnet-5-5", "claude-haiku-5-5"]);
+    const body = response.json();
+    expect(body.items).toEqual([
+      {
+        question: "",
+        text: "In my last role I cut report time by 40%.",
+        citations: [{ fact_id: "o", text: "achievement outcome: Cut report time by 40%" }],
+      },
+    ]);
+    expect(body.dropped_sentences).toEqual(["I cut report time by 45% again."]);
+    expect(body.prompt_version).toBe("cover-letter-free-form-v1");
+    // Two letters and two checks, all under the request's cost cap.
+    expect(seen).toHaveLength(4);
+    expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
+    expect(logs.join("\n")).not.toContain("report time by 45");
   });
 
   it("serves no list when the server keeps no drafts", async () => {
