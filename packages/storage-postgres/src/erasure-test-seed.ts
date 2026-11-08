@@ -28,6 +28,8 @@ export const tenantWideTables = new Set([
   "model_call_counts",
   // Deployment-wide, keyed by the organisation (#2538); organisation erasure removes its row.
   "organisation_activity",
+  // Deployment-wide and held before any organisation exists (#2566): no tenant to erase.
+  "beta_waitlist",
 ]);
 
 /**

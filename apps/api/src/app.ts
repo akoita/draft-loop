@@ -40,6 +40,10 @@ import { registerApplicationMaterialRoutes } from "./application-material-routes
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { type BetaSignUpOptions, registerBetaSignUpRoutes } from "./beta-sign-up-routes.js";
+import {
+  type BetaWaitlistRoutesOptions,
+  registerBetaWaitlistRoutes,
+} from "./beta-waitlist-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
@@ -187,6 +191,8 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
   readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
+  /** The beta waitlist; without it `/v1/waitlist` and its operator routes are absent (#2566). */
+  readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
@@ -705,6 +711,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
             },
           }),
     });
+  }
+  if (options.betaWaitlist !== undefined) {
+    registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
