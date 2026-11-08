@@ -326,11 +326,22 @@ export function rankApplicationMaterialFacts<T extends ApplicationMaterialFact>(
   facts: readonly T[],
   requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
 ): T[] {
+  const score = applicationMaterialFactScorer(requirements);
+  return facts
+    .map((fact, index) => ({ fact, index, score: score(fact) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((entry) => entry.fact);
+}
+
+/** Scores a fact by the words it shares with each requirement, weighted by priority. */
+export function applicationMaterialFactScorer(
+  requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
+): (fact: Pick<ApplicationMaterialFact, "field" | "value">) => number {
   const wanted = requirements.map((requirement) => ({
     words: matchWords(requirement.text),
     weight: priorityWeight[requirement.priority],
   }));
-  const scored = facts.map((fact, index) => {
+  return (fact) => {
     const words = matchWords(`${fact.field} ${fact.value}`);
     let score = 0;
     for (const requirement of wanted) {
@@ -338,11 +349,8 @@ export function rankApplicationMaterialFacts<T extends ApplicationMaterialFact>(
       for (const word of words) if (requirement.words.has(word)) shared += 1;
       score += shared * requirement.weight;
     }
-    return { fact, index, score };
-  });
-  return scored
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .map((entry) => entry.fact);
+    return score;
+  };
 }
 
 /**
