@@ -67,7 +67,11 @@ import {
   type SentRevisionDirection,
   sentRevisionDirection,
 } from "./footer-running-round.js";
-import { useExportPreview } from "./host-panels.js";
+import {
+  requestApplicationPanel,
+  useExportPreview,
+  useHasApplicationPanel,
+} from "./host-panels.js";
 import { JobDescriptionPanel } from "./job-description-panel.js";
 import {
   briefOperationsOf,
@@ -1110,6 +1114,7 @@ export function ReviewWorkspace({
     !draftEdits.unsaved;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const loadExportPreview = useExportPreview();
+  const hasApplicationPanel = useHasApplicationPanel();
   const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const exportPending = pendingReviewAction?.action === "export";
   // An action's error shows once: in the footer, beside the buttons that act, or at the top
@@ -3129,6 +3134,15 @@ export function ReviewWorkspace({
                   title={t`The job this draft is written for, under the Job tab. A different job needs a new application.`}
                   onClick={() => selectWorkTab("job")}
                 >{t`Read the job`}</button>
+              )}
+              {/* The Prepare panel sits folded under the draft; this opens it and goes there (#2578). */}
+              {afterReview === undefined || !hasApplicationPanel ? null : (
+                <button
+                  className="button button-primary doc-toolbar-prepare"
+                  type="button"
+                  title={t`Open the Prepare panel under the draft to write a cover letter or interview questions for this application.`}
+                  onClick={requestApplicationPanel}
+                >{t`Cover letter or interview`}</button>
               )}
               <section className="retrieval-strip" aria-label={t`evidence retrieval status`}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">

@@ -241,7 +241,7 @@ The request must send one text for each item, in order; another count answers
 
 ## The web panel
 
-Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it.
+Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
 The candidate picks a cover letter or interview questions on its toggle and
 selects **Draft**. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the

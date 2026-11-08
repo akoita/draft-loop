@@ -1646,6 +1646,11 @@ input[type="text"].workspace-title-input {
   margin-left: auto;
 }
 
+/* The way to the Prepare panel under the draft (#2578). */
+.doc-toolbar-prepare {
+  flex: none;
+}
+
 .doc-toolbar-empty {
   flex: none;
   font-size: var(--text-xs);

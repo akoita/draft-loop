@@ -87,6 +87,21 @@ export function HostApplicationPanel(context: ApplicationPanelContext) {
   return useContext(HostPanelsContext).application?.(context) ?? null;
 }
 
+/**
+ * Asks the host's application panel to unfold and scroll into view (#2578): the review's toolbar
+ * sends it and the panel listens on the window, so neither imports the other.
+ */
+export const openApplicationPanelEvent = "draft-loop:open-application-panel";
+
+export function requestApplicationPanel(): void {
+  globalThis.dispatchEvent?.(new Event(openApplicationPanelEvent));
+}
+
+/** Whether the host offers an application panel, so the review can point to it. */
+export function useHasApplicationPanel(): boolean {
+  return useContext(HostPanelsContext).application !== undefined;
+}
+
 /** The host's panel under Home's Workspace settings actions; nothing without one. */
 export function HostWorkspaceSettings() {
   return useContext(HostPanelsContext).workspaceSettings?.() ?? null;

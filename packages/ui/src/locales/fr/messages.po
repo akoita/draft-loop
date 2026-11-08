@@ -2306,6 +2306,10 @@ msgstr "Impossible de charger ce profil enregistré. Choisissez-le de nouveau ou
 msgid "Cover letter"
 msgstr "Lettre de motivation"
 
+#: packages/ui/src/review.tsx
+msgid "Cover letter or interview"
+msgstr "Lettre ou entretien"
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr "La notation de la couverture est moins fiable sans exigences relues."
@@ -5540,6 +5544,10 @@ msgstr "Open source"
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
 msgstr "Ouvrir la palette de commandes"
+
+#: packages/ui/src/review.tsx
+msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
+msgstr "Ouvre le panneau Préparer, sous le brouillon, pour écrire une lettre de motivation ou des questions d’entretien pour cette candidature."
 
 #: packages/ui/src/review.tsx
 msgid "Open the previous version beside the draft"

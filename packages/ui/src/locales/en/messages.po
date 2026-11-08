@@ -2312,6 +2312,10 @@ msgstr "Could not load that saved profile. Choose it again or load by name."
 msgid "Cover letter"
 msgstr "Cover letter"
 
+#: packages/ui/src/review.tsx
+msgid "Cover letter or interview"
+msgstr "Cover letter or interview"
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr "Coverage scoring is less reliable without reviewed requirements."
@@ -5546,6 +5550,10 @@ msgstr "Open source"
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
 msgstr "Open the command palette"
+
+#: packages/ui/src/review.tsx
+msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
+msgstr "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 
 #: packages/ui/src/review.tsx
 msgid "Open the previous version beside the draft"
