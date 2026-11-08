@@ -101,6 +101,7 @@ import {
   classifyRevisionFindings,
 } from "./finding-attribution.js";
 import { lostCoverageFindings } from "./lost-coverage.js";
+import { RunHeldByPersonError, runVersion, unseenPersonHold } from "./person-hold.js";
 import {
   type ApprovedArtifactBinding,
   approvedArtifactBinding,
@@ -1533,10 +1534,22 @@ export function createOrchestrationEngine(
   const tracer = options.tracer ?? noopRunTracer;
   const contextsByRunId = new Map<string, ContextSnapshot>();
 
+  /** What this engine last read or wrote for each run, so a stop made elsewhere is not overwritten. */
+  const seenVersions = new Map<string, string>();
+  const seen = (snapshot: RunSnapshot): RunSnapshot => {
+    seenVersions.set(snapshot.runId, runVersion(snapshot));
+    return snapshot;
+  };
+
   const save = async (snapshot: RunSnapshot): Promise<RunSnapshot> => {
+    const held = unseenPersonHold(
+      await options.store.loadRun(snapshot.runId),
+      seenVersions.get(snapshot.runId),
+    );
+    if (held !== undefined) throw new RunHeldByPersonError(held);
     const immutableSnapshot = immutable(snapshot);
     await options.store.saveRun(immutableSnapshot);
-    return immutableSnapshot;
+    return seen(immutableSnapshot);
   };
 
   const emit = async (
@@ -2444,7 +2457,13 @@ export function createOrchestrationEngine(
     let current = snapshot;
     let retryFeedback: AuthorRetryFeedback | undefined;
     if (current.state === "provider-error") {
-      const retried = await resumeFailedStep(current);
+      let retried: Awaited<ReturnType<typeof resumeFailedStep>>;
+      try {
+        retried = await resumeFailedStep(current);
+      } catch (error) {
+        if (error instanceof RunHeldByPersonError) return immutable(seen(error.held));
+        throw error;
+      }
       if (retried === undefined) return immutable(current);
       current = retried.snapshot;
       retryFeedback = retried.feedback;
@@ -2456,6 +2475,11 @@ export function createOrchestrationEngine(
     try {
       return await advanceSteps(current, context, retryFeedback, workflowSpan, signal);
     } catch (error) {
+      // The person stopped or paused the run while a step ran: their action stands.
+      if (error instanceof RunHeldByPersonError) {
+        workflowSpan.end("ok");
+        return immutable(seen(error.held));
+      }
       workflowSpan.end("error");
       throw error;
     }
@@ -2512,7 +2536,7 @@ export function createOrchestrationEngine(
   const loadForAction = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await options.store.loadRun(nonEmpty(runId, "runId"));
     if (snapshot === undefined) throw new Error(`Run ${runId} was not found.`);
-    return snapshot;
+    return seen(snapshot);
   };
 
   const begin = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
@@ -2520,6 +2544,7 @@ export function createOrchestrationEngine(
     contextsByRunId.set(request.runId, request.context);
     const budget = validateBudget(request.budget);
     let snapshot = await options.store.loadRun(request.runId);
+    if (snapshot !== undefined) seen(snapshot);
     if (snapshot === undefined) {
       snapshot = initialSnapshot({ ...request, budget }, clock());
       await saveAndEmit(snapshot, "run.created", { runId: snapshot.runId });
@@ -3038,6 +3063,7 @@ export { notBefore, notBeforeWithinClockStep } from "./causal-timestamp.js";
 export * from "./consensus-stop.js";
 export * from "./duration-accounting.js";
 export * from "./failed-provider-call.js";
+export * from "./person-hold.js";
 export type {
   ApprovedArtifactBinding,
   BuildApplicationReadinessDecisionInput,
