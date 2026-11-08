@@ -1,5 +1,6 @@
 import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useId, useState } from "react";
+import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
 import { workJournalPanelId } from "./shared-link.js";
 import {
   type WorkJournalAgentNames,
@@ -202,7 +203,8 @@ export function WorkJournalReviewCard({
   // Approve by default: a likely duplicate is only a hint, and merging two distinct pieces of
   // work by one click loses one of them.
   const [chosen, setChosen] = useState<Mode>(held ? "edit" : "approve");
-  const [knowledgeBaseId, setKnowledgeBaseId] = useState(knowledgeBases[0]?.id ?? "");
+  const [chosenKnowledgeBaseId, setKnowledgeBaseId] = useState("");
+  const knowledgeBaseId = knowledgeBaseChoice(knowledgeBases, chosenKnowledgeBaseId);
   const [tier, setTier] = useState<WorkJournalTier | "">("");
   const [into, setInto] = useState(duplicates[0]?.id ?? "");
   const [keepSummary, setKeepSummary] = useState<"into" | "this">("into");
