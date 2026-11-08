@@ -95,7 +95,7 @@ describe("the prepare panel", () => {
     expect(html).toContain("<h3>How do you report with SQL?</h3>");
     expect(html).toContain('<aside aria-label="Sources"><ul><li>role title: Data Analyst</li>');
     expect(html).toContain("Download Markdown");
-    expect(html).toContain("Draft again");
+    expect(html).toContain("Draft new interview questions");
     expect(html).not.toContain("to Anthropic (Claude)");
   });
 

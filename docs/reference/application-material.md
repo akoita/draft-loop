@@ -280,7 +280,8 @@ The request must send one text for each item, in order; another count answers
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
 The candidate picks a cover letter or interview questions on its toggle and
-selects **Draft**. **Guide this draft** opens optional fields: what to stress,
+selects the button named after it, **Draft cover letter** or **Draft
+interview questions**. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
 guidance it was written with. With two models offered, a **Model** list in
 the same fields names each with its cost. Under a cover letter, **Writing check** lists the
@@ -291,9 +292,10 @@ review it keeps the run's column.
 **About the employer** opens the panel. **Research this application** first
 shows what the run searches, that excerpts go to Anthropic, that nothing about
 the candidate is sent, and the US$0.20 cap; nothing runs until **Approve and
-research**. The panel then asks every three seconds until the run ends. It
-lists each finding with its sources, each linked and dated, or marked
-**undated**, and offers **Research again** and **Delete this research**. A
+research**. The panel then asks every three seconds until the run ends. Its
+findings stay folded under **Show N facts about the employer**, so the
+drafting controls stay near the toggle. Each finding lists its sources, each
+linked and dated, or marked **undated**. The section offers **Research again** and **Delete this research**. A
 paragraph that cites a finding lists it under **About the company**, beside
 its career facts, and Markdown adds an `> About the company:` line.
 
