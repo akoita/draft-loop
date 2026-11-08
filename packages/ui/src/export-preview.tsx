@@ -42,11 +42,19 @@ type PreviewView =
   | { readonly kind: "loading" }
   | { readonly kind: "pages"; readonly pageCount: number }
   | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "no-preview" }
   | { readonly kind: "error"; readonly message: string };
 
 export const exportPreviewFailure = () =>
   t`The preview could not be drawn. Nothing was saved; you can still export.`;
+
+/** What a preview reads: a browser has no Word viewer, so Word shows the template's PDF pages. */
+export function previewedFormat(format: ExportFormat): Exclude<ExportFormat, "docx"> {
+  return format === "docx" ? "pdf" : format;
+}
+
+/** Shown over a Word preview, which draws the same template's PDF pages. */
+export const wordPreviewNote = () =>
+  t`These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly.`;
 
 const pageLabel = (page: number, pageCount: number) => t`Page ${page} of ${pageCount}`;
 
@@ -87,12 +95,13 @@ export function ExportPreviewDialog({
   useEffect(() => {
     const signal = { cancelled: false };
     setView({ kind: "loading" });
-    if (format === "docx") {
-      setView({ kind: "no-preview" });
-      return undefined;
-    }
     const show = async (): Promise<PreviewView> => {
-      const blob = await load({ workspaceId, runId, format, template });
+      const blob = await load({
+        workspaceId,
+        runId,
+        format: previewedFormat(format),
+        template,
+      });
       if (format === "markdown") return { kind: "text", text: await blob.text() };
       const container = pagesRef.current;
       if (container === null) return { kind: "loading" };
@@ -188,16 +197,16 @@ export function ExportPreviewDialog({
               {view.message}
             </p>
           ) : null}
-          {view.kind === "no-preview" ? (
-            <p className="export-preview-message" role="status">
-              {t`Word files can't be shown here yet. Preview the PDF to see the template's pages.`}
+          {format === "docx" && view.kind === "pages" ? (
+            <p className="export-preview-message" role="note">
+              {wordPreviewNote()}
             </p>
           ) : null}
           {view.kind === "text" ? <pre className="export-preview-text">{view.text}</pre> : null}
           <div
             className="export-preview-pages"
             ref={pagesRef}
-            hidden={format === "markdown" || format === "docx" || view.kind === "error"}
+            hidden={format === "markdown" || view.kind === "error"}
           />
         </div>
         <footer className="export-preview-footer">

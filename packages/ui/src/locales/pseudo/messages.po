@@ -8437,6 +8437,10 @@ msgstr ""
 msgid "There is no previous version to compare with."
 msgstr ""
 
+#: packages/ui/src/export-preview.tsx
+msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
+msgstr ""
+
 #: apps/web/src/credits-model.ts
 msgid "These models"
 msgstr ""
@@ -9281,10 +9285,6 @@ msgstr ""
 
 #: apps/web/src/consent-model.ts
 msgid "Withdrawn on {when}."
-msgstr ""
-
-#: packages/ui/src/export-preview.tsx
-msgid "Word files can't be shown here yet. Preview the PDF to see the template's pages."
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts

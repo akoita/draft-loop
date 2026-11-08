@@ -1,6 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ExportPreviewDialog, previewPageFit } from "./export-preview.js";
+import {
+  ExportPreviewDialog,
+  previewedFormat,
+  previewPageFit,
+  wordPreviewNote,
+} from "./export-preview.js";
 import { exportTemplatePageTargets, exportTemplates } from "./export-template.js";
 import { HostPanelsContext } from "./host-panels.js";
 import { createFixtureReviewState } from "./model.js";
@@ -55,6 +60,30 @@ describe("export preview dialog", () => {
     );
 
     expect(html).toMatch(/disabled="">Export this file…<\/button>/u);
+  });
+
+  it("draws a Word preview from the same template's PDF", () => {
+    const html = renderToStaticMarkup(
+      <ExportPreviewDialog
+        workspaceId="workspace-1"
+        runId="run-1"
+        format="docx"
+        template="classic"
+        onFormatChange={noop}
+        onTemplateChange={noop}
+        load={load}
+        onExport={noop}
+        exportDisabled={false}
+        onClose={noop}
+      />,
+    );
+
+    expect(html).toMatch(/<option value="docx" selected="">DOCX<\/option>/u);
+    expect(html).toContain('<div class="export-preview-pages"></div>');
+    expect(previewedFormat("docx")).toBe("pdf");
+    expect(previewedFormat("pdf")).toBe("pdf");
+    expect(previewedFormat("markdown")).toBe("markdown");
+    expect(wordPreviewNote()).toContain("Word lays out the same text");
   });
 
   it("says how the pages fit the template's target", () => {
