@@ -1,9 +1,13 @@
+import {
+  eraseOrganisation,
+  type OrganisationErasureOutcome,
+} from "@draft-loop/storage/organisation-erasure-flow";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
-import type { TenantErasure, TenantErasureFor } from "./record-erasure-routes.js";
+import type { TenantErasureFor } from "./record-erasure-routes.js";
 
 export interface OrganisationErasureRoutesOptions {
   readonly erasureFor: TenantErasureFor;
@@ -34,52 +38,6 @@ const erasedResponses = {
 
 const description =
   "Erases every candidate record as `DELETE /v1/workspaces/{workspaceId}` does, then every object left under the tenant's storage prefix, then the tenant-wide knowledge bases, idempotency keys and the organisation with its members. The organisation id is typed back as `confirm` (400 `confirmation_mismatch`). A queued or running run anywhere in the organisation answers 409 `run_active`. The first call marks the organisation as closing, and from then on every member request but this one answers 409 `organisation_closing`. Calling again finishes an interrupted deletion. Accounts at the identity provider are not touched: a person's sign-in simply no longer resolves to an organisation.";
-
-type OrganisationErasureOutcome =
-  | { readonly state: "missing" }
-  | { readonly state: "run-active" }
-  | {
-      readonly state: "erased";
-      readonly records: number;
-      readonly objectsRemoved: number;
-      readonly rowsRemoved: number;
-    };
-
-/**
- * Erases one organisation: the organisation is marked closing first, so no member request creates
- * anything meanwhile; then each record is closed and erased in turn, its objects by key, then every
- * object left under the tenant's prefix, then the tenant's remaining rows, the directory last. An
- * interruption leaves the organisation closing in the directory, so the next call finishes it.
- *
- * An unregistered tenant, the owner token's, has no organisation to mark and no members to refuse:
- * its erasure goes straight to the records, each of which still refuses while its run is active,
- * and a repeated call finishes an interrupted one the same way.
- */
-async function eraseOrganisation(
-  erasure: TenantErasure,
-  unregistered = false,
-): Promise<OrganisationErasureOutcome> {
-  const { organisation, records, blobs } = erasure;
-  const closure = await organisation.close();
-  if (closure.state === "run-active") return closure;
-  if (closure.state === "missing" && !unregistered) return closure;
-  let erasedRecords = 0;
-  let objectsRemoved = 0;
-  let rowsRemoved = 0;
-  for (const workspaceId of await organisation.listRecords()) {
-    const recordClosure = await records.close(workspaceId);
-    if (recordClosure.state === "run-active") return { state: "run-active" };
-    if (recordClosure.state === "missing") continue;
-    for (const key of recordClosure.objectKeys) {
-      if (await blobs.removeObject(key)) objectsRemoved += 1;
-    }
-    rowsRemoved += (await records.erase(workspaceId)).rowsRemoved;
-    erasedRecords += 1;
-  }
-  objectsRemoved += await blobs.removePrefix(erasure.objectPrefix);
-  rowsRemoved += (await organisation.eraseRemainder()).rowsRemoved;
-  return { state: "erased", records: erasedRecords, objectsRemoved, rowsRemoved };
-}
 
 async function answer(
   request: FastifyRequest,
