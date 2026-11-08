@@ -608,8 +608,19 @@ People manage their organisation through the API once it has a tenant directory
 ### Beta invites
 
 The invite-only public beta (#2460) creates accounts from single-use invite
-codes, in the directory's `betaInvites` (`beta-invites.ts`). Routes and the
-sign-up screen come in #2502 and #2503.
+codes, in the directory's `betaInvites` (`beta-invites.ts`). The sign-up
+screen comes in #2503.
+
+| Route                                        | Who                                | What it does                                                         |
+| -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once |
+| `GET /v1/operator/beta-invites`              | Operator                           | Lists invites without codes, the accounts they created and the cap   |
+| `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                |
+| `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner |
+
+`POST /v1/sign-up` is the one route a sign-in without a membership reaches
+(`request-auth.ts`). After five refused codes in 15 minutes, one sign-in gets
+429 `rate_limited` with `Retry-After`. The cap is `DRAFT_LOOP_BETA_ACCOUNT_CAP`.
 
 ```mermaid
 flowchart LR

@@ -36,6 +36,7 @@ import { registerApplicationLifecycleRoutes } from "./application-lifecycle-rout
 import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
+import { type BetaSignUpOptions, registerBetaSignUpRoutes } from "./beta-sign-up-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
@@ -161,6 +162,8 @@ export interface ApiOptions {
    * routes are not served. The server opens it with per-request tenancy (#1591).
    */
   readonly directory?: TenantDirectory;
+  /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
+  readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
@@ -626,6 +629,24 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (options.tenants?.operatorFor !== undefined) {
     registerOperatorPlanRoutes(app, { operatorFor: options.tenants.operatorFor });
+  }
+  if (options.betaInvites !== undefined) {
+    const operatorFor = options.tenants?.operatorFor;
+    registerBetaSignUpRoutes(app, {
+      ...options.betaInvites,
+      ...(auth.mode === "oidc" ? { resolveSignIn: auth.resolveSignIn } : {}),
+      ...(operatorFor === undefined
+        ? {}
+        : {
+            assignBetaPlan: async (organisationId: string, at: Date) => {
+              await operatorFor(organisationId).plans.assignPlan({
+                planId: "beta",
+                periodStart: at.toISOString().slice(0, 10),
+                assignedAt: at.toISOString(),
+              });
+            },
+          }),
+    });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);

@@ -142,6 +142,15 @@ export interface ApiSchemas {
     readonly issuer: string;
     readonly clientId: string;
   };
+  "BetaInvite": {
+    readonly inviteId: string;
+    readonly email: string;
+    readonly createdAt: string;
+    readonly state: "open" | "revoked" | "redeemed";
+    readonly organisationId?: string;
+    readonly redeemedAt?: string;
+    readonly revokedAt?: string;
+  };
   "CareerInterviewActionInput": {
     readonly action: "accept";
     readonly topic_key: string;
@@ -312,6 +321,10 @@ export interface ApiSchemas {
       readonly "provider-transmission": ApiSchemas["ConsentEntry"] | null;
     };
     readonly history: readonly (ApiSchemas["ConsentEntry"])[];
+  };
+  "CreatedBetaInvite": {
+    readonly invite: ApiSchemas["BetaInvite"];
+    readonly code: string;
   };
   "CreatedOrganisation": {
     readonly organisation: {
@@ -882,6 +895,11 @@ export interface ApiSchemas {
     readonly version: number;
     readonly createdAt: string | null;
     readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
+  };
+  "SignedUp": {
+    readonly organisationId: string;
+    readonly memberId: string;
+    readonly role: "owner";
   };
   "SpeechModelManifest": {
     readonly available: boolean;
@@ -2326,6 +2344,31 @@ export interface ApiOperations {
       readonly organisationId: string;
     };
     readonly response: ApiSchemas["OrganisationCredits"];
+  };
+  "POST /v1/operator/beta-invites": {
+    readonly body: {
+      readonly email: string;
+    };
+    readonly response: ApiSchemas["CreatedBetaInvite"];
+  };
+  "GET /v1/operator/beta-invites": {
+    readonly response: {
+      readonly invites: readonly (ApiSchemas["BetaInvite"])[];
+      readonly redeemed: number;
+      readonly cap: number;
+    };
+  };
+  "DELETE /v1/operator/beta-invites/{inviteId}": {
+    readonly path: {
+      readonly inviteId: string;
+    };
+    readonly response: void;
+  };
+  "POST /v1/sign-up": {
+    readonly body: {
+      readonly code: string;
+    };
+    readonly response: ApiSchemas["SignedUp"];
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];
