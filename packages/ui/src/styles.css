@@ -10862,6 +10862,11 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   gap: var(--space-5);
 }
 
+/* The flex display above would otherwise win over the hidden attribute. */
+.export-preview-pages[hidden] {
+  display: none;
+}
+
 .export-preview-page {
   margin: 0;
   text-align: center;

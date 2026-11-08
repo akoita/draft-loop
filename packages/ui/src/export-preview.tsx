@@ -203,11 +203,11 @@ export function ExportPreviewDialog({
             </p>
           ) : null}
           {view.kind === "text" ? <pre className="export-preview-text">{view.text}</pre> : null}
-          <div
-            className="export-preview-pages"
-            ref={pagesRef}
-            hidden={format === "markdown" || view.kind === "error"}
-          />
+          {/* Markdown draws no pages: the container is left out, so pages drawn for a PDF or Word
+              preview before the switch cannot show under the text. */}
+          {format === "markdown" ? null : (
+            <div className="export-preview-pages" ref={pagesRef} hidden={view.kind === "error"} />
+          )}
         </div>
         <footer className="export-preview-footer">
           <p className="export-preview-note">{t`Nothing is saved until you export.`}</p>
