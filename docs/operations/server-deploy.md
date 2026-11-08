@@ -113,6 +113,7 @@ sets them from its infrastructure and differs from the local stack here:
 | `DRAFT_LOOP_AUTH_MODE=oidc`                             | In sign-in mode, the same on API and worker. The worker then always checks consent and refuses `DRAFT_LOOP_REQUIRE_CONSENT=false`                                            |
 | `DRAFT_LOOP_SCREENING`                                  | The same value on API and worker, so material with no stored result is held by one and refused by the other                                                                  |
 | `DRAFT_LOOP_PAGE_FETCHER_URL`                           | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                                                           |
+| `DRAFT_LOOP_SPEND_POOL_USD`                             | Set on the public beta's API to its monthly model budget; unset elsewhere ([spend pool](../architecture/hosted-service.md#monthly-spend-pool))                               |
 | `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models)) |
 
 A Cloud Scheduler sweep starts the worker job every 10 minutes for retries and
@@ -276,7 +277,7 @@ The fields sit at the top level of the entry and are a stable contract:
 
 ### Alert lines
 
-Six `WARNING` lines are the owner's alerts. The infrastructure matches each on
+Eight `WARNING` lines are the owner's alerts. The infrastructure matches each on
 its exact `message` and builds log-based metrics and alerts on their fields.
 
 | Line (`message`)                      | Writer | Written when                                                                | Fields                                                                             |
@@ -287,6 +288,8 @@ its exact `message` and builds log-based metrics and alerts on their fields.
 | `run paused for quarantined material` | worker | A claimed job pauses its run                                                | `screening` (`tenantId`, `resultIds`, `signals`), the job's ids, and `quarantined` |
 | `credit allowance 80% used`           | API    | A run start takes the period's allowance use from under 80% to at least 80% | Credit fields below                                                                |
 | `credit balance exhausted`            | API    | A run start takes `remaining` credits to 0                                  | Credit fields below                                                                |
+| `spend pool 80% used`                 | API    | A run start takes the month's committed spend to at least 80% of the pool   | `event`, `limitUsd`                                                                |
+| `spend pool exhausted`                | API    | A run start is refused because the pool is spent                            | `event`, `limitUsd`                                                                |
 
 `subjectKind` is `job-source` or `knowledge-source-version`, and `signals` are
 the closed screening codes. `quarantined` lists each piece's kind, result id

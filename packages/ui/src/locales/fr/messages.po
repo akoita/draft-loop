@@ -2802,6 +2802,10 @@ msgstr "DraftLoop accepte les fichiers PDF, DOCX, Markdown et texte, ainsi que l
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr "DraftLoop téléchargera ce modèle une fois et le gardera sur cet ordinateur. Rien n’est téléchargé avant votre confirmation, et votre contenu de candidat n’est jamais envoyé."
 
+#: apps/web/src/credits-model.ts
+msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+msgstr "Le budget de modèles de DraftLoop pour ce mois est épuisé : aucune nouvelle exécution ne peut démarrer. Elles reprennent le 1er du mois prochain."
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Drop"

@@ -144,13 +144,19 @@ export function hostedOperatorFor(tenancy: PostgresTenancy): OperatorTenantFor {
 }
 
 /** The organisation's plan entitlements and credit ledger, which a run start is checked against. */
-export function hostedEntitlementsFor(tenancy: PostgresTenancy): TenantEntitlementsFor {
+export function hostedEntitlementsFor(
+  tenancy: PostgresTenancy,
+  spendPoolUsd?: number,
+): TenantEntitlementsFor {
   return (tenantId) => {
     const storage = tenancy.forTenant(tenantId);
     return {
       entitlements: storage.organisationPlans.currentEntitlements,
       assignment: storage.organisationPlans.currentPlanAssignment,
       ledger: storage.creditLedger,
+      ...(spendPoolUsd === undefined
+        ? {}
+        : { spendPool: { limitUsd: spendPoolUsd, pool: storage.spendPool } }),
     };
   };
 }
@@ -197,7 +203,7 @@ export async function openHostedTenants(
           objectPrefix: blobs.prefixFor(tenantId),
         }),
         operatorFor: hostedOperatorFor(tenancy),
-        entitlementsFor: hostedEntitlementsFor(tenancy),
+        entitlementsFor: hostedEntitlementsFor(tenancy, config.spendPoolUsd),
         applicationFor: (tenantId) =>
           composeHostedApplication({
             storage: tenancy.forTenant(tenantId),

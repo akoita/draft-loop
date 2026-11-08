@@ -153,6 +153,8 @@ export function planRefusalMessage(error: unknown): string | undefined {
       return t`DraftLoop cannot price one of the workspace's models yet. Choose another preset or model.`;
     case "429 run_cap_reached":
       return runCapMessage(details);
+    case "503 spend_pool_exhausted":
+      return t`DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month.`;
     case "409 plan_limit_reached":
       return planLimitMessage(details);
     default:

@@ -6,7 +6,7 @@ import {
   retriesAutomatically,
 } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
-import type { CreditLedger, PostgresTenancy } from "@draft-loop/storage-postgres";
+import type { CreditLedger, PostgresTenancy, SpendPool } from "@draft-loop/storage-postgres";
 
 import type { RunJobOutcome } from "./run-job-handler.js";
 
@@ -130,12 +130,16 @@ export function tenantRunCredits(options: TenantRunCreditsOptions): RunCredits {
   const sweepLimit = options.sweepLimit ?? defaultSweepLimit;
 
   const close = async (
-    ledger: Pick<CreditLedger, "reservationFor" | "settle" | "refund">,
+    storage: {
+      readonly creditLedger: Pick<CreditLedger, "reservationFor" | "settle" | "refund">;
+      readonly spendPool: Pick<SpendPool, "close">;
+    },
     tenantId: string,
     runId: string,
     action: Exclude<RunCreditAction, "keep">,
     run: RunSnapshot | undefined,
   ): Promise<void> => {
+    const ledger = storage.creditLedger;
     // Reading first keeps a job without a reservation, or after a settlement, off the ledger lock.
     const held = await ledger.reservationFor(runId);
     if (held?.state !== "open") return;
@@ -145,6 +149,10 @@ export function tenantRunCredits(options: TenantRunCreditsOptions): RunCredits {
         ? await ledger.settle({ runId, now: at })
         : await ledger.refund({ runId, now: at });
     if (!result.changed) return;
+    const estimatedUsd = run === undefined ? null : runUsage(run).estimatedUsd;
+    // The pool counts what the run cost whether or not it left a draft: a refunded run still
+    // spent model money. A run with no pool entry, as without a pool, writes nothing.
+    await storage.spendPool.close({ runId, usd: estimatedUsd ?? 0, now: at });
     const reservation = result.reservation ?? held;
     options.onClosed({
       organisationId: tenantId,
@@ -152,7 +160,7 @@ export function tenantRunCredits(options: TenantRunCreditsOptions): RunCredits {
       credits: reservation.credits,
       estimateVersion: reservation.estimateVersion,
       outcome: action === "settle" ? "settled" : "refunded",
-      estimatedUsd: run === undefined ? null : runUsage(run).estimatedUsd,
+      estimatedUsd,
     });
   };
 
@@ -168,7 +176,7 @@ export function tenantRunCredits(options: TenantRunCreditsOptions): RunCredits {
       const run = await runs.loadRun(runId);
       // No saved run: it was never begun, or was erased with its record.
       const action = run === undefined ? "refund" : creditActionForRun(run);
-      if (action !== "keep") await close(storage.creditLedger, tenantId, runId, action, run);
+      if (action !== "keep") await close(storage, tenantId, runId, action, run);
     }
   };
 
@@ -182,8 +190,7 @@ export function tenantRunCredits(options: TenantRunCreditsOptions): RunCredits {
     afterJob: async (job, outcome, run) => {
       const action = creditActionForJob(outcome, run);
       if (action !== "keep") {
-        const { creditLedger } = options.tenancy.forTenant(job.tenantId);
-        await close(creditLedger, job.tenantId, job.runId, action, run);
+        await close(options.tenancy.forTenant(job.tenantId), job.tenantId, job.runId, action, run);
       }
       try {
         await reconcile(job.tenantId);

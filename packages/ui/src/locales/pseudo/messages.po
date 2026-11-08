@@ -2808,6 +2808,10 @@ msgstr ""
 msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
 msgstr ""
 
+#: apps/web/src/credits-model.ts
+msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Drop"

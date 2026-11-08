@@ -192,6 +192,7 @@ decides what a member may do:
 | 402 `credits_insufficient`   | The credit balance cannot cover the run                                       |
 | 429 `run_cap_reached`        | The plan's run cap is used up                                                 |
 | 403 `model_tier_not_in_plan` | The workspace picks a model outside the plan's tiers                          |
+| 503 `spend_pool_exhausted`   | The deployment's monthly spend pool is used; runs start again next month      |
 
 ### Realm clients
 
@@ -281,6 +282,7 @@ With `filesystem`, the host disk's encryption protects the files.
 | `DRAFT_LOOP_RUN_MAX_COST_USD`    | API, worker | Required ceiling on a run's estimated cost, in US dollars                                                                                                                                                                                           |
 | `DRAFT_LOOP_RUN_MAX_DURATION_MS` | API, worker | Required ceiling on a run's duration, in milliseconds                                                                                                                                                                                               |
 | `DRAFT_LOOP_MAX_SOURCE_BYTES`    | API         | Largest candidate source upload, default 10 MiB, at most 30 MiB                                                                                                                                                                                     |
+| `DRAFT_LOOP_SPEND_POOL_USD`      | API         | Optional monthly ceiling on all organisations' run spend, in US dollars. Unset means no pool; sign-in mode only                                                                                                                                     |
 
 Unless screening is `off`, a run on material with no stored result is refused
 by the API and held by the worker. The worker screens nothing itself.
