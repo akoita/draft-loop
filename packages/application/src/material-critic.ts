@@ -1,5 +1,6 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
+import { maximumMachineTellFindings } from "@draft-loop/schemas/saved-application-material";
 
 import {
   type ApplicationMaterialDraft,
@@ -19,7 +20,8 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 
 export const materialCriticPromptVersion = "material-critic-v1";
 /** The most findings one pass keeps; a letter has at most a few sentences worth rewriting. */
-export const maximumMachineTellFindings = 8;
+export { maximumMachineTellFindings };
+
 const maximumReasonCharacters = 200;
 
 /** One sentence the critic says reads as machine-written, quoted from its paragraph. */
