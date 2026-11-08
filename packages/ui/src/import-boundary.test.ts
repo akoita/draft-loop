@@ -19,6 +19,8 @@ const allowedRuntimeImports: readonly RegExp[] = [
   /^@draft-loop\/domain(?:\/[a-z-]+)?$/u,
   /^@draft-loop\/application\/model-profile-(?:budget|catalog|selection)$/u,
   /^@draft-loop\/application\/model-profiles$/u,
+  // The export preview's PDF pages (#2498): a browser-only library, loaded when a preview opens.
+  /^pdfjs-dist(?:\/build\/pdf\.worker\.min\.mjs)?$/u,
 ];
 
 const importPattern = /(?:import|export)\s+(?!type\b)(?:[^"';]*?\sfrom\s+)?["']([^"']+)["']/gu;

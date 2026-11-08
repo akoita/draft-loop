@@ -71,7 +71,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Writing preferences](review-and-export.md)                                  | `available` | server        | `none`       | Saves preferences you approve from review and applies them to later drafts.                             |
 | [Model pair and run budget](review-and-export.md)                            | `available` | server        | `none`       | Choose author and critic models from two companies and the limits a run may spend.                      |
 | [Autopilot](review-and-export.md)                                            | `available` | server        | `none`       | Keeps revising through blocking findings and pauses only when a person is needed.                       |
-| [Review and export](review-and-export.md)                                    | `available` | server, CLI   | `none`       | Review findings, approve the draft, export Markdown, DOCX or PDF from templates.                        |
+| [Review and export](review-and-export.md)                                    | `available` | server, CLI   | `none`       | Review findings, approve the draft, preview and export Markdown, DOCX or PDF from templates.            |
 
 ## Application material
 

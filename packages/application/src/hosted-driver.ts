@@ -2,6 +2,7 @@ import { extractApplicationBrief } from "./application-brief-extraction.js";
 import { importApplicationBundle } from "./application-bundle-import.js";
 import { recordApplicationJobPage } from "./application-job-page.js";
 import { CliUserError } from "./cli-user-error.js";
+import { previewRunExport } from "./export-preview.js";
 import type { ApplicationDriver } from "./index.js";
 import { type KnowledgeStoreOpener, withKnowledgeStoreOpener } from "./knowledge-store-opener.js";
 import { createLocalApplicationDriver, type LocalApplicationDriverOptions } from "./local.js";
@@ -165,6 +166,7 @@ export function createHostedApplicationDriver(
       }),
     listRunExports: (command) => inHostedContext(() => listRunExports(command)),
     readRunExport: (command) => inHostedContext(() => readRunExportContent(command)),
+    previewExport: (command) => inHostedContext(() => previewRunExport(command)),
     recordReviewDecision: (command) =>
       inHostedContext(async () => {
         await assertReviewDecisionTarget(command);
