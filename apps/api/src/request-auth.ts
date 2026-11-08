@@ -219,7 +219,7 @@ export function registerRequestAuthentication(
       }
       await reply
         .code(403)
-        .send(apiError("forbidden", "The signed-in account is not a member of an organisation."));
+        .send(apiError("no_account", "The signed-in account is not a member of an organisation."));
       return;
     }
     if (authentication.reason !== undefined) {

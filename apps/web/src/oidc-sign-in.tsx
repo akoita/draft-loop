@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AccountScreenLanguage } from "./account-screen-language.js";
 import type { ApiClient } from "./api-client.js";
 import { Shell } from "./app.js";
+import { BetaSignUp } from "./beta-sign-up.js";
 import { readAuthorizationResponse } from "./oidc-model.js";
 import {
   type OidcSession,
@@ -64,6 +65,9 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
   );
   const [notice, setNotice] = useState<string | undefined>(() => session.takeNotice());
   const [leaving, setLeaving] = useState(false);
+  // A verified sign-in with no account sees beta sign-up; a new account remounts the app.
+  const [needsAccount, setNeedsAccount] = useState(false);
+  const [accountVersion, setAccountVersion] = useState(0);
 
   useEffect(() => {
     if (phase !== "completing") return;
@@ -107,7 +111,7 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
     }
     return {
       end,
-      api: signedInClient(session, createClient, end),
+      api: signedInClient(session, createClient, end, () => setNeedsAccount(true)),
     };
   }, [phase, session, createClient, navigation]);
 
@@ -131,8 +135,20 @@ export function OidcApp({ session, createClient, navigation }: OidcAppProps) {
       />
     );
 
+  if (needsAccount)
+    return (
+      <BetaSignUp
+        client={client.api}
+        onSignedUp={() => {
+          setNeedsAccount(false);
+          setAccountVersion((version) => version + 1);
+        }}
+        onSignOut={() => client.end(undefined, true)}
+      />
+    );
+
   return (
-    <AccountScreenLanguage client={client.api}>
+    <AccountScreenLanguage key={accountVersion} client={client.api}>
       <Shell mode="sign-in" client={client.api} onSignOut={() => client.end(undefined, true)} />
     </AccountScreenLanguage>
   );
