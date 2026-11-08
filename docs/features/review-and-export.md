@@ -23,7 +23,9 @@ source-only CLI has its own review and export commands
 3. Export the approved draft as Markdown, DOCX or PDF, from the `classic`,
    `compact` or `modern` template (`modern` is the default). **Preview**
    (Alt+P) shows the exact file first, page by page, with the page count
-   against the template's target; nothing is saved until you export.
+   against the template's target; nothing is saved until you export. A
+   Word preview shows the same template's PDF pages, since a browser has no
+   Word viewer.
 4. Accept or dismiss the **writing preferences** that DraftLoop suggests from
    your review choices. An accepted one joins the writing policy, which keeps
    every version.
