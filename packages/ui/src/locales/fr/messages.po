@@ -669,6 +669,14 @@ msgstr "{matched} (choix non valide)"
 msgid "{name} · {0}"
 msgstr "{name} · {0}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), about {cost} a draft"
+msgstr "{name} ({role}), environ {cost} par brouillon"
+
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), under US$0.01 a draft"
+msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr "{name} a été retiré des espaces de travail récents. Ses fichiers sont inchangés."
@@ -1537,6 +1545,10 @@ msgstr "Avant de commencer"
 #: packages/ui/src/review.tsx
 msgid "Before your edits, the final CV checks failed:"
 msgstr "Avant vos modifications, les vérifications finales du CV avaient échoué :"
+
+#: apps/web/src/application-material-model.ts
+msgid "best writing"
+msgstr "meilleure écriture"
 
 #. placeholder {0}: status.reason
 #: packages/ui/src/application-steps-model.ts
@@ -2912,6 +2924,10 @@ msgstr "exécution antérieure"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Earlier versions cannot be edited."
 msgstr "Les versions antérieures ne sont pas modifiables."
+
+#: apps/web/src/application-material-model.ts
+msgid "economy"
+msgstr "économique"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Economy"
@@ -4491,6 +4507,7 @@ msgstr "Mistral Large 4 (préversion)"
 msgid "model"
 msgstr "modèle"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/app.tsx
 msgid "Model"
 msgstr "Modèle"

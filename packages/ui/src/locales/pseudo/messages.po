@@ -675,6 +675,14 @@ msgstr ""
 msgid "{name} · {0}"
 msgstr ""
 
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), about {cost} a draft"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "{name} ({role}), under US$0.01 a draft"
+msgstr ""
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr ""
@@ -1542,6 +1550,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Before your edits, the final CV checks failed:"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "best writing"
 msgstr ""
 
 #. placeholder {0}: status.reason
@@ -2917,6 +2929,10 @@ msgstr ""
 
 #: packages/ui/src/profile-status-view.tsx
 msgid "Earlier versions cannot be edited."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "economy"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -4496,6 +4512,7 @@ msgstr ""
 msgid "model"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/app.tsx
 msgid "Model"
 msgstr ""

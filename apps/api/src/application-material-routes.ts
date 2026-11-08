@@ -11,6 +11,7 @@ import {
 } from "@draft-loop/application/application-material";
 import {
   applicationMaterialDefaultModelId,
+  applicationMaterialEconomyModelId,
   applicationMaterialPromptVersion,
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
@@ -74,9 +75,22 @@ const params = z.strictObject({
   applicationId: applicationIdSchema,
 });
 
+/** The models that may write application material: the default first, then the economy one. */
+export const applicationMaterialModelIds = [
+  applicationMaterialDefaultModelId,
+  applicationMaterialEconomyModelId,
+] as const;
+
+/** A typical draft's tokens, for the estimate the panel shows beside each model. */
+const typicalDraftTokens = { input: 6_000, output: 2_000 } as const;
+
 const body = z
   .strictObject({
     kind: z.enum(applicationMaterialKinds),
+    model: z
+      .enum(applicationMaterialModelIds)
+      .optional()
+      .describe("The model that writes the draft; the default model when absent."),
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe(
@@ -212,13 +226,13 @@ export function registerApplicationMaterialRoutes(
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { service, workspaceRoot, material, consents, screening, drafts } = options;
   const now = options.now ?? (() => new Date());
-  const model = {
-    company: "anthropic",
-    modelId: applicationMaterialDefaultModelId,
-    role: "author",
-    promptTemplateVersion: applicationMaterialPromptVersion,
-  } as const;
-  const pricing = catalogModelPricing(model);
+  const selectionOf = (modelId: (typeof applicationMaterialModelIds)[number]) =>
+    ({
+      company: "anthropic",
+      modelId,
+      role: "author",
+      promptTemplateVersion: applicationMaterialPromptVersion,
+    }) as const;
   const maxCostUsd = material.maxCostUsd ?? defaultApplicationMaterialMaxCostUsd;
 
   app.post(
@@ -284,6 +298,8 @@ export function registerApplicationMaterialRoutes(
       const facts = await careerFacts(service, root);
       const usage = await options.factUsage?.read(root);
 
+      const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
+      const pricing = catalogModelPricing(model);
       let spentUsd = 0;
       const routed = material.route({
         configuredModel: model,
@@ -418,6 +434,47 @@ export function registerApplicationMaterialRoutes(
         throw error;
       }
     },
+  );
+
+  app.get(
+    "/v1/application-material/models",
+    {
+      schema: {
+        summary: "List the models that can write application material",
+        description:
+          "The models a cover letter or interview questions can be drafted with, the default first, each with the estimated cost of a typical draft from the catalog's prices. An estimate is absent when the catalog has no price for the model.",
+        response: {
+          200: z
+            .strictObject({
+              models: z.array(
+                z.strictObject({
+                  model_id: z.enum(applicationMaterialModelIds),
+                  default: z.boolean(),
+                  estimated_cost_usd: z.number().optional(),
+                }),
+              ),
+            })
+            .meta({ id: "ApplicationMaterialModels" }),
+        },
+      },
+    },
+    async (_request, reply) =>
+      reply.send({
+        models: applicationMaterialModelIds.map((modelId) => {
+          const price = catalogModelPricing(selectionOf(modelId));
+          const estimate =
+            price === undefined
+              ? undefined
+              : (typicalDraftTokens.input * price.inputUsdPerMillionTokens +
+                  typicalDraftTokens.output * price.outputUsdPerMillionTokens) /
+                1_000_000;
+          return {
+            model_id: modelId,
+            default: modelId === applicationMaterialDefaultModelId,
+            ...(estimate === undefined ? {} : { estimated_cost_usd: Number(estimate.toFixed(4)) }),
+          };
+        }),
+      }),
   );
 
   if (drafts === undefined) return;

@@ -137,8 +137,16 @@ export interface ApiSchemas {
     readonly length?: "short" | "standard" | "long";
     readonly addressee?: string;
   };
+  "ApplicationMaterialModels": {
+    readonly models: readonly ({
+      readonly model_id: "claude-sonnet-5-5" | "claude-haiku-5-5";
+      readonly default: boolean;
+      readonly estimated_cost_usd?: number;
+    })[];
+  };
   "ApplicationMaterialRequestInput": {
     readonly kind: "cover-letter" | "interview-questions";
+    readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
   };
   "AssignedPlan": {
@@ -2238,6 +2246,9 @@ export interface ApiOperations {
       readonly kind?: "cover-letter" | "interview-questions";
     };
     readonly response: ApiSchemas["ApplicationMaterialDraftList"];
+  };
+  "GET /v1/application-material/models": {
+    readonly response: ApiSchemas["ApplicationMaterialModels"];
   };
   "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
     readonly path: {
