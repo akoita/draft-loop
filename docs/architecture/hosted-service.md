@@ -139,10 +139,10 @@ sequenceDiagram
   and `grantRunQueueAccess` gives the runtime role table and function access
   only.
 
-### Brief and profile jobs
+### Brief, profile and material review jobs
 
-The same queue carries two other jobs. Their payloads hold ids and the person's
-choices only.
+The same queue carries three other jobs. Their payloads hold ids and the
+person's choices only.
 
 - **Brief extraction.** A live workspace's brief made from job text is saved
   without extraction. Once screening clears the text,
@@ -157,6 +157,13 @@ choices only.
   content-free progress (calls done of calls planned). A cancel stops it before
   its next provider call, and the job keeps how it ended: the saved version, or
   a fixed message the person can act on.
+- **Material review.** The critic pass on a saved cover letter (#2525). The
+  workspace's critic, from another company than the draft's author, lists the
+  sentences that read as machine-written; the author revises once. A revision
+  that passes every citation rule is saved as the next version with the
+  findings. Edited versions, interview questions and a critic from the
+  author's company are skipped without a call, and one failed attempt is
+  retried once. Nothing queues it yet: the API's enqueue comes with #2526.
 - **Derivation routes.** `/v1/workspaces/:id/profiles/:profileId/derivation`
   starts (POST), reads (GET) and cancels (DELETE) a derivation. A start needs
   the record's transmission consent in sign-in mode. The profile's own routes
