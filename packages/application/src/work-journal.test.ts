@@ -141,7 +141,10 @@ describe("work journal dedupe", () => {
     const second = await journal.record("owner", {
       ...note,
       title: "Refund webhooks for Fernhill",
-      links: [{ kind: "pull-request", url: "https://git.example.test/fernhill/bookings/pull/43" }],
+      links: [
+        { kind: "pull-request", url: "https://git.example.test/fernhill/bookings/pull/43" },
+        { kind: "pull-request", url: "https://git.example.test/fernhill/bookings/pull/42" },
+      ],
       technologies: ["Stripe", "Postgres", "Redis"],
       period: { start: "2026-10-20", end: "2026-11-02" },
     });
@@ -154,6 +157,24 @@ describe("work journal dedupe", () => {
     expect(merged.content.links).toHaveLength(2);
     expect(merged.content.technologies).toEqual(["TypeScript", "Stripe", "Postgres", "Redis"]);
     expect((await journal.get("owner", second.note_id ?? "")).status).toBe("merged");
+  });
+
+  it("drops a stored likely duplicate the current rule no longer pairs", async () => {
+    const { journal: service, store } = setup();
+    const journal = await enabled(service);
+    const first = await journal.record("owner", note);
+    const second = await journal.record("owner", {
+      ...note,
+      title: "Invoice exports for the Fernhill accountants",
+      links: [{ kind: "pull-request", url: "https://git.example.test/fernhill/bookings/pull/44" }],
+    });
+    expect(second.possible_duplicate_of).toEqual([]);
+    // As recorded under the older rule, which paired notes on two shared technologies.
+    const stored = await store.get("owner", second.note_id ?? "");
+    if (stored === undefined) throw new Error("The note was not stored.");
+    await store.replace({ ...stored, possible_duplicate_of: [first.note_id ?? ""] });
+    const listed = await journal.listFull("owner", { status: "pending" });
+    expect(listed.map((each) => each.possible_duplicate_of)).toEqual([[], []]);
   });
 
   it("amends a pending note and refuses to amend a discarded one", async () => {

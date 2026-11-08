@@ -45,7 +45,7 @@ const props: WorkJournalPanelProps = {
 };
 
 describe("work journal view model", () => {
-  it("lists pending notes newest first with their pending duplicates, merge suggested", () => {
+  it("lists pending notes newest first with their pending duplicates", () => {
     const items = workJournalReviewItems([
       note("wjn_a", { created_at: "2026-11-03T09:00:00.000Z" }),
       note("wjn_b", { possible_duplicate_of: ["wjn_a", "wjn_gone"] }),
@@ -53,8 +53,7 @@ describe("work journal view model", () => {
     ]);
     expect(items.map((item) => item.note.id)).toEqual(["wjn_b", "wjn_a"]);
     expect(items[0]?.duplicates.map((duplicate) => duplicate.id)).toEqual(["wjn_a"]);
-    expect(items[0]?.suggested).toBe("merge");
-    expect(items[1]?.suggested).toBe("approve");
+    expect(items[1]?.duplicates).toEqual([]);
   });
 
   it("reads periods and screening in words, and holds what screening flagged", () => {
@@ -113,13 +112,14 @@ describe("work journal panel", () => {
     expect(html).toContain("Card payments for the Fernhill booking site");
     expect(html).toContain("2026-10-12 to 2026-10-30 · Fernhill bookings (private)");
     expect(html).toContain("TypeScript, Stripe · Implemented");
+    expect(html).toContain("<summary>1 link</summary>");
     expect(html).toContain("https://git.example.test/fernhill/bookings/pull/42");
     expect(html).toContain("Screened: clear");
     expect(html).toContain("Approve as career evidence");
     expect(html).toContain('<option value="kb-1" selected="">Career evidence</option>');
   });
 
-  it("puts a likely duplicate side by side with Merge preselected", () => {
+  it("puts a likely duplicate side by side and still preselects Approve", () => {
     const html = renderToStaticMarkup(
       <WorkJournalPanel
         {...props}
@@ -130,8 +130,9 @@ describe("work journal panel", () => {
       />,
     );
     expect(html).toContain("Likely the same work:");
-    expect(html).toMatch(/checked="" value="merge"/u);
-    expect(html).toContain("Merge the notes");
+    expect(html).toMatch(/checked="" value="approve"/u);
+    expect(html).toContain('value="merge"');
+    expect(html).not.toMatch(/checked="" value="merge"/u);
   });
 
   it("never offers Approve for a quarantined note", () => {
@@ -169,5 +170,19 @@ describe("work journal provenance", () => {
         amended_by_agent_token_ids: ["dlat_fixtureAAAA", "dlat_fixtureBBBB"],
       }),
     ).toBe("Filed by agent token dlat_fixtureAAAA; amended by dlat_fixtureBBBB.");
+  });
+
+  it("names a token by its label when the host knows it", () => {
+    const names = new Map([["dlat_fixtureAAAA", "Claude Code on my laptop"]]);
+    expect(
+      workJournalProvenance(
+        {
+          ...base,
+          agent_token_id: "dlat_fixtureAAAA",
+          amended_by_agent_token_ids: ["dlat_fixtureBBBB"],
+        },
+        names,
+      ),
+    ).toBe("Filed by Claude Code on my laptop; amended by dlat_fixtureBBBB.");
   });
 });

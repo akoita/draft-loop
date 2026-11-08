@@ -41,6 +41,7 @@ export function WorkJournalSection({ client, bases, openHome }: WorkJournalSecti
   const [intake, setIntake] = useState<boolean | undefined>(undefined);
   const [notes, setNotes] = useState<readonly WorkJournalReviewNote[] | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
+  const [agentNames, setAgentNames] = useState<ReadonlyMap<string, string> | undefined>(undefined);
 
   const reload = useCallback(async () => {
     try {
@@ -65,6 +66,20 @@ export function WorkJournalSection({ client, bases, openHome }: WorkJournalSecti
     void reload();
   }, [reload]);
 
+  // Names each note's agent by its token's label; a note shows the token id when they can't be read.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const listed = await client.call("GET /v1/workspaces/{workspaceId}/agent-tokens", {
+          path: { workspaceId },
+        });
+        setAgentNames(new Map(listed.tokens.map((token) => [token.id, token.label])));
+      } catch {
+        setAgentNames(undefined);
+      }
+    })();
+  }, [client, workspaceId]);
+
   // A shared link to the work journal scrolls to the panel once its notes are read (#2149).
   const scrolled = useRef(false);
   useEffect(() => {
@@ -79,6 +94,7 @@ export function WorkJournalSection({ client, bases, openHome }: WorkJournalSecti
       intake={intake}
       notes={notes}
       problem={problem}
+      agentNames={agentNames}
       knowledgeBases={(bases ?? []).map((base) => ({ id: base.id, name: base.displayName }))}
       agentSetup={
         <AgentSetupLink

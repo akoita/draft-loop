@@ -264,8 +264,9 @@ With the plugin installed, Claude Code also lists each MCP prompt, as
 
 ## How the candidate reviews
 
-Each pending note shows its title, period, project, technologies, role, links,
-summary and screening result. The candidate can:
+Each pending note shows its title, period, project, technologies, role,
+summary, screening result and the agent that filed it, by its token's name.
+Its links are folded behind a count. Approve is preselected. The candidate can:
 
 - **Approve** it into a knowledge base. It becomes a Markdown source of the
   `work-journal` evidence kind, so runs can cite it like any other source.
@@ -284,8 +285,9 @@ with `draft-loop work-journal`; see the
 
 - **Duplicates.** The same pull request in the same repository, or the same
   title in the same project, is recorded once. A note about the same project
-  over overlapping dates with shared technologies or links is recorded and
-  shown as a likely duplicate.
+  over overlapping dates that shares a link or nearly the same title is
+  recorded and shown as a likely duplicate. Shared technologies alone do not
+  count, since one project's notes share its stack.
 - **Screening.** Each note is screened for instructions to a model, like an
   upload. A held note cannot be approved until an edit screens clear.
 - **Default tiers.** An approved note from a public project is `normal`, and

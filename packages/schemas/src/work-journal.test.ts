@@ -123,7 +123,7 @@ describe("work journal dedupe", () => {
     );
   });
 
-  it("marks the same project with overlapping periods and shared work as a likely duplicate", () => {
+  it("marks the same project with overlapping periods and a shared link or title as a likely duplicate", () => {
     const base = parsed();
     const sameLink = parsed({
       ...note,
@@ -131,19 +131,25 @@ describe("work journal dedupe", () => {
       technologies: ["Go"],
       period: { start: "2026-10" },
     });
-    const sharedTech = parsed({
+    const sharedStack = parsed({
       ...note,
+      title: "Invoice exports for the Fernhill accountants",
       links: [],
       technologies: ["stripe", "postgres", "Redis"],
     });
+    const sameTitle = parsed({
+      ...note,
+      title: "Card payments for the Fernhill booking site, with refunds",
+      links: [],
+      technologies: ["Go"],
+    });
     const otherProject = parsed({ ...note, project: { name: "Elsewhere", visibility: "public" } });
     const later = parsed({ ...note, period: { start: "2027-01" } });
-    const oneTech = parsed({ ...note, links: [], technologies: ["Stripe", "Redis"] });
     expect(isLikelyWorkJournalDuplicate(base, sameLink)).toBe(true);
-    expect(isLikelyWorkJournalDuplicate(base, sharedTech)).toBe(true);
+    expect(isLikelyWorkJournalDuplicate(base, sameTitle)).toBe(true);
+    expect(isLikelyWorkJournalDuplicate(base, sharedStack)).toBe(false);
     expect(isLikelyWorkJournalDuplicate(base, otherProject)).toBe(false);
     expect(isLikelyWorkJournalDuplicate(base, later)).toBe(false);
-    expect(isLikelyWorkJournalDuplicate(base, oneTech)).toBe(false);
   });
 });
 
