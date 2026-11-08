@@ -18,23 +18,50 @@ const recordWork = {
 const lines = (...entries: unknown[]) => entries.map((entry) => JSON.stringify(entry)).join("\n");
 
 describe("turnNeedsAdvice", () => {
-  it.each(["git push origin main", "gh pr merge 12 --squash", "git merge feature"])(
-    "advises after %s",
-    (command) => {
-      expect(turnNeedsAdvice(lines(person("ship it"), bash(command)))).toBe(true);
-    },
-  );
+  it.each([
+    "git push origin main",
+    "git push -u origin master",
+    "git push origin HEAD:main && echo done",
+    "gh pr merge 12 --squash",
+  ])("advises after %s", (command) => {
+    expect(turnNeedsAdvice(lines(person("ship it"), bash(command)))).toBe(true);
+  });
+
+  it.each([
+    "git push",
+    "git push -u origin claude/feature-main-menu",
+    "git merge origin/main",
+    "git push origin feature; git checkout main",
+  ])("stays quiet after %s, which ships nothing", (command) => {
+    expect(turnNeedsAdvice(lines(person("push it"), bash(command)))).toBe(false);
+  });
+
+  it("advises after a merge through a tool", () => {
+    const merged = {
+      type: "assistant",
+      message: {
+        content: [{ type: "tool_use", name: "mcp__github__merge_pull_request", input: {} }],
+      },
+    };
+    expect(turnNeedsAdvice(lines(person("merge it"), merged))).toBe(true);
+  });
 
   it("reads only the last turn the person typed, not tool results", () => {
-    const earlier = lines(person("push it"), bash("git push"), person("now just run tests"));
+    const earlier = lines(
+      person("push it"),
+      bash("git push origin main"),
+      person("now just run tests"),
+    );
     expect(turnNeedsAdvice(`${earlier}\n${lines(bash("pnpm test"))}`)).toBe(false);
     // A tool result is a user entry, but not the person: the push stays in the same turn.
-    expect(turnNeedsAdvice(lines(person("push it"), bash("git push"), toolResult))).toBe(true);
+    expect(
+      turnNeedsAdvice(lines(person("push it"), bash("git push origin main"), toolResult)),
+    ).toBe(true);
   });
 
   it("treats a person's text block as a new turn", () => {
     const textTurn = { type: "user", message: { content: [{ type: "text", text: "hi" }] } };
-    expect(turnNeedsAdvice(lines(bash("git push"), textTurn, bash("ls")))).toBe(false);
+    expect(turnNeedsAdvice(lines(bash("gh pr merge 3"), textTurn, bash("ls")))).toBe(false);
   });
 
   it("skips blank and malformed lines and odd entries", () => {
@@ -44,7 +71,7 @@ describe("turnNeedsAdvice", () => {
       JSON.stringify(person("go")),
       JSON.stringify({ type: "assistant", message: { content: "plain text" } }),
       JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use" }] } }),
-      JSON.stringify(bash("git push")),
+      JSON.stringify(bash("gh pr merge 3")),
     ].join("\n");
     expect(turnNeedsAdvice(transcript)).toBe(true);
   });
@@ -76,7 +103,7 @@ describe("runStopHook", () => {
 
   it("prints nothing when the turn recorded the work", async () => {
     const transcriptPath = join(root, "transcript.jsonl");
-    await writeFile(transcriptPath, lines(person("merge"), bash("git push"), recordWork));
+    await writeFile(transcriptPath, lines(person("merge"), bash("gh pr merge 3"), recordWork));
     expect(await runStopHook(JSON.stringify({ transcript_path: transcriptPath }))).toBe("");
   });
 

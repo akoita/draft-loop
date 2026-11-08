@@ -1,15 +1,20 @@
 import { readFile } from "node:fs/promises";
 
 /**
- * The opt-in Claude Code Stop hook (#2025). When the turn just ended pushed or merged and never
+ * The opt-in Claude Code Stop hook (#2025, #2555). When the turn just ended merged work and never
  * called `record_work`, it adds one advisory line; it never blocks the turn and never calls the
- * tool by itself.
+ * tool by itself. A push to a feature branch, or merging main into one, is not shipped work.
  */
 
 export const stopHookAdvice =
-  "This turn pushed or merged without a DraftLoop record_work call. If the work is notable, record it with /log-work.";
+  "This turn merged work without a DraftLoop record_work call. If it is a user-visible feature worth a CV line, record it with /log-work.";
 
-const shipping = /\bgit\s+push\b|\bgh\s+pr\s+merge\b|\bgit\s+merge\b/u;
+/** A pull request merged from the shell, or a push straight to the default branch. */
+const mergeCommand =
+  /\bgh\s+pr\s+merge\b|\bgit\s+push\b[^\n;&|]*?(?:\s|:)(?:main|master)(?:\s|$|[;&|])/u;
+
+/** A merge through a tool, such as the GitHub MCP server's `merge_pull_request`. */
+const mergeTool = /merge_pull_request$/u;
 
 interface TranscriptEntry {
   readonly type?: unknown;
@@ -30,7 +35,7 @@ function isPersonTurn(entry: TranscriptEntry): boolean {
   return typeof content === "string" || blocks(entry).some((block) => block.type === "text");
 }
 
-/** Whether the last turn of a Claude Code transcript (JSON lines) shipped without recording it. */
+/** Whether the last turn of a Claude Code transcript (JSON lines) merged without recording it. */
 export function turnNeedsAdvice(transcript: string): boolean {
   const entries = transcript.split("\n").flatMap((line): TranscriptEntry[] => {
     if (line.trim() === "") return [];
@@ -50,8 +55,9 @@ export function turnNeedsAdvice(transcript: string): boolean {
     .flatMap(blocks)
     .filter((block) => block.type === "tool_use");
   const shipped = uses.some((block) => {
+    if (typeof block.name === "string" && mergeTool.test(block.name)) return true;
     const command = (block.input as { readonly command?: unknown } | undefined)?.command;
-    return typeof command === "string" && shipping.test(command);
+    return typeof command === "string" && mergeCommand.test(command);
   });
   const recorded = uses.some(
     (block) => typeof block.name === "string" && block.name.endsWith("record_work"),
