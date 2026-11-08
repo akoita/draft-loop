@@ -16,16 +16,33 @@ The drafter builds a bounded context, then asks the model behind
 | Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. At most 60, each cut to 300 characters. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
+| Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
 | Refused rules    | Empty on the first call; the second call lists what the first draft broke.                                                  |
 
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v6`.
+`application-material-v7`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
 phrase, no list of three, no paragraphs that open alike, and at most one dash.
+
+## Your own voice
+
+Up to three texts the candidate wrote, such as an old letter or a long email,
+make drafts sound like them. They are kept as the `writing-samples.json`
+workspace setting, so they are archived and erased with the record.
+
+| Route                                       | Does                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET /v1/workspaces/{workspaceId}/writing-samples` | Returns the samples.                                                     |
+| `PUT /v1/workspaces/{workspaceId}/writing-samples` | Replaces them: at most 3, each 80 to 4,000 characters; `[]` removes them. |
+
+The model copies their sentence length, tone and words, never their content.
+The refusal rules check cited facts only, so a number only a sample states is
+refused. The writing policy's forbidden terms, tone and spelling reach the
+model with the samples.
 
 ## Writing check
 

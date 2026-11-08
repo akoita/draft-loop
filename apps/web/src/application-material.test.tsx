@@ -46,6 +46,10 @@ const props: ApplicationMaterialViewProps = {
   models: [],
   modelId: undefined,
   onModel: () => {},
+  samples: undefined,
+  samplesSaved: true,
+  onSamples: () => {},
+  onSaveSamples: () => {},
   collapsed: false,
   onToggle: () => {},
   onKind: () => {},
@@ -176,6 +180,24 @@ describe("the prepare panel", () => {
     );
     expect(applicationMaterialModelLabel({ model_id: "claude-haiku-5-5", default: false })).toBe(
       "Claude Haiku (economy)",
+    );
+  });
+
+  it("offers three sample fields when the server keeps samples, saved or not", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        samples={["An old letter I wrote."]}
+        samplesSaved={false}
+      />,
+    );
+    expect(html).toContain("Your writing samples");
+    expect(html).toContain(">An old letter I wrote.</textarea>");
+    expect(html.match(/aria-label="Writing sample \d"/gu)).toHaveLength(3);
+    expect(html).toContain(">Save samples</button>");
+    expect(html).toContain("never what the samples say");
+    expect(renderToStaticMarkup(<ApplicationMaterialView {...props} />)).not.toContain(
+      "Your writing samples",
     );
   });
 

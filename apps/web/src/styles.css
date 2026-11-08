@@ -571,6 +571,20 @@ button.small:where(:not(.shared-screens *)) {
   color: var(--text-2);
 }
 
+.application-material-samples {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.application-material-samples legend {
+  padding: 0 var(--space-1);
+  color: var(--text-2);
+}
+
 .application-material-versions {
   display: flex;
   flex-wrap: wrap;

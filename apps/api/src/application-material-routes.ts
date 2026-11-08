@@ -5,6 +5,7 @@ import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
   type ApplicationMaterialRequirement,
+  type ApplicationMaterialVoice,
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
@@ -17,6 +18,7 @@ import {
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
+import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import { writingTells } from "@draft-loop/application/writing-tells";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
@@ -61,6 +63,8 @@ export interface ApplicationMaterialRoutesOptions {
   readonly screening?: Pick<ContentScreeningHooks, "assertRunMaterialClear">;
   /** Where each fact may be used (#2260); without it every fact may be used, as before. */
   readonly factUsage?: Pick<FactUsageService, "read">;
+  /** The candidate's writing samples (#2513); without them drafts follow the brief alone. */
+  readonly writingSamples?: Pick<WritingSamplesService, "read">;
   /** Where drafts are kept (#2477); without it a draft is returned and not stored, as before. */
   readonly drafts?: SavedApplicationMaterialStore;
   /** The clock a saved draft's time comes from; the system clock by default. */
@@ -296,6 +300,7 @@ export function registerApplicationMaterialRoutes(
         priority: requirement.priority,
       }));
       const facts = await careerFacts(service, root);
+      const voice = await candidateVoice(service, root, options.writingSamples);
       const usage = await options.factUsage?.read(root);
 
       const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
@@ -343,6 +348,7 @@ export function registerApplicationMaterialRoutes(
         const draft = await draftApplicationMaterial(writer, {
           kind: request.body.kind,
           ...(guidance === undefined ? {} : { guidance }),
+          ...(voice === undefined ? {} : { voice }),
           facts,
           requirements,
           ...(usage === undefined ? {} : { usage }),
@@ -529,6 +535,32 @@ export function registerApplicationMaterialRoutes(
       return reply.code(204).send(null);
     },
   );
+}
+
+/**
+ * How the candidate writes: their samples, and the writing policy's forbidden terms, tone and
+ * spelling. Each is style for the model, never a fact.
+ */
+async function candidateVoice(
+  service: ApplicationService,
+  root: string,
+  samples: Pick<WritingSamplesService, "read"> | undefined,
+): Promise<ApplicationMaterialVoice | undefined> {
+  const texts = (await samples?.read(root)) ?? [];
+  const policy = (await service.getWritingPolicy?.({ root, includeContent: false }))?.policy;
+  const avoidTerms = (policy?.rules ?? []).flatMap((rule) =>
+    rule.kind === "forbidden-term" ? [rule.term] : [],
+  );
+  const preferences = policy?.preferences;
+  const voice: ApplicationMaterialVoice = {
+    ...(texts.length === 0 ? {} : { samples: texts }),
+    ...(avoidTerms.length === 0 ? {} : { avoidTerms }),
+    ...(preferences?.tone === undefined ? {} : { tone: preferences.tone }),
+    ...(preferences?.spellingLocale === undefined
+      ? {}
+      : { spellingLocale: preferences.spellingLocale }),
+  };
+  return Object.keys(voice).length === 0 ? undefined : voice;
 }
 
 /** A provider adapter's failure, named by its code and diagnostics, never by its text. */
