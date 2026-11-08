@@ -6,12 +6,14 @@ import {
   type ApplicationMaterialDraft,
   type ApplicationMaterialGuidance,
   type ApplicationMaterialKind,
+  type ApplicationMaterialModel,
   applicationMaterialDisclosure,
   applicationMaterialFileName,
   applicationMaterialGuidanceFor,
   applicationMaterialKindLabels,
   applicationMaterialLengthLabels,
   applicationMaterialMarkdown,
+  applicationMaterialModelLabel,
   applicationMaterialProblem,
   applicationMaterialTellReason,
   applicationMaterialToneLabels,
@@ -39,6 +41,10 @@ export interface ApplicationMaterialViewProps {
   /** What the candidate asked the next draft to stress, its tone, length and addressee. */
   readonly guidance: ApplicationMaterialGuidance;
   readonly onGuidance: (guidance: ApplicationMaterialGuidance) => void;
+  /** The models the server offers, the default first; fewer than two hides the picker. */
+  readonly models: readonly ApplicationMaterialModel[];
+  readonly modelId: string | undefined;
+  readonly onModel: (modelId: string) => void;
   /** Folded to its heading row, so a feature the candidate does not use takes one line. */
   readonly collapsed: boolean;
   readonly onToggle: () => void;
@@ -172,6 +178,23 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               </label>
             ) : null}
           </div>
+          {props.models.length > 1 ? (
+            <label>
+              {t`Model`}
+              <select
+                className="input"
+                disabled={busy}
+                value={props.modelId ?? props.models.find((model) => model.default)?.model_id}
+                onChange={(event) => props.onModel(event.currentTarget.value)}
+              >
+                {props.models.map((model) => (
+                  <option key={model.model_id} value={model.model_id}>
+                    {applicationMaterialModelLabel(model)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
         </details>
         <div className="application-material-actions">
@@ -284,8 +307,25 @@ export function ApplicationMaterialSection({
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [guidance, setGuidance] = useState<ApplicationMaterialGuidance>({});
+  const [models, setModels] = useState<readonly ApplicationMaterialModel[]>([]);
+  const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
+
+  // The models the server offers; a server without the route leaves the picker hidden.
+  useEffect(() => {
+    if (collapsed || models.length > 0) return;
+    let current = true;
+    client.call("GET /v1/application-material/models", {}).then(
+      (listed) => {
+        if (current) setModels(listed.models);
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [client, collapsed, models.length]);
 
   // The saved versions of the chosen kind, loaded once the panel is open. A server that keeps
   // no drafts answers 404, and the panel then shows only what it drafts in this visit.
@@ -318,6 +358,9 @@ export function ApplicationMaterialSection({
       problem={problem}
       guidance={guidance}
       onGuidance={setGuidance}
+      models={models}
+      modelId={modelId}
+      onModel={(next) => setModelId(models.find((model) => model.model_id === next)?.model_id)}
       busy={busy}
       collapsed={collapsed}
       onToggle={() => {
@@ -340,7 +383,11 @@ export function ApplicationMaterialSection({
             "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material",
             {
               path: { workspaceId, applicationId },
-              body: { kind, ...guidanceBody(kind, guidance) },
+              body: {
+                kind,
+                ...guidanceBody(kind, guidance),
+                ...(modelId === undefined ? {} : { model: modelId }),
+              },
             },
           );
           if (drafted.id === undefined) {

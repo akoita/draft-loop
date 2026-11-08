@@ -2290,6 +2290,14 @@
               "interview-questions"
             ]
           },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
           "guidance": {
             "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
@@ -7050,6 +7058,41 @@
           "exports"
         ]
       },
+      "ApplicationMaterialModelsInput": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model_id": {
+                  "type": "string",
+                  "enum": [
+                    "claude-sonnet-5-5",
+                    "claude-haiku-5-5"
+                  ]
+                },
+                "default": {
+                  "type": "boolean"
+                },
+                "estimated_cost_usd": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "model_id",
+                "default"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "models"
+        ],
+        "additionalProperties": false
+      },
       "ScreeningOutcome": {
         "type": "object",
         "properties": {
@@ -9359,6 +9402,14 @@
             "enum": [
               "cover-letter",
               "interview-questions"
+            ]
+          },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
             ]
           },
           "guidance": {
@@ -13550,6 +13601,41 @@
         },
         "required": [
           "exports"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialModels": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model_id": {
+                  "type": "string",
+                  "enum": [
+                    "claude-sonnet-5-5",
+                    "claude-haiku-5-5"
+                  ]
+                },
+                "default": {
+                  "type": "boolean"
+                },
+                "estimated_cost_usd": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "model_id",
+                "default"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "models"
         ],
         "additionalProperties": false
       }
@@ -23212,6 +23298,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/application-material/models": {
+      "get": {
+        "summary": "List the models that can write application material",
+        "description": "The models a cover letter or interview questions can be drafted with, the default first, each with the estimated cost of a typical draft from the catalog's prices. An estimate is absent when the catalog has no price for the model.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialModels"
                 }
               }
             }

@@ -12,6 +12,23 @@ export type ApplicationMaterialGuidance = NonNullable<
   ApiSchemas["ApplicationMaterialRequestInput"]["guidance"]
 >;
 
+export type ApplicationMaterialModel = ApiSchemas["ApplicationMaterialModels"]["models"][number];
+
+const modelNames: Readonly<Record<string, string>> = {
+  "claude-sonnet-5-5": "Claude Sonnet",
+  "claude-haiku-5-5": "Claude Haiku",
+};
+
+/** A model as the picker names it: its name, whether it is the default, and its cost. */
+export function applicationMaterialModelLabel(model: ApplicationMaterialModel): string {
+  const name = modelNames[model.model_id] ?? model.model_id;
+  const role = model.default ? t`best writing` : t`economy`;
+  if (model.estimated_cost_usd === undefined) return `${name} (${role})`;
+  if (model.estimated_cost_usd < 0.01) return t`${name} (${role}), under US$0.01 a draft`;
+  const cost = `US$${model.estimated_cost_usd.toFixed(2)}`;
+  return t`${name} (${role}), about ${cost} a draft`;
+}
+
 export const applicationMaterialToneLabels = (): Readonly<
   Record<NonNullable<ApplicationMaterialGuidance["tone"]>, string>
 > => ({ formal: t`Formal`, warm: t`Warm`, direct: t`Direct` });

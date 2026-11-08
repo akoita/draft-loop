@@ -43,7 +43,10 @@ detector, and the app never says a letter would pass one.
 | `word_count`        | A letter under 250 or over 350 words                                           |
 
 The default model is Claude Sonnet; Claude Haiku is the economy option. The
-host picks the model and records it with the draft.
+request's optional `model` picks one, and the saved draft records it.
+`GET /v1/application-material/models` lists both, the default first, each
+with the estimated cost of a typical draft (6,000 input and 2,000 output
+tokens) from the catalog's prices.
 
 ## Which drafts it refuses
 
@@ -121,7 +124,8 @@ Each application page on the web shows an optional **Prepare** panel after the C
 The candidate picks a cover letter or interview questions on its toggle and
 selects **Draft**. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
-guidance it was written with. Under a cover letter, **Writing check** lists the
+guidance it was written with. With two models offered, a **Model** list in
+the same fields names each with its cost. Under a cover letter, **Writing check** lists the
 flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.

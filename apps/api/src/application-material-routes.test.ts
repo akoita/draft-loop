@@ -389,6 +389,53 @@ describe("application material route", () => {
     expect(kinds.find((entry) => entry.kind === "cover-letter")?.tells).toHaveLength(2);
   });
 
+  it("drafts with the economy model when asked and lists the models with estimates", async () => {
+    const seen: unknown[] = [];
+    let configured: string | undefined;
+    const scripted = scriptedRoute(
+      [{ items: [{ question: "Why?", text: "As a Data Analyst I report.", fact_ids: ["t"] }] }],
+      seen,
+    );
+    await build({
+      consent: granted,
+      route: (options) => {
+        configured = options.configuredModel.modelId;
+        return scripted(options);
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "interview-questions", model: "claude-haiku-5-5" },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(configured).toBe("claude-haiku-5-5");
+    const refused = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "interview-questions", model: "gpt-unknown" },
+    });
+    expect(refused.statusCode).toBe(400);
+    const models = await app.inject({
+      method: "GET",
+      url: "/v1/application-material/models",
+      headers: { authorization },
+    });
+    const listed = (
+      models.json() as {
+        models: { model_id: string; default: boolean; estimated_cost_usd?: number }[];
+      }
+    ).models;
+    expect(listed.map((entry) => [entry.model_id, entry.default])).toEqual([
+      ["claude-sonnet-5-5", true],
+      ["claude-haiku-5-5", false],
+    ]);
+    const [sonnet, haiku] = listed;
+    expect(sonnet?.estimated_cost_usd).toBeGreaterThan(haiku?.estimated_cost_usd ?? Infinity);
+  });
+
   it("serves no list when the server keeps no drafts", async () => {
     await build({ consent: granted, route: scriptedRoute([], []) });
     const listed = await app.inject({ method: "GET", url, headers: { authorization } });
