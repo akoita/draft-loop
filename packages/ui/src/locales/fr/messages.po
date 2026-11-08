@@ -8428,6 +8428,10 @@ msgstr "Il n’y a aucun consentement à retirer."
 msgid "There is no previous version to compare with."
 msgstr "Il n’y a pas de version précédente à comparer."
 
+#: packages/ui/src/export-preview.tsx
+msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
+msgstr "Voici les pages du modèle en PDF. Word met en page le même texte, mais ses retours à la ligne peuvent légèrement différer."
+
 #: apps/web/src/credits-model.ts
 msgid "These models"
 msgstr "Ces modèles"
@@ -9273,10 +9277,6 @@ msgstr "Retiré"
 #: apps/web/src/consent-model.ts
 msgid "Withdrawn on {when}."
 msgstr "Retiré le {when}."
-
-#: packages/ui/src/export-preview.tsx
-msgid "Word files can't be shown here yet. Preview the PDF to see the template's pages."
-msgstr "Les fichiers Word ne peuvent pas encore être affichés ici. Prévisualisez le PDF pour voir les pages du modèle."
 
 #: packages/ui/src/agent-setup-model.ts
 #: packages/ui/src/source-evidence-kind-contract.ts
