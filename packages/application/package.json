@@ -71,6 +71,10 @@
       "types": "./src/writing-tells.ts",
       "import": "./src/writing-tells.ts"
     },
+    "./cover-letter-facts": {
+      "types": "./src/cover-letter-facts.ts",
+      "import": "./src/cover-letter-facts.ts"
+    },
     "./application-material-company": {
       "types": "./src/application-material-company.ts",
       "import": "./src/application-material-company.ts"
