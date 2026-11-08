@@ -14,6 +14,8 @@ export const savedApplicationMaterialKinds = ["cover-letter", "interview-questio
 export const maximumSavedApplicationMaterialItems = 10;
 export const maximumSavedApplicationMaterialItemCharacters = 4_000;
 export const maximumSavedApplicationMaterialCitations = 20;
+/** The most critic findings one revised version keeps (#2524). */
+export const maximumMachineTellFindings = 8;
 
 export const savedApplicationMaterialIdSchema = z
   .string()
@@ -80,6 +82,26 @@ export const savedApplicationMaterialSchema = z.strictObject({
   /** The saved draft this version was edited from (#2480); absent for a drafted version. */
   based_on: savedApplicationMaterialIdSchema.optional(),
   model: z.strictObject({ provider: shortText, model: shortText }),
+  /**
+   * The critic's findings this version revised (#2525): each sentence of the version it is based
+   * on that read as machine-written. Absent unless the critic pass wrote this version.
+   */
+  critic_findings: z
+    .array(
+      z.strictObject({
+        paragraph: z
+          .number()
+          .int()
+          .min(0)
+          .max(maximumSavedApplicationMaterialItems - 1),
+        sentence: z.string().min(1).max(maximumSavedApplicationMaterialItemCharacters),
+        reason: z.string().max(200),
+      }),
+    )
+    .max(maximumMachineTellFindings)
+    .optional(),
+  /** The critic that found them, from another company than the author. */
+  critic_model: z.strictObject({ provider: shortText, model: shortText }).optional(),
   prompt_version: shortText,
   cost_usd: z.number().min(0),
   created_at: z.iso.datetime({ offset: true }),

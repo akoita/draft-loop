@@ -99,6 +99,10 @@
       "types": "./src/material-critic.ts",
       "import": "./src/material-critic.ts"
     },
+    "./material-review": {
+      "types": "./src/material-review.ts",
+      "import": "./src/material-review.ts"
+    },
     "./application-material-input": {
       "types": "./src/application-material-input.ts",
       "import": "./src/application-material-input.ts"
