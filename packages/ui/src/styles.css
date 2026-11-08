@@ -3607,6 +3607,29 @@ input[type="text"].workspace-title-input {
   background: var(--red-wash);
 }
 
+/* A failure the host retries on its own needs no action, so it reads calm, not alarming (#2489). */
+.provider-failure-panel.provider-failure-retrying {
+  border-color: var(--border);
+  background: var(--surface-inset);
+}
+
+.provider-failure-retrying .approval-actions .button {
+  flex: 0 0 auto;
+}
+
+.provider-stop-confirm {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.provider-stop-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .provider-failure-panel h2 {
   margin-bottom: var(--space-2);
   max-width: 54ch;

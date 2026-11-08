@@ -93,6 +93,12 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import {
+  automaticRetryLine,
+  ProviderFailureStopButton,
+  providerRecoveryEyebrow,
+  providerRecoveryKind,
+} from "./provider-recovery.js";
 import type { ProviderSignInReadiness } from "./provider-sign-in-readiness.js";
 import { formatReadinessBlockers } from "./readiness-blocker-groups.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
@@ -2964,11 +2970,13 @@ export function ReviewWorkspace({
 
           {state.state === "provider-error" && state.providerFailure !== null ? (
             <section
-              className="panel provider-failure-panel"
-              role="alert"
+              className={`panel provider-failure-panel${state.providerFailure.automaticRetry ? " provider-failure-retrying" : ""}`}
+              role={state.providerFailure.automaticRetry ? "status" : "alert"}
               aria-label={t`provider failure`}
             >
-              <p className="eyebrow">{t`Provider request failed`}</p>
+              <p className="eyebrow">
+                {providerRecoveryEyebrow(providerRecoveryKind(state.providerFailure))}
+              </p>
               <h2>{state.providerFailure.explanation}</h2>
               <p className="subtle">
                 {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
@@ -3011,19 +3019,16 @@ export function ReviewWorkspace({
                     >{t`Return to review`}</button>
                   ) : null}
                   {state.providerFailure.availableActions.includes("stop") ? (
-                    <button
-                      className="button button-quiet"
-                      type="button"
-                      onClick={() => onAction({ type: "stop" })}
-                    >{t`Stop run`}</button>
+                    <ProviderFailureStopButton
+                      confirm={state.providerFailure.automaticRetry}
+                      onStop={() => onAction({ type: "stop" })}
+                    />
                   ) : null}
                 </div>
               )}
               {state.providerFailure.automaticRetry ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
-                  {retryRemainingMs > 0
-                    ? t`DraftLoop retries the ${state.providerFailure.step} automatically in ${retryWaitLabel(retryRemainingMs)}.`
-                    : t`DraftLoop retries the ${state.providerFailure.step} automatically.`}
+                  {automaticRetryLine(state.providerFailure, retryRemainingMs)}
                 </p>
               ) : retryRemainingMs > 0 && state.providerFailure.retryAvailable ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
@@ -3031,7 +3036,7 @@ export function ReviewWorkspace({
                   {retryWaitLabel(retryRemainingMs)}).
                 </p>
               ) : !state.providerFailure.availableActions.some((action) => action !== "stop") ? (
-                <p className="subtle">{t`This run has no retry left. Stop it, then start a new run.`}</p>
+                <p className="subtle">{t`This run has no retry left. Stop it, then start a new review.`}</p>
               ) : null}
             </section>
           ) : null}
