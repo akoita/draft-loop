@@ -129,6 +129,34 @@ describe("the prepare panel", () => {
     expect(questions).not.toContain("Address it to");
   });
 
+  it("shows a cover letter's writing check, and says it is not an AI detector", () => {
+    const letter: ApplicationMaterialDraft = {
+      ...draft,
+      kind: "cover-letter",
+      tells: [
+        {
+          code: "stock_phrase",
+          paragraph: 0,
+          sentence: "I am passionate about data.",
+          match: "passionate about",
+        },
+        { code: "word_count", match: "120" },
+      ],
+    };
+    const html = renderToStaticMarkup(<ApplicationMaterialView {...props} draft={letter} />);
+    expect(html).toContain("<q>I am passionate about data.</q>");
+    expect(html).toContain("Stock phrase &quot;passionate about&quot;");
+    expect(html).toContain("The letter has 120 words: aim for 250 to 350.");
+    expect(html).toContain("not an AI detector");
+    const clean = renderToStaticMarkup(
+      <ApplicationMaterialView {...props} draft={{ ...letter, tells: [] }} />,
+    );
+    expect(clean).toContain("No common machine-writing habit found.");
+    expect(
+      renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
+    ).not.toContain("Writing check");
+  });
+
   it("shows a refusal in the panel while the controls stay usable", () => {
     const problem = applicationMaterialProblem(
       new ApiRequestError(503, "material_model_unavailable", "No route."),

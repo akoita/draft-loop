@@ -21,7 +21,26 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v5`.
+`application-material-v6`.
+
+A cover letter also follows a human writing brief: 250 to 350 words, plain
+words, varied sentences, one concrete detail from a cited fact, no stock
+phrase, no list of three, no paragraphs that open alike, and at most one dash.
+
+## Writing check
+
+Each cover letter view carries `tells`: sentences with habits readers notice
+in model-written text, from `packages/application/src/writing-tells.ts`. It is
+deterministic, runs on every read, and is never stored. It is not an AI
+detector, and the app never says a letter would pass one.
+
+| Tell                | Flags                                                                          |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `stock_phrase`      | Phrases such as "I am writing to express", "passionate about" or "tirer parti" |
+| `heavy_dashes`      | Every sentence with a dash, once the letter uses two or more                   |
+| `list_of_three`     | Three single words in a row, such as "fast, reliable and calm"                 |
+| `mirrored_openings` | A paragraph that opens with the same two words as an earlier one               |
+| `word_count`        | A letter under 250 or over 350 words                                           |
 
 The default model is Claude Sonnet; Claude Haiku is the economy option. The
 host picks the model and records it with the draft.
@@ -102,7 +121,8 @@ Each application page on the web shows an optional **Prepare** panel after the C
 The candidate picks a cover letter or interview questions on its toggle and
 selects **Draft**. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
-guidance it was written with. Before the first draft, the panel names what goes
+guidance it was written with. Under a cover letter, **Writing check** lists the
+flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
 
@@ -121,5 +141,5 @@ rest of the page keeps working. The panel lives in
 The [application material walk](../evaluation/application-material-walk.md)
 drafts both kinds with Claude Sonnet on an invented record, capped at US$1. It
 runs only with the owner's go. Its fourth run, on prompt
-`application-material-v4`, passed every check; `v5` adds guidance and has not
-been walked yet (#2483).
+`application-material-v4`, passed every check; `v5` and `v6` add guidance and
+the human brief and have not been walked yet (#2483).
