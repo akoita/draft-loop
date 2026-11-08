@@ -8,6 +8,36 @@ import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js
 
 export type ApplicationMaterialKind = ApiSchemas["ApplicationMaterialRequestInput"]["kind"];
 export type ApplicationMaterialDraft = ApiSchemas["ApplicationMaterialDraft"];
+export type ApplicationMaterialGuidance = NonNullable<
+  ApiSchemas["ApplicationMaterialRequestInput"]["guidance"]
+>;
+
+export const applicationMaterialToneLabels = (): Readonly<
+  Record<NonNullable<ApplicationMaterialGuidance["tone"]>, string>
+> => ({ formal: t`Formal`, warm: t`Warm`, direct: t`Direct` });
+
+export const applicationMaterialLengthLabels = (): Readonly<
+  Record<NonNullable<ApplicationMaterialGuidance["length"]>, string>
+> => ({ short: t`Short`, standard: t`Standard`, long: t`Long` });
+
+/**
+ * The guidance the request carries for one kind: empty fields left out, and no addressee for
+ * interview questions. Undefined when the candidate gave none.
+ */
+export function applicationMaterialGuidanceFor(
+  kind: ApplicationMaterialKind,
+  guidance: ApplicationMaterialGuidance,
+): ApplicationMaterialGuidance | undefined {
+  const emphasis = guidance.emphasis?.trim();
+  const addressee = kind === "cover-letter" ? guidance.addressee?.trim() : undefined;
+  const chosen: ApplicationMaterialGuidance = {
+    ...(emphasis ? { emphasis } : {}),
+    ...(guidance.tone === undefined ? {} : { tone: guidance.tone }),
+    ...(guidance.length === undefined ? {} : { length: guidance.length }),
+    ...(addressee ? { addressee } : {}),
+  };
+  return Object.keys(chosen).length === 0 ? undefined : chosen;
+}
 
 export const applicationMaterialKindLabels = (): Readonly<
   Record<ApplicationMaterialKind, string>
