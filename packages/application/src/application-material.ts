@@ -29,6 +29,21 @@ import {
 } from "./application-material-company.js";
 
 /** The parts of a canonical profile fact the drafter reads. */
+/**
+ * A fact as one line, "category field: value", without repeating a field that only restates its
+ * category (an achievement stored as "achievement achievement" reads "achievement: …").
+ */
+export function applicationMaterialFactText(
+  fact: Pick<ApplicationMaterialFact, "category" | "field" | "value">,
+): string {
+  const field = fact.field.trim();
+  const label =
+    field === "" || field.toLowerCase() === fact.category.trim().toLowerCase()
+      ? fact.category
+      : `${fact.category} ${field}`;
+  return `${label}: ${fact.value}`;
+}
+
 export interface ApplicationMaterialFact {
   readonly id: string;
   readonly category: string;
@@ -298,7 +313,7 @@ export function applicationMaterialContext(
     .slice(0, maximumApplicationMaterialFacts)
     .map((fact) => ({
       id: fact.id,
-      text: `${fact.category} ${fact.field}: ${fact.value}`.slice(0, maximumContextCharacters),
+      text: applicationMaterialFactText(fact).slice(0, maximumContextCharacters),
       ...(fact.subjectId === undefined || fact.subjectId === ""
         ? {}
         : { group: fact.subjectId.slice(0, 64) }),
