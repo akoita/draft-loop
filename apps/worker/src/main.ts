@@ -10,6 +10,7 @@ import {
   startConfiguredCloudSqlProxy,
 } from "@draft-loop/storage-postgres";
 
+import { runBetaRetention } from "./beta-retention-wiring.js";
 import { openTenantBlobs } from "./blob-backend.js";
 import { readWorkerConfig } from "./config.js";
 import { embeddingModelReadiness } from "./embedding-model.js";
@@ -23,6 +24,7 @@ import {
   runCreditsMessage,
   runOutcomeFields,
 } from "./logging.js";
+import { readMailConfig } from "./mail.js";
 import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
@@ -38,6 +40,8 @@ import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 // tenant.
 // Each job names its tenant, and the application is composed over that tenant's view of them.
 const config = readWorkerConfig(process.env);
+// Transactional email is off unless the deployment sets a sender; a partial setting stops here.
+const mail = readMailConfig(process.env);
 if (config.modelRoutes !== undefined) {
   // Routes that process material outside the EU are deployment choices, so each start names them.
   console.info(logLine("INFO", "model routes", routeFields(config.modelRoutes)));
@@ -174,6 +178,17 @@ const worker = await startWorker({
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
+// The beta's retention sweep (#2540) runs once per start, beside the jobs; without a mail sender
+// nobody is warned, so nobody is erased, and it does not run at all.
+if (mail !== undefined) {
+  void runBetaRetention({
+    databaseUrl: config.databaseUrl,
+    databaseSchema: config.databaseSchema,
+    tenancy,
+    blobs,
+    mail,
+  });
+}
 
 let stopped = false;
 const onStopped = (error?: unknown) => {
