@@ -82,6 +82,15 @@ export {
 export { createCandidateRecordErasure, objectKeyOf } from "./record-erasure.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
+  createSpendPool,
+  type ReserveSpendInput,
+  type ReserveSpendResult,
+  readSpendPoolLimitUsd,
+  type SpendPool,
+  SpendPoolError,
+  spendPoolMonth,
+} from "./spend-pool.js";
+export {
   createSqlClient,
   createSqlPool,
   type SqlClient,

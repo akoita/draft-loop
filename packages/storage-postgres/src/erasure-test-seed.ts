@@ -20,6 +20,8 @@ export const tenantWideTables = new Set([
   "credit_ledger",
   "candidate_knowledge_stores",
   "candidate_record_erasures",
+  // Deployment-wide, with no tenant or record id: erasure never returns spent money (#2459).
+  "spend_pool_entries",
 ]);
 
 /**

@@ -30,14 +30,14 @@ time, one candidate record and no professional features.
 
 A plan sets these entitlements:
 
-| Entitlement           | Meaning                                                      |
-| --------------------- | ------------------------------------------------------------ |
+| Entitlement           | Meaning                                                              |
+| --------------------- | -------------------------------------------------------------------- |
 | Credits per period    | Credits granted each period (one month, or three for a pass or Beta) |
-| Model tiers           | The model tiers a run may use                                |
-| Seats                 | Active members plus pending invitations                      |
-| Candidate records     | Records the organisation may hold                            |
-| Runs per day, at once | Daily and concurrent run limits                              |
-| Features              | Switches such as run comparison or bring-your-own-key        |
+| Model tiers           | The model tiers a run may use                                        |
+| Seats                 | Active members plus pending invitations                              |
+| Candidate records     | Records the organisation may hold                                    |
+| Runs per day, at once | Daily and concurrent run limits                                      |
+| Features              | Switches such as run comparison or bring-your-own-key                |
 
 ## How to test it
 
@@ -63,6 +63,8 @@ A plan sets these entitlements:
 - Partial: prices and self-service sign-up are not live, and production is held.
 - Beta credits cover runs only; other model calls are bounded separately (#2456).
 - An organisation with no plan answers `403 plan_required`.
+- A deployment can set a monthly spend pool across organisations; when it is
+  used, run starts answer `503 spend_pool_exhausted` until the next month.
 
 ## Related
 

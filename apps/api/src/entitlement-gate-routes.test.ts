@@ -114,6 +114,8 @@ interface Scenario {
   consent: ConsentState;
   /** The balances the ledger reports around a new reservation. */
   balances: { before: typeof balance; after: typeof balance };
+  /** The deployment's monthly spend pool ceiling, when it has one. */
+  spendPoolUsd: number | undefined;
 }
 
 let scenario: Scenario;
@@ -127,6 +129,8 @@ const reserve = vi.fn();
 const refund = vi.fn();
 const enqueue = vi.fn(async (_workspaceId: string, _runId: string) => undefined);
 const entitlementsRead = vi.fn();
+const poolReserve = vi.fn();
+const poolClose = vi.fn(async () => true);
 
 beforeAll(async () => {
   signingKey = await generateKeyPair("ES256");
@@ -152,7 +156,14 @@ beforeEach(() => {
     workspace,
     consent: grantedConsent,
     balances: { before: balance, after: balance },
+    spendPoolUsd: undefined,
   };
+  poolReserve.mockReset();
+  poolReserve.mockImplementation(async (input: { usd: number }) => ({
+    refused: false,
+    committedUsd: input.usd,
+  }));
+  poolClose.mockClear();
   begin.mockClear();
   begin.mockImplementation(async () => snapshot);
   reserve.mockReset();
@@ -216,6 +227,14 @@ async function api(
         entitlements: entitlementsRead,
         assignment: vi.fn(),
         ledger: { reserve, refund, balance: vi.fn() },
+        ...(scenario.spendPoolUsd === undefined
+          ? {}
+          : {
+              spendPool: {
+                limitUsd: scenario.spendPoolUsd,
+                pool: { reserve: poolReserve, close: poolClose },
+              },
+            }),
       }),
     },
   });
@@ -707,5 +726,70 @@ describe("credit threshold log lines", () => {
     expect((await startRun(server, { owner: true })).status).toBe(201);
 
     expect(messages()).toEqual([]);
+  });
+});
+
+describe("the deployment's monthly spend pool", () => {
+  it("holds the run's cost limit in the pool after its credits, then begins it", async () => {
+    scenario.spendPoolUsd = 40;
+    const server = await api();
+
+    const response = await startRun(server);
+
+    expect(response.status).toBe(201);
+    const reserved = reserve.mock.calls[0]?.[0];
+    expect(poolReserve).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ runId: reserved.runId, usd: 2, limitUsd: 40 }),
+    );
+    expect(refund).not.toHaveBeenCalled();
+    expect(enqueue).toHaveBeenCalledOnce();
+  });
+
+  it("answers 503 and gives the credits back when the pool is spent", async () => {
+    scenario.spendPoolUsd = 40;
+    poolReserve.mockResolvedValueOnce({ refused: true, committedUsd: 39.5 });
+    const server = await api();
+
+    const response = await startRun(server);
+
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("spend_pool_exhausted");
+    expect(refund).toHaveBeenCalledOnce();
+    expect(begin).not.toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(logLines.join("\n")).toContain("spend pool exhausted");
+  });
+
+  it("logs the 80% line once when a reservation crosses it", async () => {
+    // Each run holds its $2 limit: 15 -> 17 crosses $16, 17 -> 19 is already past it.
+    scenario.spendPoolUsd = 20;
+    poolReserve.mockResolvedValueOnce({ refused: false, committedUsd: 17 });
+    poolReserve.mockResolvedValueOnce({ refused: false, committedUsd: 19 });
+    const server = await api();
+
+    await startRun(server, { key: "pool-0000-0001" });
+    await startRun(server, { key: "pool-0000-0002" });
+
+    expect(logLines.filter((line) => line.includes("spend pool 80% used"))).toHaveLength(1);
+  });
+
+  it("releases the pool and the credits when the run cannot be begun", async () => {
+    scenario.spendPoolUsd = 40;
+    begin.mockRejectedValueOnce(new CliUserError("The brief is not reviewed."));
+    const server = await api();
+
+    expect((await startRun(server)).status).toBe(422);
+    const reserved = reserve.mock.calls[0]?.[0];
+    expect(refund).toHaveBeenCalledOnce();
+    expect(poolClose).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ runId: reserved.runId, usd: 0 }),
+    );
+  });
+
+  it("is not read without a ceiling", async () => {
+    const server = await api();
+
+    expect((await startRun(server)).status).toBe(201);
+    expect(poolReserve).not.toHaveBeenCalled();
   });
 });

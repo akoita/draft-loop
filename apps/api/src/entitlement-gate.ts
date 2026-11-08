@@ -5,7 +5,7 @@ import type {
   WorkspaceDescriptor,
 } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
-import type { CreditLedger, OrganisationPlans } from "@draft-loop/storage-postgres";
+import type { CreditLedger, OrganisationPlans, SpendPool } from "@draft-loop/storage-postgres";
 import type { FastifyBaseLogger } from "fastify";
 
 import { logCreditCrossings } from "./credit-usage.js";
@@ -20,6 +20,14 @@ export interface TenantEntitlements {
   /** The plan assignment, whose plan id a member's credit view names. */
   readonly assignment: OrganisationPlans["currentPlanAssignment"];
   readonly ledger: Pick<CreditLedger, "reserve" | "refund" | "balance">;
+  /**
+   * The deployment's monthly spend pool and its ceiling in US dollars (#2459), shared by every
+   * organisation; absent when the deployment sets none.
+   */
+  readonly spendPool?: {
+    readonly limitUsd: number;
+    readonly pool: Pick<SpendPool, "reserve" | "close">;
+  };
 }
 
 /** One organisation's entitlements and ledger, by organisation id. */
@@ -44,6 +52,7 @@ export type EntitlementRefusal =
       readonly estimate: number;
       readonly remaining: number;
     }
+  | { readonly code: "spend_pool_exhausted" }
   | {
       readonly code: "plan_limit_reached";
       readonly limit: "seats" | "candidateRecords";
@@ -58,6 +67,7 @@ export const entitlementRefusalStatus: Readonly<Record<EntitlementRefusal["code"
   run_cap_reached: 429,
   credits_insufficient: 402,
   plan_limit_reached: 409,
+  spend_pool_exhausted: 503,
 };
 
 /** A run start the organisation's plan or credit balance does not allow. */
@@ -85,6 +95,8 @@ function refusalMessage(refusal: EntitlementRefusal): string {
         : `The organisation has started ${refusal.limit} runs today, the most its plan allows per day.`;
     case "credits_insufficient":
       return `The run needs up to ${refusal.estimate} credits and the organisation has ${refusal.remaining} left.`;
+    case "spend_pool_exhausted":
+      return "The service's model budget for this month is used; new runs start again on the 1st.";
     case "plan_limit_reached":
       return refusal.limit === "seats"
         ? `The organisation already has ${refusal.value} members, the most its plan allows.`
@@ -130,6 +142,36 @@ export interface EntitlementGate {
     log: FastifyBaseLogger,
     begin: (runId: string) => Promise<Result>,
   ) => Promise<Result>;
+}
+
+/** Returns a run's credits; a failure is logged, since the caller is already failing the start. */
+async function refundCredits(
+  tenant: TenantEntitlements,
+  runId: string,
+  at: Date,
+  log: FastifyBaseLogger,
+): Promise<void> {
+  try {
+    await tenant.ledger.refund({ runId, now: at });
+  } catch (refundError) {
+    log.error(
+      { runId, err: { type: (refundError as Error).name } },
+      "credit refund failed after a run could not begin",
+    );
+  }
+}
+
+/** Logs once when a reservation takes the month's committed spend past 80% of the pool. */
+function logSpendPoolCrossing(
+  log: FastifyBaseLogger,
+  limitUsd: number,
+  beforeUsd: number,
+  afterUsd: number,
+): void {
+  const threshold = limitUsd * 0.8;
+  if (beforeUsd < threshold && afterUsd >= threshold) {
+    log.warn({ event: "spend_pool_warning", limitUsd }, "spend pool 80% used");
+  }
 }
 
 /** Same shape as the run ids the application service picks itself. */
@@ -191,15 +233,51 @@ export function createEntitlementGate(options: EntitlementGateOptions): Entitlem
         });
       }
 
-      const result = await begin(runId).catch(async (error: unknown) => {
-        // The run was never saved, so nothing may keep its credits or its concurrency slot.
+      const { spendPool } = tenant;
+      if (spendPool !== undefined) {
+        // The run's own cost limit, which the ceiling bounds; a run without one holds the whole pool.
+        const usd = request.workspace.maxCostUsd ?? spendPool.limitUsd;
+        let pooled: Awaited<ReturnType<typeof spendPool.pool.reserve>>;
         try {
-          await tenant.ledger.refund({ runId, now: now() });
-        } catch (refundError) {
-          log.error(
-            { runId, err: { type: (refundError as Error).name } },
-            "credit refund failed after a run could not begin",
+          pooled = await spendPool.pool.reserve({
+            runId,
+            usd,
+            limitUsd: spendPool.limitUsd,
+            now: now(),
+          });
+        } catch (error) {
+          await refundCredits(tenant, runId, now(), log);
+          throw error;
+        }
+        if (pooled.refused) {
+          await refundCredits(tenant, runId, now(), log);
+          log.warn(
+            { event: "spend_pool_exhausted", limitUsd: spendPool.limitUsd },
+            "spend pool exhausted",
           );
+          throw new EntitlementRefusedError({ code: "spend_pool_exhausted" });
+        }
+        logSpendPoolCrossing(
+          log,
+          spendPool.limitUsd,
+          pooled.committedUsd - usd,
+          pooled.committedUsd,
+        );
+      }
+
+      const result = await begin(runId).catch(async (error: unknown) => {
+        // The run was never saved, so nothing may keep its credits, its concurrency slot or its
+        // share of the spend pool.
+        await refundCredits(tenant, runId, now(), log);
+        if (spendPool !== undefined) {
+          try {
+            await spendPool.pool.close({ runId, usd: 0, now: now() });
+          } catch (closeError) {
+            log.error(
+              { runId, err: { type: (closeError as Error).name } },
+              "spend pool release failed after a run could not begin",
+            );
+          }
         }
         throw error;
       });
