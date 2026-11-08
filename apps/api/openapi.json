@@ -2117,6 +2117,38 @@
           "url"
         ]
       },
+      "ApplicationMaterialGuidanceInput": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntryInput": {
         "type": "object",
         "properties": {
@@ -2257,6 +2289,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
           }
         },
         "required": [
@@ -2267,12 +2303,25 @@
       "ApplicationMaterialDraftInput": {
         "type": "object",
         "properties": {
+          "id": {
+            "description": "The saved draft's id; absent when this server keeps no drafts.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "created_at": {
+            "description": "When the draft was written and saved.",
+            "type": "string"
+          },
           "kind": {
             "type": "string",
             "enum": [
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
           },
           "items": {
             "type": "array",
@@ -2344,6 +2393,22 @@
           "prompt_version",
           "cost_usd"
         ]
+      },
+      "ApplicationMaterialDraftListInput": {
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationMaterialDraftInput"
+            },
+            "description": "The application's saved drafts, newest first, at most 50."
+          }
+        },
+        "required": [
+          "drafts"
+        ],
+        "additionalProperties": false
       },
       "OpportunityVersionsInput": {
         "type": "object",
@@ -9137,6 +9202,38 @@
         ],
         "additionalProperties": false
       },
+      "ApplicationMaterialGuidance": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntry": {
         "type": "object",
         "properties": {
@@ -9282,6 +9379,10 @@
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
           }
         },
         "required": [
@@ -9292,12 +9393,25 @@
       "ApplicationMaterialDraft": {
         "type": "object",
         "properties": {
+          "id": {
+            "description": "The saved draft's id; absent when this server keeps no drafts.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "created_at": {
+            "description": "When the draft was written and saved.",
+            "type": "string"
+          },
           "kind": {
             "type": "string",
             "enum": [
               "cover-letter",
               "interview-questions"
             ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
           },
           "items": {
             "type": "array",
@@ -9371,6 +9485,22 @@
           "model",
           "prompt_version",
           "cost_usd"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraftList": {
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationMaterialDraft"
+            },
+            "description": "The application's saved drafts, newest first, at most 50."
+          }
+        },
+        "required": [
+          "drafts"
         ],
         "additionalProperties": false
       },
@@ -22953,7 +23083,7 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
       "post": {
         "summary": "Draft a cover letter or interview questions for an application",
-        "description": "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations; nothing is stored. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
+        "description": "Drafts from the career record's facts (identity and contact withheld) and the application's newest brief requirements, and returns the draft with each item's citations. A server that keeps drafts saves it as a new version and returns its id; nothing is saved when drafting fails. Needs the record's consent to send career material to Anthropic (403 consent_required) and a server Claude route (503 material_model_unavailable). A brief whose job source is quarantined or unscreened answers 409 material_quarantined or material_unscreened, as a run would. 409 no_citable_facts when the record holds no fact to cite, 422 invalid_draft when the model's draft breaks the citation rules twice, 409 cost_cap_reached when the next call could pass the request's cost cap, and 502 material_model_failed when the model's answer cannot be used, such as one cut off at its output limit.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23056,6 +23186,114 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List an application's saved cover letters and interview questions",
+        "description": "Returns the application's saved drafts, newest first, each with its citations, model and cost. `kind` keeps one kind. Served only by a server that keeps drafts; 404 when there is no such application.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cover-letter",
+                "interview-questions"
+              ]
+            },
+            "in": "query",
+            "name": "kind",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraftList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
+      "delete": {
+        "summary": "Delete one saved cover letter or interview question set",
+        "description": "Deletes one saved draft of the application for good. 404 when the application has no such draft.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "materialId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

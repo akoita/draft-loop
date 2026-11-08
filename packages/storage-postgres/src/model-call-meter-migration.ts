@@ -5,7 +5,7 @@ import type { PostgresMigration } from "./migrations.js";
  * and day, under the tenant's row-level security. It holds a date and a number, no content.
  */
 export const modelCallMeterMigration: PostgresMigration = {
-  version: 33,
+  version: 34,
   name: "model calls outside runs per day",
   sql: `
     CREATE TABLE model_call_counts (

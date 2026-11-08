@@ -1,15 +1,20 @@
 import { t } from "@lingui/core/macro";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
   type ApplicationMaterialDraft,
+  type ApplicationMaterialGuidance,
   type ApplicationMaterialKind,
   applicationMaterialDisclosure,
   applicationMaterialFileName,
+  applicationMaterialGuidanceFor,
   applicationMaterialKindLabels,
+  applicationMaterialLengthLabels,
   applicationMaterialMarkdown,
   applicationMaterialProblem,
+  applicationMaterialToneLabels,
+  applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 import { useRecordId } from "./record-context.js";
 import { saveFile } from "./save-file.js";
@@ -17,27 +22,40 @@ import { saveFile } from "./save-file.js";
 /**
  * The prepare panel on an application (#2217): the candidate picks a cover letter or interview
  * questions, reads the draft with each citation beside its paragraph, and downloads it as
- * Markdown. A refusal, such as a server without a Claude route, shows in the panel and leaves
+ * Markdown. Each draft is saved with the application (#2477): the newest opens first, and the
+ * candidate can pick an earlier version or delete one. A refusal, such as a server without a Claude route, shows in the panel and leaves
  * the rest of the page working.
  */
 
 export interface ApplicationMaterialViewProps {
   readonly kind: ApplicationMaterialKind;
+  /** The version on screen: the newest saved one unless the candidate picked another. */
   readonly draft: ApplicationMaterialDraft | undefined;
+  /** This kind's saved versions, newest first; empty on a server that keeps no drafts. */
+  readonly versions: readonly ApplicationMaterialDraft[];
   readonly problem: string | undefined;
   readonly busy: boolean;
+  /** What the candidate asked the next draft to stress, its tone, length and addressee. */
+  readonly guidance: ApplicationMaterialGuidance;
+  readonly onGuidance: (guidance: ApplicationMaterialGuidance) => void;
   /** Folded to its heading row, so a feature the candidate does not use takes one line. */
   readonly collapsed: boolean;
   readonly onToggle: () => void;
   readonly onKind: (kind: ApplicationMaterialKind) => void;
   readonly onDraft: () => void;
   readonly onDownload: () => void;
+  readonly onSelect: (id: string) => void;
+  readonly onDelete: () => void;
 }
 
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
 
 export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
-  const { kind, draft, problem, busy } = props;
+  const { kind, draft, problem, busy, versions, guidance } = props;
+  const change = (field: keyof ApplicationMaterialGuidance, value: string) => {
+    const { [field]: _dropped, ...rest } = guidance;
+    props.onGuidance(value === "" ? rest : { ...rest, [field]: value });
+  };
   return (
     <section
       className="panel host-panel application-material"
@@ -92,6 +110,69 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
         {draft === undefined ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
         ) : null}
+        <details className="application-material-guidance">
+          <summary>{t`Guide this draft (optional)`}</summary>
+          <label>
+            {t`What to stress`}
+            <textarea
+              className="input"
+              rows={2}
+              maxLength={400}
+              disabled={busy}
+              value={guidance.emphasis ?? ""}
+              placeholder={t`For example: my move into team leadership`}
+              onChange={(event) => change("emphasis", event.currentTarget.value)}
+            />
+          </label>
+          <div className="application-material-guidance-row">
+            <label>
+              {t`Tone`}
+              <select
+                className="input"
+                disabled={busy}
+                value={guidance.tone ?? ""}
+                onChange={(event) => change("tone", event.currentTarget.value)}
+              >
+                <option value="">{t`Default`}</option>
+                {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t`Length`}
+              <select
+                className="input"
+                disabled={busy}
+                value={guidance.length ?? ""}
+                onChange={(event) => change("length", event.currentTarget.value)}
+              >
+                <option value="">{t`Default`}</option>
+                {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {kind === "cover-letter" ? (
+              <label>
+                {t`Address it to`}
+                <input
+                  className="input"
+                  maxLength={120}
+                  disabled={busy}
+                  value={guidance.addressee ?? ""}
+                  placeholder={t`For example: the hiring team`}
+                  onChange={(event) => change("addressee", event.currentTarget.value)}
+                />
+              </label>
+            ) : null}
+          </div>
+          <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
+        </details>
         <div className="application-material-actions">
           <button
             type="button"
@@ -105,6 +186,23 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
         {problem === undefined ? null : <p role="alert">{problem}</p>}
         {draft === undefined ? null : (
           <>
+            {versions.length > 1 && draft.id !== undefined ? (
+              <label className="application-material-versions">
+                {t`Version`}
+                <select
+                  className="input"
+                  value={draft.id}
+                  disabled={busy}
+                  onChange={(event) => props.onSelect(event.currentTarget.value)}
+                >
+                  {versions.map((version) => (
+                    <option key={version.id} value={version.id}>
+                      {applicationMaterialVersionLabel(version)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <ol className="material-items">
               {draft.items.map((item, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: a draft's items have no id and never reorder.
@@ -133,6 +231,14 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 className="button button-outline"
                 onClick={props.onDownload}
               >{t`Download Markdown`}</button>
+              {draft.id === undefined ? null : (
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={busy}
+                  onClick={props.onDelete}
+                >{t`Delete this version`}</button>
+              )}
             </div>
           </>
         )}
@@ -152,16 +258,46 @@ export function ApplicationMaterialSection({
 }: ApplicationMaterialSectionProps) {
   const workspaceId = useRecordId();
   const [kind, setKind] = useState<ApplicationMaterialKind>("cover-letter");
-  const [draft, setDraft] = useState<ApplicationMaterialDraft | undefined>(undefined);
+  const [versions, setVersions] = useState<readonly ApplicationMaterialDraft[]>([]);
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [unsaved, setUnsaved] = useState<ApplicationMaterialDraft | undefined>(undefined);
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
+  const [guidance, setGuidance] = useState<ApplicationMaterialGuidance>({});
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
+  const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
+
+  // The saved versions of the chosen kind, loaded once the panel is open. A server that keeps
+  // no drafts answers 404, and the panel then shows only what it drafts in this visit.
+  useEffect(() => {
+    if (collapsed) return;
+    let current = true;
+    client
+      .call("GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material", {
+        path: { workspaceId, applicationId },
+        query: { kind },
+      })
+      .then(
+        (listed) => {
+          if (current) setVersions(listed.drafts);
+        },
+        () => {
+          if (current) setVersions([]);
+        },
+      );
+    return () => {
+      current = false;
+    };
+  }, [client, workspaceId, applicationId, kind, collapsed]);
 
   return (
     <ApplicationMaterialView
       kind={kind}
       draft={draft}
+      versions={versions}
       problem={problem}
+      guidance={guidance}
+      onGuidance={setGuidance}
       busy={busy}
       collapsed={collapsed}
       onToggle={() => {
@@ -171,19 +307,29 @@ export function ApplicationMaterialSection({
       }}
       onKind={(next) => {
         setKind(next);
-        setDraft(undefined);
+        setVersions([]);
+        setSelectedId(undefined);
+        setUnsaved(undefined);
         setProblem(undefined);
       }}
       onDraft={async () => {
         setBusy(true);
         setProblem(undefined);
         try {
-          setDraft(
-            await client.call(
-              "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material",
-              { path: { workspaceId, applicationId }, body: { kind } },
-            ),
+          const drafted = await client.call(
+            "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material",
+            {
+              path: { workspaceId, applicationId },
+              body: { kind, ...guidanceBody(kind, guidance) },
+            },
           );
+          if (drafted.id === undefined) {
+            setUnsaved(drafted);
+          } else {
+            setUnsaved(undefined);
+            setVersions((saved) => [drafted, ...saved]);
+            setSelectedId(drafted.id);
+          }
         } catch (error) {
           setProblem(applicationMaterialProblem(error));
         } finally {
@@ -196,6 +342,29 @@ export function ApplicationMaterialSection({
           new Blob([applicationMaterialMarkdown(draft)], { type: "text/markdown" }),
           applicationMaterialFileName(draft.kind),
         );
+      }}
+      onSelect={(id) => {
+        setUnsaved(undefined);
+        setSelectedId(id);
+      }}
+      onDelete={async () => {
+        const id = draft?.id;
+        if (id === undefined) return;
+        if (!globalThis.confirm?.(t`Delete this version for good?`)) return;
+        setBusy(true);
+        setProblem(undefined);
+        try {
+          await client.call(
+            "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}",
+            { path: { workspaceId, applicationId, materialId: id } },
+          );
+          setVersions((saved) => saved.filter((version) => version.id !== id));
+          setSelectedId(undefined);
+        } catch (error) {
+          setProblem(applicationMaterialProblem(error));
+        } finally {
+          setBusy(false);
+        }
       }}
     />
   );
@@ -218,4 +387,9 @@ function savePrepareCollapsed(collapsed: boolean): void {
   } catch {
     // Storage may be blocked; the panel then starts folded each time.
   }
+}
+
+function guidanceBody(kind: ApplicationMaterialKind, guidance: ApplicationMaterialGuidance) {
+  const chosen = applicationMaterialGuidanceFor(kind, guidance);
+  return chosen === undefined ? {} : { guidance: chosen };
 }

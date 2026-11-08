@@ -227,6 +227,12 @@ const tableQueries: Readonly<
      ORDER BY created_at, id COLLATE "C"`,
     [s.workspaceId],
   ],
+  // Saved cover letters and interview question sets, keyed like the career interview's sessions.
+  application_material_drafts: (s) => [
+    `SELECT * FROM application_material_drafts WHERE workspace_id = $1
+     ORDER BY created_at, id COLLATE "C"`,
+    [s.workspaceId],
+  ],
 };
 
 /** One record's rows of each table that has any, without the tenant column. */

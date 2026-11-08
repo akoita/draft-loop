@@ -8,6 +8,36 @@ import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js
 
 export type ApplicationMaterialKind = ApiSchemas["ApplicationMaterialRequestInput"]["kind"];
 export type ApplicationMaterialDraft = ApiSchemas["ApplicationMaterialDraft"];
+export type ApplicationMaterialGuidance = NonNullable<
+  ApiSchemas["ApplicationMaterialRequestInput"]["guidance"]
+>;
+
+export const applicationMaterialToneLabels = (): Readonly<
+  Record<NonNullable<ApplicationMaterialGuidance["tone"]>, string>
+> => ({ formal: t`Formal`, warm: t`Warm`, direct: t`Direct` });
+
+export const applicationMaterialLengthLabels = (): Readonly<
+  Record<NonNullable<ApplicationMaterialGuidance["length"]>, string>
+> => ({ short: t`Short`, standard: t`Standard`, long: t`Long` });
+
+/**
+ * The guidance the request carries for one kind: empty fields left out, and no addressee for
+ * interview questions. Undefined when the candidate gave none.
+ */
+export function applicationMaterialGuidanceFor(
+  kind: ApplicationMaterialKind,
+  guidance: ApplicationMaterialGuidance,
+): ApplicationMaterialGuidance | undefined {
+  const emphasis = guidance.emphasis?.trim();
+  const addressee = kind === "cover-letter" ? guidance.addressee?.trim() : undefined;
+  const chosen: ApplicationMaterialGuidance = {
+    ...(emphasis ? { emphasis } : {}),
+    ...(guidance.tone === undefined ? {} : { tone: guidance.tone }),
+    ...(guidance.length === undefined ? {} : { length: guidance.length }),
+    ...(addressee ? { addressee } : {}),
+  };
+  return Object.keys(chosen).length === 0 ? undefined : chosen;
+}
 
 export const applicationMaterialKindLabels = (): Readonly<
   Record<ApplicationMaterialKind, string>
@@ -18,7 +48,7 @@ export const applicationMaterialKindLabels = (): Readonly<
 
 /** Named before the first draft: what goes to Anthropic, and what never does. */
 export const applicationMaterialDisclosure = () =>
-  t`Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent, and the draft is not stored on the server.`;
+  t`Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it.`;
 
 const refusals = (): Readonly<Record<string, string>> => ({
   material_model_unavailable: t`Drafting is not available on this server: it has no Claude route. The rest of the application works as before.`,
@@ -30,6 +60,23 @@ const refusals = (): Readonly<Record<string, string>> => ({
   material_quarantined: t`The job post was quarantined by injection screening. Release or replace it before drafting.`,
   material_unscreened: t`The job post has not been screened yet. Save the brief again to screen it.`,
 });
+
+/**
+ * How a saved version is named in the version list: when it was drafted and by which model, in
+ * the reader's locale. A draft from a server that keeps none has no time and is named "Unsaved".
+ */
+export function applicationMaterialVersionLabel(
+  draft: ApplicationMaterialDraft,
+  options: { readonly locale?: string; readonly timeZone?: string } = {},
+): string {
+  if (draft.created_at === undefined) return t`Unsaved draft`;
+  const when = new Intl.DateTimeFormat(options.locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
+  }).format(new Date(draft.created_at));
+  return `${when} · ${draft.model.model}`;
+}
 
 /** What to tell the candidate when the draft is refused; the API's words for any other code. */
 export function applicationMaterialProblem(error: unknown): string {

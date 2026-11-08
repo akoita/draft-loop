@@ -3,6 +3,10 @@ import { type FactUsageSettings, factUsageKey } from "@draft-loop/application/fa
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
+import {
+  createMemorySavedApplicationMaterialStore,
+  type SavedApplicationMaterialStore,
+} from "@draft-loop/storage/saved-application-material";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -90,6 +94,7 @@ async function build(options: {
   route?: AnthropicRouteBuilder;
   consent?: ConsentState;
   usage?: FactUsageSettings;
+  drafts?: SavedApplicationMaterialStore;
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
@@ -111,6 +116,7 @@ async function build(options: {
               change: async () => options.usage as FactUsageSettings,
             },
           }),
+      ...(options.drafts === undefined ? {} : { applicationMaterialDrafts: options.drafts }),
       careerInterview: {
         sessions: createMemoryCareerInterviewSessionStore(),
         allowProviderData: true,
@@ -162,7 +168,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v4",
+      prompt_version: "application-material-v5",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -245,6 +251,109 @@ describe("application material route", () => {
     const failed = logs.find((line) => line.includes("application material model failed"));
     expect(failed).toContain('"code":"invalid-response"');
     expect(failed).toContain('"diagnostics":["max_tokens"]');
+  });
+
+  it("saves each draft as a version, lists them newest first and deletes one", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+      ],
+    };
+    const questions = {
+      items: [{ question: "Why SQL?", text: "I cut report time by 40%.", fact_ids: ["o"] }],
+    };
+    await build({
+      consent: granted,
+      route: scriptedRoute([letter, questions, letter, { items: [] }, { items: [] }], []),
+      drafts,
+    });
+    const first = await draft("cover-letter");
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({
+      id: expect.stringMatching(/^amd_/u),
+      created_at: expect.any(String),
+      kind: "cover-letter",
+    });
+    expect((await draft("interview-questions")).statusCode).toBe(200);
+    const second = await draft("cover-letter");
+    // A draft that fails is not saved.
+    expect((await draft("cover-letter")).statusCode).toBe(422);
+
+    const list = async (query = "") =>
+      app.inject({ method: "GET", url: `${url}${query}`, headers: { authorization } });
+    const all = (await list()).json() as { drafts: { id: string; kind: string }[] };
+    expect(all.drafts.map((entry) => entry.kind)).toEqual([
+      "cover-letter",
+      "interview-questions",
+      "cover-letter",
+    ]);
+    expect(all.drafts[0]?.id).toBe(second.json().id);
+    expect(all.drafts[0]).not.toHaveProperty("workspace_id");
+    const letters = (await list("?kind=cover-letter")).json() as { drafts: { id: string }[] };
+    expect(letters.drafts.map((entry) => entry.id)).toEqual([second.json().id, first.json().id]);
+    expect((await list("?kind=thank-you-note")).statusCode).toBe(400);
+    const elsewhere = await app.inject({
+      method: "GET",
+      url: "/v1/workspaces/owner/applications/app_doesnotexist/material",
+      headers: { authorization },
+    });
+    expect(elsewhere.statusCode).toBe(404);
+
+    const remove = (target: string) =>
+      app.inject({ method: "DELETE", url: target, headers: { authorization } });
+    expect(
+      (
+        await remove(
+          `/v1/workspaces/owner/applications/app_fixture0002/material/${first.json().id}`,
+        )
+      ).statusCode,
+    ).toBe(404);
+    expect((await remove(`${url}/${first.json().id}`)).statusCode).toBe(204);
+    expect((await remove(`${url}/${first.json().id}`)).statusCode).toBe(404);
+    expect(((await list()).json() as { drafts: unknown[] }).drafts).toHaveLength(2);
+    expect(logs.join("\n")).not.toContain("cut report time");
+  });
+
+  it("sends the candidate's guidance to the model and saves it with the draft", async () => {
+    const seen: unknown[] = [];
+    const drafts = createMemorySavedApplicationMaterialStore();
+    await build({
+      consent: granted,
+      route: scriptedRoute(
+        [{ items: [{ question: "", text: "As a Data Analyst I report.", fact_ids: ["t"] }] }],
+        seen,
+      ),
+      drafts,
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: {
+        kind: "cover-letter",
+        guidance: { emphasis: " Stress reporting. ", tone: "direct", addressee: "The data team" },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    const guidance = { emphasis: "Stress reporting.", tone: "direct", addressee: "The data team" };
+    expect(response.json().guidance).toEqual(guidance);
+    expect(seen[0]).toMatchObject({ candidate_guidance: guidance });
+    expect((await drafts.get("owner", response.json().id))?.guidance).toEqual(guidance);
+    expect(logs.join("\n")).not.toContain("Stress reporting");
+    const refused = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "cover-letter", guidance: { tone: "angry" } },
+    });
+    expect(refused.statusCode).toBe(400);
+  });
+
+  it("serves no list when the server keeps no drafts", async () => {
+    await build({ consent: granted, route: scriptedRoute([], []) });
+    const listed = await app.inject({ method: "GET", url, headers: { authorization } });
+    expect(listed.statusCode).toBe(404);
   });
 
   it("answers 404 for an unknown application and 400 for an unknown kind", async () => {

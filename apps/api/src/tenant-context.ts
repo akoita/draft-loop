@@ -41,6 +41,7 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "applicationMaterialDrafts"
     | "preferenceSuggestions"
     | "factUsage"
   >
@@ -54,6 +55,7 @@ export type TenantApplication = Required<
     | "workJournal"
     | "sourceEvidenceKinds"
     | "careerInterview"
+    | "applicationMaterialDrafts"
     | "preferenceSuggestions"
     | "factUsage"
   >;
@@ -259,6 +261,11 @@ export function registerTenantApplications(
       const kinds = current().sourceEvidenceKinds;
       if (kinds === undefined) throw new TenantContextMissingError();
       return kinds;
+    }),
+    applicationMaterialDrafts: forwarding(() => {
+      const drafts = current().applicationMaterialDrafts;
+      if (drafts === undefined) throw new TenantContextMissingError();
+      return drafts;
     }),
     // Read per request: the tenant's sessions, and the deployment's Claude route and ceiling.
     careerInterview: {

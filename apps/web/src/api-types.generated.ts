@@ -97,7 +97,10 @@ export interface ApiSchemas {
     readonly url: string | null;
   };
   "ApplicationMaterialDraft": {
+    readonly id?: string;
+    readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
@@ -113,8 +116,24 @@ export interface ApiSchemas {
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
+  "ApplicationMaterialDraftList": {
+    readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
+  };
+  "ApplicationMaterialGuidance": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
+  "ApplicationMaterialGuidanceInput": {
+    readonly emphasis?: string;
+    readonly tone?: "formal" | "warm" | "direct";
+    readonly length?: "short" | "standard" | "long";
+    readonly addressee?: string;
+  };
   "ApplicationMaterialRequestInput": {
     readonly kind: "cover-letter" | "interview-questions";
+    readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
   };
   "AssignedPlan": {
     readonly assignment: ApiSchemas["PlanAssignment"];
@@ -2207,6 +2226,24 @@ export interface ApiOperations {
     };
     readonly body: ApiSchemas["ApplicationMaterialRequestInput"];
     readonly response: ApiSchemas["ApplicationMaterialDraft"];
+  };
+  "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly query?: {
+      readonly kind?: "cover-letter" | "interview-questions";
+    };
+    readonly response: ApiSchemas["ApplicationMaterialDraftList"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/applications/{applicationId}/material/{materialId}": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+      readonly materialId: string;
+    };
+    readonly response: void;
   };
   "POST /v1/workspaces/{workspaceId}/agent-tokens": {
     readonly path: {

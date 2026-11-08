@@ -14,6 +14,7 @@ import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
@@ -146,6 +147,8 @@ export interface ApiOptions {
     readonly sourceEvidenceKinds?: SourceEvidenceKinds;
     /** The guided career interview (#1030); without it those routes are not served. */
     readonly careerInterview?: CareerInterviewParts;
+    /** Saved cover letters and interview questions (#2477); without them drafts are not kept. */
+    readonly applicationMaterialDrafts?: SavedApplicationMaterialStore;
     /** Writing preferences suggested from review choices (#2253); without it those routes are not served. */
     readonly preferenceSuggestions?: PreferenceSuggestions;
     /** Where each career fact may be used (#2259); without it those routes are not served. */
@@ -594,6 +597,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
         ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+        ...(application.applicationMaterialDrafts === undefined
+          ? {}
+          : { drafts: application.applicationMaterialDrafts }),
       });
     }
     if (application.workJournal !== undefined && agentTokens !== undefined) {
