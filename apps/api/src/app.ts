@@ -638,6 +638,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.materialReviews === undefined
           ? {}
           : { reviews: application.materialReviews }),
+        ...(application.researchBriefs === undefined
+          ? {}
+          : { researchBriefs: application.researchBriefs }),
       });
     }
     if (application.researchBriefs !== undefined) {

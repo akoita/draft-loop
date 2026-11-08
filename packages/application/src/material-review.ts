@@ -71,6 +71,9 @@ function draftOf(material: SavedApplicationMaterial): ApplicationMaterialDraft {
       question: item.question,
       text: item.text,
       factIds: item.citations.map((citation) => citation.fact_id),
+      ...(item.company_citations === undefined
+        ? {}
+        : { companyFactIds: item.company_citations.map((citation) => citation.finding_id) }),
     })),
     model: material.model,
   };
@@ -99,6 +102,14 @@ export async function reviewSavedApplicationMaterial(
     return { outcome: "superseded", findings: 0 };
 
   const { input } = command;
+  // The company facts the letter cited, as it saved them: a revision may keep them, never add one.
+  const company = new Map(
+    base.items.flatMap((item) =>
+      (item.company_citations ?? []).map(
+        (citation) => [citation.finding_id, citation.text] as const,
+      ),
+    ),
+  );
   const draftInput: DraftApplicationMaterialInput = {
     kind: base.kind,
     facts: input.facts,
@@ -107,6 +118,9 @@ export async function reviewSavedApplicationMaterial(
     ...(input.voice === undefined ? {} : { voice: input.voice }),
     ...(base.guidance === undefined ? {} : { guidance: base.guidance }),
     ...(command.language === undefined ? {} : { language: command.language }),
+    ...(company.size === 0
+      ? {}
+      : { companyFacts: [...company].map(([id, text]) => ({ id, text })) }),
   };
   const pass = await runCriticPass(command.critic, command.author, draftInput, draftOf(base));
   const findings = pass.findings.length;
@@ -130,6 +144,14 @@ export async function reviewSavedApplicationMaterial(
           text: fact === undefined ? id : `${fact.category} ${fact.field}: ${fact.value}`,
         };
       }),
+      ...((item.companyFactIds ?? []).length === 0
+        ? {}
+        : {
+            company_citations: (item.companyFactIds ?? []).map((id) => ({
+              finding_id: id,
+              text: company.get(id) ?? id,
+            })),
+          }),
     })),
     based_on: base.id,
     model: pass.draft.model ?? base.model,
