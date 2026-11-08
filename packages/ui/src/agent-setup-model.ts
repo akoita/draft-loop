@@ -33,15 +33,25 @@ export interface AgentConnection {
 }
 
 /** What an agent token may do, as the API names it (ADR 0011 D17). */
-export type AgentScope = "journal" | "applications:read" | "jobs:write";
+export type AgentScope = "journal" | "applications:read" | "jobs:write" | "drafts:read";
 
-export const agentScopes: readonly AgentScope[] = ["journal", "applications:read", "jobs:write"];
+export const agentScopes: readonly AgentScope[] = [
+  "journal",
+  "applications:read",
+  "jobs:write",
+  "drafts:read",
+];
 
 /**
- * A new token's scopes until the person changes them: everything the plugin's skills and tools
- * use (#2534), so a first token is not refused; the person can still untick any of them.
+ * A new token's scopes until the person changes them: what the plugin's skills and tools use
+ * (#2534), so a first token is not refused. Reading CVs and drafts shares the candidate's
+ * material with the agent, so the person ticks it themselves (#2569).
  */
-export const defaultAgentScopes: readonly AgentScope[] = agentScopes;
+export const defaultAgentScopes: readonly AgentScope[] = [
+  "journal",
+  "applications:read",
+  "jobs:write",
+];
 
 export function agentScopeLabel(scope: AgentScope): string {
   switch (scope) {
@@ -51,6 +61,8 @@ export function agentScopeLabel(scope: AgentScope): string {
       return t`See your job applications and how their runs stand`;
     case "jobs:write":
       return t`Add a job application from a pasted job description`;
+    case "drafts:read":
+      return t`Read your exported CVs and saved cover letters and interview questions`;
   }
 }
 
@@ -63,6 +75,8 @@ export function agentScopeName(scope: AgentScope): string {
       return t`Read applications`;
     case "jobs:write":
       return t`Add jobs`;
+    case "drafts:read":
+      return t`Read CVs and drafts`;
   }
 }
 

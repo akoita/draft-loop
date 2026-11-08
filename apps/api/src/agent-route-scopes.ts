@@ -21,6 +21,7 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   journal: "Work journal",
   "applications:read": "Read applications",
   "jobs:write": "Add jobs",
+  "drafts:read": "Read CVs and drafts",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
@@ -39,6 +40,10 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`GET ${workspace}/applications/:applicationId`]: { scope: "applications:read" },
   [`GET ${workspace}/applications/:applicationId/job`]: { scope: "applications:read" },
   [`GET ${workspace}/runs/:runId`]: { scope: "applications:read" },
+  // What the candidate already exported or saved, never a run's open draft or findings (#2569).
+  [`GET ${workspace}/runs/:runId/exports`]: { scope: "drafts:read" },
+  [`GET ${workspace}/runs/:runId/exports/:exportId/content`]: { scope: "drafts:read" },
+  [`GET ${workspace}/applications/:applicationId/material`]: { scope: "drafts:read" },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
     scope: "jobs:write",
@@ -70,7 +75,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "DELETE /v1/workspaces/:workspaceId/members/:memberId",
   "DELETE /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
   "GET /speech-models/manifest.json",
-  // Saved drafts reach agents only through milestone B's read tool (D17 amendment).
   "GET /v1/application-material/models",
   "GET /v1/auth/config",
   "GET /v1/health",
@@ -105,8 +109,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/freshness",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/versions",
   "GET /v1/workspaces/:workspaceId/review-state",
-  "GET /v1/workspaces/:workspaceId/runs/:runId/exports",
-  "GET /v1/workspaces/:workspaceId/runs/:runId/exports/:exportId/content",
   "GET /v1/workspaces/:workspaceId/runs/:runId/review",
   "GET /v1/workspaces/:workspaceId/runs/:runId/usage",
   "GET /v1/workspaces/:workspaceId/runs/estimate",
@@ -134,7 +136,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/agent-tokens",
   "POST /v1/workspaces/:workspaceId/application-folders",
   "POST /v1/workspaces/:workspaceId/application-imports",
-  "GET /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
   // Research briefs reach agents only with the drafts' read tool, if ever.
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs",

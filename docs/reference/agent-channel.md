@@ -13,8 +13,8 @@ The design is [ADR 0011, D17](../adr/0011-client-server-version.md#d17-agent-cha
 The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
-created: `journal` (file notes and list their titles), `applications:read` and
-`jobs:write`. Every other route refuses it.
+created: `journal` (file notes and list their titles), `applications:read`,
+`jobs:write` and `drafts:read`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -61,8 +61,9 @@ the Work journal panel links to it.
 2. In the Work journal panel, turn on **Accept notes from agents**; the
    server refuses notes while intake is off. Then, under **Agents** in
    Workspace settings, open **Connect an agent** and select **Create agent
-   token**. All three scopes are ticked by default, which is what the plugin
-   uses; untick any the agent should not have.
+   token**. The three scopes the plugin uses are ticked by default; untick
+   any the agent should not have. **Read CVs and drafts** stays unticked
+   until you choose to share your exported CVs and saved drafts.
 3. Pick your agent's tab and copy what it shows:
 
    | Tab                     | What to do                                                             |
@@ -225,8 +226,9 @@ sentence, and `fields` names the note fields to fix.
 ## Job applications and runs
 
 With the matching scopes, the agent can also see the candidate's job
-applications, read the job description one keeps, and add one. No tool
-returns a draft or career evidence.
+applications, read the job description one keeps, and add one. With
+`drafts:read`, it reads what the candidate already exported or saved. No tool
+returns a run's open draft, its findings or career evidence.
 
 | Tool                | Scope               | What it does                                                               |
 | ------------------- | ------------------- | -------------------------------------------------------------------------- |
@@ -235,6 +237,9 @@ returns a draft or career evidence.
 | `get_job_text`      | `applications:read` | Reads the job text an application keeps, or its approved page's address    |
 | `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
 | `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
+| `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
+| `list_materials`    | `drafts:read`       | Lists saved cover letters and interview question sets, without their text  |
+| `get_material`      | `drafts:read`       | Reads one saved cover letter or question set, without the facts it cites   |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
@@ -243,12 +248,18 @@ exporting and every setting stay with the candidate in DraftLoop. A token
 without the scope a tool needs is refused with a message naming that scope,
 its name on the token form, and where to create a new token.
 
-`init` issues a token with all three scopes. To narrow it, name the scopes
-with `--scope`, repeated. Its token always keeps `journal`, which the skill
-and hook it writes need:
+`get_cv` needs a Markdown export. When the CV has none, the agent asks the
+candidate to export it in DraftLoop; it never exports or writes one itself.
+The material route returns the cited facts too, so a `drafts:read` token can
+read them by calling the API directly; the tools leave them out.
+
+`init` issues a token with `journal`, `applications:read` and `jobs:write`.
+To choose others, name them with `--scope`, repeated; `drafts:read` is given
+only when named. Its token always keeps `journal`, which the skill and hook it
+writes need:
 
 ```text
-draftloop-mcp init --host claude-code --hook --scope applications:read
+draftloop-mcp init --host claude-code --hook --scope applications:read --scope drafts:read
 ```
 
 ## Commands

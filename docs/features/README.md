@@ -88,7 +88,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | -------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | [Work journal](../reference/agent-channel.md)                  | `available` | server        | `record_work`, `list_work`                                          | An agent records notable work as notes you approve as evidence.                   |
 | [Agents](../reference/agent-channel.md#set-it-up)              | `available` | self-hosted   | `none`                                                              | A Workspace settings section that issues scoped agent tokens and shows the setup. |
-| [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `get_job_text`, `add_job`, `get_run_status` | An agent lists applications, reads a job's text, adds a job and follows a CV run. |
+| [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `get_job_text`, `add_job`, `get_run_status`, `get_cv`, `list_materials`, `get_material` | An agent lists applications, reads a job's text, adds a job, follows a CV run and reads exported CVs and saved drafts. |
 
 ## Account and data
 
