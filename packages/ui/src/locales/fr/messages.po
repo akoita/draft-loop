@@ -762,6 +762,10 @@ msgstr "{value, plural, one {Votre offre permet # dossier candidat, et il est ut
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
 msgstr "{value, plural, one {Votre offre permet # place, et elle est prise.} other {Votre offre permet # places, et toutes sont prises.}}"
 
+#: apps/web/src/application-material-model.ts
+msgid "{when} · edited by you"
+msgstr "{when} · modifié par vous"
+
 #: packages/ui/src/provider-recovery.tsx
 msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
 msgstr "{when} Vous n’avez rien à faire : attendre ne risque rien, et DraftLoop ne vous sollicite que si la dernière tentative échoue aussi."
@@ -1606,6 +1610,7 @@ msgstr "Reprise impossible"
 msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
+#: apps/web/src/application-material.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
@@ -1745,6 +1750,11 @@ msgstr "Vérifiez que les éléments de parcours choisis contiennent les faits n
 #: packages/ui/src/profile-status.ts
 msgid "Check the facts below, then mark the profile reviewed so applications can use it."
 msgstr "Vérifiez les faits ci-dessous, puis marquez le profil comme relu pour que les candidatures puissent l’utiliser."
+
+#. placeholder {0}: item.unsupported_numbers.join(", ")
+#: apps/web/src/application-material.tsx
+msgid "Check these numbers: none of the sources states {0}."
+msgstr "Vérifiez ces chiffres : aucune source n'indique {0}."
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Check what the run will use. No provider call is made until you start."
@@ -2933,6 +2943,7 @@ msgstr "économique"
 msgid "Economy"
 msgstr "Économique"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/work-journal-panel.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -2958,6 +2969,10 @@ msgstr "Modifier la politique de rédaction"
 #: packages/ui/src/review.tsx
 msgid "edited"
 msgstr "modifié"
+
+#: apps/web/src/application-material.tsx
+msgid "Edited by you"
+msgstr "Modifié par vous"
 
 #. placeholder {0}: record.version
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -3999,6 +4014,11 @@ msgstr "Problèmes par gravité et état"
 #: packages/ui/src/home-folder-model.ts
 msgid "It is empty."
 msgstr "Il est vide."
+
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Item {0}"
+msgstr "Élément {0}"
 
 #: packages/ui/src/home-folder-model.ts
 msgid "Its {held} applications move to No folder."
@@ -6867,6 +6887,10 @@ msgstr "Textes enregistrés"
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Enregistrer"
+
+#: apps/web/src/application-material.tsx
+msgid "Save as a new version"
+msgstr "Enregistrer comme nouvelle version"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save as first version"

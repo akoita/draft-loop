@@ -9,6 +9,7 @@ import {
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
+  unsupportedNumbers,
 } from "@draft-loop/application/application-material";
 import {
   applicationMaterialDefaultModelId,
@@ -25,6 +26,8 @@ import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
   applicationMaterialGuidanceSchema,
+  maximumSavedApplicationMaterialItemCharacters,
+  maximumSavedApplicationMaterialItems,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
 } from "@draft-loop/schemas/saved-application-material";
@@ -119,11 +122,24 @@ const draftView = z
           .string()
           .describe("Empty for a cover letter paragraph; the interview question otherwise."),
         text: z.string().describe("The paragraph, or the talking point for the question."),
+        edited: z
+          .boolean()
+          .optional()
+          .describe("True when the candidate rewrote this item; the text is then theirs."),
+        unsupported_numbers: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
+          ),
         citations: z
           .array(z.object({ fact_id: z.string(), text: z.string() }))
           .describe("The career record facts the item relies on, as the candidate stored them."),
       }),
     ),
+    based_on: savedApplicationMaterialIdSchema
+      .optional()
+      .describe("The saved draft this version was edited from; absent for a drafted version."),
     model: z.object({ provider: z.string(), model: z.string() }),
     tells: z
       .array(
@@ -163,10 +179,32 @@ const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).option
 
 const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
 
+const editBody = z
+  .strictObject({
+    items: z
+      .array(
+        z.strictObject({
+          text: z.string().trim().min(1).max(maximumSavedApplicationMaterialItemCharacters),
+        }),
+      )
+      .min(1)
+      .max(maximumSavedApplicationMaterialItems)
+      .describe("Every item's text, in the saved draft's order; one entry for each of its items."),
+  })
+  .meta({ id: "ApplicationMaterialEdit" });
+
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
 function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
-  return withTells(view);
+  const sources = view.items.flatMap((item) => item.citations.map((citation) => citation.text));
+  return withTells({
+    ...view,
+    items: view.items.map((item) => {
+      if (item.edited !== true) return item;
+      const numbers = unsupportedNumbers(item.text, sources);
+      return numbers.length === 0 ? item : { ...item, unsupported_numbers: numbers };
+    }),
+  });
 }
 
 /** A cover letter's view with its machine-writing tells, computed on read and never stored. */
@@ -510,6 +548,63 @@ export function registerApplicationMaterialRoutes(
         kind === undefined ? {} : { kind },
       );
       return reply.send({ drafts: saved.map(viewOf) });
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
+    {
+      schema: {
+        summary: "Save the candidate's edit of a draft as a new version",
+        description:
+          "Copies the saved draft with the candidate's texts, marks each changed item as edited and keeps its citations. No model is called and the version costs nothing. A number no cited fact states is flagged in `unsupported_numbers`, not refused. 400 when the item count differs from the draft's; 404 when the application has no such draft.",
+        params: draftParams,
+        body: editBody,
+        response: { 200: draftView, 400: apiErrorSchema, 404: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId, materialId } = request.params;
+      const base = await drafts.get(workspaceId, materialId);
+      if (base === undefined || base.application_id !== applicationId) {
+        return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
+      }
+      const texts = request.body.items.map((item) => item.text);
+      if (texts.length !== base.items.length) {
+        return reply
+          .code(400)
+          .send(
+            apiError(
+              "item_count_mismatch",
+              `The draft has ${base.items.length} items; send one text for each.`,
+            ),
+          );
+      }
+      const items = base.items.map((item, index) => {
+        const text = texts[index] as string;
+        const edited = item.edited === true || text !== item.text;
+        return { ...item, text, ...(edited ? { edited: true } : {}) };
+      });
+      const saved: SavedApplicationMaterial = {
+        ...base,
+        id: newMaterialId(),
+        created_at: now().toISOString(),
+        items,
+        based_on: base.id,
+        cost_usd: 0,
+      };
+      await drafts.insert(saved);
+      request.log.info(
+        {
+          workspaceId,
+          applicationId,
+          materialId: saved.id,
+          basedOn: base.id,
+          edited: items.filter((item) => item.edited === true).length,
+        },
+        "application material edited",
+      );
+      return reply.send(viewOf(saved));
     },
   );
 

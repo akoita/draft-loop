@@ -338,6 +338,62 @@ describe("application material route", () => {
     expect(logs.join("\n")).not.toContain("cut report time");
   });
 
+  it("saves the candidate's edit as a free new version and flags numbers no fact states", async () => {
+    const drafts = createMemorySavedApplicationMaterialStore();
+    const letter = {
+      items: [
+        { question: "", text: "As a Data Analyst I cut report time by 40%.", fact_ids: ["t", "o"] },
+        { question: "", text: "I would like to bring that to your team.", fact_ids: ["t"] },
+      ],
+    };
+    await build({ consent: granted, route: scriptedRoute([letter], []), drafts });
+    const base = (await draft("cover-letter")).json() as { id: string };
+    const edit = (items: readonly { text: string }[], target = `${url}/${base.id}/versions`) =>
+      app.inject({
+        method: "POST",
+        url: target,
+        headers: { authorization },
+        payload: { items },
+      });
+
+    const response = await edit([
+      { text: "As a Data Analyst I cut report time by 40% for 12 teams." },
+      { text: "I would like to bring that to your team." },
+    ]);
+    expect(response.statusCode).toBe(200);
+    const version = response.json() as {
+      id: string;
+      based_on: string;
+      cost_usd: number;
+      items: { edited?: boolean; unsupported_numbers?: string[]; citations: unknown[] }[];
+      tells: { code: string }[];
+    };
+    expect(version.id).not.toBe(base.id);
+    expect(version.based_on).toBe(base.id);
+    expect(version.cost_usd).toBe(0);
+    expect(version.items[0]).toMatchObject({ edited: true, unsupported_numbers: ["12"] });
+    expect(version.items[0]?.citations).toHaveLength(2);
+    expect(version.items[1]).not.toHaveProperty("edited");
+    expect(version.tells.map((tell) => tell.code)).toContain("word_count");
+
+    const list = await app.inject({ method: "GET", url, headers: { authorization } });
+    expect((list.json() as { drafts: { id: string }[] }).drafts.map((entry) => entry.id)).toEqual([
+      version.id,
+      base.id,
+    ]);
+    expect((await edit([{ text: "Only one paragraph." }])).statusCode).toBe(400);
+    expect((await edit([{ text: " " }, { text: "x" }])).statusCode).toBe(400);
+    expect(
+      (
+        await edit(
+          [{ text: "a" }, { text: "b" }],
+          `/v1/workspaces/owner/applications/app_fixture0002/material/${base.id}/versions`,
+        )
+      ).statusCode,
+    ).toBe(404);
+    expect(logs.join("\n")).not.toContain("12 teams");
+  });
+
   it("sends the candidate's guidance to the model and saves it with the draft", async () => {
     const seen: unknown[] = [];
     const drafts = createMemorySavedApplicationMaterialStore();
