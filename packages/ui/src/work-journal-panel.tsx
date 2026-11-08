@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type ReactNode, useId, useState } from "react";
+import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
 import { workJournalPanelId } from "./shared-link.js";
 import {
   type WorkJournalEditDraft,
@@ -186,7 +187,8 @@ export function WorkJournalReviewCard({
   const [chosen, setChosen] = useState<Mode>(
     item.suggested === "merge" ? "merge" : held ? "edit" : "approve",
   );
-  const [knowledgeBaseId, setKnowledgeBaseId] = useState(knowledgeBases[0]?.id ?? "");
+  const [chosenKnowledgeBaseId, setKnowledgeBaseId] = useState("");
+  const knowledgeBaseId = knowledgeBaseChoice(knowledgeBases, chosenKnowledgeBaseId);
   const [tier, setTier] = useState<WorkJournalTier | "">("");
   const [into, setInto] = useState(duplicates[0]?.id ?? "");
   const [keepSummary, setKeepSummary] = useState<"into" | "this">("into");

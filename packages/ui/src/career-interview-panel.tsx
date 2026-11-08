@@ -21,6 +21,7 @@ import {
   careerInterviewTurnText,
   careerInterviewUnavailableNotice,
 } from "./career-interview-model.js";
+import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
 import { SpeechButton } from "./speech-button.js";
 import { appendTranscript, type SpeechInput } from "./speech-to-text.js";
 
@@ -682,7 +683,8 @@ function SummaryReview({
 }) {
   const id = useId();
   const [summary, setSummary] = useState(topic.summary ?? "");
-  const [base, setBase] = useState(knowledgeBases[0]?.id ?? "");
+  const [chosenBase, setBase] = useState("");
+  const base = knowledgeBaseChoice(knowledgeBases, chosenBase);
   const [tier, setTier] = useState<CareerInterviewTier>("normal");
   const [conflicts, setConflicts] = useState<readonly CareerInterviewConflictView[]>([]);
 
