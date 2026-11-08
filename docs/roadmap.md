@@ -425,7 +425,9 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
 - **Make the agent interface visible** (#2534, #2535). New agent tokens get
   every scope the plugin uses, and a refusal names the missing one. The
   plugin adds `/draftloop:applications` and `/draftloop:status`, with matching
-  MCP prompts for other hosts, and agents can read a job's text.
+  MCP prompts for other hosts, and agents can read a job's text. The plugin
+  folder is also an Agent Plugins 1.0.0 package (#2537), so agents beyond
+  Claude Code can install it.
 - **Protect self-hosted data and harden the API edge**
   ([milestone 70](https://github.com/akoita/draft-loop/milestone/70), #2144–#2146,
   #2148, #2169, #2170, #2172, #2173, admitted 2026-11-04) closes the server
