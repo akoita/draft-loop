@@ -132,9 +132,9 @@ describe("work journal routes", () => {
     const first = (await post(note)).json();
     const second = await post({
       ...note,
-      title: "Refund webhooks for Fernhill",
+      title: "Card payments for the Fernhill booking site, with refunds",
       links: [],
-      technologies: ["Stripe", "Postgres"],
+      technologies: ["Go"],
     });
     expect(second.json().possible_duplicate_of).toEqual([first.note_id]);
   });
