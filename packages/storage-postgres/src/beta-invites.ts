@@ -3,7 +3,7 @@ import {
   normalizeMemberEmail,
   requireOrganisationName,
 } from "@draft-loop/storage/tenant-directory";
-import type { SqlRow, SqlSession } from "./sql-client.js";
+import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
 /** Serialises redemptions so two at the last seat cannot both pass the cap. */
 const betaInviteLockKey = 0x62657461;
@@ -122,19 +122,25 @@ function inviteRecord(row: SqlRow): BetaInvite {
   };
 }
 
+/** Records a new open invite for one email; the waitlist calls it inside its own transaction. */
+export async function insertBetaInvite(
+  executor: SqlExecutor,
+  input: { readonly email: string; readonly now: Date },
+): Promise<CreatedBetaInvite> {
+  const normalized = normalizeMemberEmail(input.email);
+  const code = newBetaInviteCode();
+  const [row] = await executor.query(
+    `INSERT INTO beta_invites (id, code_hash, email, created_at) VALUES ($1, $2, $3, $4)
+     RETURNING ${inviteColumns}`,
+    [randomUUID(), codeHash(code), normalized, clock(input.now)],
+  );
+  if (row === undefined) throw new Error("The invite was not recorded");
+  return { invite: inviteRecord(row), code };
+}
+
 export function createBetaInvites(client: SqlSession): BetaInvites {
   return {
-    create: async ({ email, now }) => {
-      const normalized = normalizeMemberEmail(email);
-      const code = newBetaInviteCode();
-      const [row] = await client.query(
-        `INSERT INTO beta_invites (id, code_hash, email, created_at) VALUES ($1, $2, $3, $4)
-         RETURNING ${inviteColumns}`,
-        [randomUUID(), codeHash(code), normalized, clock(now)],
-      );
-      if (row === undefined) throw new Error("The invite was not recorded");
-      return { invite: inviteRecord(row), code };
-    },
+    create: (input) => insertBetaInvite(client, input),
 
     list: async () =>
       (

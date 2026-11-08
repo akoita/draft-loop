@@ -663,6 +663,25 @@ flowchart LR
   requests. Organisation erasure deletes the row. The retention job (#2540)
   reads it.
 
+### Beta waitlist
+
+A visitor without an invite joins the waitlist, in the directory's
+`betaWaitlist` (`beta-waitlist.ts`, #2566). The operator turns an entry into
+an invite and sends the code.
+
+| Route                                         | Who      | What it does                                                         |
+| --------------------------------------------- | -------- | -------------------------------------------------------------------- |
+| `POST /v1/waitlist`                           | Anyone   | Lists an email with consent; answers 202 whether new or listed       |
+| `GET /v1/operator/waitlist`                   | Operator | Lists entries, oldest first                                          |
+| `POST /v1/operator/waitlist/:entryId/invite`  | Operator | Creates an invite for the entry's email and deletes the entry        |
+
+- **Consent.** Each row records `betaWaitlistConsentVersion`, the version of
+  the text beside the checkbox, and the day. Change the version with the text.
+- **Privacy.** The same answer for a new and a listed email reveals nobody.
+  Log lines carry no address. One address may join 5 times an hour.
+- **Retention.** An invited entry is deleted at once; any other entry after
+  six months (#2568).
+
 ### Transactional email
 
 The worker sends the few emails the service needs, such as the warning before
