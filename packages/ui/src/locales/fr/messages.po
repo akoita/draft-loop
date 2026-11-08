@@ -5614,6 +5614,10 @@ msgstr "Collez le jeton propriétaire."
 msgid "Paste this application's job description first."
 msgstr "Collez d’abord l’offre d’emploi de cette candidature."
 
+#: apps/web/src/application-material.tsx
+msgid "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+msgstr "Collez jusqu'à trois textes que vous avez écrits, comme une ancienne lettre ou un long e-mail. Les brouillons reprennent votre façon d'écrire, jamais le contenu des textes."
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Texte de l’offre collé"
@@ -6856,6 +6860,10 @@ msgstr "{noun} identique"
 msgid "Same text as the active version."
 msgstr "Même texte que la version active."
 
+#: apps/web/src/application-material.tsx
+msgid "Samples saved"
+msgstr "Textes enregistrés"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Enregistrer"
@@ -6887,6 +6895,10 @@ msgstr "Nouvelle version"
 #: packages/ui/src/review.tsx
 msgid "Save override"
 msgstr "Enregistrer la dérogation"
+
+#: apps/web/src/application-material.tsx
+msgid "Save samples"
+msgstr "Enregistrer les textes"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
@@ -9530,6 +9542,11 @@ msgstr "La politique de rédaction demande votre attention : elle est illisible.
 msgid "Writing policy versions"
 msgstr "Versions de la politique de rédaction"
 
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Writing sample {0}"
+msgstr "Texte {0}"
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -9704,3 +9721,7 @@ msgstr "Votre espace de travail"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."
 msgstr "Votre modèle de rédaction découpe la page de l’offre en exigences que vous relisez."
+
+#: apps/web/src/application-material.tsx
+msgid "Your writing samples"
+msgstr "Vos textes"

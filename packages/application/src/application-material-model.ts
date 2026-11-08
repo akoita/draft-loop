@@ -22,7 +22,7 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 
 export const applicationMaterialDefaultModelId = "claude-sonnet-5-5";
 export const applicationMaterialEconomyModelId = "claude-haiku-5-5";
-export const applicationMaterialPromptVersion = "application-material-v6";
+export const applicationMaterialPromptVersion = "application-material-v7";
 /**
  * Room for the longest valid draft: ten items of up to 1,200 characters, each with a question and
  * its fact ids, in a language such as French that spends more tokens per character. A smaller
@@ -83,6 +83,7 @@ const systemPrompt = [
   "When `addressee` is present, open the cover letter by addressing that person or team.",
   "A cover letter must read as the candidate wrote it, not as a model did: 250 to 350 words in all, plain everyday words, sentences of varied length, and at least one concrete detail from a cited fact, such as what was built or fixed.",
   "In a cover letter, never use stock phrases such as 'I am writing to express', 'passionate', 'thrilled', 'leverage', 'delve', 'proven track record', 'fast-paced' or 'dynamic team', nor their equivalents in the document language. Do not list three adjectives or nouns in a row, do not start two paragraphs with the same words, use at most one dash in the whole letter, and end with a plain sentence, not a flattering one.",
+  "`candidate_voice`, when present, is how the candidate writes. `samples` are texts they wrote: match their sentence length, rhythm, tone and everyday words, not their topics. Never take a fact, a claim, a name, an employer or a number from a sample; only `facts` may supply those. Never use a word in `avoid_terms`. Follow `tone` and `spelling_locale` when present.",
   "When `refused_rules` is not empty, your previous draft broke those rules: avoid them.",
 ].join("\n");
 
@@ -108,6 +109,17 @@ function guidanceInput(
   );
 }
 
+function voiceInput(
+  voice: NonNullable<ApplicationMaterialRequest["context"]["voice"]>,
+): JsonObject {
+  return {
+    ...(voice.samples === undefined ? {} : { samples: [...voice.samples] }),
+    ...(voice.avoidTerms === undefined ? {} : { avoid_terms: [...voice.avoidTerms] }),
+    ...(voice.tone === undefined ? {} : { tone: voice.tone }),
+    ...(voice.spellingLocale === undefined ? {} : { spelling_locale: voice.spellingLocale }),
+  };
+}
+
 function inputOf(request: ApplicationMaterialRequest): JsonObject {
   return {
     kind: request.context.kind,
@@ -124,6 +136,9 @@ function inputOf(request: ApplicationMaterialRequest): JsonObject {
     ...(request.context.guidance === undefined
       ? {}
       : { candidate_guidance: guidanceInput(request.context.guidance) }),
+    ...(request.context.voice === undefined
+      ? {}
+      : { candidate_voice: voiceInput(request.context.voice) }),
     refused_rules: [...request.refusedRules],
   };
 }

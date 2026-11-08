@@ -5619,6 +5619,10 @@ msgstr ""
 msgid "Paste this application's job description first."
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr ""
@@ -6861,6 +6865,10 @@ msgstr ""
 msgid "Same text as the active version."
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "Samples saved"
+msgstr ""
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr ""
@@ -6891,6 +6899,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Save override"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Save samples"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -9535,6 +9547,11 @@ msgstr ""
 msgid "Writing policy versions"
 msgstr ""
 
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Writing sample {0}"
+msgstr ""
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -9708,4 +9725,8 @@ msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Your writing samples"
 msgstr ""

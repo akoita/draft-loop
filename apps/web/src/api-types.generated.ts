@@ -1122,6 +1122,9 @@ export interface ApiSchemas {
     readonly createdAt: string;
     readonly priorChecksum: string | null;
   };
+  "WritingSamples": {
+    readonly samples: readonly (string)[];
+  };
 }
 
 export interface ApiOperations {
@@ -1321,6 +1324,21 @@ export interface ApiOperations {
     readonly response: {
       readonly dismissed: string;
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/writing-samples": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["WritingSamples"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/writing-samples": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly samples: readonly (string)[];
+    };
+    readonly response: ApiSchemas["WritingSamples"];
   };
   "GET /v1/workspaces/{workspaceId}/fact-usage": {
     readonly path: {

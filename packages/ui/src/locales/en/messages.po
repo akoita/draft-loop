@@ -5620,6 +5620,10 @@ msgstr "Paste the owner token."
 msgid "Paste this application's job description first."
 msgstr "Paste this application's job description first."
 
+#: apps/web/src/application-material.tsx
+msgid "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+msgstr "Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say."
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Pasted job text"
@@ -6862,6 +6866,10 @@ msgstr "Same {noun}"
 msgid "Same text as the active version."
 msgstr "Same text as the active version."
 
+#: apps/web/src/application-material.tsx
+msgid "Samples saved"
+msgstr "Samples saved"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Save"
 msgstr "Save"
@@ -6893,6 +6901,10 @@ msgstr "Save new version"
 #: packages/ui/src/review.tsx
 msgid "Save override"
 msgstr "Save override"
+
+#: apps/web/src/application-material.tsx
+msgid "Save samples"
+msgstr "Save samples"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
@@ -9536,6 +9548,11 @@ msgstr "Writing policy needs attention: it cannot be read."
 msgid "Writing policy versions"
 msgstr "Writing policy versions"
 
+#. placeholder {0}: index + 1
+#: apps/web/src/application-material.tsx
+msgid "Writing sample {0}"
+msgstr "Writing sample {0}"
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -9710,3 +9727,7 @@ msgstr "Your workspace"
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Your writing model splits the job page into requirements you review."
 msgstr "Your writing model splits the job page into requirements you review."
+
+#: apps/web/src/application-material.tsx
+msgid "Your writing samples"
+msgstr "Your writing samples"
