@@ -90,6 +90,10 @@
     "./fact-usage": {
       "types": "./src/fact-usage.ts",
       "import": "./src/fact-usage.ts"
+    },
+    "./application-material-document": {
+      "types": "./src/application-material-document.ts",
+      "import": "./src/application-material-document.ts"
     }
   },
   "files": [

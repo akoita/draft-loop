@@ -126,6 +126,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/application-folders",
   "POST /v1/workspaces/:workspaceId/application-imports",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material",
+  "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",

@@ -2721,9 +2721,17 @@ msgstr "Download cancelled. Nothing was installed."
 msgid "Download Markdown"
 msgstr "Download Markdown"
 
+#: apps/web/src/application-material.tsx
+msgid "Download PDF"
+msgstr "Download PDF"
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download size"
 msgstr "Download size"
+
+#: apps/web/src/application-material.tsx
+msgid "Download Word"
+msgstr "Download Word"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Downloading model…"
@@ -7631,6 +7639,7 @@ msgstr "Teaching"
 msgid "Technologies, separated by commas"
 msgstr "Technologies, separated by commas"
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"

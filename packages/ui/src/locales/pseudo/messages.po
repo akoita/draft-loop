@@ -2721,8 +2721,16 @@ msgstr ""
 msgid "Download Markdown"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "Download PDF"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download size"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Download Word"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -7630,6 +7638,7 @@ msgstr ""
 msgid "Technologies, separated by commas"
 msgstr ""
 
+#: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Template"

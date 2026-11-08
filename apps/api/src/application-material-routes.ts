@@ -12,6 +12,11 @@ import {
   unsupportedNumbers,
 } from "@draft-loop/application/application-material";
 import {
+  applicationMaterialDocumentFormats,
+  defaultApplicationMaterialTemplateId,
+  renderApplicationMaterialDocument,
+} from "@draft-loop/application/application-material-document";
+import {
   applicationMaterialDefaultModelId,
   applicationMaterialEconomyModelId,
   applicationMaterialPromptVersion,
@@ -178,6 +183,16 @@ const draftList = z
 const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).optional() });
 
 const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
+
+const documentQuery = z.strictObject({
+  format: z.enum(applicationMaterialDocumentFormats).describe("Word (`docx`) or `pdf`."),
+  template: z
+    .enum(["classic", "compact", "modern"])
+    .optional()
+    .describe(
+      `The CV template the document is drawn with; ${defaultApplicationMaterialTemplateId} by default.`,
+    ),
+});
 
 const editBody = z
   .strictObject({
@@ -605,6 +620,67 @@ export function registerApplicationMaterialRoutes(
         "application material edited",
       );
       return reply.send(viewOf(saved));
+    },
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
+    {
+      schema: {
+        summary: "Download a saved cover letter or question set as Word or PDF",
+        description:
+          "Draws the saved draft with a CV template, Modern by default, and answers the document as an attachment. A cover letter opens with the application's name; interview questions get one heading each. Nothing is stored. 404 when the application has no such draft.",
+        params: draftParams,
+        querystring: documentQuery,
+        response: {
+          200: z.any().describe("The document's bytes, in its media type."),
+          404: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, applicationId, materialId } = request.params;
+      const saved = await drafts.get(workspaceId, materialId);
+      if (saved === undefined || saved.application_id !== applicationId) {
+        return reply.code(404).send(apiError("not_found", "There is no such saved draft."));
+      }
+      const root = workspaceRoot(workspaceId);
+      const [application, workspace] = await Promise.all([
+        service.getApplication({ root, applicationId }),
+        service.readWorkspace(root),
+      ]);
+      const { format, template } = request.query;
+      const rendered = renderApplicationMaterialDocument(
+        {
+          id: saved.id,
+          kind: saved.kind,
+          title: application?.name ?? "",
+          language: application?.language ?? workspace.language ?? "en",
+          createdAt: saved.created_at,
+          items: saved.items,
+        },
+        format,
+        { templateId: template, generatedAt: saved.created_at },
+      );
+      request.log.info(
+        {
+          workspaceId,
+          applicationId,
+          materialId,
+          format,
+          template: rendered.metadata.renderingTemplate.id,
+        },
+        "application material document drawn",
+      );
+      return reply
+        .code(200)
+        .header("content-type", rendered.mimeType)
+        .header(
+          "content-disposition",
+          `attachment; filename="${saved.kind}-${saved.created_at.slice(0, 10)}${rendered.extension}"`,
+        )
+        .header("cache-control", "private, no-store")
+        .send(Buffer.from(rendered.content));
     },
   );
 

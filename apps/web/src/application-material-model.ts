@@ -122,8 +122,11 @@ export function applicationMaterialProblem(error: unknown): string {
 }
 
 /** The file name the download is saved under. */
-export function applicationMaterialFileName(kind: ApplicationMaterialKind): string {
-  return `${kind}.md`;
+export function applicationMaterialFileName(
+  kind: ApplicationMaterialKind,
+  format: "md" | "docx" | "pdf" = "md",
+): string {
+  return `${kind}.${format}`;
 }
 
 /**
