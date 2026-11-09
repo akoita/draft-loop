@@ -134,6 +134,7 @@ import {
   nextStepTarget,
   ReviewWorkTabs,
   reviewWorkPanelProps,
+  reviewWorkTabDomId,
   useReviewWorkTab,
 } from "./review-work-tabs.js";
 import { sendRevisionRequest } from "./revision-direction.js";
@@ -1355,6 +1356,19 @@ export function ReviewWorkspace({
   // Under another tab the queue shows no current finding, as a folded queue did before.
   const findingsCollapsed = tabbedWork && workTab !== "findings";
   const expandFindings = useCallback(() => selectWorkTab("findings"), [selectWorkTab]);
+  // "Read the job" unfolds a folded side panel, opens its Job tab and brings the tab into view,
+  // so the button never looks dead while the job sits in a hidden panel.
+  const showJob = (): void => {
+    const tab = document.getElementById(reviewWorkTabDomId("job"));
+    if (sidePanel.collapsed || workTab !== "job") {
+      if (sidePanel.collapsed) setSidePanelCollapsed(false);
+      paletteFocusRequest.current = tab;
+      selectWorkTab("job");
+      return;
+    }
+    tab?.scrollIntoView({ block: "start" });
+    tab?.focus();
+  };
   const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
@@ -3135,7 +3149,7 @@ export function ReviewWorkspace({
                   className="button button-outline doc-toolbar-job"
                   type="button"
                   title={t`The job this draft is written for, under the Job tab. A different job needs a new application.`}
-                  onClick={() => selectWorkTab("job")}
+                  onClick={showJob}
                 >{t`Read the job`}</button>
               )}
               {/* The Prepare panel sits folded under the draft; this opens it and goes there (#2578). */}

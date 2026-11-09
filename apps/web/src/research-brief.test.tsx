@@ -70,6 +70,10 @@ describe("research in the Prepare panel", () => {
 
   it("shows each finding with dated sources, marks undated ones and offers delete", () => {
     const html = render({ brief, state: { status: "done", outcome: "researched" } });
+    // Folded, so the Draft button stays near the tabs.
+    expect(html).toMatch(
+      /<details class="research-brief-details"><summary>Show 1 fact about the employer<\/summary>/u,
+    );
     expect(html).toContain("Example Corp builds tools for clinics.");
     expect(html).toContain('href="https://example.org/news"');
     expect(html).toContain("2026-10-03");

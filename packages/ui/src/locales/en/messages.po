@@ -521,6 +521,10 @@ msgstr "{count, plural, one {Includes # word-match coverage finding; accepting i
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 
+#: apps/web/src/research-brief-model.ts
+msgid "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
+msgstr "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "{count} / {limit}"
 msgstr "{count} / {limit}"
@@ -2792,7 +2796,6 @@ msgstr "Downloading model…"
 msgid "Downloading the local model."
 msgstr "Downloading the local model."
 
-#: apps/web/src/application-material.tsx
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Draft"
@@ -2802,9 +2805,9 @@ msgstr "Draft"
 msgid "Draft {width} pixels wide"
 msgstr "Draft {width} pixels wide"
 
-#: apps/web/src/application-material.tsx
-msgid "Draft again"
-msgstr "Draft again"
+#: apps/web/src/application-material-model.ts
+msgid "Draft a new cover letter"
+msgstr "Draft a new cover letter"
 
 #: packages/ui/src/review.tsx
 msgid "Draft artifact produced"
@@ -2819,9 +2822,21 @@ msgstr "Draft blocks cited for {0}"
 msgid "Draft brief saved"
 msgstr "Draft brief saved"
 
+#: apps/web/src/application-material-model.ts
+msgid "Draft cover letter"
+msgstr "Draft cover letter"
+
 #: apps/web/src/application-material.tsx
 msgid "Draft for this application"
 msgstr "Draft for this application"
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft interview questions"
+msgstr "Draft interview questions"
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft new interview questions"
+msgstr "Draft new interview questions"
 
 #. placeholder {0}: record.version
 #: packages/ui/src/profile-outcome.ts

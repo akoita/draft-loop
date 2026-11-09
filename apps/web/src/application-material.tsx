@@ -15,6 +15,7 @@ import {
   type ApplicationMaterialKind,
   type ApplicationMaterialModel,
   applicationMaterialDisclosure,
+  applicationMaterialDraftLabel,
   applicationMaterialFileName,
   applicationMaterialGuidanceFor,
   applicationMaterialKindLabels,
@@ -266,7 +267,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             disabled={busy}
             onClick={props.onDraft}
           >
-            {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
+            {busy ? t`Drafting…` : applicationMaterialDraftLabel(kind, draft !== undefined)}
           </button>
         </div>
         {problem === undefined ? null : <p role="alert">{problem}</p>}
