@@ -8,6 +8,7 @@ import {
   type ResearchRunState,
   researchDisclosure,
   researchFindings,
+  researchFindingsLabel,
   researchProblem,
   researchStateNote,
   researchSummary,
@@ -84,29 +85,33 @@ export function ResearchBriefView(props: ResearchBriefViewProps) {
           {brief.findings.length === 0 ? (
             <p>{t`The sources said nothing useful about this employer.`}</p>
           ) : (
-            <ul className="research-brief-findings">
-              {researchFindings(brief).map((finding) => (
-                <li key={finding.id}>
-                  <p>{finding.text}</p>
-                  <ul className="research-brief-sources" aria-label={t`Sources`}>
-                    {finding.sources.map((source) => (
-                      <li key={source.id}>
-                        {source.url === undefined ? (
-                          source.title
-                        ) : (
-                          <a href={source.url} target="_blank" rel="noreferrer noopener">
-                            {source.title}
-                          </a>
-                        )}{" "}
-                        <span className="research-brief-date">
-                          {source.publishedOn === undefined ? t`undated` : source.publishedOn}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+            // Folded, so the drafting controls stay close to the tabs (#2595).
+            <details className="research-brief-details">
+              <summary>{researchFindingsLabel(brief.findings.length)}</summary>
+              <ul className="research-brief-findings">
+                {researchFindings(brief).map((finding) => (
+                  <li key={finding.id}>
+                    <p>{finding.text}</p>
+                    <ul className="research-brief-sources" aria-label={t`Sources`}>
+                      {finding.sources.map((source) => (
+                        <li key={source.id}>
+                          {source.url === undefined ? (
+                            source.title
+                          ) : (
+                            <a href={source.url} target="_blank" rel="noreferrer noopener">
+                              {source.title}
+                            </a>
+                          )}{" "}
+                          <span className="research-brief-date">
+                            {source.publishedOn === undefined ? t`undated` : source.publishedOn}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
           <p className="application-material-note">{researchSummary(brief)}</p>
           <p className="application-material-note">{t`Web pages can be wrong or out of date. Check a fact at its source before you rely on it.`}</p>

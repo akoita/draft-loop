@@ -614,6 +614,15 @@ button.small:where(:not(.shared-screens *)) {
   font-size: var(--text-sm);
 }
 
+.research-brief-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.research-brief-details[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
 .research-brief-findings {
   margin: 0;
   padding-left: 1.25rem;
