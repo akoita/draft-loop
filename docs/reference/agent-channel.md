@@ -240,6 +240,8 @@ returns a run's open draft, its findings or career evidence.
 | `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
 | `list_materials`    | `drafts:read`       | Lists saved cover letters and interview question sets, without their text  |
 | `get_material`      | `drafts:read`       | Reads one saved cover letter or question set, without the facts it cites   |
+| `estimate_run`      | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap        |
+| `start_cv_run`      | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap               |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
@@ -276,6 +278,9 @@ the other.
   draft and deciding findings stay with the candidate in DraftLoop.
 
 The token list in Workspace settings shows what each token used this month.
+`start_cv_run` sends a new `Idempotency-Key` on each call, so the agent never
+calls it twice for one request. `init` never issues `runs:start`: the
+candidate sets the spend limit on the token form.
 
 `init` issues a token with `journal`, `applications:read` and `jobs:write`.
 To choose others, name them with `--scope`, repeated; `drafts:read` is given
@@ -298,6 +303,7 @@ tool the server offers.
 | List applications        | `/draftloop:applications` | `applications`       | Lists applications with status and latest run state |
 | One application's status | `/draftloop:status`       | `application-status` | Says where one application stands and the next step |
 | Tailor a CV              | `/draftloop:tailor-cv`    | none                 | Adds a pasted job and follows its CV run            |
+| Start a CV run           | `/draftloop:start-run`    | none                 | Prices a run, asks to confirm, then starts it       |
 | Log work                 | `/draftloop:log-work`     | `log-notable-work`   | Records notable merged work in the work journal     |
 
 With the plugin installed, Claude Code also lists each MCP prompt, as

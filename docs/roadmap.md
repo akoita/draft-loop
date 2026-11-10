@@ -434,7 +434,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
 - **Agents start runs within a monthly spend cap** (#2599–#2602, in
   progress). A `runs:start` scope, never ticked by default, carries a monthly
   US dollar cap; each run reserves the workspace's per-run cost limit
-  against it (#2599). MCP tools to start runs and draft letters and
+  against it (#2599). `estimate_run`, `start_cv_run` and the
+  `/draftloop:start-run` skill use it (#2600). Drafting letters and
   interview questions, and `evidence:write`, follow.
 - **Protect self-hosted data and harden the API edge**
   ([milestone 70](https://github.com/akoita/draft-loop/milestone/70), #2144–#2146,
