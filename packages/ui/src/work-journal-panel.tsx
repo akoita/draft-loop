@@ -1,5 +1,5 @@
 import { plural, t } from "@lingui/core/macro";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
 import { workJournalPanelId } from "./shared-link.js";
 import {
@@ -21,8 +21,9 @@ import {
 
 /**
  * The Work journal on the Career evidence page (#2024): the notes an agent recorded wait
- * here until the candidate approves, edits, merges or discards each one. A host that serves the
- * work journal provides it as a host panel; the desktop has none.
+ * here until the candidate approves, edits, merges or discards each one. The switch that lets
+ * agents add notes is in Workspace settings (#2625); the panel says how it is set. A host that
+ * serves the work journal provides it as a host panel; the desktop has none.
  */
 
 export interface WorkJournalKnowledgeBase {
@@ -39,15 +40,13 @@ export interface WorkJournalPanelProps {
   readonly problem?: string | undefined;
   /** Where an approved note can go; the first is preselected. */
   readonly knowledgeBases: readonly WorkJournalKnowledgeBase[];
-  /** Resolves with a problem to show, or undefined once saved. */
-  readonly onSetIntake: (enabled: boolean) => Promise<string | undefined>;
   /** Resolves with a problem to show, or undefined once the review is saved. */
   readonly onReview: (
     noteId: string,
     action: WorkJournalReviewAction,
   ) => Promise<string | undefined>;
-  /** How to connect an agent (#2427), from a host that can issue its token. */
-  readonly agentSetup?: ReactNode;
+  /** Opens Agents in Workspace settings, where the switch is (#2625); no link without it. */
+  readonly onOpenSettings?: (() => void) | undefined;
   /** Agent token names by id, so a note says which agent filed it; ids show without it. */
   readonly agentNames?: WorkJournalAgentNames | undefined;
 }
@@ -57,21 +56,12 @@ export function WorkJournalPanel({
   notes,
   problem,
   knowledgeBases,
-  onSetIntake,
   onReview,
-  agentSetup,
+  onOpenSettings,
   agentNames,
 }: WorkJournalPanelProps) {
   const id = useId();
-  const [intakeProblem, setIntakeProblem] = useState<string | undefined>(undefined);
-  const [saving, setSaving] = useState(false);
   const items = notes === undefined ? undefined : workJournalReviewItems(notes);
-
-  async function toggle(enabled: boolean) {
-    setSaving(true);
-    setIntakeProblem(await onSetIntake(enabled));
-    setSaving(false);
-  }
 
   return (
     <section
@@ -81,18 +71,14 @@ export function WorkJournalPanel({
     >
       <h2 id={`${id}-heading`}>{t`Work journal`}</h2>
       <p className="muted">{t`Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence.`}</p>
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={intake === true}
-          disabled={intake === undefined || saving}
-          onChange={(event) => void toggle(event.target.checked)}
-        />{" "}
-        {t`Accept notes from agents`}
-      </label>
-      {intakeProblem === undefined ? null : (
-        <p className="problem" role="alert">
-          {intakeProblem}
+      {intake === undefined ? null : (
+        <p className="muted work-journal-intake-status">
+          {intake ? t`Agents can add notes.` : t`Agents cannot add notes yet.`}{" "}
+          {onOpenSettings === undefined ? null : (
+            <button type="button" className="link-action" onClick={onOpenSettings}>
+              {intake ? t`Change in Workspace settings` : t`Turn on in Workspace settings`}
+            </button>
+          )}
         </p>
       )}
       {problem === undefined ? null : (
@@ -120,7 +106,6 @@ export function WorkJournalPanel({
           ))}
         </ul>
       )}
-      {agentSetup}
     </section>
   );
 }

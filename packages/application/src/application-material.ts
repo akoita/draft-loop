@@ -27,6 +27,7 @@ import {
   type CompanyFactViolationCode,
   companyFactViolations,
 } from "./application-material-company.js";
+import { keepCareerFrame } from "./career-frame-facts.js";
 
 /** The parts of a canonical profile fact the drafter reads. */
 /**
@@ -361,18 +362,19 @@ export function applicationMaterialFactScorer(
 export function applicationMaterialContext(
   input: ApplicationMaterialContextInput,
 ): ApplicationMaterialContext {
-  const facts = rankApplicationMaterialFacts(
-    input.facts.filter((fact) => allowedFact(input, fact)),
-    input.requirements,
-  )
-    .slice(0, maximumApplicationMaterialFacts)
-    .map((fact) => ({
-      id: fact.id,
-      text: applicationMaterialFactText(fact).slice(0, maximumContextCharacters),
-      ...(fact.subjectId === undefined || fact.subjectId === ""
-        ? {}
-        : { group: fact.subjectId.slice(0, 64) }),
-    }));
+  const facts = keepCareerFrame(
+    rankApplicationMaterialFacts(
+      input.facts.filter((fact) => allowedFact(input, fact)),
+      input.requirements,
+    ),
+    maximumApplicationMaterialFacts,
+  ).map((fact) => ({
+    id: fact.id,
+    text: applicationMaterialFactText(fact).slice(0, maximumContextCharacters),
+    ...(fact.subjectId === undefined || fact.subjectId === ""
+      ? {}
+      : { group: fact.subjectId.slice(0, 64) }),
+  }));
   const requirements = [...input.requirements]
     .sort((left, right) => priorityOrder[left.priority] - priorityOrder[right.priority])
     .slice(0, maximumApplicationMaterialRequirements)
