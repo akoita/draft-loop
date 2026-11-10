@@ -789,6 +789,8 @@ describe("application material route", () => {
     const writerOutputs = [
       { letter: "I cut report time by 45%.\n\nIn my last role I cut report time by 40%." },
       { letter: "I cut report time by 45% again.\n\nIn my last role I cut report time by 40%." },
+      // The repair, after the unsupported sentence was taken out.
+      { letter: "In my last role I cut report time by 40%." },
     ];
     const links = {
       links: [
@@ -820,9 +822,9 @@ describe("application material route", () => {
       },
     ]);
     expect(body.dropped_sentences).toEqual(["I cut report time by 45% again."]);
-    expect(body.prompt_version).toBe("cover-letter-free-form-v2");
-    // Two letters and two checks, all under the request's cost cap.
-    expect(seen).toHaveLength(4);
+    expect(body.prompt_version).toBe("cover-letter-free-form-v3");
+    // Two letters, the repair and three checks, all under the request's cost cap.
+    expect(seen).toHaveLength(6);
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
     expect(logs.join("\n")).not.toContain("report time by 45");
   });
@@ -845,7 +847,7 @@ describe("application material route", () => {
       coverLetterWriter: "free-form",
       route: (input) => {
         versions.push(input.configuredModel.promptTemplateVersion);
-        return input.configuredModel.promptTemplateVersion === "cover-letter-claims-v1"
+        return input.configuredModel.promptTemplateVersion === "cover-letter-claims-v2"
           ? checker(input)
           : writer(input);
       },
@@ -857,7 +859,7 @@ describe("application material route", () => {
       payload: { kind: "cover-letter", model: "claude-haiku-5-5" },
     });
     expect(response.statusCode).toBe(200);
-    expect(versions).toEqual(["cover-letter-free-form-v2", "cover-letter-claims-v1"]);
+    expect(versions).toEqual(["cover-letter-free-form-v3", "cover-letter-claims-v2"]);
   });
 
   it("serves no list when the server keeps no drafts", async () => {
