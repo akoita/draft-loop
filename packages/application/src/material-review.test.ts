@@ -28,7 +28,7 @@ const base: SavedApplicationMaterial = {
   ],
   guidance: { tone: "direct" },
   model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-  prompt_version: "application-material-v8",
+  prompt_version: "application-material-v10",
   cost_usd: 0.02,
   created_at: "2026-11-08T05:00:00.000Z",
 };
@@ -127,6 +127,50 @@ describe("critic pass on a saved cover letter", () => {
       cost_usd: 0.01,
     });
     expect(seen[0]?.context.guidance).toEqual({ tone: "direct" });
+  });
+
+  it("keeps the letter's company citations and offers no new finding", async () => {
+    const withResearch: SavedApplicationMaterial = {
+      ...base,
+      items: [
+        {
+          ...(base.items[0] as SavedApplicationMaterial["items"][number]),
+          company_citations: [
+            { finding_id: "fnd_2", text: "Example Corp builds tools for clinics." },
+          ],
+        },
+      ],
+      research_brief_id: "rbr_fixture0001",
+    };
+    const drafts = store([withResearch]);
+    const seen: ApplicationMaterialRequest[] = [];
+    const revising = {
+      draft: async (request: ApplicationMaterialRequest) => {
+        seen.push(request);
+        return {
+          items: [
+            {
+              question: "",
+              text: "As a Data Analyst I cut report time by 40%, and clinic tools appeal to me.",
+              factIds: ["t", "o"],
+              companyFactIds: ["fnd_2"],
+            },
+          ],
+        };
+      },
+    } satisfies ApplicationMaterialPort;
+    const result = await reviewSavedApplicationMaterial(
+      command({ drafts, materialId: withResearch.id, author: revising }),
+    );
+    expect(result.outcome).toBe("revised");
+    expect(seen[0]?.context.company).toEqual([
+      { id: "fnd_2", text: "Example Corp builds tools for clinics." },
+    ]);
+    expect(seen[0]?.revision?.previous[0]?.companyFactIds).toEqual(["fnd_2"]);
+    expect(drafts.rows[1]?.items[0]?.company_citations).toEqual(
+      withResearch.items[0]?.company_citations,
+    );
+    expect(drafts.rows[1]?.research_brief_id).toBe("rbr_fixture0001");
   });
 
   it("saves nothing when the critic finds nothing or the revision breaks a rule", async () => {

@@ -428,6 +428,16 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   MCP prompts for other hosts, and agents can read a job's text. The plugin
   folder is also an Agent Plugins 1.0.0 package (#2537), so agents beyond
   Claude Code can install it.
+- **Agents read your exported CV and saved drafts** (#2569). A `drafts:read`
+  scope, never ticked by default, lets an agent read the CV exported as
+  Markdown and the saved cover letters and interview questions.
+- **Agents start runs within a monthly spend cap** (#2599–#2602, in
+  progress). A `runs:start` scope, never ticked by default, carries a monthly
+  US dollar cap; each run reserves the workspace's per-run cost limit
+  against it (#2599). `estimate_run`, `start_cv_run` and the
+  `/draftloop:start-run` skill use it (#2600), and so do
+  `draft_cover_letter` and `draft_interview_prep`, each draft reserving its
+  cost cap (#2601). `evidence:write` follows.
 - **Protect self-hosted data and harden the API edge**
   ([milestone 70](https://github.com/akoita/draft-loop/milestone/70), #2144–#2146,
   #2148, #2169, #2170, #2172, #2173, admitted 2026-11-04) closes the server

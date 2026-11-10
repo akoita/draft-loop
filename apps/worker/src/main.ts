@@ -36,6 +36,7 @@ import {
   tenantServices,
   type WorkspaceJob,
 } from "./tenant-services.js";
+import { runWaitlistRetention } from "./waitlist-retention.js";
 import { startWorker, stopOnSignals, stopWhenIdle } from "./worker.js";
 
 // The worker's entry point: one pool, blob backend and queue opened at startup, serving every
@@ -211,6 +212,12 @@ const worker = await startWorker({
   },
 });
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
+// Waitlist entries nobody invited go after six months (#2568); this needs no mail sender.
+void runWaitlistRetention({
+  databaseUrl: config.databaseUrl,
+  databaseSchema: config.databaseSchema,
+});
+
 // The beta's retention sweep (#2540) runs once per start, beside the jobs; without a mail sender
 // nobody is warned, so nobody is erased, and it does not run at all.
 if (mail !== undefined) {

@@ -7,6 +7,7 @@ import {
 } from "@draft-loop/storage-postgres";
 
 import { buildApi } from "./app.js";
+import { readCoverLetterWriter } from "./application-material-routes.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
@@ -22,7 +23,9 @@ import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
 const localModels = readLocalModels(process.env);
+const betaAccountCap = readBetaAccountCap(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
+const coverLetterWriter = readCoverLetterWriter(process.env);
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
 const screening = {
@@ -79,13 +82,16 @@ const app = await buildApi({
     : {
         directory,
         memberSettings: directory.memberSettings,
-        betaInvites: { invites: directory.betaInvites, cap: readBetaAccountCap(process.env) },
+        betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
+        // The waitlist and the public landing page exist only while the beta is open (#2567).
+        ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),
+  coverLetterWriter,
 });
 
 // Cloud Run sends SIGTERM before stopping an instance; finish in-flight requests, then exit.

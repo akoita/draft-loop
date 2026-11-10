@@ -71,6 +71,30 @@
       "types": "./src/writing-tells.ts",
       "import": "./src/writing-tells.ts"
     },
+    "./cover-letter-claims": {
+      "types": "./src/cover-letter-claims.ts",
+      "import": "./src/cover-letter-claims.ts"
+    },
+    "./cover-letter-claims-model": {
+      "types": "./src/cover-letter-claims-model.ts",
+      "import": "./src/cover-letter-claims-model.ts"
+    },
+    "./cover-letter-free-form": {
+      "types": "./src/cover-letter-free-form.ts",
+      "import": "./src/cover-letter-free-form.ts"
+    },
+    "./cover-letter-free-form-model": {
+      "types": "./src/cover-letter-free-form-model.ts",
+      "import": "./src/cover-letter-free-form-model.ts"
+    },
+    "./cover-letter-facts": {
+      "types": "./src/cover-letter-facts.ts",
+      "import": "./src/cover-letter-facts.ts"
+    },
+    "./application-material-company": {
+      "types": "./src/application-material-company.ts",
+      "import": "./src/application-material-company.ts"
+    },
     "./application-material-model": {
       "types": "./src/application-material-model.ts",
       "import": "./src/application-material-model.ts"

@@ -31,15 +31,24 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
+import { registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
+import { registerApplicationJobCopyRoutes } from "./application-job-copy-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
-import { registerApplicationMaterialRoutes } from "./application-material-routes.js";
+import {
+  type CoverLetterWriter,
+  registerApplicationMaterialRoutes,
+} from "./application-material-routes.js";
 import { registerApplicationRoutes } from "./application-routes.js";
 import { registerAuthConfigRoutes } from "./auth-config-routes.js";
 import { type BetaSignUpOptions, registerBetaSignUpRoutes } from "./beta-sign-up-routes.js";
+import {
+  type BetaWaitlistRoutesOptions,
+  registerBetaWaitlistRoutes,
+} from "./beta-waitlist-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
@@ -187,6 +196,11 @@ export interface ApiOptions {
   readonly directory?: TenantDirectory;
   /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
   readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
+  /**
+   * The beta waitlist; without it `/v1/waitlist` and its operator routes are absent (#2566).
+   * With it, the auth config tells the signed-out screen to show the landing page (#2567).
+   */
+  readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
@@ -199,6 +213,8 @@ export interface ApiOptions {
   readonly localModels?: readonly string[];
   /** Speech for the live career interview (#2361); unset, the live route is not served. */
   readonly liveSpeech?: LiveInterviewSpeech;
+  /** How cover letters are written (#2586); cited paragraphs when unset. */
+  readonly coverLetterWriter?: CoverLetterWriter;
 }
 
 /** Request bodies above this are refused before parsing; job posts and briefs fit well inside. */
@@ -291,7 +307,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     },
     async () => ({ status: "ok" as const }),
   );
-  registerAuthConfigRoutes(app, auth);
+  registerAuthConfigRoutes(app, auth, options.betaWaitlist !== undefined);
   registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 
@@ -422,6 +438,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
+    // Before the routes, so a start an agent token makes is held to its monthly cap (#2599).
+    const agentSpend =
+      agentTokens === undefined
+        ? undefined
+        : registerAgentSpendGate(app, {
+            tokens: agentTokens,
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            budgetCeiling: application.budgetCeiling,
+          });
     const screening =
       application.contentScreening === undefined
         ? undefined
@@ -472,6 +498,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerRunEstimateRoute(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+      ...(agentSpend === undefined ? {} : { agentSpend }),
       ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
     });
     registerApplicationRoutes(app, {
@@ -501,6 +528,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerApplicationLifecycleRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+    });
+    registerApplicationJobCopyRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      ...(application.jobPageFetcher === undefined
+        ? {}
+        : { jobPageFetcher: application.jobPageFetcher }),
     });
     registerApplicationFolderRoutes(app, {
       service: application.service,
@@ -625,6 +659,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           get allowProviderData() {
             return interview.allowProviderData;
           },
+          ...(options.coverLetterWriter === undefined
+            ? {}
+            : { coverLetterWriter: options.coverLetterWriter }),
         },
         ...(application.consents === undefined ? {} : { consents: application.consents }),
         ...(screening === undefined ? {} : { screening }),
@@ -638,6 +675,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.materialReviews === undefined
           ? {}
           : { reviews: application.materialReviews }),
+        ...(application.researchBriefs === undefined
+          ? {}
+          : { researchBriefs: application.researchBriefs }),
       });
     }
     if (application.researchBriefs !== undefined) {
@@ -705,6 +745,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
             },
           }),
     });
+  }
+  if (options.betaWaitlist !== undefined) {
+    registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);

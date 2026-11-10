@@ -5,6 +5,10 @@ import type { MaterialReviewState } from "@draft-loop/run-queue";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
 import {
+  createMemoryResearchBriefStore,
+  type ResearchBriefStore,
+} from "@draft-loop/storage/research-briefs";
+import {
   createMemorySavedApplicationMaterialStore,
   type SavedApplicationMaterialStore,
 } from "@draft-loop/storage/saved-application-material";
@@ -82,10 +86,12 @@ const granted: ConsentState = {
 
 function scriptedRoute(outputs: readonly object[], seen: unknown[]): AnthropicRouteBuilder {
   let call = 0;
-  return () => ({
+  return ({ configuredModel }) => ({
     provider: "anthropic",
     route: "anthropic-api",
     execute: async (request) => {
+      // As the real adapters do: a route refuses a request that names another selection.
+      expect(request.model).toEqual(configuredModel);
       seen.push(request.input);
       const output = outputs[call] ?? outputs.at(-1) ?? { items: [] };
       call += 1;
@@ -115,12 +121,17 @@ async function build(options: {
   drafts?: SavedApplicationMaterialStore;
   samples?: readonly string[];
   reviews?: MaterialReviews;
+  researchBriefs?: ResearchBriefStore;
+  coverLetterWriter?: "items" | "free-form";
 }) {
   logs = [];
   const consents = { current: async () => options.consent ?? {} } as unknown as ConsentLedger;
   app = await buildApi({
     ownerToken,
     logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
+    ...(options.coverLetterWriter === undefined
+      ? {}
+      : { coverLetterWriter: options.coverLetterWriter }),
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -138,6 +149,7 @@ async function build(options: {
           }),
       ...(options.drafts === undefined ? {} : { applicationMaterialDrafts: options.drafts }),
       ...(options.reviews === undefined ? {} : { materialReviews: options.reviews }),
+      ...(options.researchBriefs === undefined ? {} : { researchBriefs: options.researchBriefs }),
       ...(options.samples === undefined
         ? {}
         : {
@@ -198,7 +210,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v8",
+      prompt_version: "application-material-v10",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -699,6 +711,153 @@ describe("application material route", () => {
     });
     expect((await draft("cover-letter")).json()).not.toHaveProperty("review");
     expect(queued).toEqual([]);
+  });
+
+  it("offers the newest research brief as company facts and saves their citations", async () => {
+    const researchBriefs = createMemoryResearchBriefStore();
+    await researchBriefs.insert({
+      id: "rbr_fixture0001",
+      workspace_id: "owner",
+      application_id: "app_fixture0001",
+      queries: ["Example Corp news"],
+      from_date: "2025-11-08",
+      sources: [
+        {
+          id: "src_1",
+          kind: "web-result",
+          url: "https://example.org/news",
+          title: "News",
+          excerpt: "A fictional page.",
+          published_on: "2026-10-03",
+        },
+      ],
+      findings: [
+        { id: "fnd_1", text: "Example Corp builds tools for clinics.", source_ids: ["src_1"] },
+      ],
+      dropped: { flagged: 0, outdated: 0 },
+      search_provider: "scripted",
+      model: { provider: "anthropic", model: "claude-haiku-5-5" },
+      cost_usd: 0.05,
+      created_at: "2026-11-08T09:00:00.000Z",
+    });
+    const seen: unknown[] = [];
+    const drafts = createMemorySavedApplicationMaterialStore();
+    await build({
+      consent: granted,
+      drafts,
+      researchBriefs,
+      route: scriptedRoute(
+        [
+          {
+            items: [
+              {
+                question: "",
+                text: "As a Data Analyst I cut report time by 40%, and clinic tools appeal to me.",
+                fact_ids: ["t", "o"],
+                company_fact_ids: ["fnd_1"],
+              },
+            ],
+          },
+        ],
+        seen,
+      ),
+    });
+    const response = await draft("cover-letter");
+    expect(response.statusCode).toBe(200);
+    expect(seen[0]).toMatchObject({
+      company_facts: [
+        { id: "fnd_1", text: "Example Corp builds tools for clinics.", published_on: "2026-10-03" },
+      ],
+    });
+    expect(response.json()).toMatchObject({
+      research_brief_id: "rbr_fixture0001",
+      items: [
+        {
+          company_citations: [
+            { finding_id: "fnd_1", text: "Example Corp builds tools for clinics." },
+          ],
+        },
+      ],
+    });
+    const [saved] = await drafts.list("owner", "app_fixture0001");
+    expect(saved?.items[0]?.company_citations).toHaveLength(1);
+  });
+
+  it("writes a free-form letter, checks it with the checker model and reports dropped sentences", async () => {
+    const seen: unknown[] = [];
+    const models: string[] = [];
+    const writerOutputs = [
+      { letter: "I cut report time by 45%.\n\nIn my last role I cut report time by 40%." },
+      { letter: "I cut report time by 45% again.\n\nIn my last role I cut report time by 40%." },
+    ];
+    const links = {
+      links: [
+        { sentence_id: "p0.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+        { sentence_id: "p1.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+      ],
+    };
+    const writer = scriptedRoute(writerOutputs, seen);
+    const checker = scriptedRoute([links], seen);
+    await build({
+      consent: granted,
+      coverLetterWriter: "free-form",
+      route: (input) => {
+        models.push(input.configuredModel.modelId);
+        return input.configuredModel.modelId === "claude-haiku-5-5"
+          ? checker(input)
+          : writer(input);
+      },
+    });
+    const response = await draft("cover-letter");
+    expect(response.statusCode).toBe(200);
+    expect(models).toEqual(["claude-sonnet-5-5", "claude-haiku-5-5"]);
+    const body = response.json();
+    expect(body.items).toEqual([
+      {
+        question: "",
+        text: "In my last role I cut report time by 40%.",
+        citations: [{ fact_id: "o", text: "achievement outcome: Cut report time by 40%" }],
+      },
+    ]);
+    expect(body.dropped_sentences).toEqual(["I cut report time by 45% again."]);
+    expect(body.prompt_version).toBe("cover-letter-free-form-v1");
+    // Two letters and two checks, all under the request's cost cap.
+    expect(seen).toHaveLength(4);
+    expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
+    expect(logs.join("\n")).not.toContain("report time by 45");
+  });
+
+  it("keeps the free-form writer and the check apart when both run on the economy model", async () => {
+    const versions: string[] = [];
+    const writer = scriptedRoute([{ letter: "I cut report time by 40%." }], []);
+    const checker = scriptedRoute(
+      [
+        {
+          links: [
+            { sentence_id: "p0.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+          ],
+        },
+      ],
+      [],
+    );
+    await build({
+      consent: granted,
+      coverLetterWriter: "free-form",
+      route: (input) => {
+        versions.push(input.configuredModel.promptTemplateVersion);
+        return input.configuredModel.promptTemplateVersion === "cover-letter-claims-v1"
+          ? checker(input)
+          : writer(input);
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "cover-letter", model: "claude-haiku-5-5" },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(versions).toEqual(["cover-letter-free-form-v1", "cover-letter-claims-v1"]);
   });
 
   it("serves no list when the server keeps no drafts", async () => {

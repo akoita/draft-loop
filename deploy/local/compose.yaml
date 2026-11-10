@@ -128,6 +128,7 @@ services:
       # `google` turns on the live voice interview, with keys/google_speech_api_key (a service
       # account key) and the Google Cloud project it bills to.
       DRAFT_LOOP_LIVE_SPEECH: ${DRAFT_LOOP_LIVE_SPEECH:-off}
+      DRAFT_LOOP_COVER_LETTER_WRITER: ${DRAFT_LOOP_COVER_LETTER_WRITER:-items}
       DRAFT_LOOP_SPEECH_PROJECT_ID: ${DRAFT_LOOP_SPEECH_PROJECT_ID:-}
       DRAFT_LOOP_SPEECH_KEY_FILE: /run/draft-loop/provider-keys/google_speech_api_key
     volumes:

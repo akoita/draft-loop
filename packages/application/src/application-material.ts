@@ -21,7 +21,29 @@ import {
   maximumApplicationMaterialEmphasisCharacters,
 } from "@draft-loop/schemas/saved-application-material";
 
+import {
+  type ApplicationMaterialCompanyFact,
+  boundedCompanyFacts,
+  type CompanyFactViolationCode,
+  companyFactViolations,
+} from "./application-material-company.js";
+
 /** The parts of a canonical profile fact the drafter reads. */
+/**
+ * A fact as one line, "category field: value", without repeating a field that only restates its
+ * category (an achievement stored as "achievement achievement" reads "achievement: …").
+ */
+export function applicationMaterialFactText(
+  fact: Pick<ApplicationMaterialFact, "category" | "field" | "value">,
+): string {
+  const field = fact.field.trim();
+  const label =
+    field === "" || field.toLowerCase() === fact.category.trim().toLowerCase()
+      ? fact.category
+      : `${fact.category} ${field}`;
+  return `${label}: ${fact.value}`;
+}
+
 export interface ApplicationMaterialFact {
   readonly id: string;
   readonly category: string;
@@ -64,6 +86,8 @@ export interface ApplicationMaterialContext {
   readonly guidance?: ApplicationMaterialGuidance;
   /** The candidate's own voice (#2513): style to copy, never a source of facts. */
   readonly voice?: ApplicationMaterialVoice;
+  /** Facts about the employer from the newest research brief (#2544); never about the candidate. */
+  readonly company?: readonly ApplicationMaterialCompanyFact[];
 }
 
 /**
@@ -91,6 +115,8 @@ export interface ApplicationMaterialItem {
   readonly question: string;
   readonly text: string;
   readonly factIds: readonly string[];
+  /** The company facts a statement about the employer rests on (#2544); never a candidate claim. */
+  readonly companyFactIds?: readonly string[];
 }
 
 export interface ApplicationMaterialModelIdentity {
@@ -138,7 +164,8 @@ export type ApplicationMaterialViolationCode =
   | "record_language"
   | "unknown_fact"
   | "fact_not_allowed"
-  | "unsupported_number";
+  | "unsupported_number"
+  | CompanyFactViolationCode;
 
 export interface ApplicationMaterialViolation {
   readonly code: ApplicationMaterialViolationCode;
@@ -191,6 +218,8 @@ export interface ApplicationMaterialContextInput {
   readonly guidance?: ApplicationMaterialGuidance;
   /** The candidate's own voice (#2513); none when unset. */
   readonly voice?: ApplicationMaterialVoice;
+  /** The newest research brief's findings (#2544); none when unset. */
+  readonly companyFacts?: readonly ApplicationMaterialCompanyFact[];
 }
 
 /** The voice that reaches the model: samples and terms trimmed and capped, empty fields dropped. */
@@ -271,6 +300,58 @@ function allowedFact(input: ApplicationMaterialContextInput, fact: ApplicationMa
 }
 
 const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 } as const;
+
+/** Words too common to tell a fact's match to a requirement. English and French. */
+const commonWords = new Set(
+  "and the for with that this from your our are has have will you who its their into over able about such other more most also then than when what which while within across using used use work works working experience years year team teams role strong good knowledge skills skill les des une pour avec dans sur par aux est sont votre vos nos".split(
+    " ",
+  ),
+);
+
+function matchWords(text: string): Set<string> {
+  return new Set(
+    (text.toLowerCase().match(/\p{L}[\p{L}\p{N}+#.-]*/gu) ?? [])
+      .map((word) => word.replace(/[.-]+$/u, ""))
+      .filter((word) => word.length >= 3 && !commonWords.has(word)),
+  );
+}
+
+/**
+ * Facts most relevant to the job first (#2583): each fact scores the words it shares with each
+ * requirement, weighted by the requirement's priority. Ties keep the record's order, so a record
+ * larger than the bound keeps its best matches rather than its first entries.
+ */
+export function rankApplicationMaterialFacts<T extends ApplicationMaterialFact>(
+  facts: readonly T[],
+  requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
+): T[] {
+  const score = applicationMaterialFactScorer(requirements);
+  return facts
+    .map((fact, index) => ({ fact, index, score: score(fact) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((entry) => entry.fact);
+}
+
+/** Scores a fact by the words it shares with each requirement, weighted by priority. */
+export function applicationMaterialFactScorer(
+  requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
+): (fact: Pick<ApplicationMaterialFact, "field" | "value">) => number {
+  const wanted = requirements.map((requirement) => ({
+    words: matchWords(requirement.text),
+    weight: priorityWeight[requirement.priority],
+  }));
+  return (fact) => {
+    const words = matchWords(`${fact.field} ${fact.value}`);
+    let score = 0;
+    for (const requirement of wanted) {
+      let shared = 0;
+      for (const word of words) if (requirement.words.has(word)) shared += 1;
+      score += shared * requirement.weight;
+    }
+    return score;
+  };
+}
 
 /**
  * The bounded context: allowed facts, then the job's requirements by priority. Each entry is
@@ -279,12 +360,14 @@ const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 } as const;
 export function applicationMaterialContext(
   input: ApplicationMaterialContextInput,
 ): ApplicationMaterialContext {
-  const facts = input.facts
-    .filter((fact) => allowedFact(input, fact))
+  const facts = rankApplicationMaterialFacts(
+    input.facts.filter((fact) => allowedFact(input, fact)),
+    input.requirements,
+  )
     .slice(0, maximumApplicationMaterialFacts)
     .map((fact) => ({
       id: fact.id,
-      text: `${fact.category} ${fact.field}: ${fact.value}`.slice(0, maximumContextCharacters),
+      text: applicationMaterialFactText(fact).slice(0, maximumContextCharacters),
       ...(fact.subjectId === undefined || fact.subjectId === ""
         ? {}
         : { group: fact.subjectId.slice(0, 64) }),
@@ -299,6 +382,7 @@ export function applicationMaterialContext(
     }));
   const guidance = boundedApplicationMaterialGuidance(input.kind, input.guidance);
   const voice = boundedApplicationMaterialVoice(input.voice);
+  const company = boundedCompanyFacts(input.companyFacts);
   return {
     kind: input.kind,
     facts,
@@ -306,6 +390,7 @@ export function applicationMaterialContext(
     ...(input.language === undefined ? {} : { language: input.language }),
     ...(guidance === undefined ? {} : { guidance }),
     ...(voice === undefined ? {} : { voice }),
+    ...(company.length === 0 ? {} : { company }),
   };
 }
 
@@ -452,7 +537,7 @@ export function unsupportedNumbers(text: string, sources: readonly string[]): st
  * work (#2218's second walk: "SQL is one of my listed skills", "without claiming more than the
  * record shows"). A candidate would never send it.
  */
-const recordLanguage =
+export const recordLanguage =
   /\b(?:my|the|your|on) record\b|\blisted (?:skills?|as)\b|\b(?:named|listed) skill\b|\bclaim(?:ing)? more than\b|\bcitations?\b/iu;
 
 /** The longest courtesy sentence a cover letter may open or close with, uncited. */
@@ -500,6 +585,7 @@ export function applicationMaterialViolations(
   );
   const known = new Set(input.facts.map((fact) => fact.id));
   const requirementTexts = context.requirements.map((requirement) => requirement.text);
+  const company = new Map((context.company ?? []).map((fact) => [fact.id, fact.text]));
   const violations: ApplicationMaterialViolation[] = [];
   if (items.length === 0) {
     return [{ code: "empty_draft", detail: "The draft has no paragraph or question." }];
@@ -536,10 +622,13 @@ export function applicationMaterialViolations(
           "The item talks about the candidate's record, a list of skills or these rules; write it as the candidate would say it.",
       });
     }
+    const companyViolations = companyFactViolations(item, index, new Set(company.keys()));
+    violations.push(...companyViolations);
     const cited: ApplicationMaterialFact[] = [];
     for (const id of item.factIds) {
       const fact = allowed.get(id);
       if (fact !== undefined) cited.push(fact);
+      else if (company.has(id)) continue;
       else if (known.has(id)) {
         violations.push({
           code: "fact_not_allowed",
@@ -554,7 +643,11 @@ export function applicationMaterialViolations(
         });
       }
     }
-    const citedValues = cited.map((fact) => fact.value);
+    // A number about the employer may come from a cited company fact.
+    const citedValues = [
+      ...cited.map((fact) => fact.value),
+      ...(item.companyFactIds ?? []).flatMap((id) => company.get(id) ?? []),
+    ];
     for (const number of numbersIn(item.text)) {
       if (!supported(number, citedValues)) {
         violations.push({
@@ -606,6 +699,9 @@ export async function draftApplicationMaterial(
       question: item.question.trim(),
       text: item.text.trim(),
       factIds: [...new Set(item.factIds)],
+      ...(item.companyFactIds === undefined || item.companyFactIds.length === 0
+        ? {}
+        : { companyFactIds: [...new Set(item.companyFactIds)] }),
     }));
     violations = applicationMaterialViolations(input, items);
     if (violations.length === 0) {

@@ -4,8 +4,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { defaultAgentTokenPath, saveTokenFromInput } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
 import { configFromEnvironment, createWorkJournalApi, createWorkspaceApiCall } from "./client.js";
+import { createDraftsApi } from "./drafts.js";
 import { runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
+import { createMaterialApi } from "./material.js";
+import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
 const [command, ...rest] = process.argv.slice(2);
@@ -42,6 +45,9 @@ if (command === "init") {
   const server = createWorkJournalMcpServer(
     createWorkJournalApi(config),
     createApplicationsApi(createWorkspaceApiCall(config)),
+    createDraftsApi(createWorkspaceApiCall(config)),
+    createRunsApi(createWorkspaceApiCall(config)),
+    createMaterialApi(createWorkspaceApiCall(config)),
   );
   await server.connect(new StdioServerTransport());
 } else {

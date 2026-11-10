@@ -17,13 +17,16 @@ export const applicationPastedJobMaxLength = 200_000;
 
 /**
  * The text a hosted application's approved job page gave when requirements were extracted, kept
- * so the worker extracts that one fetch (#1812). The brief's source records the same fetch.
+ * so the worker extracts that one fetch (#1812) and the person can still read the job once the
+ * page expires (#2592). The brief's source records the same fetch.
  */
 export const applicationJobPageSchema = z
   .object({
     text: z.string().trim().min(1).max(applicationPastedJobMaxLength),
     finalUrl: z.url({ protocol: /^https?$/u }),
     fetchedAt: strictTimestampSchema,
+    /** True when the person pasted this copy because the page could no longer be read (#2593). */
+    pasted: z.literal(true).optional(),
   })
   .strict();
 export type ApplicationJobPage = z.infer<typeof applicationJobPageSchema>;
@@ -48,6 +51,8 @@ export const applicationJobSourceSchema = z.discriminatedUnion("kind", [
       url: z.url({ protocol: /^https?$/u }),
       approved: z.literal(true),
       page: applicationJobPageSchema.optional(),
+      /** The first copy, kept when a later fetch gave different text, so it is never lost. */
+      firstPage: applicationJobPageSchema.optional(),
     })
     .strict(),
   z.object({ kind: z.literal("local-file"), path: z.string().min(1) }).strict(),

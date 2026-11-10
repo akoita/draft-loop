@@ -176,6 +176,8 @@ export interface DesktopOpportunityCapabilities {
   readonly getLatestOpportunity?: () => Promise<OpportunityLatestResult>;
   /** The job description of the loaded application, read back for the review screen. */
   readonly getApplicationJob?: () => Promise<ApplicationJobResult>;
+  /** Saves a copy of the loaded application's job page: read once more, or the pasted text. */
+  readonly saveApplicationJobCopy?: (text?: string) => Promise<ApplicationJobResult>;
   readonly editOpportunity?: (
     input: Omit<OpportunityEditInput, "workspaceId">,
   ) => Promise<OpportunityRecordResult>;
@@ -1340,6 +1342,23 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: {
                   workspaceId: state.workspaceId,
                   ...(applicationId === undefined ? {} : { applicationId }),
+                },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("application.job-copy")
+      ? {
+          saveApplicationJobCopy: async (text?: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "application.job-copy",
+                input: {
+                  workspaceId: state.workspaceId,
+                  ...(applicationId === undefined ? {} : { applicationId }),
+                  ...(text === undefined ? {} : { text }),
                 },
               }),
             );

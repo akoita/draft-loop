@@ -1,10 +1,11 @@
 import type { SavedApplicationMaterial } from "@draft-loop/schemas/saved-application-material";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 
-import type {
-  ApplicationMaterialDraft,
-  ApplicationMaterialPort,
-  DraftApplicationMaterialInput,
+import {
+  type ApplicationMaterialDraft,
+  type ApplicationMaterialPort,
+  applicationMaterialFactText,
+  type DraftApplicationMaterialInput,
 } from "./application-material.js";
 import type { ApplicationMaterialRecordInput } from "./application-material-input.js";
 import { type MaterialCriticPort, runCriticPass } from "./material-critic.js";
@@ -71,6 +72,9 @@ function draftOf(material: SavedApplicationMaterial): ApplicationMaterialDraft {
       question: item.question,
       text: item.text,
       factIds: item.citations.map((citation) => citation.fact_id),
+      ...(item.company_citations === undefined
+        ? {}
+        : { companyFactIds: item.company_citations.map((citation) => citation.finding_id) }),
     })),
     model: material.model,
   };
@@ -99,6 +103,14 @@ export async function reviewSavedApplicationMaterial(
     return { outcome: "superseded", findings: 0 };
 
   const { input } = command;
+  // The company facts the letter cited, as it saved them: a revision may keep them, never add one.
+  const company = new Map(
+    base.items.flatMap((item) =>
+      (item.company_citations ?? []).map(
+        (citation) => [citation.finding_id, citation.text] as const,
+      ),
+    ),
+  );
   const draftInput: DraftApplicationMaterialInput = {
     kind: base.kind,
     facts: input.facts,
@@ -107,6 +119,9 @@ export async function reviewSavedApplicationMaterial(
     ...(input.voice === undefined ? {} : { voice: input.voice }),
     ...(base.guidance === undefined ? {} : { guidance: base.guidance }),
     ...(command.language === undefined ? {} : { language: command.language }),
+    ...(company.size === 0
+      ? {}
+      : { companyFacts: [...company].map(([id, text]) => ({ id, text })) }),
   };
   const pass = await runCriticPass(command.critic, command.author, draftInput, draftOf(base));
   const findings = pass.findings.length;
@@ -127,9 +142,17 @@ export async function reviewSavedApplicationMaterial(
         const fact = byId.get(id);
         return {
           fact_id: id,
-          text: fact === undefined ? id : `${fact.category} ${fact.field}: ${fact.value}`,
+          text: fact === undefined ? id : applicationMaterialFactText(fact),
         };
       }),
+      ...((item.companyFactIds ?? []).length === 0
+        ? {}
+        : {
+            company_citations: (item.companyFactIds ?? []).map((id) => ({
+              finding_id: id,
+              text: company.get(id) ?? id,
+            })),
+          }),
     })),
     based_on: base.id,
     model: pass.draft.model ?? base.model,

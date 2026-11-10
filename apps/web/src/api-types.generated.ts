@@ -4,11 +4,13 @@ export interface ApiSchemas {
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
     readonly active: boolean;
+    readonly monthly_cap_usd?: number;
+    readonly spent_this_month_usd?: number;
   };
   "ApiError": {
     readonly error: {
@@ -95,6 +97,12 @@ export interface ApiSchemas {
     readonly origin: "pasted-text" | "url" | "unavailable";
     readonly text: string | null;
     readonly url: string | null;
+    readonly savedAt: string | null;
+    readonly copySource: "page" | "pasted" | null;
+    readonly earlier: {
+      readonly text: string;
+      readonly savedAt: string;
+    } | null;
   };
   "ApplicationMaterialDraft": {
     readonly id?: string;
@@ -110,7 +118,12 @@ export interface ApiSchemas {
         readonly fact_id: string;
         readonly text: string;
       })[];
+      readonly company_citations?: readonly ({
+        readonly finding_id: string;
+        readonly text: string;
+      })[];
     })[];
+    readonly research_brief_id?: string;
     readonly based_on?: string;
     readonly model: {
       readonly provider: string;
@@ -134,6 +147,7 @@ export interface ApiSchemas {
       readonly sentence?: string;
       readonly match?: string;
     })[];
+    readonly dropped_sentences?: readonly (string)[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
@@ -200,6 +214,7 @@ export interface ApiSchemas {
     readonly mode: "oidc";
     readonly issuer: string;
     readonly clientId: string;
+    readonly waitlist?: boolean;
   };
   "BetaInvite": {
     readonly inviteId: string;
@@ -209,6 +224,12 @@ export interface ApiSchemas {
     readonly organisationId?: string;
     readonly redeemedAt?: string;
     readonly revokedAt?: string;
+  };
+  "BetaWaitlistEntry": {
+    readonly entryId: string;
+    readonly email: string;
+    readonly consentVersion: string;
+    readonly joinedAt: string;
   };
   "CareerInterviewActionInput": {
     readonly action: "accept";
@@ -426,11 +447,13 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
     readonly active: boolean;
+    readonly monthly_cap_usd?: number;
+    readonly spent_this_month_usd?: number;
     readonly token: string;
   };
   "KnowledgeBase": {
@@ -880,6 +903,13 @@ export interface ApiSchemas {
       readonly unlimited: boolean;
       readonly remaining: number | null;
       readonly sufficient: boolean;
+    };
+    readonly agentSpend?: {
+      readonly monthlyCapUsd: number;
+      readonly spentThisMonthUsd: number;
+      readonly remainingUsd: number;
+      readonly runReservesUsd: number;
+      readonly draftReservesUsd: number;
     };
   };
   "RunExport": {
@@ -1823,6 +1853,16 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["ApplicationJob"];
   };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/job/copy": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: {
+      readonly text?: string;
+    };
+    readonly response: ApiSchemas["ApplicationJob"];
+  };
   "GET /v1/workspaces/{workspaceId}/application-folders": {
     readonly path: {
       readonly workspaceId: string;
@@ -2433,7 +2473,8 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+      readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
   };
@@ -2592,6 +2633,34 @@ export interface ApiOperations {
       readonly code: string;
     };
     readonly response: ApiSchemas["SignedUp"];
+  };
+  "POST /v1/waitlist": {
+    readonly body: {
+      readonly email: string;
+      readonly consent: true;
+    };
+    readonly response: {
+      readonly listed: true;
+    };
+  };
+  "GET /v1/operator/waitlist": {
+    readonly response: {
+      readonly entries: readonly (ApiSchemas["BetaWaitlistEntry"])[];
+    };
+  };
+  "POST /v1/operator/waitlist/{entryId}/invite": {
+    readonly path: {
+      readonly entryId: string;
+    };
+    readonly response: {
+      readonly invite: {
+        readonly inviteId: string;
+        readonly email: string;
+        readonly createdAt: string;
+        readonly state: "open" | "revoked" | "redeemed";
+      };
+      readonly code: string;
+    };
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

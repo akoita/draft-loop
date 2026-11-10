@@ -64,6 +64,10 @@
       "types": "./src/work-journal-panel.tsx",
       "import": "./src/work-journal-panel.tsx"
     },
+    "./work-journal-intake": {
+      "types": "./src/work-journal-intake.tsx",
+      "import": "./src/work-journal-intake.tsx"
+    },
     "./work-journal-pending": {
       "types": "./src/work-journal-pending.tsx",
       "import": "./src/work-journal-pending.tsx"

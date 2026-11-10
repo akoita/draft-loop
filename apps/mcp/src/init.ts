@@ -208,14 +208,18 @@ export function planInit(
 }
 
 /** The scopes `init --scope` accepts (ADR 0011 D17); the server checks them again. */
-export const initScopes = ["journal", "applications:read", "jobs:write"] as const;
+export const initScopes = ["journal", "applications:read", "jobs:write", "drafts:read"] as const;
+
+/** The scopes a token gets without --scope: what the plugin uses, never drafts:read (#2569). */
+export const initDefaultScopes: readonly string[] = ["journal", "applications:read", "jobs:write"];
 
 export const initUsage = `Usage: draftloop-mcp init --host claude-code|codex|generic [--hook] [--command <command>] [--scope <scope>]... [--no-token] [--dry-run]
 
 Sets up DraftLoop in the current project. With the owner token in DRAFT_LOOP_SERVER_TOKEN, it
 also issues an agent token and saves it outside the project; --no-token skips that. The token
-gets every scope the plugin uses (${initScopes.join(", ")}) unless --scope names some; it
-always keeps the work journal, which the skill and hook need.`;
+gets ${initDefaultScopes.join(", ")} unless --scope names scopes from: ${initScopes.join(", ")}.
+It always keeps the work journal, which the skill and hook need; drafts:read, which lets the
+agent read exported CVs and saved drafts, is only given when named.`;
 
 export interface InitArguments extends InitOptions {
   readonly dryRun: boolean;
@@ -270,15 +274,14 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
     // writes use the journal, so a token it issues always keeps it.
     scopes:
       scopes.length === 0
-        ? [...initScopes]
+        ? [...initDefaultScopes]
         : scopes.includes("journal")
           ? scopes
           : ["journal", ...scopes],
   };
 }
 
-const intakeLine =
-  'Then turn on "Accept notes from agents" in the Work journal panel of the Career evidence page.';
+const intakeLine = 'Then turn on "Accept notes from agents" under Agents in Workspace settings.';
 
 /** Issues and saves the agent token, or says why not, and whether intake is already on. */
 async function setUpAgentToken(

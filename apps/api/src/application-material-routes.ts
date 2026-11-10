@@ -4,11 +4,13 @@ import { type ApplicationService, catalogModelPricing } from "@draft-loop/applic
 import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
+  applicationMaterialFactText,
   applicationMaterialKinds,
   boundedApplicationMaterialGuidance,
   draftApplicationMaterial,
   unsupportedNumbers,
 } from "@draft-loop/application/application-material";
+import { researchCompanyFacts } from "@draft-loop/application/application-material-company";
 import {
   applicationMaterialDocumentFormats,
   defaultApplicationMaterialTemplateId,
@@ -22,6 +24,16 @@ import {
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
 import { guardCallCost } from "@draft-loop/application/call-cost-guard";
+import {
+  coverLetterClaimCheckModelId,
+  coverLetterClaimCheckPromptVersion,
+  createModelCoverLetterClaimChecker,
+} from "@draft-loop/application/cover-letter-claims-model";
+import { draftFreeFormCoverLetter } from "@draft-loop/application/cover-letter-free-form";
+import {
+  createModelFreeFormCoverLetterWriter,
+  freeFormCoverLetterPromptVersion,
+} from "@draft-loop/application/cover-letter-free-form-model";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import { writingTells } from "@draft-loop/application/writing-tells";
@@ -41,6 +53,7 @@ import {
   type ConsentState,
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
+import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import {
   type SavedApplicationMaterialStore,
   savedApplicationMaterialListLimit,
@@ -48,7 +61,6 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
@@ -62,6 +74,25 @@ export interface ApplicationMaterialParts {
   readonly allowProviderData: boolean;
   /** The most one request may spend across its attempts, in US dollars. */
   readonly maxCostUsd?: number;
+  /**
+   * How a cover letter is written (#2586): `items`, cited paragraphs (the default), or
+   * `free-form`, prose checked sentence by sentence against the facts afterwards.
+   */
+  readonly coverLetterWriter?: CoverLetterWriter;
+}
+
+export const coverLetterWriters = ["items", "free-form"] as const;
+export type CoverLetterWriter = (typeof coverLetterWriters)[number];
+
+/** `DRAFT_LOOP_COVER_LETTER_WRITER`: `items` when unset; anything else stops the start. */
+export function readCoverLetterWriter(env: NodeJS.ProcessEnv): CoverLetterWriter {
+  const value = env.DRAFT_LOOP_COVER_LETTER_WRITER?.trim() || "items";
+  if (!(coverLetterWriters as readonly string[]).includes(value)) {
+    throw new Error(
+      `DRAFT_LOOP_COVER_LETTER_WRITER must be one of ${coverLetterWriters.join(", ")}.`,
+    );
+  }
+  return value as CoverLetterWriter;
 }
 
 export interface ApplicationMaterialRoutesOptions {
@@ -81,6 +112,11 @@ export interface ApplicationMaterialRoutesOptions {
    * queued only when the record's consent names the workspace's critic company.
    */
   readonly reviews?: MaterialReviews;
+  /**
+   * The application's research briefs (#2544); the newest one's findings reach the drafter as
+   * company facts. Without them a draft cites career facts only, as before.
+   */
+  readonly researchBriefs?: Pick<ResearchBriefStore, "list">;
   /** The clock a saved draft's time comes from; the system clock by default. */
   readonly now?: () => Date;
 }
@@ -146,8 +182,18 @@ const draftView = z
         citations: z
           .array(z.object({ fact_id: z.string(), text: z.string() }))
           .describe("The career record facts the item relies on, as the candidate stored them."),
+        company_citations: z
+          .array(z.object({ finding_id: z.string(), text: z.string() }))
+          .optional()
+          .describe(
+            "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+          ),
       }),
     ),
+    research_brief_id: z
+      .string()
+      .optional()
+      .describe("The research brief the company citations come from."),
     based_on: savedApplicationMaterialIdSchema
       .optional()
       .describe("The saved draft this version was edited from; absent for a drafted version."),
@@ -186,6 +232,12 @@ const draftView = z
       .optional()
       .describe(
         "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+      ),
+    dropped_sentences: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
       ),
     prompt_version: z.string(),
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
@@ -248,7 +300,10 @@ const editBody = z
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
 function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
-  const sources = view.items.flatMap((item) => item.citations.map((citation) => citation.text));
+  const sources = view.items.flatMap((item) => [
+    ...item.citations.map((citation) => citation.text),
+    ...(item.company_citations ?? []).map((citation) => citation.text),
+  ]);
   return withTells({
     ...view,
     items: view.items.map((item) => {
@@ -398,15 +453,38 @@ export function registerApplicationMaterialRoutes(
       });
 
       const model = selectionOf(request.body.model ?? applicationMaterialDefaultModelId);
-      const pricing = catalogModelPricing(model);
+      const buildRoute = material.route;
       let spentUsd = 0;
-      const routed = material.route({
-        configuredModel: model,
-        ...(pricing === undefined ? {} : { pricing }),
-      });
+      const freeForm =
+        request.body.kind === "cover-letter" && material.coverLetterWriter === "free-form";
+      const checkerModel = {
+        company: "anthropic",
+        modelId: coverLetterClaimCheckModelId,
+        role: "author",
+        promptTemplateVersion: coverLetterClaimCheckPromptVersion,
+      } as const;
+      // A route answers only requests that name its exact selection, prompt version included, so
+      // the free-form writer and the claim check each get a route built for their own.
+      const writerModel = freeForm
+        ? { ...model, promptTemplateVersion: freeFormCoverLetterPromptVersion }
+        : model;
+      const routeOf = (configuredModel: typeof writerModel | typeof checkerModel) => {
+        const price = catalogModelPricing(configuredModel);
+        return buildRoute({
+          configuredModel,
+          ...(price === undefined ? {} : { pricing: price }),
+        });
+      };
+      const routed = routeOf(writerModel);
+      // The claim check runs on its own model; both share the request's cost cap.
+      const checkRoute = freeForm ? routeOf(checkerModel) : routed;
       const recording = {
         execute: async (modelRequest: Parameters<typeof routed.execute>[0]) => {
-          const response = await routed.execute(modelRequest);
+          const target =
+            modelRequest.model.promptTemplateVersion === checkerModel.promptTemplateVersion
+              ? checkRoute
+              : routed;
+          const response = await target.execute(modelRequest);
           const cost = response.cost.estimatedUsd ?? 0;
           spentUsd += cost;
           request.log.info(
@@ -423,15 +501,17 @@ export function registerApplicationMaterialRoutes(
           return response;
         },
       };
+      const executor = guardCallCost(recording, maxCostUsd) as never;
+      const dataPolicy = {
+        allowTransmission: true,
+        allowedCompanies: ["anthropic" as const],
+        sensitiveData: true,
+        sensitiveDataAcknowledged: true,
+      };
       const writer = createModelApplicationMaterialWriter({
-        executor: guardCallCost(recording, maxCostUsd) as never,
+        executor,
         model,
-        dataPolicy: {
-          allowTransmission: true,
-          allowedCompanies: ["anthropic"],
-          sensitiveData: true,
-          sensitiveDataAcknowledged: true,
-        },
+        dataPolicy,
         applicationId,
       });
       try {
@@ -439,7 +519,10 @@ export function registerApplicationMaterialRoutes(
           request.body.kind,
           request.body.guidance,
         );
-        const draft = await draftApplicationMaterial(writer, {
+        // The newest research brief, when the candidate ran one, gives facts about the employer.
+        const [research] = (await options.researchBriefs?.list(workspaceId, applicationId)) ?? [];
+        const companyFacts = research === undefined ? [] : researchCompanyFacts(research);
+        const draftInput = {
           kind: request.body.kind,
           ...(guidance === undefined ? {} : { guidance }),
           ...(voice === undefined ? {} : { voice }),
@@ -447,7 +530,29 @@ export function registerApplicationMaterialRoutes(
           requirements,
           ...(usage === undefined ? {} : { usage }),
           language: application.language ?? workspace.language,
-        });
+          ...(companyFacts.length === 0 ? {} : { companyFacts }),
+        };
+        const draft = freeForm
+          ? await draftFreeFormCoverLetter(
+              createModelFreeFormCoverLetterWriter({
+                executor,
+                model: writerModel,
+                dataPolicy,
+                applicationId,
+              }),
+              createModelCoverLetterClaimChecker({
+                executor,
+                model: checkerModel,
+                dataPolicy,
+                applicationId,
+              }),
+              draftInput,
+            )
+          : await draftApplicationMaterial(writer, draftInput);
+        const droppedSentences: readonly string[] =
+          (draft as { readonly droppedSentences?: readonly string[] }).droppedSentences ?? [];
+        const companyById = new Map(companyFacts.map((fact) => [fact.id, fact.text]));
+        const usesResearch = draft.items.some((item) => (item.companyFactIds ?? []).length > 0);
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
         request.log.info(
           {
@@ -456,6 +561,9 @@ export function registerApplicationMaterialRoutes(
             kind: draft.kind,
             items: draft.items.length,
             guided: guidance !== undefined,
+            companyFacts: companyFacts.length,
+            writer: freeForm ? "free-form" : "items",
+            droppedSentences: droppedSentences.length,
             spentUsd,
           },
           "application material drafted",
@@ -468,11 +576,23 @@ export function registerApplicationMaterialRoutes(
             text: item.text,
             citations: item.factIds.map((id) => {
               const fact = byId.get(id) as ApplicationMaterialFact;
-              return { fact_id: id, text: `${fact.category} ${fact.field}: ${fact.value}` };
+              return { fact_id: id, text: applicationMaterialFactText(fact) };
             }),
+            ...((item.companyFactIds ?? []).length === 0
+              ? {}
+              : {
+                  company_citations: (item.companyFactIds ?? []).map((id) => ({
+                    finding_id: id,
+                    text: companyById.get(id) ?? id,
+                  })),
+                }),
           })),
+          ...(usesResearch && research !== undefined ? { research_brief_id: research.id } : {}),
           model: draft.model ?? { provider: model.company, model: model.modelId },
-          prompt_version: applicationMaterialPromptVersion,
+          ...(droppedSentences.length === 0 ? {} : { dropped_sentences: [...droppedSentences] }),
+          prompt_version: freeForm
+            ? freeFormCoverLetterPromptVersion
+            : applicationMaterialPromptVersion,
           cost_usd: spentUsd,
         };
         if (drafts === undefined) return reply.send(withTells(view));

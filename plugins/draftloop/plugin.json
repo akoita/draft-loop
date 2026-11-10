@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "draftloop",
-  "version": "0.3.1",
-  "description": "Record notable work as career evidence, see your job applications, add a job and follow a CV run in your DraftLoop server. Approvals stay in DraftLoop.",
+  "version": "0.4.0",
+  "description": "Record notable work as career evidence, see your job applications, add a job, and start and follow a CV run within a monthly spend cap in your DraftLoop server. Approvals stay in DraftLoop.",
   "author": { "name": "DraftLoop contributors" },
   "homepage": "https://github.com/akoita/draft-loop/blob/main/docs/reference/agent-channel.md",
   "repository": "https://github.com/akoita/draft-loop",

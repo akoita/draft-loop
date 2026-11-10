@@ -12,6 +12,8 @@ export interface AgentRouteRule {
   readonly allows?: (request: FastifyRequest) => boolean;
   /** Why `allows` refused, for the agent to read. */
   readonly refusal?: string;
+  /** What a start reserves against the token's monthly spend cap (`agent-spend-gate.ts`). */
+  readonly charge?: "run" | "draft";
 }
 
 const workspace = "/v1/workspaces/:workspaceId";
@@ -21,6 +23,8 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   journal: "Work journal",
   "applications:read": "Read applications",
   "jobs:write": "Add jobs",
+  "drafts:read": "Read CVs and drafts",
+  "runs:start": "Start runs and drafts",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
@@ -39,6 +43,37 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`GET ${workspace}/applications/:applicationId`]: { scope: "applications:read" },
   [`GET ${workspace}/applications/:applicationId/job`]: { scope: "applications:read" },
   [`GET ${workspace}/runs/:runId`]: { scope: "applications:read" },
+  // What the candidate already exported or saved, never a run's open draft or findings (#2569).
+  [`GET ${workspace}/runs/:runId/exports`]: { scope: "drafts:read" },
+  [`GET ${workspace}/runs/:runId/exports/:exportId/content`]: { scope: "drafts:read" },
+  [`GET ${workspace}/applications/:applicationId/material`]: { scope: "drafts:read" },
+  // Runs within the token's monthly spend cap (#2599), on a brief the person reviewed; the
+  // models, the career profile and every decision on the draft stay with the person.
+  [`GET ${workspace}/runs/estimate`]: { scope: "runs:start" },
+  [`POST ${workspace}/runs`]: {
+    scope: "runs:start",
+    charge: "run",
+    allows: (request) => {
+      const body = request.body as Record<string, unknown> | undefined;
+      return (
+        body !== undefined &&
+        typeof body.applicationId === "string" &&
+        body.opportunityBrief !== undefined &&
+        body.modelProfiles === undefined &&
+        body.candidateProfile === undefined
+      );
+    },
+    refusal:
+      "An agent token starts a run on an application's reviewed brief only (applicationId and opportunityBrief); the models and the career profile are the person's choice in DraftLoop.",
+  },
+  // A cover letter or interview questions within the same cap (#2601), on the default model.
+  [`POST ${workspace}/applications/:applicationId/material`]: {
+    scope: "runs:start",
+    charge: "draft",
+    allows: (request) => (request.body as Record<string, unknown> | undefined)?.model === undefined,
+    refusal:
+      "An agent token drafts with the default model only; choosing another model is the person's choice in DraftLoop.",
+  },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
     scope: "jobs:write",
@@ -70,7 +105,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "DELETE /v1/workspaces/:workspaceId/members/:memberId",
   "DELETE /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
   "GET /speech-models/manifest.json",
-  // Saved drafts reach agents only through milestone B's read tool (D17 amendment).
   "GET /v1/application-material/models",
   "GET /v1/auth/config",
   "GET /v1/health",
@@ -105,11 +139,8 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/freshness",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/versions",
   "GET /v1/workspaces/:workspaceId/review-state",
-  "GET /v1/workspaces/:workspaceId/runs/:runId/exports",
-  "GET /v1/workspaces/:workspaceId/runs/:runId/exports/:exportId/content",
   "GET /v1/workspaces/:workspaceId/runs/:runId/review",
   "GET /v1/workspaces/:workspaceId/runs/:runId/usage",
-  "GET /v1/workspaces/:workspaceId/runs/estimate",
   "GET /v1/workspaces/:workspaceId/screening",
   "GET /v1/workspaces/:workspaceId/work-journal/intake",
   "GET /v1/workspaces/:workspaceId/work-journal/notes/:noteId",
@@ -134,7 +165,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/agent-tokens",
   "POST /v1/workspaces/:workspaceId/application-folders",
   "POST /v1/workspaces/:workspaceId/application-imports",
-  "GET /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
   // Research briefs reach agents only with the drafts' read tool, if ever.
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs",
@@ -142,7 +172,8 @@ export const humanOnlyRoutes: readonly string[] = [
   // A research run searches the web, so only the person approves it (#2560).
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/research",
-  "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
+  // Reading a job page needs the person's approval in DraftLoop, as adding one by address does.
+  "POST /v1/workspaces/:workspaceId/applications/:applicationId/job/copy",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",
   "POST /v1/workspaces/:workspaceId/career-interview/sessions",
@@ -154,7 +185,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/preference-suggestions/:suggestionId/dismiss",
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/review",
-  "POST /v1/workspaces/:workspaceId/runs",
   "POST /v1/workspaces/:workspaceId/runs/:runId/approve",
   "POST /v1/workspaces/:workspaceId/runs/:runId/export-preview",
   "POST /v1/workspaces/:workspaceId/runs/:runId/exports",

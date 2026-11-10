@@ -2,11 +2,14 @@ import type { ApplicationService } from "@draft-loop/application";
 import {
   type AgentTokenRecord,
   type AgentTokenStore,
+  agentSpendMonth,
+  agentSpentCents,
   agentTokenScopes,
   defaultAgentTokenLifetimeDays,
   defaultAgentTokenScopes,
   isAgentTokenActive,
   maximumActiveAgentTokens,
+  maximumAgentMonthlyCapCents,
   maximumAgentTokenLifetimeDays,
 } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance } from "fastify";
@@ -34,7 +37,7 @@ const tokenParams = workspaceParams.extend({
 const scopeSchema = z
   .enum(agentTokenScopes)
   .describe(
-    "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text.",
+    "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap.",
   );
 
 const tokenSchema = z
@@ -46,6 +49,14 @@ const tokenSchema = z
     expires_at: z.string().describe("When the token stops working."),
     revoked_at: z.string().optional(),
     active: z.boolean().describe("False once the token is revoked or expired."),
+    monthly_cap_usd: z
+      .number()
+      .optional()
+      .describe("With runs:start: what the token may reserve each UTC month."),
+    spent_this_month_usd: z
+      .number()
+      .optional()
+      .describe("With runs:start: what it reserved this UTC month."),
   })
   .meta({ id: "AgentToken" });
 
@@ -72,6 +83,15 @@ const issueBody = z.strictObject({
     .max(agentTokenScopes.length)
     .optional()
     .describe('What the token may do; ["journal"] by default.'),
+  monthly_cap_usd: z
+    .number()
+    .min(0.01)
+    .max(maximumAgentMonthlyCapCents / 100)
+    .multipleOf(0.01)
+    .optional()
+    .describe(
+      "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit, and each draft its cost cap.",
+    ),
 });
 
 const errors = { 400: apiErrorSchema, 404: apiErrorSchema, 409: apiErrorSchema } as const;
@@ -79,7 +99,14 @@ const errors = { 400: apiErrorSchema, 404: apiErrorSchema, 409: apiErrorSchema }
 const dayMs = 86_400_000;
 
 function view(token: AgentTokenRecord, at: Date) {
+  const cap = token.monthlyCapCents;
   return {
+    ...(cap === undefined
+      ? {}
+      : {
+          monthly_cap_usd: cap / 100,
+          spent_this_month_usd: agentSpentCents(token, agentSpendMonth(at)) / 100,
+        }),
     id: token.id,
     label: token.label,
     scopes: [...token.scopes],
@@ -112,7 +139,7 @@ export function registerAgentTokenRoutes(
     {
       schema: {
         summary: "Issue an agent token",
-        description: `A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state) and jobs:write (a job application from pasted text). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
+        description: `A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
         params: workspaceParams,
         body: issueBody,
         response: { 201: issuedSchema, ...errors },
@@ -135,6 +162,20 @@ export function registerAgentTokenRoutes(
             ),
           );
       }
+      const scopes = agentTokenScopes.filter((scope) =>
+        (request.body.scopes ?? defaultAgentTokenScopes).includes(scope),
+      );
+      const cap = request.body.monthly_cap_usd;
+      if (scopes.includes("runs:start") !== (cap !== undefined)) {
+        return reply
+          .code(400)
+          .send(
+            apiError(
+              "agent_spend_cap_mismatch",
+              "A token that starts runs needs monthly_cap_usd, and only such a token takes one.",
+            ),
+          );
+      }
       const issued = newAgentToken();
       const lifetimeDays = request.body.expires_in_days ?? defaultAgentTokenLifetimeDays;
       const record: AgentTokenRecord = {
@@ -143,13 +184,17 @@ export function registerAgentTokenRoutes(
         label: request.body.label,
         createdAt: at.toISOString(),
         expiresAt: new Date(at.getTime() + lifetimeDays * dayMs).toISOString(),
-        scopes: agentTokenScopes.filter((scope) =>
-          (request.body.scopes ?? defaultAgentTokenScopes).includes(scope),
-        ),
+        scopes,
+        ...(cap === undefined ? {} : { monthlyCapCents: Math.round(cap * 100) }),
       };
       await tokens.insert({ ...record, secretHash: agentTokenHash(issued.token) });
       request.log.info(
-        { agentTokenId: record.id, expiresAt: record.expiresAt, scopes: record.scopes },
+        {
+          agentTokenId: record.id,
+          expiresAt: record.expiresAt,
+          scopes: record.scopes,
+          monthlyCapCents: record.monthlyCapCents,
+        },
         "agent token issued",
       );
       return reply.code(201).send({ ...view(record, at), token: issued.token });

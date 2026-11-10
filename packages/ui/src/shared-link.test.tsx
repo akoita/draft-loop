@@ -28,7 +28,6 @@ describe("links into the shared screens", () => {
         notes={[]}
         problem={undefined}
         knowledgeBases={[]}
-        onSetIntake={async () => undefined}
         onReview={async () => undefined}
       />,
     );

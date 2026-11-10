@@ -77,10 +77,10 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 
 | Feature                                                     | Status      | Where it runs | Agent access | What it does                                                   |
 | ----------------------------------------------------------- | ----------- | ------------- | ------------ | -------------------------------------------------------------- |
-| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis; a critic from another company flags machine-sounding sentences for one revision. |
+| [Cover letter](../reference/application-material.md)        | `available` | server        | `none`       | Drafts a cover letter from approved facts in your own voice, guided by tone, length and emphasis; a critic from another company flags machine-sounding sentences for one revision. A server may instead write it as prose and check each sentence against your facts ([free-form](../reference/application-material.md#free-form-cover-letters)). |
 | [Interview questions](../reference/application-material.md) | `available` | server        | `none`       | Drafts likely interview questions for one application.         |
 | [Saved drafts](../reference/application-material.md#saved-drafts) | `available` | server | `none` | Keeps each cover letter and question set with its application, to reopen, edit as a new version, download as Word or PDF, or delete. |
-| [Research brief](../reference/application-material.md#research-briefs) | `partial` | server | `none` | Researches the employer after the candidate approves, and keeps dated, cited facts with each application, to read or delete. Its Prepare panel (#2545) is not built yet. |
+| [Research brief](../reference/application-material.md#research-briefs) | `partial` | server | `none` | Researches the employer after the candidate approves, and keeps dated, cited facts with each application, to read or delete. Cover letters and interview questions may cite them for statements about the company. Offered in the Prepare panel; not yet walked with a paid run (#2483). |
 
 ## Agent channel
 
@@ -88,7 +88,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | -------------------------------------------------------------- | ----------- | ------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | [Work journal](../reference/agent-channel.md)                  | `available` | server        | `record_work`, `list_work`                                          | An agent records notable work as notes you approve as evidence.                   |
 | [Agents](../reference/agent-channel.md#set-it-up)              | `available` | self-hosted   | `none`                                                              | A Workspace settings section that issues scoped agent tokens and shows the setup. |
-| [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `get_job_text`, `add_job`, `get_run_status` | An agent lists applications, reads a job's text, adds a job and follows a CV run. |
+| [Agents work your applications](../reference/agent-channel.md) | `available` | self-hosted   | `list_applications`, `get_application`, `get_job_text`, `add_job`, `get_run_status`, `get_cv`, `list_materials`, `get_material`, `estimate_run`, `start_cv_run`, `draft_cover_letter`, `draft_interview_prep` | An agent lists applications, reads a job's text, adds a job, starts a CV run and drafts cover letters and interview questions within a monthly spend cap, follows the run and reads exported CVs and saved drafts. |
 
 ## Account and data
 

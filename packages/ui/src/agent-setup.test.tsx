@@ -1,13 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { AgentSetup, AgentSetupLink, type AgentSetupProps } from "./agent-setup.js";
+import { AgentSetup, type AgentSetupProps } from "./agent-setup.js";
 import {
   activeAgentTokens,
   agentChannelGuideUrl,
   agentConfiguration,
   agentConfigurationHoldsToken,
   agentTokenPlaceholder,
+  parseAgentMonthlyCap,
 } from "./agent-setup-model.js";
 
 // A fictional token: the real secrets are random and shown only once.
@@ -99,6 +100,17 @@ describe("agent configuration", () => {
   });
 });
 
+describe("monthly spend limit", () => {
+  it("reads 0.01 to 500 US dollars in cents, with a comma or a point", () => {
+    expect(parseAgentMonthlyCap(" 5 ")).toBe(5);
+    expect(parseAgentMonthlyCap("12,50")).toBe(12.5);
+    expect(parseAgentMonthlyCap("500")).toBe(500);
+    for (const refused of ["0", "500.01", "1.234", "-3", "abc", ""]) {
+      expect(parseAgentMonthlyCap(refused), refused).toBeUndefined();
+    }
+  });
+});
+
 const props: AgentSetupProps = {
   available: true,
   serverUrl: "http://127.0.0.1:8080",
@@ -142,18 +154,22 @@ describe("AgentSetup", () => {
     expect(html).toContain('id="coding-agents"');
     expect(html).toContain("<h3>Agents</h3>");
     expect(html).toContain('<details class="agent-setup" open="">');
-    expect(html.match(/type="checkbox"/gu)).toHaveLength(3);
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(5);
+    expect(html.match(/checked=""/gu)).toHaveLength(3);
+    // Starting runs spends money: never ticked unasked, and its limit shows once it is ticked.
+    expect(html).not.toMatch(/checked=""[^>]*\/> Start CV runs/u);
+    expect(html).not.toContain("Monthly spend limit");
+    expect(html).not.toMatch(/checked=""[^>]*\/> Read your exported CVs/u);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
     expect(html).toContain("See your job applications");
     expect(html).toContain("Add a job application from a pasted job description");
     expect(html).toContain("Active agent tokens: 1");
   });
 
-  it("points the Work journal to Agents only where it can open them", () => {
-    expect(renderToStaticMarkup(<AgentSetupLink />)).toBe("");
-    expect(renderToStaticMarkup(<AgentSetupLink onOpen={() => undefined} />)).toContain(
-      "under Agents in Workspace settings",
-    );
+  it("shows the host's work journal switch above Connect an agent", () => {
+    const html = renderToStaticMarkup(<AgentSetup {...props} workJournal={<p>the switch</p>} />);
+    expect(html.indexOf("the switch")).toBeGreaterThan(-1);
+    expect(html.indexOf("the switch")).toBeLessThan(html.indexOf("Connect an agent"));
   });
 
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {

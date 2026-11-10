@@ -31,7 +31,7 @@ const letter: SavedApplicationMaterial = {
     },
   ],
   model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-  prompt_version: "application-material-v8",
+  prompt_version: "application-material-v10",
   cost_usd: 0.02,
   created_at: "2026-11-08T05:00:00.000Z",
 };

@@ -10,9 +10,17 @@
 /**
  * What an agent token may do (ADR 0011 D17, #2438). `journal` reaches the work journal intake and
  * title listing; `applications:read` lists and reads job applications and run state;
- * `jobs:write` creates a job application from pasted job text.
+ * `jobs:write` creates a job application from pasted job text; `drafts:read` (#2569) reads a
+ * run's exports and the application's saved cover letters and interview questions;
+ * `runs:start` (#2599) prices and starts CV runs within the token's monthly spend cap.
  */
-export const agentTokenScopes = ["journal", "applications:read", "jobs:write"] as const;
+export const agentTokenScopes = [
+  "journal",
+  "applications:read",
+  "jobs:write",
+  "drafts:read",
+  "runs:start",
+] as const;
 export type AgentTokenScope = (typeof agentTokenScopes)[number];
 
 /** The scopes of a token issued without any, and of every token issued before scopes existed. */
@@ -43,6 +51,13 @@ export interface AgentTokenRecord {
   readonly revokedAt?: string;
   /** What it may do; at least one scope, in the catalogue's order. */
   readonly scopes: readonly AgentTokenScope[];
+  /**
+   * What the token may spend each UTC month on what it starts, in US cents (#2599). Set exactly
+   * when the token has `runs:start`; the workspace's own run budget still applies to each run.
+   */
+  readonly monthlyCapCents?: number;
+  /** What it reserved in `month` (`YYYY-MM`, UTC); absent before its first start. */
+  readonly spend?: { readonly month: string; readonly cents: number };
 }
 
 export interface AgentTokenInsert extends AgentTokenRecord {
@@ -59,6 +74,45 @@ export interface AgentTokenStore {
   list(workspaceId: string): Promise<readonly AgentTokenRecord[]>;
   /** Revokes a token; false when the workspace has no such token or it is already revoked. */
   revoke(workspaceId: string, id: string, at: string): Promise<boolean>;
+  /**
+   * Reserves `cents` against the token's cap for `month`, once per `key`: a key already reserved
+   * this month reserves nothing more. Atomic, so two starts never both pass the last cents.
+   */
+  reserveSpend(reservation: AgentSpendReservation): Promise<AgentSpendOutcome>;
+  /** Gives back a reservation whose request failed; does nothing for an unknown key. */
+  releaseSpend(reservation: AgentSpendReservation): Promise<void>;
+}
+
+export interface AgentSpendReservation {
+  readonly workspaceId: string;
+  readonly id: string;
+  /** `YYYY-MM`, UTC. */
+  readonly month: string;
+  /** What makes a retry the same start, such as the request's Idempotency-Key. */
+  readonly key: string;
+  readonly cents: number;
+}
+
+export type AgentSpendOutcome =
+  | { readonly outcome: "reserved" | "replayed"; readonly spentCents: number }
+  | {
+      readonly outcome: "cap_reached";
+      readonly spentCents: number;
+      readonly capCents: number;
+    }
+  | { readonly outcome: "no_cap" };
+
+/** The UTC month a reservation at `at` counts in, as `YYYY-MM`. */
+export function agentSpendMonth(at: Date): string {
+  return at.toISOString().slice(0, 7);
+}
+
+/** The most a token may spend in a month: $500, far above a candidate's month of runs. */
+export const maximumAgentMonthlyCapCents = 50_000;
+
+/** What a token has reserved in `month`; 0 when its record holds another month. */
+export function agentSpentCents(token: AgentTokenRecord, month: string): number {
+  return token.spend?.month === month ? token.spend.cents : 0;
 }
 
 export class AgentTokenStoreError extends Error {
@@ -112,7 +166,13 @@ export function requireAgentTokenInsert(token: AgentTokenInsert): AgentTokenInse
     !(Date.parse(token.expiresAt) > Date.parse(token.createdAt)) ||
     Date.parse(token.expiresAt) - Date.parse(token.createdAt) >
       maximumAgentTokenLifetimeDays * dayMs ||
-    token.revokedAt !== undefined
+    token.revokedAt !== undefined ||
+    scopes.includes("runs:start") !== (token.monthlyCapCents !== undefined) ||
+    (token.monthlyCapCents !== undefined &&
+      (!Number.isInteger(token.monthlyCapCents) ||
+        token.monthlyCapCents < 1 ||
+        token.monthlyCapCents > maximumAgentMonthlyCapCents)) ||
+    token.spend !== undefined
   ) {
     throw new AgentTokenStoreError("invalid_token", "The agent token is malformed.");
   }
@@ -127,6 +187,10 @@ function recordOf(token: AgentTokenInsert): AgentTokenRecord {
 /** Agent tokens in memory, for tests and single-process stacks. */
 export function createMemoryAgentTokenStore(): AgentTokenStore {
   const tokens: AgentTokenInsert[] = [];
+  /** The keys each token reserved, with the month they count in. */
+  const keys = new Map<string, { month: string; keys: Map<string, number> }>();
+  const find = (workspaceId: string, id: string) =>
+    tokens.findIndex((held) => held.workspaceId === workspaceId && held.id === id);
   return {
     insert: async (input) => {
       const token = requireAgentTokenInsert(input);
@@ -152,6 +216,34 @@ export function createMemoryAgentTokenStore(): AgentTokenStore {
       if (index < 0) return false;
       tokens[index] = { ...(tokens[index] as AgentTokenInsert), revokedAt: at };
       return true;
+    },
+    reserveSpend: async ({ workspaceId, id, month, key, cents }) => {
+      const index = find(workspaceId, id);
+      const token = tokens[index];
+      if (token?.monthlyCapCents === undefined) return { outcome: "no_cap" };
+      const spent = agentSpentCents(token, month);
+      const held = keys.get(id);
+      const reserved = held?.month === month ? held.keys : new Map<string, number>();
+      if (reserved.has(key)) return { outcome: "replayed", spentCents: spent };
+      if (spent + cents > token.monthlyCapCents) {
+        return { outcome: "cap_reached", spentCents: spent, capCents: token.monthlyCapCents };
+      }
+      reserved.set(key, cents);
+      keys.set(id, { month, keys: reserved });
+      tokens[index] = { ...token, spend: { month, cents: spent + cents } };
+      return { outcome: "reserved", spentCents: spent + cents };
+    },
+    releaseSpend: async ({ workspaceId, id, month, key }) => {
+      const index = find(workspaceId, id);
+      const token = tokens[index];
+      const held = keys.get(id);
+      const cents = held?.month === month ? held.keys.get(key) : undefined;
+      if (token === undefined || cents === undefined) return;
+      held?.keys.delete(key);
+      tokens[index] = {
+        ...token,
+        spend: { month, cents: Math.max(0, agentSpentCents(token, month) - cents) },
+      };
     },
   };
 }

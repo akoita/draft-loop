@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
@@ -60,6 +61,33 @@ describe("export preview dialog", () => {
     );
 
     expect(html).toMatch(/disabled="">Export this file…<\/button>/u);
+  });
+
+  it("shows only the Markdown text for Markdown, with no PDF or Word pages under it", () => {
+    const markup = (format: "markdown" | "pdf") =>
+      renderToStaticMarkup(
+        <ExportPreviewDialog
+          workspaceId="workspace-1"
+          runId="run-1"
+          format={format}
+          template="classic"
+          onFormatChange={noop}
+          onTemplateChange={noop}
+          load={load}
+          onExport={noop}
+          exportDisabled={false}
+          onClose={noop}
+        />,
+      );
+
+    expect(markup("markdown")).not.toContain("export-preview-pages");
+    expect(markup("pdf")).toContain('<div class="export-preview-pages"></div>');
+  });
+
+  it("hides the pages when the hidden attribute is set, despite their flex display", () => {
+    const styles = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+
+    expect(styles).toMatch(/\.export-preview-pages\[hidden\] \{\s*display: none;/u);
   });
 
   it("draws a Word preview from the same template's PDF", () => {

@@ -1,6 +1,13 @@
 import { AgentSetup } from "@draft-loop/ui/agent-setup";
 import type { AgentTokenView } from "@draft-loop/ui/agent-setup-model";
-import { codingAgentsFragment, codingAgentsSectionId } from "@draft-loop/ui/shared-link";
+import {
+  codingAgentsFragment,
+  codingAgentsSectionId,
+  workJournalFragment,
+  workJournalPanelId,
+} from "@draft-loop/ui/shared-link";
+import { WorkJournalIntake } from "@draft-loop/ui/work-journal-intake";
+import { pendingNoteCountLimit } from "@draft-loop/ui/work-journal-pending";
 import { useCallback, useEffect, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
@@ -10,18 +17,24 @@ import { workJournalProblem } from "./work-journal.js";
 /**
  * The web host's Agents section in Workspace settings (#2439): issues scoped agent tokens,
  * lists and revokes them. With the owner token the server says whether it issues them; signed-in
- * accounts get none yet, so the section says so.
+ * accounts get none yet, so the section says so. With the owner token it also holds the work
+ * journal's "Accept notes from agents" switch (#2625), with a link to the notes that wait.
  */
 export function CodingAgentsSection({
   client,
   mode,
+  openEvidence,
 }: {
   readonly client: ApiClient;
   readonly mode: "owner" | "sign-in";
+  /** Opens the Career evidence page, where the Work journal is. */
+  readonly openEvidence?: (() => void) | undefined;
 }) {
   const workspaceId = useRecordId();
   const [served, setServed] = useState<boolean | undefined>(mode === "owner" ? undefined : false);
   const [tokens, setTokens] = useState<readonly AgentTokenView[] | undefined>(undefined);
+  const [intake, setIntake] = useState<boolean | undefined>(undefined);
+  const [pending, setPending] = useState<number | undefined>(undefined);
   const [open, setOpen] = useState(() => globalThis.location?.hash === codingAgentsFragment);
 
   const reloadTokens = useCallback(async () => {
@@ -38,7 +51,15 @@ export function CodingAgentsSection({
         const intake = await client.call("GET /v1/workspaces/{workspaceId}/work-journal/intake", {
           path: { workspaceId },
         });
+        setIntake(intake.enabled);
         setServed(intake.agent_tokens);
+        void client
+          .call("GET /v1/workspaces/{workspaceId}/work-journal/notes", {
+            path: { workspaceId },
+            query: { status: "pending", limit: pendingNoteCountLimit },
+          })
+          .then((listed) => setPending(listed.notes?.length ?? 0))
+          .catch(() => undefined);
         if (intake.agent_tokens) await reloadTokens().catch(() => undefined);
       } catch {
         setServed(false);
@@ -67,11 +88,49 @@ export function CodingAgentsSection({
       serverUrl={globalThis.location?.origin ?? ""}
       workspaceId={workspaceId}
       tokens={tokens}
-      onIssue={async (label, scopes) => {
+      workJournal={
+        mode !== "owner" || (intake === undefined && served === false) ? undefined : (
+          <WorkJournalIntake
+            enabled={intake}
+            pending={pending}
+            onSet={async (enabled) => {
+              try {
+                const saved = await client.call(
+                  "PUT /v1/workspaces/{workspaceId}/work-journal/intake",
+                  { path: { workspaceId }, body: { enabled } },
+                );
+                setIntake(saved.enabled);
+                return undefined;
+              } catch (error) {
+                return workJournalProblem(error);
+              }
+            }}
+            onReview={
+              openEvidence === undefined
+                ? undefined
+                : () => {
+                    // The fragment makes the panel scroll into view once it reads its notes.
+                    window.history.replaceState(null, "", workJournalFragment);
+                    openEvidence();
+                    window.requestAnimationFrame(() =>
+                      document
+                        .getElementById(workJournalPanelId)
+                        ?.scrollIntoView?.({ block: "start" }),
+                    );
+                  }
+            }
+          />
+        )
+      }
+      onIssue={async (label, scopes, monthlyCapUsd) => {
         try {
           const issued = await client.call("POST /v1/workspaces/{workspaceId}/agent-tokens", {
             path: { workspaceId },
-            body: { label, scopes: [...scopes] },
+            body: {
+              label,
+              scopes: [...scopes],
+              ...(monthlyCapUsd === undefined ? {} : { monthly_cap_usd: monthlyCapUsd }),
+            },
           });
           await reloadTokens().catch(() => undefined);
           return issued;

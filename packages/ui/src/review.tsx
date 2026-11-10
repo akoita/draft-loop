@@ -67,7 +67,11 @@ import {
   type SentRevisionDirection,
   sentRevisionDirection,
 } from "./footer-running-round.js";
-import { useExportPreview } from "./host-panels.js";
+import {
+  requestApplicationPanel,
+  useExportPreview,
+  useHasApplicationPanel,
+} from "./host-panels.js";
 import { JobDescriptionPanel } from "./job-description-panel.js";
 import {
   briefOperationsOf,
@@ -130,6 +134,7 @@ import {
   nextStepTarget,
   ReviewWorkTabs,
   reviewWorkPanelProps,
+  reviewWorkTabDomId,
   useReviewWorkTab,
 } from "./review-work-tabs.js";
 import { sendRevisionRequest } from "./revision-direction.js";
@@ -226,6 +231,8 @@ interface ReviewWorkspaceProps {
   readonly jobRequirements?: JobRequirementsExtractionBinding;
   /** Reads the application's job description back for the Job tab; without it there is no tab. */
   readonly onReadJob?: () => Promise<ApplicationJobResult>;
+  /** Saves a copy of a job page that has none: read once more, or the pasted text (#2593). */
+  readonly onSaveJobCopy?: (text?: string) => Promise<ApplicationJobResult>;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -983,6 +990,7 @@ export function ReviewWorkspace({
   onAddUrl,
   jobRequirements,
   onReadJob,
+  onSaveJobCopy,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -1110,6 +1118,7 @@ export function ReviewWorkspace({
     !draftEdits.unsaved;
   const canExport = approvalOpen && canExportReview(state, pendingReviewAction);
   const loadExportPreview = useExportPreview();
+  const hasApplicationPanel = useHasApplicationPanel();
   const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const exportPending = pendingReviewAction?.action === "export";
   // An action's error shows once: in the footer, beside the buttons that act, or at the top
@@ -1347,6 +1356,19 @@ export function ReviewWorkspace({
   // Under another tab the queue shows no current finding, as a folded queue did before.
   const findingsCollapsed = tabbedWork && workTab !== "findings";
   const expandFindings = useCallback(() => selectWorkTab("findings"), [selectWorkTab]);
+  // "Read the job" unfolds a folded side panel, opens its Job tab and brings the tab into view,
+  // so the button never looks dead while the job sits in a hidden panel.
+  const showJob = (): void => {
+    const tab = document.getElementById(reviewWorkTabDomId("job"));
+    if (sidePanel.collapsed || workTab !== "job") {
+      if (sidePanel.collapsed) setSidePanelCollapsed(false);
+      paletteFocusRequest.current = tab;
+      selectWorkTab("job");
+      return;
+    }
+    tab?.scrollIntoView({ block: "start" });
+    tab?.focus();
+  };
   const [coverageCardsShown, setCoverageCardsShown] = useState(false);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
@@ -3127,8 +3149,17 @@ export function ReviewWorkspace({
                   className="button button-outline doc-toolbar-job"
                   type="button"
                   title={t`The job this draft is written for, under the Job tab. A different job needs a new application.`}
-                  onClick={() => selectWorkTab("job")}
+                  onClick={showJob}
                 >{t`Read the job`}</button>
+              )}
+              {/* The Prepare panel sits folded under the draft; this opens it and goes there (#2578). */}
+              {afterReview === undefined || !hasApplicationPanel ? null : (
+                <button
+                  className="button button-primary doc-toolbar-prepare"
+                  type="button"
+                  title={t`Open the Prepare panel under the draft to write a cover letter or interview questions for this application.`}
+                  onClick={requestApplicationPanel}
+                >{t`Cover letter or interview`}</button>
               )}
               <section className="retrieval-strip" aria-label={t`evidence retrieval status`}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -3929,6 +3960,7 @@ export function ReviewWorkspace({
             {onReadJob === undefined ? null : (
               <JobDescriptionPanel
                 readJob={onReadJob}
+                {...(onSaveJobCopy === undefined ? {} : { saveCopy: onSaveJobCopy })}
                 reloadKey={`${state.workspaceId}:${state.runId}`}
                 tabPanel={reviewWorkPanelProps("job", workTab, true)}
               />

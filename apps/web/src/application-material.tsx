@@ -4,8 +4,9 @@ import {
   exportTemplateLabels,
   exportTemplates,
 } from "@draft-loop/ui/export-template";
+import { openApplicationPanelEvent } from "@draft-loop/ui/host-panels";
 import { t } from "@lingui/core/macro";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
@@ -14,6 +15,7 @@ import {
   type ApplicationMaterialKind,
   type ApplicationMaterialModel,
   applicationMaterialDisclosure,
+  applicationMaterialDraftLabel,
   applicationMaterialFileName,
   applicationMaterialGuidanceFor,
   applicationMaterialKindLabels,
@@ -27,6 +29,7 @@ import {
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
 import { useRecordId } from "./record-context.js";
+import { ResearchBriefSection } from "./research-brief.js";
 import { saveFile } from "./save-file.js";
 
 /**
@@ -79,6 +82,8 @@ export interface ApplicationMaterialViewProps {
   readonly reviewing?: boolean;
   /** How the critic's check ended, once it did. */
   readonly reviewNote?: string | undefined;
+  /** Research about the employer (#2545), shown before the drafts when the server offers it. */
+  readonly research?: ReactNode;
 }
 
 const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
@@ -140,6 +145,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
           ))}
         </fieldset>
         <p className="application-material-lead">{t`A cover letter or interview questions for this application, when you need them. Your CV does not depend on them.`}</p>
+        {props.research}
         {draft === undefined ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
         ) : null}
@@ -261,7 +267,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             disabled={busy}
             onClick={props.onDraft}
           >
-            {busy ? t`Drafting…` : draft === undefined ? t`Draft` : t`Draft again`}
+            {busy ? t`Drafting…` : applicationMaterialDraftLabel(kind, draft !== undefined)}
           </button>
         </div>
         {problem === undefined ? null : <p role="alert">{problem}</p>}
@@ -327,10 +333,33 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                         <li key={citation.fact_id}>{citation.text}</li>
                       ))}
                     </ul>
+                    {item.company_citations === undefined ? null : (
+                      <>
+                        <p className="application-material-source-kind">{t`About the company`}</p>
+                        <ul>
+                          {item.company_citations.map((citation) => (
+                            <li key={citation.finding_id}>{citation.text}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </aside>
                 </li>
               ))}
             </ol>
+            {draft.dropped_sentences === undefined ? null : (
+              <section className="application-material-tells" aria-labelledby="material-dropped">
+                <h3 id="material-dropped">{t`Left out`}</h3>
+                <p>{t`No fact in your career record supports these sentences, so they are not in the letter.`}</p>
+                <ul>
+                  {draft.dropped_sentences.map((sentence) => (
+                    <li key={sentence}>
+                      <q>{sentence}</q>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {draft.critic_findings === undefined ? null : (
               <section className="application-material-tells" aria-labelledby="material-critic">
                 <h3 id="material-critic">{t`What the critic flagged`}</h3>
@@ -472,6 +501,22 @@ export function ApplicationMaterialSection({
   const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
+
+  // The review's "Cover letter or interview" button opens the panel and brings it into view
+  // (#2578); the panel stays where it is, under the draft.
+  useEffect(() => {
+    const open = () => {
+      setCollapsed(false);
+      savePrepareCollapsed(false);
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("material-heading");
+        heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+        heading?.querySelector("button")?.focus({ preventScroll: true });
+      });
+    };
+    globalThis.addEventListener(openApplicationPanelEvent, open);
+    return () => globalThis.removeEventListener(openApplicationPanelEvent, open);
+  }, []);
   const [reviewing, setReviewing] = useState<string | undefined>(undefined);
   const [reviewNote, setReviewNote] = useState<string | undefined>(undefined);
   const draft = unsaved ?? versions.find((version) => version.id === selectedId) ?? versions[0];
@@ -569,6 +614,11 @@ export function ApplicationMaterialSection({
   return (
     <ApplicationMaterialView
       kind={kind}
+      research={
+        collapsed ? undefined : (
+          <ResearchBriefSection client={client} applicationId={applicationId} />
+        )
+      }
       draft={draft}
       versions={versions}
       problem={problem}

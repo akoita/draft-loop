@@ -141,6 +141,35 @@ label:where(:not(.shared-screens *)) {
   margin-top: 1rem;
 }
 
+/* The public beta's landing page (#2567): the sign-in column, a little wider, with sections. */
+.landing {
+  max-width: 36rem;
+  margin-top: 6vh;
+}
+
+.landing section {
+  margin-top: 2rem;
+}
+
+.landing .waitlist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.landing .consent {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+}
+
+.landing footer {
+  margin-top: 2.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
 /* The shared screens size their own columns, as in a desktop window; this caps very wide screens. */
 .shell {
   max-width: 120rem;
@@ -569,6 +598,61 @@ button.small:where(:not(.shared-screens *)) {
 
 .application-material-tells q {
   color: var(--text-2);
+}
+
+.research-brief {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+
+.research-brief h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.research-brief-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.research-brief-details[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+.research-brief-findings {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.research-brief-findings p {
+  margin: 0;
+}
+
+.research-brief-sources {
+  margin: var(--space-1) 0 0;
+  padding-left: 1rem;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.research-brief-sources a {
+  overflow-wrap: anywhere;
+}
+
+.research-brief-date {
+  white-space: nowrap;
+}
+
+.application-material-source-kind {
+  margin: var(--space-2) 0 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
 }
 
 .application-material-template {

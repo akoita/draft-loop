@@ -63,6 +63,15 @@ export const applicationMaterialKindLabels = (): Readonly<
   "interview-questions": t`Interview questions`,
 });
 
+/** The Draft button names the open tab, so it reads as that tab's action (#2595). */
+export function applicationMaterialDraftLabel(
+  kind: ApplicationMaterialKind,
+  drafted: boolean,
+): string {
+  if (kind === "cover-letter") return drafted ? t`Draft a new cover letter` : t`Draft cover letter`;
+  return drafted ? t`Draft new interview questions` : t`Draft interview questions`;
+}
+
 /** Named before the first draft: what goes to Anthropic, and what never does. */
 export const applicationMaterialDisclosure = () =>
   t`Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it.`;
@@ -166,7 +175,11 @@ export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): st
       lines.push(`## ${index + 1}. ${item.question}`, "");
     }
     lines.push(item.text, "");
-    lines.push(...item.citations.map((citation) => `> Source: ${citation.text}`), "");
+    lines.push(
+      ...item.citations.map((citation) => `> Source: ${citation.text}`),
+      ...(item.company_citations ?? []).map((citation) => `> About the company: ${citation.text}`),
+      "",
+    );
   });
   lines.push(`_Drafted by ${draft.model.model} (${draft.model.provider}). Check before use._`, "");
   return lines.join("\n");

@@ -106,23 +106,61 @@ const chooseRunBody = z.strictObject({
   reason: z.string().trim().min(1).max(maximumChosenRunReasonLength).optional(),
 });
 
-const applicationJobSchema = z
+const savedJobPageSchema = z.object({
+  text: z.string(),
+  savedAt: z.string().describe("When the service read the page and saved this copy."),
+});
+
+export const applicationJobSchema = z
   .object({
     origin: z
       .enum(["pasted-text", "url", "unavailable"])
       .describe("Where the text came from; `unavailable` when the application keeps none."),
-    text: z.string().nullable(),
+    text: z
+      .string()
+      .nullable()
+      .describe(
+        "The job text; for a job page, the copy saved when it was read, or null without one.",
+      ),
     url: z.string().nullable().describe("The approved job page, only for a job added by address."),
+    savedAt: z
+      .string()
+      .nullable()
+      .describe("When the job page's copy was saved; null for pasted text or without a copy."),
+    copySource: z
+      .enum(["page", "pasted"])
+      .nullable()
+      .describe("Whether the job page's copy was read from the page or pasted by the person."),
+    earlier: savedJobPageSchema
+      .nullable()
+      .describe("The first copy of the job page, kept when a later read gave different text."),
   })
   .meta({ id: "ApplicationJob" });
 
-/** The job an application keeps, read back for the screens: pasted text, or a page's address. */
-function applicationJob(view: ApplicationView): z.infer<typeof applicationJobSchema> {
+/**
+ * The job an application keeps, read back for the screens: pasted text, or a page's address with
+ * the copy saved when it was read, so the job stays readable after the page expires (#2592).
+ */
+export function applicationJob(view: ApplicationView): z.infer<typeof applicationJobSchema> {
   const source = view.jobSource;
-  if (source.kind === "stored-text") return { origin: "pasted-text", text: source.text, url: null };
-  if (source.kind === "approved-url") return { origin: "url", text: null, url: source.url };
+  const none = { savedAt: null, copySource: null, earlier: null };
+  if (source.kind === "stored-text") {
+    return { origin: "pasted-text", text: source.text, url: null, ...none };
+  }
+  if (source.kind === "approved-url") {
+    const { page, firstPage } = source;
+    return {
+      origin: "url",
+      text: page?.text ?? null,
+      url: source.url,
+      savedAt: page?.fetchedAt ?? null,
+      copySource: page === undefined ? null : page.pasted === true ? "pasted" : "page",
+      earlier:
+        firstPage === undefined ? null : { text: firstPage.text, savedAt: firstPage.fetchedAt },
+    };
+  }
   // A hosted workspace has no files, so a job named by a file path has no text to read.
-  return { origin: "unavailable", text: null, url: null };
+  return { origin: "unavailable", text: null, url: null, ...none };
 }
 
 /** A method the hosted service always offers; a service without it refuses as unsupported. */

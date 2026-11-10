@@ -663,6 +663,33 @@ flowchart LR
   requests. Organisation erasure deletes the row. The retention job (#2540)
   reads it.
 
+### Beta waitlist
+
+A visitor without an invite joins the waitlist, in the directory's
+`betaWaitlist` (`beta-waitlist.ts`, #2566). The operator turns an entry into
+an invite and sends the code.
+
+The waitlist exists only while the beta is open (`DRAFT_LOOP_BETA_ACCOUNT_CAP`
+above 0). Then `GET /v1/auth/config` answers `waitlist: true`, and a signed-out
+visitor sees the landing page (`landing.tsx`, #2567) instead of the bare
+sign-in. It says what DraftLoop does, that it is a test that sends material
+outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads
+no analytics or third-party script, so it needs no cookie banner.
+
+| Route                                         | Who      | What it does                                                         |
+| --------------------------------------------- | -------- | -------------------------------------------------------------------- |
+| `POST /v1/waitlist`                           | Anyone   | Lists an email with consent; answers 202 whether new or listed       |
+| `GET /v1/operator/waitlist`                   | Operator | Lists entries, oldest first                                          |
+| `POST /v1/operator/waitlist/:entryId/invite`  | Operator | Creates an invite for the entry's email and deletes the entry        |
+
+- **Consent.** Each row records `betaWaitlistConsentVersion`, the version of
+  the text beside the checkbox, and the day. Change the version with the text.
+- **Privacy.** The same answer for a new and a listed email reveals nobody.
+  Log lines carry no address. One address may join 5 times an hour.
+- **Retention.** An invited entry is deleted at once. Any other entry is
+  deleted 183 days after it was made, by the worker's sweep at each start
+  (`waitlist-retention.ts`, #2568), which logs only the count.
+
 ### Transactional email
 
 The worker sends the few emails the service needs, such as the warning before

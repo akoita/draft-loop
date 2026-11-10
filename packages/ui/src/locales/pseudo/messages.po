@@ -521,6 +521,10 @@ msgstr ""
 msgid "{count, plural, one {Mark # confirmed gap as known} other {Mark # confirmed gaps as known}}"
 msgstr ""
 
+#: apps/web/src/research-brief-model.ts
+msgid "{count, plural, one {Show # fact about the employer} other {Show # facts about the employer}}"
+msgstr ""
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "{count} / {limit}"
 msgstr ""
@@ -882,6 +886,14 @@ msgstr ""
 msgid "A review is already under way."
 msgstr ""
 
+#: apps/web/src/application-material.tsx
+msgid "About the company"
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "About the employer"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "absent"
 msgstr ""
@@ -899,7 +911,7 @@ msgstr ""
 msgid "Accept all skips word-match findings"
 msgstr ""
 
-#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Accept notes from agents"
 msgstr ""
 
@@ -1102,8 +1114,24 @@ msgstr ""
 msgid "Agents"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can add notes to your Work journal. Nothing becomes career evidence until you approve it."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can add notes."
+msgstr ""
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents cannot add notes to your Work journal. When they can, nothing becomes career evidence until you approve it."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents cannot add notes yet."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1162,6 +1190,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence.ts
 msgid "Already in {displayName}."
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Already invited?"
 msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
@@ -1308,6 +1340,10 @@ msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Approve and export it here; revisions are made on the latest run."
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "Approve and research"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -1630,12 +1666,14 @@ msgid "Can't start yet: {0}"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -1740,6 +1778,10 @@ msgstr ""
 
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Change in Workspace settings"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -2295,6 +2337,10 @@ msgstr ""
 msgid "Cover letter"
 msgstr ""
 
+#: packages/ui/src/review.tsx
+msgid "Cover letter or interview"
+msgstr ""
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Coverage scoring is less reliable without reviewed requirements."
 msgstr ""
@@ -2586,6 +2632,14 @@ msgstr ""
 msgid "Delete the folder “{0}”? {what} No application is deleted."
 msgstr ""
 
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research"
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "Delete this research for good?"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Delete this version"
 msgstr ""
@@ -2762,7 +2816,6 @@ msgstr ""
 msgid "Downloading the local model."
 msgstr ""
 
-#: apps/web/src/application-material.tsx
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
 msgid "Draft"
@@ -2772,8 +2825,8 @@ msgstr ""
 msgid "Draft {width} pixels wide"
 msgstr ""
 
-#: apps/web/src/application-material.tsx
-msgid "Draft again"
+#: apps/web/src/application-material-model.ts
+msgid "Draft a new cover letter"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -2789,8 +2842,20 @@ msgstr ""
 msgid "Draft brief saved"
 msgstr ""
 
+#: apps/web/src/application-material-model.ts
+msgid "Draft cover letter"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Draft for this application"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft interview questions"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft new interview questions"
 msgstr ""
 
 #. placeholder {0}: record.version
@@ -2847,6 +2912,7 @@ msgstr ""
 msgid "Drafting…"
 msgstr ""
 
+#: apps/web/src/landing.tsx
 #: apps/web/src/oidc-sign-in.tsx
 #: apps/web/src/sign-in.tsx
 #: packages/ui/src/app.tsx
@@ -2876,6 +2942,10 @@ msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "DraftLoop could not reach the provider, so the key was not tested. Try again when you are online."
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -2957,9 +3027,17 @@ msgstr ""
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr ""
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
+msgstr ""
+
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
 msgid "Each value is what that run recorded."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Earlier copy, saved on {earlierDate}"
 msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
@@ -3032,6 +3110,10 @@ msgstr ""
 
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Email address"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -3528,7 +3610,7 @@ msgid "From the file chosen for this application, as it reads now."
 msgstr ""
 
 #: packages/ui/src/job-description-panel.tsx
-msgid "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them."
+msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -4129,6 +4211,14 @@ msgstr ""
 msgid "Join the DraftLoop beta"
 msgstr ""
 
+#: apps/web/src/landing.tsx
+msgid "Join the waitlist"
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Joining"
+msgstr ""
+
 #: packages/ui/src/application-name.tsx
 msgid "Keep “"
 msgstr ""
@@ -4137,12 +4227,20 @@ msgstr ""
 msgid "Keep a summary of the work."
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Keep accepting"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
 msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep each heading to 200 characters or fewer."
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
@@ -4238,6 +4336,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "Left out"
 msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
@@ -4646,6 +4748,10 @@ msgstr ""
 msgid "Modern"
 msgstr ""
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Monthly spend limit in US dollars"
+msgstr ""
+
 #: packages/ui/src/model-profile-picker.tsx
 msgid "More"
 msgstr ""
@@ -4830,6 +4936,10 @@ msgstr ""
 msgid "New name for {0}"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "New notes from your agents will be refused until you turn this back on."
+msgstr ""
+
 #: apps/web/src/records.tsx
 msgid "New record id"
 msgstr ""
@@ -4998,6 +5108,10 @@ msgstr ""
 
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
+msgstr ""
+
+#: apps/web/src/application-material.tsx
+msgid "No fact in your career record supports these sentences, so they are not in the letter."
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -5303,6 +5417,10 @@ msgstr ""
 msgid "Notes"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Notes from agents"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr ""
@@ -5347,6 +5465,7 @@ msgid "of {0} and {1}"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
 msgstr ""
 
@@ -5355,6 +5474,7 @@ msgid "Omission"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "On"
 msgstr ""
 
@@ -5498,6 +5618,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
+msgstr ""
+
+#: packages/ui/src/review.tsx
+msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -5668,6 +5792,10 @@ msgstr ""
 msgid "Paste text as career evidence"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the description"
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
 msgstr ""
@@ -5678,6 +5806,10 @@ msgstr ""
 
 #: packages/ui/src/new-application-model.ts
 msgid "Paste the job description to work from."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the job description, as the page showed it"
 msgstr ""
 
 #: apps/web/src/session.ts
@@ -5694,6 +5826,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Pasted on {date} as this job page's copy, so it stays readable after the page expires."
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
@@ -5816,6 +5952,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Priority"
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Privacy policy"
 msgstr ""
 
 #: apps/web/src/private-sections.tsx
@@ -6004,6 +6144,10 @@ msgstr ""
 msgid "Read changes only"
 msgstr ""
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read CVs and drafts"
+msgstr ""
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr ""
@@ -6022,6 +6166,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Read the job"
+msgstr ""
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Read your exported CVs and saved cover letters and interview questions"
 msgstr ""
 
 #: packages/ui/src/career-evidence.ts
@@ -6052,6 +6200,7 @@ msgstr ""
 msgid "Reading the job description…"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Reading the job page…"
 msgstr ""
@@ -6175,6 +6324,10 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "Record permission to send career material to Anthropic in this record's consent, then draft again."
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "Record permission to send material to Anthropic in this record's consent, then research again."
 msgstr ""
 
 #. placeholder {0}: providerList(providers)
@@ -6435,6 +6588,30 @@ msgstr ""
 msgid "Requirements were not extracted"
 msgstr ""
 
+#: apps/web/src/research-brief.tsx
+msgid "Research again"
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "Research this application"
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researched on {day}: {kept} sources kept, {dropped} dropped as unsafe or older than {from}. Cost {cost}."
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "Researching… this usually takes a minute or two."
+msgstr ""
+
 #: packages/ui/src/draft-width.tsx
 msgid "Resize draft"
 msgstr ""
@@ -6665,8 +6842,17 @@ msgstr ""
 msgid "Review issues"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/work-journal-pending.tsx
 msgid "Review notes"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pending} waiting)"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pendingNoteCountLimit} or more waiting)"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -6942,6 +7128,10 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save a copy now"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Save as a new version"
 msgstr ""
@@ -6978,6 +7168,10 @@ msgstr ""
 msgid "Save samples"
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save the description"
+msgstr ""
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
 msgstr ""
@@ -7004,6 +7198,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Saved as your own entry, never as something the job posting says."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Saved from the job page on {date}, so it stays readable after the page expires."
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -7401,6 +7599,7 @@ msgid "Source links show where wording came from; they do not independently veri
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/research-brief.tsx
 msgid "Sources"
 msgstr ""
 
@@ -7455,6 +7654,10 @@ msgstr ""
 msgid "Start author–critic review"
 msgstr ""
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start CV runs on jobs whose requirements you reviewed, and draft cover letters and interview questions, within a monthly spend limit"
+msgstr ""
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Start from the raw job description instead"
 msgstr ""
@@ -7462,6 +7665,10 @@ msgstr ""
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
+msgstr ""
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start runs and drafts"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -7516,6 +7723,18 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Stop"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes from agents?"
 msgstr ""
 
 #: packages/ui/src/speech-button.tsx
@@ -7686,6 +7905,10 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
+#: apps/web/src/landing.tsx
+msgid "Terms of use"
+msgstr ""
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Test key"
 msgstr ""
@@ -7696,6 +7919,14 @@ msgstr ""
 
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "That does not look like an email address. Check it and try again."
 msgstr ""
 
 #: apps/web/src/beta-sign-up-model.ts
@@ -7898,6 +8129,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "The copy could not be saved."
 msgstr ""
 
 #: apps/web/src/credits-model.ts
@@ -8129,6 +8364,10 @@ msgstr ""
 msgid "The job brief has a newer version; reload it."
 msgstr ""
 
+#: apps/web/src/research-brief-model.ts
+msgid "The job brief names no employer yet. Add it to the brief, then research again."
+msgstr ""
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "The job description could not be read."
 msgstr ""
@@ -8261,6 +8500,14 @@ msgstr ""
 msgid "The models were saved, but the previously saved profile pair could not be cleared. Try saving again."
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The note already waiting stays for review."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The notes already waiting stay for review."
+msgstr ""
+
 #: packages/ui/src/profile.tsx
 msgid "The operation did not complete. No new profile version was confirmed."
 msgstr ""
@@ -8391,6 +8638,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "The requirements could not be saved. Nothing was changed."
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "The research failed and nothing was saved. Try again later."
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8533,6 +8784,10 @@ msgstr ""
 msgid "The source could not be added to the knowledge base."
 msgstr ""
 
+#: apps/web/src/research-brief.tsx
+msgid "The sources said nothing useful about this employer."
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
 msgstr ""
@@ -8565,6 +8820,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "The URL could not be imported."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "The waitlist could not be reached. Try again in a few minutes."
 msgstr ""
 
 #. placeholder {0}: workJournalProblem(error)
@@ -8667,6 +8926,10 @@ msgstr ""
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr ""
 
+#: apps/web/src/research-brief-model.ts
+msgid "This application could not be researched."
+msgstr ""
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "This application uses"
 msgstr ""
@@ -8741,6 +9004,10 @@ msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This is a draft: it has not been reviewed and cannot start a run yet."
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
 msgstr ""
 
 #: packages/ui/src/earlier-run.ts
@@ -8887,6 +9154,14 @@ msgstr ""
 msgid "This server cannot turn notes into career evidence yet."
 msgstr ""
 
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications, so nothing was searched."
+msgstr ""
+
+#: apps/web/src/research-brief-model.ts
+msgid "This server does not research applications."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route."
 msgstr ""
@@ -8973,10 +9248,6 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
-msgstr ""
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr ""
 
@@ -8988,6 +9259,10 @@ msgstr ""
 #: packages/ui/src/writing-policy-directives.ts
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Tone"
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then try again."
 msgstr ""
 
 #: apps/web/src/beta-sign-up-model.ts
@@ -9039,6 +9314,10 @@ msgstr ""
 msgid "Try demo workspace"
 msgstr ""
 
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Turn on in Workspace settings"
+msgstr ""
+
 #: packages/ui/src/speech-button.tsx
 msgid "Turning your words into text on this device…"
 msgstr ""
@@ -9084,6 +9363,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Unavailable while another action is pending"
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "undated"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9158,6 +9441,10 @@ msgstr ""
 
 #: apps/web/src/evidence-file-model.ts
 msgid "Uploaded {when}"
+msgstr ""
+
+#: packages/ui/src/agent-setup.tsx
+msgid "US${spent} of US${limit} used this month."
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -9429,6 +9716,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
+msgstr ""
+
+#: apps/web/src/research-brief.tsx
+msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts

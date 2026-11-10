@@ -1646,6 +1646,11 @@ input[type="text"].workspace-title-input {
   margin-left: auto;
 }
 
+/* The way to the Prepare panel under the draft (#2578). */
+.doc-toolbar-prepare {
+  flex: none;
+}
+
 .doc-toolbar-empty {
   flex: none;
   font-size: var(--text-xs);
@@ -3360,6 +3365,43 @@ input[type="text"].workspace-title-input {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;
+}
+
+/* Saving a copy of a job page that has none (#2593). */
+.job-copy-actions {
+  margin: var(--space-3) 0 0;
+}
+
+.job-copy-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+}
+
+.job-copy-label {
+  display: block;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.job-copy-text {
+  box-sizing: border-box;
+  width: 100%;
+  margin: var(--space-1) 0 0;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+/* The first copy of a job page, kept when a later read differed (#2592). */
+.job-earlier {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.job-earlier summary {
+  cursor: pointer;
 }
 
 /* Coverage never blocks approval, so its cards fold behind one tally line. */
@@ -9827,6 +9869,45 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   font-size: 1rem;
 }
 
+/* The "Accept notes from agents" switch in Agents (#2625). */
+.work-journal-intake {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0.75rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-2);
+}
+
+.work-journal-intake > div:first-child {
+  flex: 1 1 20rem;
+}
+
+.work-journal-intake p {
+  margin: 0.25rem 0 0;
+}
+
+.work-journal-intake .work-journal-intake-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.work-journal-intake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The question asked before agents' notes are refused (#2629). */
+.work-journal-intake-confirm {
+  border-color: var(--amber);
+  background: var(--amber-wash);
+}
+
 .agent-setup-scopes {
   display: grid;
   gap: 0.25rem;
@@ -10855,6 +10936,11 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-5);
+}
+
+/* The flex display above would otherwise win over the hidden attribute. */
+.export-preview-pages[hidden] {
+  display: none;
 }
 
 .export-preview-page {

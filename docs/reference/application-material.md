@@ -13,20 +13,24 @@ The drafter builds a bounded context, then asks the model behind
 
 | Input            | Rule                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. At most 60, each cut to 300 characters. |
+| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
+| Company facts    | Optional: the newest research brief's findings, at most 12, each with its newest source date. About the employer only.     |
 | Refused rules    | Empty on the first call; the second call lists what the first draft broke.                                                  |
 
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v8`.
+`application-material-v10`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
 phrase, no list of three, no paragraphs that open alike, and at most one dash.
+It builds on the facts that meet critical and high requirements, joins facts of
+one role or project in a sentence, paraphrases them, and never writes a
+sentence that only names a skill.
 
 ## Your own voice
 
@@ -53,7 +57,7 @@ detector, and the app never says a letter would pass one.
 
 | Tell                | Flags                                                                          |
 | ------------------- | ------------------------------------------------------------------------------ |
-| `stock_phrase`      | Phrases such as "I am writing to express", "passionate about" or "tirer parti" |
+| `stock_phrase`      | Phrases such as "I am writing to express", "passionate about", "is one of my skills" or "tirer parti" |
 | `heavy_dashes`      | Every sentence with a dash, once the letter uses two or more                   |
 | `list_of_three`     | Three single words in a row, such as "fast, reliable and calm"                 |
 | `mirrored_openings` | A paragraph that opens with the same two words as an earlier one               |
@@ -111,17 +115,60 @@ Each paragraph, or each question with its talking point, must pass all rules:
 - Every number in the text appears in a cited fact, in digits or in words:
   "five" needs a fact holding "five" or "5". "One" is not read as a count. A
   question may also repeat a number from the job's requirements.
+- A company fact supports only a statement about the employer. It is cited
+  in `company_fact_ids`, never in `fact_ids`; one cited as a career fact is
+  `company_fact_as_candidate_fact`, and one the brief does not hold is
+  `unknown_company_fact`. A cited company fact may supply a number about the
+  employer. A paragraph still needs a career fact unless it is a courtesy
+  sentence.
 - A cover letter has at most 6 paragraphs and interview questions at most 10
   items, each at most 1,200 characters.
 
 A record with no fact the draft may cite is refused before any model call
 (`no_facts`). The drafter never stores a draft.
 
+## Free-form cover letters
+
+With `DRAFT_LOOP_COVER_LETTER_WRITER=free-form` on the API, a cover letter is
+written as prose first and checked afterwards (#2586). Interview questions
+always use the cited items above. The default, `items`, keeps them for
+letters too.
+
+```mermaid
+flowchart LR
+  pick[Pick 8 to 12 facts] --> write[Writer: plain letter]
+  write --> check[Claim check]
+  check -- every sentence holds --> keep[Paragraphs with citations]
+  check -- some fail --> revise[Writer revises those sentences once]
+  revise --> check2[Claim check]
+  check2 --> drop[Drop what still fails]
+  drop --> keep
+```
+
+| Step         | What happens                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project.   |
+| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v1`.        |
+| Check        | Claude Haiku links each sentence to the facts behind it; `cover-letter-claims.ts` decides whether the link holds. |
+| Revise       | One more call rewrites only the failing sentences, with why they failed.                                      |
+| Drop         | Sentences that still fail are left out and listed in the view's `dropped_sentences`.                          |
+
+A candidate sentence holds when it cites a picked fact, all its facts share
+one group, it states no number they do not, and it never talks about the
+record. An employer sentence cites research findings only, and a courtesy
+sentence is short and states no number. A letter with no supported claim
+about the candidate is refused as `invalid_draft`. The writer and the check
+share the request's cost cap, and the saved draft's `prompt_version` is
+`cover-letter-free-form-v1`.
+
 ## The hosted route
 
 `POST /v1/workspaces/{workspaceId}/applications/{applicationId}/material` with
 `{"kind": "cover-letter"}` or `{"kind": "interview-questions"}` returns the
-draft. Each item carries its citations as the record stores them. A hosted or
+draft. Each item carries its citations as the record stores them, and
+`company_citations` when it uses the application's newest research brief,
+whose id is `research_brief_id`. The critic's revision keeps those citations
+and may not add new ones. A hosted or
 self-hosted server saves each draft as a new version and returns its `id` and
 `created_at`. It follows the career interview's rules:
 
@@ -161,8 +208,9 @@ with the record or the organisation.
 
 A research brief holds public facts about the employer, gathered after the
 candidate approves a research run (#2482). Each brief keeps what was searched,
-the sources kept, and short findings that cite those sources. The Prepare panel
-does not offer the run yet (#2545); the API does.
+the sources kept, and short findings that cite those sources. The candidate
+starts a run from the Prepare panel (see [The web panel](#the-web-panel)) or
+the API.
 
 ```mermaid
 flowchart LR
@@ -230,15 +278,26 @@ The request must send one text for each item, in order; another count answers
 
 ## The web panel
 
-Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it.
+Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
 The candidate picks a cover letter or interview questions on its toggle and
-selects **Draft**. **Guide this draft** opens optional fields: what to stress,
+selects the button named after it, **Draft cover letter** or **Draft
+interview questions**. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
 guidance it was written with. With two models offered, a **Model** list in
 the same fields names each with its cost. Under a cover letter, **Writing check** lists the
 flagged sentences and why. Before the first draft, the panel names what goes
 to Anthropic. On the job page the panel takes the setup card's column; on a run's
 review it keeps the run's column.
+
+**About the employer** opens the panel. **Research this application** first
+shows what the run searches, that excerpts go to Anthropic, that nothing about
+the candidate is sent, and the US$0.20 cap; nothing runs until **Approve and
+research**. The panel then asks every three seconds until the run ends. Its
+findings stay folded under **Show N facts about the employer**, so the
+drafting controls stay near the toggle. Each finding lists its sources, each
+linked and dated, or marked **undated**. The section offers **Research again** and **Delete this research**. A
+paragraph that cites a finding lists it under **About the company**, beside
+its career facts, and Markdown adds an `> About the company:` line.
 
 While the critic checks a new cover letter, the panel says so and asks every
 three seconds. A revised version then opens, named "revised after the critic's

@@ -95,7 +95,7 @@ describe("the prepare panel", () => {
     expect(html).toContain("<h3>How do you report with SQL?</h3>");
     expect(html).toContain('<aside aria-label="Sources"><ul><li>role title: Data Analyst</li>');
     expect(html).toContain("Download Markdown");
-    expect(html).toContain("Draft again");
+    expect(html).toContain("Draft new interview questions");
     expect(html).not.toContain("to Anthropic (Claude)");
   });
 
@@ -325,6 +325,20 @@ describe("the prepare panel's model", () => {
     );
     expect(applicationMaterialReviewNote({ status: "done", outcome: "skipped" })).toBeUndefined();
     expect(applicationMaterialReviewNote({ status: "none" })).toBeUndefined();
+  });
+
+  it("lists the sentences a free-form letter left out", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={{ ...draft, kind: "cover-letter", dropped_sentences: ["I led a team of 40."] }}
+      />,
+    );
+    expect(html).toContain("Left out");
+    expect(html).toContain("<q>I led a team of 40.</q>");
+    expect(
+      renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
+    ).not.toContain("Left out");
   });
 
   it("names a saved version by its time and model", () => {

@@ -17,6 +17,7 @@ import {
   verifiedSignInEmail,
 } from "@draft-loop/storage/tenant-directory";
 import { type BetaInvites, createBetaInvites } from "./beta-invites.js";
+import { type BetaWaitlist, createBetaWaitlist } from "./beta-waitlist.js";
 import { createPostgresMemberSettings } from "./member-settings.js";
 import { createOrganisationActivity, type OrganisationActivity } from "./organisation-activity.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
@@ -28,6 +29,7 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   readonly memberSettings: MemberSettingsStore;
   /** The public beta's invite codes (#2501). */
   readonly betaInvites: BetaInvites;
+  readonly betaWaitlist: BetaWaitlist;
   /** When each organisation was last active, for the beta's retention (#2538). */
   readonly organisationActivity: OrganisationActivity;
   readonly close: () => Promise<void>;
@@ -291,6 +293,7 @@ export async function createPostgresTenantDirectory(
 
     memberSettings: createPostgresMemberSettings(client),
     betaInvites: createBetaInvites(client),
+    betaWaitlist: createBetaWaitlist(client),
     organisationActivity: createOrganisationActivity(client),
     close: () => client.close(),
   };

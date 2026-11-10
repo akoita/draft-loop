@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import {
   type AgentHost,
@@ -15,9 +15,11 @@ import {
   agentScopeLabel,
   agentScopeName,
   agentScopes,
+  defaultAgentMonthlyCapUsd,
   defaultAgentScopes,
+  parseAgentMonthlyCap,
 } from "./agent-setup-model.js";
-import { formatDate } from "./locale-format.js";
+import { formatDate, formatNumber } from "./locale-format.js";
 import { codingAgentsSectionId } from "./shared-link.js";
 
 /**
@@ -44,11 +46,15 @@ export interface AgentSetupProps {
   readonly onIssue: (
     label: string,
     scopes: readonly AgentScope[],
+    /** Set exactly when `scopes` holds `runs:start`. */
+    monthlyCapUsd?: number,
   ) => Promise<IssuedAgentToken | { readonly problem: string }>;
   /** Opens the section, such as when a link elsewhere points to it. */
   readonly open?: boolean;
   /** Resolves with a problem to show, or undefined once revoked. */
   readonly onRevoke: (tokenId: string) => Promise<string | undefined>;
+  /** The "Accept notes from agents" switch (#2625), from a host that serves the work journal. */
+  readonly workJournal?: ReactNode;
 }
 
 function GuideLink({ children }: { readonly children: string }) {
@@ -67,6 +73,7 @@ export function AgentSetup({
   onIssue,
   onRevoke,
   open = false,
+  workJournal,
 }: AgentSetupProps) {
   const id = useId();
   const [host, setHost] = useState<AgentHost>("plugin");
@@ -76,6 +83,7 @@ export function AgentSetup({
   const [copied, setCopied] = useState<"configuration" | "token" | undefined>(undefined);
   const [showTokens, setShowTokens] = useState(false);
   const [scopes, setScopes] = useState<readonly AgentScope[]>(defaultAgentScopes);
+  const [cap, setCap] = useState(defaultAgentMonthlyCapUsd);
 
   if (available === undefined) return null;
   const heading = (
@@ -84,6 +92,7 @@ export function AgentSetup({
       <p className="muted">
         {t`Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here.`}
       </p>
+      {workJournal}
     </>
   );
   if (!available) {
@@ -105,11 +114,15 @@ export function AgentSetup({
   });
   const active = tokens === undefined ? undefined : activeAgentTokens(tokens);
   const holdsToken = agentConfigurationHoldsToken(host);
+  const startsRuns = scopes.includes("runs:start");
+  const monthlyCap = parseAgentMonthlyCap(cap);
 
   async function create() {
     setBusy(true);
     setProblem(undefined);
-    const answer = await onIssue(agentHostLabel(host), scopes);
+    const answer = startsRuns
+      ? await onIssue(agentHostLabel(host), scopes, monthlyCap)
+      : await onIssue(agentHostLabel(host), scopes);
     if ("problem" in answer) setProblem(t`The token could not be created. ${answer.problem}`);
     else {
       setIssued(answer);
@@ -161,10 +174,26 @@ export function AgentSetup({
                   {agentScopeLabel(scope)}
                 </label>
               ))}
+              {startsRuns ? (
+                <label className="agent-setup-cap">
+                  {t`Monthly spend limit in US dollars`}{" "}
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={cap}
+                    aria-invalid={monthlyCap === undefined || undefined}
+                    aria-describedby={`${id}-cap-hint`}
+                    onChange={(event) => setCap(event.currentTarget.value)}
+                  />
+                  <span className="muted" id={`${id}-cap-hint`}>
+                    {t`Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500.`}
+                  </span>
+                </label>
+              ) : null}
             </fieldset>
             <button
               type="button"
-              disabled={busy || scopes.length === 0}
+              disabled={busy || scopes.length === 0 || (startsRuns && monthlyCap === undefined)}
               onClick={() => void create()}
             >
               {t`Create agent token`}
@@ -253,11 +282,20 @@ export function AgentSetup({
               const created = formatDate(token.created_at) ?? "";
               const until = formatDate(token.expires_at) ?? "";
               const can = token.scopes.map(agentScopeName).join(", ");
+              const cap = token.monthly_cap_usd;
+              const spent = formatNumber(token.spent_this_month_usd ?? 0);
+              const limit = cap === undefined ? "" : formatNumber(cap);
               return (
                 <li key={token.id}>
                   <span>
                     {token.label}{" "}
                     <span className="muted">{t`${can}; created ${created}, expires ${until}`}</span>
+                    {cap === undefined ? null : (
+                      <span className="muted">
+                        {" "}
+                        {t`US$${spent} of US$${limit} used this month.`}
+                      </span>
+                    )}
                   </span>{" "}
                   <button type="button" onClick={() => void revoke(token.id)}>
                     {t`Revoke`}
@@ -269,18 +307,5 @@ export function AgentSetup({
         ) : null}
       </details>
     </section>
-  );
-}
-
-/** Where the Work journal panel points for connecting an agent (#2439). */
-export function AgentSetupLink({ onOpen }: { readonly onOpen?: (() => void) | undefined }) {
-  if (onOpen === undefined) return null;
-  return (
-    <p className="muted">
-      {t`To let an agent file notes here, connect it under Agents in Workspace settings.`}{" "}
-      <button type="button" className="link-action" onClick={onOpen}>
-        {t`Connect an agent`}
-      </button>
-    </p>
   );
 }
