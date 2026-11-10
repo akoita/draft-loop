@@ -13,6 +13,91 @@
       }
     },
     "schemas": {
+      "InterviewDetailsInput": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
       "ApplicationMaterialGuidanceInput": {
         "type": "object",
         "properties": {
@@ -820,6 +905,10 @@
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          },
+          "interview_details": {
+            "description": "For an interview preparation guide: the interview it was written for.",
+            "$ref": "#/components/schemas/InterviewDetailsInput"
           },
           "items": {
             "type": "array",
@@ -7722,6 +7811,91 @@
         ],
         "additionalProperties": false
       },
+      "InterviewDetails": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
       "ApplicationMaterialGuidance": {
         "type": "object",
         "properties": {
@@ -8550,6 +8724,10 @@
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          },
+          "interview_details": {
+            "description": "For an interview preparation guide: the interview it was written for.",
+            "$ref": "#/components/schemas/InterviewDetails"
           },
           "items": {
             "type": "array",

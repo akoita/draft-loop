@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { applicationIdSchema } from "./application.js";
+import { interviewDetailsSchema } from "./interview-details.js";
 
 /**
  * A cover letter, interview question set or interview preparation guide (#2615) saved with its
@@ -125,6 +126,8 @@ export const savedApplicationMaterialSchema = z
       .min(1)
       .max(maximumSavedInterviewGuideItems),
     guidance: applicationMaterialGuidanceSchema.optional(),
+    /** The interview a guide was written for (#2616); set on every guide and nothing else. */
+    interview_details: interviewDetailsSchema.optional(),
     /** The research brief the company citations come from (#2544); absent when none was used. */
     research_brief_id: shortText.optional(),
     /** The saved draft this version was edited from (#2480); absent for a drafted version. */
@@ -164,6 +167,15 @@ export const savedApplicationMaterialSchema = z
   })
   .superRefine((material, context) => {
     const guide = material.kind === "interview-guide";
+    if (guide !== (material.interview_details !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["interview_details"],
+        message: guide
+          ? "a guide needs its interview details"
+          : "only a guide has interview details",
+      });
+    }
     if (!guide && material.items.length > maximumSavedApplicationMaterialItems) {
       context.addIssue({
         code: "custom",
