@@ -15,8 +15,15 @@ export const researchBriefIdSchema = z
   .regex(/^rbr_[A-Za-z0-9_-]{8,64}$/u, "must be a research brief id");
 
 export const researchSourceKinds = ["upload", "company-page", "web-result"] as const;
+/** What a guide's search looked into (#2617); absent on a brief for a cover letter. */
+export const researchTopics = ["company", "news", "role", "field", "process", "salary"] as const;
+/**
+ * How far a source can be trusted (#2617): the employer itself, a regulator or an official body;
+ * the press; or a forum, review site or blog, which is a weak signal only.
+ */
+export const researchReliabilities = ["primary", "press", "weak"] as const;
 
-export const maximumResearchQueries = 5;
+export const maximumResearchQueries = 6;
 export const maximumResearchSources = 30;
 export const maximumResearchFindings = 12;
 export const maximumResearchFindingSources = 5;
@@ -40,6 +47,8 @@ export const researchSourceSchema = z
     excerpt: z.string().max(maximumResearchExcerptCharacters),
     /** When the page was published or last updated; absent marks the source undated. */
     published_on: day.optional(),
+    topic: z.enum(researchTopics).optional(),
+    reliability: z.enum(researchReliabilities).optional(),
   })
   .meta({ id: "ResearchSource" });
 
@@ -87,6 +96,8 @@ export const researchBriefSchema = z
     });
   });
 
+export type ResearchTopic = (typeof researchTopics)[number];
+export type ResearchReliability = (typeof researchReliabilities)[number];
 export type ResearchSource = z.infer<typeof researchSourceSchema>;
 export type ResearchFinding = z.infer<typeof researchFindingSchema>;
 export type ResearchBrief = z.infer<typeof researchBriefSchema>;

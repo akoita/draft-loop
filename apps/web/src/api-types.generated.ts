@@ -798,6 +798,8 @@ export interface ApiSchemas {
     readonly title: string;
     readonly excerpt: string;
     readonly published_on?: string;
+    readonly topic?: "company" | "news" | "role" | "field" | "process" | "salary";
+    readonly reliability?: "primary" | "press" | "weak";
   };
   "ResearchStartInput": {
     readonly approved: true;
