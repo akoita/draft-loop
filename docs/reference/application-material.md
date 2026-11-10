@@ -192,6 +192,43 @@ self-hosted server saves each draft as a new version and returns its `id` and
 Each model call is logged with its model, tokens and cost, never the draft. A
 refused or failed draft is not saved.
 
+## Interview preparation guides
+
+A guide prepares the candidate for one interview (#2615 to #2632). It is a
+sectioned draft of kind `interview-guide`, written from the facts allowed for
+interviews, the job's requirements and a research brief. The Prepare panel
+does not offer it yet (#2621); the API route below does.
+
+```mermaid
+flowchart LR
+  R["POST .../interview-guide"] --> C{Brief recent and<br/>covers the topics?}
+  C -- "no, research approved" --> Q["Queue guide research<br/>202 researching"]
+  Q -. "done: post again<br/>with research skip" .-> R
+  C -- "yes, or research skip" --> W[Writer: 1 call essential,<br/>3 calls extensive]
+  W --> K[Claim check per sentence]
+  K --> S[Server adds matrix,<br/>never say, sources]
+  S --> V[(Saved guide)]
+```
+
+| Body field | Holds                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| `details`  | The interview: stage, `essential` or `extensive` depth, length, interviewer role, topics, notes, never say. |
+| `research` | `approved` queues research when the newest brief is older than 14 days or misses a topic; `skip` drafts now. |
+| `model`    | `claude-sonnet-5-5` by default, or `claude-haiku-5-5`.                                                    |
+| `parts`    | For an extensive guide with `based_on`: `context`, `story` or `practice` to write again; the rest is kept. |
+
+A sentence about the candidate must cite an allowed fact, or admit a gap the
+matrix found. A sentence about the employer or the field must cite a finding.
+Sentences that fail, or come close to a never-say entry, are left out and
+listed in `dropped_sentences`. Topics research found no source for are listed
+in `unsourced_topics`, and their sections state no fact.
+
+Never-said facts and the candidate's never-say list never reach a model. The
+cost cap is US$0.20 for an essential guide and US$0.40 for an extensive one,
+writer and check together. Errors are the material route's, plus 400
+`invalid_input` for `parts` without an extensive `based_on`, and 404 when
+`based_on` is not a guide of the application.
+
 ## Saved drafts
 
 Every draft is kept with its application, so you can reopen, compare and delete

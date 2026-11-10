@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { applicationIdSchema } from "./application.js";
 import { interviewDetailsSchema } from "./interview-details.js";
+import { researchTopics } from "./research-brief.js";
 
 /**
  * A cover letter, interview question set or interview preparation guide (#2615) saved with its
@@ -154,13 +155,18 @@ export const savedApplicationMaterialSchema = z
     /** The critic that found them, from another company than the author. */
     critic_model: z.strictObject({ provider: shortText, model: shortText }).optional(),
     /**
-     * A free-form cover letter's sentences left out because no career fact supported them, even
-     * after one revision (#2586). Absent when none was dropped.
+     * A free-form cover letter's or a guide's sentences left out because no career fact supported them
+     * (#2586, #2619). Absent when none was dropped.
      */
     dropped_sentences: z
       .array(z.string().min(1).max(maximumSavedApplicationMaterialItemCharacters))
-      .max(maximumSavedApplicationMaterialItems * 4)
+      .max(maximumSavedInterviewGuideItems * 2)
       .optional(),
+    /**
+     * For a guide (#2632): the topics research kept no source for, whose sections stay short and
+     * state no fact. Absent when every topic had a source.
+     */
+    unsourced_topics: z.array(z.enum(researchTopics)).max(researchTopics.length).optional(),
     prompt_version: shortText,
     cost_usd: z.number().min(0),
     created_at: z.iso.datetime({ offset: true }),

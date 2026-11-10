@@ -42,6 +42,7 @@ import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import { interviewDetailsSchema } from "@draft-loop/schemas/interview-details";
+import { researchTopics } from "@draft-loop/schemas/research-brief";
 import {
   applicationMaterialGuidanceSchema,
   interviewGuideSections,
@@ -127,7 +128,7 @@ export interface ApplicationMaterialRoutesOptions {
 /** The default cap on one request: two Sonnet calls with a full context stay well below it. */
 export const defaultApplicationMaterialMaxCostUsd = 0.5;
 
-const params = z.strictObject({
+export const params = z.strictObject({
   workspaceId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier"),
   applicationId: applicationIdSchema,
 });
@@ -156,7 +157,7 @@ const body = z
   })
   .meta({ id: "ApplicationMaterialRequest" });
 
-const draftView = z
+export const draftView = z
   .object({
     id: savedApplicationMaterialIdSchema
       .optional()
@@ -165,7 +166,7 @@ const draftView = z
     kind: z
       .enum(savedApplicationMaterialKinds)
       .describe(
-        "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions.",
+        "A cover letter, interview questions, or an interview preparation guide, which its own route drafts.",
       ),
     guidance: applicationMaterialGuidanceSchema
       .optional()
@@ -255,7 +256,13 @@ const draftView = z
       .array(z.string())
       .optional()
       .describe(
-        "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+        "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
+      ),
+    unsourced_topics: z
+      .array(z.enum(researchTopics))
+      .optional()
+      .describe(
+        "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
       ),
     prompt_version: z.string(),
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
@@ -316,7 +323,7 @@ const editBody = z
   .meta({ id: "ApplicationMaterialEdit" });
 
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
-function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
+export function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
   const sources = view.items.flatMap((item) => [
     ...item.citations.map((citation) => citation.text),
@@ -340,11 +347,11 @@ function withTells<View extends Pick<z.infer<typeof draftView>, "kind" | "items"
   return { ...view, tells: writingTells(view.items.map((item) => item.text)) };
 }
 
-function newMaterialId(): string {
+export function newMaterialId(): string {
   return `amd_${randomBytes(12).toString("base64url")}`;
 }
 
-const errors = {
+export const errors = {
   400: apiErrorSchema,
   403: apiErrorSchema,
   404: apiErrorSchema,
@@ -354,7 +361,7 @@ const errors = {
   503: apiErrorSchema,
 } as const;
 
-function permitsAnthropic(state: ConsentState): boolean {
+export function permitsAnthropic(state: ConsentState): boolean {
   return permitsTransmission(state, {
     author: { company: "anthropic" },
     critic: { company: "anthropic" },
@@ -925,7 +932,7 @@ export function registerApplicationMaterialRoutes(
 }
 
 /** A provider adapter's failure, named by its code and diagnostics, never by its text. */
-function providerFailureOf(
+export function providerFailureOf(
   error: unknown,
 ): { readonly code: string; readonly diagnostics: readonly string[] } | undefined {
   if (!(error instanceof Error) || !("diagnostics" in error) || !("code" in error)) {

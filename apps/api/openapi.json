@@ -107,6 +107,97 @@
         ],
         "additionalProperties": false
       },
+      "ResearchSourceInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFindingInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
       "ApplicationMaterialGuidanceInput": {
         "type": "object",
         "properties": {
@@ -909,7 +1000,7 @@
               "interview-questions",
               "interview-guide"
             ],
-            "description": "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions."
+            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -1127,10 +1218,25 @@
             }
           },
           "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "description": "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "unsourced_topics": {
+            "description": "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "company",
+                "news",
+                "role",
+                "field",
+                "process",
+                "salary"
+              ]
             }
           },
           "prompt_version": {
@@ -4851,6 +4957,82 @@
           "facts"
         ]
       },
+      "InterviewGuideRequestInput": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "description": "The interview the guide prepares for: its stage, depth, length and what to cover. `notes`, `other_topics` and `never_say` are the candidate's own words, never facts.",
+            "$ref": "#/components/schemas/InterviewDetailsInput"
+          },
+          "model": {
+            "description": "The model that writes the guide; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "research": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "skip"
+            ],
+            "description": "`approved` queues web research about the employer, the role and the field when the newest brief is older than 14 days or misses a topic the guide needs, and answers 202 while it runs; draft again with `skip` once it is done. `skip` drafts from the briefs that exist; topics without a source are reported in `unsourced_topics`."
+          },
+          "parts": {
+            "description": "For an extensive guide: write only these parts again and keep the rest of `based_on`. Needs `based_on`.",
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "context",
+                "story",
+                "practice"
+              ]
+            }
+          },
+          "based_on": {
+            "description": "The saved guide whose other parts are kept when `parts` is set.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "details",
+          "research"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewGuideResearchingInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "researching"
+          },
+          "research": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "research"
+        ],
+        "additionalProperties": false
+      },
       "KnowledgeBaseInput": {
         "type": "object",
         "properties": {
@@ -5173,97 +5355,6 @@
           "defaultPresetId",
           "localModels"
         ]
-      },
-      "ResearchSourceInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          },
-          "topic": {
-            "type": "string",
-            "enum": [
-              "company",
-              "news",
-              "role",
-              "field",
-              "process",
-              "salary"
-            ]
-          },
-          "reliability": {
-            "type": "string",
-            "enum": [
-              "primary",
-              "press",
-              "weak"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFindingInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
-        ],
-        "additionalProperties": false
       },
       "PlanAssignmentInput": {
         "type": "object",
@@ -7933,6 +8024,97 @@
         ],
         "additionalProperties": false
       },
+      "ResearchSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
       "ApplicationMaterialGuidance": {
         "type": "object",
         "properties": {
@@ -8756,7 +8938,7 @@
               "interview-questions",
               "interview-guide"
             ],
-            "description": "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions."
+            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -8982,10 +9164,25 @@
             }
           },
           "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "description": "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "unsourced_topics": {
+            "description": "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "company",
+                "news",
+                "role",
+                "field",
+                "process",
+                "salary"
+              ]
             }
           },
           "prompt_version": {
@@ -12093,6 +12290,82 @@
         ],
         "additionalProperties": false
       },
+      "InterviewGuideRequest": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "description": "The interview the guide prepares for: its stage, depth, length and what to cover. `notes`, `other_topics` and `never_say` are the candidate's own words, never facts.",
+            "$ref": "#/components/schemas/InterviewDetails"
+          },
+          "model": {
+            "description": "The model that writes the guide; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "research": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "skip"
+            ],
+            "description": "`approved` queues web research about the employer, the role and the field when the newest brief is older than 14 days or misses a topic the guide needs, and answers 202 while it runs; draft again with `skip` once it is done. `skip` drafts from the briefs that exist; topics without a source are reported in `unsourced_topics`."
+          },
+          "parts": {
+            "description": "For an extensive guide: write only these parts again and keep the rest of `based_on`. Needs `based_on`.",
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "context",
+                "story",
+                "practice"
+              ]
+            }
+          },
+          "based_on": {
+            "description": "The saved guide whose other parts are kept when `parts` is set.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "details",
+          "research"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewGuideResearching": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "researching"
+          },
+          "research": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "research"
+        ],
+        "additionalProperties": false
+      },
       "KnowledgeBase": {
         "type": "object",
         "properties": {
@@ -12422,97 +12695,6 @@
           "presets",
           "defaultPresetId",
           "localModels"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchSource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          },
-          "topic": {
-            "type": "string",
-            "enum": [
-              "company",
-              "news",
-              "role",
-              "field",
-              "process",
-              "salary"
-            ]
-          },
-          "reliability": {
-            "type": "string",
-            "enum": [
-              "primary",
-              "press",
-              "weak"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFinding": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
         ],
         "additionalProperties": false
       },
@@ -25379,6 +25561,134 @@
             "description": "Default Response"
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
+      "post": {
+        "summary": "Draft an interview preparation guide for an application",
+        "description": "Drafts a sectioned guide for one interview from the facts the candidate allowed for interviews, the newest brief's requirements and the application's research brief. Every sentence about the candidate cites a fact or admits a gap, every sentence about the employer or the field cites a finding, and sentences that fail, or come close to a never-say entry, are left out and listed in `dropped_sentences`. An essential guide is one writer call (cost cap US$0.20); an extensive one is three (US$0.40), and `parts` writes some of them again. With `research: approved` and a brief that is stale or misses a topic, research is queued and the answer is 202. Errors as the material route: 403 consent_required, 503 material_model_unavailable, 409 material_quarantined, material_unscreened, no_citable_facts or cost_cap_reached, 422 invalid_draft, 502 material_model_failed; 404 when `based_on` is not a guide of this application, 400 when `parts` is set without it or for an essential guide.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewGuideRequestInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraft"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewGuideResearching"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {
