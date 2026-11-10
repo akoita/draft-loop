@@ -43,10 +43,12 @@ import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
 import {
   applicationMaterialGuidanceSchema,
+  interviewGuideSections,
   maximumSavedApplicationMaterialItemCharacters,
   maximumSavedApplicationMaterialItems,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
+  savedApplicationMaterialKinds,
 } from "@draft-loop/schemas/saved-application-material";
 import {
   type ConsentLedger,
@@ -159,7 +161,11 @@ const draftView = z
       .optional()
       .describe("The saved draft's id; absent when this server keeps no drafts."),
     created_at: z.string().optional().describe("When the draft was written and saved."),
-    kind: z.enum(applicationMaterialKinds),
+    kind: z
+      .enum(savedApplicationMaterialKinds)
+      .describe(
+        "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions.",
+      ),
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe("The guidance the draft was written with, as the model received it."),
@@ -169,6 +175,14 @@ const draftView = z
           .string()
           .describe("Empty for a cover letter paragraph; the interview question otherwise."),
         text: z.string().describe("The paragraph, or the talking point for the question."),
+        section: z
+          .enum(interviewGuideSections)
+          .optional()
+          .describe("For an interview preparation guide: the section the item belongs to."),
+        trap: z
+          .string()
+          .optional()
+          .describe("For a likely question in a guide: the answer to avoid, and why."),
         edited: z
           .boolean()
           .optional()
@@ -254,7 +268,7 @@ const draftList = z
   })
   .meta({ id: "ApplicationMaterialDraftList" });
 
-const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).optional() });
+const listQuery = z.strictObject({ kind: z.enum(savedApplicationMaterialKinds).optional() });
 
 const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
 

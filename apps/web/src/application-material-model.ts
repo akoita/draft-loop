@@ -8,6 +8,8 @@ import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js
 
 export type ApplicationMaterialKind = ApiSchemas["ApplicationMaterialRequestInput"]["kind"];
 export type ApplicationMaterialDraft = ApiSchemas["ApplicationMaterialDraft"];
+/** A saved draft's kind: a new draft's kind, or an interview preparation guide (#2615). */
+export type SavedApplicationMaterialKind = ApplicationMaterialDraft["kind"];
 export type ApplicationMaterialGuidance = NonNullable<
   ApiSchemas["ApplicationMaterialRequestInput"]["guidance"]
 >;
@@ -57,10 +59,11 @@ export function applicationMaterialGuidanceFor(
 }
 
 export const applicationMaterialKindLabels = (): Readonly<
-  Record<ApplicationMaterialKind, string>
+  Record<SavedApplicationMaterialKind, string>
 > => ({
   "cover-letter": t`Cover letter`,
   "interview-questions": t`Interview questions`,
+  "interview-guide": t`Interview preparation guide`,
 });
 
 /** The Draft button names the open tab, so it reads as that tab's action (#2595). */
@@ -158,7 +161,7 @@ export function applicationMaterialProblem(error: unknown): string {
 
 /** The file name the download is saved under. */
 export function applicationMaterialFileName(
-  kind: ApplicationMaterialKind,
+  kind: SavedApplicationMaterialKind,
   format: "md" | "docx" | "pdf" = "md",
 ): string {
   return `${kind}.${format}`;
@@ -173,6 +176,8 @@ export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): st
   draft.items.forEach((item, index) => {
     if (draft.kind === "interview-questions") {
       lines.push(`## ${index + 1}. ${item.question}`, "");
+    } else if (draft.kind === "interview-guide" && item.question.trim() !== "") {
+      lines.push(`## ${item.question}`, "");
     }
     lines.push(item.text, "");
     lines.push(

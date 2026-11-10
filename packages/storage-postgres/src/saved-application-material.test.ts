@@ -51,6 +51,24 @@ describe.runIf(connectionString !== undefined)("Postgres saved application mater
         }),
       );
       await storeA.insert(draft("amd_fixture0004", { application_id: "application-2" }));
+      const guide = draft("amd_fixture0005", {
+        application_id: "application-3",
+        kind: "interview-guide",
+        items: [
+          { section: "read-first", question: "", text: "Fictional takeaway.", citations: [] },
+          {
+            section: "questions",
+            question: "Why this role?",
+            text: "Fictional angle.",
+            trap: "Fictional trap.",
+            citations: [],
+          },
+        ],
+      });
+      await storeA.insert(guide);
+      expect(await storeA.list("owner", "application-3", { kind: "interview-guide" })).toEqual([
+        guide,
+      ]);
 
       await tenancy.close();
       tenancy = await openTenancy();

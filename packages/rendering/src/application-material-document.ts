@@ -13,7 +13,7 @@ export const defaultApplicationMaterialTemplateId = "modern";
 /** What a saved draft's document needs: its kind, title, language and items. */
 export interface ApplicationMaterialDocumentInput {
   readonly id: string;
-  readonly kind: "cover-letter" | "interview-questions";
+  readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
   /** The heading the document opens with, such as the application's name. */
   readonly title: string;
   readonly language: string;

@@ -812,8 +812,10 @@
             "type": "string",
             "enum": [
               "cover-letter",
-              "interview-questions"
-            ]
+              "interview-questions",
+              "interview-guide"
+            ],
+            "description": "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -831,6 +833,32 @@
                 "text": {
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
+                },
+                "section": {
+                  "description": "For an interview preparation guide: the section the item belongs to.",
+                  "type": "string",
+                  "enum": [
+                    "read-first",
+                    "interview",
+                    "company",
+                    "role",
+                    "market",
+                    "matrix",
+                    "pitch",
+                    "stories",
+                    "defense",
+                    "questions",
+                    "ask",
+                    "practical",
+                    "topic",
+                    "never-say",
+                    "checklist",
+                    "sources"
+                  ]
+                },
+                "trap": {
+                  "description": "For a likely question in a guide: the answer to avoid, and why.",
+                  "type": "string"
                 },
                 "edited": {
                   "description": "True when the candidate rewrote this item; the text is then theirs.",
@@ -8514,8 +8542,10 @@
             "type": "string",
             "enum": [
               "cover-letter",
-              "interview-questions"
-            ]
+              "interview-questions",
+              "interview-guide"
+            ],
+            "description": "A saved draft may be an interview preparation guide; new drafts are a cover letter or interview questions."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
@@ -8533,6 +8563,32 @@
                 "text": {
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
+                },
+                "section": {
+                  "description": "For an interview preparation guide: the section the item belongs to.",
+                  "type": "string",
+                  "enum": [
+                    "read-first",
+                    "interview",
+                    "company",
+                    "role",
+                    "market",
+                    "matrix",
+                    "pitch",
+                    "stories",
+                    "defense",
+                    "questions",
+                    "ask",
+                    "practical",
+                    "topic",
+                    "never-say",
+                    "checklist",
+                    "sources"
+                  ]
+                },
+                "trap": {
+                  "description": "For a likely question in a guide: the answer to avoid, and why.",
+                  "type": "string"
                 },
                 "edited": {
                   "description": "True when the candidate rewrote this item; the text is then theirs.",
@@ -24764,7 +24820,8 @@
               "type": "string",
               "enum": [
                 "cover-letter",
-                "interview-questions"
+                "interview-questions",
+                "interview-guide"
               ]
             },
             "in": "query",
