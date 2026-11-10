@@ -905,7 +905,7 @@ msgstr "Accepter"
 msgid "Accept all skips word-match findings"
 msgstr "Tout accepter ignore les constats par mots-clés"
 
-#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Accept notes from agents"
 msgstr "Accepter les notes des agents"
 
@@ -1109,8 +1109,20 @@ msgid "Agents"
 msgstr "Agents"
 
 #: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can add notes."
+msgstr "Les agents peuvent ajouter des notes."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
+msgstr "Les agents peuvent noter dans votre journal de travail les travaux marquants que vous avez livrés. Rien ne devient un élément de parcours sans votre approbation."
+
+#: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Les agents peuvent noter les travaux marquants que vous avez livrés. Chaque note attend ici ; seules celles que vous approuvez deviennent des éléments de parcours."
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents cannot add notes yet."
+msgstr "Les agents ne peuvent pas encore ajouter de notes."
 
 #: packages/ui/src/review.tsx
 msgid "all"
@@ -1757,6 +1769,10 @@ msgstr "thèmes centraux"
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Changer"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Change in Workspace settings"
+msgstr "Modifier dans les réglages de l’espace de travail"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -6795,9 +6811,18 @@ msgstr "Relecture en cours · rien à faire pour l’instant"
 msgid "Review issues"
 msgstr "Relire les problèmes"
 
+#: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/work-journal-pending.tsx
 msgid "Review notes"
 msgstr "Relire les notes"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pending} waiting)"
+msgstr "Relire les notes ({pending} en attente)"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pendingNoteCountLimit} or more waiting)"
+msgstr "Relire les notes ({pendingNoteCountLimit} ou plus en attente)"
 
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/profile-status.ts
@@ -9164,10 +9189,6 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr "Pour commencer, créez un espace de travail pour votre recherche d’emploi, ouvrez-en un récent, ou essayez la démo avec des éléments d’exemple."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
-msgstr "Pour qu’un agent dépose des notes ici, connectez-le dans Agents, dans les Réglages de l’espace de travail."
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr "Jeton :"
 
@@ -9233,6 +9254,10 @@ msgstr "Réessayer"
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Essayer la démo"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Turn on in Workspace settings"
+msgstr "Activer dans les réglages de l’espace de travail"
 
 #: packages/ui/src/speech-button.tsx
 msgid "Turning your words into text on this device…"

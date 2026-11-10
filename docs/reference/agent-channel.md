@@ -35,8 +35,9 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 | A copied configuration       | Claude Code, Codex, any | The tools only                                        |
 | `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
 
-The Agents section of Workspace settings on Home shows the first two;
-the Work journal panel links to it.
+The Agents section of Workspace settings on Home shows the first two and
+holds the **Accept notes from agents** switch; the Work journal panel links
+to it.
 
 1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
    link from inside `apps/mcp`: `pnpm --dir apps/mcp link --global` links the
@@ -58,9 +59,9 @@ the Work journal panel links to it.
    find both `claude` and `draftloop-mcp`: use one Node version for both, or
    put both versions' `bin` folders on `PATH`.
 
-2. In the Work journal panel, turn on **Accept notes from agents**; the
-   server refuses notes while intake is off. Then, under **Agents** in
-   Workspace settings, open **Connect an agent** and select **Create agent
+2. Under **Agents** in Workspace settings, turn on **Accept notes from
+   agents**; the server refuses notes while intake is off. Then, in the same
+   section, open **Connect an agent** and select **Create agent
    token**. The three scopes the plugin uses are ticked by default; untick
    any the agent should not have. **Read CVs and drafts** stays unticked
    until you choose to share your exported CVs and saved drafts.

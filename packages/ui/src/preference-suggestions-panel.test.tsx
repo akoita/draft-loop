@@ -60,10 +60,10 @@ describe("suggested preferences panel", () => {
   });
 
   it("renders the host's Workspace settings panel, and nothing without one", () => {
-    expect(renderToStaticMarkup(<HostWorkspaceSettings />)).toBe("");
+    expect(renderToStaticMarkup(<HostWorkspaceSettings openEvidence={() => undefined} />)).toBe("");
     const html = renderToStaticMarkup(
       <HostPanelsContext.Provider value={{ workspaceSettings: () => <p>host panel</p> }}>
-        <HostWorkspaceSettings />
+        <HostWorkspaceSettings openEvidence={() => undefined} />
       </HostPanelsContext.Provider>,
     );
     expect(html).toBe("<p>host panel</p>");

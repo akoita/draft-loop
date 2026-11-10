@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { AgentSetup, AgentSetupLink, type AgentSetupProps } from "./agent-setup.js";
+import { AgentSetup, type AgentSetupProps } from "./agent-setup.js";
 import {
   activeAgentTokens,
   agentChannelGuideUrl,
@@ -151,11 +151,10 @@ describe("AgentSetup", () => {
     expect(html).toContain("Active agent tokens: 1");
   });
 
-  it("points the Work journal to Agents only where it can open them", () => {
-    expect(renderToStaticMarkup(<AgentSetupLink />)).toBe("");
-    expect(renderToStaticMarkup(<AgentSetupLink onOpen={() => undefined} />)).toContain(
-      "under Agents in Workspace settings",
-    );
+  it("shows the host's work journal switch above Connect an agent", () => {
+    const html = renderToStaticMarkup(<AgentSetup {...props} workJournal={<p>the switch</p>} />);
+    expect(html.indexOf("the switch")).toBeGreaterThan(-1);
+    expect(html.indexOf("the switch")).toBeLessThan(html.indexOf("Connect an agent"));
   });
 
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {

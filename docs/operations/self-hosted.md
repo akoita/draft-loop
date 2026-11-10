@@ -229,9 +229,9 @@ Agents such as Claude Code or Codex can record notable work you shipped as
 notes in a work journal (ADR 0011, D17). Notes wait as pending until you
 review them, and only an approved note becomes career evidence.
 
-- **Turn it on** with "Accept notes from agents" in the Work journal
-  panel of the Career evidence page. The server refuses notes while it is off.
-- **Review on the web** in the same panel: approve a note into a knowledge
+- **Turn it on** with "Accept notes from agents" under Agents in Workspace
+  settings. The server refuses notes while it is off.
+- **Review on the web** in the Work journal panel of the Career evidence page: approve a note into a knowledge
   base, edit it, merge it with a likely duplicate shown beside it, or discard
   it.
 - **Review from the CLI** with the owner token. Put `draft-loop` on your

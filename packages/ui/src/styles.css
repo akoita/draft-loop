@@ -9869,6 +9869,15 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   font-size: 1rem;
 }
 
+/* The "Accept notes from agents" switch in Agents (#2625). */
+.work-journal-intake {
+  margin: 0.75rem 0 0;
+}
+
+.work-journal-intake p {
+  margin: 0.25rem 0 0;
+}
+
 .agent-setup-scopes {
   display: grid;
   gap: 0.25rem;

@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import {
   type AgentHost,
@@ -49,6 +49,8 @@ export interface AgentSetupProps {
   readonly open?: boolean;
   /** Resolves with a problem to show, or undefined once revoked. */
   readonly onRevoke: (tokenId: string) => Promise<string | undefined>;
+  /** The "Accept notes from agents" switch (#2625), from a host that serves the work journal. */
+  readonly workJournal?: ReactNode;
 }
 
 function GuideLink({ children }: { readonly children: string }) {
@@ -67,6 +69,7 @@ export function AgentSetup({
   onIssue,
   onRevoke,
   open = false,
+  workJournal,
 }: AgentSetupProps) {
   const id = useId();
   const [host, setHost] = useState<AgentHost>("plugin");
@@ -84,6 +87,7 @@ export function AgentSetup({
       <p className="muted">
         {t`Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here.`}
       </p>
+      {workJournal}
     </>
   );
   if (!available) {
@@ -269,18 +273,5 @@ export function AgentSetup({
         ) : null}
       </details>
     </section>
-  );
-}
-
-/** Where the Work journal panel points for connecting an agent (#2439). */
-export function AgentSetupLink({ onOpen }: { readonly onOpen?: (() => void) | undefined }) {
-  if (onOpen === undefined) return null;
-  return (
-    <p className="muted">
-      {t`To let an agent file notes here, connect it under Agents in Workspace settings.`}{" "}
-      <button type="button" className="link-action" onClick={onOpen}>
-        {t`Connect an agent`}
-      </button>
-    </p>
   );
 }
