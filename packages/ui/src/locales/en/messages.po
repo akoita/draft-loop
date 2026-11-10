@@ -1564,6 +1564,7 @@ msgstr "Available candidate knowledge bases"
 msgid "Available now"
 msgstr "Available now"
 
+#: apps/web/src/interview-guide-model.ts
 #: apps/web/src/interview-guide.tsx
 msgid "Avoid:"
 msgstr "Avoid:"
@@ -3661,6 +3662,10 @@ msgstr "From career interview"
 #: apps/web/src/interview-guide.tsx
 msgid "From research"
 msgstr "From research"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "From research:"
+msgstr "From research:"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the file chosen for this application, as it reads now."
@@ -7760,6 +7765,10 @@ msgstr "source linked"
 #: packages/ui/src/review.tsx
 msgid "Source links show where wording came from; they do not independently verify it."
 msgstr "Source links show where wording came from; they do not independently verify it."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Source:"
+msgstr "Source:"
 
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide-model.ts

@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { interviewGuideMarkdown } from "./interview-guide-model.js";
 
 /**
  * The web's application material (#2217): what the prepare panel says before the first draft,
@@ -175,12 +176,18 @@ export function applicationMaterialFileName(
  * cites under it, so the candidate can check every claim before using the text.
  */
 export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): string {
+  if (draft.kind === "interview-guide") {
+    return [
+      interviewGuideMarkdown(draft, applicationMaterialKindLabels()[draft.kind]).trimEnd(),
+      "",
+      `_Drafted by ${draft.model.model} (${draft.model.provider}). Check before use._`,
+      "",
+    ].join("\n");
+  }
   const lines = [`# ${applicationMaterialKindLabels()[draft.kind]}`, ""];
   draft.items.forEach((item, index) => {
     if (draft.kind === "interview-questions") {
       lines.push(`## ${index + 1}. ${item.question}`, "");
-    } else if (draft.kind === "interview-guide" && item.question.trim() !== "") {
-      lines.push(`## ${item.question}`, "");
     }
     lines.push(item.text, "");
     lines.push(

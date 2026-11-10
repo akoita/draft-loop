@@ -1564,6 +1564,7 @@ msgstr ""
 msgid "Available now"
 msgstr ""
 
+#: apps/web/src/interview-guide-model.ts
 #: apps/web/src/interview-guide.tsx
 msgid "Avoid:"
 msgstr ""
@@ -3660,6 +3661,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide.tsx
 msgid "From research"
+msgstr ""
+
+#: apps/web/src/interview-guide-model.ts
+msgid "From research:"
 msgstr ""
 
 #: packages/ui/src/job-description-panel.tsx
@@ -7758,6 +7763,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Source links show where wording came from; they do not independently verify it."
+msgstr ""
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Source:"
 msgstr ""
 
 #: apps/web/src/application-material.tsx

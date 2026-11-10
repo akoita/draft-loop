@@ -5,7 +5,10 @@ import {
   ApplicationMaterialView,
   type ApplicationMaterialViewProps,
 } from "./application-material.js";
-import type { ApplicationMaterialDraft } from "./application-material-model.js";
+import {
+  type ApplicationMaterialDraft,
+  applicationMaterialMarkdown,
+} from "./application-material-model.js";
 import { InterviewGuideForm, InterviewGuideReader } from "./interview-guide.js";
 import {
   emptyInterviewDetailsForm,
@@ -104,6 +107,20 @@ describe("the interview guide's model", () => {
     expect(sections[2]?.items.map((entry) => entry.index)).toEqual([2, 3]);
     expect(interviewGuideUnsourcedNote(guide)).toContain("no recent source on pay");
     expect(interviewGuideUnsourcedNote({ ...guide, unsourced_topics: [] })).toBeUndefined();
+  });
+});
+
+describe("the interview guide's Markdown", () => {
+  it("heads each section, then each question with its trap and its sources", () => {
+    const markdown = applicationMaterialMarkdown(guide);
+    expect(markdown).toContain(
+      "# Interview preparation guide\n\n## If you read one thing\n\nLead with reporting.",
+    );
+    expect(markdown).toContain(
+      "## Likely questions\n\n### How do you report?\n\nAs a Data Analyst you report weekly.\n\nAvoid: Do not overstate the team size.\n\n> Source: role title: Data Analyst",
+    );
+    expect(markdown).toContain("> From research: Example Corp builds tools for clinics.");
+    expect(markdown).toContain("_Drafted by claude-sonnet-5-5 (anthropic). Check before use._");
   });
 });
 

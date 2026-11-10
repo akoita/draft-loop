@@ -274,3 +274,27 @@ export const interviewGuideRefusals = (): Readonly<Record<string, string>> => ({
   invalid_draft: t`No sentence of the guide about you was supported by your career record, so it was refused. Add facts to your record, or allow more of them for interviews.`,
   cost_cap_reached: t`This guide would pass the server's cost cap. Try the essential depth or the economy model.`,
 });
+
+/**
+ * A guide as Markdown: one heading per section, each question under it with its talking point
+ * and trap, and the sources each item cites, so the candidate can check every claim.
+ */
+export function interviewGuideMarkdown(draft: ApplicationMaterialDraft, title: string): string {
+  const lines = [`# ${title}`, ""];
+  for (const section of interviewGuideSections(draft)) {
+    lines.push(`## ${section.title}`, "");
+    for (const { item } of section.items) {
+      if (item.question.trim() !== "") lines.push(`### ${item.question}`, "");
+      lines.push(item.text, "");
+      if (item.trap !== undefined) lines.push(`${t`Avoid:`} ${item.trap}`, "");
+      const cited = [
+        ...item.citations.map((citation) => `> ${t`Source:`} ${citation.text}`),
+        ...(item.company_citations ?? []).map(
+          (citation) => `> ${t`From research:`} ${citation.text}`,
+        ),
+      ];
+      if (cited.length > 0) lines.push(...cited, "");
+    }
+  }
+  return lines.join("\n");
+}
