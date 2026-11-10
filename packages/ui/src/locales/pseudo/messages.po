@@ -1114,16 +1114,20 @@ msgstr ""
 msgid "Agents"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can add notes to your Work journal. Nothing becomes career evidence until you approve it."
+msgstr ""
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can add notes."
 msgstr ""
 
-#: packages/ui/src/work-journal-intake.tsx
-msgid "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
-msgstr ""
-
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents cannot add notes to your Work journal. When they can, nothing becomes career evidence until you approve it."
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -4223,6 +4227,10 @@ msgstr ""
 msgid "Keep a summary of the work."
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Keep accepting"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
 msgstr ""
@@ -4928,6 +4936,10 @@ msgstr ""
 msgid "New name for {0}"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "New notes from your agents will be refused until you turn this back on."
+msgstr ""
+
 #: apps/web/src/records.tsx
 msgid "New record id"
 msgstr ""
@@ -5405,6 +5417,10 @@ msgstr ""
 msgid "Notes"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Notes from agents"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr ""
@@ -5449,6 +5465,7 @@ msgid "of {0} and {1}"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
 msgstr ""
 
@@ -5457,6 +5474,7 @@ msgid "Omission"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "On"
 msgstr ""
 
@@ -7707,6 +7725,18 @@ msgstr ""
 msgid "Stop"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes from agents?"
+msgstr ""
+
 #: packages/ui/src/speech-button.tsx
 msgid "Stop and transcribe"
 msgstr ""
@@ -8468,6 +8498,14 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "The models were saved, but the previously saved profile pair could not be cleared. Try saving again."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The note already waiting stays for review."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The notes already waiting stay for review."
 msgstr ""
 
 #: packages/ui/src/profile.tsx

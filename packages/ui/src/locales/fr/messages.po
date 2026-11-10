@@ -1108,17 +1108,21 @@ msgstr "Agent"
 msgid "Agents"
 msgstr "Agents"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can add notes to your Work journal. Nothing becomes career evidence until you approve it."
+msgstr "Les agents peuvent ajouter des notes à votre journal de travail. Rien ne devient un élément de parcours sans votre approbation."
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can add notes."
 msgstr "Les agents peuvent ajouter des notes."
 
-#: packages/ui/src/work-journal-intake.tsx
-msgid "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
-msgstr "Les agents peuvent noter dans votre journal de travail les travaux marquants que vous avez livrés. Rien ne devient un élément de parcours sans votre approbation."
-
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Les agents peuvent noter les travaux marquants que vous avez livrés. Chaque note attend ici ; seules celles que vous approuvez deviennent des éléments de parcours."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents cannot add notes to your Work journal. When they can, nothing becomes career evidence until you approve it."
+msgstr "Les agents ne peuvent pas ajouter de notes à votre journal de travail. Quand ils le pourront, rien ne deviendra un élément de parcours sans votre approbation."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents cannot add notes yet."
@@ -4218,6 +4222,10 @@ msgstr "Garder « "
 msgid "Keep a summary of the work."
 msgstr "Gardez un résumé du travail."
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Keep accepting"
+msgstr "Continuer d’accepter"
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
 msgstr "Gardez au moins une exigence."
@@ -4923,6 +4931,10 @@ msgstr "Nom de la nouvelle base de connaissances"
 msgid "New name for {0}"
 msgstr "Nouveau nom pour {0}"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "New notes from your agents will be refused until you turn this back on."
+msgstr "Les nouvelles notes de vos agents seront refusées jusqu’à ce que vous réactiviez ce réglage."
+
 #: apps/web/src/records.tsx
 msgid "New record id"
 msgstr "Identifiant du nouveau dossier"
@@ -5400,6 +5412,10 @@ msgstr "Note (facultatif)"
 msgid "Notes"
 msgstr "Notes"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Notes from agents"
+msgstr "Notes des agents"
+
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr "Rien n’est en cours à arrêter."
@@ -5444,6 +5460,7 @@ msgid "of {0} and {1}"
 msgstr "sur {0} et {1}"
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
 msgstr "Désactivé"
 
@@ -5452,6 +5469,7 @@ msgid "Omission"
 msgstr "Omission"
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "On"
 msgstr "Activé"
 
@@ -7702,6 +7720,18 @@ msgstr "Formule toute faite « {0} » : dites-le avec vos mots."
 msgid "Stop"
 msgstr "Arrêter"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting"
+msgstr "Ne plus accepter"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes"
+msgstr "Ne plus accepter de notes"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes from agents?"
+msgstr "Ne plus accepter les notes des agents ?"
+
 #: packages/ui/src/speech-button.tsx
 msgid "Stop and transcribe"
 msgstr "Arrêter et transcrire"
@@ -8464,6 +8494,14 @@ msgstr "Les modèles ont été configurés, mais la paire de profils n’a pas p
 #: packages/ui/src/app.tsx
 msgid "The models were saved, but the previously saved profile pair could not be cleared. Try saving again."
 msgstr "Les modèles ont été enregistrés, mais la paire de profils enregistrée auparavant n’a pas pu être effacée. Réessayez d’enregistrer."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The note already waiting stays for review."
+msgstr "La note déjà en attente reste à relire."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The notes already waiting stay for review."
+msgstr "Les notes déjà en attente restent à relire."
 
 #: packages/ui/src/profile.tsx
 msgid "The operation did not complete. No new profile version was confirmed."

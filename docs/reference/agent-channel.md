@@ -36,7 +36,7 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 | `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
 
 The Agents section of Workspace settings on Home shows the first two and
-holds the **Accept notes from agents** switch; the Work journal panel links
+holds the **Accept notes from agents** button; the Work journal panel links
 to it.
 
 1. Put `draftloop-mcp` on your `PATH` from a clone of this repository. Run the
