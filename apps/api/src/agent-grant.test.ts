@@ -63,11 +63,21 @@ describe("admitAgentGrant", () => {
     for (const [method, url] of [
       ["POST", `${workspace}/runs/:runId/approve`],
       ["GET", "/v1/not-a-route"],
-      ["GET", "/v1/workspaces"],
+      ["GET", "/v1/me"],
     ] as const) {
       expect(admitAgentGrant(request(method, url, { params: {} }), grant).outcome).toBe("refused");
       expect(admitAgentGrant(request(method, url), grant).outcome).toBe("refused");
     }
+  });
+
+  it("lists the member's workspaces with any granted scope, and with none refuses", () => {
+    const list = request("GET", "/v1/workspaces", { params: {} });
+
+    expect(admitAgentGrant(list, grant)).toEqual({ outcome: "allowed" });
+    expect(admitAgentGrant(list, { clientId: "assistant", scopes: [] }).outcome).toBe("refused");
+    expect(admitAgentGrant(request("POST", "/v1/workspaces", { params: {} }), grant).outcome).toBe(
+      "refused",
+    );
   });
 
   it("refuses a scope the person did not grant, and names it", () => {

@@ -736,7 +736,9 @@ not a second product.
     a signed-in token from the identity provider and plan credits (D13).
   - *Remote (#2647):* `draftloop-mcp serve-http` serves the same tools over
     Streamable HTTP on one URL, forwarding each caller's own credential to
-    the API and keeping none. OAuth sign-in for it comes later (#2648).
+    the API and keeping none. In sign-in mode it is an OAuth protected
+    resource (#2648): it publishes its metadata, and the identity provider
+    signs the person in for a client created per assistant.
 - **First tools: the work journal (decided 2026-11-01, #2018).**
   `record_work` lets the candidate's coding agent file a short note about
   notable work it just helped ship, and `list_work` lists those notes by

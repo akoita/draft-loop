@@ -337,8 +337,45 @@ the API on each call. It keeps no token, no session and no candidate data.
 
 A request without a credential answers `401`, and `GET /healthz` answers
 `200`. It speaks plain `http` on this computer only: to reach it from another
-machine, put a TLS proxy in front of it. Sign-in with OAuth is not built yet
-([#2648](https://github.com/akoita/draft-loop/issues/2648)).
+machine, put a TLS proxy in front of it.
+
+### With OAuth sign-in
+
+On a server in sign-in mode, set both addresses and the server asks
+assistants to sign the person in instead of taking an agent token:
+
+| Setting                     | What it sets                                                 |
+| --------------------------- | ------------------------------------------------------------ |
+| `DRAFT_LOOP_MCP_PUBLIC_URL` | This server's `https` address as people enter it, ending `/mcp` |
+| `DRAFT_LOOP_OIDC_ISSUER`    | The identity provider's issuer, the same one the API trusts  |
+
+```mermaid
+sequenceDiagram
+  participant A as Assistant
+  participant M as MCP server
+  participant I as Identity provider
+  participant D as DraftLoop API
+  A->>M: POST /mcp without a token
+  M-->>A: 401 with the metadata address and default scopes
+  A->>M: GET /.well-known/oauth-protected-resource
+  A->>I: Sign the person in (PKCE), who grants scopes
+  A->>M: POST /mcp with the access token
+  M->>D: GET /v1/workspaces with that token
+  M->>D: The tool's call, in the person's workspace
+```
+
+- **Default scopes.** The server asks for `journal`, `applications:read` and
+  `jobs:write`. `drafts:read` is granted only when the person adds it.
+- **Workspace.** The tools act in the signed-in person's workspace. A person
+  who reaches several gets the first by id; choosing one is not built.
+- **A dead token** answers `401` with `invalid_token`, so the assistant
+  refreshes it. An account without a workspace answers `403`.
+- **Identity provider.** It needs one confidential client per assistant with
+  that assistant's redirect address, PKCE with S256, refresh tokens, the API's
+  audience on the token and the `draftloop:` scopes as optional client scopes.
+
+Not built yet: runs and drafts from a connection, which wait for a spend cap
+per connection.
 
 ## How the candidate reviews
 
@@ -374,9 +411,9 @@ its own client. The API treats that token as an **agent grant**:
 - **No spending yet.** A grant cannot start a run or a draft, with or without
   `runs:start`, because it has no monthly spend cap.
 
-Nothing connects this way yet: the tools are
-[served over HTTP](#serve-the-tools-over-http), and the sign-in is planned in
-[#2648](https://github.com/akoita/draft-loop/issues/2648).
+The assistant gets that token through the
+[remote server's OAuth sign-in](#with-oauth-sign-in). A grant also lists the
+ids of the workspaces its member reaches, and nothing else outside a workspace.
 
 ## Privacy lines
 

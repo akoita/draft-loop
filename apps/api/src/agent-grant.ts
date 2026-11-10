@@ -47,8 +47,19 @@ export function agentGrantId(grant: AgentGrant): string {
   return `dlat_oauth_${digest.slice(0, 16)}`;
 }
 
+/**
+ * The one route outside a workspace a grant reaches (#2648): the list of workspace ids the
+ * member can reach, which the remote MCP server reads to know where its tools act.
+ */
+export const agentGrantWorkspaceListRoute = "GET /v1/workspaces";
+
 export type AgentGrantAdmission =
-  | { readonly outcome: "allowed"; readonly scope: AgentTokenScope; readonly workspaceId: string }
+  | {
+      readonly outcome: "allowed";
+      /** Unset on the workspace list, which any granted scope reaches. */
+      readonly scope?: AgentTokenScope;
+      readonly workspaceId?: string;
+    }
   | { readonly outcome: "refused"; readonly message: string };
 
 /**
@@ -56,6 +67,9 @@ export type AgentGrantAdmission =
  * it reaches. A route that spends is refused: a grant has no monthly spend cap yet.
  */
 export function admitAgentGrant(request: FastifyRequest, grant: AgentGrant): AgentGrantAdmission {
+  const key = agentRouteKey(request.method, request.routeOptions.url);
+  if (key === agentGrantWorkspaceListRoute && grant.scopes.length > 0)
+    return { outcome: "allowed" };
   const rule = agentRoutes[agentRouteKey(request.method, request.routeOptions.url)];
   const workspaceId = (request.params as { readonly workspaceId?: unknown } | undefined)
     ?.workspaceId;
