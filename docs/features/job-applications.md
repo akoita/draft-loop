@@ -51,6 +51,7 @@ until an owner or admin releases it
 | ------ | ------------------------------------------------------------------------------ |
 | Screen | Home list and folders, New application form, opportunity brief review, Job tab |
 | API    | `/v1/workspaces/{id}/applications`, `.../applications/from-file`, `.../job`    |
+| API    | `POST .../applications/{applicationId}/job/copy`                               |
 | API    | `/v1/workspaces/{id}/opportunities`, `.../{briefId}/versions`, `.../review`    |
 | API    | `/v1/workspaces/{id}/application-folders`                                      |
 | API    | `POST /v1/workspaces/{id}/application-imports` (from a v0.8 desktop workspace) |
@@ -62,7 +63,9 @@ until an owner or admin releases it
 - A page keeps at most two copies: the first one and the newest one. A later
   read never replaces the first copy, so a closed or expired page cannot erase
   the job.
-- An application added from a page before copies were kept has none yet.
+- An application added from a page before copies were kept has none. Its
+  **Job** tab offers **Save a copy now**, which reads the approved page once
+  more, and **Paste the description** for a page that is already gone.
 - Folders are one level deep; an application sits in at most one folder.
 
 ## Related

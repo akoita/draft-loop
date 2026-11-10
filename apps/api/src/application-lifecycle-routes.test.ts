@@ -346,6 +346,7 @@ describe("application lifecycle", () => {
       text: "Platform Engineer at Example Ledger",
       url: null,
       savedAt: null,
+      copySource: null,
       earlier: null,
     });
     expect(await read("page")).toEqual({
@@ -353,6 +354,7 @@ describe("application lifecycle", () => {
       text: null,
       url,
       savedAt: null,
+      copySource: null,
       earlier: null,
     });
     expect(await read("saved")).toEqual({
@@ -360,6 +362,7 @@ describe("application lifecycle", () => {
       text: "Position closed",
       url,
       savedAt: "2030-01-05T00:00:00.000Z",
+      copySource: "page",
       earlier: { text: "Platform Engineer", savedAt: "2030-01-04T00:00:00.000Z" },
     });
     expect(await read("file")).toEqual({
@@ -367,6 +370,7 @@ describe("application lifecycle", () => {
       text: null,
       url: null,
       savedAt: null,
+      copySource: null,
       earlier: null,
     });
   });

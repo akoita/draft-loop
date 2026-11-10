@@ -14,6 +14,7 @@ export const bridgeCapabilities = [
   "application.list",
   "application.get",
   "application.job",
+  "application.job-copy",
   "application.create",
   "application.import",
   "application.archive",

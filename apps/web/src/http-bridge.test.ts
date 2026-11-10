@@ -300,6 +300,7 @@ describe("the shared screens' commands over HTTP", () => {
         text: "Platform Engineer",
         url: null,
         savedAt: null,
+        copySource: null,
         earlier: null,
       }),
     });
@@ -315,10 +316,37 @@ describe("the shared screens' commands over HTTP", () => {
         truncated: false,
         url: null,
         savedAt: null,
+        copySource: null,
         earlier: null,
       },
     });
     expect(calls[1]?.input).toMatchObject({ path: { applicationId: "default" } });
+  });
+
+  it("saves a pasted copy of the application's job page", async () => {
+    const saved = {
+      origin: "url",
+      text: "Platform Engineer",
+      url: "https://jobs.example.test/1",
+      savedAt: "2030-01-05T00:00:00.000Z",
+      copySource: "pasted",
+      earlier: null,
+    };
+    const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications": listed,
+      "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/job/copy": () => saved,
+    });
+
+    const result = await port.execute({
+      type: "application.job-copy",
+      input: { workspaceId, text: "Platform Engineer" },
+    });
+
+    expect(result).toEqual({ ok: true, value: { workspaceId, ...saved, truncated: false } });
+    expect(calls[1]?.input).toMatchObject({
+      path: { applicationId: "default" },
+      body: { text: "Platform Engineer" },
+    });
   });
 
   it("creates, reads, lists, edits and reviews a brief, projected as the desktop projects it", async () => {

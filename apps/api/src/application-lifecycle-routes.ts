@@ -111,7 +111,7 @@ const savedJobPageSchema = z.object({
   savedAt: z.string().describe("When the service read the page and saved this copy."),
 });
 
-const applicationJobSchema = z
+export const applicationJobSchema = z
   .object({
     origin: z
       .enum(["pasted-text", "url", "unavailable"])
@@ -127,6 +127,10 @@ const applicationJobSchema = z
       .string()
       .nullable()
       .describe("When the job page's copy was saved; null for pasted text or without a copy."),
+    copySource: z
+      .enum(["page", "pasted"])
+      .nullable()
+      .describe("Whether the job page's copy was read from the page or pasted by the person."),
     earlier: savedJobPageSchema
       .nullable()
       .describe("The first copy of the job page, kept when a later read gave different text."),
@@ -137,9 +141,9 @@ const applicationJobSchema = z
  * The job an application keeps, read back for the screens: pasted text, or a page's address with
  * the copy saved when it was read, so the job stays readable after the page expires (#2592).
  */
-function applicationJob(view: ApplicationView): z.infer<typeof applicationJobSchema> {
+export function applicationJob(view: ApplicationView): z.infer<typeof applicationJobSchema> {
   const source = view.jobSource;
-  const none = { savedAt: null, earlier: null };
+  const none = { savedAt: null, copySource: null, earlier: null };
   if (source.kind === "stored-text") {
     return { origin: "pasted-text", text: source.text, url: null, ...none };
   }
@@ -150,6 +154,7 @@ function applicationJob(view: ApplicationView): z.infer<typeof applicationJobSch
       text: page?.text ?? null,
       url: source.url,
       savedAt: page?.fetchedAt ?? null,
+      copySource: page === undefined ? null : page.pasted === true ? "pasted" : "page",
       earlier:
         firstPage === undefined ? null : { text: firstPage.text, savedAt: firstPage.fetchedAt },
     };
