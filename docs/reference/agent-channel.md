@@ -334,6 +334,24 @@ workspace home shows how many notes wait. The same review runs from the CLI
 with `draft-loop work-journal`; see the
 [self-hosted server](../operations/self-hosted.md#work-journal) guide.
 
+## On the hosted service: an assistant's sign-in
+
+The hosted service issues no agent tokens. An assistant instead signs the
+person in through the identity provider and holds an access token issued to
+its own client. The API treats that token as an **agent grant**:
+
+- **Same routes.** The grant acts as the signed-in member, on the routes the
+  agent scopes admit and no other. A decision, a setting or sign-up answers
+  `403`.
+- **Scopes.** The token's `scope` claim carries each granted scope as
+  `draftloop:<scope>`, such as `draftloop:applications:read`. A token of any
+  client other than the web screen's is a grant, even with no scope.
+- **No spending yet.** A grant cannot start a run or a draft, with or without
+  `runs:start`, because it has no monthly spend cap.
+
+Nothing connects this way yet: the remote MCP endpoint and its sign-in are
+planned in [#1403](https://github.com/akoita/draft-loop/issues/1403).
+
 ## Privacy lines
 
 - **Duplicates.** The same pull request in the same repository, or the same

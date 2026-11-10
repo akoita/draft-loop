@@ -1,6 +1,7 @@
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { JWTVerifyGetKey } from "jose";
+import { type AgentGrant, admitAgentGrant, agentGrantId, agentGrantOf } from "./agent-grant.js";
 import { admitAgentBody, admitAgentRoute } from "./agent-route-scopes.js";
 import { authenticateAgentToken, isAgentTokenShape } from "./agent-token-auth.js";
 import { apiError } from "./errors.js";
@@ -47,7 +48,7 @@ export type ApiAuthOptions =
     });
 
 type Authentication =
-  | { readonly outcome: "authenticated"; readonly caller: Caller }
+  | { readonly outcome: "authenticated"; readonly caller: Caller; readonly grant?: AgentGrant }
   | { readonly outcome: "unauthenticated"; readonly reason?: string }
   | { readonly outcome: "forbidden"; readonly identity?: SignInIdentity };
 
@@ -81,7 +82,11 @@ function ownerAuthenticator(ownerToken: string): Authenticator {
  * Sign-in: the provider's access token, whose person must hold an active membership. The owner
  * token is not accepted here; it is kept as the operator's credential for operator-only routes.
  */
-function signInAuthenticator(verify: VerifySignInToken, resolve: ResolveSignIn): Authenticator {
+function signInAuthenticator(
+  verify: VerifySignInToken,
+  resolve: ResolveSignIn,
+  webClientId: string,
+): Authenticator {
   return async (authorization) => {
     const token = bearerToken(authorization);
     if (token === undefined) return { outcome: "unauthenticated" };
@@ -89,10 +94,17 @@ function signInAuthenticator(verify: VerifySignInToken, resolve: ResolveSignIn):
     if (verification.status === "refused") {
       return { outcome: "unauthenticated", reason: verification.reason };
     }
+    const grant = agentGrantOf(verification, webClientId);
     const member = await resolve(verification.identity);
-    if (member === undefined) return { outcome: "forbidden", identity: verification.identity };
+    // Only the web screen's own sign-in may go on to create an account (#2646).
+    if (member === undefined) {
+      return grant === undefined
+        ? { outcome: "forbidden", identity: verification.identity }
+        : { outcome: "forbidden" };
+    }
     return {
       outcome: "authenticated",
+      ...(grant === undefined ? {} : { grant }),
       caller: {
         kind: "member",
         tenantId: member.tenantId,
@@ -108,6 +120,7 @@ function authenticatorFor(ownerToken: string, auth: ApiAuthOptions): Authenticat
   return signInAuthenticator(
     signInTokenVerifier(auth, auth.keys ?? remoteSignInKeys(auth)),
     auth.resolveSignIn,
+    auth.webClientId,
   );
 }
 
@@ -205,6 +218,30 @@ export function registerRequestAuthentication(
       authentication = agent;
     }
     if (authentication.outcome === "authenticated") {
+      const { grant } = authentication;
+      if (grant !== undefined) {
+        // An assistant's sign-in (#2646): the member, on the agent routes its scopes admit only.
+        const admission = admitAgentGrant(request, grant);
+        if (admission.outcome === "refused") {
+          request.log.info({ agentClientId: grant.clientId }, "agent grant refused on this route");
+          await reply.code(403).send(apiError("forbidden", admission.message));
+          return;
+        }
+        request.log.info(
+          {
+            agentClientId: grant.clientId,
+            method: request.method,
+            route: request.routeOptions.url,
+            scope: admission.scope,
+          },
+          "agent grant accepted",
+        );
+        request.agentToken = {
+          id: agentGrantId(grant),
+          workspaceId: admission.workspaceId,
+          scopes: grant.scopes,
+        };
+      }
       request.caller = authentication.caller;
       return;
     }
