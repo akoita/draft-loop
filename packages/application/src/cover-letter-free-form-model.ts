@@ -1,7 +1,10 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
 
-import type { ApplicationMaterialModelExecutor } from "./application-material-model.js";
+import {
+  type ApplicationMaterialModelExecutor,
+  applicationMaterialMaxOutputTokens,
+} from "./application-material-model.js";
 import type {
   FreeFormCoverLetterRequest,
   FreeFormCoverLetterWriterPort,
@@ -15,7 +18,12 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
  */
 
 export const freeFormCoverLetterPromptVersion = "cover-letter-free-form-v1";
-const maxOutputTokens = 2_048;
+/**
+ * The items writer's budget (#2613): a 350-word letter used up to 1,794 of 2,048 output tokens on
+ * a live run, and the revision was then cut off at `max_tokens`, which the provider adapter
+ * rejects. The model stops at the letter's end, so the larger budget costs nothing more.
+ */
+const maxOutputTokens = applicationMaterialMaxOutputTokens;
 
 const outputSchema = {
   type: "object",
