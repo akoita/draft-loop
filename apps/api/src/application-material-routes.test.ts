@@ -86,10 +86,12 @@ const granted: ConsentState = {
 
 function scriptedRoute(outputs: readonly object[], seen: unknown[]): AnthropicRouteBuilder {
   let call = 0;
-  return () => ({
+  return ({ configuredModel }) => ({
     provider: "anthropic",
     route: "anthropic-api",
     execute: async (request) => {
+      // As the real adapters do: a route refuses a request that names another selection.
+      expect(request.model).toEqual(configuredModel);
       seen.push(request.input);
       const output = outputs[call] ?? outputs.at(-1) ?? { items: [] };
       call += 1;
@@ -823,6 +825,39 @@ describe("application material route", () => {
     expect(seen).toHaveLength(4);
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
     expect(logs.join("\n")).not.toContain("report time by 45");
+  });
+
+  it("keeps the free-form writer and the check apart when both run on the economy model", async () => {
+    const versions: string[] = [];
+    const writer = scriptedRoute([{ letter: "I cut report time by 40%." }], []);
+    const checker = scriptedRoute(
+      [
+        {
+          links: [
+            { sentence_id: "p0.s0", kind: "candidate", fact_ids: ["o"], company_fact_ids: [] },
+          ],
+        },
+      ],
+      [],
+    );
+    await build({
+      consent: granted,
+      coverLetterWriter: "free-form",
+      route: (input) => {
+        versions.push(input.configuredModel.promptTemplateVersion);
+        return input.configuredModel.promptTemplateVersion === "cover-letter-claims-v1"
+          ? checker(input)
+          : writer(input);
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: { authorization },
+      payload: { kind: "cover-letter", model: "claude-haiku-5-5" },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(versions).toEqual(["cover-letter-free-form-v1", "cover-letter-claims-v1"]);
   });
 
   it("serves no list when the server keeps no drafts", async () => {

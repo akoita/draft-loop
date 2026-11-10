@@ -463,19 +463,27 @@ export function registerApplicationMaterialRoutes(
         role: "author",
         promptTemplateVersion: coverLetterClaimCheckPromptVersion,
       } as const;
-      const routeOf = (configuredModel: typeof model | typeof checkerModel) => {
+      // A route answers only requests that name its exact selection, prompt version included, so
+      // the free-form writer and the claim check each get a route built for their own.
+      const writerModel = freeForm
+        ? { ...model, promptTemplateVersion: freeFormCoverLetterPromptVersion }
+        : model;
+      const routeOf = (configuredModel: typeof writerModel | typeof checkerModel) => {
         const price = catalogModelPricing(configuredModel);
         return buildRoute({
           configuredModel,
           ...(price === undefined ? {} : { pricing: price }),
         });
       };
-      const routed = routeOf(model);
+      const routed = routeOf(writerModel);
       // The claim check runs on its own model; both share the request's cost cap.
       const checkRoute = freeForm ? routeOf(checkerModel) : routed;
       const recording = {
         execute: async (modelRequest: Parameters<typeof routed.execute>[0]) => {
-          const target = modelRequest.model.modelId === model.modelId ? routed : checkRoute;
+          const target =
+            modelRequest.model.promptTemplateVersion === checkerModel.promptTemplateVersion
+              ? checkRoute
+              : routed;
           const response = await target.execute(modelRequest);
           const cost = response.cost.estimatedUsd ?? 0;
           spentUsd += cost;
@@ -528,7 +536,7 @@ export function registerApplicationMaterialRoutes(
           ? await draftFreeFormCoverLetter(
               createModelFreeFormCoverLetterWriter({
                 executor,
-                model: { ...model, promptTemplateVersion: freeFormCoverLetterPromptVersion },
+                model: writerModel,
                 dataPolicy,
                 applicationId,
               }),
