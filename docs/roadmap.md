@@ -587,6 +587,15 @@ from your own writing samples (#2479), editing per paragraph (#2480), Word and
 PDF export (#2481), a research brief from your uploads and current public
 sources (#2482), and a capped walk with a blind writing test (#2483).
 
+**Building:** an interview preparation guide, in
+[milestone 95](https://github.com/akoita/draft-loop/milestone/95), which
+replaces interview questions in the Prepare panel. The candidate describes the
+interview and picks an essential guide (capped at US$0.20) or an extensive one
+(US$0.40). Research on the employer, the role and the field comes first and
+keeps recent, rated sources. Every sentence then cites a career fact, an
+admitted gap or a finding, and never-say entries never reach a model. Issues
+2615 to 2622 and 2632 are built; a capped paid walk (#2623) is left.
+
 **Built:** usage level, in
 [milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or
 section says where it may be used: CV and interview, interview only, or never

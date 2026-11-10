@@ -5,7 +5,7 @@ import { WorkJournalApiError, type WorkspaceApiCall } from "./client.js";
 
 /**
  * The agent channel's read tools for what the candidate already approved (#2569): the CV they
- * exported as Markdown, and the cover letters and interview question sets they saved. They need
+ * exported as Markdown, and the cover letters, interview guides and question sets they saved. They need
  * the `drafts:read` scope, which no token gets unless the candidate ticks it. A run's open draft,
  * its findings and the career evidence a draft cites never reach the agent through them.
  */
@@ -27,8 +27,16 @@ export interface AgentMaterialSummary {
   readonly item_count: number;
 }
 
+export interface AgentMaterialItem {
+  readonly question: string;
+  readonly text: string;
+  /** For an interview preparation guide: the item's section, and a likely question's trap. */
+  readonly section?: string;
+  readonly trap?: string;
+}
+
 export interface AgentMaterial extends AgentMaterialSummary {
-  readonly items: readonly { readonly question: string; readonly text: string }[];
+  readonly items: readonly AgentMaterialItem[];
 }
 
 export interface DraftsApi {
@@ -55,6 +63,8 @@ interface MaterialBody {
   readonly items: readonly {
     readonly question: string;
     readonly text: string;
+    readonly section?: string;
+    readonly trap?: string;
     readonly edited?: boolean;
   }[];
 }
@@ -75,15 +85,24 @@ function cvRunOf(application: ApplicationBody): string | undefined {
 }
 
 function materialOf(body: MaterialBody): AgentMaterial {
+  // Citations stay out: they are the career facts the draft relies on, not the draft. A guide's
+  // never-say list stays out too: it is what the candidate never wants said.
+  const items = body.items
+    .filter((item) => item.section !== "never-say")
+    .map((item) => ({
+      question: item.question,
+      text: item.text,
+      ...(item.section === undefined ? {} : { section: item.section }),
+      ...(item.trap === undefined ? {} : { trap: item.trap }),
+    }));
   return {
     material_id: body.id ?? "",
     kind: body.kind,
     created_at: body.created_at ?? null,
     edited: body.items.some((item) => item.edited === true),
     based_on: body.based_on ?? null,
-    item_count: body.items.length,
-    // Citations stay out: they are the career facts the draft relies on, not the draft.
-    items: body.items.map((item) => ({ question: item.question, text: item.text })),
+    item_count: items.length,
+    items,
   };
 }
 
@@ -140,12 +159,12 @@ export const getCvDescription =
   "Read the CV the candidate approved and exported as Markdown for one job application: the newest Markdown export of the run the application uses. Without one, the candidate exports it in DraftLoop; never write or change a CV here. Needs the drafts:read scope.";
 
 export const listMaterialsDescription =
-  "List the cover letters and interview question sets the candidate saved for one job application, newest first: id, kind, date and whether they edited it. It returns no text; call get_material for one. Needs the drafts:read scope.";
+  "List the cover letters, interview preparation guides and interview question sets the candidate saved for one job application, newest first: id, kind, date and whether they edited it. It returns no text; call get_material for one. Needs the drafts:read scope.";
 
 export const getMaterialDescription =
-  "Read one saved cover letter or interview question set: its paragraphs, or each question with its talking point. Quote it as the candidate saved it. Needs the drafts:read scope.";
+  "Read one saved cover letter, interview preparation guide or interview question set: its paragraphs, each question with its talking point, or each guide item with its section and, for a likely question, the trap to avoid. A guide's never-say list is left out. Quote it as the candidate saved it. Needs the drafts:read scope.";
 
-const kinds = ["cover-letter", "interview-questions"] as const;
+const kinds = ["cover-letter", "interview-guide", "interview-questions"] as const;
 
 const summarySchema = z.object({
   material_id: z.string(),
@@ -199,11 +218,11 @@ export function registerDraftTools(server: McpServer, api: DraftsApi, failure: F
   server.registerTool(
     "list_materials",
     {
-      title: "List saved cover letters and interview questions",
+      title: "List saved cover letters and interview preparation",
       description: listMaterialsDescription,
       inputSchema: z.object({
         application_id: applicationId,
-        kind: z.enum(kinds).optional().describe("Keep one kind; both by default."),
+        kind: z.enum(kinds).optional().describe("Keep one kind; every kind by default."),
       }),
       outputSchema: z.object({ materials: z.array(summarySchema) }),
       annotations: { readOnlyHint: true, openWorldHint: false },
@@ -223,11 +242,18 @@ export function registerDraftTools(server: McpServer, api: DraftsApi, failure: F
   server.registerTool(
     "get_material",
     {
-      title: "Read a saved cover letter or interview questions",
+      title: "Read a saved cover letter or interview preparation",
       description: getMaterialDescription,
       inputSchema: z.object({ application_id: applicationId, material_id: applicationId }),
       outputSchema: summarySchema.extend({
-        items: z.array(z.object({ question: z.string(), text: z.string() })),
+        items: z.array(
+          z.object({
+            question: z.string(),
+            text: z.string(),
+            section: z.string().optional(),
+            trap: z.string().optional(),
+          }),
+        ),
       }),
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

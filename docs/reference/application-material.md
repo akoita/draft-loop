@@ -377,7 +377,10 @@ sections folded, the first one open. Likely questions show the trap to avoid,
 and statements from research list it under **From research**. **Left out**
 lists the sentences the check dropped, and a note names topics research found
 no source for. An extensive guide offers one button per part to write it
-again. The tab lives in `apps/web/src/interview-guide.tsx`.
+again. **Download Word**, **Download PDF** and **Download Markdown** keep one
+heading per section, each question with its talking point and the trap to
+avoid. Agents read a saved guide with `get_material`, without its citations
+or its never-say list. The tab lives in `apps/web/src/interview-guide.tsx`.
 
 ## Validation walk
 

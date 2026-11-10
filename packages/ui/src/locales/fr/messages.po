@@ -1574,6 +1574,7 @@ msgstr "Bases de connaissances candidat disponibles"
 msgid "Available now"
 msgstr "Disponible maintenant"
 
+#: apps/web/src/interview-guide-model.ts
 #: apps/web/src/interview-guide.tsx
 msgid "Avoid:"
 msgstr "À éviter :"
@@ -3675,6 +3676,10 @@ msgstr "Issu de l’entretien de parcours"
 #: apps/web/src/interview-guide.tsx
 msgid "From research"
 msgstr "Issu de la recherche"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "From research:"
+msgstr "Issu de la recherche :"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the file chosen for this application, as it reads now."
@@ -7797,6 +7802,10 @@ msgstr "source liée"
 #: packages/ui/src/review.tsx
 msgid "Source links show where wording came from; they do not independently verify it."
 msgstr "Les liens vers les sources montrent d’où vient la formulation ; ils ne la vérifient pas de manière indépendante."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Source:"
+msgstr "Source :"
 
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide-model.ts

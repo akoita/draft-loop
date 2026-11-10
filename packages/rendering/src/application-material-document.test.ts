@@ -58,6 +58,42 @@ describe("application material document", () => {
     expect(text).toContain("finance team");
   });
 
+  it("lays a guide out one section per guide section, in French for a French guide", () => {
+    const guide = {
+      ...letter,
+      kind: "interview-guide" as const,
+      language: "fr",
+      items: [
+        { section: "read-first", question: "", text: "Mettez en avant le reporting." },
+        {
+          section: "questions",
+          question: "Pourquoi SQL ?",
+          text: "Il répond vite aux questions de la finance.",
+          trap: "Ne promettez pas un délai.",
+        },
+        { section: "questions", question: "Pourquoi nous ?", text: "Votre travail y correspond." },
+        { section: "checklist", question: "", text: "Relire l’offre." },
+      ],
+    };
+    const artifact = applicationMaterialArtifact(guide);
+    expect(artifact.sections.map((section) => section.title)).toEqual([
+      "Si vous ne lisez qu’une chose",
+      "Questions probables",
+      "Avant l’entretien",
+    ]);
+    expect(artifact.sections[1]?.blocks.map((block) => block.text)).toEqual([
+      "Pourquoi SQL ?",
+      "Il répond vite aux questions de la finance.",
+      "À éviter : Ne promettez pas un délai.",
+      "Pourquoi nous ?",
+      "Votre travail y correspond.",
+    ]);
+    expect(artifact.sections[2]?.blocks[0]?.type).toBe("bullet");
+    const text = extractTextFromRenderedDocument(renderApplicationMaterialDocument(guide, "docx"));
+    expect(text).toContain("Questions probables");
+    expect(text).toContain("Ne promettez pas un délai.");
+  });
+
   it("refuses an unknown template", () => {
     expect(() => renderApplicationMaterialDocument(letter, "pdf", { templateId: "neon" })).toThrow(
       RangeError,
