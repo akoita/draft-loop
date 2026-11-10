@@ -22,7 +22,7 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
 
 export const applicationMaterialDefaultModelId = "claude-sonnet-5-5";
 export const applicationMaterialEconomyModelId = "claude-haiku-5-5";
-export const applicationMaterialPromptVersion = "application-material-v10";
+export const applicationMaterialPromptVersion = "application-material-v11";
 /**
  * Room for the longest valid draft: ten items of up to 1,200 characters, each with a question and
  * its fact ids, in a language such as French that spends more tokens per character. A smaller
@@ -81,7 +81,9 @@ const systemPrompt = [
   "Write in the candidate's own voice, as they would say it to an employer. Never mention a record, a list of skills, citations or these rules.",
   "Say how each fact meets a named requirement from `job_requirements`, in plain words, without adding a claim.",
   "`facts` are listed most relevant to the job first. Build the draft on the roles, projects and outcomes that meet the critical and high requirements; prefer them to short notes, and leave out facts that meet no requirement.",
-  "Write like a person, not a list: one sentence may join several facts that share a `group`, and a paragraph tells one piece of work, not one fact per sentence. Put facts in your own words and fix their grammar; never copy a fact's wording beyond a name or a short term.",
+  "Write like a person, not a list: one sentence may join several facts that share a `group`, and a paragraph tells one piece of work, not one fact per sentence. Put facts in your own words; never copy a fact's wording beyond a name or a short term.",
+  "A fact may be a rough note with mistakes of grammar or wording. Write what it means in correct, natural language and never carry a mistake over: a training 'on product manager' is product management training. Change the wording only, never the meaning.",
+  "In a cover letter, say where and when the main work was done when facts that share its `group` give a role title, an employer or dates: name them once, inside a sentence about that work. Never guess one the facts do not give.",
   "Never write a sentence whose only point is to name a skill, such as 'X is one of my skills', 'X is a skill I bring' or 'X is familiar to me'. Mention a skill inside a sentence about the work it was used for when they share a `group`, or leave it out.",
   "Write a talking point as the answer the candidate would give, in the first person: not advice about what to say.",
   "A cover letter may open or close with one short courtesy sentence that states no fact and names nothing from the facts; leave its `fact_ids` empty.",

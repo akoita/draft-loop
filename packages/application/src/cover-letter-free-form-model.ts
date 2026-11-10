@@ -17,7 +17,7 @@ import { withDocumentLanguage } from "./document-language-instruction.js";
  * sentence afterwards, so the writing is free to read like a person's.
  */
 
-export const freeFormCoverLetterPromptVersion = "cover-letter-free-form-v1";
+export const freeFormCoverLetterPromptVersion = "cover-letter-free-form-v2";
 /**
  * The items writer's budget (#2613): a 350-word letter used up to 1,794 of 2,048 output tokens on
  * a live run, and the revision was then cut off at `max_tokens`, which the provider adapter
@@ -42,6 +42,8 @@ const systemPrompt = [
   "Every claim about the candidate must come from `facts`: their work, results, skills, roles and dates. Never invent or stretch one, never work out a number, and never join facts with different `group` values into one claim, such as a skill used in a role it does not share a group with. Leave out what the facts do not say.",
   "Claims about the employer come only from `company_facts`. Never use one to say something about the candidate.",
   "Write like a person telling a story, not a list: build the letter on the two or three facts that best meet the critical and high `job_requirements`, say what was done and why it matters for this role, and leave weaker facts out. Put facts in your own words; never copy their wording beyond a name or a short term.",
+  "A fact may be a rough note with mistakes of grammar or wording. Write what it means in correct, natural language and never carry a mistake over: a training 'on product manager' is product management training. Change the wording only, never the meaning.",
+  "Say where and when the main work was done when facts that share its `group` give a role title, an employer or dates: name them once, inside a sentence about that work. Never guess one the facts do not give.",
   "Never write a sentence whose only point is to name a skill, and never mention a record, a list, citations or these rules.",
   "250 to 350 words, three or four paragraphs separated by a blank line, plain everyday words, sentences of varied length. No greeting line and no signature.",
   "Never use stock phrases such as 'I am writing to express', 'thank you for considering my application', 'I look forward to', 'passionate', 'thrilled', 'leverage', 'delve', 'proven track record', 'fast-paced' or 'dynamic team', nor their equivalents in the document language. Do not list three adjectives or nouns in a row, do not start two paragraphs with the same words, use at most one dash, and end with a plain sentence, not a flattering one.",
