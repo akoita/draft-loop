@@ -210,7 +210,7 @@ describe("application material route", () => {
         },
       ],
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
-      prompt_version: "application-material-v10",
+      prompt_version: "application-material-v11",
       cost_usd: 0.002,
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -820,7 +820,7 @@ describe("application material route", () => {
       },
     ]);
     expect(body.dropped_sentences).toEqual(["I cut report time by 45% again."]);
-    expect(body.prompt_version).toBe("cover-letter-free-form-v1");
+    expect(body.prompt_version).toBe("cover-letter-free-form-v2");
     // Two letters and two checks, all under the request's cost cap.
     expect(seen).toHaveLength(4);
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
@@ -857,7 +857,7 @@ describe("application material route", () => {
       payload: { kind: "cover-letter", model: "claude-haiku-5-5" },
     });
     expect(response.statusCode).toBe(200);
-    expect(versions).toEqual(["cover-letter-free-form-v1", "cover-letter-claims-v1"]);
+    expect(versions).toEqual(["cover-letter-free-form-v2", "cover-letter-claims-v1"]);
   });
 
   it("serves no list when the server keeps no drafts", async () => {

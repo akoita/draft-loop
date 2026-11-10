@@ -291,7 +291,16 @@ form button[type="submit"]:where(:not(.button)) {
 /* Career evidence files: name and checks on one row, when it was added below (#2413). */
 .evidence-files {
   list-style: none;
+  max-height: 33rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-left: 0;
+  padding-right: 0.5rem;
+}
+
+.evidence-file-count {
+  color: var(--text-2);
+  font-weight: normal;
 }
 
 .evidence-files li {
@@ -337,6 +346,10 @@ form button[type="submit"]:where(:not(.button)) {
 }
 
 @media (max-width: 40rem) {
+  .evidence-files {
+    max-height: 60vh;
+  }
+
   .evidence-files li {
     grid-template-columns: minmax(0, 1fr);
   }

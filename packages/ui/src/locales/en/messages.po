@@ -927,7 +927,7 @@ msgstr "Accept"
 msgid "Accept all skips word-match findings"
 msgstr "Accept all skips word-match findings"
 
-#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Accept notes from agents"
 msgstr "Accept notes from agents"
 
@@ -1130,9 +1130,25 @@ msgstr "Agent"
 msgid "Agents"
 msgstr "Agents"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can add notes to your Work journal. Nothing becomes career evidence until you approve it."
+msgstr "Agents can add notes to your Work journal. Nothing becomes career evidence until you approve it."
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can add notes."
+msgstr "Agents can add notes."
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents cannot add notes to your Work journal. When they can, nothing becomes career evidence until you approve it."
+msgstr "Agents cannot add notes to your Work journal. When they can, nothing becomes career evidence until you approve it."
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents cannot add notes yet."
+msgstr "Agents cannot add notes yet."
 
 #: packages/ui/src/review.tsx
 msgid "all"
@@ -1795,6 +1811,10 @@ msgstr "central themes"
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Change"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Change in Workspace settings"
+msgstr "Change in Workspace settings"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -4306,6 +4326,10 @@ msgstr "Keep “"
 msgid "Keep a summary of the work."
 msgstr "Keep a summary of the work."
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Keep accepting"
+msgstr "Keep accepting"
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
 msgstr "Keep at least one requirement."
@@ -5041,6 +5065,10 @@ msgstr "New knowledge base name"
 msgid "New name for {0}"
 msgstr "New name for {0}"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "New notes from your agents will be refused until you turn this back on."
+msgstr "New notes from your agents will be refused until you turn this back on."
+
 #: apps/web/src/records.tsx
 msgid "New record id"
 msgstr "New record id"
@@ -5538,6 +5566,10 @@ msgstr "Notes and what never to say (optional)"
 msgid "Notes for the guide"
 msgstr "Notes for the guide"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Notes from agents"
+msgstr "Notes from agents"
+
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr "Nothing is running to stop."
@@ -5582,6 +5614,7 @@ msgid "of {0} and {1}"
 msgstr "of {0} and {1}"
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
 msgstr "Off"
 
@@ -5590,6 +5623,7 @@ msgid "Omission"
 msgstr "Omission"
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "On"
 msgstr "On"
 
@@ -7005,9 +7039,18 @@ msgstr "Review in progress · nothing to do yet"
 msgid "Review issues"
 msgstr "Review issues"
 
+#: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/work-journal-pending.tsx
 msgid "Review notes"
 msgstr "Review notes"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pending} waiting)"
+msgstr "Review notes ({pending} waiting)"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pendingNoteCountLimit} or more waiting)"
+msgstr "Review notes ({pendingNoteCountLimit} or more waiting)"
 
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/profile-status.ts
@@ -7890,6 +7933,18 @@ msgstr "Stock phrase \"{0}\": say it in your own words."
 msgid "Stop"
 msgstr "Stop"
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting"
+msgstr "Stop accepting"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes"
+msgstr "Stop accepting notes"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Stop accepting notes from agents?"
+msgstr "Stop accepting notes from agents?"
+
 #: packages/ui/src/speech-button.tsx
 msgid "Stop and transcribe"
 msgstr "Stop and transcribe"
@@ -8685,6 +8740,14 @@ msgstr "The models were configured, but the profile pair could not be saved for 
 msgid "The models were saved, but the previously saved profile pair could not be cleared. Try saving again."
 msgstr "The models were saved, but the previously saved profile pair could not be cleared. Try saving again."
 
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The note already waiting stays for review."
+msgstr "The note already waiting stays for review."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "The notes already waiting stay for review."
+msgstr "The notes already waiting stay for review."
+
 #: packages/ui/src/profile.tsx
 msgid "The operation did not complete. No new profile version was confirmed."
 msgstr "The operation did not complete. No new profile version was confirmed."
@@ -9441,10 +9504,6 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
-msgstr "To let an agent file notes here, connect it under Agents in Workspace settings."
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr "Token:"
 
@@ -9518,6 +9577,10 @@ msgstr "Try again"
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Try demo workspace"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Turn on in Workspace settings"
+msgstr "Turn on in Workspace settings"
 
 #: packages/ui/src/speech-button.tsx
 msgid "Turning your words into text on this device…"
