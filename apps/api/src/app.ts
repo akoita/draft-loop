@@ -31,6 +31,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
+import { registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
@@ -436,6 +437,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const { knowledgeIntake, knowledgeStore } = application;
     // One store for every route, so a key is never replayed by another route's cache.
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
+    // Before the routes, so a start an agent token makes is held to its monthly cap (#2599).
+    const agentSpend =
+      agentTokens === undefined
+        ? undefined
+        : registerAgentSpendGate(app, {
+            tokens: agentTokens,
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            budgetCeiling: application.budgetCeiling,
+          });
     const screening =
       application.contentScreening === undefined
         ? undefined
@@ -486,6 +497,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerRunEstimateRoute(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+      ...(agentSpend === undefined ? {} : { agentSpend }),
       ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
     });
     registerApplicationRoutes(app, {

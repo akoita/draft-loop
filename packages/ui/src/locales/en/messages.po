@@ -3006,6 +3006,10 @@ msgstr "e.g. senior-data-engineer-cv"
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
+msgstr "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
+
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
 msgid "Each value is what that run recorded."
@@ -4715,6 +4719,10 @@ msgstr "Models, writing policy and sign-in are set on Home"
 #: packages/ui/src/export-template.ts
 msgid "Modern"
 msgstr "Modern"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Monthly spend limit in US dollars"
+msgstr "Monthly spend limit in US dollars"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "More"
@@ -7561,6 +7569,10 @@ msgstr "Start"
 msgid "Start a conversation"
 msgstr "Start a conversation"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
+msgstr "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
+
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -7582,6 +7594,10 @@ msgstr "Start from the raw job description instead"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
 msgstr "Start review · {0}"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start runs"
+msgstr "Start runs"
 
 #: packages/ui/src/review.tsx
 msgid "Start the review"
@@ -9330,6 +9346,10 @@ msgstr "Updating candidate knowledge…"
 #: apps/web/src/evidence-file-model.ts
 msgid "Uploaded {when}"
 msgstr "Uploaded {when}"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "US${spent} of US${limit} used this month."
+msgstr "US${spent} of US${limit} used this month."
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"

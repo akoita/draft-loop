@@ -3006,6 +3006,10 @@ msgstr ""
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr ""
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
+msgstr ""
+
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
 msgid "Each value is what that run recorded."
@@ -4713,6 +4717,10 @@ msgstr ""
 
 #: packages/ui/src/export-template.ts
 msgid "Modern"
+msgstr ""
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Monthly spend limit in US dollars"
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx
@@ -7560,6 +7568,10 @@ msgstr ""
 msgid "Start a conversation"
 msgstr ""
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -7580,6 +7592,10 @@ msgstr ""
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
+msgstr ""
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start runs"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9328,6 +9344,10 @@ msgstr ""
 
 #: apps/web/src/evidence-file-model.ts
 msgid "Uploaded {when}"
+msgstr ""
+
+#: packages/ui/src/agent-setup.tsx
+msgid "US${spent} of US${limit} used this month."
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx

@@ -3000,6 +3000,10 @@ msgstr "p. ex. cv-data-engineer-senior"
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées avant utilisation. Les fichiers en quarantaine attendent qu’un propriétaire ou un administrateur les libère."
 
+#: packages/ui/src/agent-setup.tsx
+msgid "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
+msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace. De 0,01 à 500."
+
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
 msgid "Each value is what that run recorded."
@@ -4709,6 +4713,10 @@ msgstr "Modèles, politique de rédaction et connexion se règlent sur l’accue
 #: packages/ui/src/export-template.ts
 msgid "Modern"
 msgstr "Moderne"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "Monthly spend limit in US dollars"
+msgstr "Limite de dépense mensuelle en dollars US"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "More"
@@ -7555,6 +7563,10 @@ msgstr "Démarrer"
 msgid "Start a conversation"
 msgstr "Démarrer une conversation"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
+msgstr "Lancer une exécution de CV sur une offre dont vous avez relu les exigences, dans une limite de dépense mensuelle"
+
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -7576,6 +7588,10 @@ msgstr "Partir plutôt de la description de poste brute"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
 msgstr "Démarrer la relecture · {0}"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start runs"
+msgstr "Lancer des exécutions"
 
 #: packages/ui/src/review.tsx
 msgid "Start the review"
@@ -9324,6 +9340,10 @@ msgstr "Mise à jour des connaissances candidat…"
 #: apps/web/src/evidence-file-model.ts
 msgid "Uploaded {when}"
 msgstr "Ajouté le {when}"
+
+#: packages/ui/src/agent-setup.tsx
+msgid "US${spent} of US${limit} used this month."
+msgstr "{spent} $US sur {limit} $US utilisés ce mois-ci."
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"

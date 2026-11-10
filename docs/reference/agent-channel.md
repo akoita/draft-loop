@@ -14,7 +14,7 @@ The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
 created: `journal` (file notes and list their titles), `applications:read`,
-`jobs:write` and `drafts:read`. Every other route refuses it.
+`jobs:write`, `drafts:read` and `runs:start`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -252,6 +252,30 @@ its name on the token form, and where to create a new token.
 candidate to export it in DraftLoop; it never exports or writes one itself.
 The material route returns the cited facts too, so a `drafts:read` token can
 read them by calling the API directly; the tools leave them out.
+
+### Starting runs within a monthly spend cap
+
+A token with `runs:start` can price a run and start a CV run on an
+application's reviewed brief. The candidate gives it a monthly spend limit in
+US dollars when creating it; the token form and the API refuse one without
+the other.
+
+| Route                | What an agent token may do                                                |
+| -------------------- | ------------------------------------------------------------------------- |
+| `GET runs/estimate`  | Price a run; the answer adds `agentSpend`: cap, spent, remaining, per run |
+| `POST runs`          | Start a run with `applicationId` and `opportunityBrief` only              |
+
+- **Reservation.** Each start reserves the workspace's per-run cost limit
+  against the cap for the UTC month, before the run is saved. A run cannot
+  cost more, so the cap is never passed.
+- **Retries.** A retry with the same `Idempotency-Key` reserves nothing more,
+  and a start the server refuses gives its reservation back.
+- **Past the cap.** The start answers 429 `agent_spend_cap_reached` with the
+  cap and what was spent. It works again next month, or with a new token.
+- **Stays human.** The models, the career profile, the budget, approving the
+  draft and deciding findings stay with the candidate in DraftLoop.
+
+The token list in Workspace settings shows what each token used this month.
 
 `init` issues a token with `journal`, `applications:read` and `jobs:write`.
 To choose others, name them with `--scope`, repeated; `drafts:read` is given

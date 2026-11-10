@@ -12,6 +12,8 @@ export interface AgentRouteRule {
   readonly allows?: (request: FastifyRequest) => boolean;
   /** Why `allows` refused, for the agent to read. */
   readonly refusal?: string;
+  /** What a start reserves against the token's monthly spend cap (`agent-spend-gate.ts`). */
+  readonly charge?: "run";
 }
 
 const workspace = "/v1/workspaces/:workspaceId";
@@ -22,6 +24,7 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   "applications:read": "Read applications",
   "jobs:write": "Add jobs",
   "drafts:read": "Read CVs and drafts",
+  "runs:start": "Start runs",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
@@ -44,6 +47,25 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`GET ${workspace}/runs/:runId/exports`]: { scope: "drafts:read" },
   [`GET ${workspace}/runs/:runId/exports/:exportId/content`]: { scope: "drafts:read" },
   [`GET ${workspace}/applications/:applicationId/material`]: { scope: "drafts:read" },
+  // Runs within the token's monthly spend cap (#2599), on a brief the person reviewed; the
+  // models, the career profile and every decision on the draft stay with the person.
+  [`GET ${workspace}/runs/estimate`]: { scope: "runs:start" },
+  [`POST ${workspace}/runs`]: {
+    scope: "runs:start",
+    charge: "run",
+    allows: (request) => {
+      const body = request.body as Record<string, unknown> | undefined;
+      return (
+        body !== undefined &&
+        typeof body.applicationId === "string" &&
+        body.opportunityBrief !== undefined &&
+        body.modelProfiles === undefined &&
+        body.candidateProfile === undefined
+      );
+    },
+    refusal:
+      "An agent token starts a run on an application's reviewed brief only (applicationId and opportunityBrief); the models and the career profile are the person's choice in DraftLoop.",
+  },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
     scope: "jobs:write",
@@ -111,7 +133,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/review-state",
   "GET /v1/workspaces/:workspaceId/runs/:runId/review",
   "GET /v1/workspaces/:workspaceId/runs/:runId/usage",
-  "GET /v1/workspaces/:workspaceId/runs/estimate",
   "GET /v1/workspaces/:workspaceId/screening",
   "GET /v1/workspaces/:workspaceId/work-journal/intake",
   "GET /v1/workspaces/:workspaceId/work-journal/notes/:noteId",
@@ -155,7 +176,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/preference-suggestions/:suggestionId/dismiss",
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/review",
-  "POST /v1/workspaces/:workspaceId/runs",
   "POST /v1/workspaces/:workspaceId/runs/:runId/approve",
   "POST /v1/workspaces/:workspaceId/runs/:runId/export-preview",
   "POST /v1/workspaces/:workspaceId/runs/:runId/exports",

@@ -8,6 +8,7 @@ import {
   agentConfiguration,
   agentConfigurationHoldsToken,
   agentTokenPlaceholder,
+  parseAgentMonthlyCap,
 } from "./agent-setup-model.js";
 
 // A fictional token: the real secrets are random and shown only once.
@@ -99,6 +100,17 @@ describe("agent configuration", () => {
   });
 });
 
+describe("monthly spend limit", () => {
+  it("reads 0.01 to 500 US dollars in cents, with a comma or a point", () => {
+    expect(parseAgentMonthlyCap(" 5 ")).toBe(5);
+    expect(parseAgentMonthlyCap("12,50")).toBe(12.5);
+    expect(parseAgentMonthlyCap("500")).toBe(500);
+    for (const refused of ["0", "500.01", "1.234", "-3", "abc", ""]) {
+      expect(parseAgentMonthlyCap(refused), refused).toBeUndefined();
+    }
+  });
+});
+
 const props: AgentSetupProps = {
   available: true,
   serverUrl: "http://127.0.0.1:8080",
@@ -142,8 +154,11 @@ describe("AgentSetup", () => {
     expect(html).toContain('id="coding-agents"');
     expect(html).toContain("<h3>Agents</h3>");
     expect(html).toContain('<details class="agent-setup" open="">');
-    expect(html.match(/type="checkbox"/gu)).toHaveLength(4);
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(5);
     expect(html.match(/checked=""/gu)).toHaveLength(3);
+    // Starting runs spends money: never ticked unasked, and its limit shows once it is ticked.
+    expect(html).not.toMatch(/checked=""[^>]*\/> Start a CV run/u);
+    expect(html).not.toContain("Monthly spend limit");
     expect(html).not.toMatch(/checked=""[^>]*\/> Read your exported CVs/u);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
     expect(html).toContain("See your job applications");

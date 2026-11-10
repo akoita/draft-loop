@@ -622,9 +622,10 @@
                 "journal",
                 "applications:read",
                 "jobs:write",
-                "drafts:read"
+                "drafts:read",
+                "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -641,6 +642,14 @@
           "active": {
             "type": "boolean",
             "description": "False once the token is revoked or expired."
+          },
+          "monthly_cap_usd": {
+            "description": "With runs:start: what the token may reserve each UTC month.",
+            "type": "number"
+          },
+          "spent_this_month_usd": {
+            "description": "With runs:start: what it reserved this UTC month.",
+            "type": "number"
           }
         },
         "required": [
@@ -669,9 +678,10 @@
                 "journal",
                 "applications:read",
                 "jobs:write",
-                "drafts:read"
+                "drafts:read",
+                "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -688,6 +698,14 @@
           "active": {
             "type": "boolean",
             "description": "False once the token is revoked or expired."
+          },
+          "monthly_cap_usd": {
+            "description": "With runs:start: what the token may reserve each UTC month.",
+            "type": "number"
+          },
+          "spent_this_month_usd": {
+            "description": "With runs:start: what it reserved this UTC month.",
+            "type": "number"
           },
           "token": {
             "type": "string",
@@ -4509,6 +4527,32 @@
               "remaining",
               "sufficient"
             ]
+          },
+          "agentSpend": {
+            "description": "For an agent token with runs:start: its monthly spend cap (#2599).",
+            "type": "object",
+            "properties": {
+              "monthlyCapUsd": {
+                "type": "number"
+              },
+              "spentThisMonthUsd": {
+                "type": "number",
+                "description": "What the token reserved this UTC month."
+              },
+              "remainingUsd": {
+                "type": "number"
+              },
+              "runReservesUsd": {
+                "type": "number",
+                "description": "What one run reserves against the cap: the workspace's per-run cost limit."
+              }
+            },
+            "required": [
+              "monthlyCapUsd",
+              "spentThisMonthUsd",
+              "remainingUsd",
+              "runReservesUsd"
+            ]
           }
         },
         "required": [
@@ -8220,9 +8264,10 @@
                 "journal",
                 "applications:read",
                 "jobs:write",
-                "drafts:read"
+                "drafts:read",
+                "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -8239,6 +8284,14 @@
           "active": {
             "type": "boolean",
             "description": "False once the token is revoked or expired."
+          },
+          "monthly_cap_usd": {
+            "description": "With runs:start: what the token may reserve each UTC month.",
+            "type": "number"
+          },
+          "spent_this_month_usd": {
+            "description": "With runs:start: what it reserved this UTC month.",
+            "type": "number"
           }
         },
         "required": [
@@ -8268,9 +8321,10 @@
                 "journal",
                 "applications:read",
                 "jobs:write",
-                "drafts:read"
+                "drafts:read",
+                "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -8287,6 +8341,14 @@
           "active": {
             "type": "boolean",
             "description": "False once the token is revoked or expired."
+          },
+          "monthly_cap_usd": {
+            "description": "With runs:start: what the token may reserve each UTC month.",
+            "type": "number"
+          },
+          "spent_this_month_usd": {
+            "description": "With runs:start: what it reserved this UTC month.",
+            "type": "number"
           },
           "token": {
             "type": "string",
@@ -11500,6 +11562,33 @@
               "unlimited",
               "remaining",
               "sufficient"
+            ],
+            "additionalProperties": false
+          },
+          "agentSpend": {
+            "description": "For an agent token with runs:start: its monthly spend cap (#2599).",
+            "type": "object",
+            "properties": {
+              "monthlyCapUsd": {
+                "type": "number"
+              },
+              "spentThisMonthUsd": {
+                "type": "number",
+                "description": "What the token reserved this UTC month."
+              },
+              "remainingUsd": {
+                "type": "number"
+              },
+              "runReservesUsd": {
+                "type": "number",
+                "description": "What one run reserves against the cap: the workspace's per-run cost limit."
+              }
+            },
+            "required": [
+              "monthlyCapUsd",
+              "spentThisMonthUsd",
+              "remainingUsd",
+              "runReservesUsd"
             ],
             "additionalProperties": false
           }
@@ -25083,7 +25172,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) and drafts:read (a run's exports and the saved cover letters and interview questions). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -25106,7 +25195,7 @@
                   "scopes": {
                     "description": "What the token may do; [\"journal\"] by default.",
                     "minItems": 1,
-                    "maxItems": 4,
+                    "maxItems": 5,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -25114,10 +25203,18 @@
                         "journal",
                         "applications:read",
                         "jobs:write",
-                        "drafts:read"
+                        "drafts:read",
+                        "runs:start"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
                     }
+                  },
+                  "monthly_cap_usd": {
+                    "description": "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit.",
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 500,
+                    "multipleOf": 0.01
                   }
                 },
                 "required": [

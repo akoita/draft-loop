@@ -33,19 +33,26 @@ export interface AgentConnection {
 }
 
 /** What an agent token may do, as the API names it (ADR 0011 D17). */
-export type AgentScope = "journal" | "applications:read" | "jobs:write" | "drafts:read";
+export type AgentScope =
+  | "journal"
+  | "applications:read"
+  | "jobs:write"
+  | "drafts:read"
+  | "runs:start";
 
 export const agentScopes: readonly AgentScope[] = [
   "journal",
   "applications:read",
   "jobs:write",
   "drafts:read",
+  "runs:start",
 ];
 
 /**
  * A new token's scopes until the person changes them: what the plugin's skills and tools use
  * (#2534), so a first token is not refused. Reading CVs and drafts shares the candidate's
- * material with the agent, so the person ticks it themselves (#2569).
+ * material with the agent (#2569), and starting runs spends money (#2599), so the person ticks
+ * those themselves.
  */
 export const defaultAgentScopes: readonly AgentScope[] = [
   "journal",
@@ -63,6 +70,8 @@ export function agentScopeLabel(scope: AgentScope): string {
       return t`Add a job application from a pasted job description`;
     case "drafts:read":
       return t`Read your exported CVs and saved cover letters and interview questions`;
+    case "runs:start":
+      return t`Start a CV run on a job whose requirements you reviewed, within a monthly spend limit`;
   }
 }
 
@@ -77,7 +86,20 @@ export function agentScopeName(scope: AgentScope): string {
       return t`Add jobs`;
     case "drafts:read":
       return t`Read CVs and drafts`;
+    case "runs:start":
+      return t`Start runs`;
   }
+}
+
+/** The monthly spend limit a token that starts runs gets until the person changes it. */
+export const defaultAgentMonthlyCapUsd = "5";
+
+/** The spend limit the person typed, in US dollars; undefined unless 0.01 to 500 in cents. */
+export function parseAgentMonthlyCap(text: string): number | undefined {
+  const trimmed = text.trim().replace(",", ".");
+  if (!/^\d{1,3}(\.\d{1,2})?$/u.test(trimmed)) return undefined;
+  const value = Number(trimmed);
+  return value >= 0.01 && value <= 500 ? value : undefined;
 }
 
 /** One of the workspace's agent tokens, as the API lists it. */
@@ -88,6 +110,9 @@ export interface AgentTokenView {
   readonly created_at: string;
   readonly expires_at: string;
   readonly active: boolean;
+  /** With `runs:start`: the monthly spend limit and what this month used, in US dollars. */
+  readonly monthly_cap_usd?: number | undefined;
+  readonly spent_this_month_usd?: number | undefined;
 }
 
 const defaultWorkspace = "owner";
