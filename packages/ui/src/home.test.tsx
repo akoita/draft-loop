@@ -287,6 +287,17 @@ describe("Home dashboard", () => {
     );
   });
 
+  it("puts the theme control in the header, before the workspace actions", () => {
+    const html = render();
+    const header = html.slice(
+      html.indexOf('class="home-header-actions"'),
+      html.indexOf("</header>"),
+    );
+    expect(header).toContain('class="button button-toolbar header-theme-toggle"');
+    expect(header).toContain("Theme: ");
+    expect(header.indexOf("header-theme-toggle")).toBeLessThan(header.indexOf("Close workspace"));
+  });
+
   it("shows an error banner as an alert", () => {
     expect(render({ errorMessage: "The application could not be opened." })).toContain(
       'role="alert"',

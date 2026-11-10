@@ -2989,7 +2989,7 @@ export function App({
                   />
                 )}
               </div>
-              <HostWorkspaceSettings />
+              <HostWorkspaceSettings openEvidence={openEvidenceScreen} />
               <ScreenLanguageSetting />
               {providerAuthentication}
             </>

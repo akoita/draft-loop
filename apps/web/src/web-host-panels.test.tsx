@@ -37,7 +37,8 @@ describe("the web's host panels", () => {
       webHostPanels(unusedClient, "sign-in", undefined).evidenceAfter?.({ revision: 0 }),
     );
 
-    expect(owner).toContain("Accept notes from agents");
+    expect(owner).toContain(">Work journal</h2>");
+    expect(owner).not.toContain("Accept notes from agents");
     expect(signIn).not.toContain("Work journal");
   });
 
