@@ -1313,7 +1313,7 @@
         "properties": {
           "items": {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 80,
             "type": "array",
             "items": {
               "type": "object",
@@ -9261,7 +9261,7 @@
         "properties": {
           "items": {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 80,
             "type": "array",
             "items": {
               "type": "object",

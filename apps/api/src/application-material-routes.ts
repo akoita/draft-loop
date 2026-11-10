@@ -47,7 +47,7 @@ import {
   applicationMaterialGuidanceSchema,
   interviewGuideSections,
   maximumSavedApplicationMaterialItemCharacters,
-  maximumSavedApplicationMaterialItems,
+  maximumSavedInterviewGuideItems,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
   savedApplicationMaterialKinds,
@@ -317,7 +317,7 @@ const editBody = z
         }),
       )
       .min(1)
-      .max(maximumSavedApplicationMaterialItems)
+      .max(maximumSavedInterviewGuideItems)
       .describe("Every item's text, in the saved draft's order; one entry for each of its items."),
   })
   .meta({ id: "ApplicationMaterialEdit" });

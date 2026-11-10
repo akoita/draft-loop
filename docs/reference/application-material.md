@@ -192,7 +192,7 @@ refused or failed draft is not saved.
 A guide prepares the candidate for one interview (#2615 to #2632). It is a
 sectioned draft of kind `interview-guide`, written from the facts allowed for
 interviews, the job's requirements and a research brief. The Prepare panel
-does not offer it yet (#2621); the API route below does.
+offers it (see [The guide tab](#the-guide-tab)) through the API route below.
 
 ```mermaid
 flowchart LR
@@ -316,9 +316,10 @@ The request must send one text for each item, in order; another count answers
 ## The web panel
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
-The candidate picks a cover letter or interview questions on its toggle and
-selects the button named after it, **Draft cover letter** or **Draft
-interview questions**. **Guide this draft** opens optional fields: what to stress,
+The candidate picks a cover letter or an interview preparation guide on its
+toggle and selects the button named after it, **Draft cover letter** or
+**Draft interview guide**. Interview questions drafted before guides existed
+stay readable in the guide tab's version list. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
 guidance it was written with. With two models offered, a **Model** list in
 the same fields names each with its cost. Under a cover letter, **Writing check** lists the
@@ -355,6 +356,23 @@ such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
 `apps/web/src/application-material.tsx` and fills the shared screens'
 `application` host slot; a host that leaves the slot empty shows nothing new.
+
+### The guide tab
+
+The guide tab asks for the interview: its kind, length, time, format and who
+the candidate meets, by role. **How deep** offers **Essential** and
+**Extensive** with their cost, and marks the one the interview suggests.
+**Topics to cover** offers quick picks and free text; **Notes and what never
+to say** holds notes and the never-say list. A checked research box lets the
+guide research first.
+
+While research runs, the button reads **Researching…** and the panel waits
+for the run, then drafts. The guide opens with **Guide contents** and its
+sections folded, the first one open. Likely questions show the trap to avoid,
+and statements from research list it under **From research**. **Left out**
+lists the sentences the check dropped, and a note names topics research found
+no source for. An extensive guide offers one button per part to write it
+again. The tab lives in `apps/web/src/interview-guide.tsx`.
 
 ## Validation walk
 

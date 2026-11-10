@@ -814,8 +814,8 @@ msgid "A contract with the candidate"
 msgstr "A contract with the candidate"
 
 #: apps/web/src/application-material.tsx
-msgid "A cover letter or interview questions for this application, when you need them. Your CV does not depend on them."
-msgstr "A cover letter or interview questions for this application, when you need them. Your CV does not depend on them."
+msgid "A cover letter or an interview preparation guide for this application, when you need them. Your CV does not depend on them."
+msgstr "A cover letter or an interview preparation guide for this application, when you need them. Your CV does not depend on them."
 
 #: apps/web/src/refusal-text.ts
 msgid "A credential is required."
@@ -828,6 +828,14 @@ msgstr "A critic from another company is checking this letter for sentences that
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "A gap in my career"
+msgstr "A gap in my career"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "A guide sends this application's job requirements, the career facts you allow for interviews and your interview details to Anthropic (Claude). Your name, contact details and never-say list are never sent. With research approved, the server first searches the public web for the employer, the role and the field, which nothing about you reaches."
+msgstr "A guide sends this application's job requirements, the career facts you allow for interviews and your interview details to Anthropic (Claude). Your name, contact details and never-say list are never sent. With research approved, the server first searches the public web for the employer, the role and the field, which nothing about you reaches."
 
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
@@ -870,6 +878,10 @@ msgstr "A newer screening result replaced this one. Reload to see the current st
 msgid "A one-run writing policy cannot be used on the hosted service yet."
 msgstr "A one-run writing policy cannot be used on the hosted service yet."
 
+#: apps/web/src/interview-guide.tsx
+msgid "A pay range is given only from a dated source research finds; otherwise the guide says what to check."
+msgstr "A pay range is given only from a dated source research finds; otherwise the guide says what to check."
+
 #: packages/ui/src/new-application-form.tsx
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
@@ -885,6 +897,10 @@ msgstr "A requirement cannot be empty. Write it out or drop it."
 #: packages/ui/src/review.tsx
 msgid "A review is already under way."
 msgstr "A review is already under way."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "A technology I have not used"
+msgstr "A technology I have not used"
 
 #: apps/web/src/application-material.tsx
 msgid "About the company"
@@ -1528,6 +1544,10 @@ msgstr "Autopilot keeps going until the draft is ready, a claim needs your call,
 msgid "Autopilot: run all"
 msgstr "Autopilot: run all"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Availability and notice"
+msgstr "Availability and notice"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "available"
 msgstr "available"
@@ -1543,6 +1563,10 @@ msgstr "Available candidate knowledge bases"
 #: packages/ui/src/review.tsx
 msgid "Available now"
 msgstr "Available now"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Avoid:"
+msgstr "Avoid:"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Awards"
@@ -1572,6 +1596,10 @@ msgstr "Basis for storing the material"
 #: packages/ui/src/review.tsx
 msgid "Before the first run"
 msgstr "Before the first run"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Before the interview"
+msgstr "Before the interview"
 
 #: packages/ui/src/review.tsx
 msgid "Before the review"
@@ -1755,6 +1783,10 @@ msgstr "Career profile"
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Career profile version"
 msgstr "Career profile version"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Case study"
+msgstr "Case study"
 
 #: packages/ui/src/run-details.tsx
 msgid "central themes"
@@ -2809,6 +2841,10 @@ msgstr "Draft {width} pixels wide"
 msgid "Draft a new cover letter"
 msgstr "Draft a new cover letter"
 
+#: apps/web/src/application-material-model.ts
+msgid "Draft a new interview guide"
+msgstr "Draft a new interview guide"
+
 #: packages/ui/src/review.tsx
 msgid "Draft artifact produced"
 msgstr "Draft artifact produced"
@@ -2829,6 +2865,10 @@ msgstr "Draft cover letter"
 #: apps/web/src/application-material.tsx
 msgid "Draft for this application"
 msgstr "Draft for this application"
+
+#: apps/web/src/application-material-model.ts
+msgid "Draft interview guide"
+msgstr "Draft interview guide"
 
 #: apps/web/src/application-material-model.ts
 msgid "Draft interview questions"
@@ -3064,6 +3104,7 @@ msgid "edited"
 msgstr "edited"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/interview-guide.tsx
 msgid "Edited by you"
 msgstr "Edited by you"
 
@@ -3168,6 +3209,10 @@ msgstr "Entered by you"
 #: packages/ui/src/provider-authentication.tsx
 msgid "Environment variable"
 msgstr "Environment variable"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Essential"
+msgstr "Essential"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Estimated public API cost"
@@ -3308,6 +3353,10 @@ msgstr "Exporting"
 #: packages/ui/src/review-footer.tsx
 msgid "Exporting {0}…"
 msgstr "Exporting {0}…"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Extensive"
+msgstr "Extensive"
 
 #: packages/ui/src/model-profile-presentation.ts
 msgid "Extra high"
@@ -3491,6 +3540,10 @@ msgstr "Final CV checks passed"
 msgid "Final CV checks run again on your edits"
 msgstr "Final CV checks run again on your edits"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Final round"
+msgstr "Final round"
+
 #: packages/ui/src/review.tsx
 msgid "finding"
 msgstr "finding"
@@ -3560,17 +3613,37 @@ msgstr "Folder"
 msgid "Follow system"
 msgstr "Follow system"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "For a 15 to 30 minute screen: the key points, your pitch, weak points and six likely questions. About US$0.10 to 0.15, at most US$0.20."
+msgstr "For a 15 to 30 minute screen: the key points, your pitch, weak points and six likely questions. About US$0.10 to 0.15, at most US$0.20."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "For an interview of an hour or more: adds the market, a requirement matrix, stories, twelve questions and a checklist. About US$0.30 to 0.40, at most US$0.40."
+msgstr "For an interview of an hour or more: adds the market, a requirement matrix, stories, twelve questions and a checklist. About US$0.30 to 0.40, at most US$0.40."
+
 #: apps/web/src/application-material.tsx
 msgid "For example: my move into team leadership"
 msgstr "For example: my move into team leadership"
+
+#: apps/web/src/interview-guide.tsx
+msgid "For example: recruiter, or engineering manager"
+msgstr "For example: recruiter, or engineering manager"
 
 #: apps/web/src/application-material.tsx
 msgid "For example: the hiring team"
 msgstr "For example: the hiring team"
 
+#: apps/web/src/interview-guide.tsx
+msgid "For example: they asked me to prepare a short case"
+msgstr "For example: they asked me to prepare a short case"
+
 #: apps/web/src/application-material-model.ts
 msgid "Formal"
 msgstr "Formal"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Format"
+msgstr "Format"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Formula: calls × (input tokens × input rate + output tokens × output rate) ÷ 1,000,000; author and critic are added together. The output allocation includes billable reasoning tokens where applicable, but does not change runtime controls."
@@ -3584,6 +3657,10 @@ msgstr "from {0}"
 #: apps/web/src/evidence-panels.tsx
 msgid "From career interview"
 msgstr "From career interview"
+
+#: apps/web/src/interview-guide.tsx
+msgid "From research"
+msgstr "From research"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the file chosen for this application, as it reads now."
@@ -3822,6 +3899,10 @@ msgstr "Group applications"
 msgid "Guidance shapes the writing only. Every claim still comes from your career record."
 msgstr "Guidance shapes the writing only. Every claim still comes from your career record."
 
+#: apps/web/src/interview-guide.tsx
+msgid "Guide contents"
+msgstr "Guide contents"
+
 #: apps/web/src/application-material.tsx
 msgid "Guide this draft (optional)"
 msgstr "Guide this draft (optional)"
@@ -3860,6 +3941,10 @@ msgstr "Hide side panel"
 msgid "High"
 msgstr "High"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Hiring manager"
+msgstr "Hiring manager"
+
 #: apps/web/src/consent.tsx
 msgid "History ("
 msgstr "History ("
@@ -3878,6 +3963,10 @@ msgstr "History:"
 #: packages/ui/src/page-navigation.ts
 msgid "Home"
 msgstr "Home"
+
+#: apps/web/src/interview-guide.tsx
+msgid "How deep"
+msgstr "How deep"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "How it works"
@@ -3932,6 +4021,10 @@ msgstr "I have no topic to suggest today. Is there anything from your career you
 #: packages/ui/src/review.tsx
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
 msgstr "I reviewed these destinations, data categories, retention preference, and limits."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "If you read one thing"
+msgstr "If you read one thing"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Illustrative public API token-cost scenario"
@@ -4126,6 +4219,7 @@ msgstr "It is empty."
 
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
+#: apps/web/src/interview-guide.tsx
 msgid "Item {0}"
 msgstr "Item {0}"
 
@@ -4252,6 +4346,10 @@ msgstr "Keyword search over your candidate knowledge. Needs no model."
 msgid "Kind"
 msgstr "Kind"
 
+#: apps/web/src/interview-guide.tsx
+msgid "Kind of interview"
+msgstr "Kind of interview"
+
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Knowledge base"
@@ -4272,6 +4370,10 @@ msgstr "Knowledge-store selection is unavailable in this desktop host."
 #: packages/ui/src/known-gaps.ts
 msgid "Known gap: the approved evidence does not support this requirement"
 msgstr "Known gap: the approved evidence does not support this requirement"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Language"
+msgstr "Language"
 
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Large knowledge bases are processed in parts, so this can take several minutes. Keep DraftLoop open."
@@ -4320,6 +4422,7 @@ msgid "Leadership"
 msgstr "Leadership"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/interview-guide.tsx
 msgid "Left out"
 msgstr "Left out"
 
@@ -4340,6 +4443,10 @@ msgstr "Legitimate interest"
 msgid "Length"
 msgstr "Length"
 
+#: apps/web/src/interview-guide.tsx
+msgid "Length in minutes"
+msgstr "Length in minutes"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
 msgstr "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
@@ -4359,6 +4466,10 @@ msgstr "Light"
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Like section ("
 msgstr "Like section ("
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Likely questions"
+msgstr "Likely questions"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Likely the same work:"
@@ -4535,6 +4646,10 @@ msgstr "Manage career evidence"
 msgid "Manage provider authentication"
 msgstr "Manage provider authentication"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Managing people"
+msgstr "Managing people"
+
 #: packages/ui/src/review.tsx
 msgid "Mark every word that changed since the previous version"
 msgstr "Mark every word that changed since the previous version"
@@ -4660,6 +4775,10 @@ msgstr "model"
 #: packages/ui/src/app.tsx
 msgid "Model"
 msgstr "Model"
+
+#: apps/web/src/application-material.tsx
+msgid "Model (optional)"
+msgstr "Model (optional)"
 
 #: packages/ui/src/app.tsx
 msgid "Model discovery can only ask the default local server until this workspace exists, and you named a different address. Type the model id your server serves."
@@ -4857,9 +4976,14 @@ msgstr "Neither run used a requirements brief (raw job text)"
 msgid "Never included"
 msgstr "Never included"
 
+#: apps/web/src/interview-guide-model.ts
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Never say"
 msgstr "Never say"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Never say, one per line"
+msgstr "Never say, one per line"
 
 #: apps/web/src/private-sections.tsx
 #: apps/web/src/sensitivity-model.ts
@@ -5091,6 +5215,10 @@ msgstr "No evidence found for: "
 msgid "No fact in your career record supports these sentences, so they are not in the letter."
 msgstr "No fact in your career record supports these sentences, so they are not in the letter."
 
+#: apps/web/src/interview-guide.tsx
+msgid "No fact in your record or finding in the research supports these sentences, or they came close to something you never say, so they are not in the guide."
+msgstr "No fact in your record or finding in the research supports these sentences, or they came close to something you never say, so they are not in the guide."
+
 #: packages/ui/src/profile.tsx
 msgid "No facts are recorded in this version."
 msgstr "No facts are recorded in this version."
@@ -5249,6 +5377,10 @@ msgstr "No saved profile version exists for this name yet."
 msgid "No sent evidence for {0}"
 msgstr "No sent evidence for {0}"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "No sentence of the guide about you was supported by your career record, so it was refused. Add facts to your record, or allow more of them for interviews."
+msgstr "No sentence of the guide about you was supported by your career record, so it was refused. Add facts to your record, or allow more of them for interviews."
+
 #: apps/web/src/refusal-text.ts
 msgid "No such job brief."
 msgstr "No such job brief."
@@ -5341,6 +5473,10 @@ msgstr "Not generated yet"
 msgid "Not installed"
 msgstr "Not installed"
 
+#: apps/web/src/interview-guide.tsx
+msgid "Not known"
+msgstr "Not known"
+
 #: packages/ui/src/review.tsx
 msgid "not linked to candidate materials"
 msgstr "not linked to candidate materials"
@@ -5393,6 +5529,14 @@ msgstr "Note (optional)"
 #: packages/ui/src/source-evidence-kind-contract.ts
 msgid "Notes"
 msgstr "Notes"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Notes and what never to say (optional)"
+msgstr "Notes and what never to say (optional)"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Notes for the guide"
+msgstr "Notes for the guide"
 
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
@@ -5448,6 +5592,10 @@ msgstr "Omission"
 #: packages/ui/src/start-confirmation.tsx
 msgid "On"
 msgstr "On"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "On site"
+msgstr "On site"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "One"
@@ -5636,8 +5784,8 @@ msgid "Optional"
 msgstr "Optional"
 
 #: apps/web/src/application-material.tsx
-msgid "Optional · cover letter or interview questions"
-msgstr "Optional · cover letter or interview questions"
+msgid "Optional · cover letter or interview guide"
+msgstr "Optional · cover letter or interview guide"
 
 #: packages/ui/src/application-steps.tsx
 msgid "Or provide a public URL"
@@ -5679,6 +5827,10 @@ msgstr "Other MCP agents (JSON)"
 #: packages/ui/src/app.tsx
 msgid "Other model…"
 msgstr "Other model…"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Other topics, one per line"
+msgstr "Other topics, one per line"
 
 #: packages/ui/src/profile-status.ts
 msgid "Out of date with your evidence"
@@ -5827,6 +5979,10 @@ msgstr "Paused: autopilot found a conflict only you can settle — a disputed cl
 msgid "Paused: the same blocking finding persisted for two rounds — decide it to continue"
 msgstr "Paused: the same blocking finding persisted for two rounds — decide it to continue"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "pay"
+msgstr "pay"
+
 #: packages/ui/src/review.tsx
 msgid "Pending"
 msgstr "Pending"
@@ -5842,6 +5998,10 @@ msgstr "Permission to send material to model providers"
 #: apps/web/src/consent.tsx
 msgid "Permission to store this material"
 msgstr "Permission to store this material"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Phone"
+msgstr "Phone"
 
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Pick a version to read its text."
@@ -5870,6 +6030,10 @@ msgstr "Policy text"
 #: packages/ui/src/profile-presentation.ts
 msgid "Possible duplicate"
 msgstr "Possible duplicate"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Practical points to settle"
+msgstr "Practical points to settle"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Premium"
@@ -6087,6 +6251,10 @@ msgstr "Quarantined: flagged"
 msgid "Quarantined: not screened"
 msgstr "Quarantined: not screened"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Questions to ask"
+msgstr "Questions to ask"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Questions written by"
 msgstr "Questions written by"
@@ -6265,6 +6433,10 @@ msgstr "Reason for releasing"
 msgid "reasoning"
 msgstr "reasoning"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "recent news"
+msgstr "recent news"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Recent workspace history cleared. Workspace files are unchanged."
 msgstr "Recent workspace history cleared. Workspace files are unchanged."
@@ -6371,6 +6543,10 @@ msgstr "Releasing…"
 #: apps/web/src/new-release.tsx
 msgid "Reload"
 msgstr "Reload"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Remote work and travel"
+msgstr "Remote work and travel"
 
 #: apps/web/src/private-sections.tsx
 #: apps/web/src/records.tsx
@@ -6563,9 +6739,17 @@ msgstr "Requirements were not extracted"
 msgid "Research again"
 msgstr "Research again"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Research found no recent source on {named}, so those sections state no fact. Check them yourself before the interview."
+msgstr "Research found no recent source on {named}, so those sections state no fact. Check them yourself before the interview."
+
 #: apps/web/src/research-brief.tsx
 msgid "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
 msgstr "Research the employer before you draft: recent, dated facts that a cover letter or interview answer can cite."
+
+#: apps/web/src/interview-guide.tsx
+msgid "Research the employer, the role and the field first when the saved research is older than two weeks or misses a topic"
+msgstr "Research the employer, the role and the field first when the saved research is older than two weeks or misses a topic"
 
 #: apps/web/src/research-brief.tsx
 msgid "Research this application"
@@ -6578,6 +6762,14 @@ msgstr "Researched on {day}: {kept} sources kept, {dropped} dropped as unsafe or
 #: apps/web/src/research-brief-model.ts
 msgid "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
 msgstr "Researching searches the public web for this employer and role with the server's search provider (Claude's web search unless the server picked another), screens each page, and sends the kept excerpts to Anthropic (Claude) to write short facts that cite them. Nothing about you is sent. It costs at most {researchMaxCostLabel} and the brief is saved with this application."
+
+#: apps/web/src/application-material.tsx
+msgid "Researching the employer, the role and the field. The guide is drafted as soon as the research ends, usually within two minutes."
+msgstr "Researching the employer, the role and the field. The guide is drafted as soon as the research ends, usually within two minutes."
+
+#: apps/web/src/application-material.tsx
+msgid "Researching…"
+msgstr "Researching…"
 
 #: apps/web/src/research-brief-model.ts
 msgid "Researching… this usually takes a minute or two."
@@ -7070,6 +7262,7 @@ msgstr "Runs use these files while no knowledge base is selected. Adding a sourc
 msgid "Runtime controls"
 msgstr "Runtime controls"
 
+#: apps/web/src/interview-guide-model.ts
 #: apps/web/src/private-sections.tsx
 msgid "Salary"
 msgstr "Salary"
@@ -7225,6 +7418,14 @@ msgstr "Screen language"
 #: packages/ui/src/work-journal-model.ts
 msgid "Screened: clear"
 msgstr "Screened: clear"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Screening and technical together"
+msgstr "Screening and technical together"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Screening call"
+msgstr "Screening call"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Screening held this note back. Edit it so it screens clear, or discard it."
@@ -7561,6 +7762,8 @@ msgid "Source links show where wording came from; they do not independently veri
 msgstr "Source links show where wording came from; they do not independently verify it."
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/interview-guide-model.ts
+#: apps/web/src/interview-guide.tsx
 #: apps/web/src/research-brief.tsx
 msgid "Sources"
 msgstr "Sources"
@@ -7756,6 +7959,10 @@ msgstr "Stored in knowledge base"
 msgid "Stored with the workspace rather than in a knowledge base."
 msgstr "Stored with the workspace rather than in a knowledge base."
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Stories to tell"
+msgstr "Stories to tell"
+
 #: apps/web/src/consent-model.ts
 msgid "Storing material"
 msgstr "Storing material"
@@ -7763,6 +7970,10 @@ msgstr "Storing material"
 #: packages/ui/src/profile.tsx
 msgid "subject"
 msgstr "subject"
+
+#: apps/web/src/interview-guide.tsx
+msgid "suggested"
+msgstr "suggested"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Suggested"
@@ -7844,6 +8055,10 @@ msgstr "Target job description URL"
 #: packages/ui/src/career-interview-model.ts
 msgid "Teaching"
 msgstr "Teaching"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Technical interview"
+msgstr "Technical interview"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
@@ -8053,6 +8268,14 @@ msgstr "The career profile could not be derived."
 msgid "The career profile could not be derived. Try again."
 msgstr "The career profile could not be derived. Try again."
 
+#: apps/web/src/interview-guide-model.ts
+msgid "the company"
+msgstr "the company"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "The company"
+msgstr "The company"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "The comparison could not be saved:"
 msgstr "The comparison could not be saved:"
@@ -8190,6 +8413,10 @@ msgstr "The evidence kind could not be saved."
 msgid "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 msgstr "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 
+#: apps/web/src/interview-guide-model.ts
+msgid "the field"
+msgstr "the field"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "The file could not be written."
 msgstr "The file could not be written."
@@ -8229,6 +8456,10 @@ msgstr "The folder could not be renamed. Try again."
 #: packages/ui/src/career-evidence.ts
 msgid "The folder has no supported files to add."
 msgstr "The folder has no supported files to add."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "the hiring process"
+msgstr "the hiring process"
 
 #: apps/web/src/http-bridge.ts
 msgid "The hosted service derives each model's lineage itself."
@@ -8281,6 +8512,10 @@ msgstr "The independence check could not be completed."
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
 msgstr "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "The interview"
+msgstr "The interview"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "The interviewer is Claude, by Anthropic, so your answers go to Anthropic to write each question. The interview needs your permission for that."
@@ -8642,6 +8877,14 @@ msgstr "The reviewed profile catalog payload is invalid."
 msgid "The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason."
 msgstr "The reviewed version failed the final CV checks. Approving makes a new version with your edits and checks it again; a check that still fails then needs a recorded reason."
 
+#: apps/web/src/interview-guide-model.ts
+msgid "the role"
+msgstr "the role"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "The role in plain words"
+msgstr "The role in plain words"
+
 #: packages/ui/src/app.tsx
 #: packages/ui/src/run-draft-choice.tsx
 msgid "The run could not be chosen."
@@ -8729,6 +8972,10 @@ msgstr "The source could not be added to the knowledge base."
 #: apps/web/src/research-brief.tsx
 msgid "The sources said nothing useful about this employer."
 msgstr "The sources said nothing useful about this employer."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "The state of the field"
+msgstr "The state of the field"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
@@ -8931,6 +9178,10 @@ msgstr "This draft would pass the server's cost cap for one request."
 #: packages/ui/src/earlier-run.ts
 msgid "This earlier run can only be approved and exported. Open the latest run to revise it."
 msgstr "This earlier run can only be approved and exported. Open the latest run to revise it."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "This guide would pass the server's cost cap. Try the essential depth or the economy model."
+msgstr "This guide would pass the server's cost cap. Try the essential depth or the economy model."
 
 #: packages/ui/src/app.tsx
 msgid "This host cannot check the current model pairing."
@@ -9231,6 +9482,14 @@ msgstr "topics finished in this conversation."
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Topics in this conversation"
 msgstr "Topics in this conversation"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Topics to cover (optional)"
+msgstr "Topics to cover (optional)"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Topics you asked to cover"
+msgstr "Topics you asked to cover"
 
 #: packages/ui/src/review.tsx
 msgid "Traceability"
@@ -9577,6 +9836,10 @@ msgstr "Version {0}."
 msgid "Version history"
 msgstr "Version history"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Video call"
+msgstr "Video call"
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "View"
 msgstr "View"
@@ -9660,6 +9923,10 @@ msgstr "Warnings"
 msgid "was opened after the configured maximum of"
 msgstr "was opened after the configured maximum of"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "Weak points and how to answer"
+msgstr "Weak points and how to answer"
+
 #: apps/web/src/research-brief.tsx
 msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
@@ -9716,6 +9983,10 @@ msgstr "What the critic flagged"
 msgid "what the role covered"
 msgstr "what the role covered"
 
+#: apps/web/src/interview-guide-model.ts
+msgid "What they ask for, and your proof"
+msgstr "What they ask for, and your proof"
+
 #: apps/web/src/private-sections.tsx
 msgid "What to do with matching sections"
 msgstr "What to do with matching sections"
@@ -9727,6 +9998,10 @@ msgstr "What to stress"
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
 msgstr "What you give"
+
+#: apps/web/src/interview-guide.tsx
+msgid "When"
+msgstr "When"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "when it happened"
@@ -9743,6 +10018,14 @@ msgstr "Where your evidence is kept. Most people need only one; choosing a diffe
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Who may read it"
 msgstr "Who may read it"
+
+#: apps/web/src/interview-guide.tsx
+msgid "Who you will meet, by role"
+msgstr "Who you will meet, by role"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Why I left"
+msgstr "Why I left"
 
 #: packages/ui/src/app.tsx
 msgid "Why is one lineage on both sides acceptable? (required)"
@@ -9850,6 +10133,18 @@ msgstr "Write in {label}"
 #: packages/ui/src/application-language.tsx
 msgid "Write its documents in"
 msgstr "Write its documents in"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Write the interview, company, role and market again"
+msgstr "Write the interview, company, role and market again"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Write the pitch, stories and weak points again"
+msgstr "Write the pitch, stories and weak points again"
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Write the questions and checklist again"
+msgstr "Write the questions and checklist again"
 
 #: apps/web/src/screening-model.ts
 msgid "Write why this text is safe to use."
@@ -10025,9 +10320,17 @@ msgstr "Your files"
 msgid "Your instructions"
 msgstr "Your instructions"
 
+#: apps/web/src/interview-guide.tsx
+msgid "Your interview"
+msgstr "Your interview"
+
 #: packages/ui/src/knowledge-current.ts
 msgid "Your knowledge base is created when you add your first evidence above."
 msgstr "Your knowledge base is created when you add your first evidence above."
+
+#: apps/web/src/interview-guide.tsx
+msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
+msgstr "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
 
 #: apps/web/src/records-model.ts
 msgid "Your organisation has no candidate record yet. Create the first one."
@@ -10040,6 +10343,10 @@ msgstr "Your organisation has no plan yet."
 #: apps/web/src/credits-model.ts
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Your organisation has no plan yet. Ask the owner to choose one."
+
+#: apps/web/src/interview-guide-model.ts
+msgid "Your pitch"
+msgstr "Your pitch"
 
 #: apps/web/src/refusal-text.ts
 msgid "Your plan allows {limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC."
