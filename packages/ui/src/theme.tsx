@@ -196,6 +196,14 @@ export function ThemeToggle({
   );
 }
 
+/**
+ * The theme control in a page header (Home and the career pages), which have no side rail. It sits
+ * beside the workspace actions as an icon-only toolbar button and shares the rail's saved choice.
+ */
+export function HeaderThemeToggle(): JSX.Element {
+  return <ThemeToggle className="button button-toolbar header-theme-toggle" />;
+}
+
 // Resolve before React renders, so a light-desk user never sees a dark frame first.
 if (typeof document !== "undefined" && typeof window !== "undefined") {
   applyResolvedTheme(

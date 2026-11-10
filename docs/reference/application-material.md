@@ -13,7 +13,7 @@ The drafter builds a bounded context, then asks the model behind
 
 | Input            | Rule                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. |
+| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. The title, employer and dates of the best-matching roles are always kept. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
@@ -23,7 +23,7 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v10`.
+`application-material-v11`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
@@ -147,8 +147,8 @@ flowchart LR
 
 | Step         | What happens                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project.   |
-| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v1`.        |
+| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project and at least 3 from career roles, then adds each picked role's title, employer and dates (up to 6 more). |
+| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v2`.        |
 | Check        | Claude Haiku links each sentence to the facts behind it; `cover-letter-claims.ts` decides whether the link holds. |
 | Revise       | One more call rewrites only the failing sentences, with why they failed.                                      |
 | Drop         | Sentences that still fail are left out and listed in the view's `dropped_sentences`.                          |
@@ -159,7 +159,7 @@ record. An employer sentence cites research findings only, and a courtesy
 sentence is short and states no number. A letter with no supported claim
 about the candidate is refused as `invalid_draft`. The writer and the check
 share the request's cost cap, and the saved draft's `prompt_version` is
-`cover-letter-free-form-v1`.
+`cover-letter-free-form-v2`.
 
 ## The hosted route
 

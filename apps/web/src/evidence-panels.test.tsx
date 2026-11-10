@@ -153,6 +153,14 @@ describe("file checks on the Career evidence page", () => {
     expect(html).toContain("Download sample-career-facts.md");
   });
 
+  it("counts each group's files and makes its list a named, focusable scroll region", () => {
+    const html = fileChecks(false);
+    expect(html).toContain('id="file-group-kb-1"');
+    expect(html).toMatch(/·\s*(<!-- -->)?2 files/u);
+    expect(html).toContain('aria-labelledby="file-group-kb-1"');
+    expect(html).toMatch(/<ul class="sources evidence-files"[^>]*tabindex="0"/u);
+  });
+
   it("lists each file with its screening chip", () => {
     const html = fileChecks(false);
 
