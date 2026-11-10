@@ -14,6 +14,8 @@ const pasted: ApplicationJobResult = {
   text: "Staff Fullstack Engineer\nTypeScript, React, Node.js",
   truncated: false,
   url: null,
+  savedAt: null,
+  earlier: null,
 };
 
 const answers: readonly ApplicationJobResult[] = [
@@ -21,6 +23,13 @@ const answers: readonly ApplicationJobResult[] = [
   { ...pasted, origin: "workspace-file" },
   { ...pasted, origin: "local-file", truncated: true },
   { ...pasted, origin: "url", text: null, url: "https://jobs.example.com/staff-engineer" },
+  {
+    ...pasted,
+    origin: "url",
+    url: "https://jobs.example.com/staff-engineer",
+    savedAt: "2030-01-05T00:00:00.000Z",
+    earlier: { text: "Staff Engineer", savedAt: "2030-01-04T00:00:00.000Z" },
+  },
   { ...pasted, origin: "unavailable", text: null },
 ];
 
@@ -80,6 +89,15 @@ describe("application.job bridge command", () => {
       { ...pasted, origin: "url", url: null, text: null },
       { ...pasted, origin: "url", url: "file:///etc/passwd", text: null },
       { ...pasted, origin: "url", url: "https://jobs.example.com" },
+      { ...pasted, savedAt: "2030-01-05T00:00:00.000Z" },
+      { ...pasted, earlier: { text: "x", savedAt: "2030-01-04T00:00:00.000Z" } },
+      {
+        ...pasted,
+        origin: "url",
+        url: "https://jobs.example.com",
+        savedAt: "2030-01-05T00:00:00.000Z",
+        earlier: { text: "x", savedAt: "not a date" },
+      },
       { ...pasted, origin: "unavailable" },
       { ...pasted, text: "x".repeat(200_001) },
       { ...pasted, workspaceId: "bad id" },

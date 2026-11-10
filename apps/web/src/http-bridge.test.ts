@@ -299,6 +299,8 @@ describe("the shared screens' commands over HTTP", () => {
         origin: "pasted-text",
         text: "Platform Engineer",
         url: null,
+        savedAt: null,
+        earlier: null,
       }),
     });
 
@@ -312,6 +314,8 @@ describe("the shared screens' commands over HTTP", () => {
         text: "Platform Engineer",
         truncated: false,
         url: null,
+        savedAt: null,
+        earlier: null,
       },
     });
     expect(calls[1]?.input).toMatchObject({ path: { applicationId: "default" } });

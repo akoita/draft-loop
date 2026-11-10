@@ -311,12 +311,24 @@ describe("application lifecycle", () => {
     });
   });
 
-  it("reads back the pasted job, an approved address, or nothing for a file job", async () => {
+  it("reads back the pasted job, an approved address with its saved copies, or nothing for a file job", async () => {
+    const url = "https://jobs.example.test/1";
+    const copy = (text: string, fetchedAt: string) => ({ text, finalUrl: url, fetchedAt });
     const views: Record<string, ApplicationView> = {
       pasted: created,
       page: {
         ...created,
-        jobSource: { kind: "approved-url", url: "https://jobs.example.test/1", approved: true },
+        jobSource: { kind: "approved-url", url, approved: true },
+      },
+      saved: {
+        ...created,
+        jobSource: {
+          kind: "approved-url",
+          url,
+          approved: true,
+          page: copy("Position closed", "2030-01-05T00:00:00.000Z"),
+          firstPage: copy("Platform Engineer", "2030-01-04T00:00:00.000Z"),
+        },
       },
       file: { ...created, jobSource: { kind: "local-file", path: "job.md" } },
     };
@@ -333,12 +345,29 @@ describe("application lifecycle", () => {
       origin: "pasted-text",
       text: "Platform Engineer at Example Ledger",
       url: null,
+      savedAt: null,
+      earlier: null,
     });
     expect(await read("page")).toEqual({
       origin: "url",
       text: null,
-      url: "https://jobs.example.test/1",
+      url,
+      savedAt: null,
+      earlier: null,
     });
-    expect(await read("file")).toEqual({ origin: "unavailable", text: null, url: null });
+    expect(await read("saved")).toEqual({
+      origin: "url",
+      text: "Position closed",
+      url,
+      savedAt: "2030-01-05T00:00:00.000Z",
+      earlier: { text: "Platform Engineer", savedAt: "2030-01-04T00:00:00.000Z" },
+    });
+    expect(await read("file")).toEqual({
+      origin: "unavailable",
+      text: null,
+      url: null,
+      savedAt: null,
+      earlier: null,
+    });
   });
 });

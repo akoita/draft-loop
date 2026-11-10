@@ -20,7 +20,9 @@ web servers.
    post, attach a job file, or enter the job page's address.
 2. A page address is fetched only after you approve it and choose
    **Extract**. Its text goes to the extraction model, which drafts an
-   **opportunity brief**; only the extracted requirements are kept.
+   **opportunity brief**. The application keeps a copy of the page's text,
+   dated, so the job stays readable after the page expires.
+   The review's **Job** tab shows it with the page's address.
 3. Check the brief, edit it, and mark the version reviewed. A run pins one
    reviewed version.
 4. Home lists every application with search, a status filter, sort and a
@@ -37,6 +39,8 @@ until an owner or admin releases it
   with a fictional job post.
 - Focused tests: `apps/api/src/job-page-brief-routes.test.ts`,
   `apps/api/src/application-folder-routes.test.ts`,
+  `apps/api/src/application-lifecycle-routes.test.ts`,
+  `packages/ui/src/job-description-panel.test.tsx`,
   `packages/ui/src/new-application-form.test.tsx`,
   `packages/ui/src/opportunity-brief-review.test.tsx` and
   `packages/ui/src/home-list-model.test.ts`.
@@ -45,7 +49,7 @@ until an owner or admin releases it
 
 | Kind   | Surface                                                                        |
 | ------ | ------------------------------------------------------------------------------ |
-| Screen | Home list and folders, New application form, opportunity brief review          |
+| Screen | Home list and folders, New application form, opportunity brief review, Job tab |
 | API    | `/v1/workspaces/{id}/applications`, `.../applications/from-file`, `.../job`    |
 | API    | `/v1/workspaces/{id}/opportunities`, `.../{briefId}/versions`, `.../review`    |
 | API    | `/v1/workspaces/{id}/application-folders`                                      |
@@ -55,6 +59,10 @@ until an owner or admin releases it
 ## Limits
 
 - Only public job pages are fetched, one approved address per application.
+- A page keeps at most two copies: the first one and the newest one. A later
+  read never replaces the first copy, so a closed or expired page cannot erase
+  the job.
+- An application added from a page before copies were kept has none yet.
 - Folders are one level deep; an application sits in at most one folder.
 
 ## Related

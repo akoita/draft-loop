@@ -17,6 +17,8 @@ const pasted: ApplicationJobResult = {
   text: "Staff Fullstack Engineer\n\nTypeScript, React & Node.js",
   truncated: false,
   url: null,
+  savedAt: null,
+  earlier: null,
 };
 
 function view(job: ApplicationJobResult): string {
@@ -41,16 +43,32 @@ describe("the Job tab", () => {
     );
   });
 
-  it("shows a URL job's address and points to the extracted requirements", () => {
+  it("shows a URL job's address and says when no copy of the page was saved", () => {
     const html = view({
       ...pasted,
       origin: "url",
       text: null,
       url: "https://jobs.example.com/staff-engineer",
     });
-    expect(html).toContain("https://jobs.example.com/staff-engineer");
-    expect(html).toContain("the Coverage tab lists them");
-    expect(html).not.toContain("<a ");
+    expect(html).toContain('href="https://jobs.example.com/staff-engineer"');
+    expect(html).toContain('rel="noreferrer noopener"');
+    expect(html).toContain("No copy of the page was saved");
+    expect(html).not.toContain("job-text");
+  });
+
+  it("shows the saved copy of a URL job's page, and its earlier copy folded", () => {
+    const html = view({
+      ...pasted,
+      origin: "url",
+      url: "https://jobs.example.com/staff-engineer",
+      savedAt: "2030-01-05T12:00:00.000Z",
+      earlier: { text: "Staff Engineer, first copy", savedAt: "2030-01-04T12:00:00.000Z" },
+    });
+    expect(html).toContain("Saved from the job page on 5 Jan 2030");
+    expect(html).toContain("Staff Fullstack Engineer");
+    expect(html).toContain("<details");
+    expect(html).toContain("Earlier copy, saved on 4 Jan 2030");
+    expect(html).toContain("Staff Engineer, first copy");
   });
 
   it("explains an unreadable job and offers a retry after a failed read", () => {

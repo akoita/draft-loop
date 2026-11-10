@@ -3005,6 +3005,10 @@ msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées a
 msgid "Each value is what that run recorded."
 msgstr "Chaque valeur est celle enregistrée par cette exécution."
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Earlier copy, saved on {earlierDate}"
+msgstr "Copie précédente, enregistrée le {earlierDate}"
+
 #: packages/ui/src/earlier-run-view.tsx
 msgid "earlier run"
 msgstr "exécution antérieure"
@@ -3575,8 +3579,8 @@ msgid "From the file chosen for this application, as it reads now."
 msgstr "Depuis le fichier choisi pour cette candidature, dans son état actuel."
 
 #: packages/ui/src/job-description-panel.tsx
-msgid "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them."
-msgstr "Depuis la page de l’offre approuvée pour cette candidature. Seules les exigences extraites sont conservées, pas le texte de la page ; l’onglet Couverture les liste."
+msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
+msgstr "Depuis la page de l’offre approuvée pour cette candidature. Aucune copie de la page n’a été enregistrée ; l’onglet Couverture liste les exigences qui en ont été extraites."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "From the job text"
@@ -7117,6 +7121,10 @@ msgstr "Enregistré comme brouillon v{version}. Marquez-le comme relu quand il e
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Saved as your own entry, never as something the job posting says."
 msgstr "Enregistré comme votre propre saisie, jamais comme quelque chose que dit l’annonce."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Saved from the job page on {date}, so it stays readable after the page expires."
+msgstr "Enregistrée depuis la page de l’offre le {date}, pour rester lisible après l’expiration de la page."
 
 #: packages/ui/src/profile.tsx
 msgid "Saved profile issue guidance"

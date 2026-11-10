@@ -95,6 +95,11 @@ export interface ApiSchemas {
     readonly origin: "pasted-text" | "url" | "unavailable";
     readonly text: string | null;
     readonly url: string | null;
+    readonly savedAt: string | null;
+    readonly earlier: {
+      readonly text: string;
+      readonly savedAt: string;
+    } | null;
   };
   "ApplicationMaterialDraft": {
     readonly id?: string;

@@ -44,6 +44,8 @@ export interface AgentJobText {
   readonly origin: "pasted-text" | "url" | "unavailable";
   readonly text: string | null;
   readonly url: string | null;
+  /** When the job page's copy was saved; null for pasted text or without a copy. */
+  readonly saved_at: string | null;
 }
 
 export interface ApplicationsApi {
@@ -164,8 +166,16 @@ export function createApplicationsApi(call: WorkspaceApiCall): ApplicationsApi {
     jobText: async (applicationId) => {
       const body = (await call(`/applications/${pathId(applicationId, "application")}/job`, {
         method: "GET",
-      })) as Omit<AgentJobText, "application_id">;
-      return { application_id: applicationId, origin: body.origin, text: body.text, url: body.url };
+      })) as Omit<AgentJobText, "application_id" | "saved_at"> & {
+        readonly savedAt?: string | null;
+      };
+      return {
+        application_id: applicationId,
+        origin: body.origin,
+        text: body.text,
+        url: body.url,
+        saved_at: body.savedAt ?? null,
+      };
     },
     addJob: async (input) =>
       applicationOf(
@@ -191,7 +201,7 @@ export const getApplicationDescription =
   "Read one job application by id: name, status, folder, chosen run and latest run. Needs the applications:read scope.";
 
 export const getJobTextDescription =
-  "Read the job description one job application keeps, as the candidate gave it: the pasted text, or the approved job page's address when it was added by address. Use it to compare the job with the candidate's request; never rewrite it in DraftLoop. Needs the applications:read scope.";
+  "Read the job description one job application keeps, as the candidate gave it: the pasted text, or the approved job page's address with the copy of the page saved when DraftLoop read it (saved_at; text is null when no copy was saved). The copy stays readable after the page expires. Use it to compare the job with the candidate's request; never rewrite it in DraftLoop. Needs the applications:read scope.";
 
 export const addJobDescription = `Add a job application to DraftLoop from a job description the candidate gave you, pasted as text. DraftLoop keeps the text and screens it like an upload; the candidate then extracts the requirements, reviews them and starts the CV run in DraftLoop.
 Pass the job text exactly as the candidate gave it; never invent or summarise requirements. A job page address is refused: fetching a page needs the candidate's approval in DraftLoop. Needs the jobs:write scope.`;
@@ -217,6 +227,7 @@ const jobTextSchema = z.object({
   origin: z.enum(["pasted-text", "url", "unavailable"]),
   text: z.string().nullable(),
   url: z.string().nullable(),
+  saved_at: z.string().nullable(),
 });
 
 const runStatusSchema = z.object({

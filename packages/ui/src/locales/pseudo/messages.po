@@ -3011,6 +3011,10 @@ msgstr ""
 msgid "Each value is what that run recorded."
 msgstr ""
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Earlier copy, saved on {earlierDate}"
+msgstr ""
+
 #: packages/ui/src/earlier-run-view.tsx
 msgid "earlier run"
 msgstr ""
@@ -3581,7 +3585,7 @@ msgid "From the file chosen for this application, as it reads now."
 msgstr ""
 
 #: packages/ui/src/job-description-panel.tsx
-msgid "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them."
+msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -7121,6 +7125,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Saved as your own entry, never as something the job posting says."
+msgstr ""
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Saved from the job page on {date}, so it stays readable after the page expires."
 msgstr ""
 
 #: packages/ui/src/profile.tsx

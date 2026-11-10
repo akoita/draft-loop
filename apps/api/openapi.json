@@ -2100,6 +2100,7 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
+            "description": "The job text; for a job page, the copy saved when it was read, or null without one.",
             "type": [
               "string",
               "null"
@@ -2111,12 +2112,45 @@
               "string",
               "null"
             ]
+          },
+          "savedAt": {
+            "description": "When the job page's copy was saved; null for pasted text or without a copy.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "earlier": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "description": "When the service read the page and saved this copy."
+                  }
+                },
+                "required": [
+                  "text",
+                  "savedAt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first copy of the job page, kept when a later read gave different text."
           }
         },
         "required": [
           "origin",
           "text",
-          "url"
+          "url",
+          "savedAt",
+          "earlier"
         ]
       },
       "ApplicationMaterialGuidanceInput": {
@@ -9710,6 +9744,7 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
+            "description": "The job text; for a job page, the copy saved when it was read, or null without one.",
             "type": [
               "string",
               "null"
@@ -9721,12 +9756,46 @@
               "string",
               "null"
             ]
+          },
+          "savedAt": {
+            "description": "When the job page's copy was saved; null for pasted text or without a copy.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "earlier": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "description": "When the service read the page and saved this copy."
+                  }
+                },
+                "required": [
+                  "text",
+                  "savedAt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first copy of the job page, kept when a later read gave different text."
           }
         },
         "required": [
           "origin",
           "text",
-          "url"
+          "url",
+          "savedAt",
+          "earlier"
         ],
         "additionalProperties": false
       },
