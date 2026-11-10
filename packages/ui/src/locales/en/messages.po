@@ -911,7 +911,7 @@ msgstr "Accept"
 msgid "Accept all skips word-match findings"
 msgstr "Accept all skips word-match findings"
 
-#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Accept notes from agents"
 msgstr "Accept notes from agents"
 
@@ -1115,8 +1115,20 @@ msgid "Agents"
 msgstr "Agents"
 
 #: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can add notes."
+msgstr "Agents can add notes."
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
+msgstr "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
+
+#: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
 msgstr "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents cannot add notes yet."
+msgstr "Agents cannot add notes yet."
 
 #: packages/ui/src/review.tsx
 msgid "all"
@@ -1763,6 +1775,10 @@ msgstr "central themes"
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Change"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Change in Workspace settings"
+msgstr "Change in Workspace settings"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -6809,9 +6825,18 @@ msgstr "Review in progress · nothing to do yet"
 msgid "Review issues"
 msgstr "Review issues"
 
+#: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/work-journal-pending.tsx
 msgid "Review notes"
 msgstr "Review notes"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pending} waiting)"
+msgstr "Review notes ({pending} waiting)"
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pendingNoteCountLimit} or more waiting)"
+msgstr "Review notes ({pendingNoteCountLimit} or more waiting)"
 
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/profile-status.ts
@@ -9186,10 +9211,6 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
-msgstr "To let an agent file notes here, connect it under Agents in Workspace settings."
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr "Token:"
 
@@ -9255,6 +9276,10 @@ msgstr "Try again"
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Try demo workspace"
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Turn on in Workspace settings"
+msgstr "Turn on in Workspace settings"
 
 #: packages/ui/src/speech-button.tsx
 msgid "Turning your words into text on this device…"

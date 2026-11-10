@@ -911,7 +911,7 @@ msgstr ""
 msgid "Accept all skips word-match findings"
 msgstr ""
 
-#: packages/ui/src/work-journal-panel.tsx
+#: packages/ui/src/work-journal-intake.tsx
 msgid "Accept notes from agents"
 msgstr ""
 
@@ -1115,7 +1115,19 @@ msgid "Agents"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
+msgid "Agents can add notes."
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Agents can record notable work you shipped in your Work journal. Nothing becomes career evidence until you approve it."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
 msgid "Agents can record notable work you shipped. Each note waits here; only the notes you approve become career evidence."
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Agents cannot add notes yet."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1762,6 +1774,10 @@ msgstr ""
 
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Change in Workspace settings"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -6808,8 +6824,17 @@ msgstr ""
 msgid "Review issues"
 msgstr ""
 
+#: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/work-journal-pending.tsx
 msgid "Review notes"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pending} waiting)"
+msgstr ""
+
+#: packages/ui/src/work-journal-intake.tsx
+msgid "Review notes ({pendingNoteCountLimit} or more waiting)"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -9185,10 +9210,6 @@ msgid "To begin, create a workspace for your job search, open a recent one, or t
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "To let an agent file notes here, connect it under Agents in Workspace settings."
-msgstr ""
-
-#: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr ""
 
@@ -9253,6 +9274,10 @@ msgstr ""
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
+msgstr ""
+
+#: packages/ui/src/work-journal-panel.tsx
+msgid "Turn on in Workspace settings"
 msgstr ""
 
 #: packages/ui/src/speech-button.tsx

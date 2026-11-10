@@ -28,8 +28,11 @@ export interface HostPanels {
   readonly homeEvidence?: (context: HomeEvidenceContext) => ReactNode;
   /** Shown under an application's header, such as drafting its cover letter (#2217). */
   readonly application?: (context: ApplicationPanelContext) => ReactNode;
-  /** Shown under Home's Workspace settings actions, such as suggested preferences (#2265). */
-  readonly workspaceSettings?: () => ReactNode;
+  /**
+   * Shown under Home's Workspace settings actions, such as suggested preferences (#2265).
+   * `openEvidence` opens the Career evidence page.
+   */
+  readonly workspaceSettings?: (context: HomeEvidenceContext) => ReactNode;
   /**
    * Reads the file an export would save without saving it, for the review's Preview (#2498).
    * Without it the review offers no preview.
@@ -48,7 +51,7 @@ export interface ApplicationPanelContext {
   readonly applicationId: string;
 }
 
-/** What the host's panel in Home's Career evidence card is given. */
+/** What the host's panels on Home, in the Career evidence card and Workspace settings, are given. */
 export interface HomeEvidenceContext {
   readonly openEvidence: () => void;
 }
@@ -103,8 +106,8 @@ export function useHasApplicationPanel(): boolean {
 }
 
 /** The host's panel under Home's Workspace settings actions; nothing without one. */
-export function HostWorkspaceSettings() {
-  return useContext(HostPanelsContext).workspaceSettings?.() ?? null;
+export function HostWorkspaceSettings(context: HomeEvidenceContext) {
+  return useContext(HostPanelsContext).workspaceSettings?.(context) ?? null;
 }
 
 /** The host's export preview reader, or undefined when the host offers no preview (#2498). */
