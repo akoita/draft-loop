@@ -8082,6 +8082,17 @@ input[type="text"].workspace-title-input {
   gap: var(--space-2);
 }
 
+/* The header's theme control is icon-only, so it is square at the toolbar buttons' height. */
+.header-theme-toggle {
+  width: 32px;
+  padding: 0;
+}
+
+.header-theme-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* "← Home / Current screen". Focus lands here when a screen opens so the change is announced. */
 .home-location {
   display: flex;
