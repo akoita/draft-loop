@@ -13,7 +13,7 @@ import { t } from "@lingui/core/macro";
  * the main process owns, and the desktop bridge's runtime command allowlist is not worth the
  * drift for a colour scheme.
  */
-import { type JSX, useCallback, useEffect, useState } from "react";
+import { type JSX, useSyncExternalStore } from "react";
 
 /** How the desk chooses its colours: follow the OS, or a fixed choice. */
 export type ThemePreference = "system" | "light" | "dark";
@@ -111,35 +111,83 @@ function prefersLightQueryList(): MediaQueryList | null {
 }
 
 /**
- * Hold the preference, persist it, and keep `data-theme` in step with it. While the preference is
- * "system" the OS stays in charge, so the hook listens for the media query flipping under it.
+ * One preference for the whole document. Every page stays mounted while hidden (Home, the career
+ * pages, the review), so each control must read this shared value rather than its own copy, or a
+ * page hidden before a change would keep showing, and re-applying, the old choice.
  */
-export function useThemePreference(): readonly [ThemePreference, (next: ThemePreference) => void] {
-  const [preference, setPreference] = useState<ThemePreference>(() =>
-    readStoredThemePreference(browserStorage()),
-  );
+type ThemeStore = {
+  readonly get: () => ThemePreference;
+  readonly set: (next: ThemePreference) => void;
+  readonly subscribe: (listener: () => void) => () => void;
+};
 
-  const choose = useCallback((next: ThemePreference) => {
-    setPreference(next);
-    writeStoredThemePreference(browserStorage(), next);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    const query = prefersLightQueryList();
-    const apply = () => {
-      applyResolvedTheme(root, resolveTheme(preference, query?.matches ?? false));
-    };
+/**
+ * Build the preference store over a storage and a document root. The store keeps `data-theme` in
+ * step with the preference, follows the OS while the preference is "system", and picks up a
+ * choice another tab writes to the same storage.
+ */
+export function createThemeStore(
+  storage: Pick<Storage, "getItem" | "setItem"> | undefined,
+  root: HTMLElement | undefined,
+  query: MediaQueryList | null,
+  events: Pick<Window, "addEventListener" | "removeEventListener"> | undefined,
+): ThemeStore {
+  let current = readStoredThemePreference(storage);
+  const listeners = new Set<() => void>();
+  const apply = () => {
+    if (root !== undefined)
+      applyResolvedTheme(root, resolveTheme(current, query?.matches ?? false));
+  };
+  const update = (next: ThemePreference) => {
+    if (next === current) return;
+    current = next;
     apply();
-    if (preference !== "system" || query === null) return;
-    query.addEventListener("change", apply);
-    return () => {
-      query.removeEventListener("change", apply);
-    };
-  }, [preference]);
+    for (const listener of listeners) listener();
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === themeStorageKey) update(readStoredThemePreference(storage));
+  };
+  const onQuery = () => {
+    if (current === "system") apply();
+  };
+  return {
+    get: () => current,
+    set: (next) => {
+      writeStoredThemePreference(storage, next);
+      update(next);
+    },
+    subscribe: (listener) => {
+      if (listeners.size === 0) {
+        events?.addEventListener("storage", onStorage);
+        query?.addEventListener("change", onQuery);
+      }
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0) {
+          events?.removeEventListener("storage", onStorage);
+          query?.removeEventListener("change", onQuery);
+        }
+      };
+    },
+  };
+}
 
-  return [preference, choose] as const;
+const documentThemeStore = createThemeStore(
+  browserStorage(),
+  typeof document === "undefined" ? undefined : document.documentElement,
+  prefersLightQueryList(),
+  typeof window === "undefined" ? undefined : window,
+);
+
+/** Read and change the document's one theme preference; every control sees the same value. */
+export function useThemePreference(): readonly [ThemePreference, (next: ThemePreference) => void] {
+  const preference = useSyncExternalStore(
+    documentThemeStore.subscribe,
+    documentThemeStore.get,
+    () => "system" as const,
+  );
+  return [preference, documentThemeStore.set] as const;
 }
 
 function ThemeIcon({ preference }: { readonly preference: ThemePreference }) {
@@ -177,8 +225,8 @@ function ThemeIcon({ preference }: { readonly preference: ThemePreference }) {
 }
 
 /**
- * The theme control. It owns its own state through `useThemePreference`, so the rail and the boot
- * panels mount it without threading a preference through their props.
+ * The theme control. It reads the shared preference through `useThemePreference`, so the rail, the
+ * page headers and the boot panels mount it without threading a preference through their props.
  */
 export function ThemeToggle({
   className = "rail-button",

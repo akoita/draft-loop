@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyResolvedTheme,
+  createThemeStore,
   isThemePreference,
   nextThemePreference,
   readStoredThemePreference,
@@ -121,5 +122,74 @@ describe("desk theme preference", () => {
     const html = renderToStaticMarkup(<ThemeToggle className="boot-theme-toggle" />);
 
     expect(html).toContain('class="boot-theme-toggle"');
+  });
+
+  describe("the document's shared preference", () => {
+    function fixture(stored: string | null = null, prefersLight = false) {
+      const values = new Map<string, string>();
+      if (stored !== null) values.set(themeStorageKey, stored);
+      const storage = {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => void values.set(key, value),
+      };
+      const attributes = new Map<string, string>();
+      const root = {
+        setAttribute: (name: string, value: string) => void attributes.set(name, value),
+      } as unknown as HTMLElement;
+      const handlers = new Map<string, (event: unknown) => void>();
+      const target = {
+        addEventListener: (type: string, handler: (event: unknown) => void) =>
+          void handlers.set(type, handler),
+        removeEventListener: (type: string) => void handlers.delete(type),
+      };
+      const query = { matches: prefersLight, ...target } as unknown as MediaQueryList;
+      const events = target as unknown as Window;
+      const store = createThemeStore(storage, root, query, events);
+      return { store, values, attributes, handlers, query };
+    }
+
+    it("gives every mounted control the same choice, so a hidden page cannot keep an old one", () => {
+      const { store, attributes } = fixture("system", true);
+      const seen: string[] = [];
+      const offHome = store.subscribe(() => seen.push(`home:${store.get()}`));
+      const offReview = store.subscribe(() => seen.push(`review:${store.get()}`));
+
+      store.set("dark");
+
+      expect(seen).toEqual(["home:dark", "review:dark"]);
+      expect(attributes.get("data-theme")).toBe("dark");
+      offHome();
+      offReview();
+    });
+
+    it("saves the choice and takes up one another tab writes", () => {
+      const { store, values, attributes, handlers } = fixture("light");
+      const off = store.subscribe(() => undefined);
+      store.set("dark");
+      expect(values.get(themeStorageKey)).toBe("dark");
+
+      values.set(themeStorageKey, "light");
+      handlers.get("storage")?.({ key: themeStorageKey });
+      expect(store.get()).toBe("light");
+      expect(attributes.get("data-theme")).toBe("light");
+      off();
+      expect(handlers.size).toBe(0);
+    });
+
+    it("follows the operating system only while the choice is system", () => {
+      const { store, attributes, handlers, query } = fixture("system", false);
+      const off = store.subscribe(() => undefined);
+      (query as { matches: boolean }).matches = true;
+      handlers.get("change")?.({});
+      expect(attributes.get("data-theme")).toBe("light");
+
+      store.set("dark");
+      (query as { matches: boolean }).matches = false;
+      handlers.get("change")?.({});
+      (query as { matches: boolean }).matches = true;
+      handlers.get("change")?.({});
+      expect(attributes.get("data-theme")).toBe("dark");
+      off();
+    });
   });
 });
