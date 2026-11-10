@@ -29,7 +29,8 @@ describe("Claude on Vertex AI", () => {
     );
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer synthetic-token");
     expect(calls[0]?.headers.has("x-api-key")).toBe(false);
-    expect(calls[0]?.body).toMatchObject({ anthropic_version: "2026-10-21", stream: true });
+    expect(calls[0]?.headers.has("anthropic-version")).toBe(false);
+    expect(calls[0]?.body).toMatchObject({ anthropic_version: "vertex-2023-10-16", stream: true });
     expect(calls[0]?.body.model).toBeUndefined();
     expect(response).toMatchObject({
       output: { answer: "yes" },

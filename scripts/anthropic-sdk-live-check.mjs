@@ -48,6 +48,7 @@ if (process.env.DRAFT_LOOP_VERTEX_PROJECT) {
     projectId: process.env.DRAFT_LOOP_VERTEX_PROJECT,
     region: "eu",
     baseURL: "https://aiplatform.eu.rep.googleapis.com/v1",
+    defaultHeaders: { "anthropic-version": "vertex-2023-10-16" },
   });
   results.push(await check("vertex-eu", () => vertex.messages.create(request)));
 } else {
