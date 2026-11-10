@@ -1,4 +1,5 @@
 import { knowledgeBaseDisplayName } from "@draft-loop/ui/career-evidence";
+import { countedNouns } from "@draft-loop/ui/counted-nouns";
 import { t } from "@lingui/core/macro";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -90,8 +91,20 @@ export function FileChecksPanel({
         groups.map(({ base, sources }) =>
           sources.length === 0 ? null : (
             <div key={base.id}>
-              <h3>{knowledgeBaseDisplayName(base.displayName)}</h3>
-              <ul className="sources evidence-files">
+              <h3 id={`file-group-${base.id}`}>
+                {knowledgeBaseDisplayName(base.displayName)}
+                <span className="evidence-file-count">
+                  {" · "}
+                  {countedNouns.file(sources.length)}
+                </span>
+              </h3>
+              {/* A long list scrolls inside its own box so the sections below stay near (#2635). */}
+              <ul
+                className="sources evidence-files"
+                aria-labelledby={`file-group-${base.id}`}
+                // biome-ignore lint/a11y/noNoninteractiveTabindex: a scroll region needs focus to scroll by keyboard.
+                tabIndex={0}
+              >
                 {sources.map((source) => {
                   const added = fileAddedLine(source);
                   return (
