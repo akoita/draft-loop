@@ -174,6 +174,8 @@ describe("createModelFreeFormCoverLetterWriter", () => {
       letter: "I did it in SQL.",
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
     });
+    // Room for the whole letter: a cut-off answer is refused by the provider adapter.
+    expect(requests[0]?.maxOutputTokens).toBe(8_192);
     expect(requests[0]?.input).toMatchObject({
       facts: [{ id: "f2", text: "skill name: SQL", group: "r1" }],
       revision: { letter: "Old.", sentences: [{ text: "Old.", problems: ["no_fact"] }] },

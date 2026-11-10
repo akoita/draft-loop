@@ -1,7 +1,10 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
 
-import type { ApplicationMaterialModelExecutor } from "./application-material-model.js";
+import {
+  type ApplicationMaterialModelExecutor,
+  applicationMaterialMaxOutputTokens,
+} from "./application-material-model.js";
 import type {
   CoverLetterClaimCheckPort,
   CoverLetterClaimKind,
@@ -16,7 +19,8 @@ import type {
 
 export const coverLetterClaimCheckModelId = "claude-haiku-5-5";
 export const coverLetterClaimCheckPromptVersion = "cover-letter-claims-v1";
-const maxOutputTokens = 4_096;
+/** One link per sentence; a live check used 2,690 of 4,096 tokens, too close to a cut-off (#2613). */
+const maxOutputTokens = applicationMaterialMaxOutputTokens;
 
 const outputSchema = {
   type: "object",
