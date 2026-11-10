@@ -121,6 +121,7 @@ describe("the model adapter", () => {
     });
     const check = await checkCoverLetter(letter, facts, companyFacts, port);
     expect(JSON.stringify(requests[0]?.input)).toContain("Cut settlement breaks");
+    expect(requests[0]?.maxOutputTokens).toBe(8_192);
     expect(check.sentences.filter((s) => s.problems.length === 0).map((s) => s.id)).toEqual([
       "p0.s0",
     ]);

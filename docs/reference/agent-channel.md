@@ -14,7 +14,7 @@ The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
 created: `journal` (file notes and list their titles), `applications:read`,
-`jobs:write` and `drafts:read`. Every other route refuses it.
+`jobs:write`, `drafts:read` and `runs:start`. Every other route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -241,6 +241,10 @@ returns a run's open draft, its findings or career evidence.
 | `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
 | `list_materials`    | `drafts:read`       | Lists saved cover letters and interview question sets, without their text  |
 | `get_material`      | `drafts:read`       | Reads one saved cover letter or question set, without the facts it cites   |
+| `estimate_run`      | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap        |
+| `start_cv_run`      | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap               |
+| `draft_cover_letter` | `runs:start`       | Drafts and saves a cover letter, within the cap                            |
+| `draft_interview_prep` | `runs:start`     | Drafts and saves interview questions with talking points, within the cap   |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
@@ -253,6 +257,36 @@ its name on the token form, and where to create a new token.
 candidate to export it in DraftLoop; it never exports or writes one itself.
 The material route returns the cited facts too, so a `drafts:read` token can
 read them by calling the API directly; the tools leave them out.
+
+### Starting runs and drafts within a monthly spend cap
+
+A token with `runs:start` can price a run, start a CV run on an
+application's reviewed brief, and draft a cover letter or interview
+questions. The candidate gives it a monthly spend limit in
+US dollars when creating it; the token form and the API refuse one without
+the other.
+
+| Route                | What an agent token may do                                                |
+| -------------------- | ------------------------------------------------------------------------- |
+| `GET runs/estimate`  | Price a run; the answer adds `agentSpend`: cap, spent, remaining, per run |
+| `POST runs`          | Start a run with `applicationId` and `opportunityBrief` only              |
+| `POST applications/:id/material` | Draft a cover letter or interview questions on the default model |
+
+- **Reservation.** Each run reserves the workspace's per-run cost limit
+  against the cap for the UTC month, before it is saved; each draft reserves
+  its own cost cap, US$0.50 by default. Neither can cost more, so the cap is
+  never passed.
+- **Retries.** A retry with the same `Idempotency-Key` reserves nothing more,
+  and a start the server refuses gives its reservation back.
+- **Past the cap.** The start answers 429 `agent_spend_cap_reached` with the
+  cap and what was spent. It works again next month, or with a new token.
+- **Stays human.** The models, the career profile, the budget, approving the
+  draft and deciding findings stay with the candidate in DraftLoop.
+
+The token list in Workspace settings shows what each token used this month.
+`start_cv_run` sends a new `Idempotency-Key` on each call, so the agent never
+calls it twice for one request. `init` never issues `runs:start`: the
+candidate sets the spend limit on the token form.
 
 `init` issues a token with `journal`, `applications:read` and `jobs:write`.
 To choose others, name them with `--scope`, repeated; `drafts:read` is given
@@ -275,6 +309,7 @@ tool the server offers.
 | List applications        | `/draftloop:applications` | `applications`       | Lists applications with status and latest run state |
 | One application's status | `/draftloop:status`       | `application-status` | Says where one application stands and the next step |
 | Tailor a CV              | `/draftloop:tailor-cv`    | none                 | Adds a pasted job and follows its CV run            |
+| Start a CV run           | `/draftloop:start-run`    | none                 | Prices a run, asks to confirm, then starts it       |
 | Log work                 | `/draftloop:log-work`     | `log-notable-work`   | Records notable merged work in the work journal     |
 
 With the plugin installed, Claude Code also lists each MCP prompt, as

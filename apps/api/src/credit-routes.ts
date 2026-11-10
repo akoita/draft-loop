@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import type { AgentSpendGate } from "./agent-spend-gate.js";
 import { creditUsage, creditWarningPercent } from "./credit-usage.js";
 import { EntitlementRefusedError, type TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
@@ -120,6 +121,20 @@ const runEstimateSchema = z
       })
       .optional()
       .describe("Sign-in mode, for a member."),
+    agentSpend: z
+      .object({
+        monthlyCapUsd: z.number(),
+        spentThisMonthUsd: z.number().describe("What the token reserved this UTC month."),
+        remainingUsd: z.number(),
+        runReservesUsd: z
+          .number()
+          .describe("What one run reserves against the cap: the workspace's per-run cost limit."),
+        draftReservesUsd: z
+          .number()
+          .describe("What one cover letter or set of interview questions reserves: its cost cap."),
+      })
+      .optional()
+      .describe("For an agent token with runs:start: its monthly spend cap (#2599)."),
   })
   .meta({ id: "RunEstimate" });
 
@@ -203,6 +218,8 @@ export interface RunEstimateRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   /** Sign-in mode only: adds the plan and balance fields for a member. */
   readonly entitlementsFor?: TenantEntitlementsFor;
+  /** Adds what an agent token with `runs:start` may still spend this month (#2599). */
+  readonly agentSpend?: AgentSpendGate;
   readonly now?: () => Date;
 }
 
@@ -251,6 +268,11 @@ export function registerRunEstimateRoute(
         authorTier,
         criticTier,
       };
+      const agent = request.agentToken;
+      if (agent !== undefined && options.agentSpend !== undefined) {
+        const spend = await options.agentSpend.status(agent, root);
+        return spend === undefined ? view : { ...view, agentSpend: spend };
+      }
       const { caller } = request;
       if (caller?.kind !== "member" || entitlementsFor === undefined) return view;
 
