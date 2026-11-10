@@ -761,6 +761,10 @@ not a second product.
   `journal` only. The API admits an agent token through one route-to-scope
   table, and a test fails when a route is not classified, so a new route is
   refused to agents until someone decides.
+- **Agent grants on the hosted service (#2646).** There, an assistant holds
+  the identity provider's access token, issued to its own client. The API
+  admits it as the member on the same route-to-scope table, with scopes
+  spelled `draftloop:<scope>`, and refuses spending until a grant has a cap.
 - **Human-only:** approving a draft, deciding findings, editing draft blocks,
   consent, erasure, releasing quarantined material, models, budget, writing
   policy and its suggestions, members, tokens and the career interview, which

@@ -128,7 +128,14 @@ const refusedTokenCodes: ReadonlySet<string> = new Set([
 ]);
 
 export type SignInVerification =
-  | { readonly status: "verified"; readonly identity: SignInIdentity }
+  | {
+      readonly status: "verified";
+      readonly identity: SignInIdentity;
+      /** The client the token was issued to (`azp`, else `client_id`), when it names one. */
+      readonly clientId?: string;
+      /** The token's `scope` claim, split; what an agent grant's scopes are read from. */
+      readonly grantedScopes: readonly string[];
+    }
   /** `reason` is `jose`'s error code, safe to log: it never quotes the token. */
   | { readonly status: "refused"; readonly reason: string };
 
@@ -161,6 +168,9 @@ export function signInTokenVerifier(
     }
     const { sub, email, email_verified: emailVerified } = payload;
     if (typeof sub !== "string" || sub === "") return { status: "refused", reason: "subject" };
+    const client = [payload.azp, payload.client_id].find(
+      (claim): claim is string => typeof claim === "string" && claim !== "",
+    );
     return {
       status: "verified",
       identity: {
@@ -169,6 +179,9 @@ export function signInTokenVerifier(
         ...(typeof email === "string" && email !== "" ? { email } : {}),
         emailVerified: emailVerified === true,
       },
+      ...(client === undefined ? {} : { clientId: client }),
+      grantedScopes:
+        typeof payload.scope === "string" ? payload.scope.split(" ").filter(Boolean) : [],
     };
   };
 }

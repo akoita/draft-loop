@@ -61,6 +61,10 @@ async function signInApi(
     },
   });
   app.get("/v1/test-caller", async (request) => ({ caller: request.caller ?? null }));
+  app.get("/v1/workspaces/:workspaceId/applications", async (request) => ({
+    caller: request.caller ?? null,
+    agent: request.agentToken ?? null,
+  }));
   return app;
 }
 
@@ -177,6 +181,78 @@ describe("sign-in mode", () => {
     const api = await signInApi(async () => member);
 
     expect((await api.inject({ method: "GET", url: "/v1/health" })).statusCode).toBe(200);
+  });
+});
+
+describe("an assistant's sign-in (agent grant)", () => {
+  const applications = "/v1/workspaces/ws-1/applications";
+  const assistant = { azp: "assistant", scope: "openid draftloop:applications:read" };
+
+  it("acts as the member on an agent route its scopes admit", async () => {
+    const api = await signInApi(async () => member);
+
+    const response = await api.inject({
+      method: "GET",
+      url: applications,
+      headers: { authorization: `Bearer ${await token(assistant)}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      caller: { kind: "member", ...member },
+      agent: {
+        id: expect.stringMatching(/^dlat_oauth_/u),
+        workspaceId: "ws-1",
+        scopes: ["applications:read"],
+      },
+    });
+  });
+
+  it("is refused everywhere else, with or without scopes", async () => {
+    const api = await signInApi(async () => member);
+
+    const elsewhere = await callerOf(api, `Bearer ${await token(assistant)}`);
+    const unscoped = await api.inject({
+      method: "GET",
+      url: applications,
+      headers: { authorization: `Bearer ${await token({ client_id: "unknown-client" })}` },
+    });
+
+    expect(elsewhere.statusCode).toBe(403);
+    expect(elsewhere.json()).toMatchObject({ error: { code: "forbidden" } });
+    expect(unscoped.statusCode).toBe(403);
+  });
+
+  it("leaves the web screen's own sign-in unrestricted", async () => {
+    const api = await signInApi(async () => member);
+
+    const web = await callerOf(api, `Bearer ${await token({ azp: "draft-loop-web" })}`);
+    const onAgentRoute = await api.inject({
+      method: "GET",
+      url: applications,
+      headers: { authorization: `Bearer ${await token({ azp: "draft-loop-web" })}` },
+    });
+
+    expect(web.statusCode).toBe(200);
+    expect(onAgentRoute.json()).toMatchObject({ agent: null });
+  });
+
+  it("cannot create an account: without a membership it never reaches sign-up", async () => {
+    const api = await signInApi(async () => undefined);
+    let reached = false;
+    api.post("/v1/sign-up", async (request) => {
+      reached = request.signUpIdentity !== undefined;
+      return {};
+    });
+
+    const response = await api.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: { authorization: `Bearer ${await token(assistant)}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(reached).toBe(false);
   });
 });
 
