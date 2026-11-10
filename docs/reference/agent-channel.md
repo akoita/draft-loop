@@ -242,6 +242,8 @@ returns a run's open draft, its findings or career evidence.
 | `get_material`      | `drafts:read`       | Reads one saved cover letter or question set, without the facts it cites   |
 | `estimate_run`      | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap        |
 | `start_cv_run`      | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap               |
+| `draft_cover_letter` | `runs:start`       | Drafts and saves a cover letter, within the cap                            |
+| `draft_interview_prep` | `runs:start`     | Drafts and saves interview questions with talking points, within the cap   |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
@@ -255,10 +257,11 @@ candidate to export it in DraftLoop; it never exports or writes one itself.
 The material route returns the cited facts too, so a `drafts:read` token can
 read them by calling the API directly; the tools leave them out.
 
-### Starting runs within a monthly spend cap
+### Starting runs and drafts within a monthly spend cap
 
-A token with `runs:start` can price a run and start a CV run on an
-application's reviewed brief. The candidate gives it a monthly spend limit in
+A token with `runs:start` can price a run, start a CV run on an
+application's reviewed brief, and draft a cover letter or interview
+questions. The candidate gives it a monthly spend limit in
 US dollars when creating it; the token form and the API refuse one without
 the other.
 
@@ -266,10 +269,12 @@ the other.
 | -------------------- | ------------------------------------------------------------------------- |
 | `GET runs/estimate`  | Price a run; the answer adds `agentSpend`: cap, spent, remaining, per run |
 | `POST runs`          | Start a run with `applicationId` and `opportunityBrief` only              |
+| `POST applications/:id/material` | Draft a cover letter or interview questions on the default model |
 
-- **Reservation.** Each start reserves the workspace's per-run cost limit
-  against the cap for the UTC month, before the run is saved. A run cannot
-  cost more, so the cap is never passed.
+- **Reservation.** Each run reserves the workspace's per-run cost limit
+  against the cap for the UTC month, before it is saved; each draft reserves
+  its own cost cap, US$0.50 by default. Neither can cost more, so the cap is
+  never passed.
 - **Retries.** A retry with the same `Idempotency-Key` reserves nothing more,
   and a start the server refuses gives its reservation back.
 - **Past the cap.** The start answers 429 `agent_spend_cap_reached` with the

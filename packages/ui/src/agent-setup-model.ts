@@ -71,7 +71,7 @@ export function agentScopeLabel(scope: AgentScope): string {
     case "drafts:read":
       return t`Read your exported CVs and saved cover letters and interview questions`;
     case "runs:start":
-      return t`Start a CV run on a job whose requirements you reviewed, within a monthly spend limit`;
+      return t`Start CV runs on jobs whose requirements you reviewed, and draft cover letters and interview questions, within a monthly spend limit`;
   }
 }
 
@@ -87,7 +87,7 @@ export function agentScopeName(scope: AgentScope): string {
     case "drafts:read":
       return t`Read CVs and drafts`;
     case "runs:start":
-      return t`Start runs`;
+      return t`Start runs and drafts`;
   }
 }
 

@@ -3007,7 +3007,7 @@ msgid "Each file is checked for hidden instructions before runs use it. Quaranti
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
+msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr ""
 
 #: packages/ui/src/run-comparison-export.ts
@@ -7568,10 +7568,6 @@ msgstr ""
 msgid "Start a conversation"
 msgstr ""
 
-#: packages/ui/src/agent-setup-model.ts
-msgid "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
-msgstr ""
-
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -7585,6 +7581,10 @@ msgstr ""
 msgid "Start author–critic review"
 msgstr ""
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start CV runs on jobs whose requirements you reviewed, and draft cover letters and interview questions, within a monthly spend limit"
+msgstr ""
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Start from the raw job description instead"
 msgstr ""
@@ -7595,7 +7595,7 @@ msgid "Start review · {0}"
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts
-msgid "Start runs"
+msgid "Start runs and drafts"
 msgstr ""
 
 #: packages/ui/src/review.tsx

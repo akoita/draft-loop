@@ -37,7 +37,7 @@ const tokenParams = workspaceParams.extend({
 const scopeSchema = z
   .enum(agentTokenScopes)
   .describe(
-    "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap.",
+    "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap.",
   );
 
 const tokenSchema = z
@@ -90,7 +90,7 @@ const issueBody = z.strictObject({
     .multipleOf(0.01)
     .optional()
     .describe(
-      "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit.",
+      "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit, and each draft its cost cap.",
     ),
 });
 
@@ -139,7 +139,7 @@ export function registerAgentTokenRoutes(
     {
       schema: {
         summary: "Issue an agent token",
-        description: `A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
+        description: `A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (${defaultAgentTokenLifetimeDays} by default, at most ${maximumAgentTokenLifetimeDays}). A workspace holds at most ${maximumActiveAgentTokens} active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.`,
         params: workspaceParams,
         body: issueBody,
         response: { 201: issuedSchema, ...errors },

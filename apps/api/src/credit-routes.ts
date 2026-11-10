@@ -129,6 +129,9 @@ const runEstimateSchema = z
         runReservesUsd: z
           .number()
           .describe("What one run reserves against the cap: the workspace's per-run cost limit."),
+        draftReservesUsd: z
+          .number()
+          .describe("What one cover letter or set of interview questions reserves: its cost cap."),
       })
       .optional()
       .describe("For an agent token with runs:start: its monthly spend cap (#2599)."),

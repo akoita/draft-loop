@@ -18,4 +18,4 @@ When `start_cv_run` says the requirements are not reviewed, tell the candidate t
 
 ## When a call is refused
 
-A refusal that names the `runs:start` scope means the candidate's agent token lacks it. Tell them to create a token with **Start runs** ticked and a monthly spend limit in DraftLoop's Workspace settings > Agents, then run `draftloop-mcp save-token`.
+A refusal that names the `runs:start` scope means the candidate's agent token lacks it. Tell them to create a token with **Start runs and drafts** ticked and a monthly spend limit in DraftLoop's Workspace settings > Agents, then run `draftloop-mcp save-token`.

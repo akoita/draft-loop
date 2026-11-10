@@ -182,7 +182,7 @@ export function AgentSetup({
                     onChange={(event) => setCap(event.currentTarget.value)}
                   />
                   <span className="muted" id={`${id}-cap-hint`}>
-                    {t`Each run counts at your workspace's cost limit per run. From 0.01 to 500.`}
+                    {t`Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500.`}
                   </span>
                 </label>
               ) : null}

@@ -13,7 +13,7 @@ export interface AgentRouteRule {
   /** Why `allows` refused, for the agent to read. */
   readonly refusal?: string;
   /** What a start reserves against the token's monthly spend cap (`agent-spend-gate.ts`). */
-  readonly charge?: "run";
+  readonly charge?: "run" | "draft";
 }
 
 const workspace = "/v1/workspaces/:workspaceId";
@@ -24,7 +24,7 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   "applications:read": "Read applications",
   "jobs:write": "Add jobs",
   "drafts:read": "Read CVs and drafts",
-  "runs:start": "Start runs",
+  "runs:start": "Start runs and drafts",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
@@ -65,6 +65,14 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
     },
     refusal:
       "An agent token starts a run on an application's reviewed brief only (applicationId and opportunityBrief); the models and the career profile are the person's choice in DraftLoop.",
+  },
+  // A cover letter or interview questions within the same cap (#2601), on the default model.
+  [`POST ${workspace}/applications/:applicationId/material`]: {
+    scope: "runs:start",
+    charge: "draft",
+    allows: (request) => (request.body as Record<string, unknown> | undefined)?.model === undefined,
+    refusal:
+      "An agent token drafts with the default model only; choosing another model is the person's choice in DraftLoop.",
   },
   // Pasted job text only: approving a job page fetch stays with the person (D17).
   [`POST ${workspace}/applications`]: {
@@ -164,7 +172,6 @@ export const humanOnlyRoutes: readonly string[] = [
   // A research run searches the web, so only the person approves it (#2560).
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/research",
-  "POST /v1/workspaces/:workspaceId/applications/:applicationId/material",
   "POST /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/versions",
   "POST /v1/workspaces/:workspaceId/applications/from-file",
   "POST /v1/workspaces/:workspaceId/career-interview/sessions",

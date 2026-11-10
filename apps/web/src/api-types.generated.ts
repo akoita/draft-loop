@@ -903,6 +903,7 @@ export interface ApiSchemas {
       readonly spentThisMonthUsd: number;
       readonly remainingUsd: number;
       readonly runReservesUsd: number;
+      readonly draftReservesUsd: number;
     };
   };
   "RunExport": {

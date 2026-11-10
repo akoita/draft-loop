@@ -7,6 +7,7 @@ import { configFromEnvironment, createWorkJournalApi, createWorkspaceApiCall } f
 import { createDraftsApi } from "./drafts.js";
 import { runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
+import { createMaterialApi } from "./material.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
@@ -46,6 +47,7 @@ if (command === "init") {
     createApplicationsApi(createWorkspaceApiCall(config)),
     createDraftsApi(createWorkspaceApiCall(config)),
     createRunsApi(createWorkspaceApiCall(config)),
+    createMaterialApi(createWorkspaceApiCall(config)),
   );
   await server.connect(new StdioServerTransport());
 } else {

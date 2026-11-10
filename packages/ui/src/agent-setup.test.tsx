@@ -157,7 +157,7 @@ describe("AgentSetup", () => {
     expect(html.match(/type="checkbox"/gu)).toHaveLength(5);
     expect(html.match(/checked=""/gu)).toHaveLength(3);
     // Starting runs spends money: never ticked unasked, and its limit shows once it is ticked.
-    expect(html).not.toMatch(/checked=""[^>]*\/> Start a CV run/u);
+    expect(html).not.toMatch(/checked=""[^>]*\/> Start CV runs/u);
     expect(html).not.toContain("Monthly spend limit");
     expect(html).not.toMatch(/checked=""[^>]*\/> Read your exported CVs/u);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);

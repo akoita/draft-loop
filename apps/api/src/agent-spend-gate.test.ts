@@ -3,8 +3,9 @@ import { createWorkJournalService } from "@draft-loop/application/work-journal";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import { createMemoryAgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import { createMemoryWorkJournalNoteStore } from "@draft-loop/storage/work-journal-notes";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { agentRoutes } from "./agent-route-scopes.js";
 import { centsOf } from "./agent-spend-gate.js";
 import { buildApi } from "./app.js";
 
@@ -181,7 +182,20 @@ describe("agent spend cap", () => {
       spentThisMonthUsd: 2,
       remainingUsd: 3,
       runReservesUsd: 2,
+      draftReservesUsd: 0.5,
     });
+  });
+
+  it("charges a cover letter or interview questions on the default model only", () => {
+    // This test API drafts no material, so the route is checked by its rule.
+    const rule =
+      agentRoutes["POST /v1/workspaces/:workspaceId/applications/:applicationId/material"];
+    expect(rule).toMatchObject({ scope: "runs:start", charge: "draft" });
+    const request = (body: object) => ({ body }) as unknown as FastifyRequest;
+    expect(rule?.allows?.(request({ kind: "cover-letter" }))).toBe(true);
+    expect(rule?.allows?.(request({ kind: "cover-letter", model: "claude-haiku-5-5" }))).toBe(
+      false,
+    );
   });
 
   it("rounds a limit up to whole cents", () => {

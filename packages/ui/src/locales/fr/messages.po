@@ -3001,8 +3001,8 @@ msgid "Each file is checked for hidden instructions before runs use it. Quaranti
 msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées avant utilisation. Les fichiers en quarantaine attendent qu’un propriétaire ou un administrateur les libère."
 
 #: packages/ui/src/agent-setup.tsx
-msgid "Each run counts at your workspace's cost limit per run. From 0.01 to 500."
-msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace. De 0,01 à 500."
+msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
+msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace, et chaque brouillon pour son plafond de coût. De 0,01 à 500."
 
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
@@ -7563,10 +7563,6 @@ msgstr "Démarrer"
 msgid "Start a conversation"
 msgstr "Démarrer une conversation"
 
-#: packages/ui/src/agent-setup-model.ts
-msgid "Start a CV run on a job whose requirements you reviewed, within a monthly spend limit"
-msgstr "Lancer une exécution de CV sur une offre dont vous avez relu les exigences, dans une limite de dépense mensuelle"
-
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -7580,6 +7576,10 @@ msgstr "Lancez d’abord une exécution."
 msgid "Start author–critic review"
 msgstr "Démarrer la relecture rédacteur–relecteur"
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "Start CV runs on jobs whose requirements you reviewed, and draft cover letters and interview questions, within a monthly spend limit"
+msgstr "Lancer des exécutions de CV sur les offres dont vous avez relu les exigences, et rédiger des lettres de motivation et des questions d’entretien, dans une limite de dépense mensuelle"
+
 #: packages/ui/src/start-requirements-model.ts
 msgid "Start from the raw job description instead"
 msgstr "Partir plutôt de la description de poste brute"
@@ -7590,8 +7590,8 @@ msgid "Start review · {0}"
 msgstr "Démarrer la relecture · {0}"
 
 #: packages/ui/src/agent-setup-model.ts
-msgid "Start runs"
-msgstr "Lancer des exécutions"
+msgid "Start runs and drafts"
+msgstr "Lancer des exécutions et des brouillons"
 
 #: packages/ui/src/review.tsx
 msgid "Start the review"

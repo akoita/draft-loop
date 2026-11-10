@@ -10,6 +10,7 @@ import { z } from "zod";
 import { type ApplicationsApi, registerApplicationTools } from "./applications.js";
 import { type WorkJournalApi, WorkJournalApiError } from "./client.js";
 import { type DraftsApi, registerDraftTools } from "./drafts.js";
+import { type MaterialApi, registerMaterialTools } from "./material.js";
 import { registerApplicationPrompts } from "./prompts.js";
 import { type RunsApi, registerRunTools } from "./runs.js";
 
@@ -27,7 +28,7 @@ export const serverInstructions = [
   "DraftLoop keeps the candidate's career evidence; record_work files a note about notable work you just helped ship, which waits for the candidate's review and never becomes a CV claim by itself.",
   "Call it after a merge or release that a hiring manager would care about, never for routine fixes, and never include secrets, customer data or anything the candidate asked you to keep private.",
   "Read draftloop://work-journal/guide when unsure, and use list_work to avoid recording the same work twice.",
-  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; get_job_text reads the job description one keeps; get_cv, list_materials and get_material read the CV the candidate exported and the cover letters and interview questions they saved; add_job adds an application from a job description the candidate pasted; estimate_run prices a CV run and start_cv_run starts one within the token's monthly spend cap, only when the candidate asked for it.",
+  "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; get_job_text reads the job description one keeps; get_cv, list_materials and get_material read the CV the candidate exported and the cover letters and interview questions they saved; add_job adds an application from a job description the candidate pasted; estimate_run prices a CV run and start_cv_run starts one, and draft_cover_letter and draft_interview_prep write and save a draft, within the token's monthly spend cap and only when the candidate asked.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
   "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
 ].join(" ");
@@ -137,6 +138,7 @@ export function createWorkJournalMcpServer(
   applications?: ApplicationsApi,
   drafts?: DraftsApi,
   runs?: RunsApi,
+  material?: MaterialApi,
 ): McpServer {
   const server = new McpServer(
     { name: "draftloop", version: serverVersion },
@@ -199,6 +201,7 @@ export function createWorkJournalMcpServer(
   }
   if (drafts !== undefined) registerDraftTools(server, drafts, failure);
   if (runs !== undefined) registerRunTools(server, runs, failure);
+  if (material !== undefined) registerMaterialTools(server, material, failure);
 
   server.registerResource(
     "work-journal-guide",

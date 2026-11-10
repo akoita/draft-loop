@@ -7,8 +7,9 @@ import { describe, expect, it } from "vitest";
 import { createApplicationsApi } from "./applications.js";
 import { createWorkJournalApi, createWorkspaceApiCall } from "./client.js";
 import { createDraftsApi } from "./drafts.js";
-import { createRunsApi } from "./runs.js";
 import { logWorkSkill } from "./init.js";
+import { createMaterialApi } from "./material.js";
+import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
 /**
@@ -61,6 +62,7 @@ async function toolNames(): Promise<readonly string[]> {
     createApplicationsApi(createWorkspaceApiCall(config)),
     createDraftsApi(createWorkspaceApiCall(config)),
     createRunsApi(createWorkspaceApiCall(config)),
+    createMaterialApi(createWorkspaceApiCall(config)),
   );
   const client = new Client({ name: "test-host", version: "0.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

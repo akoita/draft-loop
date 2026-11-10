@@ -13,6 +13,38 @@
       }
     },
     "schemas": {
+      "ApplicationMaterialGuidanceInput": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ScreeningOutcomeInput": {
         "type": "object",
         "properties": {
@@ -605,6 +637,474 @@
           "error"
         ]
       },
+      "ConsentEntryInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material-storage",
+              "provider-transmission"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "withdrawn"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "candidate-consent",
+              "contract",
+              "legitimate-interest"
+            ]
+          },
+          "recordedBy": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "owner"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "member"
+                  },
+                  "memberId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "memberId"
+                ]
+              }
+            ],
+            "description": "Who recorded the entry: the owner token or a signed-in member."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The providers a transmission grant names."
+          },
+          "note": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "action",
+          "basis",
+          "recordedBy",
+          "providers",
+          "recordedAt"
+        ]
+      },
+      "ConsentsInput": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object",
+            "properties": {
+              "material-storage": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntryInput"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provider-transmission": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntryInput"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "material-storage",
+              "provider-transmission"
+            ],
+            "description": "Each kind's latest entry, or null when none was recorded."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentEntryInput"
+            },
+            "description": "Every entry, oldest first."
+          }
+        },
+        "required": [
+          "current",
+          "history"
+        ]
+      },
+      "ApplicationMaterialRequestInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraftInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The saved draft's id; absent when this server keeps no drafts.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "created_at": {
+            "description": "When the draft was written and saved.",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The paragraph, or the talking point for the question."
+                },
+                "edited": {
+                  "description": "True when the candidate rewrote this item; the text is then theirs.",
+                  "type": "boolean"
+                },
+                "unsupported_numbers": {
+                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fact_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fact_id",
+                      "text"
+                    ]
+                  },
+                  "description": "The career record facts the item relies on, as the candidate stored them."
+                },
+                "company_citations": {
+                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "finding_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "finding_id",
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "question",
+                "text",
+                "citations"
+              ]
+            }
+          },
+          "research_brief_id": {
+            "description": "The research brief the company citations come from.",
+            "type": "string"
+          },
+          "based_on": {
+            "description": "The saved draft this version was edited from; absent for a drafted version.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          "critic_findings": {
+            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paragraph",
+                "sentence",
+                "reason"
+              ]
+            }
+          },
+          "critic_model": {
+            "description": "The critic that found them, from another company than the author.",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          "review": {
+            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "tells": {
+            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "match": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ]
+            }
+          },
+          "dropped_sentences": {
+            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prompt_version": {
+            "type": "string"
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "The provider cost recorded for this draft's calls."
+          }
+        },
+        "required": [
+          "kind",
+          "items",
+          "model",
+          "prompt_version",
+          "cost_usd"
+        ]
+      },
+      "ApplicationMaterialDraftListInput": {
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationMaterialDraftInput"
+            },
+            "description": "The application's saved drafts, newest first, at most 50."
+          }
+        },
+        "required": [
+          "drafts"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialReviewInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ]
+          },
+          "outcome": {
+            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
+            "type": "string",
+            "enum": [
+              "revised",
+              "clean",
+              "kept",
+              "missing",
+              "skipped",
+              "superseded",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "revision_id": {
+            "description": "The version the pass saved, when it revised the letter.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ApplicationMaterialEditInput": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
       "AgentTokenInput": {
         "type": "object",
         "properties": {
@@ -625,7 +1125,7 @@
                 "drafts:read",
                 "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -681,7 +1181,7 @@
                 "drafts:read",
                 "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -2136,506 +2636,6 @@
           "text",
           "url"
         ]
-      },
-      "ApplicationMaterialGuidanceInput": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
-      "ConsentEntryInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "material-storage",
-              "provider-transmission"
-            ]
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "granted",
-              "withdrawn"
-            ]
-          },
-          "basis": {
-            "type": "string",
-            "enum": [
-              "candidate-consent",
-              "contract",
-              "legitimate-interest"
-            ]
-          },
-          "recordedBy": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "owner"
-                  }
-                },
-                "required": [
-                  "kind"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "member"
-                  },
-                  "memberId": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "memberId"
-                ]
-              }
-            ],
-            "description": "Who recorded the entry: the owner token or a signed-in member."
-          },
-          "providers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "The providers a transmission grant names."
-          },
-          "note": {
-            "type": "string"
-          },
-          "recordedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "action",
-          "basis",
-          "recordedBy",
-          "providers",
-          "recordedAt"
-        ]
-      },
-      "ConsentsInput": {
-        "type": "object",
-        "properties": {
-          "current": {
-            "type": "object",
-            "properties": {
-              "material-storage": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/ConsentEntryInput"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "provider-transmission": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/ConsentEntryInput"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "material-storage",
-              "provider-transmission"
-            ],
-            "description": "Each kind's latest entry, or null when none was recorded."
-          },
-          "history": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ConsentEntryInput"
-            },
-            "description": "Every entry, oldest first."
-          }
-        },
-        "required": [
-          "current",
-          "history"
-        ]
-      },
-      "ApplicationMaterialRequestInput": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cover-letter",
-              "interview-questions"
-            ]
-          },
-          "model": {
-            "description": "The model that writes the draft; the default model when absent.",
-            "type": "string",
-            "enum": [
-              "claude-sonnet-5-5",
-              "claude-haiku-5-5"
-            ]
-          },
-          "guidance": {
-            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
-            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
-          }
-        },
-        "required": [
-          "kind"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialDraftInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "description": "The saved draft's id; absent when this server keeps no drafts.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          },
-          "created_at": {
-            "description": "When the draft was written and saved.",
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cover-letter",
-              "interview-questions"
-            ]
-          },
-          "guidance": {
-            "description": "The guidance the draft was written with, as the model received it.",
-            "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "question": {
-                  "type": "string",
-                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
-                },
-                "text": {
-                  "type": "string",
-                  "description": "The paragraph, or the talking point for the question."
-                },
-                "edited": {
-                  "description": "True when the candidate rewrote this item; the text is then theirs.",
-                  "type": "boolean"
-                },
-                "unsupported_numbers": {
-                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "citations": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "fact_id": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "fact_id",
-                      "text"
-                    ]
-                  },
-                  "description": "The career record facts the item relies on, as the candidate stored them."
-                },
-                "company_citations": {
-                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "finding_id": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "finding_id",
-                      "text"
-                    ]
-                  }
-                }
-              },
-              "required": [
-                "question",
-                "text",
-                "citations"
-              ]
-            }
-          },
-          "research_brief_id": {
-            "description": "The research brief the company citations come from.",
-            "type": "string"
-          },
-          "based_on": {
-            "description": "The saved draft this version was edited from; absent for a drafted version.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          },
-          "model": {
-            "type": "object",
-            "properties": {
-              "provider": {
-                "type": "string"
-              },
-              "model": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "provider",
-              "model"
-            ]
-          },
-          "critic_findings": {
-            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "paragraph": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "sentence": {
-                  "type": "string"
-                },
-                "reason": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "paragraph",
-                "sentence",
-                "reason"
-              ]
-            }
-          },
-          "critic_model": {
-            "description": "The critic that found them, from another company than the author.",
-            "type": "object",
-            "properties": {
-              "provider": {
-                "type": "string"
-              },
-              "model": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "provider",
-              "model"
-            ]
-          },
-          "review": {
-            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "const": "pending"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "tells": {
-            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "type": "string",
-                  "enum": [
-                    "stock_phrase",
-                    "heavy_dashes",
-                    "list_of_three",
-                    "mirrored_openings",
-                    "word_count"
-                  ]
-                },
-                "paragraph": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "sentence": {
-                  "type": "string"
-                },
-                "match": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "code"
-              ]
-            }
-          },
-          "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "prompt_version": {
-            "type": "string"
-          },
-          "cost_usd": {
-            "type": "number",
-            "description": "The provider cost recorded for this draft's calls."
-          }
-        },
-        "required": [
-          "kind",
-          "items",
-          "model",
-          "prompt_version",
-          "cost_usd"
-        ]
-      },
-      "ApplicationMaterialDraftListInput": {
-        "type": "object",
-        "properties": {
-          "drafts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ApplicationMaterialDraftInput"
-            },
-            "description": "The application's saved drafts, newest first, at most 50."
-          }
-        },
-        "required": [
-          "drafts"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialReviewInput": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "none",
-              "pending",
-              "done",
-              "failed"
-            ]
-          },
-          "outcome": {
-            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
-            "type": "string",
-            "enum": [
-              "revised",
-              "clean",
-              "kept",
-              "missing",
-              "skipped",
-              "superseded",
-              "consent-required",
-              "record-erased",
-              "unavailable"
-            ]
-          },
-          "revision_id": {
-            "description": "The version the pass saved, when it revised the letter.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          }
-        },
-        "required": [
-          "status"
-        ]
-      },
-      "ApplicationMaterialEditInput": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "minItems": 1,
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 4000
-                }
-              },
-              "required": [
-                "text"
-              ],
-              "additionalProperties": false
-            },
-            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "additionalProperties": false
       },
       "OpportunityVersionsInput": {
         "type": "object",
@@ -4545,13 +4545,18 @@
               "runReservesUsd": {
                 "type": "number",
                 "description": "What one run reserves against the cap: the workspace's per-run cost limit."
+              },
+              "draftReservesUsd": {
+                "type": "number",
+                "description": "What one cover letter or set of interview questions reserves: its cost cap."
               }
             },
             "required": [
               "monthlyCapUsd",
               "spentThisMonthUsd",
               "remainingUsd",
-              "runReservesUsd"
+              "runReservesUsd",
+              "draftReservesUsd"
             ]
           }
         },
@@ -7639,6 +7644,38 @@
         ],
         "additionalProperties": false
       },
+      "ApplicationMaterialGuidance": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ScreeningOutcome": {
         "type": "object",
         "properties": {
@@ -8247,6 +8284,489 @@
         ],
         "additionalProperties": false
       },
+      "ConsentEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material-storage",
+              "provider-transmission"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "withdrawn"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "candidate-consent",
+              "contract",
+              "legitimate-interest"
+            ]
+          },
+          "recordedBy": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "owner"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "member"
+                  },
+                  "memberId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "memberId"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "Who recorded the entry: the owner token or a signed-in member."
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The providers a transmission grant names."
+          },
+          "note": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "action",
+          "basis",
+          "recordedBy",
+          "providers",
+          "recordedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Consents": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object",
+            "properties": {
+              "material-storage": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntry"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "provider-transmission": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsentEntry"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "material-storage",
+              "provider-transmission"
+            ],
+            "additionalProperties": false,
+            "description": "Each kind's latest entry, or null when none was recorded."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentEntry"
+            },
+            "description": "Every entry, oldest first."
+          }
+        },
+        "required": [
+          "current",
+          "history"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "model": {
+            "description": "The model that writes the draft; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "guidance": {
+            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The saved draft's id; absent when this server keeps no drafts.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "created_at": {
+            "description": "When the draft was written and saved.",
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "cover-letter",
+              "interview-questions"
+            ]
+          },
+          "guidance": {
+            "description": "The guidance the draft was written with, as the model received it.",
+            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The paragraph, or the talking point for the question."
+                },
+                "edited": {
+                  "description": "True when the candidate rewrote this item; the text is then theirs.",
+                  "type": "boolean"
+                },
+                "unsupported_numbers": {
+                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "citations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fact_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fact_id",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "The career record facts the item relies on, as the candidate stored them."
+                },
+                "company_citations": {
+                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "finding_id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "finding_id",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "question",
+                "text",
+                "citations"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "research_brief_id": {
+            "description": "The research brief the company citations come from.",
+            "type": "string"
+          },
+          "based_on": {
+            "description": "The saved draft this version was edited from; absent for a drafted version.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ],
+            "additionalProperties": false
+          },
+          "critic_findings": {
+            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paragraph",
+                "sentence",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "critic_model": {
+            "description": "The critic that found them, from another company than the author.",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ],
+            "additionalProperties": false
+          },
+          "review": {
+            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "tells": {
+            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "stock_phrase",
+                    "heavy_dashes",
+                    "list_of_three",
+                    "mirrored_openings",
+                    "word_count"
+                  ]
+                },
+                "paragraph": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "sentence": {
+                  "type": "string"
+                },
+                "match": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "dropped_sentences": {
+            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prompt_version": {
+            "type": "string"
+          },
+          "cost_usd": {
+            "type": "number",
+            "description": "The provider cost recorded for this draft's calls."
+          }
+        },
+        "required": [
+          "kind",
+          "items",
+          "model",
+          "prompt_version",
+          "cost_usd"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialDraftList": {
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationMaterialDraft"
+            },
+            "description": "The application's saved drafts, newest first, at most 50."
+          }
+        },
+        "required": [
+          "drafts"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialReview": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending",
+              "done",
+              "failed"
+            ]
+          },
+          "outcome": {
+            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
+            "type": "string",
+            "enum": [
+              "revised",
+              "clean",
+              "kept",
+              "missing",
+              "skipped",
+              "superseded",
+              "consent-required",
+              "record-erased",
+              "unavailable"
+            ]
+          },
+          "revision_id": {
+            "description": "The version the pass saved, when it revised the letter.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialEdit": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
       "AgentToken": {
         "type": "object",
         "properties": {
@@ -8267,7 +8787,7 @@
                 "drafts:read",
                 "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -8324,7 +8844,7 @@
                 "drafts:read",
                 "runs:start"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
             },
             "description": "What the token may do."
           },
@@ -9792,521 +10312,6 @@
         ],
         "additionalProperties": false
       },
-      "ApplicationMaterialGuidance": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
-      "ConsentEntry": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "material-storage",
-              "provider-transmission"
-            ]
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "granted",
-              "withdrawn"
-            ]
-          },
-          "basis": {
-            "type": "string",
-            "enum": [
-              "candidate-consent",
-              "contract",
-              "legitimate-interest"
-            ]
-          },
-          "recordedBy": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "owner"
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "member"
-                  },
-                  "memberId": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "memberId"
-                ],
-                "additionalProperties": false
-              }
-            ],
-            "description": "Who recorded the entry: the owner token or a signed-in member."
-          },
-          "providers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "The providers a transmission grant names."
-          },
-          "note": {
-            "type": "string"
-          },
-          "recordedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "action",
-          "basis",
-          "recordedBy",
-          "providers",
-          "recordedAt"
-        ],
-        "additionalProperties": false
-      },
-      "Consents": {
-        "type": "object",
-        "properties": {
-          "current": {
-            "type": "object",
-            "properties": {
-              "material-storage": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/ConsentEntry"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "provider-transmission": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/ConsentEntry"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "material-storage",
-              "provider-transmission"
-            ],
-            "additionalProperties": false,
-            "description": "Each kind's latest entry, or null when none was recorded."
-          },
-          "history": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ConsentEntry"
-            },
-            "description": "Every entry, oldest first."
-          }
-        },
-        "required": [
-          "current",
-          "history"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialRequest": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cover-letter",
-              "interview-questions"
-            ]
-          },
-          "model": {
-            "description": "The model that writes the draft; the default model when absent.",
-            "type": "string",
-            "enum": [
-              "claude-sonnet-5-5",
-              "claude-haiku-5-5"
-            ]
-          },
-          "guidance": {
-            "description": "The candidate's guidance on emphasis, tone, length and addressee; it steers the writing and is never cited as a fact.",
-            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
-          }
-        },
-        "required": [
-          "kind"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialDraft": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "description": "The saved draft's id; absent when this server keeps no drafts.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          },
-          "created_at": {
-            "description": "When the draft was written and saved.",
-            "type": "string"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "cover-letter",
-              "interview-questions"
-            ]
-          },
-          "guidance": {
-            "description": "The guidance the draft was written with, as the model received it.",
-            "$ref": "#/components/schemas/ApplicationMaterialGuidance"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "question": {
-                  "type": "string",
-                  "description": "Empty for a cover letter paragraph; the interview question otherwise."
-                },
-                "text": {
-                  "type": "string",
-                  "description": "The paragraph, or the talking point for the question."
-                },
-                "edited": {
-                  "description": "True when the candidate rewrote this item; the text is then theirs.",
-                  "type": "boolean"
-                },
-                "unsupported_numbers": {
-                  "description": "For an edited item: numbers none of the draft's cited facts state, for the candidate to check. Flagged, never refused.",
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "citations": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "fact_id": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "fact_id",
-                      "text"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "description": "The career record facts the item relies on, as the candidate stored them."
-                },
-                "company_citations": {
-                  "description": "The research brief's findings a statement about the employer relies on; never a claim about the candidate.",
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "finding_id": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "finding_id",
-                      "text"
-                    ],
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "required": [
-                "question",
-                "text",
-                "citations"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "research_brief_id": {
-            "description": "The research brief the company citations come from.",
-            "type": "string"
-          },
-          "based_on": {
-            "description": "The saved draft this version was edited from; absent for a drafted version.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          },
-          "model": {
-            "type": "object",
-            "properties": {
-              "provider": {
-                "type": "string"
-              },
-              "model": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "provider",
-              "model"
-            ],
-            "additionalProperties": false
-          },
-          "critic_findings": {
-            "description": "For a version the critic pass wrote: the sentences of the version it is based on that read as machine-written.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "paragraph": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "sentence": {
-                  "type": "string"
-                },
-                "reason": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "paragraph",
-                "sentence",
-                "reason"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "critic_model": {
-            "description": "The critic that found them, from another company than the author.",
-            "type": "object",
-            "properties": {
-              "provider": {
-                "type": "string"
-              },
-              "model": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "provider",
-              "model"
-            ],
-            "additionalProperties": false
-          },
-          "review": {
-            "description": "Set when saving this cover letter queued the critic pass; poll the draft's review route.",
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "const": "pending"
-              }
-            },
-            "required": [
-              "status"
-            ],
-            "additionalProperties": false
-          },
-          "tells": {
-            "description": "For a cover letter: sentences with machine-writing tells, from a deterministic check. Not an AI detector.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "type": "string",
-                  "enum": [
-                    "stock_phrase",
-                    "heavy_dashes",
-                    "list_of_three",
-                    "mirrored_openings",
-                    "word_count"
-                  ]
-                },
-                "paragraph": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "sentence": {
-                  "type": "string"
-                },
-                "match": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "code"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "prompt_version": {
-            "type": "string"
-          },
-          "cost_usd": {
-            "type": "number",
-            "description": "The provider cost recorded for this draft's calls."
-          }
-        },
-        "required": [
-          "kind",
-          "items",
-          "model",
-          "prompt_version",
-          "cost_usd"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialDraftList": {
-        "type": "object",
-        "properties": {
-          "drafts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ApplicationMaterialDraft"
-            },
-            "description": "The application's saved drafts, newest first, at most 50."
-          }
-        },
-        "required": [
-          "drafts"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialReview": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "none",
-              "pending",
-              "done",
-              "failed"
-            ]
-          },
-          "outcome": {
-            "description": "How a finished pass ended: `revised` saved a new version, `clean` found nothing to rewrite, `kept` kept the draft because the revision broke a citation rule; the rest made no change.",
-            "type": "string",
-            "enum": [
-              "revised",
-              "clean",
-              "kept",
-              "missing",
-              "skipped",
-              "superseded",
-              "consent-required",
-              "record-erased",
-              "unavailable"
-            ]
-          },
-          "revision_id": {
-            "description": "The version the pass saved, when it revised the letter.",
-            "type": "string",
-            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialEdit": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "minItems": 1,
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 4000
-                }
-              },
-              "required": [
-                "text"
-              ],
-              "additionalProperties": false
-            },
-            "description": "Every item's text, in the saved draft's order; one entry for each of its items."
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "additionalProperties": false
-      },
       "OpportunityVersions": {
         "type": "object",
         "properties": {
@@ -11582,13 +11587,18 @@
               "runReservesUsd": {
                 "type": "number",
                 "description": "What one run reserves against the cap: the workspace's per-run cost limit."
+              },
+              "draftReservesUsd": {
+                "type": "number",
+                "description": "What one cover letter or set of interview questions reserves: its cost cap."
               }
             },
             "required": [
               "monthlyCapUsd",
               "spentThisMonthUsd",
               "remainingUsd",
-              "runReservesUsd"
+              "runReservesUsd",
+              "draftReservesUsd"
             ],
             "additionalProperties": false
           }
@@ -25172,7 +25182,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -25206,11 +25216,11 @@
                         "drafts:read",
                         "runs:start"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief within the token's monthly spend cap."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
                     }
                   },
                   "monthly_cap_usd": {
-                    "description": "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit.",
+                    "description": "Required with runs:start, refused without it: the US dollars the token may reserve each UTC month. Each run reserves the workspace's per-run cost limit, and each draft its cost cap.",
                     "type": "number",
                     "minimum": 0.01,
                     "maximum": 500,

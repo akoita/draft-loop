@@ -435,8 +435,9 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   progress). A `runs:start` scope, never ticked by default, carries a monthly
   US dollar cap; each run reserves the workspace's per-run cost limit
   against it (#2599). `estimate_run`, `start_cv_run` and the
-  `/draftloop:start-run` skill use it (#2600). Drafting letters and
-  interview questions, and `evidence:write`, follow.
+  `/draftloop:start-run` skill use it (#2600), and so do
+  `draft_cover_letter` and `draft_interview_prep`, each draft reserving its
+  cost cap (#2601). `evidence:write` follows.
 - **Protect self-hosted data and harden the API edge**
   ([milestone 70](https://github.com/akoita/draft-loop/milestone/70), #2144–#2146,
   #2148, #2169, #2170, #2172, #2173, admitted 2026-11-04) closes the server
