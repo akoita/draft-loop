@@ -127,6 +127,10 @@
       "types": "./src/material-review.ts",
       "import": "./src/material-review.ts"
     },
+    "./interview-guide-matrix": {
+      "types": "./src/interview-guide-matrix.ts",
+      "import": "./src/interview-guide-matrix.ts"
+    },
     "./interview-guide-research": {
       "types": "./src/interview-guide-research.ts",
       "import": "./src/interview-guide-research.ts"

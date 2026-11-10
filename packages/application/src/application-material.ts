@@ -309,7 +309,8 @@ const commonWords = new Set(
   ),
 );
 
-function matchWords(text: string): Set<string> {
+/** The words of a text that can tell a match: lower case, without common English and French words. */
+export function applicationMaterialMatchWords(text: string): Set<string> {
   return new Set(
     (text.toLowerCase().match(/\p{L}[\p{L}\p{N}+#.-]*/gu) ?? [])
       .map((word) => word.replace(/[.-]+$/u, ""))
@@ -338,11 +339,11 @@ export function applicationMaterialFactScorer(
   requirements: readonly Pick<ApplicationMaterialRequirement, "text" | "priority">[],
 ): (fact: Pick<ApplicationMaterialFact, "field" | "value">) => number {
   const wanted = requirements.map((requirement) => ({
-    words: matchWords(requirement.text),
+    words: applicationMaterialMatchWords(requirement.text),
     weight: priorityWeight[requirement.priority],
   }));
   return (fact) => {
-    const words = matchWords(`${fact.field} ${fact.value}`);
+    const words = applicationMaterialMatchWords(`${fact.field} ${fact.value}`);
     let score = 0;
     for (const requirement of wanted) {
       let shared = 0;
