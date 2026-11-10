@@ -13,7 +13,11 @@ export interface ResearchRunAddress {
 export interface ResearchRuns {
   /** Queues the run: `waiting` when one for the application already waits or runs. */
   readonly queue: (
-    job: ResearchRunAddress & { readonly windowMonths?: number },
+    job: ResearchRunAddress & {
+      readonly windowMonths?: number;
+      /** For an interview guide (#2632): its depth and whether pay is a topic. */
+      readonly guide?: { readonly depth: "essential" | "extensive"; readonly salary?: boolean };
+    },
   ) => Promise<"queued" | "waiting" | "unavailable">;
   /** Where the application's newest run stands; undefined when none was queued. */
   readonly state: (address: ResearchRunAddress) => Promise<ResearchState | undefined>;

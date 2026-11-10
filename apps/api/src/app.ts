@@ -67,6 +67,7 @@ import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
@@ -679,6 +680,28 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           ? {}
           : { researchBriefs: application.researchBriefs }),
       });
+      if (application.applicationMaterialDrafts !== undefined) {
+        registerInterviewGuideRoutes(app, {
+          service: application.service,
+          workspaceRoot: application.workspaceRoot,
+          material: {
+            get route() {
+              return interview.route;
+            },
+            get allowProviderData() {
+              return interview.allowProviderData;
+            },
+          },
+          drafts: application.applicationMaterialDrafts,
+          ...(application.consents === undefined ? {} : { consents: application.consents }),
+          ...(screening === undefined ? {} : { screening }),
+          ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+          ...(application.researchBriefs === undefined
+            ? {}
+            : { researchBriefs: application.researchBriefs }),
+          ...(application.researchRuns === undefined ? {} : { runs: application.researchRuns }),
+        });
+      }
     }
     if (application.researchBriefs !== undefined) {
       registerResearchBriefRoutes(app, {

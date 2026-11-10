@@ -151,6 +151,7 @@ export interface ApiSchemas {
       readonly match?: string;
     })[];
     readonly dropped_sentences?: readonly (string)[];
+    readonly unsourced_topics?: readonly ("company" | "news" | "role" | "field" | "process" | "salary")[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
@@ -459,6 +460,32 @@ export interface ApiSchemas {
     readonly other_topics?: readonly (string)[];
     readonly notes?: string;
     readonly never_say?: readonly (string)[];
+  };
+  "InterviewDetailsInput": {
+    readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
+    readonly depth: "essential" | "extensive";
+    readonly scheduled_at?: string;
+    readonly length_minutes?: number;
+    readonly format?: "video" | "phone" | "onsite";
+    readonly interviewer_role?: string;
+    readonly language?: string;
+    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
+    readonly other_topics?: readonly (string)[];
+    readonly notes?: string;
+    readonly never_say?: readonly (string)[];
+  };
+  "InterviewGuideRequestInput": {
+    readonly details: ApiSchemas["InterviewDetailsInput"];
+    readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
+    readonly research: "approved" | "skip";
+    readonly parts?: readonly ("context" | "story" | "practice")[];
+    readonly based_on?: string;
+  };
+  "InterviewGuideResearching": {
+    readonly status: "researching";
+    readonly research: {
+      readonly status: "pending";
+    };
   };
   "IssuedAgentToken": {
     readonly id: string;
@@ -2445,6 +2472,14 @@ export interface ApiOperations {
       readonly materialId: string;
     };
     readonly response: void;
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: ApiSchemas["InterviewGuideRequestInput"];
+    readonly response: ApiSchemas["ApplicationMaterialDraft"] | ApiSchemas["InterviewGuideResearching"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
     readonly path: {
