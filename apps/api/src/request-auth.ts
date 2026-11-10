@@ -236,11 +236,13 @@ export function registerRequestAuthentication(
           },
           "agent grant accepted",
         );
-        request.agentToken = {
-          id: agentGrantId(grant),
-          workspaceId: admission.workspaceId,
-          scopes: grant.scopes,
-        };
+        if (admission.workspaceId !== undefined) {
+          request.agentToken = {
+            id: agentGrantId(grant),
+            workspaceId: admission.workspaceId,
+            scopes: grant.scopes,
+          };
+        }
       }
       request.caller = authentication.caller;
       return;
