@@ -1,4 +1,5 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
+import { coverLetterClaimCheckPromptVersion } from "@draft-loop/application/cover-letter-claims-model";
 import { type FactUsageSettings, factUsageKey } from "@draft-loop/application/fact-usage";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import type { ResearchBrief } from "@draft-loop/schemas/research-brief";
@@ -304,7 +305,7 @@ describe("interview guide route", () => {
     // Two calls: the writer, then the claim check on its own route and model.
     expect(calls.map((call) => call.version)).toEqual([
       "interview-guide-v1",
-      "cover-letter-claims-v1",
+      coverLetterClaimCheckPromptVersion,
     ]);
     const sent = JSON.stringify(calls);
     expect(sent).not.toContain("candidate@example.test");
