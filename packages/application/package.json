@@ -135,6 +135,10 @@
       "types": "./src/interview-guide-model.ts",
       "import": "./src/interview-guide-model.ts"
     },
+    "./interview-guide-extensive": {
+      "types": "./src/interview-guide-extensive.ts",
+      "import": "./src/interview-guide-extensive.ts"
+    },
     "./interview-guide-matrix": {
       "types": "./src/interview-guide-matrix.ts",
       "import": "./src/interview-guide-matrix.ts"

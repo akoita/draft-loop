@@ -161,6 +161,8 @@ const gapId = (index: number) => `gap_${index + 1}`;
 /** The writer's request: bounded facts, the matrix, the gaps to defend and the findings. */
 export function interviewGuideWriterRequest(
   input: DraftInterviewGuideInput,
+  sections: readonly InterviewGuideSection[] = essentialInterviewGuideSections,
+  questionCount: number = essentialInterviewGuideQuestions,
 ): InterviewGuideWriterRequest {
   const { never_say: _private, ...interview } = input.details;
   const facts = rankApplicationMaterialFacts(input.facts, input.requirements)
@@ -175,7 +177,7 @@ export function interviewGuideWriterRequest(
     .slice(0, interviewGuideDefenseLines[input.details.depth])
     .map((gap, index) => ({ id: gapId(index), requirement: gap.requirement.slice(0, 300) }));
   return {
-    sections: essentialInterviewGuideSections.filter(
+    sections: sections.filter(
       (section) =>
         section !== "topic" ||
         (interview.topics?.length ?? 0) + (interview.other_topics?.length ?? 0) > 0,
@@ -190,7 +192,7 @@ export function interviewGuideWriterRequest(
     gaps,
     findings: interviewGuideFindings(input.brief),
     unsourcedTopics: interviewGuideMissingTopics(input.brief, input.details),
-    questionCount: essentialInterviewGuideQuestions,
+    questionCount,
     ...(input.language === undefined ? {} : { language: input.language }),
   };
 }
@@ -222,28 +224,36 @@ function holds(
   return problems.length === 0 && !touchesNeverSay(sentence.text, neverSay);
 }
 
-const writable = new Set<string>(essentialInterviewGuideSections);
+/** One written and checked part of a guide: its kept items and the sentences it dropped. */
+export interface InterviewGuidePart {
+  readonly items: readonly InterviewGuideItem[];
+  readonly droppedSentences: readonly string[];
+  readonly unsourcedTopics: readonly string[];
+  readonly model?: ApplicationMaterialModelIdentity;
+}
 
-/** Drafts an essential guide: one writer call, the claim check, then the server's own sections. */
-export async function draftEssentialInterviewGuide(
-  writer: InterviewGuideWriterPort,
-  checker: CoverLetterClaimCheckPort,
-  input: DraftInterviewGuideInput,
-): Promise<InterviewGuideDraft> {
-  const request = interviewGuideWriterRequest(input);
+/** Refuses to write a guide from a record with no fact it may cite. */
+function requireFacts(request: InterviewGuideWriterRequest): void {
   if (request.facts.length === 0) {
     throw new ApplicationMaterialError(
       "no_facts",
       "The career record holds no fact an interview guide may cite.",
     );
   }
+}
+
+/** Writes the request's sections in one call, then holds each sentence to its sources. */
+export async function writeInterviewGuidePart(
+  writer: InterviewGuideWriterPort,
+  checker: CoverLetterClaimCheckPort,
+  request: InterviewGuideWriterRequest,
+  neverSay: readonly InterviewGuideNeverSayEntry[],
+): Promise<InterviewGuidePart> {
+  requireFacts(request);
   const reply = await writer.write(request);
+  const wanted = new Set<string>(request.sections);
   const written = reply.items
-    .filter(
-      (item) =>
-        writable.has(item.section) &&
-        request.sections.includes(item.section as InterviewGuideSection),
-    )
+    .filter((item) => wanted.has(item.section))
     .map((item) => ({
       section: item.section,
       heading: item.heading.trim().slice(0, 300),
@@ -268,8 +278,13 @@ export async function draftEssentialInterviewGuide(
   ];
   const companyFacts = request.findings.map((finding) => ({ id: finding.id, text: finding.text }));
   const sentences = guideSentences(written);
-  const { links } = await checker.link({ sentences, facts, companyFacts });
-  const checked = checkCoverLetterClaims({ sentences, facts, companyFacts }, links).sentences;
+  const checked =
+    sentences.length === 0
+      ? []
+      : checkCoverLetterClaims(
+          { sentences, facts, companyFacts },
+          (await checker.link({ sentences, facts, companyFacts })).links,
+        ).sentences;
 
   const dropped: string[] = [];
   const items: InterviewGuideItem[] = [];
@@ -277,7 +292,7 @@ export async function draftEssentialInterviewGuide(
     const part = (paragraph: number) =>
       checked.filter((sentence) => sentence.paragraph === paragraph);
     const keep = (parts: CheckedCoverLetterSentence[]) => {
-      const kept = parts.filter((sentence) => holds(sentence, input.neverSay));
+      const kept = parts.filter((sentence) => holds(sentence, neverSay));
       dropped.push(...parts.filter((sentence) => !kept.includes(sentence)).map((s) => s.text));
       return kept;
     };
@@ -298,24 +313,60 @@ export async function draftEssentialInterviewGuide(
       findingIds: [...new Set(cited.flatMap((sentence) => sentence.companyFactIds))],
     });
   });
-  if (!items.some((item) => item.factIds.length > 0)) {
-    throw new ApplicationMaterialError(
-      "invalid_draft",
-      "No sentence of the drafted guide about the candidate was supported by the career record.",
-    );
-  }
   return {
-    items: [...items, ...serverSections(input)],
+    items,
     droppedSentences: dropped,
     unsourcedTopics: request.unsourcedTopics,
     ...(reply.model === undefined ? {} : { model: reply.model }),
   };
 }
 
+/** Refuses a guide in which no kept sentence about the candidate cites a fact. */
+export function requireSupportedGuide(items: readonly InterviewGuideItem[]): void {
+  if (!items.some((item) => item.factIds.length > 0)) {
+    throw new ApplicationMaterialError(
+      "invalid_draft",
+      "No sentence of the drafted guide about the candidate was supported by the career record.",
+    );
+  }
+}
+
+/** Drafts an essential guide: one writer call, the claim check, then the server's own sections. */
+export async function draftEssentialInterviewGuide(
+  writer: InterviewGuideWriterPort,
+  checker: CoverLetterClaimCheckPort,
+  input: DraftInterviewGuideInput,
+): Promise<InterviewGuideDraft> {
+  const part = await writeInterviewGuidePart(
+    writer,
+    checker,
+    interviewGuideWriterRequest(input),
+    input.neverSay,
+  );
+  requireSupportedGuide(part.items);
+  return {
+    items: [...part.items, ...serverSections(input)],
+    droppedSentences: part.droppedSentences,
+    unsourcedTopics: part.unsourcedTopics,
+    ...(part.model === undefined ? {} : { model: part.model }),
+  };
+}
+
+/** The few words the server writes itself, in the guide's language (English otherwise). */
+const serverWords = {
+  en: { undated: "undated", weak: "weak source" },
+  fr: { undated: "non daté", weak: "source fragile" },
+} as const;
+
+export function interviewGuideServerWords(language: string | undefined) {
+  return language?.toLowerCase().startsWith("fr") ? serverWords.fr : serverWords.en;
+}
+
 /** The never-say and sources sections, built from the record and the brief, never by a model. */
 export function serverSections(
-  input: Pick<DraftInterviewGuideInput, "neverSay" | "brief">,
+  input: Pick<DraftInterviewGuideInput, "neverSay" | "brief" | "language">,
 ): InterviewGuideItem[] {
+  const words = interviewGuideServerWords(input.language);
   const items: InterviewGuideItem[] = input.neverSay.map((entry) => ({
     section: "never-say",
     heading: "",
@@ -326,8 +377,8 @@ export function serverSections(
   for (const source of input.brief?.sources ?? []) {
     const parts = [
       source.title,
-      source.published_on ?? "undated",
-      ...(source.reliability === "weak" ? ["weak source"] : []),
+      source.published_on ?? words.undated,
+      ...(source.reliability === "weak" ? [words.weak] : []),
       ...(source.url === undefined ? [] : [source.url]),
     ];
     items.push({
