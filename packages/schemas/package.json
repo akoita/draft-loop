@@ -67,6 +67,10 @@
       "types": "./src/application-language.ts",
       "import": "./src/application-language.ts"
     },
+    "./interview-details": {
+      "types": "./src/interview-details.ts",
+      "import": "./src/interview-details.ts"
+    },
     "./research-brief": {
       "types": "./src/research-brief.ts",
       "import": "./src/research-brief.ts"

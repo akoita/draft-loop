@@ -41,6 +41,7 @@ import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
+import { interviewDetailsSchema } from "@draft-loop/schemas/interview-details";
 import {
   applicationMaterialGuidanceSchema,
   interviewGuideSections,
@@ -169,6 +170,9 @@ const draftView = z
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe("The guidance the draft was written with, as the model received it."),
+    interview_details: interviewDetailsSchema
+      .optional()
+      .describe("For an interview preparation guide: the interview it was written for."),
     items: z.array(
       z.object({
         question: z

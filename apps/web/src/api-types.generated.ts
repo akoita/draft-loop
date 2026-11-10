@@ -109,6 +109,7 @@ export interface ApiSchemas {
     readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
+    readonly interview_details?: ApiSchemas["InterviewDetails"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
@@ -445,6 +446,18 @@ export interface ApiSchemas {
   };
   "Health": {
     readonly status: "ok";
+  };
+  "InterviewDetails": {
+    readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
+    readonly depth: "essential" | "extensive";
+    readonly scheduled_at?: string;
+    readonly length_minutes?: number;
+    readonly format?: "video" | "phone" | "onsite";
+    readonly interviewer_role?: string;
+    readonly language?: string;
+    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
+    readonly other_topics?: readonly (string)[];
+    readonly notes?: string;
   };
   "IssuedAgentToken": {
     readonly id: string;

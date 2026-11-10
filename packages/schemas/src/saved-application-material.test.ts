@@ -16,6 +16,7 @@ const base = {
   cost_usd: 0.1,
   created_at: "2026-11-10T09:00:00.000Z",
 };
+const details = { stage: "screen", depth: "essential" };
 const item = (extra: Record<string, unknown> = {}) => ({
   question: "",
   text: "Fictional text.",
@@ -28,6 +29,7 @@ describe("saved interview guides", () => {
     const parsed = savedApplicationMaterialSchema.parse({
       ...base,
       kind: "interview-guide",
+      interview_details: details,
       items: [
         item({ section: "read-first" }),
         item({ section: "questions", question: "Why this role?", trap: "Reciting the post." }),
@@ -43,6 +45,7 @@ describe("saved interview guides", () => {
       savedApplicationMaterialSchema.safeParse({
         ...base,
         kind: "interview-guide",
+        interview_details: details,
         items: many(maximumSavedInterviewGuideItems, { section: "stories" }),
       }).success,
     ).toBe(true);
@@ -56,9 +59,11 @@ describe("saved interview guides", () => {
   });
 
   it("refuses a guide item without a section and a section or trap elsewhere", () => {
-    const refused = (kind: string, items: unknown[]) =>
-      savedApplicationMaterialSchema.safeParse({ ...base, kind, items }).success;
-    expect(refused("interview-guide", [item()])).toBe(false);
+    const refused = (kind: string, items: unknown[], extra: Record<string, unknown> = {}) =>
+      savedApplicationMaterialSchema.safeParse({ ...base, kind, items, ...extra }).success;
+    expect(refused("interview-guide", [item()], { interview_details: details })).toBe(false);
+    expect(refused("interview-guide", [item({ section: "pitch" })])).toBe(false);
+    expect(refused("cover-letter", [item()], { interview_details: details })).toBe(false);
     expect(refused("cover-letter", [item({ section: "pitch" })])).toBe(false);
     expect(refused("interview-questions", [item({ question: "Why?", trap: "None." })])).toBe(false);
   });

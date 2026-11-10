@@ -54,6 +54,7 @@ describe.runIf(connectionString !== undefined)("Postgres saved application mater
       const guide = draft("amd_fixture0005", {
         application_id: "application-3",
         kind: "interview-guide",
+        interview_details: { stage: "screen", depth: "essential", topics: ["salary"] },
         items: [
           { section: "read-first", question: "", text: "Fictional takeaway.", citations: [] },
           {
