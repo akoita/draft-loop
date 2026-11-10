@@ -67,11 +67,15 @@ export function CodingAgentsSection({
       serverUrl={globalThis.location?.origin ?? ""}
       workspaceId={workspaceId}
       tokens={tokens}
-      onIssue={async (label, scopes) => {
+      onIssue={async (label, scopes, monthlyCapUsd) => {
         try {
           const issued = await client.call("POST /v1/workspaces/{workspaceId}/agent-tokens", {
             path: { workspaceId },
-            body: { label, scopes: [...scopes] },
+            body: {
+              label,
+              scopes: [...scopes],
+              ...(monthlyCapUsd === undefined ? {} : { monthly_cap_usd: monthlyCapUsd }),
+            },
           });
           await reloadTokens().catch(() => undefined);
           return issued;

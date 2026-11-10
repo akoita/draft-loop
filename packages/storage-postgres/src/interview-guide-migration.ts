@@ -6,7 +6,7 @@ import type { PostgresMigration } from "./migrations.js";
  * changes.
  */
 export const interviewGuideMigration: PostgresMigration = {
-  version: 38,
+  version: 39,
   name: "interview guide material kind",
   sql: `
     ALTER TABLE application_material_drafts

@@ -83,4 +83,53 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
       await drop();
     }
   });
+
+  it("reserves spend once per key within the cap, per month and per tenant", async () => {
+    const { openTenancy, drop } = await createTestSchema(url, "agent_token_spend");
+    const tenancy = await openTenancy();
+    try {
+      const storeA = tenancy.forTenant("tenant-a").agentTokens;
+      const storeB = tenancy.forTenant("tenant-b").agentTokens;
+      await storeA.insert({
+        id: "dlat_fixture0010",
+        workspaceId: "owner",
+        label: "Claude Code",
+        createdAt: "2026-11-04T10:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
+        scopes: ["applications:read", "runs:start"],
+        monthlyCapCents: 500,
+        secretHash: hashA,
+      });
+      const at = { workspaceId: "owner", id: "dlat_fixture0010", month: "2026-11", cents: 200 };
+
+      expect(await storeA.findByHash(hashA)).toMatchObject({ monthlyCapCents: 500 });
+      expect(await storeB.reserveSpend({ ...at, key: "a" })).toEqual({ outcome: "no_cap" });
+      const [first, second] = await Promise.all([
+        storeA.reserveSpend({ ...at, key: "a" }),
+        storeA.reserveSpend({ ...at, key: "b" }),
+      ]);
+      expect([first?.outcome, second?.outcome]).toEqual(["reserved", "reserved"]);
+      expect(await storeA.reserveSpend({ ...at, key: "a" })).toEqual({
+        outcome: "replayed",
+        spentCents: 400,
+      });
+      expect(await storeA.reserveSpend({ ...at, key: "c" })).toEqual({
+        outcome: "cap_reached",
+        spentCents: 400,
+        capCents: 500,
+      });
+      await storeA.releaseSpend({ ...at, key: "b" });
+      await storeA.releaseSpend({ ...at, key: "b" });
+      expect(await storeA.findByHash(hashA)).toMatchObject({
+        spend: { month: "2026-11", cents: 200 },
+      });
+      expect(await storeA.reserveSpend({ ...at, month: "2026-12", key: "a" })).toEqual({
+        outcome: "reserved",
+        spentCents: 200,
+      });
+    } finally {
+      await tenancy.close();
+      await drop();
+    }
+  });
 });

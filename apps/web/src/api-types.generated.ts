@@ -4,11 +4,13 @@ export interface ApiSchemas {
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
     readonly active: boolean;
+    readonly monthly_cap_usd?: number;
+    readonly spent_this_month_usd?: number;
   };
   "ApiError": {
     readonly error: {
@@ -447,11 +449,13 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
     readonly active: boolean;
+    readonly monthly_cap_usd?: number;
+    readonly spent_this_month_usd?: number;
     readonly token: string;
   };
   "KnowledgeBase": {
@@ -901,6 +905,13 @@ export interface ApiSchemas {
       readonly unlimited: boolean;
       readonly remaining: number | null;
       readonly sufficient: boolean;
+    };
+    readonly agentSpend?: {
+      readonly monthlyCapUsd: number;
+      readonly spentThisMonthUsd: number;
+      readonly remainingUsd: number;
+      readonly runReservesUsd: number;
+      readonly draftReservesUsd: number;
     };
   };
   "RunExport": {
@@ -2464,7 +2475,8 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+      readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
   };
