@@ -105,11 +105,13 @@ export interface ApiSchemas {
   "ApplicationMaterialDraft": {
     readonly id?: string;
     readonly created_at?: string;
-    readonly kind: "cover-letter" | "interview-questions";
+    readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
+      readonly section?: "read-first" | "interview" | "company" | "role" | "market" | "matrix" | "pitch" | "stories" | "defense" | "questions" | "ask" | "practical" | "topic" | "never-say" | "checklist" | "sources";
+      readonly trap?: string;
       readonly edited?: boolean;
       readonly unsupported_numbers?: readonly (string)[];
       readonly citations: readonly ({
@@ -2373,7 +2375,7 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly query?: {
-      readonly kind?: "cover-letter" | "interview-questions";
+      readonly kind?: "cover-letter" | "interview-questions" | "interview-guide";
     };
     readonly response: ApiSchemas["ApplicationMaterialDraftList"];
   };

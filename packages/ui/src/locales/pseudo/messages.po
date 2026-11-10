@@ -4062,6 +4062,10 @@ msgid "Interview only"
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
+msgid "Interview preparation guide"
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
 msgid "Interview questions"
 msgstr ""
 
