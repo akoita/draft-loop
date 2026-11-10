@@ -21,7 +21,8 @@ source-only CLI takes files into a local workspace instead
 2. Or choose **Paste text**, give an optional title and save. The text is
    stored as one more source, named `<title>.txt`.
 3. **Your files** lists each source with the date it was added, its
-   injection screening and a **Download** button.
+   injection screening and a **Download** button. Each knowledge base shows
+   its file count, and a long list scrolls inside its own box.
 
 Every source is screened for hidden instructions before a run may use it; see
 [Sensitivity and screening](sensitivity-and-screening.md). Imported pull
