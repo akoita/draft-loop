@@ -1,4 +1,3 @@
-import { AgentSetupLink } from "@draft-loop/ui/agent-setup";
 import {
   codingAgentsFragment,
   workJournalFragment,
@@ -18,7 +17,7 @@ import { useRecordId } from "./record-context.js";
 
 /**
  * The web host's Work journal (#2024): reads the record's notes and intake switch through the
- * API and sends each review to the review route. The server checks, merges and publishes.
+ * API and sends each review to the review route. The switch is set in Workspace settings (#2625). The server checks, merges and publishes.
  */
 
 export interface WorkJournalSectionProps {
@@ -96,30 +95,14 @@ export function WorkJournalSection({ client, bases, openHome }: WorkJournalSecti
       problem={problem}
       agentNames={agentNames}
       knowledgeBases={(bases ?? []).map((base) => ({ id: base.id, name: base.displayName }))}
-      agentSetup={
-        <AgentSetupLink
-          onOpen={
-            openHome === undefined
-              ? undefined
-              : () => {
-                  openHome();
-                  window.location.hash = codingAgentsFragment;
-                }
-          }
-        />
+      onOpenSettings={
+        openHome === undefined
+          ? undefined
+          : () => {
+              openHome();
+              window.location.hash = codingAgentsFragment;
+            }
       }
-      onSetIntake={async (enabled) => {
-        try {
-          const saved = await client.call("PUT /v1/workspaces/{workspaceId}/work-journal/intake", {
-            path: { workspaceId },
-            body: { enabled },
-          });
-          setIntake(saved.enabled);
-          return undefined;
-        } catch (error) {
-          return workJournalProblem(error);
-        }
-      }}
       onReview={async (noteId, action: WorkJournalReviewAction) => {
         try {
           await client.call(

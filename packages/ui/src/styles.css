@@ -8082,6 +8082,17 @@ input[type="text"].workspace-title-input {
   gap: var(--space-2);
 }
 
+/* The header's theme control is icon-only, so it is square at the toolbar buttons' height. */
+.header-theme-toggle {
+  width: 32px;
+  padding: 0;
+}
+
+.header-theme-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* "← Home / Current screen". Focus lands here when a screen opens so the change is announced. */
 .home-location {
   display: flex;
@@ -9867,6 +9878,45 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .coding-agents h3 {
   margin: 0 0 0.25rem;
   font-size: 1rem;
+}
+
+/* The "Accept notes from agents" switch in Agents (#2625). */
+.work-journal-intake {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0.75rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-2);
+}
+
+.work-journal-intake > div:first-child {
+  flex: 1 1 20rem;
+}
+
+.work-journal-intake p {
+  margin: 0.25rem 0 0;
+}
+
+.work-journal-intake .work-journal-intake-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.work-journal-intake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The question asked before agents' notes are refused (#2629). */
+.work-journal-intake-confirm {
+  border-color: var(--amber);
+  background: var(--amber-wash);
 }
 
 .agent-setup-scopes {

@@ -40,7 +40,6 @@ const props: WorkJournalPanelProps = {
   intake: true,
   notes: [],
   knowledgeBases: [{ id: "kb-1", name: "Career evidence" }],
-  onSetIntake: async () => undefined,
   onReview: async () => undefined,
 };
 
@@ -100,11 +99,29 @@ describe("work journal view model", () => {
 });
 
 describe("work journal panel", () => {
-  it("shows the consent switch and an empty list", () => {
-    const html = renderToStaticMarkup(<WorkJournalPanel {...props} />);
-    expect(html).toContain("Accept notes from agents");
-    expect(html).toMatch(/type="checkbox" checked=""/u);
-    expect(html).toContain("No notes wait for review.");
+  it("says how the switch is set, links to Workspace settings, and shows an empty list", () => {
+    const on = renderToStaticMarkup(
+      <WorkJournalPanel {...props} onOpenSettings={() => undefined} />,
+    );
+    expect(on).toContain("Agents can add notes.");
+    expect(on).toContain("Change in Workspace settings");
+    expect(on).not.toContain('type="checkbox"');
+    expect(on).toContain("No notes wait for review.");
+
+    const off = renderToStaticMarkup(
+      <WorkJournalPanel {...props} intake={false} onOpenSettings={() => undefined} />,
+    );
+    expect(off).toContain("Agents cannot add notes yet.");
+    expect(off).toContain("Turn on in Workspace settings");
+  });
+
+  it("shows no link where Workspace settings cannot be opened, and no status until read", () => {
+    expect(renderToStaticMarkup(<WorkJournalPanel {...props} />)).not.toContain(
+      "Workspace settings",
+    );
+    expect(renderToStaticMarkup(<WorkJournalPanel {...props} intake={undefined} />)).not.toContain(
+      "add notes",
+    );
   });
 
   it("shows a pending note's details and approves into the first knowledge base by default", () => {
