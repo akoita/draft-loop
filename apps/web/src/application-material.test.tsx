@@ -70,32 +70,32 @@ describe("the prepare panel", () => {
   it("names what it sends to Anthropic before the first draft", () => {
     const html = renderToStaticMarkup(<ApplicationMaterialView {...props} />);
     expect(html).toContain('aria-expanded="true" aria-controls="material-body"');
-    expect(html).toContain("Optional · cover letter or interview questions");
+    expect(html).toContain("Optional · cover letter or interview guide");
     expect(html).toContain("to Anthropic (Claude)");
     expect(html).toContain("name and contact details are never sent");
     expect(html).toContain("saved with this application");
     expect(html).toContain('aria-pressed="true">Cover letter</button>');
-    expect(html).toContain('aria-pressed="false">Interview questions</button>');
+    expect(html).toContain('aria-pressed="false">Interview preparation guide</button>');
+    expect(html).not.toContain(">Interview questions</button>");
     expect(html).toContain('class="button button-primary"');
-    expect(html).toContain("Interview questions");
     expect(html).not.toContain("Download Markdown");
   });
 
   it("folds to its heading row, which says it is optional", () => {
     const html = renderToStaticMarkup(<ApplicationMaterialView {...props} collapsed />);
     expect(html).toContain('aria-expanded="false" aria-controls="material-body"');
-    expect(html).toContain("Optional · cover letter or interview questions");
+    expect(html).toContain("Optional · cover letter or interview guide");
     expect(html).toContain('<div id="material-body" class="application-material-body" hidden="">');
   });
 
   it("shows each citation beside its item and offers the download", () => {
     const html = renderToStaticMarkup(
-      <ApplicationMaterialView {...props} kind="interview-questions" draft={draft} />,
+      <ApplicationMaterialView {...props} kind="interview-guide" draft={draft} />,
     );
     expect(html).toContain("<h3>How do you report with SQL?</h3>");
     expect(html).toContain('<aside aria-label="Sources"><ul><li>role title: Data Analyst</li>');
     expect(html).toContain("Download Markdown");
-    expect(html).toContain("Draft new interview questions");
+    expect(html).toContain("Draft a new interview guide");
     expect(html).not.toContain("to Anthropic (Claude)");
   });
 
@@ -105,7 +105,7 @@ describe("the prepare panel", () => {
     const html = renderToStaticMarkup(
       <ApplicationMaterialView
         {...props}
-        kind="interview-questions"
+        kind="interview-guide"
         draft={newest}
         versions={versions}
       />,
@@ -133,7 +133,7 @@ describe("the prepare panel", () => {
     expect(html).toContain("Address it to");
     expect(html).toContain("Every claim still comes from your career record.");
     const questions = renderToStaticMarkup(
-      <ApplicationMaterialView {...props} kind="interview-questions" />,
+      <ApplicationMaterialView {...props} kind="interview-guide" />,
     );
     expect(questions).not.toContain("Address it to");
   });

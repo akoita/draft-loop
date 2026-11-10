@@ -68,10 +68,13 @@ export const applicationMaterialKindLabels = (): Readonly<
 
 /** The Draft button names the open tab, so it reads as that tab's action (#2595). */
 export function applicationMaterialDraftLabel(
-  kind: ApplicationMaterialKind,
+  kind: SavedApplicationMaterialKind,
   drafted: boolean,
 ): string {
   if (kind === "cover-letter") return drafted ? t`Draft a new cover letter` : t`Draft cover letter`;
+  if (kind === "interview-guide") {
+    return drafted ? t`Draft a new interview guide` : t`Draft interview guide`;
+  }
   return drafted ? t`Draft new interview questions` : t`Draft interview questions`;
 }
 
