@@ -734,7 +734,9 @@ not a second product.
     path without the self-hosted stack is not served.
   - *Hosted:* the same process and tools against the cloud API (D10), with
     a signed-in token from the identity provider and plan credits (D13).
-    A remote MCP endpoint with OAuth on the API comes later.
+  - *Remote (#2647):* `draftloop-mcp serve-http` serves the same tools over
+    Streamable HTTP on one URL, forwarding each caller's own credential to
+    the API and keeping none. OAuth sign-in for it comes later (#2648).
 - **First tools: the work journal (decided 2026-11-01, #2018).**
   `record_work` lets the candidate's coding agent file a short note about
   notable work it just helped ship, and `list_work` lists those notes by

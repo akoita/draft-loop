@@ -149,9 +149,9 @@ The full guide is the agent-toolkit `document-software` skill
 - `apps/web` is the hosted service's browser screen over the HTTP API, typed
   from the API's OpenAPI document. It holds no domain logic and never imports
   `apps/api` or server packages; the API serves its built files.
-- `apps/mcp` is the agent channel's stdio MCP server (ADR 0011, D17): an HTTP
-  client of the API that depends only on `packages/schemas`. It holds no domain
-  logic, and the desktop and the CLI never depend on it.
+- `apps/mcp` is the agent channel's MCP server (ADR 0011, D17), over stdio or
+  HTTP: an HTTP client of the API that depends only on `packages/schemas`. It
+  holds no domain logic, and the desktop and the CLI never depend on it.
 - `apps/desktop-client` is the desktop client (ADR 0011, D9): an Electron
   shell over a DraftLoop server's own web screen. It holds no domain logic and
   never depends on engine, storage, provider or server packages.

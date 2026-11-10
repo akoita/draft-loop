@@ -315,6 +315,31 @@ tool the server offers.
 With the plugin installed, Claude Code also lists each MCP prompt, as
 `/plugin:draftloop:draftloop:<prompt> (MCP)`.
 
+## Serve the tools over HTTP
+
+Some assistants connect to an MCP server by address instead of starting a
+command. `draftloop-mcp serve-http` serves the same tools over Streamable HTTP:
+
+```sh
+DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 draftloop-mcp serve-http
+```
+
+It prints `DraftLoop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
+its own agent token as `Authorization: Bearer`, and the server forwards it to
+the API on each call. It keeps no token, no session and no candidate data.
+
+| Setting                       | Default                 | What it sets                         |
+| ----------------------------- | ----------------------- | ------------------------------------ |
+| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The DraftLoop API the tools call     |
+| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace the tools act in       |
+| `DRAFT_LOOP_MCP_PORT`         | `8090`                  | The port it listens on               |
+| `DRAFT_LOOP_MCP_HOST`         | `127.0.0.1`             | The address it binds                 |
+
+A request without a credential answers `401`, and `GET /healthz` answers
+`200`. It speaks plain `http` on this computer only: to reach it from another
+machine, put a TLS proxy in front of it. Sign-in with OAuth is not built yet
+([#2648](https://github.com/akoita/draft-loop/issues/2648)).
+
 ## How the candidate reviews
 
 Each pending note shows its title, period, project, technologies, role,
@@ -349,8 +374,9 @@ its own client. The API treats that token as an **agent grant**:
 - **No spending yet.** A grant cannot start a run or a draft, with or without
   `runs:start`, because it has no monthly spend cap.
 
-Nothing connects this way yet: the remote MCP endpoint and its sign-in are
-planned in [#1403](https://github.com/akoita/draft-loop/issues/1403).
+Nothing connects this way yet: the tools are
+[served over HTTP](#serve-the-tools-over-http), and the sign-in is planned in
+[#2648](https://github.com/akoita/draft-loop/issues/2648).
 
 ## Privacy lines
 

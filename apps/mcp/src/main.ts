@@ -2,14 +2,15 @@ import { text } from "node:stream/consumers";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { defaultAgentTokenPath, saveTokenFromInput } from "./agent-token.js";
-import { createApplicationsApi } from "./applications.js";
-import { configFromEnvironment, createWorkJournalApi, createWorkspaceApiCall } from "./client.js";
-import { createDraftsApi } from "./drafts.js";
+import { configFromEnvironment } from "./client.js";
 import { runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
-import { createMaterialApi } from "./material.js";
-import { createRunsApi } from "./runs.js";
-import { createWorkJournalMcpServer } from "./server.js";
+import {
+  createDraftLoopMcpServer,
+  remoteMcpPath,
+  remoteOptionsFromEnvironment,
+  serveRemoteMcp,
+} from "./remote.js";
 
 const [command, ...rest] = process.argv.slice(2);
 
@@ -39,20 +40,19 @@ if (command === "init") {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 2;
   }
+} else if (command === "serve-http" && rest.length === 0) {
+  const options = remoteOptionsFromEnvironment();
+  const listening = await serveRemoteMcp(options);
+  const address = listening.address();
+  const port = typeof address === "object" && address !== null ? address.port : options.port;
+  process.stderr.write(`DraftLoop MCP tools on http://${options.host}:${port}${remoteMcpPath}\n`);
 } else if (command === undefined) {
   // Stdout carries the protocol; nothing else may write to it.
-  const config = configFromEnvironment();
-  const server = createWorkJournalMcpServer(
-    createWorkJournalApi(config),
-    createApplicationsApi(createWorkspaceApiCall(config)),
-    createDraftsApi(createWorkspaceApiCall(config)),
-    createRunsApi(createWorkspaceApiCall(config)),
-    createMaterialApi(createWorkspaceApiCall(config)),
-  );
+  const server = createDraftLoopMcpServer(configFromEnvironment());
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(
-    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       draftloop-mcp save-token  keep a token from Agents in Workspace settings, read from standard input\n       draftloop-mcp hook stop   the Claude Code Stop hook: one advisory line, never a failure\n",
+    "Usage: draftloop-mcp            serve the MCP tools over stdio\n       draftloop-mcp serve-http  serve the same tools over HTTP for assistants that connect by address\n       draftloop-mcp init --host claude-code|codex|generic [--hook] [--scope <scope>]... [--no-token]\n       draftloop-mcp save-token  keep a token from Agents in Workspace settings, read from standard input\n       draftloop-mcp hook stop   the Claude Code Stop hook: one advisory line, never a failure\n",
   );
   process.exitCode = 2;
 }
