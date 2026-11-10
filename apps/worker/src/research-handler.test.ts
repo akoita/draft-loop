@@ -67,6 +67,26 @@ function options(
 }
 
 describe("research job", () => {
+  it("researches a guide's topics when the job carries a guide", async () => {
+    const setup = options();
+    const result = await createResearchHandler(setup.options)({
+      ...job,
+      guide: { depth: "extensive", salary: true },
+    });
+    expect(result.outcome).toBe("researched");
+    expect(setup.search.requests.map((request) => request.query)).toEqual([
+      "Example Corp Data Analyst",
+      "Example Corp news 2026",
+      "Example Corp careers Data Analyst team",
+      "Data Analyst trends 2026",
+      "Example Corp interview process Data Analyst",
+      "Data Analyst salary 2026",
+    ]);
+    const saved = await setup.store.get(job.workspaceId, "rbr_fixture0001");
+    expect(saved?.from_date).toBe("2024-11-08");
+    expect(saved?.sources[0]).toMatchObject({ topic: "company", reliability: "press" });
+  });
+
   it("saves the brief and logs ids and counts only", async () => {
     const lines: unknown[] = [];
     const setup = options({ onOutcome: (...line) => lines.push(line) });
