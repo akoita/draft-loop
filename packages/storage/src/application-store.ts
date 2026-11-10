@@ -356,7 +356,11 @@ export function jobSourceWithPage(
   if (record.jobSource.kind !== "approved-url") {
     throw new StorageValidationError(`Application ${applicationId} has no approved job page`);
   }
-  const parsed = applicationJobSourceSchema.safeParse({ ...record.jobSource, page });
+  // The first copy stays once a later fetch differs: an expired page must not replace it (#2592).
+  const { page: previous, firstPage: kept, ...source } = record.jobSource;
+  const first = kept ?? (previous?.text === page.text ? undefined : previous);
+  const firstPage = first === undefined || first.text === page.text ? {} : { firstPage: first };
+  const parsed = applicationJobSourceSchema.safeParse({ ...source, page, ...firstPage });
   if (!parsed.success) throw new StorageValidationError("Invalid job page");
   return parsed.data;
 }

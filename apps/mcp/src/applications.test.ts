@@ -196,9 +196,11 @@ describe("application tools", () => {
   it("read the job description an application keeps, as the candidate gave it", async () => {
     const { config, requests } = scriptedServer({
       [`GET ${base}/applications/app_fixture_0001/job`]: json({
-        origin: "pasted-text",
+        origin: "url",
         text: "A fictional job.",
-        url: null,
+        url: "https://jobs.example.test/1",
+        savedAt: "2030-01-04T00:00:00.000Z",
+        earlier: null,
       }),
     });
     const client = await connect(config);
@@ -210,9 +212,10 @@ describe("application tools", () => {
     );
     expect(job).toEqual({
       application_id: "app_fixture_0001",
-      origin: "pasted-text",
+      origin: "url",
       text: "A fictional job.",
-      url: null,
+      url: "https://jobs.example.test/1",
+      saved_at: "2030-01-04T00:00:00.000Z",
     });
     expect(requests.map((request) => request.method)).toEqual(["GET"]);
     await client.close();

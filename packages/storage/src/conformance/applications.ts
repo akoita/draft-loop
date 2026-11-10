@@ -262,7 +262,15 @@ export const applicationsContracts: readonly StorageContract<ApplicationsStorage
       const again = { ...page, text: "Staff Platform Engineer" };
       expect(
         (await applications.recordJobPage(workspaceId, "app-page", again, fetchedAt)).jobSource,
-      ).toMatchObject({ page: again });
+      ).toMatchObject({ page: again, firstPage: page });
+      // A third copy replaces the newest one; the first copy stays, and a copy equal to it drops it.
+      const third = { ...page, text: "Position closed", fetchedAt: "2030-01-05T00:00:00.000Z" };
+      expect(
+        (await applications.recordJobPage(workspaceId, "app-page", third, fetchedAt)).jobSource,
+      ).toMatchObject({ page: third, firstPage: page });
+      expect(
+        (await applications.recordJobPage(workspaceId, "app-page", page, fetchedAt)).jobSource,
+      ).not.toHaveProperty("firstPage");
       for (const [applicationId, value] of [
         ["app-file", page],
         ["missing", page],

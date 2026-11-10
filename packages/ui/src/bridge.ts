@@ -89,8 +89,10 @@ import {
   validateApplicationMoveInput,
 } from "./application-folder-contract.js";
 import {
+  type ApplicationJobCopyInput,
   type ApplicationJobInput,
   type ApplicationJobResult,
+  applicationJobCopyInputKeys,
   applicationJobInputKeys,
   normalizeApplicationJobResult,
 } from "./application-job-contract.js";
@@ -260,6 +262,7 @@ export type {
   ApplicationMoveInput,
 } from "./application-folder-contract.js";
 export type {
+  ApplicationJobCopyInput,
   ApplicationJobInput,
   ApplicationJobOrigin,
   ApplicationJobResult,
@@ -3213,6 +3216,7 @@ export interface BridgeCommandInputMap {
   "application.list": ApplicationListInput;
   "application.get": ApplicationGetInput;
   "application.job": ApplicationJobInput;
+  "application.job-copy": ApplicationJobCopyInput;
   "application.create": ApplicationCreateInput;
   "application.import": ApplicationImportInput;
   "application.archive": ApplicationArchiveInput;
@@ -3336,6 +3340,7 @@ export interface BridgeCommandOutputMap {
   "application.list": ApplicationListResult;
   "application.get": ApplicationRecordResult;
   "application.job": ApplicationJobResult;
+  "application.job-copy": ApplicationJobResult;
   "application.create": ApplicationRecordResult;
   "application.import": ApplicationImportResult;
   "application.archive": ApplicationRecordResult;
@@ -4722,6 +4727,19 @@ function validateApplicationJobInput(value: unknown): ApplicationJobInput {
   };
 }
 
+function validateApplicationJobCopyInput(value: unknown): ApplicationJobCopyInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, applicationJobCopyInputKeys)) return invalidInput();
+  const applicationId = optionalIdentifier(input.applicationId);
+  const text =
+    input.text === undefined ? undefined : proseValue(input.text, maximumApplicationJobTextLength);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    ...(applicationId === undefined ? {} : { applicationId }),
+    ...(text === undefined ? {} : { text }),
+  };
+}
+
 function validateApplicationCreateInput(value: unknown): ApplicationCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, applicationCreateKeys)) return invalidInput();
@@ -5900,6 +5918,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "application.get", input: validateApplicationGetInput(command.input) };
     case "application.job":
       return { type: "application.job", input: validateApplicationJobInput(command.input) };
+    case "application.job-copy":
+      return {
+        type: "application.job-copy",
+        input: validateApplicationJobCopyInput(command.input),
+      };
     case "application.create":
       return { type: "application.create", input: validateApplicationCreateInput(command.input) };
     case "application.import":
@@ -8603,6 +8626,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "application.list":
       return normalizeApplicationList(value);
     case "application.job":
+    case "application.job-copy":
       return normalizeApplicationJobResult(value) ?? invalidInput();
     case "application.get":
     case "application.create":

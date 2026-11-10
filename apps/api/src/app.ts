@@ -36,6 +36,7 @@ import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
 import { registerApplicationImportRoutes } from "./application-import-routes.js";
+import { registerApplicationJobCopyRoutes } from "./application-job-copy-routes.js";
 import { registerApplicationLifecycleRoutes } from "./application-lifecycle-routes.js";
 import {
   type CoverLetterWriter,
@@ -527,6 +528,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerApplicationLifecycleRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+    });
+    registerApplicationJobCopyRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      ...(application.jobPageFetcher === undefined
+        ? {}
+        : { jobPageFetcher: application.jobPageFetcher }),
     });
     registerApplicationFolderRoutes(app, {
       service: application.service,

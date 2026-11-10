@@ -1657,6 +1657,7 @@ msgstr "Can't start yet: {0}"
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -3015,6 +3016,10 @@ msgstr "Each run counts at your workspace's cost limit per run, and each draft a
 msgid "Each value is what that run recorded."
 msgstr "Each value is what that run recorded."
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Earlier copy, saved on {earlierDate}"
+msgstr "Earlier copy, saved on {earlierDate}"
+
 #: packages/ui/src/earlier-run-view.tsx
 msgid "earlier run"
 msgstr "earlier run"
@@ -3585,8 +3590,8 @@ msgid "From the file chosen for this application, as it reads now."
 msgstr "From the file chosen for this application, as it reads now."
 
 #: packages/ui/src/job-description-panel.tsx
-msgid "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them."
-msgstr "From the job page approved for this application. Only the requirements extracted from it are kept, not the page text; the Coverage tab lists them."
+msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
+msgstr "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "From the job text"
@@ -5754,6 +5759,10 @@ msgstr "Paste text"
 msgid "Paste text as career evidence"
 msgstr "Paste text as career evidence"
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the description"
+msgstr "Paste the description"
+
 #: packages/ui/src/new-application-form.tsx
 msgid "Paste the job description"
 msgstr "Paste the job description"
@@ -5765,6 +5774,10 @@ msgstr "Paste the job description first."
 #: packages/ui/src/new-application-model.ts
 msgid "Paste the job description to work from."
 msgstr "Paste the job description to work from."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Paste the job description, as the page showed it"
+msgstr "Paste the job description, as the page showed it"
 
 #: apps/web/src/session.ts
 msgid "Paste the owner token."
@@ -5781,6 +5794,10 @@ msgstr "Paste up to three texts you wrote, such as an old letter or a long email
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Pasted job text"
 msgstr "Pasted job text"
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Pasted on {date} as this job page's copy, so it stays readable after the page expires."
+msgstr "Pasted on {date} as this job page's copy, so it stays readable after the page expires."
 
 #: apps/web/src/evidence-panels.tsx
 msgid "Pasted text"
@@ -6150,6 +6167,7 @@ msgstr "Reading the draft of"
 msgid "Reading the job description…"
 msgstr "Reading the job description…"
 
+#: packages/ui/src/job-description-panel.tsx
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Reading the job page…"
 msgstr "Reading the job page…"
@@ -7068,6 +7086,10 @@ msgstr "Samples saved"
 msgid "Save"
 msgstr "Save"
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save a copy now"
+msgstr "Save a copy now"
+
 #: apps/web/src/application-material.tsx
 msgid "Save as a new version"
 msgstr "Save as a new version"
@@ -7104,6 +7126,10 @@ msgstr "Save override"
 msgid "Save samples"
 msgstr "Save samples"
 
+#: packages/ui/src/job-description-panel.tsx
+msgid "Save the description"
+msgstr "Save the description"
+
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Save the edit"
 msgstr "Save the edit"
@@ -7131,6 +7157,10 @@ msgstr "Saved as draft v{version}. Mark it reviewed when it is ready."
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Saved as your own entry, never as something the job posting says."
 msgstr "Saved as your own entry, never as something the job posting says."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "Saved from the job page on {date}, so it stays readable after the page expires."
+msgstr "Saved from the job page on {date}, so it stays readable after the page expires."
 
 #: packages/ui/src/profile.tsx
 msgid "Saved profile issue guidance"
@@ -8046,6 +8076,10 @@ msgstr "The consent does not name"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
 msgstr "The conversation is paused. Your answers so far are saved; resume when you are ready."
+
+#: packages/ui/src/job-description-panel.tsx
+msgid "The copy could not be saved."
+msgstr "The copy could not be saved."
 
 #: apps/web/src/credits-model.ts
 msgid "The credit estimate could not be read."

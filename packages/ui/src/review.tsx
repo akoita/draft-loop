@@ -231,6 +231,8 @@ interface ReviewWorkspaceProps {
   readonly jobRequirements?: JobRequirementsExtractionBinding;
   /** Reads the application's job description back for the Job tab; without it there is no tab. */
   readonly onReadJob?: () => Promise<ApplicationJobResult>;
+  /** Saves a copy of a job page that has none: read once more, or the pasted text (#2593). */
+  readonly onSaveJobCopy?: (text?: string) => Promise<ApplicationJobResult>;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -988,6 +990,7 @@ export function ReviewWorkspace({
   onAddUrl,
   jobRequirements,
   onReadJob,
+  onSaveJobCopy,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -3957,6 +3960,7 @@ export function ReviewWorkspace({
             {onReadJob === undefined ? null : (
               <JobDescriptionPanel
                 readJob={onReadJob}
+                {...(onSaveJobCopy === undefined ? {} : { saveCopy: onSaveJobCopy })}
                 reloadKey={`${state.workspaceId}:${state.runId}`}
                 tabPanel={reviewWorkPanelProps("job", workTab, true)}
               />

@@ -2618,6 +2618,7 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
+            "description": "The job text; for a job page, the copy saved when it was read, or null without one.",
             "type": [
               "string",
               "null"
@@ -2629,12 +2630,61 @@
               "string",
               "null"
             ]
+          },
+          "savedAt": {
+            "description": "When the job page's copy was saved; null for pasted text or without a copy.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "copySource": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "page",
+                  "pasted"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the job page's copy was read from the page or pasted by the person."
+          },
+          "earlier": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "description": "When the service read the page and saved this copy."
+                  }
+                },
+                "required": [
+                  "text",
+                  "savedAt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first copy of the job page, kept when a later read gave different text."
           }
         },
         "required": [
           "origin",
           "text",
-          "url"
+          "url",
+          "savedAt",
+          "copySource",
+          "earlier"
         ]
       },
       "OpportunityVersionsInput": {
@@ -10292,6 +10342,7 @@
             "description": "Where the text came from; `unavailable` when the application keeps none."
           },
           "text": {
+            "description": "The job text; for a job page, the copy saved when it was read, or null without one.",
             "type": [
               "string",
               "null"
@@ -10303,12 +10354,62 @@
               "string",
               "null"
             ]
+          },
+          "savedAt": {
+            "description": "When the job page's copy was saved; null for pasted text or without a copy.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "copySource": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "page",
+                  "pasted"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the job page's copy was read from the page or pasted by the person."
+          },
+          "earlier": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "description": "When the service read the page and saved this copy."
+                  }
+                },
+                "required": [
+                  "text",
+                  "savedAt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first copy of the job page, kept when a later read gave different text."
           }
         },
         "required": [
           "origin",
           "text",
-          "url"
+          "url",
+          "savedAt",
+          "copySource",
+          "earlier"
         ],
         "additionalProperties": false
       },
@@ -19741,6 +19842,93 @@
     "/v1/workspaces/{workspaceId}/applications/{applicationId}/job": {
       "get": {
         "summary": "Read the job description a job application keeps",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/job/copy": {
+      "post": {
+        "summary": "Save a copy of a job application's job page",
+        "description": "Without text, reads the job page approved with the application once, through the page fetcher, and keeps its text. With text, keeps the job description the person pasted, for a page that can no longer be read. Only an application added from a job page has a copy; its first copy is never replaced.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "description": "The job description the person pasted; absent reads the approved page once now.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "schema": {
