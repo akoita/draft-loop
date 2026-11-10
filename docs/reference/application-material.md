@@ -141,25 +141,30 @@ flowchart LR
   check -- every sentence holds --> keep[Paragraphs with citations]
   check -- some fail --> revise[Writer revises those sentences once]
   revise --> check2[Claim check]
-  check2 --> drop[Drop what still fails]
-  drop --> keep
+  check2 -- every sentence holds --> keep
+  check2 -- some still fail --> drop[Drop them]
+  drop --> repair[Writer repairs the paragraphs]
+  repair --> check3[Claim check]
+  check3 --> keep
 ```
 
 | Step         | What happens                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project and at least 3 from career roles, then adds each picked role's title, employer and dates (up to 6 more). |
-| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v2`.        |
+| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v3`.        |
 | Check        | Claude Haiku links each sentence to the facts behind it; `cover-letter-claims.ts` decides whether the link holds. |
 | Revise       | One more call rewrites only the failing sentences, with why they failed.                                      |
 | Drop         | Sentences that still fail are left out and listed in the view's `dropped_sentences`.                          |
+| Repair       | When a sentence was dropped, one call makes the remaining paragraphs read whole, adding no claim. The repair is checked again; what fails is dropped and listed too. If the repair keeps no claim about the candidate, the unrepaired letter stands. |
 
 A candidate sentence holds when it cites a picked fact, all its facts share
 one group, it states no number they do not, and it never talks about the
-record. An employer sentence cites research findings only, and a courtesy
+record. A sentence about the employer or the role cites research findings or
+the job's own requirements, never a career fact, and a courtesy
 sentence is short and states no number. A letter with no supported claim
 about the candidate is refused as `invalid_draft`. The writer and the check
 share the request's cost cap, and the saved draft's `prompt_version` is
-`cover-letter-free-form-v2`.
+`cover-letter-free-form-v3`.
 
 ## The hosted route
 
