@@ -33,6 +33,7 @@ export const maximumInterviewMinutes = 480;
 export const maximumInterviewOtherTopics = 5;
 export const maximumInterviewTopicCharacters = 200;
 export const maximumInterviewNotesCharacters = 1_000;
+export const maximumInterviewNeverSay = 10;
 
 export type InterviewStage = (typeof interviewStages)[number];
 export type InterviewGuideDepth = (typeof interviewGuideDepths)[number];
@@ -66,6 +67,14 @@ export const interviewDetailsSchema = z
       .max(maximumInterviewOtherTopics)
       .optional(),
     notes: z.string().trim().max(maximumInterviewNotesCharacters).optional(),
+    /**
+     * What the candidate never wants said (#2618), in their words. It stays on the server: the
+     * guide lists it back, and the check drops a written sentence that comes close to an entry.
+     */
+    never_say: z
+      .array(z.string().trim().min(1).max(maximumInterviewTopicCharacters))
+      .max(maximumInterviewNeverSay)
+      .optional(),
   })
   .superRefine((details, context) => {
     if (details.topics !== undefined && new Set(details.topics).size !== details.topics.length) {

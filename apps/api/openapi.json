@@ -90,6 +90,15 @@
           "notes": {
             "type": "string",
             "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
           }
         },
         "required": [
@@ -7907,6 +7916,15 @@
           "notes": {
             "type": "string",
             "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
           }
         },
         "required": [

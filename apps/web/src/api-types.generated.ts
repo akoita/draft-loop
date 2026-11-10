@@ -458,6 +458,7 @@ export interface ApiSchemas {
     readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
     readonly other_topics?: readonly (string)[];
     readonly notes?: string;
+    readonly never_say?: readonly (string)[];
   };
   "IssuedAgentToken": {
     readonly id: string;
