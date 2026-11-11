@@ -2096,6 +2096,7 @@ const writingPolicyVersionMetadataKeys = resultKeys<WritingPolicyVersionMetadata
   "schemaVersion",
   "createdAt",
   "priorChecksum",
+  "suggestedFromRunCount",
 ]);
 const writingPolicyIdentityKeys = resultKeys<WritingPolicyIdentity>()(["version", "checksum"]);
 const writingPolicyLineageKeys = ["kind", "base", "override"] as const;
@@ -7584,12 +7585,18 @@ function normalizeWritingPolicyVersionMetadata(value: unknown): WritingPolicyVer
     metadata.priorChecksum === null ? null : writingPolicyChecksumValue(metadata.priorChecksum);
   const checksum = writingPolicyChecksumValue(metadata.checksum);
   if (priorChecksum === checksum) return invalidInput();
+  const suggestedFromRunCount =
+    metadata.suggestedFromRunCount === undefined
+      ? undefined
+      : finiteInteger(metadata.suggestedFromRunCount, 256);
+  if (suggestedFromRunCount === 0) return invalidInput();
   return {
     checksum,
     version: identifier(metadata.version),
     schemaVersion,
     createdAt: timestampValue(metadata.createdAt),
     priorChecksum,
+    ...(suggestedFromRunCount === undefined ? {} : { suggestedFromRunCount }),
   };
 }
 

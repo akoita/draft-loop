@@ -1106,7 +1106,8 @@ pnpm --filter @draft-loop/cli start preferences sources ./workspace
   showed it, so you can check it.
 - **Sources.** Accepting records the new policy version with those run ids,
   never their content. `preferences sources` lists them; rules you wrote by
-  hand have no source. The History tab does not show them yet.
+  hand have no source. On the server's screens, the policy's **History** tab
+  marks such a version "Suggested from N runs".
 - **Accept** adds the preference to the policy as a new version for future runs.
 - **Dismiss** keeps the policy as it is, and the suggestion is never offered
   again. Only its id is stored.

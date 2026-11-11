@@ -7716,6 +7716,11 @@ input[type="text"].workspace-title-input {
   font-size: var(--text-micro);
 }
 
+.policy-history-source {
+  color: var(--text-2);
+  font-size: var(--text-micro);
+}
+
 .policy-history-text {
   max-height: 20em;
   margin: 0;

@@ -28,7 +28,7 @@ source-only CLI has its own review and export commands
    Word viewer.
 4. Accept or dismiss the **writing preferences** that DraftLoop suggests from
    your review choices. An accepted one joins the writing policy, which keeps
-   every version.
+   every version. The policy's History tab shows how many runs suggested it.
 
 | Setting    | What it does                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------- |
