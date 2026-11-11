@@ -3,6 +3,7 @@ import {
   type RunBudgetCeiling,
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
+import type { RunSpanRecorder } from "@draft-loop/application/run-span-recorder";
 import {
   automaticRetryTime,
   defaultAutomaticRetryDelays,
@@ -103,6 +104,11 @@ export interface RunJobHandlerOptions {
    * refunded after each job that leaves the run in a final state. Unset, the worker meters nothing.
    */
   readonly credits?: RunCredits;
+  /**
+   * Records the job's content-free run spans (#2686), so a failed run can be diagnosed afterwards.
+   * Unset, the worker records none. A recorder never fails or delays the run's outcome.
+   */
+  readonly spansFor?: (job: RunJob) => RunSpanRecorder;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
@@ -212,11 +218,19 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
       options.onQuarantined?.(job, quarantined);
       return "material-quarantined";
     }
-    const advanced = await service.resume({
-      root,
-      runId: job.runId,
-      allowProviderData: options.allowProviderData,
-    });
+    const spans = options.spansFor?.(job);
+    let advanced: RunSnapshot;
+    try {
+      advanced = await service.resume({
+        root,
+        runId: job.runId,
+        allowProviderData: options.allowProviderData,
+        ...(spans === undefined ? {} : { tracer: spans.tracer }),
+      });
+    } finally {
+      // Also after a throw: the spans of a failed step are the ones worth reading.
+      await spans?.flush();
+    }
     seen(advanced);
     if (pausedForUsageLimit(advanced)) {
       await requeue(resumeTime(advanced));

@@ -415,8 +415,12 @@ nothing.
   spans and reads them back as a tree. It refuses an attribute outside the
   listed names instead of dropping it. On Postgres the `run_spans` table is
   confined to its tenant and erased with the candidate record.
-- **Plan.** Nothing writes to the store yet: recording a run's spans from the
-  worker (#2686) and exporting them locally (#1104) are planned.
+- **Recording.** The worker gives each run it resumes a recorder
+  (`packages/application/src/run-span-recorder.ts`). It saves a span when it
+  starts and when it ends. A failed save is logged once and never changes the
+  run's outcome. The CLI records none.
+- **Plan.** Reading a run's span tree over the API and exporting spans locally
+  (#1104) are planned.
 
 ## Clients and adapters
 
