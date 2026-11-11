@@ -16,6 +16,7 @@ const suggestion: PreferenceSuggestion = {
   term: "passionate",
   occurrences: 3,
   applications: 2,
+  runIds: ["run-a", "run-b", "run-c"],
   reason: 'You removed "passionate" from 3 drafts across 2 applications.',
 };
 
@@ -25,6 +26,14 @@ function run(args: string[], listed: PreferenceSuggestion[] = [suggestion]) {
     list: vi.fn(async () => listed),
     accept: vi.fn(async () => suggestion),
     dismiss: vi.fn(async () => undefined),
+    sources: vi.fn(async () => [
+      {
+        suggestionId: id,
+        policyChecksum: "a".repeat(64),
+        runIds: ["run-a", "run-b", "run-c"],
+        acceptedAt: "2026-11-11T10:00:00.000Z",
+      },
+    ]),
   };
   const program = new Command().exitOverride();
   registerPreferenceCommands(
@@ -44,6 +53,7 @@ describe("preferences commands", () => {
     expect(lines).toEqual([
       `${id}: forbid the word "passionate"`,
       '  why: You removed "passionate" from 3 drafts across 2 applications.',
+      "  from runs: run-a, run-b, run-c",
       'Accept one with "draft-loop preferences accept <workspace> <id>".',
     ]);
   });
@@ -55,6 +65,16 @@ describe("preferences commands", () => {
     const json = run(["preferences", "list", "ws", "--json"]);
     await json.done;
     expect(JSON.parse(json.lines[0] ?? "")).toEqual([suggestion]);
+  });
+
+  it("shows the runs each accepted preference came from (#2384)", async () => {
+    const { done, lines, suggestions } = run(["preferences", "sources", "ws"]);
+    await done;
+    expect(suggestions.sources).toHaveBeenCalledWith(resolve("ws"));
+    expect(lines).toEqual([
+      `policy aaaaaaaaaaaa: suggested from 3 runs (${id}, accepted 2026-11-11T10:00:00.000Z)`,
+      "  runs: run-a, run-b, run-c",
+    ]);
   });
 
   it("accepts and dismisses by id", async () => {

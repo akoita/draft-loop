@@ -329,4 +329,5 @@ const noPreferenceSuggestions: PreferenceSuggestions = {
   dismiss: async () => {
     throw new CliUserError("No preference suggestion is waiting for a decision.");
   },
+  sources: async () => [],
 };

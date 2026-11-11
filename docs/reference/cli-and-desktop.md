@@ -1096,12 +1096,17 @@ you decide. Nothing changes until you accept one, and no model is called.
 pnpm --filter @draft-loop/cli start preferences list ./workspace
 pnpm --filter @draft-loop/cli start preferences accept ./workspace preference-0123456789abcdef
 pnpm --filter @draft-loop/cli start preferences dismiss ./workspace preference-0123456789abcdef
+pnpm --filter @draft-loop/cli start preferences sources ./workspace
 ```
 
 - **What is suggested.** A word you removed from at least 3 drafts across at
   least 2 applications becomes a forbidden term. A section order you approved
   as often becomes `Section order`.
-- **Why.** Each suggestion shows the pattern it comes from, so you can check it.
+- **Why.** Each suggestion shows the pattern it comes from and the runs that
+  showed it, so you can check it.
+- **Sources.** Accepting records the new policy version with those run ids,
+  never their content. `preferences sources` lists them; rules you wrote by
+  hand have no source. The History tab does not show them yet.
 - **Accept** adds the preference to the policy as a new version for future runs.
 - **Dismiss** keeps the policy as it is, and the suggestion is never offered
   again. Only its id is stored.

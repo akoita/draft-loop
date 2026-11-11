@@ -20,8 +20,12 @@ const suggestion: PreferenceSuggestion = {
   sectionOrder: ["summary", "skills", "experience"],
   occurrences: 3,
   applications: 2,
+  runIds: ["run-a", "run-b", "run-c"],
   reason: "You approved 3 drafts across 2 applications with sections in this order.",
 };
+
+/** What the route answers: the source run ids stay off it for now (#2670). */
+const { runIds: _runIds, ...served } = suggestion;
 
 let app: FastifyInstance;
 
@@ -55,6 +59,7 @@ function fake(): PreferenceSuggestions & { calls: string[] } {
     dismiss: vi.fn(async (at: string, chosen: string) => {
       calls.push(`dismiss ${at} ${chosen}`);
     }),
+    sources: vi.fn(async () => []),
   };
 }
 
@@ -68,7 +73,7 @@ describe("preference suggestion routes", () => {
     await build(suggestions);
     const response = await app.inject({ method: "GET", url: base, headers: { authorization } });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ suggestions: [suggestion] });
+    expect(response.json()).toEqual({ suggestions: [served] });
     expect(suggestions.calls).toEqual([`list ${root}`]);
   });
 
@@ -81,7 +86,7 @@ describe("preference suggestion routes", () => {
       headers: { authorization },
     });
     expect(accepted.statusCode).toBe(200);
-    expect(accepted.json()).toEqual({ accepted: suggestion });
+    expect(accepted.json()).toEqual({ accepted: served });
     const dismissed = await app.inject({
       method: "POST",
       url: `${base}/${id}/dismiss`,
