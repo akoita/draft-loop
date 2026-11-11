@@ -946,8 +946,12 @@ is separate from sensitivity, which decides what may reach a model provider.
 | `never-say`      | Never say        | No                    | No                  |
 
 Cover letters and interview questions on the **Prepare** panel follow these
-levels. CV runs do not yet; that is
-[#2304](https://github.com/akoita/draft-loop/issues/2304).
+levels, and so do CV runs. A CV run leaves out each held-back fact and the
+source chunk it was quoted from, so the writer never sees either.
+
+- **Whole chunks.** Other text in the same chunk is left out too.
+- **Read at start and resume.** A level changed while a run waits applies when
+  the run resumes.
 
 - **Unset is `cv`.** Nothing changes until you mark a fact or section.
 - **A fact's own level wins.** "Like section" follows the section's level.
