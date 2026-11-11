@@ -4,14 +4,19 @@ import type {
   CanonicalCandidateProfileStoragePort,
   SemanticRetrievalTraceAccessPort,
 } from "@draft-loop/storage";
-
+import { createPinnedCandidateKnowledgeSourceReferenceChunkLoader } from "./candidate-experience-body-evidence.js";
 import {
   type CandidateKnowledgeRuntimeConfig,
   candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
-import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
-import { CliUserError } from "./cli-user-error.js";
 import {
+  type CandidateKnowledgeSensitivityExclusions,
+  createCandidateKnowledgeSensitivityExclusions,
+} from "./candidate-knowledge-sensitivity-exclusion.js";
+import { CliUserError } from "./cli-user-error.js";
+import { withFactUsageExclusions } from "./run-fact-usage-exclusions.js";
+import {
+  loadPinnedProfile,
   runCandidateProfileUnavailableMessage,
   withPinnedProfileFacts,
 } from "./run-profile-fact-retrieval.js";
@@ -21,6 +26,34 @@ import {
 } from "./run-semantic-retrieval.js";
 import { readWorkspaceEvidenceMode } from "./workspace-evidence-mode.js";
 import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
+
+/**
+ * The run's withheld-section filter, extended with the source text of the pinned profile's facts
+ * the person holds back from a CV (#2304). Unchanged without a pinned selection or profile.
+ */
+async function heldBackFactsWithheld(
+  storage: Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
+  root: string,
+  config: CandidateKnowledgeRuntimeConfig,
+  context: ContextSnapshot,
+  withheld: CandidateKnowledgeSensitivityExclusions | undefined,
+): Promise<CandidateKnowledgeSensitivityExclusions | undefined> {
+  const binding = config.candidateKnowledgeSelection;
+  const selection = context.candidateKnowledgeSelection;
+  const reference = context.candidateProfileReference;
+  if (binding === undefined || selection === undefined || reference === undefined) return withheld;
+  return withFactUsageExclusions({
+    root,
+    workspaceId: config.id,
+    context,
+    profile: await loadPinnedProfile(storage, config.id, reference),
+    withheld: withheld ?? createCandidateKnowledgeSensitivityExclusions(binding.entries, selection),
+    loadSourceChunks: createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
+      binding.entries,
+      selection,
+    ),
+  });
+}
 
 /**
  * Build a run's candidate-knowledge retrieval with the workspace evidence and retrieval modes in
@@ -55,7 +88,7 @@ export async function openRunCandidateRetrieval(
     storage,
     config,
     context,
-    withheld,
+    await heldBackFactsWithheld(storage, root, config, context, withheld),
     mode,
     semantic,
     maxEvidenceTokens,

@@ -14,6 +14,7 @@ import {
   candidateKnowledgeEvidenceSourceId,
   type candidateKnowledgeRuntimeRetrieval,
 } from "./candidate-knowledge-retrieval.js";
+import { changeFactUsage } from "./fact-usage.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import { CliUserError, createLocalApplicationDriver } from "./local.js";
 import { profileFactEvidenceIdPrefix } from "./profile-fact-evidence.js";
@@ -292,6 +293,39 @@ describe("runs with a pinned reviewed profile", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it.each(["retrieval", "full-source"] as const)(
+    "keep a held-back fact and its source text from the author (%s)",
+    async (mode) => {
+      const { root, driver, reviewed, authorInputs } = await profileWorkspace();
+      try {
+        await writeWorkspaceEvidenceMode(root, mode);
+        const candidateProfile = { profileId: "profile-1", version: reviewed.profile.version };
+        // Sent while the fact may be used in a CV.
+        await driver.start({ root, allowProviderData: true, candidateProfile }, silent);
+        const sentBefore = JSON.stringify(authorInputs);
+        expect(sentBefore).toContain(evidenceLine);
+
+        await changeFactUsage(root, { kind: "section", category: "skill", level: "never-say" });
+        const before = authorInputs.length;
+        const begun = await driver.begin(
+          { root, allowProviderData: false, candidateProfile },
+          silent,
+        );
+        await driver.resume({ root, runId: begun.runId, allowProviderData: true }, silent);
+
+        const sent = authorInputs.slice(before);
+        expect(sent.length).toBeGreaterThan(0);
+        // Neither the fact item nor the chunk it was quoted from reaches the author.
+        expect(JSON.stringify(sent)).not.toContain(evidenceLine);
+        expect(sent.flatMap(factItems)).toEqual([]);
+        // The rest of the source still does.
+        expect(JSON.stringify(sent)).toContain("Maintained deterministic testing suites");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("leave a run without a profile on chunk evidence only", async () => {
     const { root, driver, authorInputs } = await profileWorkspace();

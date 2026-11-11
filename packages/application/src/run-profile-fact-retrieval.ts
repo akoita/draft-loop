@@ -30,7 +30,7 @@ export const runCandidateProfileUnavailableMessage =
  * Load the exact reviewed profile version a run's context pins and verify its checksum. Any
  * mismatch, a missing version, or a corrupt record fails the run before evidence is retrieved.
  */
-async function loadPinnedProfile(
+export async function loadPinnedProfile(
   storage: Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
   workspaceId: string,
   reference: NonNullable<ContextSnapshot["candidateProfileReference"]>,
