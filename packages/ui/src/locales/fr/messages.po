@@ -1740,10 +1740,6 @@ msgstr "Annuler la génération"
 msgid "Cancelling…"
 msgstr "Annulation…"
 
-#: apps/web/src/knowledge-bridge.ts
-msgid "Candidate knowledge file import was cancelled."
-msgstr "L’import du fichier de connaissances candidat a été annulé."
-
 #: apps/web/src/records.tsx
 msgid "Candidate record"
 msgstr "Dossier candidat"
