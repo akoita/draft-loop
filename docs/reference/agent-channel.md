@@ -399,6 +399,8 @@ with `draft-loop work-journal`; see the
 
 ## On the hosted service: an assistant's sign-in
 
+A candidate's own guide is [Connect DraftLoop to your assistant](connect-an-assistant.md).
+
 The hosted service issues no agent tokens. An assistant instead signs the
 person in through the identity provider and holds an access token issued to
 its own client. The API treats that token as an **agent grant**:

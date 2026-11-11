@@ -384,6 +384,10 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   candidate's coding agent into a pending inbox for approval, with
   `draftloop-mcp init` for Claude Code and Codex and the
   [agent channel](reference/agent-channel.md) reference. Built 2026-11-03.
+  Assistant directories as a first channel (#2646–#2650, #2653): the remote
+  MCP server, OAuth sign-in and a spend limit per assistant are built, and the
+  [listing material](operations/directory-listing.md) is written. Nothing is
+  deployed or submitted; each submission needs the owner's go.
 - **Desktop client (D9, amended 2026-11-03).** The desktop is a first-class
   client of the server beside the web, built in its
   [milestone](https://github.com/akoita/draft-loop/milestone/65) (#2089–#2094)
