@@ -160,6 +160,8 @@ export function registerRequestAuthentication(
   auth: ApiAuthOptions = { mode: "owner" },
   /** The owner tenant's agent tokens (#2159); owner mode accepts them on their scopes' routes. */
   agentTokens?: AgentTokenStore,
+  /** Whether connection caps are kept (#2656); without them a grant never reaches a spend. */
+  grantSpendCaps = false,
 ): void {
   const authenticate = authenticatorFor(ownerToken, auth);
   const authenticateOperator = ownerAuthenticator(ownerToken);
@@ -221,7 +223,7 @@ export function registerRequestAuthentication(
       const { grant } = authentication;
       if (grant !== undefined) {
         // An assistant's sign-in (#2646): the member, on the agent routes its scopes admit only.
-        const admission = admitAgentGrant(request, grant);
+        const admission = admitAgentGrant(request, grant, { spendCaps: grantSpendCaps });
         if (admission.outcome === "refused") {
           request.log.info({ agentClientId: grant.clientId }, "agent grant refused on this route");
           await reply.code(403).send(apiError("forbidden", admission.message));
@@ -241,6 +243,7 @@ export function registerRequestAuthentication(
             id: agentGrantId(grant),
             workspaceId: admission.workspaceId,
             scopes: grant.scopes,
+            clientId: grant.clientId,
           };
         }
       }

@@ -87,12 +87,16 @@ describe("admitAgentGrant", () => {
     });
   });
 
-  it("refuses a route that spends, even with runs:start", () => {
-    expect(admitAgentGrant(request("POST", `${workspace}/runs`), grant).outcome).toBe("refused");
-    expect(
-      admitAgentGrant(request("POST", `${workspace}/applications/:applicationId/material`), grant)
-        .outcome,
-    ).toBe("refused");
+  it("reaches a route that spends only where connection caps are kept", () => {
+    const routes = [`${workspace}/runs`, `${workspace}/applications/:applicationId/material`];
+    for (const url of routes) {
+      expect(admitAgentGrant(request("POST", url), grant).outcome).toBe("refused");
+      expect(admitAgentGrant(request("POST", url), grant, { spendCaps: true })).toEqual({
+        outcome: "allowed",
+        scope: "runs:start",
+        workspaceId: "ws-1",
+      });
+    }
   });
 
   it("applies a route's own rule, such as note titles only", () => {

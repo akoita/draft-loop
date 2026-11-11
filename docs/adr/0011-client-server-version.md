@@ -768,7 +768,9 @@ not a second product.
 - **Agent grants on the hosted service (#2646).** There, an assistant holds
   the identity provider's access token, issued to its own client. The API
   admits it as the member on the same route-to-scope table, with scopes
-  spelled `draftloop:<scope>`, and refuses spending until a grant has a cap.
+  spelled `draftloop:<scope>`. A grant spends only within the monthly cap its
+  person set for that assistant in the workspace (#2653), and never without
+  one.
 - **Human-only:** approving a draft, deciding findings, editing draft blocks,
   consent, erasure, releasing quarantined material, models, budget, writing
   policy and its suggestions, members, tokens and the career interview, which

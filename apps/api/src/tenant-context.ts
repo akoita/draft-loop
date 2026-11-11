@@ -7,6 +7,7 @@ import {
 import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { WorkJournalError, type WorkJournalService } from "@draft-loop/application/work-journal";
 import type { UrlFetcher } from "@draft-loop/ingestion";
+import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { FastifyInstance } from "fastify";
 
@@ -112,6 +113,8 @@ export interface TenantApplications {
   readonly jobPageFetcher?: UrlFetcher;
   /** A tenant's agent tokens (#2159); owner mode reads the owner tenant's to admit agents. */
   readonly agentTokensFor?: (tenantId: string) => AgentTokenStore;
+  /** A tenant's assistant connection caps (#2656); without it a grant never spends. */
+  readonly agentConnectionCapsFor?: (tenantId: string) => AgentConnectionCapStore;
 }
 
 export const defaultTenantCacheSize = 100;

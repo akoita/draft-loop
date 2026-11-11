@@ -13,223 +13,6 @@
       }
     },
     "schemas": {
-      "InterviewDetailsInput": {
-        "type": "object",
-        "properties": {
-          "stage": {
-            "type": "string",
-            "enum": [
-              "screen",
-              "technical",
-              "manager",
-              "case",
-              "combined",
-              "final"
-            ]
-          },
-          "depth": {
-            "type": "string",
-            "enum": [
-              "essential",
-              "extensive"
-            ]
-          },
-          "scheduled_at": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
-          },
-          "length_minutes": {
-            "type": "integer",
-            "minimum": 5,
-            "maximum": 480
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "video",
-              "phone",
-              "onsite"
-            ]
-          },
-          "interviewer_role": {
-            "description": "Such as recruiter or engineering manager; never searched as a person.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "language": {
-            "type": "string",
-            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
-          },
-          "topics": {
-            "maxItems": 8,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "salary",
-                "availability",
-                "remote-and-travel",
-                "language",
-                "career-gap",
-                "departure",
-                "management",
-                "unused-technology"
-              ]
-            }
-          },
-          "other_topics": {
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            }
-          },
-          "notes": {
-            "type": "string",
-            "maxLength": 1000
-          },
-          "never_say": {
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            }
-          }
-        },
-        "required": [
-          "stage",
-          "depth"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchSourceInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          },
-          "topic": {
-            "type": "string",
-            "enum": [
-              "company",
-              "news",
-              "role",
-              "field",
-              "process",
-              "salary"
-            ]
-          },
-          "reliability": {
-            "type": "string",
-            "enum": [
-              "primary",
-              "press",
-              "weak"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFindingInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialGuidanceInput": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
       "ScreeningOutcomeInput": {
         "type": "object",
         "properties": {
@@ -821,6 +604,250 @@
         "required": [
           "error"
         ]
+      },
+      "AgentConnectionCapInput": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "pattern": "^[\\x21-\\x7e]{1,200}$",
+            "description": "The assistant's client at the identity provider."
+          },
+          "monthly_cap_usd": {
+            "type": "number",
+            "description": "What the connection may reserve each UTC month."
+          },
+          "spent_this_month_usd": {
+            "type": "number",
+            "description": "What it reserved this UTC month."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "monthly_cap_usd",
+          "spent_this_month_usd",
+          "updated_at"
+        ]
+      },
+      "InterviewDetailsInput": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchSourceInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFindingInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialGuidanceInput": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
       },
       "ConsentEntryInput": {
         "type": "object",
@@ -4819,7 +4846,7 @@
               },
               "spentThisMonthUsd": {
                 "type": "number",
-                "description": "What the token reserved this UTC month."
+                "description": "What the token or connection reserved this UTC month."
               },
               "remainingUsd": {
                 "type": "number"
@@ -7930,223 +7957,6 @@
         ],
         "additionalProperties": false
       },
-      "InterviewDetails": {
-        "type": "object",
-        "properties": {
-          "stage": {
-            "type": "string",
-            "enum": [
-              "screen",
-              "technical",
-              "manager",
-              "case",
-              "combined",
-              "final"
-            ]
-          },
-          "depth": {
-            "type": "string",
-            "enum": [
-              "essential",
-              "extensive"
-            ]
-          },
-          "scheduled_at": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
-          },
-          "length_minutes": {
-            "type": "integer",
-            "minimum": 5,
-            "maximum": 480
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "video",
-              "phone",
-              "onsite"
-            ]
-          },
-          "interviewer_role": {
-            "description": "Such as recruiter or engineering manager; never searched as a person.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "language": {
-            "type": "string",
-            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
-          },
-          "topics": {
-            "maxItems": 8,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "salary",
-                "availability",
-                "remote-and-travel",
-                "language",
-                "career-gap",
-                "departure",
-                "management",
-                "unused-technology"
-              ]
-            }
-          },
-          "other_topics": {
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            }
-          },
-          "notes": {
-            "type": "string",
-            "maxLength": 1000
-          },
-          "never_say": {
-            "maxItems": 10,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            }
-          }
-        },
-        "required": [
-          "stage",
-          "depth"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchSource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          },
-          "topic": {
-            "type": "string",
-            "enum": [
-              "company",
-              "news",
-              "role",
-              "field",
-              "process",
-              "salary"
-            ]
-          },
-          "reliability": {
-            "type": "string",
-            "enum": [
-              "primary",
-              "press",
-              "weak"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFinding": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
-        ],
-        "additionalProperties": false
-      },
-      "ApplicationMaterialGuidance": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
       "ScreeningOutcome": {
         "type": "object",
         "properties": {
@@ -8753,6 +8563,251 @@
         "required": [
           "error"
         ],
+        "additionalProperties": false
+      },
+      "AgentConnectionCap": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "pattern": "^[\\x21-\\x7e]{1,200}$",
+            "description": "The assistant's client at the identity provider."
+          },
+          "monthly_cap_usd": {
+            "type": "number",
+            "description": "What the connection may reserve each UTC month."
+          },
+          "spent_this_month_usd": {
+            "type": "number",
+            "description": "What it reserved this UTC month."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "monthly_cap_usd",
+          "spent_this_month_usd",
+          "updated_at"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewDetails": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialGuidance": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
         "additionalProperties": false
       },
       "ConsentEntry": {
@@ -12148,7 +12203,7 @@
               },
               "spentThisMonthUsd": {
                 "type": "number",
-                "description": "What the token reserved this UTC month."
+                "description": "What the token or connection reserved this UTC month."
               },
               "remainingUsd": {
                 "type": "number"
@@ -26197,6 +26252,193 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agent-connections": {
+      "get": {
+        "summary": "List assistant connection caps",
+        "description": "The monthly spend cap of each assistant connection in the workspace, by client id. A connection without a cap starts no run or draft.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connections": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentConnectionCap"
+                      }
+                    }
+                  },
+                  "required": [
+                    "connections"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set an assistant connection's monthly spend cap",
+        "description": "Sets or changes what one assistant connection may reserve each UTC month in this workspace. What it reserved this month is kept. The assistant must also be granted the runs:start scope when it connects.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "pattern": "^[\\x21-\\x7e]{1,200}$",
+                    "description": "The assistant's client at the identity provider."
+                  },
+                  "monthly_cap_usd": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 500,
+                    "multipleOf": 0.01,
+                    "description": "The US dollars the connection may reserve each UTC month. Each run reserves the workspace's per-run cost limit, and each draft its cost cap."
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "monthly_cap_usd"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentConnectionCap"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove an assistant connection's monthly spend cap",
+        "description": "The connection starts no run or draft from now on; it keeps its other scopes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[\\x21-\\x7e]{1,200}$"
+            },
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "description": "The assistant's client at the identity provider."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

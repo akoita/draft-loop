@@ -1,6 +1,12 @@
 // Generated from apps/api/openapi.json by `pnpm --filter @draft-loop/web api-types`. Do not edit.
 
 export interface ApiSchemas {
+  "AgentConnectionCap": {
+    readonly client_id: string;
+    readonly monthly_cap_usd: number;
+    readonly spent_this_month_usd: number;
+    readonly updated_at: string;
+  };
   "AgentToken": {
     readonly id: string;
     readonly label: string;
@@ -2543,6 +2549,33 @@ export interface ApiOperations {
     readonly path: {
       readonly workspaceId: string;
       readonly tokenId: string;
+    };
+    readonly response: void;
+  };
+  "GET /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly connections: readonly (ApiSchemas["AgentConnectionCap"])[];
+    };
+  };
+  "PUT /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly client_id: string;
+      readonly monthly_cap_usd: number;
+    };
+    readonly response: ApiSchemas["AgentConnectionCap"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query: {
+      readonly client_id: string;
     };
     readonly response: void;
   };
