@@ -286,6 +286,7 @@ describe("assistant connection caps", () => {
     );
     expect(other.statusCode).toBe(429);
     expect(other.json().error.message).toContain("no monthly spend cap");
+    expect(other.json().error.message).toContain('"another-assistant"');
     const unscoped = await start(
       api,
       await assistant("draftloop:applications:read"),

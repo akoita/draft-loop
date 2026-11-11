@@ -1216,6 +1216,10 @@ msgstr "Already invited?"
 msgid "Always allow"
 msgstr "Always allow"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "An assistant you connect by signing in, such as Claude or ChatGPT, starts CV runs and drafts only within a monthly limit you set here. Without a limit it starts none."
+msgstr "An assistant you connect by signing in, such as Claude or ChatGPT, starts CV runs and drafts only within a monthly limit you set here. Without a limit it starts none."
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
@@ -1449,6 +1453,10 @@ msgstr "Assign"
 #: apps/web/src/records.tsx
 msgid "Assign a member"
 msgstr "Assign a member"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Assistant"
+msgstr "Assistant"
 
 #: apps/web/src/http-bridge.ts
 #: packages/ui/src/new-application-model.ts
@@ -1816,6 +1824,10 @@ msgstr "Change"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Change in Workspace settings"
 msgstr "Change in Workspace settings"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Change limit"
+msgstr "Change limit"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -3068,6 +3080,7 @@ msgstr "e.g. senior-data-engineer-cv"
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
@@ -4242,6 +4255,10 @@ msgstr "Issues by severity and status"
 msgid "It is empty."
 msgstr "It is empty."
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "It will start no run or draft until you set a limit again. It keeps its other permissions."
+msgstr "It will start no run or draft until you set a limit again. It keeps its other permissions."
+
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -4350,6 +4367,10 @@ msgstr "Keep my email address to invite me to the DraftLoop beta. It is deleted 
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Keep the heading text to 200 characters or fewer."
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Keep the limit"
+msgstr "Keep the limit"
 
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Keep the model pairing rationale under 500 characters without control characters."
@@ -4877,6 +4898,7 @@ msgstr "Models, writing policy and sign-in are set on Home"
 msgid "Modern"
 msgstr "Modern"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Monthly spend limit in US dollars"
 msgstr "Monthly spend limit in US dollars"
@@ -5187,6 +5209,10 @@ msgstr "No application matches this search or filter."
 #: packages/ui/src/home.tsx
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
 msgstr "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "No assistant has a spend limit."
+msgstr "No assistant has a spend limit."
 
 #: packages/ui/src/review.tsx
 msgid "No blocking findings need action."
@@ -5627,6 +5653,7 @@ msgstr "Off"
 msgid "Omission"
 msgstr "Omission"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "On"
@@ -7629,6 +7656,10 @@ msgstr "Set all"
 msgid "Set aside"
 msgstr "Set aside"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Set spend limit"
+msgstr "Set spend limit"
+
 #. placeholder {0}: issues.length
 #: packages/ui/src/profile-issue-bulk-status.tsx
 msgid "Set status for all {0} {severity} issues"
@@ -7837,6 +7868,10 @@ msgstr "Speaking at events"
 msgid "Spelling locale"
 msgstr "Spelling locale"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Spending by connected assistants"
+msgstr "Spending by connected assistants"
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr "Splitting the job text with local fixtures. Nothing is sent to a provider."
@@ -7970,6 +8005,14 @@ msgstr "Stop review"
 #: packages/ui/src/provider-recovery.tsx
 msgid "Stop run"
 msgstr "Stop run"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Stop spending"
+msgstr "Stop spending"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Stop spending by {name}?"
+msgstr "Stop spending by {name}?"
 
 #: packages/ui/src/app.tsx
 msgid "Stop the review before changing models."
@@ -9612,6 +9655,10 @@ msgstr "Two pages, left-aligned name, teal headings and dates, justified text."
 msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
 msgstr "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Type the assistant's id. When an assistant has no limit, it tells you its id."
+msgstr "Type the assistant's id. When an assistant has no limit, it tells you its id."
+
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
 msgstr "Type the record id,"
@@ -9716,6 +9763,7 @@ msgstr "Updating candidate knowledge…"
 msgid "Uploaded {when}"
 msgstr "Uploaded {when}"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "US${spent} of US${limit} used this month."
 msgstr "US${spent} of US${limit} used this month."

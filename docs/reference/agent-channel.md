@@ -415,8 +415,13 @@ its own client. The API treats that token as an **agent grant**:
 
 ### The connection's spend cap
 
-The person sets the cap from their own sign-in; an assistant never reaches
-these routes. One cap holds for one workspace and one assistant client.
+The person sets the cap in **Workspace settings > Agents**, under "Spending by
+connected assistants": the assistant's id and a monthly limit in US dollars.
+An assistant without a cap names its id in its refusal. One cap holds for one
+workspace and one assistant client.
+
+The screen calls these routes from the person's own sign-in; an assistant
+never reaches them.
 
 | Route                                                       | What it does                                 |
 | ----------------------------------------------------------- | -------------------------------------------- |

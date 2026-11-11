@@ -1210,6 +1210,10 @@ msgstr "Déjà invité ?"
 msgid "Always allow"
 msgstr "Toujours autoriser"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "An assistant you connect by signing in, such as Claude or ChatGPT, starts CV runs and drafts only within a monthly limit you set here. Without a limit it starts none."
+msgstr "Un assistant que vous connectez en vous identifiant, comme Claude ou ChatGPT, ne lance des exécutions de CV et des brouillons que dans la limite mensuelle que vous fixez ici. Sans limite, il n'en lance aucun."
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr "Une variable d’environnement impose ce mode. Supprimez la variable d’authentification du fournisseur et redémarrez DraftLoop avant de modifier la préférence enregistrée."
@@ -1443,6 +1447,10 @@ msgstr "Attribuer"
 #: apps/web/src/records.tsx
 msgid "Assign a member"
 msgstr "Attribuer à un membre"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Assistant"
+msgstr "Assistant"
 
 #: apps/web/src/http-bridge.ts
 #: packages/ui/src/new-application-model.ts
@@ -1810,6 +1818,10 @@ msgstr "Changer"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Change in Workspace settings"
 msgstr "Modifier dans les réglages de l’espace de travail"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Change limit"
+msgstr "Modifier la limite"
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
@@ -3062,6 +3074,7 @@ msgstr "p. ex. cv-data-engineer-senior"
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées avant utilisation. Les fichiers en quarantaine attendent qu’un propriétaire ou un administrateur les libère."
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace, et chaque brouillon pour son plafond de coût. De 0,01 à 500."
@@ -4236,6 +4249,10 @@ msgstr "Problèmes par gravité et état"
 msgid "It is empty."
 msgstr "Il est vide."
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "It will start no run or draft until you set a limit again. It keeps its other permissions."
+msgstr "Il ne lancera plus aucune exécution ni aucun brouillon tant que vous n'aurez pas fixé une nouvelle limite. Il garde ses autres autorisations."
+
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -4344,6 +4361,10 @@ msgstr "Conserver mon adresse e-mail pour m'inviter à la bêta de DraftLoop. El
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Limitez le texte du titre à 200 caractères."
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Keep the limit"
+msgstr "Garder la limite"
 
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Keep the model pairing rationale under 500 characters without control characters."
@@ -4871,6 +4892,7 @@ msgstr "Modèles, politique de rédaction et connexion se règlent sur l’accue
 msgid "Modern"
 msgstr "Moderne"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Monthly spend limit in US dollars"
 msgstr "Limite de dépense mensuelle en dollars US"
@@ -5181,6 +5203,10 @@ msgstr "Aucune candidature ne correspond à cette recherche ou à ce filtre."
 #: packages/ui/src/home.tsx
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
 msgstr "Aucune candidature pour l’instant. Commencez-en une pour le poste visé. Elle utilise votre profil et vos éléments de parcours."
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "No assistant has a spend limit."
+msgstr "Aucun assistant n'a de limite de dépense."
 
 #: packages/ui/src/review.tsx
 msgid "No blocking findings need action."
@@ -5621,6 +5647,7 @@ msgstr "Désactivé"
 msgid "Omission"
 msgstr "Omission"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "On"
@@ -7623,6 +7650,10 @@ msgstr "Tout définir"
 msgid "Set aside"
 msgstr "Mettre de côté"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Set spend limit"
+msgstr "Fixer la limite de dépense"
+
 #. placeholder {0}: issues.length
 #: packages/ui/src/profile-issue-bulk-status.tsx
 msgid "Set status for all {0} {severity} issues"
@@ -7831,6 +7862,10 @@ msgstr "Interventions publiques"
 msgid "Spelling locale"
 msgstr "Langue d’orthographe"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Spending by connected assistants"
+msgstr "Dépenses des assistants connectés"
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
 msgstr "Découpage du texte de l’offre avec les données d’exemple locales. Rien n’est envoyé à un fournisseur."
@@ -7964,6 +7999,14 @@ msgstr "Arrêter la relecture"
 #: packages/ui/src/provider-recovery.tsx
 msgid "Stop run"
 msgstr "Arrêter l’exécution"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Stop spending"
+msgstr "Arrêter les dépenses"
+
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Stop spending by {name}?"
+msgstr "Arrêter les dépenses de {name} ?"
 
 #: packages/ui/src/app.tsx
 msgid "Stop the review before changing models."
@@ -9606,6 +9649,10 @@ msgstr "Deux pages, nom aligné à gauche, titres et dates en bleu-vert, texte j
 msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
 msgstr "Deux choses mériteraient d’être racontées. 1. {one} 2. {two} Voulez-vous parler de l’une d’elles, ou d’autre chose ?"
 
+#: packages/ui/src/agent-connection-caps.tsx
+msgid "Type the assistant's id. When an assistant has no limit, it tells you its id."
+msgstr "Saisissez l'identifiant de l'assistant. Un assistant sans limite vous indique son identifiant."
+
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
 msgstr "Saisissez l’identifiant du dossier,"
@@ -9710,6 +9757,7 @@ msgstr "Mise à jour des connaissances candidat…"
 msgid "Uploaded {when}"
 msgstr "Ajouté le {when}"
 
+#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "US${spent} of US${limit} used this month."
 msgstr "{spent} $US sur {limit} $US utilisés ce mois-ci."

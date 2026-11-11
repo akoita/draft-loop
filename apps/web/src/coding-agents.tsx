@@ -1,3 +1,7 @@
+import {
+  AgentConnectionCaps,
+  type AgentConnectionCapView,
+} from "@draft-loop/ui/agent-connection-caps";
 import { AgentSetup } from "@draft-loop/ui/agent-setup";
 import type { AgentTokenView } from "@draft-loop/ui/agent-setup-model";
 import {
@@ -17,7 +21,8 @@ import { workJournalProblem } from "./work-journal.js";
 /**
  * The web host's Agents section in Workspace settings (#2439): issues scoped agent tokens,
  * lists and revokes them. With the owner token the server says whether it issues them; signed-in
- * accounts get none yet, so the section says so. With the owner token it also holds the work
+ * accounts get none, so the section shows what their connected assistants may spend instead
+ * (#2657), where the server keeps those limits. With the owner token it also holds the work
  * journal's "Accept notes from agents" switch (#2625), with a link to the notes that wait.
  */
 export function CodingAgentsSection({
@@ -35,6 +40,9 @@ export function CodingAgentsSection({
   const [tokens, setTokens] = useState<readonly AgentTokenView[] | undefined>(undefined);
   const [intake, setIntake] = useState<boolean | undefined>(undefined);
   const [pending, setPending] = useState<number | undefined>(undefined);
+  const [connections, setConnections] = useState<readonly AgentConnectionCapView[] | undefined>(
+    undefined,
+  );
   const [open, setOpen] = useState(() => globalThis.location?.hash === codingAgentsFragment);
 
   const reloadTokens = useCallback(async () => {
@@ -66,6 +74,19 @@ export function CodingAgentsSection({
       }
     })();
   }, [client, mode, workspaceId, reloadTokens]);
+
+  const reloadConnections = useCallback(async () => {
+    const listed = await client.call("GET /v1/workspaces/{workspaceId}/agent-connections", {
+      path: { workspaceId },
+    });
+    setConnections(listed.connections);
+  }, [client, workspaceId]);
+
+  // A server that keeps no limits answers 404, and the section then says agents cannot connect.
+  useEffect(() => {
+    if (mode !== "sign-in") return;
+    void reloadConnections().catch(() => undefined);
+  }, [mode, reloadConnections]);
 
   // A link from the Work journal panel names the section in the fragment; open and show it once
   // the section is drawn, which waits for the server's answer.
@@ -119,6 +140,37 @@ export function CodingAgentsSection({
                     );
                   }
             }
+          />
+        )
+      }
+      connections={
+        connections === undefined ? undefined : (
+          <AgentConnectionCaps
+            connections={connections}
+            onSet={async (clientId, monthlyCapUsd) => {
+              try {
+                await client.call("PUT /v1/workspaces/{workspaceId}/agent-connections", {
+                  path: { workspaceId },
+                  body: { client_id: clientId, monthly_cap_usd: monthlyCapUsd },
+                });
+                await reloadConnections();
+                return undefined;
+              } catch (error) {
+                return workJournalProblem(error);
+              }
+            }}
+            onRemove={async (clientId) => {
+              try {
+                await client.call("DELETE /v1/workspaces/{workspaceId}/agent-connections", {
+                  path: { workspaceId },
+                  query: { client_id: clientId },
+                });
+                await reloadConnections();
+                return undefined;
+              } catch (error) {
+                return workJournalProblem(error);
+              }
+            }}
           />
         )
       }
