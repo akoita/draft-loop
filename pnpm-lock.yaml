@@ -315,8 +315,8 @@ importers:
   packages/application:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: 0.117.1
-        version: 0.117.1(zod@4.6.7)
+        specifier: 1.5.0
+        version: 1.5.0(zod@4.6.7)
       '@draft-loop/artifacts':
         specifier: workspace:*
         version: link:../artifacts
@@ -429,11 +429,11 @@ importers:
   packages/model-gateway:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: 0.117.1
-        version: 0.117.1(zod@4.6.7)
+        specifier: 1.5.0
+        version: 1.5.0(zod@4.6.7)
       '@anthropic-ai/vertex-sdk':
-        specifier: 0.20.4
-        version: 0.20.4(zod@4.6.7)
+        specifier: 1.1.2
+        version: 1.1.2(zod@4.6.7)
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
@@ -490,8 +490,8 @@ importers:
   packages/providers:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: 0.117.1
-        version: 0.117.1(zod@4.6.7)
+        specifier: 1.5.0
+        version: 1.5.0(zod@4.6.7)
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
@@ -663,8 +663,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.117.1':
-    resolution: {integrity: sha512-Yn2QlXfyCiKJ5YGCOOay7ZE78ISvII2XY621WMCiflmG8IYgwx59IBwPExxki3Xk9jKUtnD/Sj6UvplWr0rZxg==}
+  '@anthropic-ai/sdk@1.5.0':
+    resolution: {integrity: sha512-AqB4Irlv4TLzTqsBCSpVyk5BLaPPfsTt5wUEju6X5a273nBsL143EM+4hxj67F9e0HpBlzdwUhVIPYM9OxD2oQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -672,8 +672,8 @@ packages:
       zod:
         optional: true
 
-  '@anthropic-ai/vertex-sdk@0.20.4':
-    resolution: {integrity: sha512-FYVOr6v/u1O7lIKdvoLPj7cKgMZEvZrZkjFjSFgozzHk5Ic/mB//R3Q/4dujPdLmXlb44Ph6CmkKZiUCa/1Z8Q==}
+  '@anthropic-ai/vertex-sdk@1.1.2':
+    resolution: {integrity: sha512-mLdfLqJjXN/RxqcqWmKAUcDZtSOFFja9IXcqDcBRkpoW1TMxBN1I/AUouLDq5SE67DmIANoNiWLzax28psSOmw==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -5377,16 +5377,18 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.117.1(zod@4.6.7)':
+  '@anthropic-ai/sdk@1.5.0(zod@4.6.7)':
     dependencies:
+      '@opentelemetry/api': 1.9.1
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
     optionalDependencies:
       zod: 4.6.7
 
-  '@anthropic-ai/vertex-sdk@0.20.4(zod@4.6.7)':
+  '@anthropic-ai/vertex-sdk@1.1.2(zod@4.6.7)':
     dependencies:
-      '@anthropic-ai/sdk': 0.117.1(zod@4.6.7)
+      '@anthropic-ai/sdk': 1.5.0(zod@4.6.7)
+      '@opentelemetry/api': 1.9.1
       google-auth-library: 10.9.1
     transitivePeerDependencies:
       - supports-color

@@ -175,7 +175,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.117.1",
+    "@anthropic-ai/sdk": "1.5.0",
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/embeddings": "workspace:*",
