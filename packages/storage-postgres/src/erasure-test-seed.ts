@@ -321,6 +321,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO run_spans (tenant_id, workspace_id, run_id, span_id, name, started_at)
+       VALUES ($1, $2, 'run-1', 'span-1', 'invoke_workflow', $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO agent_connection_caps (tenant_id, workspace_id, client_id, monthly_cap_cents, updated_at)
        VALUES ($1, $2, 'fictional-assistant', 500, $3)`,
       [tenant, record, at],

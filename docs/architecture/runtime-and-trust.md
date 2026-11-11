@@ -409,8 +409,14 @@ nothing.
   must be a short identifier, so a prompt or a draft sentence is dropped.
 - **Names.** Attributes follow the OpenTelemetry GenAI conventions where one
   exists, pinned to one version.
-- **Plan.** Storing spans beside run history (#1103) and exporting them
-  locally (#1104) are planned.
+- **Vocabulary.** The span and attribute names live in
+  `packages/domain/src/run-span.ts`, shared by the port and the store.
+- **Store.** A span store (`packages/storage/src/run-spans.ts`) keeps a run's
+  spans and reads them back as a tree. It refuses an attribute outside the
+  listed names instead of dropping it. On Postgres the `run_spans` table is
+  confined to its tenant and erased with the candidate record.
+- **Plan.** Nothing writes to the store yet: recording a run's spans from the
+  worker (#2686) and exporting them locally (#1104) are planned.
 
 ## Clients and adapters
 

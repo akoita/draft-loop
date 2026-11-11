@@ -9,35 +9,28 @@
  * output can enter a span.
  */
 
+import {
+  isContentFreeSpanValue,
+  isRunSpanAttributeName,
+  type RunSpanAttributeName,
+  type RunSpanAttributes,
+  type RunSpanName,
+  type RunSpanStatus,
+  runSpanAttributeNames,
+  runSpanNames,
+} from "@draft-loop/domain/run-span";
+
 /** The OpenTelemetry GenAI semantic-convention version these attribute names follow. */
 export const genAiSemanticConventionsVersion = "1.37.0";
 
-export const runSpanNames = ["invoke_workflow", "invoke_agent", "retrieve_evidence"] as const;
-export type RunSpanName = (typeof runSpanNames)[number];
-
-/** The only attribute names a run span may carry. */
-export const runSpanAttributeNames = [
-  "gen_ai.operation.name",
-  "gen_ai.provider.name",
-  "gen_ai.request.model",
-  "gen_ai.usage.input_tokens",
-  "gen_ai.usage.output_tokens",
-  "gen_ai.usage.cache_read.input_tokens",
-  "gen_ai.usage.cache_creation.input_tokens",
-  "error.type",
-  "draftloop.run.id",
-  "draftloop.round",
-  "draftloop.step",
-  "draftloop.attempt",
-  "draftloop.estimated_usd",
-  "draftloop.failure_stage",
-  "draftloop.retrieved_chunks",
-] as const;
-export type RunSpanAttributeName = (typeof runSpanAttributeNames)[number];
-
-export type RunSpanAttributes = Partial<Record<RunSpanAttributeName, string | number | boolean>>;
-
-export type RunSpanStatus = "ok" | "error";
+export {
+  type RunSpanAttributeName,
+  type RunSpanAttributes,
+  type RunSpanName,
+  type RunSpanStatus,
+  runSpanAttributeNames,
+  runSpanNames,
+};
 
 export interface RunSpan {
   readonly setAttributes: (attributes: RunSpanAttributes) => void;
@@ -53,18 +46,11 @@ export interface RunTracer {
   ) => RunSpan;
 }
 
-/** Identifiers are short and plain: a longer or free-text value is not an identifier. */
-const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,159}$/u;
-const allowed: ReadonlySet<string> = new Set(runSpanAttributeNames);
-
 /** The attributes with every unknown name and every non-identifier string dropped. */
 export function contentFreeSpanAttributes(attributes: Record<string, unknown>): RunSpanAttributes {
   const kept: Record<string, string | number | boolean> = {};
   for (const [name, value] of Object.entries(attributes)) {
-    if (!allowed.has(name)) continue;
-    if (typeof value === "number" && Number.isFinite(value)) kept[name] = value;
-    else if (typeof value === "boolean") kept[name] = value;
-    else if (typeof value === "string" && identifierPattern.test(value)) kept[name] = value;
+    if (isRunSpanAttributeName(name) && isContentFreeSpanValue(value)) kept[name] = value;
   }
   return kept as RunSpanAttributes;
 }

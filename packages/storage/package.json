@@ -135,6 +135,14 @@
       "types": "./src/agent-tokens.ts",
       "import": "./src/agent-tokens.ts"
     },
+    "./run-spans": {
+      "types": "./src/run-spans.ts",
+      "import": "./src/run-spans.ts"
+    },
+    "./run-spans-conformance": {
+      "types": "./src/run-spans-conformance.ts",
+      "import": "./src/run-spans-conformance.ts"
+    },
     "./agent-connection-caps": {
       "types": "./src/agent-connection-caps.ts",
       "import": "./src/agent-connection-caps.ts"
