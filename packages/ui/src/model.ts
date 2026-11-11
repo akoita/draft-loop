@@ -26,6 +26,11 @@ export interface WritingPolicyVersionMetadata {
   readonly schemaVersion: number;
   readonly createdAt: string;
   readonly priorChecksum: string | null;
+  /**
+   * How many runs suggested the preference this version added (#2670). Absent for a version the
+   * person wrote by hand.
+   */
+  readonly suggestedFromRunCount?: number;
 }
 
 export interface WritingPolicyIdentity {

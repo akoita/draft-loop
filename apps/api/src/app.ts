@@ -589,6 +589,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
+      ...(application.preferenceSuggestions === undefined
+        ? {}
+        : { preferenceSources: application.preferenceSuggestions.sources }),
     });
     registerExportRoutes(app, {
       service: application.service,

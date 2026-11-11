@@ -264,6 +264,11 @@ msgstr "{0, plural, one {Approuver crée la v{version} avec votre # modification
 msgid "{0, plural, one {No lexical match; using # bounded fallback excerpt from career evidence} other {No lexical match; using # bounded fallback excerpts from career evidence}}"
 msgstr "{0, plural, one {Aucune correspondance lexicale ; # extrait de repli limité des éléments de parcours est utilisé} other {Aucune correspondance lexicale ; # extraits de repli limités des éléments de parcours sont utilisés}}"
 
+#. placeholder {0}: entry.suggestedFromRunCount
+#: packages/ui/src/writing-policy-history.tsx
+msgid "{0, plural, one {Suggested from # run} other {Suggested from # runs}}"
+msgstr "{0, plural, one {Suggéré à partir de # exécution} other {Suggéré à partir de # exécutions}}"
+
 #. placeholder {0}: made.created ? t`Created knowledge base “${shown}”.` : t`Knowledge base “${shown}” already exists.`
 #: packages/ui/src/knowledge.tsx
 msgid "{0} Add a source to it to use it in this workspace."

@@ -1,3 +1,4 @@
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type {
   ApplicationService,
   ApplicationView,
@@ -198,7 +199,10 @@ async function throughPort(body: unknown) {
 
 let app: FastifyInstance;
 
-async function build(methods: Partial<ApplicationService>): Promise<void> {
+async function build(
+  methods: Partial<ApplicationService>,
+  preferenceSuggestions?: PreferenceSuggestions,
+): Promise<void> {
   app = await buildApi({
     ownerToken,
     application: {
@@ -208,6 +212,7 @@ async function build(methods: Partial<ApplicationService>): Promise<void> {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
       knowledgeIntake,
+      ...(preferenceSuggestions === undefined ? {} : { preferenceSuggestions }),
     },
   });
 }
@@ -217,6 +222,48 @@ afterEach(async () => {
 });
 
 describe("review state", () => {
+  it("marks the policy version an accepted suggestion saved with its run count (#2670)", async () => {
+    const policy = (char: string, createdAt: string, priorChecksum: string | null) => ({
+      checksum: char.repeat(64),
+      version: `sha256:${char.repeat(12)}`,
+      schemaVersion: 1,
+      createdAt,
+      priorChecksum,
+    });
+    const written = policy("a", "2026-11-01T08:00:00.000Z", null);
+    const suggested = policy("b", "2026-11-02T08:00:00.000Z", written.checksum);
+    const sources = vi.fn(async () => [
+      {
+        suggestionId: "preference-0123456789abcdef",
+        policyChecksum: suggested.checksum,
+        runIds: ["run-a", "run-b", "run-c"],
+        acceptedAt: "2026-11-02T08:00:00.000Z",
+      },
+    ]);
+    await build(
+      {
+        getApplication: async () => application,
+        getWritingPolicy: async () => suggested as never,
+        listWritingPolicyVersions: async () => [written, suggested] as never,
+      },
+      { sources } as unknown as PreferenceSuggestions,
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: `${url}?applicationId=app-ledger`,
+      headers: { authorization },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(sources).toHaveBeenCalledWith(root);
+    const history = response.json().setup.writingPolicyHistory;
+    expect(history).toEqual([written, { ...suggested, suggestedFromRunCount: 3 }]);
+    // Only the count leaves the server, and the shared screens accept it.
+    expect(JSON.stringify(response.json())).not.toContain("run-a");
+    expect(await throughPort(response.json())).toMatchObject({ ok: true });
+  });
+
   it("opens an application without a run on its start state, ready from its job and sources", async () => {
     const getApplication = vi.fn(async () => application);
     await build({ getApplication });

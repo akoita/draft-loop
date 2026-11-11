@@ -33,6 +33,7 @@ import type {
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "@draft-loop/ui/model";
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { type RunAuthorInputView, runAuthorInputView } from "@draft-loop/ui/run-author-input";
 import {
   normalizeRunEvidenceMode,
@@ -50,6 +51,8 @@ export interface ReviewStateRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   /** The tenant's knowledge intake, which counts the selected bases' sources; none counts zero. */
   readonly knowledgeIntake?: HostedKnowledgeIntake;
+  /** The accepted preference suggestions and their runs (#2670); none marks no version. */
+  readonly preferenceSources?: PreferenceSuggestions["sources"];
 }
 
 const identifierSchema = z
@@ -271,6 +274,11 @@ export function registerReviewStateRoutes(
     const reviewedOpportunity = reviewedBrief(application);
     const active = await service.getWritingPolicy?.({ root, includeContent: false });
     const history = await service.listWritingPolicyVersions?.({ root, includeContent: false });
+    // A version saved by accepting a suggestion shows how many runs suggested it; ids stay here.
+    const suggestedRuns = new Map<string, number>();
+    for (const source of (await options.preferenceSources?.(root)) ?? []) {
+      if (source.runIds.length > 0) suggestedRuns.set(source.policyChecksum, source.runIds.length);
+    }
     return workspaceReadinessFrom({
       descriptor,
       jobDescription,
@@ -280,7 +288,12 @@ export function registerReviewStateRoutes(
       // A hosted run reads only its selected knowledge bases; there is no evidence folder.
       knowledgeSelected: true,
       writingPolicy: active === undefined ? undefined : policyMetadata(active),
-      writingPolicyHistory: (history ?? []).map(policyMetadata),
+      writingPolicyHistory: (history ?? []).map((version) => {
+        const runs = suggestedRuns.get(version.checksum);
+        return runs === undefined
+          ? policyMetadata(version)
+          : { ...policyMetadata(version), suggestedFromRunCount: runs };
+      }),
       writingPolicyStatus: active === undefined ? "none" : "active",
       // Retrieval indexes the selected sources when a run starts, never ahead of it.
       retrieval: {
