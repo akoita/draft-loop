@@ -179,7 +179,11 @@ describe("with OAuth sign-in", () => {
       expect(await response.json()).toMatchObject({
         resource: oauth.resource,
         authorization_servers: [oauth.issuer],
-        scopes_supported: expect.arrayContaining(["draftloop:journal", "draftloop:drafts:read"]),
+        scopes_supported: expect.arrayContaining([
+          "draftloop:journal",
+          "draftloop:drafts:read",
+          "draftloop:runs:start",
+        ]),
       });
     }
   });
@@ -194,6 +198,7 @@ describe("with OAuth sign-in", () => {
     );
     expect(header).toContain("draftloop:applications:read");
     expect(header).not.toContain("drafts:read");
+    expect(header).not.toContain("runs:start");
   });
 
   it("answers 401 invalid_token for a dead sign-in and 403 for one without access", async () => {
