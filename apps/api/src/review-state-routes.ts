@@ -10,6 +10,7 @@ import type {
   WritingPolicyVersionView,
 } from "@draft-loop/application";
 import { defaultModelProfileRegistry } from "@draft-loop/application/model-profiles";
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import {
   emptyReviewState,
@@ -33,7 +34,6 @@ import type {
   WorkspaceReadiness,
   WritingPolicyVersionMetadata,
 } from "@draft-loop/ui/model";
-import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { type RunAuthorInputView, runAuthorInputView } from "@draft-loop/ui/run-author-input";
 import {
   normalizeRunEvidenceMode,

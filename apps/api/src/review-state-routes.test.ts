@@ -1,4 +1,3 @@
-import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import type {
   ApplicationService,
   ApplicationView,
@@ -7,6 +6,7 @@ import type {
   RunReview,
   WorkspaceDescriptor,
 } from "@draft-loop/application";
+import type { PreferenceSuggestions } from "@draft-loop/application/preference-suggestions";
 import { type RunSnapshot, reviewFindingId } from "@draft-loop/orchestrator";
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
 import type { FastifyInstance } from "fastify";
