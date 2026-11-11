@@ -285,7 +285,7 @@ fixtures. The worker logs ids, counts and cost only, never sources or findings.
 | ----------- | ---------------------------------------------------------------------------------------------- |
 | `queries`   | What the run searched for.                                                                     |
 | `from_date` | The oldest publication date kept; older sources are dropped and counted in `dropped.outdated`. |
-| `sources`   | Uploads, company pages and web results, each with an excerpt; no `published_on` means undated. |
+| `sources`   | Uploads, company pages and web results, each with an excerpt; no `published_on` means undated. A relative page age such as "2 days ago" counts back from the search time. |
 | `findings`  | Facts about the employer, each citing one to five of the brief's sources.                      |
 | `dropped`   | Sources the run dropped: `flagged` by screening, `outdated` by the window.                     |
 | `cost_usd`  | What the run's searches and model calls cost.                                                  |
