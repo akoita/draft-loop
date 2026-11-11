@@ -13,6 +13,8 @@ export interface WorkspaceEvidenceModeService {
   readonly set: (command: {
     readonly root: string;
     readonly mode: EvidenceMode;
+    /** Cost cap on full-source evidence; omitting it clears a saved cap. */
+    readonly maxEvidenceTokens?: number;
   }) => Promise<WorkspaceEvidenceModeRecord>;
 }
 
@@ -24,10 +26,10 @@ export function createWorkspaceEvidenceModeService(now?: () => Date): WorkspaceE
       await readWorkspace(workspaceRoot);
       return readWorkspaceEvidenceMode(workspaceRoot);
     },
-    set: async ({ root, mode }) => {
+    set: async ({ root, mode, maxEvidenceTokens }) => {
       const workspaceRoot = resolve(root);
       await readWorkspace(workspaceRoot);
-      return writeWorkspaceEvidenceMode(workspaceRoot, mode, now);
+      return writeWorkspaceEvidenceMode(workspaceRoot, mode, now, maxEvidenceTokens);
     },
   };
 }

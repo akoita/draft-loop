@@ -62,7 +62,7 @@ export async function previewEvidenceMode(
   const config = await readWorkspace(root);
   const selection = await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
   if (selection === undefined) return undefined;
-  const { mode } = await readWorkspaceEvidenceMode(root);
+  const { mode, maxEvidenceTokens } = await readWorkspaceEvidenceMode(root);
   const profiles = resolveRequestedRunModelProfiles(
     command.modelProfiles,
     options.modelProfileRegistry,
@@ -91,6 +91,8 @@ export async function previewEvidenceMode(
     context,
     withheld,
     mode,
+    undefined,
+    maxEvidenceTokens,
   );
   if (runtime === undefined) return undefined;
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } =

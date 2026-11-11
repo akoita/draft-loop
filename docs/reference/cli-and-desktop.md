@@ -1380,6 +1380,7 @@ run starts or resumes.
 pnpm --filter @draft-loop/cli start evidence mode ./workspace
 pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source
 pnpm --filter @draft-loop/cli start evidence mode ./workspace retrieval --json
+pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source --max-evidence-tokens 50000
 ```
 
 The workspace argument is required. Without a mode, the command shows the
@@ -1391,6 +1392,10 @@ current one. It never starts a run.
 - **Size budget.** The evidence must fit half the smaller known context window
   of the two profiles, at four characters per token, or 240,000 characters when
   a window is unknown. Serialized chunks and their ids count.
+- **Cost cap.** `--max-evidence-tokens` (1,000 to 1,000,000) lowers that budget
+  to about this many tokens, so a large collection uses retrieval instead of a
+  costly prompt. It never raises the budget. There is no cap by default, and
+  saving a mode without the option clears a saved cap.
 - **Fallback.** When the evidence does not fit, or no chunk is eligible, the run
   uses retrieval. The preflight prints an `Evidence mode:` line with the chunk
   count and budget, or the reason. A `run.evidence-mode` audit event records the

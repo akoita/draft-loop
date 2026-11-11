@@ -1,9 +1,11 @@
 import type { Command } from "commander";
 import {
   type ApplicationIo,
+  CliUserError,
   type EvidenceMode,
   evidenceModes,
   parseEvidenceMode,
+  parseMaxEvidenceTokens,
   type WorkspaceEvidenceModeRecord,
   type WorkspaceEvidenceModeService,
   workspaceRoot,
@@ -18,6 +20,9 @@ function describeMode(mode: EvidenceMode): string {
 function writeMode(io: ApplicationIo, record: WorkspaceEvidenceModeRecord, changed: boolean): void {
   io.write(`evidence mode: ${record.mode}${changed ? " (saved)" : ""}`);
   io.write(`  sends: ${describeMode(record.mode)}`);
+  if (record.maxEvidenceTokens !== undefined) {
+    io.write(`  cap: retrieval above about ${record.maxEvidenceTokens} tokens of evidence`);
+  }
   if (record.updatedAt === undefined) io.write("  default: no setting saved");
 }
 
@@ -41,15 +46,36 @@ export function registerEvidenceModeCommands(
     )
     .argument("<workspace>", "workspace directory")
     .argument("[mode]", `new mode: ${evidenceModes.join(" or ")}; omit to show the current mode`)
+    .option(
+      "--max-evidence-tokens <tokens>",
+      "with a mode: cap full-source evidence at about this many tokens, else use retrieval; setting a mode without it clears the cap",
+    )
     .option("--json", "print machine-readable JSON")
-    .action(async (workspace: string, mode: string | undefined, options: { json?: boolean }) => {
-      const requested = mode === undefined ? undefined : parseEvidenceMode(mode);
-      const command = { root: workspaceRoot(workspace) };
-      const record =
-        requested === undefined
-          ? await service.get(command)
-          : await service.set({ ...command, mode: requested });
-      if (options.json === true) io.write(JSON.stringify(record));
-      else writeMode(io, record, requested !== undefined);
-    });
+    .action(
+      async (
+        workspace: string,
+        mode: string | undefined,
+        options: { json?: boolean; maxEvidenceTokens?: string },
+      ) => {
+        const requested = mode === undefined ? undefined : parseEvidenceMode(mode);
+        if (requested === undefined && options.maxEvidenceTokens !== undefined) {
+          throw new CliUserError("Give a mode with --max-evidence-tokens.");
+        }
+        const maxEvidenceTokens =
+          options.maxEvidenceTokens === undefined
+            ? undefined
+            : parseMaxEvidenceTokens(options.maxEvidenceTokens);
+        const command = { root: workspaceRoot(workspace) };
+        const record =
+          requested === undefined
+            ? await service.get(command)
+            : await service.set({
+                ...command,
+                mode: requested,
+                ...(maxEvidenceTokens === undefined ? {} : { maxEvidenceTokens }),
+              });
+        if (options.json === true) io.write(JSON.stringify(record));
+        else writeMode(io, record, requested !== undefined);
+      },
+    );
 }

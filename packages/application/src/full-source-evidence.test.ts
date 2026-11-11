@@ -271,7 +271,7 @@ describe("full-source evidence", () => {
     expect(appendAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("derives the budget from the smaller known context window, else the default", () => {
+  it("derives the budget from the smaller known context window and the cost cap", () => {
     const selection = (contextWindowTokens?: number) =>
       contextWindowTokens === undefined
         ? {}
@@ -287,6 +287,11 @@ describe("full-source evidence", () => {
       defaultFullSourceBudgetCharacters,
     );
     expect(fullSourceBudgetCharacters(configuration())).toBe(240_000);
+    // A workspace cost cap lowers the budget and never raises it.
+    expect(fullSourceBudgetCharacters(configuration(200_000, 1_000_000), 50_000)).toBe(200_000);
+    expect(fullSourceBudgetCharacters(configuration(), 50_000)).toBe(200_000);
+    expect(fullSourceBudgetCharacters(configuration(200_000, 1_000_000), 500_000)).toBe(400_000);
+    expect(fullSourceBudgetCharacters(configuration(), 1_000_000)).toBe(240_000);
   });
 
   it("counts the distinct sources among the eligible chunks", () => {

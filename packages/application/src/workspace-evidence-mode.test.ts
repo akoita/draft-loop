@@ -7,6 +7,7 @@ import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
 import {
   evidenceModeInvalidMessage,
   parseEvidenceMode,
+  parseMaxEvidenceTokens,
   readWorkspaceEvidenceMode,
   writeWorkspaceEvidenceMode,
 } from "./workspace-evidence-mode.js";
@@ -51,7 +52,53 @@ describe("workspace evidence mode", () => {
     expect((await readWorkspaceEvidenceMode(root)).mode).toBe("retrieval");
   });
 
+  it("saves an optional cost cap and clears it when a mode is saved without one", async () => {
+    const root = await workspace();
+    const at = () => new Date("2030-01-02T03:04:05.000Z");
+    const saved = await writeWorkspaceEvidenceMode(root, "full-source", at, 50_000);
+    expect(saved).toEqual({
+      mode: "full-source",
+      maxEvidenceTokens: 50_000,
+      updatedAt: "2030-01-02T03:04:05.000Z",
+    });
+    expect(JSON.parse(await readFile(modePath(root), "utf8"))).toEqual({
+      schemaVersion: 1,
+      mode: "full-source",
+      maxEvidenceTokens: 50_000,
+      updatedAt: "2030-01-02T03:04:05.000Z",
+    });
+    expect(await readWorkspaceEvidenceMode(root)).toEqual(saved);
+    await writeWorkspaceEvidenceMode(root, "full-source", at);
+    expect(await readWorkspaceEvidenceMode(root)).toEqual({
+      mode: "full-source",
+      updatedAt: "2030-01-02T03:04:05.000Z",
+    });
+  });
+
+  it.each([0, 999, 1_000_001, 1.5])("refuses a cost cap of %s", async (tokens) => {
+    const root = await workspace();
+    await expect(
+      writeWorkspaceEvidenceMode(root, "full-source", undefined, tokens),
+    ).rejects.toBeInstanceOf(CliUserError);
+  });
+
+  it("parses the CLI cap and refuses anything but a whole number in range", () => {
+    expect(parseMaxEvidenceTokens("50000")).toBe(50_000);
+    for (const value of ["", "5e4", "-1000", "12.5", "999", "1000001", "many"]) {
+      expect(() => parseMaxEvidenceTokens(value)).toThrow(CliUserError);
+    }
+  });
+
   it.each([
+    [
+      "a cap out of range",
+      JSON.stringify({
+        schemaVersion: 1,
+        mode: "full-source",
+        maxEvidenceTokens: 10,
+        updatedAt: "2030-01-02T03:04:05.000Z",
+      }),
+    ],
     ["not JSON", "{"],
     [
       "an unknown mode",
