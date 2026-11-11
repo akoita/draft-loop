@@ -6,7 +6,7 @@ import {
   type ModelSelection,
 } from "@draft-loop/domain";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import type { RunBudget } from "@draft-loop/orchestrator";
+import type { RunBudget, RunTracer } from "@draft-loop/orchestrator";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
 import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
@@ -58,6 +58,8 @@ export interface RunOptions {
    * prompt `cli-author-v11` or later plan, and tests that script provider calls turn it off.
    */
   readonly applicationPlan?: boolean;
+  /** Receives the run's content-free spans (#2686); absent records none. */
+  readonly tracer?: RunTracer;
 }
 
 export type BeginStartRunOptions = Omit<RunOptions, "signal" | "writingPolicyOverrideChecksum">;
@@ -106,7 +108,7 @@ export function projectStartRunOptions(
 
 export function projectResumeRunOptions(
   command: ResumeRunCommand,
-  providerOptions: Omit<ResumeRunOptions, "runId" | "allowProviderData" | "signal">,
+  providerOptions: Omit<ResumeRunOptions, "runId" | "allowProviderData" | "signal" | "tracer">,
 ): ResumeRunOptions {
   return {
     ...(command.runId === undefined ? {} : { runId: command.runId }),
@@ -114,6 +116,7 @@ export function projectResumeRunOptions(
       ? {}
       : { allowProviderData: command.allowProviderData }),
     ...(command.signal === undefined ? {} : { signal: command.signal }),
+    ...(command.tracer === undefined ? {} : { tracer: command.tracer }),
     ...providerOptions,
   };
 }

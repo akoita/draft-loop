@@ -31,6 +31,10 @@
       "types": "./src/model-profile-selection.ts",
       "import": "./src/model-profile-selection.ts"
     },
+    "./run-span-recorder": {
+      "types": "./src/run-span-recorder.ts",
+      "import": "./src/run-span-recorder.ts"
+    },
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
