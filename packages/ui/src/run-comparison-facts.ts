@@ -126,8 +126,9 @@ function evidenceOf(state: RunState): string {
       : t`full source, ${chunks} from ${sources}`;
   }
   if (mode.requestedMode === "full-source") {
-    return mode.fallbackReason === "no-eligible-chunks"
-      ? t`retrieval (no full-source chunks)`
+    if (mode.fallbackReason === "no-eligible-chunks") return t`retrieval (no full-source chunks)`;
+    return mode.fallbackReason === "cost-cap-exceeded"
+      ? t`retrieval (full source of ${chunks} passed the cost cap)`
       : t`retrieval (full source of ${chunks} did not fit)`;
   }
   return sources === undefined ? t`retrieval, ${chunks}` : t`retrieval, ${chunks} from ${sources}`;

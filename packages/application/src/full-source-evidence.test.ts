@@ -15,6 +15,7 @@ import {
   announceRunEvidenceMode,
   decideFullSourceEvidence,
   defaultFullSourceBudgetCharacters,
+  evidenceModePreflightLine,
   fullSourceBudgetCharacters,
 } from "./full-source-evidence.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
@@ -310,5 +311,21 @@ describe("full-source evidence", () => {
       effectiveMode: "retrieval",
       fallbackReason: "no-eligible-chunks",
     });
+  });
+
+  it("names the cost cap when the evidence fits the models but not the cap", () => {
+    const evidence = [{ id: "chunk-1", sourceId: "source-1", text: "x".repeat(500) }] as never;
+    // Too large for the capped budget, small enough for the context budget.
+    expect(decideFullSourceEvidence(evidence, 100, 10_000)).toMatchObject({
+      effectiveMode: "retrieval",
+      fallbackReason: "cost-cap-exceeded",
+      budgetCharacters: 100,
+    });
+    // Too large for the models whatever the cap.
+    expect(decideFullSourceEvidence(evidence, 100, 200).fallbackReason).toBe("budget-exceeded");
+    expect(decideFullSourceEvidence(evidence, 100).fallbackReason).toBe("budget-exceeded");
+    expect(evidenceModePreflightLine(decideFullSourceEvidence(evidence, 100, 10_000))).toContain(
+      "exceeds the workspace cost cap",
+    );
   });
 });

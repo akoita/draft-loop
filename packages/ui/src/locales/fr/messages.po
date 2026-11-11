@@ -3777,6 +3777,16 @@ msgid "Full source has no eligible chunks; retrieval will be used"
 msgstr "La source complète n’a aucun extrait éligible ; la recherche sera utilisée"
 
 #. placeholder {0}: countedNouns.chunk(mode.chunkCount)
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "Full source passed this workspace's cost cap ({0}), so retrieval was used"
+msgstr "La source complète dépassait le plafond de coût de cet espace ({0}) ; la recherche a donc été utilisée"
+
+#. placeholder {0}: countedNouns.chunk(chunkCount)
+#: packages/ui/src/start-confirmation.tsx
+msgid "Full source passes this workspace's cost cap ({0}); retrieval will be used"
+msgstr "La source complète dépasse le plafond de coût de cet espace ({0}) ; la recherche sera utilisée"
+
+#. placeholder {0}: countedNouns.chunk(mode.chunkCount)
 #: packages/ui/src/run-details.tsx
 msgid "full source, {0}"
 msgstr "source complète, {0}"
@@ -6966,6 +6976,10 @@ msgid "retrieval (full source of {chunks} did not fit)"
 msgstr "recherche (la source complète de {chunks} ne tenait pas)"
 
 #: packages/ui/src/run-comparison-facts.ts
+msgid "retrieval (full source of {chunks} passed the cost cap)"
+msgstr "recherche (la source complète de {chunks} dépassait le plafond de coût)"
+
+#: packages/ui/src/run-comparison-facts.ts
 msgid "retrieval (no full-source chunks)"
 msgstr "recherche (aucun fragment de source complète)"
 
@@ -6997,6 +7011,10 @@ msgstr "recherche, {counted}"
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "retrieval; full source did not fit"
 msgstr "recherche ; la source complète ne tenait pas"
+
+#: packages/ui/src/run-evidence-mode-display.ts
+msgid "retrieval; full source passed the cost cap"
+msgstr "recherche ; la source complète dépassait le plafond de coût"
 
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "retrieval; no full-source chunks"

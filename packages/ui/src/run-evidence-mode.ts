@@ -11,7 +11,7 @@
  */
 
 const evidenceModes = ["retrieval", "full-source"] as const;
-const fallbackReasons = ["budget-exceeded", "no-eligible-chunks"] as const;
+const fallbackReasons = ["budget-exceeded", "cost-cap-exceeded", "no-eligible-chunks"] as const;
 
 export interface RunEvidenceModeView {
   readonly requestedMode: (typeof evidenceModes)[number];
