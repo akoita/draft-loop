@@ -9995,6 +9995,38 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   justify-content: space-between;
 }
 
+/* What connected assistants may spend, in Workspace settings > Agents (#2657). */
+.agent-connection-caps {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.agent-connection-caps p {
+  margin: 0;
+}
+
+.agent-connection-caps .work-journal-intake-title {
+  font-weight: 600;
+}
+
+.agent-connection-caps li.work-journal-intake-confirm {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--amber);
+  border-radius: 0.4rem;
+}
+
+.agent-connection-caps-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.agent-connection-caps-form p {
+  flex: 1 1 100%;
+}
+
 /* Suggested writing preferences under Workspace settings (#2265). */
 .preference-suggestion-list {
   list-style: none;

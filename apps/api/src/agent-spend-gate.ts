@@ -76,6 +76,8 @@ interface Held {
 interface Ledger {
   /** "token" or "connection", as the refusal names the agent. */
   readonly noun: "token" | "connection";
+  /** What the person types to set a connection's cap: its client id. */
+  readonly clientId?: string;
   reserve(month: string, key: string, cents: number): Promise<AgentSpendOutcome>;
   release(month: string, key: string, cents: number): Promise<void>;
 }
@@ -105,6 +107,7 @@ export function registerAgentSpendGate(
       if (caps === undefined) return undefined;
       return {
         noun: "connection",
+        clientId,
         reserve: (month, key, cents) =>
           caps.reserveSpend({ workspaceId, clientId, month, key, cents }),
         release: (month, key, cents) =>
@@ -151,7 +154,7 @@ export function registerAgentSpendGate(
     if (outcome.outcome === "replayed") return;
     const noCap =
       ledger.noun === "connection"
-        ? "This agent connection has no monthly spend cap; the person sets one in Workspace settings > Agents."
+        ? `This agent connection has no monthly spend cap; the person sets one in Workspace settings > Agents, for the assistant "${ledger.clientId}".`
         : "This agent token has no monthly spend cap; create a token with Start runs and drafts in Workspace settings > Agents.";
     const raise =
       ledger.noun === "connection"
