@@ -53,15 +53,23 @@ export const retrievalEvidenceModeDecision: EvidenceModeDecision = Object.freeze
   budgetCharacters: 0,
 });
 
-/** Half of the smaller known context window, at four characters a token, else the default. */
+/**
+ * Half of the smaller known context window, at four characters a token, else the default. A
+ * workspace cost cap (#2666), in the same estimated tokens, lowers the budget and never raises it.
+ */
 export function fullSourceBudgetCharacters(
   modelConfiguration: Pick<ContextSnapshot["modelConfiguration"], "author" | "critic">,
+  maxEvidenceTokens?: number,
 ): number {
   const windows = [modelConfiguration.author, modelConfiguration.critic].map(
     (selection) => selection.profile?.knownLimits.contextWindowTokens,
   );
-  if (windows.some((tokens) => tokens === undefined)) return defaultFullSourceBudgetCharacters;
-  return Math.floor(Math.min(...(windows as number[])) * charactersPerToken * contextWindowShare);
+  const contextBudget = windows.some((tokens) => tokens === undefined)
+    ? defaultFullSourceBudgetCharacters
+    : Math.floor(Math.min(...(windows as number[])) * charactersPerToken * contextWindowShare);
+  return maxEvidenceTokens === undefined
+    ? contextBudget
+    : Math.min(contextBudget, maxEvidenceTokens * charactersPerToken);
 }
 
 /** Decide whether the eligible evidence fits the budget; the caller supplies the serialized form. */

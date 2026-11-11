@@ -53,6 +53,34 @@ describe("evidence mode CLI", () => {
     expect(service.set).toHaveBeenLastCalledWith({ root: resolve("ws"), mode: "retrieval" });
   });
 
+  it("sets a cost cap with a mode and shows it", async () => {
+    const { service, lines, run } = setup();
+    service.set.mockResolvedValueOnce({
+      mode: "full-source",
+      maxEvidenceTokens: 50_000,
+      updatedAt: "2030-01-01T00:00:00.000Z",
+    } as never);
+    await run("mode", "ws", "full-source", "--max-evidence-tokens", "50000");
+    expect(service.set).toHaveBeenLastCalledWith({
+      root: resolve("ws"),
+      mode: "full-source",
+      maxEvidenceTokens: 50_000,
+    });
+    expect(lines).toContain("  cap: retrieval above about 50000 tokens of evidence");
+  });
+
+  it("refuses a cap without a mode or out of range before touching the workspace", async () => {
+    const { service, run } = setup();
+    await expect(run("mode", "ws", "--max-evidence-tokens", "50000")).rejects.toBeInstanceOf(
+      CliUserError,
+    );
+    await expect(
+      run("mode", "ws", "full-source", "--max-evidence-tokens", "12"),
+    ).rejects.toBeInstanceOf(CliUserError);
+    expect(service.get).not.toHaveBeenCalled();
+    expect(service.set).not.toHaveBeenCalled();
+  });
+
   it("prints JSON for both show and set", async () => {
     const { lines, run } = setup();
     await run("mode", "ws", "--json");

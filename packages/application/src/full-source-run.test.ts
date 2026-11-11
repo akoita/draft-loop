@@ -124,6 +124,28 @@ describe("full-source evidence in a run", () => {
     });
   });
 
+  it("falls back to retrieval when the evidence passes the workspace cost cap", async () => {
+    const { root, driver } = await workspace();
+    await writeWorkspaceEvidenceMode(root, "full-source", undefined, 1_000);
+    const lines: string[] = [];
+    const begun = await driver.begin(
+      { root, allowProviderData: false },
+      { write: (line) => lines.push(line) },
+    );
+    expect(lines).toContainEqual(
+      expect.stringMatching(
+        /^Evidence mode: full-source requested, using retrieval because the eligible evidence exceeds the budget \(26 eligible chunks, \d+ of 4000 characters\)$/u,
+      ),
+    );
+    const events = await auditEvents(root, begun.runId);
+    expect(events[0]?.payload).toMatchObject({
+      requestedMode: "full-source",
+      effectiveMode: "retrieval",
+      fallbackReason: "budget-exceeded",
+      budgetCharacters: 4000,
+    });
+  });
+
   it("reads the mode again when the run resumes", async () => {
     const { root, driver } = await workspace();
     await writeWorkspaceEvidenceMode(root, "retrieval");

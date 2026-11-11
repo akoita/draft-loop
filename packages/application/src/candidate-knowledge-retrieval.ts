@@ -239,6 +239,8 @@ export function candidateKnowledgeRuntimeRetrieval(
    * exactly as before. Every other query stays lexical.
    */
   semanticOptions?: RunSemanticRetrievalOptions,
+  /** Workspace cost cap on full-source evidence, in estimated tokens; absent means none. */
+  maxEvidenceTokens?: number,
 ):
   | (EvidenceModeRetrieval & {
       readonly port: RetrievalPort;
@@ -769,7 +771,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const evidence = hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
       const decision = decideFullSourceEvidence(
         evidence,
-        fullSourceBudgetCharacters(context.modelConfiguration),
+        fullSourceBudgetCharacters(context.modelConfiguration, maxEvidenceTokens),
       );
       return { decision, hits, evidence };
     })();

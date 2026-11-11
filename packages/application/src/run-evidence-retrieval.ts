@@ -40,7 +40,7 @@ export async function openRunCandidateRetrieval(
   /** Injection point for the model location and embedder; tests use it, runs use the defaults. */
   semanticDependencies: Partial<RunSemanticRetrievalOptions> = {},
 ) {
-  const { mode } = await readWorkspaceEvidenceMode(root);
+  const { mode, maxEvidenceTokens } = await readWorkspaceEvidenceMode(root);
   const retrieval = await readWorkspaceRetrievalMode(root);
   const semantic: RunSemanticRetrievalOptions | undefined =
     retrieval.mode === "lexical"
@@ -58,6 +58,7 @@ export async function openRunCandidateRetrieval(
     withheld,
     mode,
     semantic,
+    maxEvidenceTokens,
   );
   if (runtime === undefined) {
     if (context.candidateProfileReference !== undefined) {
