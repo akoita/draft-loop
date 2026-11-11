@@ -134,14 +134,14 @@ describe("full-source evidence in a run", () => {
     );
     expect(lines).toContainEqual(
       expect.stringMatching(
-        /^Evidence mode: full-source requested, using retrieval because the eligible evidence exceeds the budget \(26 eligible chunks, \d+ of 4000 characters\)$/u,
+        /^Evidence mode: full-source requested, using retrieval because the eligible evidence exceeds the workspace cost cap \(26 eligible chunks, \d+ of 4000 characters\)$/u,
       ),
     );
     const events = await auditEvents(root, begun.runId);
     expect(events[0]?.payload).toMatchObject({
       requestedMode: "full-source",
       effectiveMode: "retrieval",
-      fallbackReason: "budget-exceeded",
+      fallbackReason: "cost-cap-exceeded",
       budgetCharacters: 4000,
     });
   });
