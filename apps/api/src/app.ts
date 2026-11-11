@@ -591,7 +591,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
       ...(application.preferenceSuggestions === undefined
         ? {}
-        : { preferenceSources: application.preferenceSuggestions.sources }),
+        : {
+            // Read per request: in sign-in mode the suggestions belong to the request's tenant.
+            preferenceSources: (root: string) =>
+              application.preferenceSuggestions?.sources(root) ?? Promise.resolve([]),
+          }),
     });
     registerExportRoutes(app, {
       service: application.service,
