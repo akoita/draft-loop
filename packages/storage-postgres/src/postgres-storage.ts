@@ -1,4 +1,5 @@
 import type { AuditEvent, AuditEventInput } from "@draft-loop/storage";
+import { createAgentConnectionCapStore } from "./agent-connection-caps.js";
 import { createAgentTokenStore } from "./agent-tokens.js";
 import { createApplications } from "./applications.js";
 import { appendAuditEventRow, createAuditEventReads, listAuditEventRows } from "./audit-trail.js";
@@ -147,6 +148,7 @@ function tenantStorage(client: SqlSession) {
     contentScreening: createContentScreening(client),
     workJournalNotes: createWorkJournalNoteStore(client),
     agentTokens: createAgentTokenStore(client),
+    agentConnectionCaps: createAgentConnectionCapStore(client),
     careerInterviewSessions: createCareerInterviewSessionStore(client),
     savedApplicationMaterial: createSavedApplicationMaterialStore(client),
     researchBriefs: createResearchBriefStore(client),

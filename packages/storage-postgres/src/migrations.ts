@@ -1,3 +1,4 @@
+import { agentConnectionCapsMigration } from "./agent-connection-caps-migration.js";
 import { agentTokenExpiryMigration } from "./agent-token-expiry-migration.js";
 import { agentTokenScopesMigration } from "./agent-token-scopes-migration.js";
 import { agentTokenSpendMigration } from "./agent-token-spend-migration.js";
@@ -815,6 +816,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   betaWaitlistMigration,
   agentTokenSpendMigration,
   interviewGuideMigration,
+  agentConnectionCapsMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

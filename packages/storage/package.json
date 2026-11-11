@@ -135,6 +135,14 @@
       "types": "./src/agent-tokens.ts",
       "import": "./src/agent-tokens.ts"
     },
+    "./agent-connection-caps": {
+      "types": "./src/agent-connection-caps.ts",
+      "import": "./src/agent-connection-caps.ts"
+    },
+    "./agent-connection-caps-conformance": {
+      "types": "./src/agent-connection-caps-conformance.ts",
+      "import": "./src/agent-connection-caps-conformance.ts"
+    },
     "./career-interview-sessions": {
       "types": "./src/career-interview-sessions.ts",
       "import": "./src/career-interview-sessions.ts"
