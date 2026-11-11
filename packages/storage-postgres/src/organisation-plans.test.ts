@@ -124,7 +124,7 @@ describe.runIf(connectionString !== undefined)("Postgres organisation plans", ()
         { planId: "pro", overrides: { unknownLimit: 1 } },
         { planId: "pro", overrides: { runsPerDay: -1 } },
         { planId: "pro", overrides: { modelTiers: [] } },
-        { planId: "free" },
+        { planId: "starter" },
         { planId: "team" },
         { planId: "team", seats: 0 },
         { planId: "pro", periodStart: "2026-02-30" },
