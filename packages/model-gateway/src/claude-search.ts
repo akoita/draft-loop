@@ -33,7 +33,8 @@ export interface ClaudeSearchSource {
 export interface ClaudeSearchReply {
   readonly sources: readonly ClaudeSearchSource[];
   readonly costUsd: number;
-  readonly provider: "claude";
+  /** `claude`, or `claude-api-fallback` when Vertex AI refused for quota (#2582). */
+  readonly provider: "claude" | "claude-api-fallback";
 }
 
 /** The one call the search makes, on the Claude API or on Vertex AI. */
@@ -245,4 +246,31 @@ export function vertexClaudeSearchClient(
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
   return async () => client as unknown as ClaudeSearchClient;
+}
+
+/** What a search that fell back to the Claude API records as its provider (#2582). */
+export const claudeSearchFallbackProvider = "claude-api-fallback";
+
+/**
+ * Vertex AI's search with the direct Claude API as its fallback (#2582), for a deployment that
+ * turned the fallback on. Only a quota refusal (status 429, Vertex AI's RESOURCE_EXHAUSTED) moves
+ * a search to the Claude API, once; the reply is priced at the Claude API's rates and records the
+ * fallback as its provider. Any other failure stays a failure.
+ */
+export function withClaudeApiSearchFallback(
+  primary: ReturnType<typeof createClaudeResearchSearch>,
+  fallback: ReturnType<typeof createClaudeResearchSearch>,
+): ReturnType<typeof createClaudeResearchSearch> {
+  return {
+    search: async (request) => {
+      try {
+        return await primary.search(request);
+      } catch (error) {
+        if (!(error instanceof ClaudeSearchError) || error.code !== "status_429") throw error;
+        if (request.signal?.aborted === true) throw error;
+      }
+      const reply = await fallback.search(request);
+      return { ...reply, provider: claudeSearchFallbackProvider };
+    },
+  };
 }
