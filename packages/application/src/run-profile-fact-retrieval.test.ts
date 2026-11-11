@@ -327,6 +327,34 @@ describe("runs with a pinned reviewed profile", () => {
     },
   );
 
+  it("keep the usage levels a run started with when a level changes while it waits", async () => {
+    const { root, driver, reviewed, authorInputs } = await profileWorkspace();
+    try {
+      const candidateProfile = { profileId: "profile-1", version: reviewed.profile.version };
+      const started = await driver.start(
+        { root, allowProviderData: true, candidateProfile },
+        silent,
+      );
+      expect(JSON.stringify(authorInputs)).toContain(evidenceLine);
+
+      // Held back while the run waits: the run in progress keeps the levels it started with.
+      await changeFactUsage(root, { kind: "section", category: "skill", level: "never-say" });
+      const before = authorInputs.length;
+      await driver.lifecycle({ root, runId: started.runId, action: "revision" }, silent);
+      await driver.resume({ root, runId: started.runId, allowProviderData: true }, silent);
+      const revised = authorInputs.slice(before);
+      expect(revised.length).toBeGreaterThan(0);
+      expect(JSON.stringify(revised)).toContain(evidenceLine);
+
+      // The next run starts with the new level.
+      const next = authorInputs.length;
+      await driver.start({ root, allowProviderData: true, candidateProfile }, silent);
+      expect(JSON.stringify(authorInputs.slice(next))).not.toContain(evidenceLine);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leave a run without a profile on chunk evidence only", async () => {
     const { root, driver, authorInputs } = await profileWorkspace();
     try {

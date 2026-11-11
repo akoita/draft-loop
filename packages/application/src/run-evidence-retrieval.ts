@@ -15,6 +15,7 @@ import {
 } from "./candidate-knowledge-sensitivity-exclusion.js";
 import { CliUserError } from "./cli-user-error.js";
 import { withFactUsageExclusions } from "./run-fact-usage-exclusions.js";
+import { type RunFactUsageStorage, runFactUsage } from "./run-fact-usage-snapshot.js";
 import {
   loadPinnedProfile,
   runCandidateProfileUnavailableMessage,
@@ -32,7 +33,8 @@ import { readWorkspaceRetrievalMode } from "./workspace-retrieval-mode.js";
  * the person holds back from a CV (#2304). Unchanged without a pinned selection or profile.
  */
 async function heldBackFactsWithheld(
-  storage: Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
+  storage: Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">> &
+    RunFactUsageStorage,
   root: string,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
@@ -43,7 +45,12 @@ async function heldBackFactsWithheld(
   const reference = context.candidateProfileReference;
   if (binding === undefined || selection === undefined || reference === undefined) return withheld;
   return withFactUsageExclusions({
-    root,
+    usage: await runFactUsage({
+      storage,
+      root,
+      workspaceId: config.id,
+      contextSnapshotId: context.id,
+    }),
     workspaceId: config.id,
     context,
     profile: await loadPinnedProfile(storage, config.id, reference),
@@ -65,7 +72,8 @@ async function heldBackFactsWithheld(
 export async function openRunCandidateRetrieval(
   storage: Pick<CandidateKnowledgeLexicalStoragePort, "appendCandidateKnowledgeRetrievalTrace"> &
     Partial<SemanticRetrievalTraceAccessPort> &
-    Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">>,
+    Partial<Pick<CanonicalCandidateProfileStoragePort, "getCanonicalCandidateProfile">> &
+    RunFactUsageStorage,
   root: string,
   config: CandidateKnowledgeRuntimeConfig,
   context: ContextSnapshot,
