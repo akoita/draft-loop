@@ -27,6 +27,7 @@ import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
 import { createResearchBriefStore } from "./research-briefs.js";
 import { createRunHistory } from "./run-history.js";
+import { createRunSpanStore } from "./run-spans.js";
 import { createRunState } from "./run-state.js";
 import { createSavedApplicationMaterialStore } from "./saved-application-material.js";
 import { createSourceEvidenceKindOverrides } from "./source-evidence-kinds.js";
@@ -152,6 +153,7 @@ function tenantStorage(client: SqlSession) {
     careerInterviewSessions: createCareerInterviewSessionStore(client),
     savedApplicationMaterial: createSavedApplicationMaterialStore(client),
     researchBriefs: createResearchBriefStore(client),
+    runSpans: createRunSpanStore(client),
     appendAuditEvent: (input: AuditEventInput): Promise<AuditEvent> =>
       client.transaction((executor) => appendAuditEventRow(executor, input)),
     listAuditEvents: (workspaceId: string): Promise<readonly AuditEvent[]> =>
