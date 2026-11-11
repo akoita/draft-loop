@@ -55,7 +55,9 @@ const planBody = z.strictObject({
   planId: z
     .string()
     .max(64)
-    .describe(`The plan's id in catalog v1: ${planIds.join(", ")}. Anything else answers 422.`),
+    .describe(
+      `The plan's id in the plan catalog: ${planIds.join(", ")}. Anything else answers 422.`,
+    ),
   overrides: entitlementOverridesSchema
     .optional()
     .describe("Per-organisation entitlement overrides, merged over the plan."),
