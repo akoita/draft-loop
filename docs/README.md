@@ -23,6 +23,7 @@ contributors, maintainers, and operators to the current information they need.
 | Run CLI and desktop commands                                             | [CLI and desktop reference](reference/cli-and-desktop.md)                                                                                                                                                             |
 | Read the hosted service's record export format                           | [Record archive v1](reference/record-archive.md)                                                                                                                                                                      |
 | Let an agent record your work for review                                 | [Agent channel](reference/agent-channel.md)                                                                                                                                                                           |
+| Connect Claude, ChatGPT or another assistant to your account | [Connect DraftLoop to your assistant](reference/connect-an-assistant.md) |
 | Change how the guided career interview talks to candidates               | [Career interview method](reference/career-interview-method.md)                                                                                                                                                       |
 | Use DraftLoop in French, or write documents in another language          | [Languages](reference/languages.md)                                                                                                                                                                                   |
 | Turn on voice answers in the career interview                            | [Voice input](reference/voice-input.md)                                                                                                                                                                               |
@@ -37,6 +38,7 @@ contributors, maintainers, and operators to the current information they need.
 | Make a common code change: API route, shared screen, checklist           | [Engineering guides](engineering/README.md)                                                                                                                                                                           |
 | Develop and test the server locally                                      | [Local server stack](operations/local-server-stack.md)                                                                                                                                                                |
 | Deploy the hosted service                                                | [Server deploy](operations/server-deploy.md)                                                                                                                                                                          |
+| List DraftLoop in an assistant directory | [Directory listing](operations/directory-listing.md) |
 
 ## Document types
 
