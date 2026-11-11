@@ -1,8 +1,11 @@
 import type { CanonicalCandidateProfile, ContextSnapshot } from "@draft-loop/domain";
-import { factUsageAllows, resolveFactUsage } from "@draft-loop/domain/fact-usage";
+import {
+  type FactUsageSettings,
+  factUsageAllows,
+  resolveFactUsage,
+} from "@draft-loop/domain/fact-usage";
 
 import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
-import { readFactUsage } from "./fact-usage.js";
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
 import {
   type ProfileFactEvidenceCandidatesRequest,
@@ -19,7 +22,7 @@ import {
  * remaining chunks, so the held-back fact, and any other fact quoted from the same chunk, is left
  * out with it. Withholding the whole chunk is deliberate: part of a chunk cannot be sent safely.
  *
- * The usage levels are read once, when the run starts or resumes, like the evidence mode. A
+ * The usage levels are the run's own record (see run-fact-usage-snapshot). A
  * held-back fact whose quote is not found in a pinned source has no source text to withhold.
  */
 
@@ -51,7 +54,8 @@ function referenceKey(reference: SourceVersionKeyParts): string {
 }
 
 export interface RunFactUsageExclusionsRequest {
-  readonly root: string;
+  /** The usage levels the run works with: its own record, not the workspace's current setting. */
+  readonly usage: FactUsageSettings;
   readonly workspaceId: string;
   readonly context: Pick<ContextSnapshot, "evidenceManifest">;
   /** The run's pinned, verified reviewed profile. */
@@ -70,7 +74,7 @@ export async function withFactUsageExclusions(
   request: RunFactUsageExclusionsRequest,
 ): Promise<CandidateKnowledgeSensitivityExclusions> {
   const { withheld } = request;
-  const usage = await readFactUsage(request.root);
+  const { usage } = request;
   const heldBack = request.profile.facts.filter(
     (fact) => !factUsageAllows(resolveFactUsage(usage, fact), "cv"),
   );

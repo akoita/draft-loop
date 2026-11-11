@@ -52,8 +52,8 @@ sensitivity decides what may reach a model provider.
 
 - A CV run withholds the whole source chunk a held-back fact was quoted from, so
   other text in that chunk is left out too.
-- A CV run reads the usage levels when it starts or resumes; a level changed in
-  between applies from the resume.
+- A CV run keeps the usage levels it started with; a level changed while it
+  waits applies to the next run.
 - One derivation runs per profile at a time; a second answers
   `409 derivation_running`.
 - Derivation calls a model, so in sign-in mode it needs the candidate record's

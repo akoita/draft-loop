@@ -950,8 +950,9 @@ levels, and so do CV runs. A CV run leaves out each held-back fact and the
 source chunk it was quoted from, so the writer never sees either.
 
 - **Whole chunks.** Other text in the same chunk is left out too.
-- **Read at start and resume.** A level changed while a run waits applies when
-  the run resumes.
+- **Kept per run.** A run records the levels in force when it first reads its
+  evidence, as a `run.fact-usage` audit event holding keys and levels only. A
+  level changed while the run waits applies to the next run.
 
 - **Unset is `cv`.** Nothing changes until you mark a fact or section.
 - **A fact's own level wins.** "Like section" follows the section's level.
