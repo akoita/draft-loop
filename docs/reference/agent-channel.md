@@ -365,7 +365,11 @@ sequenceDiagram
 ```
 
 - **Default scopes.** The server asks for `journal`, `applications:read` and
-  `jobs:write`. `drafts:read` is granted only when the person adds it.
+  `jobs:write`. `drafts:read` and `runs:start` are granted only when the
+  person adds them.
+- **Runs and drafts.** With `runs:start`, the assistant starts them within
+  [the connection's spend cap](#the-connections-spend-cap). Without a cap, the
+  tool tells the person to set one in Workspace settings > Agents.
 - **Workspace.** The tools act in the signed-in person's workspace. A person
   who reaches several gets the first by id; choosing one is not built.
 - **A dead token** answers `401` with `invalid_token`, so the assistant
@@ -373,9 +377,6 @@ sequenceDiagram
 - **Identity provider.** It needs one confidential client per assistant with
   that assistant's redirect address, PKCE with S256, refresh tokens, the API's
   audience on the token and the `draftloop:` scopes as optional client scopes.
-
-Not built yet: runs and drafts from a connection, which wait for a spend cap
-per connection.
 
 ## How the candidate reviews
 

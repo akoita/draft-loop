@@ -34,11 +34,15 @@ export const remoteScopes = [
   "draftloop:applications:read",
   "draftloop:jobs:write",
   "draftloop:drafts:read",
+  "draftloop:runs:start",
 ] as const;
-/** What a connection asks for unless the client names scopes; reading drafts is opt-in. */
-export const remoteDefaultScopes = remoteScopes.filter(
-  (scope) => scope !== "draftloop:drafts:read",
-);
+/** Granted only when the person adds them: reading drafts, and spending within a cap (#2658). */
+const remoteOptInScopes: ReadonlySet<string> = new Set([
+  "draftloop:drafts:read",
+  "draftloop:runs:start",
+]);
+/** What a connection asks for unless the client names scopes. */
+export const remoteDefaultScopes = remoteScopes.filter((scope) => !remoteOptInScopes.has(scope));
 
 /** Where the protected resource metadata is served (RFC 9728). */
 export const protectedResourcePath = "/.well-known/oauth-protected-resource";
