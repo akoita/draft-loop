@@ -321,6 +321,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO agent_connection_caps (tenant_id, workspace_id, client_id, monthly_cap_cents, updated_at)
+       VALUES ($1, $2, 'fictional-assistant', 500, $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO application_research_briefs (tenant_id, id, workspace_id, application_id, brief, created_at)
        VALUES ($1, 'rbr_' || md5($1 || $2), $2, 'application-1', '{}', $3)`,
       [tenant, record, at],
