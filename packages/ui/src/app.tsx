@@ -1058,6 +1058,15 @@ export function App({
   const activeExecutionStatus =
     state?.providerFailure?.automaticRetry === true ? "running" : state?.execution.status;
   const activeWorkspaceId = state?.workspaceId ?? null;
+  const runTraceCapabilities = activePort.runTrace;
+  /** Reads a run's trace for Run details; undefined on a host that records none. */
+  const loadRunTrace = useMemo(
+    () =>
+      runTraceCapabilities === undefined || activeWorkspaceId === null
+        ? undefined
+        : (runId: string) => runTraceCapabilities.getRunTrace(activeWorkspaceId, runId),
+    [runTraceCapabilities, activeWorkspaceId],
+  );
   const workspaceGeneration = contextGenerationRef.current;
   const profilePendingForActiveWorkspace =
     activeWorkspaceId !== null &&
@@ -2891,6 +2900,7 @@ export function App({
       {...(activePort.saveApplicationJobCopy === undefined
         ? {}
         : { onSaveJobCopy: activePort.saveApplicationJobCopy })}
+      {...(loadRunTrace === undefined ? {} : { onLoadRunTrace: loadRunTrace })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
       providerSignInReadiness={providerSignInReadiness}
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")

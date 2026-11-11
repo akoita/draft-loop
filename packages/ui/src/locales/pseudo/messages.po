@@ -401,6 +401,10 @@ msgstr ""
 msgid "{accepted, plural, one {# accepted blocking finding needs a revision} other {# accepted blocking findings need a revision}}"
 msgstr ""
 
+#: packages/ui/src/run-steps.tsx
+msgid "{attemptCount, plural, one {# model call} other {# model calls}}"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr ""
@@ -905,6 +909,12 @@ msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
 msgid "A technology I have not used"
+msgstr ""
+
+#. placeholder {0}: formatEstimatedUsd(entry.estimatedUsd)
+#. placeholder {0}: formatEstimatedUsd(total)
+#: packages/ui/src/run-steps.tsx
+msgid "about {0}"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -1476,6 +1486,10 @@ msgstr ""
 msgid "Attach the job description file."
 msgstr ""
 
+#: packages/ui/src/run-steps.tsx
+msgid "attempt {attemptNumber}"
+msgstr ""
+
 #. placeholder {0}: failure.maxAttempts
 #: packages/ui/src/provider-recovery.tsx
 msgid "Attempt {next} of {0} is starting."
@@ -1495,6 +1509,7 @@ msgstr ""
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Author"
 msgstr ""
@@ -2484,6 +2499,7 @@ msgstr ""
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Critic"
 msgstr ""
@@ -3475,6 +3491,7 @@ msgid "Facts:"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/run-steps.tsx
 msgid "Failed"
 msgstr ""
 
@@ -3488,6 +3505,11 @@ msgstr ""
 
 #: packages/ui/src/provider-authentication-actions.ts
 msgid "Failed to save provider authentication mode."
+msgstr ""
+
+#. placeholder {0}: entry.errorType
+#: packages/ui/src/run-steps.tsx
+msgid "Failed: {0}"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -5516,6 +5538,10 @@ msgstr ""
 msgid "Not evaluated"
 msgstr ""
 
+#: packages/ui/src/run-steps.tsx
+msgid "not finished"
+msgstr ""
+
 #: packages/ui/src/finding-title.ts
 msgid "Not found in the CV wording: "
 msgstr ""
@@ -5669,6 +5695,10 @@ msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "One or both exact profiles are not in the registered catalog, so no estimate is available."
+msgstr ""
+
+#: packages/ui/src/run-steps.tsx
+msgid "one or more failed"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -7194,6 +7224,10 @@ msgstr ""
 msgid "Revise"
 msgstr ""
 
+#: packages/ui/src/run-steps.tsx
+msgid "Revision"
+msgstr ""
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Revoke"
 msgstr ""
@@ -7208,6 +7242,11 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Round"
+msgstr ""
+
+#. placeholder {0}: entry.round
+#: packages/ui/src/run-steps.tsx
+msgid "round {0}"
 msgstr ""
 
 #. placeholder {0}: state.round
@@ -7964,8 +8003,16 @@ msgstr ""
 msgid "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 msgstr ""
 
+#: packages/ui/src/run-steps.tsx
+msgid "Step"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "step where it stopped."
+msgstr ""
+
+#: packages/ui/src/run-steps.tsx
+msgid "Steps"
 msgstr ""
 
 #. placeholder {0}: tell.match ?? ""
@@ -10101,6 +10148,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "what the role covered"
+msgstr ""
+
+#: packages/ui/src/run-steps.tsx
+msgid "What the server ran for this run. Costs are estimates. No draft or career material is recorded here."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts

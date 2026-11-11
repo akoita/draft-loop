@@ -157,6 +157,7 @@ import {
 } from "./run-details.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
+import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, SidePanelToggle, useSidePanelWidth } from "./side-panel-width.js";
@@ -233,6 +234,8 @@ interface ReviewWorkspaceProps {
   readonly onReadJob?: () => Promise<ApplicationJobResult>;
   /** Saves a copy of a job page that has none: read once more, or the pasted text (#2593). */
   readonly onSaveJobCopy?: (text?: string) => Promise<ApplicationJobResult>;
+  /** Reads a run's trace for the Steps section of Run details; without it there is none. */
+  readonly onLoadRunTrace?: LoadRunTrace;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -991,6 +994,7 @@ export function ReviewWorkspace({
   jobRequirements,
   onReadJob,
   onSaveJobCopy,
+  onLoadRunTrace,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -2911,6 +2915,7 @@ export function ReviewWorkspace({
           returnFocusRef={runDetailsButtonRef}
           state={state}
           describeState={stateLabel}
+          {...(onLoadRunTrace === undefined ? {} : { loadTrace: onLoadRunTrace })}
           start={
             readOnly
               ? null

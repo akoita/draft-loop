@@ -47,6 +47,14 @@ even while a call is running.
 | Waiting for you     | A retry or another action needs you, as after a key problem                                 | Fix the cause, then Retry     |
 | Can't recover       | No attempt is left                                                                          | Stop, then start a new review |
 
+### See what a run did
+
+Open **Run details**, then **Steps**. Each line is one model call: author,
+critic or revision, with its round, model, duration and estimated cost. A
+failed call names its error type, and a retry shows its attempt number. The
+section appears once the run is not executing, and only for a run the server
+executed since traces were recorded. It never shows draft or career material.
+
 ## How to test it
 
 - Walk steps 4 and 5 of the [local server stack](../operations/local-server-stack.md);
@@ -57,14 +65,15 @@ even while a call is running.
   `apps/api/src/preference-suggestion-routes.test.ts`,
   `packages/ui/src/export-template.test.ts`,
   `packages/ui/src/export-preview.test.tsx`,
-  `packages/ui/src/provider-recovery.test.tsx` and
+  `packages/ui/src/provider-recovery.test.tsx`,
+  `packages/ui/src/run-steps.test.tsx` and
   `packages/orchestrator/src/person-hold.test.ts`.
 
 ## Surfaces
 
 | Kind   | Surface                                                                                                  |
 | ------ | -------------------------------------------------------------------------------------------------------- |
-| Screen | Review page, Export area and its preview, run details, Home's writing policy                             |
+| Screen | Review page, Export area and its preview, run details and its Steps, Home's writing policy               |
 | API    | `/v1/workspaces/{id}/runs/{runId}/review`, `.../findings/{findingId}/decision`                           |
 | API    | `.../runs/{runId}/edits/{blockId}`, `.../approve`, `.../revision`, `.../pause`, `.../resume`, `.../stop` |
 | API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`, `.../export-preview` (saves nothing)       |
