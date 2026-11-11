@@ -816,7 +816,7 @@ describe.runIf(connectionString !== undefined)("Postgres credit ledger", () => {
         reservation: undefined,
       });
       await expect(south.openReservationCount()).resolves.toBe(0);
-      await expect(south.balance(now)).resolves.toMatchObject({ allowance: 4, reserved: 0 });
+      await expect(south.balance(now)).resolves.toMatchObject({ allowance: 5, reserved: 0 });
       await expect(north.balance(now)).resolves.toMatchObject({ allowance: 8, reserved: 2 });
       // The same run id may exist in two organisations.
       await expect(

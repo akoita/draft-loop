@@ -3,7 +3,7 @@ import {
   type EntitlementOverrides,
   entitlementOverridesSchema,
   type PlanId,
-  planCatalogV1,
+  planCatalog,
   planIdSchema,
   resolveEntitlements,
 } from "@draft-loop/schemas/entitlements";
@@ -103,7 +103,7 @@ function requirePlanAssignmentInput(input: PlanAssignmentInput): PlanAssignment 
       !planId.success ? "Unknown plan id." : "Invalid entitlement overrides.",
     );
   }
-  const seatPriced = planCatalogV1.plans[planId.data].seatPriced;
+  const seatPriced = planCatalog.plans[planId.data].seatPriced;
   const seats = seatPriced ? (input.seats ?? null) : null;
   try {
     resolveEntitlements(planId.data, overrides.data, { seats: seats ?? undefined });
@@ -115,7 +115,7 @@ function requirePlanAssignmentInput(input: PlanAssignmentInput): PlanAssignment 
   }
   return {
     planId: planId.data,
-    catalogVersion: planCatalogV1.version,
+    catalogVersion: planCatalog.version,
     overrides: overrides.data,
     seats,
     periodStart: utcDate(input.periodStart),
@@ -128,7 +128,12 @@ function planAssignment(row: SqlRow): PlanAssignment {
   const planId = planIdSchema.safeParse(row.plan_id);
   const overrides = entitlementOverridesSchema.safeParse(row.overrides);
   const catalogVersion = Number(row.catalog_version);
-  if (!planId.success || !overrides.success || catalogVersion !== planCatalogV1.version) {
+  // An assignment stored under an earlier catalog still resolves: versions only add plans.
+  const knownVersion =
+    Number.isInteger(catalogVersion) &&
+    catalogVersion >= 1 &&
+    catalogVersion <= planCatalog.version;
+  if (!planId.success || !overrides.success || !knownVersion) {
     throw new PlanAssignmentError(
       "stored_plan_invalid",
       "The stored plan assignment is not valid for the plan catalog.",

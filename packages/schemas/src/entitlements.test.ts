@@ -3,34 +3,65 @@ import { describe, expect, it } from "vitest";
 import {
   entitlementOverridesSchema,
   entitlementsSchema,
+  planCatalog,
   planCatalogSchema,
-  planCatalogV1,
+  planCatalogVersion,
   planIdSchema,
   planIds,
   resolveEntitlements,
 } from "./entitlements.js";
 
-describe("plan catalog v1", () => {
-  it("parses and covers every plan id at version 1", () => {
-    expect(planCatalogSchema.safeParse(planCatalogV1).success).toBe(true);
-    expect(planCatalogV1.version).toBe(1);
-    expect(Object.keys(planCatalogV1.plans).sort()).toEqual([...planIds].sort());
-    for (const plan of Object.values(planCatalogV1.plans)) {
+describe("plan catalog", () => {
+  it("parses and covers every plan id at the current version", () => {
+    expect(planCatalogSchema.safeParse(planCatalog).success).toBe(true);
+    expect(planCatalog.version).toBe(planCatalogVersion);
+    expect(planCatalogVersion).toBe(2);
+    expect(Object.keys(planCatalog.plans).sort()).toEqual([...planIds].sort());
+    for (const plan of Object.values(planCatalog.plans)) {
       expect(entitlementsSchema.safeParse(plan.entitlements).success).toBe(true);
     }
   });
 
   it("is frozen", () => {
-    expect(Object.isFrozen(planCatalogV1.plans.pro.entitlements.features)).toBe(true);
+    expect(Object.isFrozen(planCatalog.plans.pro.entitlements.features)).toBe(true);
   });
 
   it("rejects an unknown version, a missing plan and extra keys", () => {
-    expect(planCatalogSchema.safeParse({ ...planCatalogV1, version: 2 }).success).toBe(false);
-    const { pro: _pro, ...withoutPro } = planCatalogV1.plans;
-    expect(planCatalogSchema.safeParse({ ...planCatalogV1, plans: withoutPro }).success).toBe(
-      false,
-    );
-    expect(planCatalogSchema.safeParse({ ...planCatalogV1, extra: true }).success).toBe(false);
+    expect(planCatalogSchema.safeParse({ ...planCatalog, version: 1 }).success).toBe(false);
+    const { pro: _pro, ...withoutPro } = planCatalog.plans;
+    expect(planCatalogSchema.safeParse({ ...planCatalog, plans: withoutPro }).success).toBe(false);
+    expect(planCatalogSchema.safeParse({ ...planCatalog, extra: true }).success).toBe(false);
+  });
+
+  it("gives Free one welcome application on the standard pair and 20 light calls a day", () => {
+    expect(resolveEntitlements("free")).toEqual({
+      creditsPerPeriod: 1,
+      creditPeriodMonths: 36,
+      modelTiers: ["standard", "economy"],
+      seats: 1,
+      candidateRecords: 1,
+      runsPerDay: 2,
+      concurrentRuns: 1,
+      modelCallsPerDay: 20,
+      features: {
+        provenanceReport: false,
+        runComparison: false,
+        byok: false,
+        sso: false,
+        retentionControls: false,
+      },
+    });
+  });
+
+  it("sells credit packs of 1 for €5 and 5 for €22, valid 12 months", () => {
+    expect(planCatalog.creditPacks).toEqual([
+      { id: "pack-1", label: "1 application", credits: 1, priceEurCents: 500, validMonths: 12 },
+      { id: "pack-5", label: "5 applications", credits: 5, priceEurCents: 2200, validMonths: 12 },
+    ]);
+    const [first] = planCatalog.creditPacks;
+    expect(
+      planCatalogSchema.safeParse({ ...planCatalog, creditPacks: [first, first] }).success,
+    ).toBe(false);
   });
 
   it("holds the D13 working defaults", () => {
@@ -46,7 +77,7 @@ describe("plan catalog v1", () => {
       concurrentRuns: 1,
     });
     expect(resolve("individual")).toMatchObject({
-      creditsPerPeriod: 4,
+      creditsPerPeriod: 5,
       creditPeriodMonths: 1,
       modelTiers: ["economy"],
       seats: 1,
@@ -215,6 +246,6 @@ describe("overrides", () => {
     const first = resolveEntitlements("pro", { features: { byok: true } });
     const second = resolveEntitlements("pro");
     expect(second.features.byok).toBe(false);
-    expect(first.modelTiers).not.toBe(planCatalogV1.plans.pro.entitlements.modelTiers);
+    expect(first.modelTiers).not.toBe(planCatalog.plans.pro.entitlements.modelTiers);
   });
 });

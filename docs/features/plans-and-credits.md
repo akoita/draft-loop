@@ -23,16 +23,26 @@ owner token, has no organisation and answers `404` on these routes.
 - Before a run starts, DraftLoop estimates the credits it would reserve; a
   started run counts at once.
 
-The catalog's plans are Beta, Individual, Job-search pass, Pro, Team,
-Business and Internal. **Beta** is the free plan of the invite-only public
-test: three economy runs over three months, at most two a day and one at a
-time, one candidate record and no professional features.
+The catalog's plans are Free, Beta, Individual, Job-search pass, Pro, Team,
+Business and Internal.
+
+- **Free** gives one welcome application on the standard pair, 20 model calls
+  a day outside runs and one candidate record. Its credit does not come back
+  each month.
+- **Beta** is the free plan of the invite-only public test: three economy runs
+  over three months, at most two a day and one at a time, one candidate record
+  and no professional features.
+- **Individual** grants 5 credits a month.
+
+The catalog also lists two **credit packs**, bought once with no subscription:
+1 credit for €5 and 5 credits for €22, valid 12 months. Buying one is not built
+yet; an operator grants the credits.
 
 A plan sets these entitlements:
 
 | Entitlement           | Meaning                                                              |
 | --------------------- | -------------------------------------------------------------------- |
-| Credits per period    | Credits granted each period (one month, or three for a pass or Beta) |
+| Credits per period    | Credits granted each period (one month, three for a pass or Beta)    |
 | Model tiers           | The model tiers a run may use                                        |
 | Seats                 | Active members plus pending invitations                              |
 | Candidate records     | Records the organisation may hold                                    |
@@ -62,7 +72,7 @@ A plan sets these entitlements:
 ## Limits
 
 - Partial: prices and self-service sign-up are not live, and production is held.
-- Beta allows 20 model calls a day outside runs; past that, those routes answer
+- Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - An organisation with no plan answers `403 plan_required`.
 - A deployment can set a monthly spend pool across organisations; when it is

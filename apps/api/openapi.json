@@ -27440,7 +27440,7 @@
                   "planId": {
                     "type": "string",
                     "maxLength": 64,
-                    "description": "The plan's id in catalog v1: beta, individual, job-search-pass, pro, team, business, internal. Anything else answers 422."
+                    "description": "The plan's id in the plan catalog: free, beta, individual, job-search-pass, pro, team, business, internal. Anything else answers 422."
                   },
                   "overrides": {
                     "description": "Per-organisation entitlement overrides, merged over the plan.",

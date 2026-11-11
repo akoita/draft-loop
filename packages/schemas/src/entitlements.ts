@@ -4,9 +4,11 @@
  * `resolveEntitlements`. Services read the resolved `Entitlements`, never a
  * plan name.
  *
- * The numbers in `planCatalogV1` are working defaults from D13 and the daily
+ * The numbers in `planCatalog` are working defaults from D13 and the daily
  * and concurrency caps below are conservative starting values. Change them
- * here, as data, and bump the catalog version when the shape changes.
+ * here, as data, and bump the catalog version when the catalog's shape changes.
+ * A plan assignment stored under an earlier version still resolves: versions
+ * only ever add plans and fields.
  */
 
 import type {
@@ -20,6 +22,7 @@ import { modelProfileTiers } from "@draft-loop/domain/model-profile";
 import { z } from "zod";
 
 export const planIds = [
+  "free",
   "beta",
   "individual",
   "job-search-pass",
@@ -106,9 +109,31 @@ export const planDefinitionSchema = z.strictObject({
 
 export type PlanDefinition = z.infer<typeof planDefinitionSchema>;
 
+export const creditPackIds = ["pack-1", "pack-5"] as const;
+
+export type CreditPackId = (typeof creditPackIds)[number];
+
+/**
+ * A prepaid pack of credits bought once, with no subscription (D13). The price is in euro cents;
+ * the credits expire `validMonths` after the purchase.
+ */
+export const creditPackSchema = z.strictObject({
+  id: z.enum(creditPackIds),
+  label: z.string().trim().min(1).max(80),
+  credits: z.number().int().positive().safe(),
+  priceEurCents: z.number().int().positive().safe(),
+  validMonths: creditPeriodMonthsSchema,
+});
+
+export type CreditPack = z.infer<typeof creditPackSchema>;
+
+/** The catalog version new plan assignments are stored under. */
+export const planCatalogVersion = 2;
+
 export const planCatalogSchema = z.strictObject({
-  version: z.literal(1),
+  version: z.literal(planCatalogVersion),
   plans: z.strictObject({
+    free: planDefinitionSchema,
     beta: planDefinitionSchema,
     individual: planDefinitionSchema,
     "job-search-pass": planDefinitionSchema,
@@ -117,6 +142,12 @@ export const planCatalogSchema = z.strictObject({
     business: planDefinitionSchema,
     internal: planDefinitionSchema,
   }),
+  creditPacks: z
+    .array(creditPackSchema)
+    .refine(
+      (packs) => new Set(packs.map(({ id }) => id)).size === packs.length,
+      "credit pack ids must be unique",
+    ),
 });
 
 export type PlanCatalog = z.infer<typeof planCatalogSchema>;
@@ -137,6 +168,7 @@ const professionalFeatures: EntitlementFeatureFlags = {
 };
 
 const economyOnly = ["economy"] as const;
+const standardAndEconomy = ["standard", "economy"] as const;
 
 function deepFreeze<T>(value: T): T {
   if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {
@@ -147,15 +179,41 @@ function deepFreeze<T>(value: T): T {
 }
 
 /**
- * Plan catalog v1: D13 working defaults. Business starts with no credits until overrides set them.
+ * Plan catalog v2: D13 working defaults. Business starts with no credits until overrides set them.
+ *
+ * Free (#2677) is the first step of the pricing ladder: one welcome application on the standard
+ * pair and 20 model calls a day outside runs, with no card. Its single credit is the allowance of
+ * the longest period the catalog allows, so it does not come back each month.
+ *
  * Beta is the free plan of the invite-only public test (#2456): three economy runs over three
  * months, two a day, one at a time, with no payment and no professional features. Its 20 model
  * calls a day outside runs (#2487) cover a short interview or a few drafts; paid plans have no cap.
+ *
+ * Credit packs let a person pay per application with no subscription.
  */
-export const planCatalogV1: PlanCatalog = deepFreeze(
+export const planCatalog: PlanCatalog = deepFreeze(
   planCatalogSchema.parse({
-    version: 1,
+    version: planCatalogVersion,
+    creditPacks: [
+      { id: "pack-1", label: "1 application", credits: 1, priceEurCents: 500, validMonths: 12 },
+      { id: "pack-5", label: "5 applications", credits: 5, priceEurCents: 2200, validMonths: 12 },
+    ],
     plans: {
+      free: {
+        label: "Free",
+        seatPriced: false,
+        entitlements: {
+          creditsPerPeriod: 1,
+          creditPeriodMonths: maximumCreditPeriodMonths,
+          modelTiers: standardAndEconomy,
+          seats: 1,
+          candidateRecords: 1,
+          runsPerDay: 2,
+          concurrentRuns: 1,
+          modelCallsPerDay: 20,
+          features: noFeatures,
+        },
+      },
       beta: {
         label: "Beta",
         seatPriced: false,
@@ -175,7 +233,7 @@ export const planCatalogV1: PlanCatalog = deepFreeze(
         label: "Individual",
         seatPriced: false,
         entitlements: {
-          creditsPerPeriod: 4,
+          creditsPerPeriod: 5,
           creditPeriodMonths: 1,
           modelTiers: economyOnly,
           seats: 1,
@@ -307,7 +365,7 @@ export function resolveEntitlements(
   const parsedOverrides = entitlementOverridesSchema.safeParse(overrides);
   if (!parsedOverrides.success) throw new Error("invalid entitlement overrides");
   const override = parsedOverrides.data;
-  const plan = (options.catalog ?? planCatalogV1).plans[id.data];
+  const plan = (options.catalog ?? planCatalog).plans[id.data];
   const base = plan.entitlements;
 
   let creditsPerPeriod: EntitlementLimit = base.creditsPerPeriod;
