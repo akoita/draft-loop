@@ -70,6 +70,7 @@ even while a call is running.
 | API    | `.../runs/{runId}/exports`, `.../exports/{exportId}/content`, `.../export-preview` (saves nothing)       |
 | API    | `/v1/workspaces/{id}/writing-policy`, `/v1/workspaces/{id}/preference-suggestions`                       |
 | API    | `/v1/workspaces/{id}/models`, `.../budget`, `.../autopilot`, `.../runs/estimate`                         |
+| API    | `GET .../runs/{runId}/trace` (the steps a run executed; content-free, people only)                        |
 | MCP    | none yet; run status is planned in [#2440](https://github.com/akoita/draft-loop/issues/2440)             |
 
 ## Limits

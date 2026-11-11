@@ -419,8 +419,10 @@ nothing.
   (`packages/application/src/run-span-recorder.ts`). It saves a span when it
   starts and when it ends. A failed save is logged once and never changes the
   run's outcome. The CLI records none.
-- **Plan.** Reading a run's span tree over the API and exporting spans locally
-  (#1104) are planned.
+- **Reading.** `GET /v1/workspaces/{id}/runs/{runId}/trace` lists a run's
+  spans in start order. Whoever can read the run can read its trace; an agent
+  token cannot. No screen shows it yet.
+- **Plan.** Exporting spans locally (#1104) is planned.
 
 ## Clients and adapters
 

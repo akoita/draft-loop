@@ -6759,6 +6759,93 @@
         ],
         "additionalProperties": {}
       },
+      "RunSpanInput": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.retrieved_chunks"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ]
+      },
       "SensitivityRuleMatchInput": {
         "oneOf": [
           {
@@ -14159,6 +14246,94 @@
           "state"
         ],
         "additionalProperties": {}
+      },
+      "RunSpan": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.retrieved_chunks"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ],
+        "additionalProperties": false
       },
       "SensitivityRuleMatch": {
         "oneOf": [
@@ -26252,6 +26427,76 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/trace": {
+      "get": {
+        "summary": "Read a run's trace",
+        "description": "The steps the worker executed for the run, in start order: each advance, each author, critic or revision attempt, and each evidence retrieval, with its timing, status, model, token counts and estimated cost. Content-free: no prompt, draft or candidate material. Empty for a run no worker has executed since traces were recorded.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spans": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RunSpan"
+                      }
+                    }
+                  },
+                  "required": [
+                    "spans"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
