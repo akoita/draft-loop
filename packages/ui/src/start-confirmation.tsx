@@ -173,6 +173,9 @@ export function evidencePreviewValue(preview: StartEvidencePreview): string {
   if (fallbackReason === "no-eligible-chunks") {
     return t`Full source has no eligible chunks; retrieval will be used`;
   }
+  if (fallbackReason === "cost-cap-exceeded") {
+    return t`Full source passes this workspace's cost cap (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
+  }
   return t`Full source does not fit the budget for this pair (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
 }
 

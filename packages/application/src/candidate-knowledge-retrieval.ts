@@ -772,6 +772,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const decision = decideFullSourceEvidence(
         evidence,
         fullSourceBudgetCharacters(context.modelConfiguration, maxEvidenceTokens),
+        fullSourceBudgetCharacters(context.modelConfiguration),
       );
       return { decision, hits, evidence };
     })();

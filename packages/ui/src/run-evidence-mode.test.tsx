@@ -77,6 +77,16 @@ describe("run evidence mode in the review", () => {
       '<strong class="numeric">20 excerpts</strong><span>retrieval; full source did not fit</span>',
     );
 
+    const capped = render(
+      stateWith({ ...fullSource, effectiveMode: "retrieval", fallbackReason: "cost-cap-exceeded" }),
+    );
+    expect(strip(capped)).toContain(
+      "Full source passed this workspace&#x27;s cost cap (181 chunks), so retrieval was used",
+    );
+    expect(evidenceFact(capped)).toContain(
+      "<span>retrieval; full source passed the cost cap</span>",
+    );
+
     const empty = render(
       stateWith({
         ...fullSource,
@@ -129,6 +139,7 @@ describe("run evidence mode over the bridge", () => {
     for (const evidenceMode of [
       fullSource,
       { ...fullSource, effectiveMode: "retrieval", fallbackReason: "budget-exceeded" } as const,
+      { ...fullSource, effectiveMode: "retrieval", fallbackReason: "cost-cap-exceeded" } as const,
       null,
     ]) {
       const state = { ...createFixtureReviewState(), evidenceMode };

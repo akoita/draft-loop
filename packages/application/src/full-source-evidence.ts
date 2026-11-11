@@ -30,7 +30,14 @@ const contextWindowShare = 0.5;
 /** Used when either model's context window is unknown. */
 export const defaultFullSourceBudgetCharacters = 240_000;
 
-export type FullSourceFallbackReason = "budget-exceeded" | "no-eligible-chunks";
+/**
+ * Why a run that asked for full source used retrieval. `cost-cap-exceeded` means the evidence
+ * would fit the models' context but passes the workspace cost cap (#2666).
+ */
+export type FullSourceFallbackReason =
+  | "budget-exceeded"
+  | "cost-cap-exceeded"
+  | "no-eligible-chunks";
 
 export interface EvidenceModeDecision {
   readonly requestedMode: EvidenceMode;
@@ -72,10 +79,15 @@ export function fullSourceBudgetCharacters(
     : Math.min(contextBudget, maxEvidenceTokens * charactersPerToken);
 }
 
-/** Decide whether the eligible evidence fits the budget; the caller supplies the serialized form. */
+/**
+ * Decide whether the eligible evidence fits the budget; the caller supplies the serialized form.
+ * `contextBudgetCharacters` is the budget before any workspace cost cap: evidence that fits it but
+ * not the capped budget fell back because of the cap.
+ */
 export function decideFullSourceEvidence(
   evidence: readonly ScoredEvidenceChunk[],
   budgetCharacters: number,
+  contextBudgetCharacters: number = budgetCharacters,
 ): EvidenceModeDecision {
   const serializedCharacterCount = JSON.stringify(evidence).length;
   const base = {
@@ -89,7 +101,14 @@ export function decideFullSourceEvidence(
     return { ...base, effectiveMode: "retrieval", fallbackReason: "no-eligible-chunks" };
   }
   if (serializedCharacterCount > budgetCharacters) {
-    return { ...base, effectiveMode: "retrieval", fallbackReason: "budget-exceeded" };
+    return {
+      ...base,
+      effectiveMode: "retrieval",
+      fallbackReason:
+        serializedCharacterCount <= contextBudgetCharacters
+          ? "cost-cap-exceeded"
+          : "budget-exceeded",
+    };
   }
   return { ...base, effectiveMode: "full-source" };
 }
@@ -102,7 +121,9 @@ export function evidenceModePreflightLine(decision: EvidenceModeDecision): strin
   return `Evidence mode: full-source requested, using retrieval because ${
     decision.fallbackReason === "no-eligible-chunks"
       ? "no eligible chunks were found"
-      : "the eligible evidence exceeds the budget"
+      : decision.fallbackReason === "cost-cap-exceeded"
+        ? "the eligible evidence exceeds the workspace cost cap"
+        : "the eligible evidence exceeds the budget"
   } (${size})`;
 }
 

@@ -1408,7 +1408,9 @@ current one. It never starts a run.
   costly prompt. It never raises the budget. There is no cap by default, and
   saving a mode without the option clears a saved cap.
 - **Fallback.** When the evidence does not fit, or no chunk is eligible, the run
-  uses retrieval. The preflight prints an `Evidence mode:` line with the chunk
+  uses retrieval. The recorded reason is `budget-exceeded` when the evidence is
+  too large for the models, `cost-cap-exceeded` when only the cost cap refused
+  it, and `no-eligible-chunks`. The preflight prints an `Evidence mode:` line with the chunk
   count and budget, or the reason. A `run.evidence-mode` audit event records the
   decision.
 - **Errors.** A missing setting means `full-source`, and an unreadable one stops
