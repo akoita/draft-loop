@@ -1628,6 +1628,10 @@ msgstr "Revenir à l’écrit"
 msgid "Balanced"
 msgstr "Équilibré"
 
+#: packages/ui/src/run-details.tsx
+msgid "Base {base} → override {override}"
+msgstr "Base {base} → dérogation {override}"
+
 #: apps/web/src/consent.tsx
 msgid "Basis for storing the material"
 msgstr "Base légale de conservation du contenu"
@@ -1910,6 +1914,7 @@ msgid "Checking whether the author and critic lineages differ…"
 msgstr "Vérification que les filiations du rédacteur et du relecteur diffèrent…"
 
 #: packages/ui/src/semantic-retrieval.tsx
+#: packages/ui/src/start-confirmation.tsx
 msgid "Checking…"
 msgstr "Vérification…"
 
@@ -4165,10 +4170,13 @@ msgstr "La critique indépendante n’est pas terminée."
 msgid "Independent review not required for this run"
 msgstr "Relecture indépendante non requise pour cette exécution"
 
-#. placeholder {0}: view.lineagesDistinct ? "differ" : "are the same"
 #: packages/ui/src/run-details.tsx
-msgid "Independent review was not required for this run; the claimed lineages {0}."
-msgstr "La relecture indépendante n’était pas requise pour cette exécution ; les filiations déclarées {0}."
+msgid "Independent review was not required for this run; the claimed lineages are the same."
+msgstr "La relecture indépendante n’était pas requise pour cette exécution ; les filiations revendiquées sont identiques."
+
+#: packages/ui/src/run-details.tsx
+msgid "Independent review was not required for this run; the claimed lineages differ."
+msgstr "La relecture indépendante n’était pas requise pour cette exécution ; les filiations revendiquées diffèrent."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Initial illustration: 10,000 input and 1,000 output tokens per call, with 2 author calls and 1 critic call. Edit every value to reflect your own scenario."
@@ -4546,6 +4554,10 @@ msgstr "Probablement le même travail :"
 msgid "line per directive, then free-text rules. The selectors above edit these lines; you can also edit them here."
 msgstr "ligne par directive, puis des règles en texte libre. Les sélecteurs ci-dessus modifient ces lignes ; vous pouvez aussi les modifier ici."
 
+#: packages/ui/src/run-details.tsx
+msgid "lineages differ"
+msgstr "filiations différentes"
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
 msgstr "Affirmation liée :"
@@ -4906,6 +4918,10 @@ msgstr "Les modèles n’ont pas pu être listés. {0} Saisissez plutôt l’ide
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Models may use it in drafts"
 msgstr "Les modèles peuvent l’utiliser dans les ébauches"
+
+#: packages/ui/src/run-details.tsx
+msgid "models not recorded"
+msgstr "modèles non enregistrés"
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Models, writing policy and sign-in are set on Home"
@@ -5384,6 +5400,10 @@ msgstr "Aucune transmission réseau"
 msgid "No notes wait for review."
 msgstr "Aucune note n’attend de relecture."
 
+#: packages/ui/src/run-details.tsx
+msgid "no policy"
+msgstr "aucune politique"
+
 #: packages/ui/src/app.tsx
 msgid "No profile has been selected for this workspace yet."
 msgstr "Aucun profil n’a encore été sélectionné pour cet espace de travail."
@@ -5549,6 +5569,10 @@ msgstr "Absent de l’offre d’emploi"
 msgid "Not generated yet"
 msgstr "Pas encore généré"
 
+#: packages/ui/src/run-details.tsx
+msgid "not independent"
+msgstr "non indépendante"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Not installed"
 msgstr "Non installé"
@@ -5578,6 +5602,10 @@ msgstr "Pas encore prêt à envoyer"
 msgid "Not ready: {0}{noRevision}"
 msgstr "Pas prêt : {0}{noRevision}"
 
+#: packages/ui/src/run-details.tsx
+msgid "not recorded"
+msgstr "non enregistré"
+
 #: apps/web/src/consent-model.ts
 msgid "Not recorded yet."
 msgstr "Pas encore enregistré."
@@ -5585,6 +5613,10 @@ msgstr "Pas encore enregistré."
 #: packages/ui/src/model-suggestions.tsx
 msgid "not registered for {roleName}"
 msgstr "non enregistré pour {roleName}"
+
+#: packages/ui/src/run-details.tsx
+msgid "not required"
+msgstr "non requise"
 
 #: apps/web/src/screening-model.ts
 msgid "Not screened"
@@ -5937,6 +5969,10 @@ msgstr "Jetons de sortie par appel"
 msgid "over {0}, not the {1}"
 msgstr "sur {0}, pas sur les {1}"
 
+#: packages/ui/src/run-details.tsx
+msgid "overridden"
+msgstr "dérogation"
+
 #: packages/ui/src/review.tsx
 msgid "override"
 msgstr "dérogation"
@@ -6106,6 +6142,10 @@ msgstr "Choisissez vous-même le rédacteur et le relecteur."
 msgid "Planned calls"
 msgstr "Appels prévus"
 
+#: packages/ui/src/run-details.tsx
+msgid "policy active"
+msgstr "politique active"
+
 #: packages/ui/src/review.tsx
 msgid "Policy content stays local to this workspace and is kept separate from career evidence. Runs record only its version and checksum in ordinary review status."
 msgstr "Le contenu de la politique reste local à cet espace de travail et séparé des éléments de parcours. Les exécutions n’enregistrent que sa version et sa somme de contrôle dans l’état de relecture."
@@ -6113,6 +6153,10 @@ msgstr "Le contenu de la politique reste local à cet espace de travail et sépa
 #: packages/ui/src/review.tsx
 msgid "Policy fingerprint"
 msgstr "Empreinte de la politique"
+
+#: packages/ui/src/run-details.tsx
+msgid "policy override"
+msgstr "politique avec dérogation"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Policy text"
@@ -9734,6 +9778,10 @@ msgstr "non daté"
 #: packages/ui/src/review.tsx
 msgid "Undo an empty round opened after the configured limit"
 msgstr "Annuler un tour vide ouvert après la limite configurée"
+
+#: packages/ui/src/run-details.tsx
+msgid "unknown"
+msgstr "inconnu"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Unknown"

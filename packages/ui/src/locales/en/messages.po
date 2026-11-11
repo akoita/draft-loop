@@ -1634,6 +1634,10 @@ msgstr "Back to writing"
 msgid "Balanced"
 msgstr "Balanced"
 
+#: packages/ui/src/run-details.tsx
+msgid "Base {base} → override {override}"
+msgstr "Base {base} → override {override}"
+
 #: apps/web/src/consent.tsx
 msgid "Basis for storing the material"
 msgstr "Basis for storing the material"
@@ -1916,6 +1920,7 @@ msgid "Checking whether the author and critic lineages differ…"
 msgstr "Checking whether the author and critic lineages differ…"
 
 #: packages/ui/src/semantic-retrieval.tsx
+#: packages/ui/src/start-confirmation.tsx
 msgid "Checking…"
 msgstr "Checking…"
 
@@ -4171,10 +4176,13 @@ msgstr "Independent critique has not completed."
 msgid "Independent review not required for this run"
 msgstr "Independent review not required for this run"
 
-#. placeholder {0}: view.lineagesDistinct ? "differ" : "are the same"
 #: packages/ui/src/run-details.tsx
-msgid "Independent review was not required for this run; the claimed lineages {0}."
-msgstr "Independent review was not required for this run; the claimed lineages {0}."
+msgid "Independent review was not required for this run; the claimed lineages are the same."
+msgstr "Independent review was not required for this run; the claimed lineages are the same."
+
+#: packages/ui/src/run-details.tsx
+msgid "Independent review was not required for this run; the claimed lineages differ."
+msgstr "Independent review was not required for this run; the claimed lineages differ."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Initial illustration: 10,000 input and 1,000 output tokens per call, with 2 author calls and 1 critic call. Edit every value to reflect your own scenario."
@@ -4552,6 +4560,10 @@ msgstr "Likely the same work:"
 msgid "line per directive, then free-text rules. The selectors above edit these lines; you can also edit them here."
 msgstr "line per directive, then free-text rules. The selectors above edit these lines; you can also edit them here."
 
+#: packages/ui/src/run-details.tsx
+msgid "lineages differ"
+msgstr "lineages differ"
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
 msgstr "Linked claim:"
@@ -4912,6 +4924,10 @@ msgstr "Models could not be listed. {0} Type the model id instead; {1}"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Models may use it in drafts"
 msgstr "Models may use it in drafts"
+
+#: packages/ui/src/run-details.tsx
+msgid "models not recorded"
+msgstr "models not recorded"
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Models, writing policy and sign-in are set on Home"
@@ -5390,6 +5406,10 @@ msgstr "No network transmission"
 msgid "No notes wait for review."
 msgstr "No notes wait for review."
 
+#: packages/ui/src/run-details.tsx
+msgid "no policy"
+msgstr "no policy"
+
 #: packages/ui/src/app.tsx
 msgid "No profile has been selected for this workspace yet."
 msgstr "No profile has been selected for this workspace yet."
@@ -5555,6 +5575,10 @@ msgstr "Not found in the job description"
 msgid "Not generated yet"
 msgstr "Not generated yet"
 
+#: packages/ui/src/run-details.tsx
+msgid "not independent"
+msgstr "not independent"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Not installed"
 msgstr "Not installed"
@@ -5584,6 +5608,10 @@ msgstr "Not ready to send yet"
 msgid "Not ready: {0}{noRevision}"
 msgstr "Not ready: {0}{noRevision}"
 
+#: packages/ui/src/run-details.tsx
+msgid "not recorded"
+msgstr "not recorded"
+
 #: apps/web/src/consent-model.ts
 msgid "Not recorded yet."
 msgstr "Not recorded yet."
@@ -5591,6 +5619,10 @@ msgstr "Not recorded yet."
 #: packages/ui/src/model-suggestions.tsx
 msgid "not registered for {roleName}"
 msgstr "not registered for {roleName}"
+
+#: packages/ui/src/run-details.tsx
+msgid "not required"
+msgstr "not required"
 
 #: apps/web/src/screening-model.ts
 msgid "Not screened"
@@ -5943,6 +5975,10 @@ msgstr "Output tokens per call"
 msgid "over {0}, not the {1}"
 msgstr "over {0}, not the {1}"
 
+#: packages/ui/src/run-details.tsx
+msgid "overridden"
+msgstr "overridden"
+
 #: packages/ui/src/review.tsx
 msgid "override"
 msgstr "override"
@@ -6112,6 +6148,10 @@ msgstr "Pick the writer and reviewer yourself."
 msgid "Planned calls"
 msgstr "Planned calls"
 
+#: packages/ui/src/run-details.tsx
+msgid "policy active"
+msgstr "policy active"
+
 #: packages/ui/src/review.tsx
 msgid "Policy content stays local to this workspace and is kept separate from career evidence. Runs record only its version and checksum in ordinary review status."
 msgstr "Policy content stays local to this workspace and is kept separate from career evidence. Runs record only its version and checksum in ordinary review status."
@@ -6119,6 +6159,10 @@ msgstr "Policy content stays local to this workspace and is kept separate from c
 #: packages/ui/src/review.tsx
 msgid "Policy fingerprint"
 msgstr "Policy fingerprint"
+
+#: packages/ui/src/run-details.tsx
+msgid "policy override"
+msgstr "policy override"
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Policy text"
@@ -9740,6 +9784,10 @@ msgstr "undated"
 #: packages/ui/src/review.tsx
 msgid "Undo an empty round opened after the configured limit"
 msgstr "Undo an empty round opened after the configured limit"
+
+#: packages/ui/src/run-details.tsx
+msgid "unknown"
+msgstr "unknown"
 
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Unknown"
