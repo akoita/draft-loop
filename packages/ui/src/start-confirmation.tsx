@@ -161,7 +161,7 @@ function requirementsValue(state: DesktopReviewState, context: StartConfirmation
 
 /** The evidence line: the mode the run would use and how much of the source that is. */
 export function evidencePreviewValue(preview: StartEvidencePreview): string {
-  if (preview.status === "checking") return "Checking…";
+  if (preview.status === "checking") return t`Checking…`;
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } = preview.preview;
   if (requestedMode === "retrieval") return t`Retrieval`;
   if (effectiveMode === "full-source") {
