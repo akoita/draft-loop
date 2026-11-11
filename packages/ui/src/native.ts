@@ -87,6 +87,7 @@ import {
   type RecentWorkspaceSummary,
 } from "./recent-workspaces.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
+import { createRunTraceCapabilities, type RunTraceCapabilities } from "./run-trace-capabilities.js";
 import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
 
 export type { NativeBridge } from "./bridge.js";
@@ -396,6 +397,8 @@ export interface DesktopApplicationCapabilities {
   readonly deleteApplication?: (workspaceId: string, applicationId: string) => Promise<void>;
   /** Folders that group applications on Home; absent on a host without them. */
   readonly applicationFolders?: ApplicationFolderCapabilities;
+  /** Reads a run's trace for Run details; absent on a host that records none. */
+  readonly runTrace?: RunTraceCapabilities;
   /** Sets the model pair one application's new runs use, or clears it with `null`. */
   readonly setApplicationModels?: (
     workspaceId: string,
@@ -546,6 +549,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const refresh = async (): Promise<DesktopReviewState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
+  const runTrace = createRunTraceCapabilities(capabilityPort, unwrap);
   return {
     load,
     ...(capabilityPort.hasCapability("workspace.open") ||
@@ -733,6 +737,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(applicationFolders === undefined ? {} : { applicationFolders }),
     ...(factUsage === undefined ? {} : { factUsage }),
+    ...(runTrace === undefined ? {} : { runTrace }),
     ...(capabilityPort.hasCapability("application.delete")
       ? {
           deleteApplication: async (workspaceId: string, applicationId: string) => {

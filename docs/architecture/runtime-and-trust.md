@@ -421,7 +421,11 @@ nothing.
   run's outcome. The CLI records none.
 - **Reading.** `GET /v1/workspaces/{id}/runs/{runId}/trace` lists a run's
   spans in start order. Whoever can read the run can read its trace; an agent
-  token cannot. No screen shows it yet.
+  token cannot.
+- **On screen.** On the hosted service, **Run details** has a folded **Steps**
+  section (`packages/ui/src/run-steps.tsx`). It lists each advance with its
+  author, critic and revision attempts: duration, model, estimated cost and,
+  for a failed attempt, the error type. A run with no trace shows no section.
 - **Plan.** Exporting spans locally (#1104) is planned.
 
 ## Clients and adapters

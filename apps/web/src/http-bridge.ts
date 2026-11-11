@@ -47,6 +47,11 @@ import {
   isProfileCommand,
 } from "./profile-bridge.js";
 import { createReviewActions, type DownloadFile } from "./review-actions.js";
+import {
+  createRunTraceAnswers,
+  hostedRunTraceCapabilities,
+  isRunTraceCommand,
+} from "./run-trace-bridge.js";
 import { saveFile } from "./save-file.js";
 import { sourceMediaType } from "./sources-model.js";
 import { ownerWorkspaceId, ownerWorkspaceName } from "./workspace-model.js";
@@ -85,6 +90,7 @@ export const hostedBridgeCapabilities = [
   "run.pause",
   "run.resume",
   "run.stop",
+  ...hostedRunTraceCapabilities,
   "review.load",
   "review.dispatch",
   "models.list",
@@ -239,6 +245,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerProfile = createProfileAnswers(client);
   const answerFolder = createApplicationFolderAnswers(client);
   const answerFactUsage = createFactUsageAnswers(client);
+  const answerRunTrace = createRunTraceAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
   /** The run as the server projects it, with the owner token's fixed workspace named in words. */
@@ -286,6 +293,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isProfileCommand(command)) return answerProfile(command);
     if (isApplicationFolderCommand(command)) return answerFolder(command);
     if (isFactUsageCommand(command)) return answerFactUsage(command);
+    if (isRunTraceCommand(command)) return answerRunTrace(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;

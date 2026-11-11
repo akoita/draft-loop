@@ -3267,6 +3267,49 @@ input[type="text"].workspace-title-input {
   border-top: 1px solid var(--border);
 }
 
+/* The steps the server executed, folded under the run's timeline. */
+.run-steps {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.run-steps summary {
+  cursor: pointer;
+}
+
+.run-steps-title {
+  font-weight: 600;
+}
+
+.run-steps-summary,
+.run-steps-advance {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.run-steps-advances,
+.run-steps-advances ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.run-steps-advance {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.run-step {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-1) 0;
+  overflow-wrap: anywhere;
+}
+
+.run-step-error {
+  color: var(--red);
+}
+
 /* Outside the drawer the side panel keeps only what needs the reviewer: a paused or
    interrupted run's way back in, and a shared-lineage warning. */
 .side-scroll > .run-recovery-panel .section-heading {

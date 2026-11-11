@@ -401,6 +401,10 @@ msgstr "{0}: this run has used all {maximumRounds} rounds."
 msgid "{accepted, plural, one {# accepted blocking finding needs a revision} other {# accepted blocking findings need a revision}}"
 msgstr "{accepted, plural, one {# accepted blocking finding needs a revision} other {# accepted blocking findings need a revision}}"
 
+#: packages/ui/src/run-steps.tsx
+msgid "{attemptCount, plural, one {# model call} other {# model calls}}"
+msgstr "{attemptCount, plural, one {# model call} other {# model calls}}"
+
 #: packages/ui/src/app.tsx
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
@@ -906,6 +910,12 @@ msgstr "A review is already under way."
 #: apps/web/src/interview-guide-model.ts
 msgid "A technology I have not used"
 msgstr "A technology I have not used"
+
+#. placeholder {0}: formatEstimatedUsd(entry.estimatedUsd)
+#. placeholder {0}: formatEstimatedUsd(total)
+#: packages/ui/src/run-steps.tsx
+msgid "about {0}"
+msgstr "about {0}"
 
 #: apps/web/src/application-material.tsx
 msgid "About the company"
@@ -1476,6 +1486,10 @@ msgstr "Attach file"
 msgid "Attach the job description file."
 msgstr "Attach the job description file."
 
+#: packages/ui/src/run-steps.tsx
+msgid "attempt {attemptNumber}"
+msgstr "attempt {attemptNumber}"
+
 #. placeholder {0}: failure.maxAttempts
 #: packages/ui/src/provider-recovery.tsx
 msgid "Attempt {next} of {0} is starting."
@@ -1495,6 +1509,7 @@ msgstr "Authenticated Codex / ChatGPT subscription"
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Author"
 msgstr "Author"
@@ -2484,6 +2499,7 @@ msgstr "Credits and consent"
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/run-steps.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Critic"
 msgstr "Critic"
@@ -3475,6 +3491,7 @@ msgid "Facts:"
 msgstr "Facts:"
 
 #: packages/ui/src/home-model.ts
+#: packages/ui/src/run-steps.tsx
 msgid "Failed"
 msgstr "Failed"
 
@@ -3489,6 +3506,11 @@ msgstr "Failed to save API key."
 #: packages/ui/src/provider-authentication-actions.ts
 msgid "Failed to save provider authentication mode."
 msgstr "Failed to save provider authentication mode."
+
+#. placeholder {0}: entry.errorType
+#: packages/ui/src/run-steps.tsx
+msgid "Failed: {0}"
+msgstr "Failed: {0}"
 
 #: packages/ui/src/profile.tsx
 msgid "Field"
@@ -5517,6 +5539,10 @@ msgstr "Not done"
 msgid "Not evaluated"
 msgstr "Not evaluated"
 
+#: packages/ui/src/run-steps.tsx
+msgid "not finished"
+msgstr "not finished"
+
 #: packages/ui/src/finding-title.ts
 msgid "Not found in the CV wording: "
 msgstr "Not found in the CV wording: "
@@ -5671,6 +5697,10 @@ msgstr "One"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "One or both exact profiles are not in the registered catalog, so no estimate is available."
 msgstr "One or both exact profiles are not in the registered catalog, so no estimate is available."
+
+#: packages/ui/src/run-steps.tsx
+msgid "one or more failed"
+msgstr "one or more failed"
 
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/writing-policy-editor.tsx
@@ -7195,6 +7225,10 @@ msgstr "reviews"
 msgid "Revise"
 msgstr "Revise"
 
+#: packages/ui/src/run-steps.tsx
+msgid "Revision"
+msgstr "Revision"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Revoke"
 msgstr "Revoke"
@@ -7210,6 +7244,11 @@ msgstr "round"
 #: packages/ui/src/review.tsx
 msgid "Round"
 msgstr "Round"
+
+#. placeholder {0}: entry.round
+#: packages/ui/src/run-steps.tsx
+msgid "round {0}"
+msgstr "round {0}"
 
 #. placeholder {0}: state.round
 #. placeholder {1}: state.round - 1
@@ -7965,9 +8004,17 @@ msgstr "Status:"
 msgid "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 msgstr "Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.{0}"
 
+#: packages/ui/src/run-steps.tsx
+msgid "Step"
+msgstr "Step"
+
 #: packages/ui/src/review.tsx
 msgid "step where it stopped."
 msgstr "step where it stopped."
+
+#: packages/ui/src/run-steps.tsx
+msgid "Steps"
+msgstr "Steps"
 
 #. placeholder {0}: tell.match ?? ""
 #: apps/web/src/application-material-model.ts
@@ -10103,6 +10150,10 @@ msgstr "What the critic flagged"
 #: packages/ui/src/career-interview-model.ts
 msgid "what the role covered"
 msgstr "what the role covered"
+
+#: packages/ui/src/run-steps.tsx
+msgid "What the server ran for this run. Costs are estimates. No draft or career material is recorded here."
+msgstr "What the server ran for this run. Costs are estimates. No draft or career material is recorded here."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "What they ask for, and your proof"
