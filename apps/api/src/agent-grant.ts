@@ -64,9 +64,14 @@ export type AgentGrantAdmission =
 
 /**
  * Whether a grant may make this request. The member's own rights still decide which workspace
- * it reaches. A route that spends is refused: a grant has no monthly spend cap yet.
+ * it reaches. A route that spends is admitted only where the server keeps connection caps
+ * (#2656), so the spend gate can hold the start to the cap its person set.
  */
-export function admitAgentGrant(request: FastifyRequest, grant: AgentGrant): AgentGrantAdmission {
+export function admitAgentGrant(
+  request: FastifyRequest,
+  grant: AgentGrant,
+  options: { readonly spendCaps?: boolean } = {},
+): AgentGrantAdmission {
   const key = agentRouteKey(request.method, request.routeOptions.url);
   if (key === agentGrantWorkspaceListRoute && grant.scopes.length > 0)
     return { outcome: "allowed" };
@@ -82,11 +87,11 @@ export function admitAgentGrant(request: FastifyRequest, grant: AgentGrant): Age
       message: `This agent connection was not granted the "${rule.scope}" scope; connect it again and grant that scope.`,
     };
   }
-  if (rule.charge !== undefined) {
+  if (rule.charge !== undefined && options.spendCaps !== true) {
     return {
       outcome: "refused",
       message:
-        "An agent connection cannot start runs or drafts yet; start them in DraftLoop or with an agent token.",
+        "An agent connection cannot start runs or drafts on this server; start them in DraftLoop.",
     };
   }
   if (request.method === "GET" && rule.allows !== undefined && !rule.allows(request)) {

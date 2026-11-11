@@ -204,6 +204,7 @@ describe("an assistant's sign-in (agent grant)", () => {
         id: expect.stringMatching(/^dlat_oauth_/u),
         workspaceId: "ws-1",
         scopes: ["applications:read"],
+        clientId: "assistant",
       },
     });
   });

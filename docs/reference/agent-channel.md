@@ -408,8 +408,26 @@ its own client. The API treats that token as an **agent grant**:
 - **Scopes.** The token's `scope` claim carries each granted scope as
   `draftloop:<scope>`, such as `draftloop:applications:read`. A token of any
   client other than the web screen's is a grant, even with no scope.
-- **No spending yet.** A grant cannot start a run or a draft, with or without
-  `runs:start`, because it has no monthly spend cap.
+- **Spending needs a cap.** A grant with `runs:start` starts a run or a draft
+  only within the monthly cap its person set for that assistant in the
+  workspace. Without a cap it answers `429`, like a token past its cap.
+
+### The connection's spend cap
+
+The person sets the cap from their own sign-in; an assistant never reaches
+these routes. One cap holds for one workspace and one assistant client.
+
+| Route                                                       | What it does                                 |
+| ----------------------------------------------------------- | -------------------------------------------- |
+| `GET /v1/workspaces/{id}/agent-connections`                 | Lists each cap and what it reserved this month |
+| `PUT /v1/workspaces/{id}/agent-connections`                 | Sets or changes a cap: `client_id`, `monthly_cap_usd` |
+| `DELETE /v1/workspaces/{id}/agent-connections?client_id=…` | Removes a cap; the connection stops spending |
+
+Each start reserves its worst case against the cap, as an
+[agent token's](#starting-runs-and-drafts-within-a-monthly-spend-cap) does: a
+run reserves the workspace's per-run cost limit and a draft its cost cap. The organisation's plan and credits still
+apply to each run. A server that keeps no caps refuses every grant's start
+with `403`.
 
 The assistant gets that token through the
 [remote server's OAuth sign-in](#with-oauth-sign-in). A grant also lists the

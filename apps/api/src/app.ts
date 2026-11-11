@@ -11,6 +11,7 @@ import type { PreferenceSuggestions } from "@draft-loop/application/preference-s
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import type { UrlFetcher } from "@draft-loop/ingestion";
+import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
@@ -31,7 +32,8 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
-import { registerAgentSpendGate } from "./agent-spend-gate.js";
+import { registerAgentConnectionCapRoutes } from "./agent-connection-cap-routes.js";
+import { type AgentConnectionCapsFor, registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
@@ -188,6 +190,11 @@ export interface ApiOptions {
    * tenant's through `agentTokensFor`. Owner mode only; without them agent tokens are refused.
    */
   readonly agentTokens?: AgentTokenStore;
+  /**
+   * Assistant connection caps with one fixed `application` (#2656); with `tenants`, each
+   * tenant's through `agentConnectionCapsFor`. Without them an assistant's sign-in never spends.
+   */
+  readonly agentConnectionCaps?: AgentConnectionCapStore;
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
   /**
@@ -287,7 +294,24 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           ? undefined
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
-  registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
+  const tenantConnectionCaps = options.tenants?.agentConnectionCapsFor;
+  const connectionCaps: AgentConnectionCapsFor | undefined =
+    options.agentConnectionCaps !== undefined
+      ? () => options.agentConnectionCaps
+      : tenantConnectionCaps === undefined
+        ? undefined
+        : (request) => {
+            const tenantId =
+              request.caller?.kind === "member" ? request.caller.tenantId : ownerTenantId;
+            return tenantId === undefined ? undefined : tenantConnectionCaps(tenantId);
+          };
+  registerRequestAuthentication(
+    app,
+    options.ownerToken,
+    auth,
+    agentTokens,
+    connectionCaps !== undefined,
+  );
   const recordActivity =
     options.organisationActivity === undefined
       ? undefined
@@ -441,10 +465,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
     // Before the routes, so a start an agent token makes is held to its monthly cap (#2599).
     const agentSpend =
-      agentTokens === undefined
+      agentTokens === undefined && connectionCaps === undefined
         ? undefined
         : registerAgentSpendGate(app, {
-            tokens: agentTokens,
+            ...(agentTokens === undefined ? {} : { tokens: agentTokens }),
+            ...(connectionCaps === undefined ? {} : { connectionCaps }),
             service: application.service,
             workspaceRoot: application.workspaceRoot,
             budgetCeiling: application.budgetCeiling,
@@ -716,6 +741,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         tokens: agentTokens,
+      });
+    }
+    if (connectionCaps !== undefined) {
+      registerAgentConnectionCapRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        capsFor: connectionCaps,
       });
     }
     if (application.recordArchives !== undefined) {
