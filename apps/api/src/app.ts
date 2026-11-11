@@ -17,6 +17,7 @@ import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
+import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
@@ -104,6 +105,7 @@ import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
+import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
@@ -195,6 +197,11 @@ export interface ApiOptions {
    * tenant's through `agentConnectionCapsFor`. Without them an assistant's sign-in never spends.
    */
   readonly agentConnectionCaps?: AgentConnectionCapStore;
+  /**
+   * Stored run spans with one fixed `application` (#1103); with `tenants`, each tenant's through
+   * `runSpansFor`. Without them the run trace route is not served.
+   */
+  readonly runSpans?: Pick<RunSpanStore, "list">;
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
   /**
@@ -304,6 +311,17 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
             const tenantId =
               request.caller?.kind === "member" ? request.caller.tenantId : ownerTenantId;
             return tenantId === undefined ? undefined : tenantConnectionCaps(tenantId);
+          };
+  const tenantRunSpans = options.tenants?.runSpansFor;
+  const runSpans: RunSpansFor | undefined =
+    options.runSpans !== undefined
+      ? () => options.runSpans
+      : tenantRunSpans === undefined
+        ? undefined
+        : (request) => {
+            const tenantId =
+              request.caller?.kind === "member" ? request.caller.tenantId : ownerTenantId;
+            return tenantId === undefined ? undefined : tenantRunSpans(tenantId);
           };
   registerRequestAuthentication(
     app,
@@ -748,6 +766,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         tokens: agentTokens,
+      });
+    }
+    if (runSpans !== undefined) {
+      registerRunTraceRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        spansFor: runSpans,
       });
     }
     if (connectionCaps !== undefined) {

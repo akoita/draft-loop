@@ -9,6 +9,7 @@ import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-record
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import type { BetaInvites, BetaWaitlist } from "@draft-loop/storage-postgres";
 
@@ -35,6 +36,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       ownerTenantId: "openapi-owner",
       agentTokensFor: () => ({}) as AgentTokenStore,
       agentConnectionCapsFor: () => ({}) as AgentConnectionCapStore,
+      runSpansFor: () => ({}) as RunSpanStore,
       entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,

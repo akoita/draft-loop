@@ -1006,6 +1006,15 @@ export interface ApiSchemas {
     } | null;
     readonly candidateDirection: string | null;
   };
+  "RunSpan": {
+    readonly span_id: string;
+    readonly parent_span_id: string | null;
+    readonly name: "invoke_workflow" | "invoke_agent" | "retrieve_evidence";
+    readonly started_at: string;
+    readonly ended_at: string | null;
+    readonly status: "ok" | "error" | null;
+    readonly attributes: Record<string, never>;
+  };
   "RunUsage": {
     readonly calls: number;
     readonly inputTokens: number;
@@ -2551,6 +2560,15 @@ export interface ApiOperations {
       readonly tokenId: string;
     };
     readonly response: void;
+  };
+  "GET /v1/workspaces/{workspaceId}/runs/{runId}/trace": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly response: {
+      readonly spans: readonly (ApiSchemas["RunSpan"])[];
+    };
   };
   "GET /v1/workspaces/{workspaceId}/agent-connections": {
     readonly path: {

@@ -9,6 +9,7 @@ import { WorkJournalError, type WorkJournalService } from "@draft-loop/applicati
 import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
+import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
@@ -115,6 +116,8 @@ export interface TenantApplications {
   readonly agentTokensFor?: (tenantId: string) => AgentTokenStore;
   /** A tenant's assistant connection caps (#2656); without it a grant never spends. */
   readonly agentConnectionCapsFor?: (tenantId: string) => AgentConnectionCapStore;
+  /** A tenant's stored run spans (#1103); without it the run trace route is not served. */
+  readonly runSpansFor?: (tenantId: string) => Pick<RunSpanStore, "list">;
 }
 
 export const defaultTenantCacheSize = 100;
