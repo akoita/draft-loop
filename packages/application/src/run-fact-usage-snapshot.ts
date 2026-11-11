@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { FactUsageSettings } from "@draft-loop/domain/fact-usage";
 import { factUsageSettingsSchema } from "@draft-loop/schemas/fact-usage";
-import type { AuditEventReadsPort, AuditTrailStoragePort } from "@draft-loop/storage";
+import type { AuditTrailStoragePort, WorkspaceHistoryStorage } from "@draft-loop/storage";
 
 import { readFactUsage } from "./fact-usage.js";
 
@@ -20,7 +20,7 @@ export const runFactUsageEventType = "run.fact-usage";
 const entityType = "context-snapshot";
 
 export type RunFactUsageStorage = Partial<Pick<AuditTrailStoragePort, "appendAuditEvent">> & {
-  readonly auditEvents?: Pick<AuditEventReadsPort, "findLatestAuditEvent">;
+  readonly auditEvents?: Pick<WorkspaceHistoryStorage["auditEvents"], "findLatestAuditEvent">;
 };
 
 export interface RunFactUsageRequest {
