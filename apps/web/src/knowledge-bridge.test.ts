@@ -1,5 +1,7 @@
 import { createCapabilityPort } from "@draft-loop/ui/bridge";
-import { describe, expect, it, vi } from "vitest";
+import { activateScreenLocale } from "@draft-loop/ui/i18n";
+import { isKnowledgeOperationCancelled } from "@draft-loop/ui/knowledge-cancel";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { createHttpBridge } from "./http-bridge.js";
@@ -270,6 +272,19 @@ describe("career evidence over HTTP", () => {
       error: { code: "operation-failed", message: expect.stringContaining("PDF") },
     });
     expect([...cancelled.calls, ...unsupported.calls]).toEqual([]);
+  });
+
+  describe("in a French screen", () => {
+    afterEach(() => activateScreenLocale("en"));
+
+    it("still answers a closed picker with the cancel the screen recognizes", async () => {
+      activateScreenLocale("fr");
+      const cancelled = portOver({}, async () => undefined);
+      const input = { storeId, knowledgeBaseId: "kb-a", selection: "native-dialog" } as const;
+      const result = await cancelled.port.execute({ type: "knowledge.import-file", input });
+      expect(result.ok).toBe(false);
+      expect(isKnowledgeOperationCancelled(result.ok ? undefined : result.error)).toBe(true);
+    });
   });
 
   it.each([

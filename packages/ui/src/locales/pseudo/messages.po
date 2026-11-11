@@ -1746,10 +1746,6 @@ msgstr ""
 msgid "Cancelling…"
 msgstr ""
 
-#: apps/web/src/knowledge-bridge.ts
-msgid "Candidate knowledge file import was cancelled."
-msgstr ""
-
 #: apps/web/src/records.tsx
 msgid "Candidate record"
 msgstr ""
