@@ -140,7 +140,8 @@ context.
 
 - **`retrieval` mode:** at most 20 chunks and 128 KiB of serialized evidence.
 - **`full-source` mode,** the default for a CKB workspace, replaces those limits
-  with its own size budget, which an optional workspace cost cap can lower;
+  with its own size budget, which an optional workspace cost cap can lower.
+  A run above that cap adds requirement-picked chunks to retrieval's excerpts;
   see [Evidence mode](../reference/cli-and-desktop.md#evidence-mode).
 
 Every reservation below shares these limits. When protected evidence cannot

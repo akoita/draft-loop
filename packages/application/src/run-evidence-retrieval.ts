@@ -14,6 +14,7 @@ import {
   createCandidateKnowledgeSensitivityExclusions,
 } from "./candidate-knowledge-sensitivity-exclusion.js";
 import { CliUserError } from "./cli-user-error.js";
+import { withRequirementPickedEvidence } from "./requirement-picked-evidence.js";
 import { withFactUsageExclusions } from "./run-fact-usage-exclusions.js";
 import { type RunFactUsageStorage, runFactUsage } from "./run-fact-usage-snapshot.js";
 import {
@@ -67,7 +68,8 @@ async function heldBackFactsWithheld(
  * force. Both are read here, once, when a run starts or resumes, and fail closed when a setting
  * cannot be read. Lexical retrieval, the default, takes exactly the path it always did. When the
  * run's context pins a reviewed candidate profile, that exact version is loaded and verified here
- * too, and its facts lead the evidence (see run-profile-fact-retrieval).
+ * too, and its facts lead the evidence (see run-profile-fact-retrieval). A run whose full source
+ * passes the workspace cost cap adds requirement-picked chunks (see requirement-picked-evidence).
  */
 export async function openRunCandidateRetrieval(
   storage: Pick<CandidateKnowledgeLexicalStoragePort, "appendCandidateKnowledgeRetrievalTrace"> &
@@ -107,10 +109,12 @@ export async function openRunCandidateRetrieval(
     }
     return undefined;
   }
-  return withPinnedProfileFacts(runtime, {
+  const withFacts = await withPinnedProfileFacts(runtime, {
     storage,
     workspaceId: config.id,
     context,
     ...(semantic === undefined ? {} : { semanticOptions: semantic }),
   });
+  // Outermost, so the picks are added to the final selection, profile facts included.
+  return withRequirementPickedEvidence(withFacts, context);
 }
