@@ -5,6 +5,7 @@ import {
   ProviderAdapterError,
   type ProviderErrorCode,
 } from "@draft-loop/providers";
+import { isGoogleGemini4AuthorProfile } from "./gemini-4-profiles.js";
 import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import {
@@ -204,6 +205,7 @@ export function buildModelSuggestionPreflightPlan(
       isRecord(profile.knownLimits) &&
       (isDeepInfraGLMAuthorProfile(profile) ||
         isGoogleGeminiAuthorProfile(profile) ||
+        isGoogleGemini4AuthorProfile(profile) ||
         isMistralAuthorProfile(profile))
     ) {
       continue;

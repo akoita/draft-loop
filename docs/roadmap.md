@@ -69,7 +69,7 @@ the default pair is cross-company and provider/model identities are recorded.
 Model choice balances capability, cost, and the amount of configuration the
 project can maintain. The current scope is three Anthropic authors and three OpenAI
 critics: Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna,
-GPT-6.1 Terra, and GPT-6.1 Sol, plus opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
+GPT-6.1 Terra, and GPT-6.1 Sol, plus opt-in Google authors (Gemini 4 Hydrogen, Carbon, and Argon) and opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
 CV quality has not been validated for these choices.
 
 The current curated choices use three tiers:
@@ -128,6 +128,14 @@ The opt-in `development-gemini` preset pairs it with the GPT-6 Luna critic in
 the CLI and desktop. Default pairs and representative quality claims are
 unchanged. Free-tier Gemini API terms may allow Google to use submitted content,
 so candidate material needs a paid-tier key.
+
+The same adapter serves Gemini 4 Hydrogen, Carbon, and Argon as opt-in authors
+([#2703](https://github.com/akoita/draft-loop/issues/2703)). The `balanced-google`
+preset pairs Hydrogen with GPT-6.1 Terra, and `standard-google` pairs Carbon with
+GPT-6.1 Sol; Argon is selectable by profile only. They run in the CLI and the
+local-first desktop. The server route through Vertex AI in the EU is blocked on
+Google's regional availability
+([#2704](https://github.com/akoita/draft-loop/issues/2704)).
 
 The opt-in `development-mistral` preset pairs Mistral Large 4 (public preview)
 with the GPT-6 Luna critic. Mistral says that

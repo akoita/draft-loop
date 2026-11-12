@@ -1465,12 +1465,12 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--truthfulness-policy <text>", "truthfulness policy")
     .option(
       "--author-company <company>",
-      "author provider company; use 'zai' only for development GLM Flash, 'google' only for development Gemini 3.8 Flash, or 'mistral' only for development Mistral Large 4",
+      "author provider company; use 'zai' only for development GLM Flash, 'google' only for development Gemini 3.8 Flash or the opt-in Gemini 4 models, or 'mistral' only for development Mistral Large 4",
       "anthropic",
     )
     .option(
       "--author-model <model>",
-      "exact author model id; development GLM Flash is zai-org/GLM-5.3-Flash and development Gemini is gemini-3.8-flash (gemini-3.7-flash stays accepted for existing runs), and development Mistral is mistral-large-4",
+      "exact author model id; development GLM Flash is zai-org/GLM-5.3-Flash and development Gemini is gemini-3.8-flash (gemini-3.7-flash stays accepted for existing runs; pick Gemini 4 with --model-preset or --author-profile), and development Mistral is mistral-large-4",
       "claude-haiku-5-5",
     )
     .option("--critic-company <company>", "critic provider company", "openai")
@@ -1508,7 +1508,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     )
     .addHelpText(
       "after",
-      "\nDevelopment-only Z.ai GLM Flash requires DEEPINFRA_API_KEY; model quality and account availability are unvalidated.\nDevelopment-only Gemini 3.8 Flash requires GEMINI_API_KEY from a paid-tier Gemini API project: free-tier terms let Google use submitted content, so candidate material needs a paid-tier key. Quality and account availability are unvalidated.\nDevelopment-only Mistral Large 4 requires MISTRAL_API_KEY; the model is in public preview, and quality and account availability are unvalidated.\n",
+      "\nDevelopment-only Z.ai GLM Flash requires DEEPINFRA_API_KEY; model quality and account availability are unvalidated.\nDevelopment-only Gemini 3.8 Flash requires GEMINI_API_KEY from a paid-tier Gemini API project: free-tier terms let Google use submitted content, so candidate material needs a paid-tier key. Quality and account availability are unvalidated.\nOpt-in Gemini 4 Hydrogen, Carbon and Argon use the same paid-tier GEMINI_API_KEY; quality and account availability are unvalidated.\nDevelopment-only Mistral Large 4 requires MISTRAL_API_KEY; the model is in public preview, and quality and account availability are unvalidated.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       await service.initialize({
@@ -1632,11 +1632,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option(
       "--model-preset <id>",
-      "exact pair preset; economy, balanced and standard are unvalidated; balanced-anthropic and standard-anthropic use Claude on both sides with a different reviewing model, unvalidated; development-glm uses DEEPINFRA_API_KEY, development-gemini uses GEMINI_API_KEY and development-mistral uses MISTRAL_API_KEY, all unvalidated",
+      "exact pair preset; economy, balanced and standard are unvalidated; balanced-anthropic and standard-anthropic use Claude on both sides with a different reviewing model, unvalidated; balanced-google (Gemini 4 Hydrogen author) and standard-google (Gemini 4 Carbon author) use GEMINI_API_KEY, unvalidated; development-glm uses DEEPINFRA_API_KEY, development-gemini uses GEMINI_API_KEY and development-mistral uses MISTRAL_API_KEY, all unvalidated",
     )
     .option(
       "--author-profile <id@version>",
-      "exact registered author profile version, including dev-deepinfra-glm-author@1 and dev-google-gemini-author@2 (uses GEMINI_API_KEY; dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs) and dev-mistral-author@1 (uses MISTRAL_API_KEY)",
+      "exact registered author profile version, including dev-deepinfra-glm-author@1 and dev-google-gemini-author@2 (uses GEMINI_API_KEY; dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs) and dev-mistral-author@1 (uses MISTRAL_API_KEY), and the Gemini 4 authors balanced-google-author@1 (Hydrogen), standard-google-author@1 (Carbon) and standard-google-argon-author@1 (Argon), which use GEMINI_API_KEY",
     )
     .option("--critic-profile <id@version>", "exact registered critic profile version")
     .option("--author-effort <level>", authorEffortHelp)
@@ -1665,7 +1665,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. --author-effort and --critic-effort pick a reasoning level the profile allows (see effortLevels in `model-profiles`). Exact profiles are pinned to this run; listing and selecting profiles here does not change workspace defaults (use `model-profiles apply` for that). Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated. Opt-in development Mistral: use --model-preset development-mistral (author dev-mistral-author@1, critic economy-openai-critic@1) or --author-profile dev-mistral-author@1 with an exact critic profile, and set MISTRAL_API_KEY; the model is in public preview and quality is unvalidated.\n",
+      "\nUse one --model-preset or both explicit profile options. --author-effort and --critic-effort pick a reasoning level the profile allows (see effortLevels in `model-profiles`). Exact profiles are pinned to this run; listing and selecting profiles here does not change workspace defaults (use `model-profiles apply` for that). Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked. Opt-in development Gemini: use --model-preset development-gemini (author dev-google-gemini-author@2, critic economy-openai-critic@1) or --author-profile dev-google-gemini-author@2 with an exact critic profile (dev-google-gemini-author@1, Gemini 3.7 Flash, remains accepted for existing runs), and set GEMINI_API_KEY from a paid-tier project, because free-tier terms let Google use submitted content; quality is unvalidated. Opt-in Gemini 4: use --model-preset balanced-google (author balanced-google-author@1, Gemini 4 Hydrogen, critic balanced-openai-critic@1) or --model-preset standard-google (author standard-google-author@1, Gemini 4 Carbon, critic standard-openai-critic@2); Gemini 4 Argon has no preset, so use --author-profile standard-google-argon-author@1 with an exact critic profile; all three need the same paid-tier GEMINI_API_KEY and are unvalidated. Opt-in development Mistral: use --model-preset development-mistral (author dev-mistral-author@1, critic economy-openai-critic@1) or --author-profile dev-mistral-author@1 with an exact critic profile, and set MISTRAL_API_KEY; the model is in public preview and quality is unvalidated.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;

@@ -8,6 +8,7 @@ import {
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import type { RunBudget, RunTracer } from "@draft-loop/orchestrator";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
+import { isGoogleGemini4AuthorProfile } from "./gemini-4-profiles.js";
 import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type {
@@ -154,7 +155,9 @@ export function validateProfileRoute(
     return;
   }
   if (profile.provider === "google") {
-    if (!isGoogleGeminiAuthorProfile(profile)) throw new RunModelProfileError();
+    if (!isGoogleGeminiAuthorProfile(profile) && !isGoogleGemini4AuthorProfile(profile)) {
+      throw new RunModelProfileError();
+    }
     return;
   }
   if (profile.provider === "mistral") {
