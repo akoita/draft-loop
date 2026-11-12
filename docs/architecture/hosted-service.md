@@ -751,6 +751,8 @@ plans have no cap.
 | An interview turn            | `POST .../career-interview/sessions/:sessionId/actions` with `accept`, `answer` or `own_subject` |
 | A live interview             | `GET .../career-interview/sessions/:sessionId/live`, once per session                            |
 | Drafted application material | `POST .../applications/:applicationId/material`                                                  |
+| An interview guide           | `POST .../applications/:applicationId/interview-guide`                                           |
+| Research for an application  | `POST .../applications/:applicationId/research`                                                  |
 | A profile derivation         | `POST .../profiles/:profileId/derivation`                                                        |
 
 - **Free.** Brief extraction, since a run needs a brief. Owner-token calls
@@ -760,6 +762,32 @@ plans have no cap.
 - **Counting.** `model_call_counts` holds one counter per organisation and
   day. The check and the increment are one statement, so racing calls cannot
   pass the cap. A call the route then refuses for another reason still counts.
+
+### Prepare calls under an application's credit
+
+A credit covers its application's Prepare work (#2680): the last three rows
+above. An application is credited when one of its runs holds or spent a
+credit; a refunded run does not count.
+
+```mermaid
+flowchart TD
+  call[Prepare call] --> credited{Application credited?}
+  credited -- no --> day[Counts against modelCallsPerDay]
+  credited -- yes --> fair{Under 20 calls for this application?}
+  fair -- yes --> pass[Passes, the day's count untouched]
+  fair -- no --> refuse[429 prepare_fair_use_reached]
+```
+
+- **Limit.** `prepareCallsPerCreditedApplication` in the plan catalog module,
+  20 for every plan. A plan with unlimited credits is not bound.
+- **Refusal.** 429 `prepare_fair_use_reached` with `limit`, and no
+  `Retry-After`: the count does not reset. The API logs
+  `prepare fair-use limit reached`.
+- **Counting.** `prepare_call_counts` holds one counter per candidate record
+  and application, removed with the record. The check and the increment are
+  one statement.
+- **Not covered.** The derived default application has no bound runs, so its
+  Prepare calls always count against the day.
 
 ### Operator routes
 

@@ -40,6 +40,12 @@ function knownText(refusal: Refusal): string | undefined {
         ? t`Your plan allows ${limit} interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC.`
         : t`Your plan's interview turns, drafts and profile updates for today are used. They come back at midnight UTC.`;
     }
+    case "prepare_fair_use_reached": {
+      const limit = refusal.params?.limit;
+      return typeof limit === "number"
+        ? t`This application has used the ${limit} drafts, guides and research runs its credit covers.`
+        : t`This application has used the drafts, guides and research runs its credit covers.`;
+    }
     case "not_ready":
       return t`The run is still being saved; retry in a moment.`;
     case "brief_version_stale":

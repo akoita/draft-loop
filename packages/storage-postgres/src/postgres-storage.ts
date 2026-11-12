@@ -22,6 +22,7 @@ import { createOrganisationErasure } from "./organisation-erasure.js";
 import { organisationErasureGrant } from "./organisation-erasure-migration.js";
 import { createOrganisationPlans } from "./organisation-plans.js";
 import { organisationPlanGrants } from "./organisation-plans-migration.js";
+import { createPrepareCallMeter } from "./prepare-call-meter.js";
 import { createRecordArchiveRows } from "./record-archive.js";
 import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
@@ -144,6 +145,7 @@ function tenantStorage(client: SqlSession) {
     creditLedger: createCreditLedger(client),
     spendPool: createSpendPool(client),
     modelCalls: createModelCallMeter(client),
+    prepareCalls: createPrepareCallMeter(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),

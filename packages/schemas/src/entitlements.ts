@@ -127,6 +127,13 @@ export const creditPackSchema = z.strictObject({
 
 export type CreditPack = z.infer<typeof creditPackSchema>;
 
+/**
+ * How many Prepare model calls one credited application covers (#2680): cover letter and question
+ * drafts, interview guides and research. An ordinary application uses about a dozen; the limit
+ * bounds what one credit can cost. Plans with unlimited credits are not bound by it.
+ */
+export const prepareCallsPerCreditedApplication = 20;
+
 /** The catalog version new plan assignments are stored under. */
 export const planCatalogVersion = 2;
 

@@ -326,6 +326,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO prepare_call_counts (tenant_id, workspace_id, application_id, calls)
+       VALUES ($1, $2, 'application-1', 3)`,
+      [tenant, record],
+    ],
+    [
       `INSERT INTO agent_connection_caps (tenant_id, workspace_id, client_id, monthly_cap_cents, updated_at)
        VALUES ($1, $2, 'fictional-assistant', 500, $3)`,
       [tenant, record, at],

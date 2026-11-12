@@ -9344,6 +9344,14 @@ msgstr "This account is not a member of an organisation yet. Ask your organisati
 msgid "This application could not be researched."
 msgstr "This application could not be researched."
 
+#: apps/web/src/refusal-text.ts
+msgid "This application has used the {limit} drafts, guides and research runs its credit covers."
+msgstr "This application has used the {limit} drafts, guides and research runs its credit covers."
+
+#: apps/web/src/refusal-text.ts
+msgid "This application has used the drafts, guides and research runs its credit covers."
+msgstr "This application has used the drafts, guides and research runs its credit covers."
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "This application uses"
 msgstr "This application uses"

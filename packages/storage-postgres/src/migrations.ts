@@ -19,6 +19,7 @@ import { organisationActivityMigration } from "./organisation-activity-migration
 import { organisationClosingMigration } from "./organisation-closing-migration.js";
 import { organisationErasureMigration } from "./organisation-erasure-migration.js";
 import { organisationPlansMigration } from "./organisation-plans-migration.js";
+import { prepareCallMeterMigration } from "./prepare-call-meter-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import { researchBriefsMigration } from "./research-briefs-migration.js";
 import { runSpansMigration } from "./run-spans-migration.js";
@@ -819,6 +820,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   interviewGuideMigration,
   agentConnectionCapsMigration,
   runSpansMigration,
+  prepareCallMeterMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

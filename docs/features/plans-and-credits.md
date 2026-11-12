@@ -74,6 +74,10 @@ A plan sets these entitlements:
 - Partial: prices and self-service sign-up are not live, and production is held.
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
+- A credit covers 20 cover letter or question drafts, interview guides and
+  research runs for its application, outside the daily count; past that, those
+  routes answer `429 prepare_fair_use_reached`. An application without a credit
+  counts them against the day.
 - An organisation with no plan answers `403 plan_required`.
 - A deployment can set a monthly spend pool across organisations; when it is
   used, run starts answer `503 spend_pool_exhausted` until the next month.
