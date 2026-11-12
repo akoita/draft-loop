@@ -104,12 +104,17 @@ and account or provider availability is unchecked.
 | `standard`            | Claude Opus 5.5                                | GPT-6.1 Sol                                                   | Anthropic, OpenAI          |
 | `balanced-anthropic`  | Claude Sonnet 5.5                              | Claude Opus 5.5 (`standard-anthropic-critic@1`), low effort   | Anthropic                  |
 | `standard-anthropic`  | Claude Opus 5.5                                | Claude Sonnet 5.5 (`balanced-anthropic-critic@1`), low effort | Anthropic                  |
+| `balanced-google` | Gemini 4 Hydrogen | GPT-6.1 Terra | Gemini (paid tier), OpenAI |
+| `standard-google` | Gemini 4 Carbon | GPT-6.1 Sol | Gemini (paid tier), OpenAI |
 | `development-glm`     | Z.ai `zai-org/GLM-5.3-Flash` through DeepInfra | GPT-6 Luna                                                    | DeepInfra, OpenAI          |
 | `development-gemini`  | Gemini 3.8 Flash                               | GPT-6 Luna                                                    | Gemini (paid tier), OpenAI |
 | `development-mistral` | Mistral Large 4 (public preview)               | GPT-6 Luna                                                    | Mistral, OpenAI            |
 
 - **Balanced** sits between economy and standard on cost.
 - **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
+- **The two Google writer pairs** run in the CLI and the local-first desktop with
+  your own Gemini key. A DraftLoop server does not route Gemini yet
+  ([#2704](https://github.com/akoita/draft-loop/issues/2704)).
   A different Claude model reviews each draft, so author and critic still
   differ.
 - **The active catalog** holds eleven exact profile versions. Older versions
@@ -158,6 +163,20 @@ and versions, with the time it was applied. Each role may also store an
 | No applied pair                                                                                                            | The preflight says no profiles are attached. The run uses provider-default controls and unknown context windows. |
 | A corrupt selection file                                                                                                   | `start` stops before any provider work. Fix it with `apply` or `clear`.                                          |
 | Resume                                                                                                                     | Never reads the applied pair. It reuses the profiles recorded in the run.                                        |
+
+### Gemini 4 authors
+
+Three Gemini 4 authors are opt-in, and their quality is unvalidated. All use
+`GEMINI_API_KEY` from a paid-tier Gemini API project.
+
+| Author | Select it with | Thinking level |
+| --- | --- | --- |
+| Gemini 4 Hydrogen | `--model-preset balanced-google`, or `--author-profile balanced-google-author@1` | `high`, the model default |
+| Gemini 4 Carbon | `--model-preset standard-google`, or `--author-profile standard-google-author@1` | `medium`, the model default |
+| Gemini 4 Argon | `--author-profile standard-google-argon-author@1` with an exact critic profile | `medium`, the model default |
+
+Argon has no preset: it costs the same as Carbon and scores below Hydrogen on
+Google's published benchmarks. Each profile keeps one fixed thinking level.
 
 ### Development authors
 
@@ -275,6 +294,8 @@ User-session routes show public rates only.
 | GLM-5.3-Flash (DeepInfra) | $0.15 / $0.50                     | Reviewed 2026-10-02                                                |
 | Gemini 3.8 Flash          | $0.75 / $3.75                     | Reviewed 2026-10-04                                                |
 | Mistral Large 4           | $1.36 / $4.18                     | Reviewed 2026-10-08, without the launch discount; 1M-token context |
+| Gemini 4 Hydrogen | $1.50 / $7.50 | Reviewed 2026-11-12; flat across the 1M-token context |
+| Gemini 4 Carbon and Argon | $4 / $20 | Reviewed 2026-11-12; the list rate from 2026-12-01, so an upper bound during the $2 / $10 introductory rate |
 
 Claude and OpenAI rates are in the catalog (`model-profiles`).
 
@@ -302,7 +323,8 @@ Each catalog entry shows its metadata review date, which is not a live probe.
 Sources: [Anthropic model overview], [Claude models overview],
 [Claude Sonnet 5.5 overview], [GPT-6.1 Sol], [GPT-6.1 Terra], [GPT-6 Luna],
 the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
-[Gemini API pricing], [Gemini models] and the [Mistral Large 4 model page].
+[Gemini API pricing], [Gemini models], the [Gemini 4 guide], the
+[Gemini 4 Hydrogen announcement] and the [Mistral Large 4 model page].
 
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
 [Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
@@ -315,6 +337,8 @@ the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 [Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
 [Gemini models]: https://ai.google.dev/gemini-api/docs/models
+[Gemini 4 guide]: https://ai.google.dev/gemini-api/docs/latest-model
+[Gemini 4 Hydrogen announcement]: https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/
 [Mistral Large 4 model page]: https://docs.mistral.ai/models/mistral-large-4
 
 ## Provider credentials
@@ -327,7 +351,7 @@ own provider.
 | `ANTHROPIC_API_KEY` | Anthropic | Claude authors and critics                              |
 | `OPENAI_API_KEY`    | OpenAI    | GPT critics                                             |
 | `DEEPINFRA_API_KEY` | DeepInfra | The GLM development author                              |
-| `GEMINI_API_KEY`    | Google    | The Gemini development author, from a paid-tier project |
+| `GEMINI_API_KEY`    | Google    | The Gemini 4 and Gemini development authors, from a paid-tier project |
 | `MISTRAL_API_KEY`   | Mistral   | The Mistral development author                          |
 
 ## Autopilot
@@ -987,7 +1011,8 @@ extracts every source again.
 | ------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 (API key) | 32,768 tokens                                                                         | Profile default                                                                                       |
 | GLM through DeepInfra                            | 32,768 tokens                                                                         | `reasoning_effort: "none"` ([DeepInfra reasoning control](https://docs.deepinfra.com/chat/reasoning)) |
-| Gemini                                           | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
+| Gemini 3.8 Flash                                 | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
+| Gemini 4 | 65,536 tokens, shared by thinking and the answer | `thinkingLevel: "LOW"`, because Gemini 4 thinking cannot be disabled here |
 | Mistral Large 4                                  | 32,768-token answer budget, sent as the 65,536-token model limit when reasoning is on | `reasoningEffort: "none"`                                                                             |
 | User-session, local and other routes             | 8,192 tokens                                                                          | Route default                                                                                         |
 

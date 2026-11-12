@@ -1,4 +1,5 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
+import { createGoogleGemini4ExtractionProfile } from "./gemini-4-profiles.js";
 import {
   googleGeminiProfileVersionFor,
   isGoogleGeminiModel,
@@ -16,7 +17,9 @@ export function canonicalExtractionProfileFor(
   if (isDeepInfraGLMModel(company, modelId)) return createGLMExtractionProfile();
   if (isGoogleGeminiModel(company, modelId)) {
     const version = googleGeminiProfileVersionFor(modelId);
-    return version === undefined ? undefined : createGoogleGeminiExtractionProfile(version);
+    return version === undefined
+      ? createGoogleGemini4ExtractionProfile(modelId)
+      : createGoogleGeminiExtractionProfile(version);
   }
   if (isMistralModel(company, modelId)) return createMistralExtractionProfile();
   return undefined;

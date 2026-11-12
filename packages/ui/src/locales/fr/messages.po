@@ -3816,6 +3816,18 @@ msgstr "Gemini 3.7 Flash"
 msgid "Gemini 3.8 Flash"
 msgstr "Gemini 3.8 Flash"
 
+#: packages/ui/src/model-profile-presentation.ts
+msgid "Gemini 4 Argon"
+msgstr "Gemini 4 Argon"
+
+#: packages/ui/src/model-profile-presentation.ts
+msgid "Gemini 4 Carbon"
+msgstr "Gemini 4 Carbon"
+
+#: packages/ui/src/model-profile-presentation.ts
+msgid "Gemini 4 Hydrogen"
+msgstr "Gemini 4 Hydrogen"
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "Gemini API key"
 msgstr "Clé d’API Gemini"

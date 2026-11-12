@@ -38,6 +38,8 @@ export type ModelProfilePresetId =
   | "standard"
   | "balanced-anthropic"
   | "standard-anthropic"
+  | "balanced-google"
+  | "standard-google"
   | "development-glm"
   | "development-gemini"
   | "development-mistral";
@@ -80,6 +82,9 @@ const deepInfraGlmOverview = "https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 
 const googleGeminiPricing = "https://ai.google.dev/gemini-api/docs/pricing";
 const googleGeminiModels = "https://ai.google.dev/gemini-api/docs/models";
+const googleGemini4Guide = "https://ai.google.dev/gemini-api/docs/latest-model";
+const googleGemini4HydrogenPost =
+  "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/";
 
 const mistralLarge4Model = "https://docs.mistral.ai/models/mistral-large-4";
 
@@ -216,6 +221,30 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     apiPricing: { inputUsdPerMillion: 0.75, outputUsdPerMillion: 3.75 },
     reviewedAt: "2026-10-04",
   },
+  // Gemini 4 caches implicitly: a cache read costs 5% of the input rate and a write is not billed.
+  // Hydrogen's rate is flat across its 1M-token window.
+  "balanced-google-author@1": {
+    sources: [googleGemini4HydrogenPost, googleGeminiPricing],
+    apiPricing: {
+      inputUsdPerMillion: 1.5,
+      outputUsdPerMillion: 7.5,
+      cacheReadUsdPerMillion: 0.075,
+    },
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-11-12",
+  },
+  // Carbon and Argon carry the list rate that starts on 2026-12-01; the $2/$10 introductory rate
+  // before it is not modeled, so an estimate is an upper bound until then.
+  "standard-google-author@1": {
+    sources: [googleGemini4Guide, googleGeminiPricing],
+    apiPricing: { inputUsdPerMillion: 4, outputUsdPerMillion: 20, cacheReadUsdPerMillion: 0.2 },
+    reviewedAt: "2026-11-12",
+  },
+  "standard-google-argon-author@1": {
+    sources: [googleGemini4Guide, googleGeminiPricing],
+    apiPricing: { inputUsdPerMillion: 4, outputUsdPerMillion: 20, cacheReadUsdPerMillion: 0.2 },
+    reviewedAt: "2026-11-12",
+  },
   // Standard list rates; the temporary launch discount on the same page is not modeled.
   "dev-mistral-author@1": {
     sources: [mistralLarge4Model],
@@ -267,6 +296,20 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     critic: { id: "balanced-anthropic-critic", version: 1 },
   },
   {
+    id: "balanced-google",
+    label: "Balanced, Google writer — unvalidated",
+    tier: "standard",
+    author: { id: "balanced-google-author", version: 1 },
+    critic: { id: "balanced-openai-critic", version: 1 },
+  },
+  {
+    id: "standard-google",
+    label: "Standard, Google writer — unvalidated",
+    tier: "standard",
+    author: { id: "standard-google-author", version: 1 },
+    critic: { id: "standard-openai-critic", version: 2 },
+  },
+  {
     id: "development-glm",
     label: "Development — GLM Flash — unvalidated",
     tier: "economy",
@@ -301,11 +344,19 @@ function detachedPreset(preset: ModelProfilePreset): ModelProfilePreset {
   };
 }
 
+/** Profiles a person can pick for a custom pair although no preset uses them. */
+const customOnlyReferences = [
+  { id: "standard-google-argon-author", version: 1, role: "author" as const },
+];
+
 export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
-  const activeReferences = presetDefinitions.flatMap((preset) => [
-    { ...preset.author, role: "author" as const },
-    { ...preset.critic, role: "critic" as const },
-  ]);
+  const activeReferences = [
+    ...presetDefinitions.flatMap((preset) => [
+      { ...preset.author, role: "author" as const },
+      { ...preset.critic, role: "critic" as const },
+    ]),
+    ...customOnlyReferences,
+  ];
   const uniqueReferences = new Map(
     activeReferences.map((reference) => [`${reference.id}@${reference.version}`, reference]),
   );
