@@ -9343,6 +9343,14 @@ msgstr ""
 msgid "This application could not be researched."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "This application has used the {limit} drafts, guides and research runs its credit covers."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "This application has used the drafts, guides and research runs its credit covers."
+msgstr ""
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "This application uses"
 msgstr ""

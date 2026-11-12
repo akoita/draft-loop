@@ -106,6 +106,12 @@ export {
   type PostgresTenantStorage,
 } from "./postgres-storage.js";
 export {
+  createPrepareCallMeter,
+  type PrepareCallMeter,
+  PrepareCallMeterError,
+  type PrepareCallTake,
+} from "./prepare-call-meter.js";
+export {
   openPostgresRecordArchives,
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";

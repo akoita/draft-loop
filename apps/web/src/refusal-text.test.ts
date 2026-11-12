@@ -32,4 +32,10 @@ describe("refusal text", () => {
       "Your plan allows 20 interview turns, drafts and profile updates a day, and today's are used. They come back at midnight UTC.",
     );
   });
+
+  it("says when an application's credit covers no more Prepare calls (#2680)", () => {
+    expect(
+      refusalText({ code: "prepare_fair_use_reached", message: "x", params: { limit: 20 } }),
+    ).toBe("This application has used the 20 drafts, guides and research runs its credit covers.");
+  });
 });
