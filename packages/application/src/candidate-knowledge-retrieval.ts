@@ -256,6 +256,8 @@ export function candidateKnowledgeRuntimeRetrieval(
       ) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]>;
       /** Eligible chunks across the pinned sources, the set full source would send; memoized. */
       readonly knowledgeChunkCount: () => Promise<number>;
+      /** Those chunks themselves when full source was requested, else none; memoized. */
+      readonly fullSourceEvidence: () => Promise<readonly ScoredEvidenceChunk[]>;
     })
   | undefined {
   const binding = config.candidateKnowledgeSelection;
@@ -785,6 +787,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       reservedIdsByQuery.get(JSON.stringify([text, limit])) ?? new Set(),
     loadPinnedSourceChunks: (references) => loadPinnedSourceReferences(references),
     evidenceModeDecision: async () => (await resolveFullSource()).decision,
+    fullSourceEvidence: async () => (await resolveFullSource()).evidence,
     knowledgeChunkCount: (): Promise<number> => {
       knowledgeChunkCount ??= (async () =>
         evidenceMode === "full-source"

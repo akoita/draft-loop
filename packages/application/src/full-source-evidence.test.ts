@@ -19,6 +19,7 @@ import {
   fullSourceBudgetCharacters,
 } from "./full-source-evidence.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
+import { withRequirementPickedEvidence } from "./requirement-picked-evidence.js";
 import { createSourceSensitivityService } from "./source-sensitivity-service.js";
 import type { EvidenceMode } from "./workspace-evidence-mode.js";
 
@@ -270,6 +271,46 @@ describe("full-source evidence", () => {
     );
     expect(lines).toEqual([]);
     expect(appendAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("fills the cost cap with requirement-picked chunks and never a withheld one", async () => {
+    const fixture = await createFixture(rules);
+    const runtime = candidateKnowledgeRuntimeRetrieval(
+      { appendCandidateKnowledgeRetrievalTrace: async (input) => input as never },
+      {
+        id: "workspace-full-source",
+        requiredSections: [],
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot: fixture.storeRoot, knowledgeBaseId: fixture.knowledgeBaseId }],
+        },
+      },
+      contextWith(fixture),
+      undefined,
+      "full-source",
+      undefined,
+      2_500,
+    );
+    if (runtime === undefined) throw new Error("Expected candidate knowledge retrieval.");
+    const decision = await runtime.evidenceModeDecision();
+    expect(decision).toMatchObject({
+      fallbackReason: "cost-cap-exceeded",
+      budgetCharacters: 10_000,
+    });
+
+    const retrieved = await runtime.port.queryEvidence(query);
+    const picked = await withRequirementPickedEvidence(runtime, {
+      requirements: [
+        { id: "r1", text: "Fictional salary history and platform milestone 7", priority: "must" },
+      ],
+    } as never).port.queryEvidence(query);
+
+    expect(picked.slice(0, retrieved.length)).toEqual(retrieved);
+    expect(picked.length).toBeGreaterThan(retrieved.length);
+    expect(new Set(picked.map(({ id }) => id)).size).toBe(picked.length);
+    expect(JSON.stringify(picked).length).toBeLessThanOrEqual(decision.budgetCharacters);
+    expect(picked.some(({ text }) => text.includes(withheldMarker))).toBe(false);
+    const eligibleIds = new Set((await runtime.fullSourceEvidence()).map(({ id }) => id));
+    expect(picked.slice(retrieved.length).every(({ id }) => eligibleIds.has(id))).toBe(true);
   });
 
   it("derives the budget from the smaller known context window and the cost cap", () => {
