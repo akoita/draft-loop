@@ -61,8 +61,10 @@ repeats a pattern that none covers.
 | [Add an API route](docs/engineering/api-route.md)         | Expose a capability to the web and to agents     |
 | [Add a shared screen](docs/engineering/shared-screen.md)  | Add or change a screen the web and desktop share |
 
-Browser code in `packages/ui` and `apps/web` follows the `modern-web-guidance`
-skill. The shared screen guide says how to install and use it.
+For browser UI work in `packages/ui` or `apps/web` (components, overlays,
+layout, animation, forms, media controls, performance, accessibility), read
+`.agents/skills/building-draftloop-web-ui/SKILL.md` before writing code and
+look up the matching guides.
 
 ## Documentation synchronization
 

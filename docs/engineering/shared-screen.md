@@ -39,27 +39,32 @@ flowchart LR
 
 ## Web platform guidance
 
-Before you write markup, CSS or browser code for a screen, look up the
-pattern in the `modern-web-guidance` skill from
-[Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance).
-Prefer the native feature it names, such as `<dialog>` for a modal, over a
-hand-built one.
+Before you build or rework a component, overlay, layout, animation, form,
+media control, or a performance or accessibility fix, read
+[`building-draftloop-web-ui`](../../.agents/skills/building-draftloop-web-ui/SKILL.md).
+It looks the pattern up in [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance)
+and lists where DraftLoop's rules take precedence. Prefer a native element or
+API over a hand-built one or a new dependency, with a fallback for browsers
+that lack it.
 
-| Agent       | How it gets the skill                                                  |
-| ----------- | ---------------------------------------------------------------------- |
-| Claude Code | `.claude/settings.json` enables the plugin and turns its telemetry off |
-| Codex       | Run the commands below once on your machine                            |
+| Agent       | How it finds the skill                                    |
+| ----------- | --------------------------------------------------------- |
+| Claude Code | `.claude/skills`, a link to `.agents/skills`              |
+| Codex       | The pointer in `AGENTS.md` to the file in `.agents/skills` |
 
-```sh
-export DISABLE_TELEMETRY=1
-codex plugin marketplace add GoogleChrome/modern-web-guidance
-codex plugin add modern-web-guidance@googlechrome
-```
+Three choices are deliberate and should survive edits:
 
-Keep `export DISABLE_TELEMETRY=1` in your shell profile. Without it the skill
-sends anonymous usage data, including the agent's search phrases, to Google.
+- **Pinned version.** Every command names an exact version, never `@latest`,
+  and passes `--ignore-scripts`. Upgrade in one reviewed commit that changes
+  the version in the skill body and its `metadata.upstream`.
+- **Usage reporting off.** Every command sets `DISABLE_TELEMETRY=1`. By
+  default the tool reports search queries and guide ids to its publisher.
+- **No upstream installer or plugin.** Either would add an unpinned, always-on
+  copy of the upstream skill to one agent only. The project skill gives every
+  agent one committed file with the same scope and safeguards.
 
-If the skill is not installed, say so in the PR instead of skipping the step.
+When guides shaped a change, add the skill's one-line `Web guidance:` note to
+the PR body.
 
 ## Strings in two languages
 
