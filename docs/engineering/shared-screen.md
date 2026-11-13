@@ -47,10 +47,10 @@ and lists where DraftLoop's rules take precedence. Prefer a native element or
 API over a hand-built one or a new dependency, with a fallback for browsers
 that lack it.
 
-| Agent       | How it finds the skill                                    |
-| ----------- | --------------------------------------------------------- |
-| Claude Code | `.claude/skills`, a link to `.agents/skills`              |
-| Codex       | The pointer in `AGENTS.md` to the file in `.agents/skills` |
+| Agent       | How it finds the skill                                         |
+| ----------- | -------------------------------------------------------------- |
+| Codex       | `.agents/skills`, and the pointer in `AGENTS.md`               |
+| Claude Code | A short file in `.claude/skills` that sends it to the same file |
 
 Three choices are deliberate and should survive edits:
 
