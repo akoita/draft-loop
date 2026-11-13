@@ -37,6 +37,30 @@ flowchart LR
    `packages/review-state`, which fills it on the host side for both the
    desktop host and the hosted API.
 
+## Web platform guidance
+
+Before you write markup, CSS or browser code for a screen, look up the
+pattern in the `modern-web-guidance` skill from
+[Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance).
+Prefer the native feature it names, such as `<dialog>` for a modal, over a
+hand-built one.
+
+| Agent       | How it gets the skill                                                  |
+| ----------- | ---------------------------------------------------------------------- |
+| Claude Code | `.claude/settings.json` enables the plugin and turns its telemetry off |
+| Codex       | Run the commands below once on your machine                            |
+
+```sh
+export DISABLE_TELEMETRY=1
+codex plugin marketplace add GoogleChrome/modern-web-guidance
+codex plugin add modern-web-guidance@googlechrome
+```
+
+Keep `export DISABLE_TELEMETRY=1` in your shell profile. Without it the skill
+sends anonymous usage data, including the agent's search phrases, to Google.
+
+If the skill is not installed, say so in the PR instead of skipping the step.
+
 ## Strings in two languages
 
 Every visible string uses the Lingui macros, for example

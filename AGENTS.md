@@ -61,6 +61,9 @@ repeats a pattern that none covers.
 | [Add an API route](docs/engineering/api-route.md)         | Expose a capability to the web and to agents     |
 | [Add a shared screen](docs/engineering/shared-screen.md)  | Add or change a screen the web and desktop share |
 
+Browser code in `packages/ui` and `apps/web` follows the `modern-web-guidance`
+skill. The shared screen guide says how to install and use it.
+
 ## Documentation synchronization
 
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
