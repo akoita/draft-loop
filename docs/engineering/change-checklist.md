@@ -27,6 +27,9 @@ and what you deferred, under the template's impact sections.
 
 - [ ] Every new screen string goes through Lingui, in English and French;
       `pnpm i18n:check` passes ([Add a shared screen](shared-screen.md)).
+- [ ] Browser UI work looked up its pattern with
+      [`building-draftloop-web-ui`](../../.agents/skills/building-draftloop-web-ui/SKILL.md),
+      and the PR body carries its `Web guidance:` line when a guide applied.
 - [ ] Material sent to a provider respects sensitivity tiers, screening and,
       in sign-in mode, the candidate's consent
       ([Sensitivity and screening](../features/sensitivity-and-screening.md)).

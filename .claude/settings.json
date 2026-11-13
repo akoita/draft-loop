@@ -1,24 +1,14 @@
 {
-  "env": {
-    "DISABLE_TELEMETRY": "1"
-  },
   "extraKnownMarketplaces": {
     "agent-toolkit": {
       "source": {
         "source": "github",
         "repo": "akoita/agent-toolkit"
       }
-    },
-    "googlechrome": {
-      "source": {
-        "source": "github",
-        "repo": "GoogleChrome/modern-web-guidance"
-      }
     }
   },
   "enabledPlugins": {
     "utilities@agent-toolkit": true,
-    "baseline@agent-toolkit": true,
-    "modern-web-guidance@googlechrome": true
+    "baseline@agent-toolkit": true
   }
 }
