@@ -2681,6 +2681,10 @@ msgstr "defer"
 msgid "Defer"
 msgstr "Defer"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Degrees, courses and certificates."
+msgstr "Degrees, courses and certificates."
+
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -3196,6 +3200,10 @@ msgstr "Editing version {savedVersion}. Saving creates a new version and applies
 #: packages/ui/src/review.tsx
 msgid "Edits you make here are applied when you approve; the critic has not reviewed them."
 msgstr "Edits you make here are applied when you approve; the critic has not reviewed them."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Education and training"
+msgstr "Education and training"
 
 #: packages/ui/src/run-details.tsx
 msgid "Effective checksum"
@@ -4400,6 +4408,10 @@ msgstr "Job requirements read from the job description"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
 msgstr "Job requirements reviewed"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Jobs you held: employer, title, dates and what you did."
+msgstr "Jobs you held: employer, title, dates and what you did."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Join the DraftLoop beta"
@@ -5792,6 +5804,10 @@ msgstr "One page or two is saved as your writing policy's page target, and the d
 #: packages/ui/src/export-template.ts
 msgid "One page with smaller type and tighter spacing, so the most fits on each page."
 msgstr "One page with smaller type and tighter spacing, so the most fits on each page."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "One project or result, told as a story."
+msgstr "One project or result, told as a story."
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Only applications without runs, briefs or exports can be deleted. Archiving keeps everything and can be undone."
@@ -7948,6 +7964,10 @@ msgstr "Sign-in is on Home, under Workspace settings."
 msgid "Signing in"
 msgstr "Signing in"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Skills and tools"
+msgstr "Skills and tools"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Skip this question"
 msgstr "Skip this question"
@@ -7959,6 +7979,10 @@ msgstr "Skipped this question."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
 msgstr "Social announcement"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Something you are proud of"
+msgstr "Something you are proud of"
 
 #: packages/ui/src/home-applications-view.tsx
 msgid "Sort"
@@ -10293,6 +10317,10 @@ msgstr "What to stress"
 msgid "What you give"
 msgstr "What you give"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "What you know how to do, and the tools you use."
+msgstr "What you know how to do, and the tools you use."
+
 #: apps/web/src/interview-guide.tsx
 msgid "When"
 msgstr "When"
@@ -10684,6 +10712,10 @@ msgid "Your plan's runs for today are used. Try again later."
 msgstr "Your plan's runs for today are used. Try again later."
 
 #: packages/ui/src/career-interview-model.ts
+msgid "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+msgstr "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+
+#: packages/ui/src/career-interview-model.ts
 msgid "Your record names {title} but leaves out part of this role."
 msgstr "Your record names {title} but leaves out part of this role."
 
@@ -10707,6 +10739,10 @@ msgstr "Your sign-in has expired. Sign in again."
 #: packages/ui/src/career-interview-live.tsx
 msgid "Your voice goes to {0} to become text."
 msgstr "Your voice goes to {0} to become text."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your work history"
+msgstr "Your work history"
 
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"

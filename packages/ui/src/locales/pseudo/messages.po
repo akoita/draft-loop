@@ -2681,6 +2681,10 @@ msgstr ""
 msgid "Defer"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Degrees, courses and certificates."
+msgstr ""
+
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -3195,6 +3199,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Edits you make here are applied when you approve; the critic has not reviewed them."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Education and training"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -4398,6 +4406,10 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Jobs you held: employer, title, dates and what you did."
 msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx
@@ -5790,6 +5802,10 @@ msgstr ""
 
 #: packages/ui/src/export-template.ts
 msgid "One page with smaller type and tighter spacing, so the most fits on each page."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "One project or result, told as a story."
 msgstr ""
 
 #: packages/ui/src/application-archive-model.ts
@@ -7947,6 +7963,10 @@ msgstr ""
 msgid "Signing in"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Skills and tools"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Skip this question"
 msgstr ""
@@ -7957,6 +7977,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Something you are proud of"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -10292,6 +10316,10 @@ msgstr ""
 msgid "What you give"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "What you know how to do, and the tools you use."
+msgstr ""
+
 #: apps/web/src/interview-guide.tsx
 msgid "When"
 msgstr ""
@@ -10683,6 +10711,10 @@ msgid "Your plan's runs for today are used. Try again later."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
+msgid "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
 msgid "Your record names {title} but leaves out part of this role."
 msgstr ""
 
@@ -10705,6 +10737,10 @@ msgstr ""
 #. placeholder {0}: voice.listener
 #: packages/ui/src/career-interview-live.tsx
 msgid "Your voice goes to {0} to become text."
+msgstr ""
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your work history"
 msgstr ""
 
 #: apps/web/src/workspace-model.ts

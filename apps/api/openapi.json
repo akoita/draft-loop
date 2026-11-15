@@ -3402,7 +3402,8 @@
                         "untold-period",
                         "untold-theme",
                         "application-relevance",
-                        "candidate-subject"
+                        "candidate-subject",
+                        "career-start"
                       ]
                     },
                     "reason": {
@@ -11588,7 +11589,8 @@
                         "untold-period",
                         "untold-theme",
                         "application-relevance",
-                        "candidate-subject"
+                        "candidate-subject",
+                        "career-start"
                       ]
                     },
                     "reason": {
