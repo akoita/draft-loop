@@ -793,6 +793,10 @@ msgstr "{theme}: your record mentions it but tells no story about it."
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
 msgstr "{tierLabel} tier · {profiles} · {roleStatus}"
 
+#: apps/web/src/evidence-advanced.tsx
+msgid "{total, plural, one {# private-section rule} other {# private-section rules}}"
+msgstr "{total, plural, one {# private-section rule} other {# private-section rules}}"
+
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
 msgstr "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
@@ -4452,6 +4456,10 @@ msgstr "Keep each heading to 200 characters or fewer."
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 
+#: apps/web/src/private-sections.tsx
+msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
+msgstr "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
+
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Keep the heading text to 200 characters or fewer."
@@ -4804,10 +4812,6 @@ msgstr "Mark every word that changed since the previous version"
 #: packages/ui/src/profile.tsx
 msgid "Mark latest draft reviewed"
 msgstr "Mark latest draft reviewed"
-
-#: apps/web/src/private-sections.tsx
-msgid "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
-msgstr "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Mark reviewed"

@@ -17,7 +17,7 @@ for comparison and never blocks material.
 
 ## How to use it
 
-**Private sections** (on Career evidence) mark Markdown sections by heading:
+**Private sections** (on Career evidence, under **Advanced options**) mark Markdown sections by heading:
 
 | Tier                          | Effect                                                    |
 | ----------------------------- | --------------------------------------------------------- |
@@ -47,7 +47,7 @@ a short reason that is not candidate material.
 
 | Kind   | Surface                                                          |
 | ------ | ---------------------------------------------------------------- |
-| Screen | Private sections panel, screening status in **Your files**       |
+| Screen | Private sections in the Career evidence card, screening status in **Your files**       |
 | API    | `GET`/`POST`/`DELETE /v1/knowledge-bases/{id}/sensitivity-rules` |
 | API    | `GET /v1/workspaces/{id}/screening`                              |
 | API    | `POST /v1/workspaces/{id}/screening/{resultId}/release`          |

@@ -787,6 +787,10 @@ msgstr "{theme} : votre dossier en parle sans raconter d’histoire."
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
 msgstr "Niveau {tierLabel} · {profiles} · {roleStatus}"
 
+#: apps/web/src/evidence-advanced.tsx
+msgid "{total, plural, one {# private-section rule} other {# private-section rules}}"
+msgstr "{total, plural, one {# règle de section privée} other {# règles de sections privées}}"
+
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
 msgstr "{unpriced, plural, one {# appel de modèle n’a pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.} other {# appels de modèle n’ont pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.}}"
@@ -4446,6 +4450,10 @@ msgstr "Limitez chaque titre à 200 caractères."
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr "Conserver mon adresse e-mail pour m'inviter à la bêta de DraftLoop. Elle est supprimée dès que je suis invité, ou au bout de six mois."
 
+#: apps/web/src/private-sections.tsx
+msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
+msgstr "Gardez des parties de vos documents, comme Salaire ou Santé, hors de portée des modèles. Marquez les sections Markdown par leur titre. Les sections « jamais envoyées » n’atteignent jamais un modèle ; les sections « seulement si autorisé » restent exclues sauf si l’espace de travail autorise le contenu sensible."
+
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Limitez le texte du titre à 200 caractères."
@@ -4798,10 +4806,6 @@ msgstr "Marquer chaque mot modifié depuis la version précédente"
 #: packages/ui/src/profile.tsx
 msgid "Mark latest draft reviewed"
 msgstr "Marquer le dernier brouillon comme relu"
-
-#: apps/web/src/private-sections.tsx
-msgid "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
-msgstr "Marquez les sections Markdown par leur titre. Les sections « jamais envoyées » n’atteignent jamais un modèle ; les sections « seulement si autorisé » restent exclues sauf si l’espace de travail autorise le contenu sensible."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Mark reviewed"
