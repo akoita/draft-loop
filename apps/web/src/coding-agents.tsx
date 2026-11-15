@@ -1,9 +1,6 @@
-import {
-  AgentConnectionCaps,
-  type AgentConnectionCapView,
-} from "@draft-loop/ui/agent-connection-caps";
 import { AgentSetup } from "@draft-loop/ui/agent-setup";
 import type { AgentTokenView } from "@draft-loop/ui/agent-setup-model";
+import type { AssistantConnectionView } from "@draft-loop/ui/connected-agents";
 import {
   codingAgentsFragment,
   codingAgentsSectionId,
@@ -40,7 +37,7 @@ export function CodingAgentsSection({
   const [tokens, setTokens] = useState<readonly AgentTokenView[] | undefined>(undefined);
   const [intake, setIntake] = useState<boolean | undefined>(undefined);
   const [pending, setPending] = useState<number | undefined>(undefined);
-  const [connections, setConnections] = useState<readonly AgentConnectionCapView[] | undefined>(
+  const [connections, setConnections] = useState<readonly AssistantConnectionView[] | undefined>(
     undefined,
   );
   const [open, setOpen] = useState(() => globalThis.location?.hash === codingAgentsFragment);
@@ -142,37 +139,31 @@ export function CodingAgentsSection({
           />
         )
       }
-      connections={
-        connections === undefined ? undefined : (
-          <AgentConnectionCaps
-            connections={connections}
-            onSet={async (clientId, monthlyCapUsd) => {
-              try {
-                await client.call("PUT /v1/workspaces/{workspaceId}/agent-connections", {
-                  path: { workspaceId },
-                  body: { client_id: clientId, monthly_cap_usd: monthlyCapUsd },
-                });
-                await reloadConnections();
-                return undefined;
-              } catch (error) {
-                return workJournalProblem(error);
-              }
-            }}
-            onRemove={async (clientId) => {
-              try {
-                await client.call("DELETE /v1/workspaces/{workspaceId}/agent-connections", {
-                  path: { workspaceId },
-                  query: { client_id: clientId },
-                });
-                await reloadConnections();
-                return undefined;
-              } catch (error) {
-                return workJournalProblem(error);
-              }
-            }}
-          />
-        )
-      }
+      assistants={connections}
+      onSetAssistantLimit={async (clientId, monthlyCapUsd) => {
+        try {
+          await client.call("PUT /v1/workspaces/{workspaceId}/agent-connections", {
+            path: { workspaceId },
+            body: { client_id: clientId, monthly_cap_usd: monthlyCapUsd },
+          });
+          await reloadConnections();
+          return undefined;
+        } catch (error) {
+          return workJournalProblem(error);
+        }
+      }}
+      onRemoveAssistant={async (clientId) => {
+        try {
+          await client.call("DELETE /v1/workspaces/{workspaceId}/agent-connections", {
+            path: { workspaceId },
+            query: { client_id: clientId },
+          });
+          await reloadConnections();
+          return undefined;
+        } catch (error) {
+          return workJournalProblem(error);
+        }
+      }}
       onIssue={async (label, scopes, monthlyCapUsd) => {
         try {
           const issued = await client.call("POST /v1/workspaces/{workspaceId}/agent-tokens", {

@@ -614,8 +614,8 @@
             "description": "The assistant's client at the identity provider."
           },
           "monthly_cap_usd": {
-            "type": "number",
-            "description": "What the connection may reserve each UTC month."
+            "description": "What the connection may reserve each UTC month; absent for an assistant that asked to spend before a limit was set, which starts nothing.",
+            "type": "number"
           },
           "spent_this_month_usd": {
             "type": "number",
@@ -627,7 +627,6 @@
         },
         "required": [
           "client_id",
-          "monthly_cap_usd",
           "spent_this_month_usd",
           "updated_at"
         ]
@@ -8830,8 +8829,8 @@
             "description": "The assistant's client at the identity provider."
           },
           "monthly_cap_usd": {
-            "type": "number",
-            "description": "What the connection may reserve each UTC month."
+            "description": "What the connection may reserve each UTC month; absent for an assistant that asked to spend before a limit was set, which starts nothing.",
+            "type": "number"
           },
           "spent_this_month_usd": {
             "type": "number",
@@ -8843,7 +8842,6 @@
         },
         "required": [
           "client_id",
-          "monthly_cap_usd",
           "spent_this_month_usd",
           "updated_at"
         ],
@@ -27024,7 +27022,7 @@
     "/v1/workspaces/{workspaceId}/agent-connections": {
       "get": {
         "summary": "List assistant connection caps",
-        "description": "The monthly spend cap of each assistant connection in the workspace, by client id. A connection without a cap starts no run or draft.",
+        "description": "The monthly spend cap of each assistant connection in the workspace, by client id, and each assistant that asked to spend before a cap was set, without monthly_cap_usd. A connection without a cap starts no run or draft.",
         "parameters": [
           {
             "schema": {

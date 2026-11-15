@@ -9,7 +9,9 @@ function capOf(row: Record<string, unknown>): AgentConnectionCap {
   return {
     workspaceId: String(row.workspace_id),
     clientId: String(row.client_id),
-    monthlyCapCents: Number(row.monthly_cap_cents),
+    ...(row.monthly_cap_cents === null || row.monthly_cap_cents === undefined
+      ? {}
+      : { monthlyCapCents: Number(row.monthly_cap_cents) }),
     updatedAt: String(row.updated_at),
     ...(row.spend_month === null || row.spend_month === undefined
       ? {}
@@ -39,6 +41,14 @@ export function createAgentConnectionCapStore(client: SqlSession): AgentConnecti
       );
       if (row === undefined) throw new Error("The connection cap was not stored.");
       return capOf(row);
+    },
+    note: async (workspaceId, clientId, at) => {
+      await client.query(
+        `INSERT INTO agent_connection_caps (workspace_id, client_id, updated_at)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (tenant_id, workspace_id, client_id) DO NOTHING`,
+        [workspaceId, clientId, at],
+      );
     },
     get: async (workspaceId, clientId) => {
       const [row] = await client.query(
@@ -83,7 +93,7 @@ export function createAgentConnectionCapStore(client: SqlSession): AgentConnecti
            FROM agent_connection_caps WHERE workspace_id = $1 AND client_id = $2`,
         [workspaceId, clientId, month, key],
       );
-      if (row === undefined) return { outcome: "no_cap" };
+      if (row === undefined || row.monthly_cap_cents === null) return { outcome: "no_cap" };
       if (row.replayed === true) return { outcome: "replayed", spentCents: Number(row.spent) };
       return {
         outcome: "cap_reached",

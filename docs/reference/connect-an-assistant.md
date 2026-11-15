@@ -56,12 +56,14 @@ The assistant can never do these, whatever you grant:
 Starting a CV run or a draft costs model usage on your account. An assistant
 starts none until you set its monthly limit:
 
-1. In DraftLoop, open **Workspace settings > Agents**.
-2. Under "Spending by connected assistants", type the assistant's id and a
-   monthly limit in US dollars.
-3. Select **Set spend limit**.
+1. Ask your assistant to start something once. Without a limit it is refused,
+   and it then appears in DraftLoop.
+2. In DraftLoop, open **Workspace settings > Agents**. Under **Connected
+   agents**, find your assistant's row: it says "No limit yet".
+3. Select **Set a limit**, type a monthly limit in US dollars and select
+   **Save limit**.
 
-An assistant without a limit tells you its id when it is refused. Each run
+Each run
 counts at your workspace's cost limit per run, and each draft at its cost
 cap, so the limit is never passed. Your plan and credits still apply.
 
