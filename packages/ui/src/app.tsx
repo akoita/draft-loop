@@ -3020,6 +3020,11 @@ export function App({
           back={pageBack}
           onOpenStep={flowStepHandlers}
           revision={knowledgeRevision}
+          onEvidenceChanged={() =>
+            void onKnowledgeSelectionSaved(state.workspaceId, workspaceGeneration).catch(
+              () => undefined,
+            )
+          }
           lockedReason={
             profileGenerationForActiveWorkspace === null
               ? null

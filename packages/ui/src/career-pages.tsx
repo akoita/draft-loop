@@ -88,6 +88,8 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly lockedReason?: string | null;
   /** Changes whenever the knowledge selection or its files change; the host's panels read again. */
   readonly revision?: number;
+  /** Called when a host panel changed the knowledge selection or its files (#2733). */
+  readonly onEvidenceChanged?: (() => void) | undefined;
 }
 
 /** The documents the candidate provides. Add or manage documents opens it. */
@@ -97,6 +99,7 @@ export function CareerEvidencePage({
   retrieval = null,
   lockedReason = null,
   revision = 0,
+  onEvidenceChanged,
   ...frame
 }: CareerEvidencePageProps) {
   return (
@@ -118,7 +121,11 @@ export function CareerEvidencePage({
       {card}
       {knowledge}
       {retrieval}
-      <HostEvidenceAfter revision={revision} openHome={frame.onOpenStep.applications} />
+      <HostEvidenceAfter
+        revision={revision}
+        openHome={frame.onOpenStep.applications}
+        onChanged={onEvidenceChanged}
+      />
     </CareerPageFrame>
   );
 }

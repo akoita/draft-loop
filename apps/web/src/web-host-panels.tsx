@@ -38,12 +38,13 @@ export function webHostPanels(
     application: ({ applicationId }) => (
       <ApplicationMaterialSection client={client} applicationId={applicationId} />
     ),
-    evidenceAfter: ({ revision, openHome }) => (
+    evidenceAfter: ({ revision, openHome, onChanged }) => (
       <EvidenceSections
         client={client}
         revision={revision}
         workJournal={mode === "owner"}
         openHome={openHome}
+        onChanged={onChanged}
       />
     ),
     ...(mode === "owner"

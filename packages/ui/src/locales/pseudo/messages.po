@@ -9435,6 +9435,10 @@ msgstr ""
 msgid "This application's job description could not be read. Its file may have been moved or emptied."
 msgstr ""
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "This becomes your first career evidence. You can add documents later."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "This brief changed since you opened it. The latest version has been loaded; review it and try again."
 msgstr ""
