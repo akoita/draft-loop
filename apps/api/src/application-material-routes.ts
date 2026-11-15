@@ -23,7 +23,7 @@ import {
   applicationMaterialPromptVersion,
   createModelApplicationMaterialWriter,
 } from "@draft-loop/application/application-material-model";
-import { guardCallCost } from "@draft-loop/application/call-cost-guard";
+import { failedCallCostUsd, guardCallCost } from "@draft-loop/application/call-cost-guard";
 import {
   coverLetterClaimCheckModelId,
   coverLetterClaimCheckPromptVersion,
@@ -509,7 +509,11 @@ export function registerApplicationMaterialRoutes(
             modelRequest.model.promptTemplateVersion === checkerModel.promptTemplateVersion
               ? checkRoute
               : routed;
-          const response = await target.execute(modelRequest);
+          const response = await target.execute(modelRequest).catch((error: unknown) => {
+            // A rejected answer, such as one cut off at its output limit, was billed too.
+            spentUsd += failedCallCostUsd(error);
+            throw error;
+          });
           const cost = response.cost.estimatedUsd ?? 0;
           spentUsd += cost;
           request.log.info(

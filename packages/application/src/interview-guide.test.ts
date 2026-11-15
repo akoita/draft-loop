@@ -1,6 +1,7 @@
 import type { ResearchBrief } from "@draft-loop/schemas/research-brief";
 import { describe, expect, it } from "vitest";
 
+import { worstCallCostUsd } from "./call-cost-guard.js";
 import type { CoverLetterClaimCheckPort, CoverLetterClaimLink } from "./cover-letter-claims.js";
 import {
   draftEssentialInterviewGuide,
@@ -8,7 +9,13 @@ import {
   type InterviewGuideWriterRequest,
 } from "./interview-guide.js";
 import { interviewGuideMatrix, interviewGuideNeverSay } from "./interview-guide-matrix.js";
-import { interviewGuideItemsOf } from "./interview-guide-model.js";
+import {
+  createModelInterviewGuideWriter,
+  interviewGuideItemsOf,
+  interviewGuideMaxCostUsd,
+  interviewGuideMaxOutputTokens,
+  interviewGuidePromptVersion,
+} from "./interview-guide-model.js";
 
 // An invented candidate, employer and pages only.
 const facts = [
@@ -181,6 +188,35 @@ describe("essential interview guide", () => {
       draftEssentialInterviewGuide(port, checker, { ...input(), facts: [] }),
     ).rejects.toMatchObject({ code: "no_facts" });
     expect(requests).toHaveLength(0);
+  });
+
+  it("gives the writer room for its reasoning and its answer, within the essential cap", async () => {
+    const sent: { readonly maxOutputTokens?: number }[] = [];
+    const model = createModelInterviewGuideWriter({
+      executor: {
+        execute: async (request: { readonly maxOutputTokens?: number }) => {
+          sent.push(request);
+          return { output: { items: [] }, company: "anthropic", modelId: "claude-sonnet-5-5" };
+        },
+      } as never,
+      model: {
+        company: "anthropic",
+        modelId: "claude-sonnet-5-5",
+        role: "author",
+        promptTemplateVersion: interviewGuidePromptVersion,
+      },
+      dataPolicy: {} as never,
+      applicationId: "app_fixture0001",
+    });
+    const { port, requests } = writer([
+      { section: "pitch", heading: "Pitch", text: "Open with the ledger migration you led." },
+    ]);
+    await draftEssentialInterviewGuide(port, checker, input());
+    await model.write(requests[0] as InterviewGuideWriterRequest);
+    expect(sent[0]?.maxOutputTokens).toBe(interviewGuideMaxOutputTokens);
+    expect(interviewGuideMaxOutputTokens).toBeGreaterThan(8_192);
+    // The whole output budget at the default model's price leaves room under the cap.
+    expect(worstCallCostUsd(sent[0] as never)).toBeLessThan(interviewGuideMaxCostUsd.essential);
   });
 
   it("reads only well-formed items from a model's output", () => {

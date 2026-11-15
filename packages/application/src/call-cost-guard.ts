@@ -55,13 +55,24 @@ export function worstCallCostUsd(request: ModelRequest<JsonObject>): number | un
 }
 
 /**
+ * What the provider billed for a call that failed after it answered, such as an answer cut off at
+ * its output limit; 0 for a failure before any answer or an error that carries no usage.
+ */
+export function failedCallCostUsd(error: unknown): number {
+  const billed = (error as { readonly billed?: unknown } | null)?.billed;
+  const cost = (billed as { readonly cost?: { readonly estimatedUsd?: unknown } } | null)?.cost
+    ?.estimatedUsd;
+  return typeof cost === "number" && Number.isFinite(cost) && cost > 0 ? cost : 0;
+}
+
+/**
  * Refuses, before it is sent, any call whose worst cost would pass what the run may still spend,
  * counting the calls this adapter already made. A model without a catalog price passes: the run's
  * own check stops it after that call, since its cost cannot be counted.
  *
  * Each call reserves its worst cost while it is in flight and settles to its billed cost when it
  * answers, so calls sent together cannot each spend the same remainder (#2233). A call that fails
- * releases its reservation, as a sequential failure counted nothing. A call that does not fit while
+ * releases its reservation and keeps only what the provider billed for it. A call that does not fit while
  * others are in flight waits for them to settle and is priced again, so running calls together
  * never refuses a call that running them one by one would have sent.
  */
@@ -93,7 +104,7 @@ export function guardCallCost<Executor extends ModelExecutor>(
         remaining += reserved - (response.cost.estimatedUsd ?? 0);
         return response;
       } catch (error) {
-        remaining += reserved;
+        remaining += reserved - failedCallCostUsd(error);
         throw error;
       } finally {
         inFlight.delete(settled);
