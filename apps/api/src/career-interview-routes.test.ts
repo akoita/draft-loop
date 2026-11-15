@@ -159,6 +159,12 @@ describe("career interview routes", () => {
     });
     expect(answered.statusCode).toBe(200);
     expect((await call("GET", `${sessions}/${id}`)).json().session.topics[0].turns).toHaveLength(3);
+    // A reloaded screen reads the unfinished session without starting another (#2760).
+    const current = (await call("GET", `${sessions}/current`)).json().current;
+    expect(current.session.id).toBe(id);
+    expect(current.session.topics[0].turns).toHaveLength(3);
+    await call("POST", `${sessions}/${id}/actions`, { action: "close" });
+    expect((await call("GET", `${sessions}/current`)).json()).toEqual({ current: null });
     expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
     // Each interviewer call records its model, tokens and cost, and nothing it said (#2758).
     const recorded = logs
