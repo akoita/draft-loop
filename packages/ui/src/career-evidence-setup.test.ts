@@ -106,8 +106,7 @@ describe("first career evidence", () => {
     expect(calls).toEqual(["ensure", "import-file", "select", "refresh"]);
     expect(outcome).toEqual({
       status: "added",
-      message:
-        "Created knowledge base “Career evidence” in DraftLoop application data and selected it for this workspace. Added to Career evidence. 1 source, 1 ready.",
+      message: "Added to Career evidence. 1 document, 1 ready.",
     });
   });
 
@@ -121,7 +120,7 @@ describe("first career evidence", () => {
       onChanged: async () => true,
     });
     expect(outcome).toMatchObject({
-      message: expect.stringContaining("Selected knowledge base “Career evidence”"),
+      message: expect.not.stringContaining("knowledge base"),
     });
   });
 

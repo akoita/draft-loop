@@ -73,7 +73,7 @@ describe("Home and the Career evidence page agree on workspace evidence files", 
 
     const pageHtml = evidencePage(0);
     expect(pageHtml).toContain("No career evidence yet");
-    expect(pageHtml).toContain("Required");
+    expect(pageHtml).toContain("Start here");
     expect(pageHtml).not.toContain("Workspace evidence files");
   });
 });

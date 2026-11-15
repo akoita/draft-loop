@@ -44,13 +44,14 @@ describe("Career evidence card without a selected base", () => {
   it("creates the base on the first add when the workspace has no legacy evidence", () => {
     const html = render(fresh, { automatic: true });
     expect(html).toContain("No career evidence yet");
-    expect(html).toContain("creates a knowledge base for this workspace in");
-    expect(html).toContain("DraftLoop application data");
+    expect(html).toContain("Your CV is enough to start");
+    expect(html).toContain("Add your career documents");
+    expect(html).not.toContain("knowledge base");
     expect(html).toContain(">Add documents<");
     expect(html).toContain(">Review and fetch source URL<");
     expect(html).not.toContain("legacy");
     expect(html).not.toContain("Import legacy evidence");
-    expect(html).toContain("Required");
+    expect(html).toContain("Start here");
   });
 
   it("lists workspace evidence files read-only: no import offer, and the first add still creates a base", () => {

@@ -333,6 +333,11 @@ export async function seedRecord(
       [tenant, record],
     ],
     [
+      `INSERT INTO candidate_record_names (tenant_id, workspace_id, name, updated_at)
+       VALUES ($1, $2, 'Fictional search', $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO agent_connection_caps (tenant_id, workspace_id, client_id, monthly_cap_cents, updated_at)
        VALUES ($1, $2, 'fictional-assistant', 500, $3)`,
       [tenant, record, at],
