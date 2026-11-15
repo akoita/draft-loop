@@ -86,6 +86,28 @@ const themeNames = (): Readonly<Record<string, string>> => ({
   leadership: t`Leadership`,
 });
 
+/** The starting topics of a first conversation on an empty record (#2732), by their stable name. */
+const startTopics = (): Readonly<
+  Record<string, { readonly name: string; readonly hint: string }>
+> => ({
+  "work history": {
+    name: t`Your work history`,
+    hint: t`Jobs you held: employer, title, dates and what you did.`,
+  },
+  education: {
+    name: t`Education and training`,
+    hint: t`Degrees, courses and certificates.`,
+  },
+  skills: {
+    name: t`Skills and tools`,
+    hint: t`What you know how to do, and the tools you use.`,
+  },
+  "proud of": {
+    name: t`Something you are proud of`,
+    hint: t`One project or result, told as a story.`,
+  },
+});
+
 /**
  * A topic's name on the screen (#2403): its short title worded for its kind in the screen's
  * language, or its reason when an older session has no title.
@@ -100,6 +122,8 @@ export function careerInterviewTopicTitle(topic: CareerInterviewTopicView): stri
       return themeNames()[title] ?? title;
     case "application-relevance":
       return t`Asked in a job post: ${title}`;
+    case "career-start":
+      return startTopics()[title]?.name ?? title;
     default:
       return title;
   }
@@ -161,6 +185,8 @@ export function careerInterviewTopicReason(topic: CareerInterviewTopicView): str
         : t`A job you applied for asks for "${title}", and your record does not show it yet.`;
     case "candidate-subject":
       return title === "" ? topic.reason : t`You chose to talk about: ${title}`;
+    case "career-start":
+      return startTopics()[title]?.hint ?? topic.reason;
     default:
       return topic.reason;
   }
@@ -171,6 +197,9 @@ export function careerInterviewOffer(topics: readonly CareerInterviewTopicView[]
   const [first, second] = topics;
   if (first === undefined) {
     return t`I have no topic to suggest today. Is there anything from your career you would like to tell me about?`;
+  }
+  if (topics.every((topic) => topic.kind === "career-start")) {
+    return t`Your record is empty, so let's begin with the basics. Which would you like to start with?`;
   }
   const one = careerInterviewTopicReason(first);
   if (second === undefined)

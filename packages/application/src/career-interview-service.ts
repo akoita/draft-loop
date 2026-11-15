@@ -27,6 +27,7 @@ import {
   type CareerInterviewFact,
   type CareerInterviewRequirement,
   type CareerInterviewTopic,
+  careerStartTopics,
   findCareerInterviewTopics,
 } from "./career-interview-topics.js";
 
@@ -266,11 +267,26 @@ export function createCareerInterviewService(
       }
       const record = await options.loadRecord(workspaceId);
       const declinedTopicKeys = await store.declinedTopicKeys(workspaceId);
+      // An empty record gets every starting topic at once (#2732), minus those already told:
+      // their summaries are evidence, though the profile has no fact from them yet.
+      const starting = record.facts.length === 0;
+      const told = starting
+        ? (await store.list(workspaceId, 20)).flatMap((earlier) =>
+            earlier.topics
+              .filter(
+                (topic) =>
+                  topic.kind === "career-start" &&
+                  topic.summary !== undefined &&
+                  (topic.status === "summarised" || topic.status === "closed"),
+              )
+              .map((topic) => topic.key),
+          )
+        : [];
       const topics = findCareerInterviewTopics({
         facts: record.facts,
         requirements: record.requirements,
-        declinedTopicKeys,
-        maximumTopics: perProposal,
+        declinedTopicKeys: new Set([...declinedTopicKeys, ...told]),
+        maximumTopics: starting ? careerStartTopics.length : perProposal,
       });
       const at = now();
       const session: CareerInterviewSession = {

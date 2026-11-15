@@ -2691,6 +2691,10 @@ msgstr "reporter"
 msgid "Defer"
 msgstr "Reporter"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Degrees, courses and certificates."
+msgstr "Diplômes, formations et certifications."
+
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -3206,6 +3210,10 @@ msgstr "Modification de la version {savedVersion}. L’enregistrement crée une 
 #: packages/ui/src/review.tsx
 msgid "Edits you make here are applied when you approve; the critic has not reviewed them."
 msgstr "Les modifications faites ici sont appliquées à l’approbation ; le relecteur ne les a pas relues."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Education and training"
+msgstr "Études et formations"
 
 #: packages/ui/src/run-details.tsx
 msgid "Effective checksum"
@@ -4410,6 +4418,10 @@ msgstr "Exigences lues dans l’offre d’emploi"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
 msgstr "Exigences du poste relues"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Jobs you held: employer, title, dates and what you did."
+msgstr "Les postes que vous avez occupés : employeur, intitulé, dates et ce que vous y avez fait."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Join the DraftLoop beta"
@@ -5813,6 +5825,10 @@ msgstr "Une ou deux pages sont enregistrées comme objectif de pages de votre po
 #: packages/ui/src/export-template.ts
 msgid "One page with smaller type and tighter spacing, so the most fits on each page."
 msgstr "Une page avec une police plus petite et un interligne plus serré, pour en faire tenir le plus possible."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "One project or result, told as a story."
+msgstr "Un projet ou un résultat, raconté comme une histoire."
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Only applications without runs, briefs or exports can be deleted. Archiving keeps everything and can be undone."
@@ -7973,6 +7989,10 @@ msgstr "La connexion se trouve sur l’accueil, dans Réglages de l’espace de 
 msgid "Signing in"
 msgstr "Connexion"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Skills and tools"
+msgstr "Compétences et outils"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Skip this question"
 msgstr "Passer cette question"
@@ -7984,6 +8004,10 @@ msgstr "Question passée."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
 msgstr "Annonce sur les réseaux sociaux"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Something you are proud of"
+msgstr "Une réalisation dont vous êtes fier"
 
 #: packages/ui/src/home-applications-view.tsx
 msgid "Sort"
@@ -10326,6 +10350,10 @@ msgstr "Ce qu'il faut mettre en avant"
 msgid "What you give"
 msgstr "Ce que vous fournissez"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "What you know how to do, and the tools you use."
+msgstr "Ce que vous savez faire et les outils que vous utilisez."
+
 #: apps/web/src/interview-guide.tsx
 msgid "When"
 msgstr "Quand"
@@ -10725,6 +10753,10 @@ msgid "Your plan's runs for today are used. Try again later."
 msgstr "Les exécutions du jour de votre offre sont utilisées. Réessayez plus tard."
 
 #: packages/ui/src/career-interview-model.ts
+msgid "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+msgstr "Votre dossier est vide, commençons donc par l’essentiel. Par quoi voulez-vous commencer ?"
+
+#: packages/ui/src/career-interview-model.ts
 msgid "Your record names {title} but leaves out part of this role."
 msgstr "Votre dossier cite {title} sans tout dire de ce rôle."
 
@@ -10748,6 +10780,10 @@ msgstr "Votre session a expiré. Reconnectez-vous."
 #: packages/ui/src/career-interview-live.tsx
 msgid "Your voice goes to {0} to become text."
 msgstr "Votre voix est envoyée à {0} pour être transcrite."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your work history"
+msgstr "Votre parcours professionnel"
 
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"
