@@ -39,6 +39,7 @@ contributors, maintainers, and operators to the current information they need.
 | Develop and test the server locally                                      | [Local server stack](operations/local-server-stack.md)                                                                                                                                                                |
 | Deploy the hosted service                                                | [Server deploy](operations/server-deploy.md)                                                                                                                                                                          |
 | List DraftLoop in an assistant directory | [Directory listing](operations/directory-listing.md) |
+| Sell credit packs through Stripe in test mode | [Stripe test mode](operations/stripe-test-mode.md) |
 
 ## Document types
 
