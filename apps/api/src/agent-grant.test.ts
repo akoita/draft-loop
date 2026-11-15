@@ -23,6 +23,12 @@ describe("agentGrantOf", () => {
     expect(agentGrantOf({ grantedScopes: [] }, "web")).toBe(undefined);
   });
 
+  it("is none for a member client the deployment names, and a grant for any other", () => {
+    const token = { clientId: "smoke", grantedScopes: ["openid"] };
+    expect(agentGrantOf(token, "web", ["smoke"])).toBe(undefined);
+    expect(agentGrantOf(token, "web", ["other"])).toEqual({ clientId: "smoke", scopes: [] });
+  });
+
   it("reads only known scopes under the prefix, and none is still a grant", () => {
     expect(
       agentGrantOf(

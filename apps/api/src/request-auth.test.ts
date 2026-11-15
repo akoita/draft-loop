@@ -47,6 +47,7 @@ async function token(claims: Record<string, unknown> = {}): Promise<string> {
 async function signInApi(
   resolveSignIn: ResolveSignIn,
   keys: JWTVerifyGetKey = createLocalJWKSet({ keys: [publicJwk] }),
+  memberClientIds?: readonly string[],
 ): Promise<FastifyInstance> {
   app = await buildApi({
     ownerToken,
@@ -55,6 +56,7 @@ async function signInApi(
       issuer,
       audience,
       webClientId: "draft-loop-web",
+      ...(memberClientIds === undefined ? {} : { memberClientIds }),
       allowHttp: false,
       resolveSignIn,
       keys,
@@ -112,6 +114,38 @@ describe("sign-in mode", () => {
       caller: { kind: "member", tenantId: "org-1", memberId: "member-new", role: "member" },
     });
     expect(unverified.statusCode).toBe(403);
+  });
+
+  it("gives a named member client the member's full access, but never a new account", async () => {
+    const api = await signInApi(
+      async (identity) => (identity.email === "ada@example.test" ? member : undefined),
+      createLocalJWKSet({ keys: [publicJwk] }),
+      ["draft-loop-smoke"],
+    );
+    let reached = false;
+    api.post("/v1/sign-up", async (request) => {
+      reached = request.signUpIdentity !== undefined;
+      return {};
+    });
+    const smoke = await token({ azp: "draft-loop-smoke" });
+
+    const response = await api.inject({
+      method: "GET",
+      url: "/v1/workspaces/ws-1/applications",
+      headers: { authorization: `Bearer ${smoke}` },
+    });
+    const signUp = await api.inject({
+      method: "POST",
+      url: "/v1/sign-up",
+      headers: {
+        authorization: `Bearer ${await token({ azp: "draft-loop-smoke", email: "new@example.test" })}`,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ caller: { kind: "member", ...member }, agent: null });
+    expect(signUp.statusCode).toBe(403);
+    expect(reached).toBe(false);
   });
 
   it("forbids a valid token without an active membership", async () => {

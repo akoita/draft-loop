@@ -36,6 +36,12 @@ export interface OidcSettings {
   readonly audience: string;
   /** The web screen's public client id, which the screen signs in with. */
   readonly webClientId: string;
+  /**
+   * Other clients whose tokens act as the member with full access, like the web screen's, from
+   * `DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS`: a deployment's own smoke, never an assistant. They cannot
+   * create an account. Any client not named here, or as the web client, is an agent grant.
+   */
+  readonly memberClientIds?: readonly string[];
   /** Where the provider publishes its keys; discovered from the issuer when unset. */
   readonly jwksUrl?: string;
   /** Whether plain-http provider addresses are accepted, for the local stack only. */

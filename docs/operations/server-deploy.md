@@ -150,6 +150,11 @@ provider's password grant:
 | `DRAFT_LOOP_TEST_SIGN_IN_EMAIL`        | Its verified email, which the organisation names as first owner |
 | `DRAFT_LOOP_TEST_SIGN_IN_ORGANISATION` | Optional; the organisation id, `smoke` by default               |
 
+The API treats a token from any client other than the web screen's as an
+assistant's grant, which cannot create a workspace. Name the smoke's client in
+the API's `DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS` so its token acts as the member.
+Such a client still cannot create an account.
+
 The smoke then creates the organisation with the owner token, or reuses it,
 and gives it the internal plan. It records the storage and provider
 transmission consents on its fresh workspace, and renews the member's token
