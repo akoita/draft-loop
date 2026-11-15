@@ -27,6 +27,7 @@ import {
   applicationMaterialTellReason,
   applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
+  recordGapsNotice,
 } from "./application-material-model.js";
 import {
   InterviewGuideForm,
@@ -398,6 +399,11 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                   </li>
                 ))}
               </ol>
+            )}
+            {draft.record_gaps === undefined || draft.record_gaps.length === 0 ? null : (
+              <p className="application-material-note" role="note">
+                {recordGapsNotice(draft.record_gaps)}
+              </p>
             )}
             {draft.dropped_sentences === undefined || draft.kind === "interview-guide" ? null : (
               <section className="application-material-tells" aria-labelledby="material-dropped">
