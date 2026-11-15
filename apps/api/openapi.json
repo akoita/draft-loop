@@ -4516,6 +4516,10 @@
               "properties": {
                 "id": {
                   "type": "string"
+                },
+                "name": {
+                  "description": "The name people gave the record; absent when it has none.",
+                  "type": "string"
                 }
               },
               "required": [
@@ -6329,6 +6333,21 @@
           "status",
           "assignedAt",
           "workspaceId"
+        ]
+      },
+      "RecordNameInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "ResearchBriefInput": {
@@ -12053,6 +12072,10 @@
               "properties": {
                 "id": {
                   "type": "string"
+                },
+                "name": {
+                  "description": "The name people gave the record; absent when it has none.",
+                  "type": "string"
                 }
               },
               "required": [
@@ -13904,6 +13927,22 @@
           "status",
           "assignedAt",
           "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "RecordName": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ],
         "additionalProperties": false
       },
@@ -15895,7 +15934,7 @@
     "/v1/workspaces": {
       "get": {
         "summary": "List the workspaces the caller can reach",
-        "description": "Owners and admins, and the owner token, see every workspace of the organisation; a member sees the workspaces assigned to them. Sorted by id.",
+        "description": "Owners and admins, and the owner token, see every workspace of the organisation; a member sees the workspaces assigned to them. Sorted by id, each with the name people gave it, if any.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -15903,6 +15942,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkspaceList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/name": {
+      "put": {
+        "summary": "Name a candidate record",
+        "description": "Sets the name the screens show for the record. The record keeps its id. A record without a name is shown by its id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 400,
+                    "description": "The name people see for the record: a plain name or a short sentence, 1 to 80 characters once its spaces are tidied."
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordName"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

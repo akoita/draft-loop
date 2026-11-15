@@ -206,6 +206,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "PUT /v1/workspaces/:workspaceId/applications/:applicationId/models",
   "PUT /v1/workspaces/:workspaceId/autopilot",
   "PUT /v1/workspaces/:workspaceId/budget",
+  "PUT /v1/workspaces/:workspaceId/name",
   "PUT /v1/workspaces/:workspaceId/fact-usage",
   "PUT /v1/workspaces/:workspaceId/writing-samples",
   "PUT /v1/workspaces/:workspaceId/knowledge-selection",

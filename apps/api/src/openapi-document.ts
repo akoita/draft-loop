@@ -11,7 +11,12 @@ import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
-import type { BetaInvites, BetaWaitlist, CreditPurchases } from "@draft-loop/storage-postgres";
+import type {
+  BetaInvites,
+  BetaWaitlist,
+  CreditPurchases,
+  RecordNames,
+} from "@draft-loop/storage-postgres";
 import { buildApi } from "./app.js";
 import type { TenantEntitlements } from "./entitlement-gate.js";
 import type { OperatorTenant } from "./operator-plan-routes.js";
@@ -38,6 +43,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       agentConnectionCapsFor: () => ({}) as AgentConnectionCapStore,
       runSpansFor: () => ({}) as RunSpanStore,
       creditPurchasesFor: () => ({}) as CreditPurchases,
+      recordNamesFor: () => ({}) as RecordNames,
       entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,

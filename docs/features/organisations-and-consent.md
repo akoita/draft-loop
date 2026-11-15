@@ -25,6 +25,10 @@ organisation; it erases everything with `draft-loop-server`
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
    their assigned records.
+   A record keeps the id it was created with. Anyone who reaches it can give
+   it a plain name of up to 80 characters with
+   `PUT /v1/workspaces/{id}/name`; the records list returns that name, and a
+   record without one is shown by its id. Erasing the record removes the name.
 3. Record the candidate's two consents under **Credits and consent**: to store
    their material, and to send it to model providers. Uploads need the first;
    runs and profile derivation need the second. A withdrawal is recorded too,

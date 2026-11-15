@@ -103,6 +103,7 @@ import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
 import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
+import { registerRecordNameRoutes } from "./record-name-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
 import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
@@ -395,14 +396,26 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (application !== undefined && recordAccessFor !== undefined) {
     // Before the workspace routes, so its hooks run for each of them.
+    const recordNamesFor = options.tenants?.recordNamesFor;
     registerRecordAccess(app, {
       recordAccessFor,
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+      ...(recordNamesFor === undefined ? {} : { recordNamesFor }),
       ...(options.tenants?.ownerTenantId === undefined
         ? {}
         : { ownerTenantId: options.tenants.ownerTenantId }),
     });
+    if (recordNamesFor !== undefined) {
+      registerRecordNameRoutes(app, {
+        recordNamesFor,
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        ...(options.tenants?.ownerTenantId === undefined
+          ? {}
+          : { ownerTenantId: options.tenants.ownerTenantId }),
+      });
+    }
     if (options.directory !== undefined) {
       registerRecordMemberRoutes(app, {
         recordAccessFor,

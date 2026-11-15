@@ -809,6 +809,10 @@ export interface ApiSchemas {
     readonly workspaceId: string;
     readonly members: readonly (ApiSchemas["RecordMember"])[];
   };
+  "RecordName": {
+    readonly id: string;
+    readonly name: string;
+  };
   "ResearchBrief": {
     readonly id: string;
     readonly application_id: string;
@@ -1283,6 +1287,7 @@ export interface ApiSchemas {
   "WorkspaceList": {
     readonly workspaces: readonly ({
       readonly id: string;
+      readonly name?: string;
     })[];
   };
   "WritingPolicy": {
@@ -1329,6 +1334,15 @@ export interface ApiOperations {
   };
   "GET /v1/workspaces": {
     readonly response: ApiSchemas["WorkspaceList"];
+  };
+  "PUT /v1/workspaces/{workspaceId}/name": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly name: string;
+    };
+    readonly response: ApiSchemas["RecordName"];
   };
   "GET /v1/workspaces/{workspaceId}/members": {
     readonly path: {
