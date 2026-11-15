@@ -25538,7 +25538,7 @@
     "/v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/actions": {
       "post": {
         "summary": "Act on a guided career interview session",
-        "description": "accept, answer and own_subject call the interviewer model and need the record's consent to send career material to Anthropic (403 consent_required) and a server model route (503). confirm writes the topic's confirmed summary as career evidence; nothing in the record is overwritten.",
+        "description": "accept, answer and own_subject call the interviewer model and need the record's consent to send career material to Anthropic (403 consent_required) and a server model route (503); 502 interview_model_failed when the model's answer cannot be used, such as one cut off at its output limit, and then nothing is saved. confirm writes the topic's confirmed summary as career evidence; nothing in the record is overwritten.",
         "requestBody": {
           "required": true,
           "content": {

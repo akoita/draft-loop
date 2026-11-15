@@ -39,11 +39,11 @@ import "@fastify/websocket";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { providerFailureOf } from "./application-material-routes.js";
 import { type LiveInterviewSpeech, runLiveInterview } from "./career-interview-live.js";
 import { consentRecordId } from "./consent-routes.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
-import { apiErrorSchema } from "./errors.js";
+import { apiError, apiErrorSchema } from "./errors.js";
 import type { SourceEvidenceKinds } from "./work-journal-routes.js";
 
 /** What the guided career interview needs from a deployment (#1030, #2178). */
@@ -366,6 +366,20 @@ export function registerCareerInterviewRoutes(
           .send({ error: { code: error.code, message: error.message } });
         return undefined;
       }
+      const failure = providerFailureOf(error);
+      if (failure !== undefined) {
+        // Content-free: the adapter's code and diagnostics, never the conversation.
+        reply.log.warn({ ...failure }, "career interview model failed");
+        void reply
+          .code(502)
+          .send(
+            apiError(
+              "interview_model_failed",
+              "The interviewer's answer could not be used. Nothing was saved; send your answer again.",
+            ),
+          );
+        return undefined;
+      }
       throw error;
     }
   };
@@ -446,7 +460,7 @@ export function registerCareerInterviewRoutes(
       schema: {
         summary: "Act on a guided career interview session",
         description:
-          "accept, answer and own_subject call the interviewer model and need the record's consent to send career material to Anthropic (403 consent_required) and a server model route (503). confirm writes the topic's confirmed summary as career evidence; nothing in the record is overwritten.",
+          "accept, answer and own_subject call the interviewer model and need the record's consent to send career material to Anthropic (403 consent_required) and a server model route (503); 502 interview_model_failed when the model's answer cannot be used, such as one cut off at its output limit, and then nothing is saved. confirm writes the topic's confirmed summary as career evidence; nothing in the record is overwritten.",
         params: sessionParams,
         body: actionBody,
         response: { 200: sessionView, ...errors },
