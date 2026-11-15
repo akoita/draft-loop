@@ -42,12 +42,13 @@ export function webHostPanels(
     evidenceAdvanced: ({ revision, setNote }) => (
       <EvidenceAdvanced client={client} revision={revision} setNote={setNote} />
     ),
-    evidenceAfter: ({ revision, openHome }) => (
+    evidenceAfter: ({ revision, openHome, onChanged }) => (
       <EvidenceSections
         client={client}
         revision={revision}
         workJournal={mode === "owner"}
         openHome={openHome}
+        onChanged={onChanged}
       />
     ),
     ...(mode === "owner"

@@ -15,6 +15,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { firstInterviewBase } from "./career-interview-first-base.js";
 import { type ConsentProvider, isConsentProvider } from "./consent-model.js";
 import {
   createBrowserPlayer,
@@ -36,6 +37,8 @@ export interface CareerInterviewSectionProps {
   readonly client: ApiClient;
   /** The record's selected knowledge bases, the first preselected; undefined until read. */
   readonly bases: readonly ApiSchemas["KnowledgeBase"][] | undefined;
+  /** Called after a summary became evidence, so the page reads the record's files again. */
+  readonly onChanged?: (() => void) | undefined;
 }
 
 /** What to tell the candidate when a career interview call is refused. */
@@ -179,7 +182,7 @@ export async function allowInterviewProviders(
   }
 }
 
-export function CareerInterviewSection({ client, bases }: CareerInterviewSectionProps) {
+export function CareerInterviewSection({ client, bases, onChanged }: CareerInterviewSectionProps) {
   const workspaceId = useRecordId();
   const language = interviewLanguage(useScreenLocale().locale);
   const [session, setSession] = useState<CareerInterviewSessionView | undefined>(undefined);
@@ -242,9 +245,19 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
           return careerInterviewRefused(error);
         }
       }}
-      onAction={async (action: CareerInterviewAction) => {
+      createsFirstBase={bases !== undefined}
+      onAction={async (chosen: CareerInterviewAction) => {
         if (session === undefined) return undefined;
         try {
+          // A record with no base gets its first one from the first confirmed summary (#2733).
+          const first =
+            chosen.action === "confirm" && chosen.knowledge_base_id === ""
+              ? await firstInterviewBase(client, workspaceId)
+              : undefined;
+          const action =
+            first === undefined || chosen.action !== "confirm"
+              ? chosen
+              : { ...chosen, knowledge_base_id: first.id };
           show(
             await client.call(
               "POST /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}/actions",
@@ -257,6 +270,8 @@ export function CareerInterviewSection({ client, bases }: CareerInterviewSection
               },
             ),
           );
+          await first?.select();
+          if (action.action === "confirm") onChanged?.();
           return undefined;
         } catch (error) {
           return careerInterviewRefused(error);

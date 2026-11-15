@@ -9461,6 +9461,10 @@ msgstr "Cette candidature utilise sa propre paire de modèles"
 msgid "This application's job description could not be read. Its file may have been moved or emptied."
 msgstr "L’offre d’emploi de cette candidature n’a pas pu être lue. Son fichier a peut-être été déplacé ou vidé."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "This becomes your first career evidence. You can add documents later."
+msgstr "Ceci devient votre premier élément de parcours. Vous pourrez ajouter des documents plus tard."
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "This brief changed since you opened it. The latest version has been loaded; review it and try again."
 msgstr "Ce brief a changé depuis que vous l’avez ouvert. La dernière version a été chargée ; relisez-la et réessayez."

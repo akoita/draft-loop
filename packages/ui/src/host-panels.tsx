@@ -49,6 +49,8 @@ export interface HostPanels {
 export interface EvidenceAfterContext {
   readonly revision: number;
   readonly openHome?: (() => void) | undefined;
+  /** Tells the screens the panel changed the knowledge selection or its files, to read again. */
+  readonly onChanged?: (() => void) | undefined;
 }
 
 /** What the host's panel in the Career evidence card's Advanced options is given. */

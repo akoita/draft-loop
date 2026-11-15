@@ -291,6 +291,7 @@ export function EvidenceSections({
   revision,
   workJournal,
   openHome,
+  onChanged,
 }: EvidenceSectionsProps) {
   const { groups, problem } = useSelectedBases(client, revision);
   const bases = groups?.map((group) => group.base);
@@ -301,7 +302,9 @@ export function EvidenceSections({
         <p className="eyebrow">{t`Optional`}</p>
         <p>{t`Add more evidence at any time. None of the sections below is needed before Career profile.`}</p>
       </div>
-      {workJournal === true ? <CareerInterviewSection client={client} bases={bases} /> : null}
+      {workJournal === true ? (
+        <CareerInterviewSection client={client} bases={bases} onChanged={onChanged} />
+      ) : null}
       {workJournal === true ? (
         <WorkJournalSection client={client} bases={bases} openHome={openHome} />
       ) : null}
@@ -319,4 +322,6 @@ export interface EvidenceSectionsProps {
   readonly workJournal?: boolean;
   /** Opens Home, for the Work journal's link to Agents. */
   readonly openHome?: (() => void) | undefined;
+  /** Tells the shared page a panel added evidence, so it reads the record again. */
+  readonly onChanged?: (() => void) | undefined;
 }

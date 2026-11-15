@@ -90,6 +90,9 @@ starting topics at once, in this order, and no job-post theme (#2732):
   candidate has not given. It still suggests none of them.
 - **Told once.** A starting topic with a summary is not offered again, even
   while the profile has no fact from it yet. A declined one stays away too.
+- **First evidence.** A record with no knowledge base gets one from the first
+  confirmed summary: the web screen creates it, saves the summary, then
+  selects it for the record (#2733).
 - **Back to normal.** Once the profile holds a fact, the finder proposes gaps,
   periods and themes as above.
 
