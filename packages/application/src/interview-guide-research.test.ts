@@ -40,6 +40,32 @@ describe("interview guide research", () => {
     );
   });
 
+  it("runs every planned query within each depth's cap, one search a query (#2719)", async () => {
+    for (const depth of ["essential", "extensive"] as const) {
+      const plan = interviewGuideResearchPlan(subject, { depth, topics: ["salary"] }, now);
+      // One search (US$0.01) and its tokens: about US$0.015 a query.
+      const search = createScriptedResearchSearch(
+        plan.queries.map(() => []),
+        { costUsd: 0.015 },
+      );
+      await runResearch({
+        workspaceId: "owner",
+        applicationId: "app_fixture0001",
+        subject,
+        plan,
+        maxCostUsd: plan.maxCostUsd,
+        search,
+        screen: async () => true,
+        findings: { write: async () => ({ findings: [], model: { provider: "x", model: "y" } }) },
+        findingsSpentUsd: () => 0,
+        newId: () => "rbr_fixture0009",
+        now: () => now,
+      });
+      expect(search.requests).toHaveLength(plan.queries.length);
+      expect(search.requests.every((request) => request.maxSearches === 1)).toBe(true);
+    }
+  });
+
   it("rates the employer and public bodies primary, forums weak and the rest press", () => {
     const rate = (url: string) => researchSourceReliability(url, "Example Corp");
     expect(rate("https://www.examplecorp.com/careers")).toBe("primary");

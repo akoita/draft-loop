@@ -21,6 +21,8 @@ export interface ResearchSearchRequest {
   /** The oldest publication date to keep, `YYYY-MM-DD`. */
   readonly fromDate: string;
   readonly maxResults: number;
+  /** The web searches a provider that runs several may make for this query; its own limit when absent. */
+  readonly maxSearches?: number;
   /** Domains to search only, such as the employer's own site; every domain when absent. */
   readonly includeDomains?: readonly string[];
   readonly signal?: AbortSignal;
