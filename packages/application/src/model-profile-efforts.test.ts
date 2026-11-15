@@ -19,7 +19,7 @@ describe("model profile reasoning levels", () => {
     expect(levels).toEqual({
       "economy-anthropic-author@2": all,
       "economy-openai-critic@1": all,
-      "economy-anthropic-author@1": all,
+      "economy-anthropic-author@3": all,
       "balanced-openai-critic@1": all,
       "standard-anthropic-author@2": all,
       "standard-openai-critic@2": all,

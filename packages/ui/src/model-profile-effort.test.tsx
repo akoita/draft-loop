@@ -14,7 +14,7 @@ import {
 } from "./model-profile-picker-state.js";
 
 const balanced: ModelProfileReferences = {
-  author: { id: "economy-anthropic-author", version: 1 },
+  author: { id: "economy-anthropic-author", version: 3 },
   critic: { id: "balanced-openai-critic", version: 1 },
 };
 const writerHigh: ModelProfileReferences = {

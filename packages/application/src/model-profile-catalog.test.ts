@@ -18,7 +18,7 @@ describe("model profile catalog", () => {
     expect(catalog.map(({ profile }) => `${profile.id}@${profile.version}`)).toEqual([
       "economy-anthropic-author@2",
       "economy-openai-critic@1",
-      "economy-anthropic-author@1",
+      "economy-anthropic-author@3",
       "balanced-openai-critic@1",
       "standard-anthropic-author@2",
       "standard-openai-critic@2",
@@ -34,7 +34,7 @@ describe("model profile catalog", () => {
     const inputCaps: Record<string, number> = {
       "balanced-google-author@1": 1000000,
       "standard-anthropic-author@2": 1000000,
-      "economy-anthropic-author@1": 1000000,
+      "economy-anthropic-author@3": 1000000,
       "economy-anthropic-author@2": 1000000,
       "economy-openai-critic@1": 272000,
       "standard-openai-critic@2": 272000,
@@ -60,7 +60,7 @@ describe("model profile catalog", () => {
         "dev-deepinfra-glm-author@1": "2026-10-02",
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
-        "economy-anthropic-author@1": "2026-11-01",
+        "economy-anthropic-author@3": "2026-11-01",
         "economy-anthropic-author@2": "2026-11-01",
         "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@1": "2026-11-01",
@@ -85,7 +85,7 @@ describe("model profile catalog", () => {
     ).toEqual({
       "economy-anthropic-author@2": [0.5, 2.5],
       "economy-openai-critic@1": [0.1, 0.5],
-      "economy-anthropic-author@1": [2, 10],
+      "economy-anthropic-author@3": [2, 10],
       "balanced-openai-critic@1": [1, 5],
       "standard-anthropic-author@2": [4, 20],
       "standard-openai-critic@2": [2, 10],
@@ -107,7 +107,7 @@ describe("model profile catalog", () => {
       ),
     ).toMatchObject({
       "economy-anthropic-author@2": [0.05, 0.625],
-      "economy-anthropic-author@1": [0.1, 2.5],
+      "economy-anthropic-author@3": [0.1, 2.5],
       "standard-anthropic-author@2": [0.2, 5],
       "standard-anthropic-critic@1": [0.2, 8],
       "balanced-anthropic-critic@1": [0.1, 4],
@@ -120,7 +120,7 @@ describe("model profile catalog", () => {
       "https://platform.claude.com/docs/en/about-claude/pricing",
       "https://platform.claude.com/docs/en/build-with-claude/effort",
     ]);
-    expect(byId.get("economy-anthropic-author@1")).toMatchObject({
+    expect(byId.get("economy-anthropic-author@3")).toMatchObject({
       profile: { provider: "anthropic", modelId: "claude-sonnet-5-5", roles: ["author"] },
       sources: [
         "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
@@ -130,7 +130,7 @@ describe("model profile catalog", () => {
       apiPricing: { maxInputTokens: 1000000 },
     });
     expect(
-      defaultModelProfileRegistry.resolve("economy-anthropic-author", 1, "author").modelId,
+      defaultModelProfileRegistry.resolve("economy-anthropic-author", 3, "author").modelId,
     ).toBe("claude-sonnet-5-5");
     expect(byId.get("standard-anthropic-author@2")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/overview",
@@ -235,7 +235,7 @@ describe("model profile catalog", () => {
         id: "balanced",
         label: "Balanced — unvalidated",
         tier: "standard",
-        author: { id: "economy-anthropic-author", version: 1 },
+        author: { id: "economy-anthropic-author", version: 3 },
         critic: { id: "balanced-openai-critic", version: 1 },
       },
       {
@@ -249,7 +249,7 @@ describe("model profile catalog", () => {
         id: "balanced-anthropic",
         label: "Balanced, Anthropic only — unvalidated",
         tier: "standard",
-        author: { id: "economy-anthropic-author", version: 1 },
+        author: { id: "economy-anthropic-author", version: 3 },
         critic: { id: "standard-anthropic-critic", version: 1 },
       },
       {

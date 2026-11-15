@@ -16,7 +16,7 @@ const standard: ModelProfileReferences = {
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const balanced: ModelProfileReferences = {
-  author: { id: "economy-anthropic-author", version: 1 },
+  author: { id: "economy-anthropic-author", version: 3 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const development: ModelProfileReferences = {
@@ -103,7 +103,7 @@ describe("desktop model profile API budget scenario", () => {
     const html = renderBudget(balanced, apiKeyModes);
     // The heading names the model, not Balanced's historical "economy" profile id.
     expect(html).toContain("Author: Claude Sonnet 5.5");
-    expect(html).not.toContain("economy-anthropic-author@1");
+    expect(html).not.toContain("economy-anthropic-author@3");
     expect(html).toContain("anthropic/claude-sonnet-5-5");
     expect(html).toContain("Critic: GPT-6.1 Sol");
     expect(html).toContain("$2/1M input · $10/1M output");

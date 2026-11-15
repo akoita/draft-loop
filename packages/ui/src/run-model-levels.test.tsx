@@ -14,7 +14,7 @@ const start: StartReviewAction = { type: "start" };
 
 /** Balanced: the writer's own level is medium and the reviewer's is low. */
 const balanced: ModelProfileReferences = {
-  author: { id: "economy-anthropic-author", version: 1 },
+  author: { id: "economy-anthropic-author", version: 3 },
   critic: { id: "balanced-openai-critic", version: 1 },
 };
 const raised: ModelProfileReferences = {

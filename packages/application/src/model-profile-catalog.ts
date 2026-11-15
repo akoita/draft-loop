@@ -151,6 +151,18 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     maxInputTokens: 1000000,
     reviewedAt: "2026-11-01",
   },
+  // Version 3 is version 1's model with a larger output budget: the same rate card.
+  "economy-anthropic-author@3": {
+    sources: [anthropicSonnet55Overview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 2,
+      outputUsdPerMillion: 10,
+      cacheReadUsdPerMillion: 0.1,
+      cacheWriteUsdPerMillion: 2.5,
+    },
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-11-01",
+  },
   "economy-anthropic-author@2": {
     sources: [anthropicModelsOverview, anthropicPricing],
     // Haiku 5.5 bills prompts above 100K tokens at $0.50/$2.50 instead of $0.10/$0.50. A run's
@@ -270,7 +282,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "balanced",
     label: "Balanced — unvalidated",
     tier: "standard",
-    author: { id: "economy-anthropic-author", version: 1 },
+    author: { id: "economy-anthropic-author", version: 3 },
     critic: { id: "balanced-openai-critic", version: 1 },
   },
   {
@@ -285,7 +297,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "balanced-anthropic",
     label: "Balanced, Anthropic only — unvalidated",
     tier: "standard",
-    author: { id: "economy-anthropic-author", version: 1 },
+    author: { id: "economy-anthropic-author", version: 3 },
     critic: { id: "standard-anthropic-critic", version: 1 },
   },
   {

@@ -323,4 +323,20 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
   },
   ...createGoogleGemini4AuthorProfiles(),
+  // Sonnet 5.5 spends more of its output on thinking than its 32,768-token budget left for a
+  // long draft, and the writer call then stopped at max_tokens. Version 3 doubles the budget.
+  {
+    id: "economy-anthropic-author",
+    version: 3,
+    provider: "anthropic",
+    modelId: "claude-sonnet-5-5",
+    tier: "economy",
+    roles: ["author"],
+    runtime: {
+      effort: "medium",
+      maxOutputTokens: 64000,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
 ]);

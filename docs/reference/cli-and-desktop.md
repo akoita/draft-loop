@@ -111,6 +111,9 @@ and account or provider availability is unchecked.
 | `development-mistral` | Mistral Large 4 (public preview)               | GPT-6 Luna                                                    | Mistral, OpenAI            |
 
 - **Balanced** sits between economy and standard on cost.
+  Its writer, and the `balanced-anthropic` writer, is `economy-anthropic-author@3`:
+  Claude Sonnet 5.5 with a 64,000-token output budget. A workspace that saved
+  version 1 keeps its 32,768-token budget until the preset is chosen again.
 - **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
 - **The two Google writer pairs** run in the CLI and the local-first desktop with
   your own Gemini key. A DraftLoop server does not route Gemini yet
