@@ -34,7 +34,7 @@ const assignable: ApiSchemas["OrganisationMember"][] = [
 const listProps = { busy: false, messages: [], onAssign: () => {}, onRemove: () => {} };
 
 describe("record picker", () => {
-  it("lists the records with the chosen one selected, and a labelled new-record field", () => {
+  it("lists the records with the chosen one selected, and folds the new-record field", () => {
     const html = renderToStaticMarkup(
       <RecordPicker
         ids={["record-a", "record-b"]}
@@ -46,8 +46,24 @@ describe("record picker", () => {
 
     expect(html).toContain('<label for="record-picker">Record</label>');
     expect(html).toContain('<option value="record-b" selected="">record-b</option>');
+    expect(html).toContain("New record");
+    expect(html).not.toContain("new-record-id");
+  });
+
+  it("shows a labelled new-record field once asked, with a way back", () => {
+    const html = renderToStaticMarkup(
+      <RecordPicker
+        ids={["record-a", "record-b"]}
+        chosen="record-b"
+        notice="unused"
+        onChoose={() => {}}
+        initiallyAdding
+      />,
+    );
+
     expect(html).toContain('<label for="new-record-id">New record id</label>');
     expect(html).toContain("Create record");
+    expect(html).toContain("Cancel");
   });
 
   it("marks a new id not set up yet", () => {
@@ -70,6 +86,9 @@ describe("record picker", () => {
 
     expect(html).toContain("No candidate record is assigned to you yet.");
     expect(html).not.toContain("record-picker");
+    // Naming the first record is the only thing to do, so the field is not folded.
+    expect(html).toContain('<label for="new-record-id">New record id</label>');
+    expect(html).not.toContain("Cancel");
   });
 });
 

@@ -119,13 +119,24 @@ export function BuyCredits({ packs, onBuy, locale, initiallyOpen = false }: BuyC
 
   return (
     <span className="buy-credits">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button
+        type="button"
+        className="button button-toolbar"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
         {t`Buy credits`}
       </button>
       {open ? (
         <span className="buy-credits-packs">
           {packs.map((pack) => (
-            <button key={pack.id} type="button" disabled={busy} onClick={() => void buy(pack.id)}>
+            <button
+              key={pack.id}
+              type="button"
+              className="button button-primary"
+              disabled={busy}
+              onClick={() => void buy(pack.id)}
+            >
               {packLabel(pack, locale)}
             </button>
           ))}

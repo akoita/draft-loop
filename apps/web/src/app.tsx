@@ -121,7 +121,9 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
       {mode === "sign-in" ? (
         <>
           <ShellActionsContext.Provider value={actions}>
-            <PageActions />
+            <div className="record-rail">
+              <PageActions />
+            </div>
           </ShellActionsContext.Provider>
           <Records client={client} memory={memory}>
             {(recordId, onSaved) => (

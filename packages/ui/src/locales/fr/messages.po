@@ -1740,6 +1740,7 @@ msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
@@ -5169,6 +5170,10 @@ msgstr "Nouveau nom pour {0}"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "New notes from your agents will be refused until you turn this back on."
 msgstr "Les nouvelles notes de vos agents seront refusées jusqu’à ce que vous réactiviez ce réglage."
+
+#: apps/web/src/records.tsx
+msgid "New record"
+msgstr "Nouveau dossier candidat"
 
 #: apps/web/src/records.tsx
 msgid "New record id"
