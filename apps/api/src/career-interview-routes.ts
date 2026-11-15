@@ -19,6 +19,10 @@ import type {
   CareerInterviewRequirement,
 } from "@draft-loop/application/career-interview-topics";
 import {
+  billedCallUsage,
+  recordCareerInterviewModelCall,
+} from "@draft-loop/application/career-interview-usage";
+import {
   careerInterviewDefaultModelId,
   careerInterviewPromptVersion,
   createModelCareerInterviewer,
@@ -30,6 +34,7 @@ import {
   careerInterviewSessionSchema,
   careerInterviewTurnMarks,
 } from "@draft-loop/schemas/career-interview";
+import type { AuditTrailStoragePort } from "@draft-loop/storage";
 import type { CareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import {
   type ConsentLedger,
@@ -54,6 +59,8 @@ export interface CareerInterviewParts {
   readonly route?: AnthropicRouteBuilder | undefined;
   /** The deployment's ceiling on sending candidate material to a provider. */
   readonly allowProviderData: boolean;
+  /** Where each interviewer call's tokens and cost are recorded for month usage (#2758). */
+  readonly calls?: Pick<AuditTrailStoragePort, "appendAuditEvent">;
 }
 
 export interface CareerInterviewRoutesOptions {
@@ -281,16 +288,47 @@ export function registerCareerInterviewRoutes(
         configuredModel: model,
         ...(pricing === undefined ? {} : { pricing }),
       });
-      // Each interviewer call leaves its model, tokens and cost in the log, never its words
-      // (#2758); a rejected answer, such as one cut off at its output limit, was billed too.
+      // Each interviewer call leaves its model, tokens and cost in the log and in month usage,
+      // never its words (#2758); a rejected answer, such as one cut off at its output limit, was
+      // billed too. A failure to record never fails the candidate's turn.
+      const record = async (call: Parameters<typeof recordCareerInterviewModelCall>[3]) => {
+        if (interview.calls === undefined) return;
+        await recordCareerInterviewModelCall(interview.calls, workspaceId, sessionId, call).catch(
+          (error: unknown) => {
+            log.warn(
+              { workspaceId, sessionId, error: (error as Error).name },
+              "career interview model call not recorded",
+            );
+          },
+        );
+      };
       const executor = {
         execute: async (modelRequest: Parameters<typeof routed.execute>[0]) => {
-          const response = await routed.execute(modelRequest).catch((error: unknown) => {
+          const response = await routed.execute(modelRequest).catch(async (error: unknown) => {
             log.info(
               { workspaceId, sessionId, model: model.modelId, costUsd: failedCallCostUsd(error) },
               "career interview model call failed",
             );
+            const billed = billedCallUsage(error);
+            if (billed !== undefined) {
+              await record({
+                provider: model.company,
+                modelId: model.modelId,
+                route: null,
+                ...billed,
+                completedAt: new Date().toISOString(),
+              });
+            }
             throw error;
+          });
+          await record({
+            provider: response.company,
+            modelId: response.modelId,
+            route: response.route,
+            inputTokens: response.usage.inputTokens,
+            outputTokens: response.usage.outputTokens,
+            estimatedUsd: response.cost.estimatedUsd,
+            completedAt: new Date().toISOString(),
           });
           log.info(
             {

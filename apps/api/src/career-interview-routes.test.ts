@@ -4,6 +4,7 @@ import {
   createScriptedTextToSpeech,
 } from "@draft-loop/application/live-speech";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
+import type { AuditEventInput } from "@draft-loop/storage";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import type { ConsentLedger, ConsentState } from "@draft-loop/storage/consent-ledger";
 import type { FastifyInstance } from "fastify";
@@ -78,12 +79,16 @@ function scriptedRoute(outputs: readonly object[], seen: unknown[]): AnthropicRo
 let app: FastifyInstance;
 let logs: string[];
 
+/** The audit events the interview recorded, one per interviewer call (#2758). */
+let events: AuditEventInput[] = [];
+
 async function build(options: {
   route?: AnthropicRouteBuilder;
   consent?: ConsentState;
   liveSpeech?: LiveInterviewSpeech;
 }): Promise<void> {
   logs = [];
+  events = [];
   const consents = {
     current: async () => options.consent ?? {},
   } as unknown as ConsentLedger;
@@ -101,6 +106,12 @@ async function build(options: {
       careerInterview: {
         sessions: createMemoryCareerInterviewSessionStore(),
         allowProviderData: true,
+        calls: {
+          appendAuditEvent: async (event) => {
+            events.push(event);
+            return event as never;
+          },
+        },
         ...(options.route === undefined ? {} : { route: options.route }),
       },
     },
@@ -179,6 +190,21 @@ describe("career interview routes", () => {
       outputTokens: 5,
       costUsd: 0.001,
     });
+    // Each call is recorded for month usage too, with counts only (#2758).
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      eventType: "career-interview.model-call",
+      entityType: "career-interview-session",
+      entityId: id,
+      payload: {
+        provider: "anthropic",
+        modelId: "claude-sonnet-5-5",
+        inputTokens: 10,
+        outputTokens: 5,
+        estimatedUsd: 0.001,
+      },
+    });
+    expect(JSON.stringify(events)).not.toContain("rebuilt the loan reports");
   });
 
   it("answers 502 and saves nothing when the model's answer cannot be used", async () => {
@@ -227,6 +253,9 @@ describe("career interview routes", () => {
         .map((line) => JSON.parse(line) as Record<string, unknown>)
         .find((entry) => entry.msg === "career interview model call failed"),
     ).toMatchObject({ sessionId: id, costUsd: 0.02 });
+    expect(events.at(-1)).toMatchObject({
+      payload: { route: null, inputTokens: 0, outputTokens: 0, estimatedUsd: 0.02 },
+    });
     expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
 
     fail = false;

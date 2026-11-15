@@ -435,6 +435,9 @@ Usage reads return counts and amounts only.
 
 Calls without a cost estimate are counted as `unpricedCalls`, never as zero.
 
+The month total also counts each career interviewer call, which the interview records as a
+content-free audit event: model, route, tokens and cost.
+
 ## The API from setup to export
 
 These routes take a hosted run from an empty workspace to a downloaded CV. The

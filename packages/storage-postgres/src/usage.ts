@@ -16,11 +16,14 @@ const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/u;
 
 /** The audit event the plan step appends after each call, holding all its calls so far. */
 const applicationPlanEventType = "run.application-plan";
+/** The audit event each career interviewer call appends, one per call (#2758). */
+const careerInterviewCallEventType = "career-interview.model-call";
 
 /**
- * Reads the tenant's usage per month from its execution records and, for the application plan
- * step whose calls are not executions, from each run's latest plan event. Row-level security confines the
- * sums to the tenant the storage was opened for (ADR 0011, D3).
+ * Reads the tenant's usage per month from its execution records and, for calls that are not
+ * executions, from audit events: each run's latest plan event for the application plan step, and
+ * one event per career interviewer call. Row-level security confines the sums to the tenant the
+ * storage was opened for (ADR 0011, D3).
  */
 export function createUsageReads(client: SqlSession) {
   return {
@@ -44,6 +47,14 @@ export function createUsageReads(client: SqlSession) {
                     ORDER BY workspace_id, entity_id, sequence DESC) AS latest,
                   jsonb_array_elements((latest.payload_json::jsonb)->'steps') AS step
             WHERE left(step->>'completedAt', 7) = $1
+           UNION ALL
+           SELECT call->>'provider', call->>'modelId', call->>'route',
+                  (call->>'inputTokens')::bigint, (call->>'outputTokens')::bigint,
+                  (call->>'estimatedUsd')::double precision
+             FROM (SELECT payload_json::jsonb AS call
+                     FROM audit_events
+                    WHERE event_type = $3) AS interview
+            WHERE left(call->>'completedAt', 7) = $1
          )
          SELECT provider, model_id, route,
                 count(*) AS calls,
@@ -54,7 +65,7 @@ export function createUsageReads(client: SqlSession) {
            FROM calls
           GROUP BY provider, model_id, route
           ORDER BY provider, model_id, route NULLS FIRST`,
-        [month, applicationPlanEventType],
+        [month, applicationPlanEventType, careerInterviewCallEventType],
       );
       return rows.map((row) => ({
         company: String(row.provider),
