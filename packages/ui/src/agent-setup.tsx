@@ -57,7 +57,8 @@ export interface AgentSetupProps {
   readonly workJournal?: ReactNode;
   /**
    * What connected assistants may spend (#2657), from a host where an assistant signs the
-   * person in. It replaces the line that says agents cannot connect.
+   * person in. Shown above the token steps, or in place of the line that says agents cannot
+   * connect where the server issues no tokens.
    */
   readonly connections?: ReactNode;
 }
@@ -161,6 +162,7 @@ export function AgentSetup({
   return (
     <section className="coding-agents" id={codingAgentsSectionId}>
       {heading}
+      {connections}
       <details className="agent-setup" open={open || undefined}>
         <summary>{t`Connect an agent`}</summary>
         <ol>

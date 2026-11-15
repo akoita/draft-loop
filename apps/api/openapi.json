@@ -23770,7 +23770,7 @@
     "/v1/workspaces/{workspaceId}/work-journal/notes": {
       "post": {
         "summary": "Record a note about notable work, pending the candidate's review",
-        "description": "What the MCP tool record_work sends. The note waits in the candidate's Work journal inbox; nothing becomes career evidence until they approve it. Refusals are content-free codes: invalid_note, secret_like_content, link_not_https, metric_without_how_measured, amend_not_pending, not_consented (403) and rate_limited (429). A repeat answers duplicate with the earlier note, and work the candidate discarded answers previously_discarded. dry_run validates without storing.",
+        "description": "What the MCP tool record_work sends. The note waits in the candidate's Work journal inbox; nothing becomes career evidence until they approve it. Refusals are content-free codes: invalid_note, secret_like_content, link_not_https, metric_without_how_measured, amend_not_pending, not_consented (403) and rate_limited (429); in sign-in mode, storage_consent_required (409) without the record's material-storage consent. A repeat answers duplicate with the earlier note, and work the candidate discarded answers previously_discarded. dry_run validates without storing.",
         "requestBody": {
           "required": true,
           "content": {

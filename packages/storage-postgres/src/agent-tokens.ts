@@ -25,6 +25,9 @@ function recordOf(row: Record<string, unknown>): AgentTokenRecord {
       ? {}
       : { spend: { month: String(row.spend_month), cents: Number(row.spent_cents) } }),
     scopes: scopesOf(row.scopes),
+    ...(row.member_id === null || row.member_id === undefined
+      ? {}
+      : { memberId: String(row.member_id) }),
     id: String(row.id),
     workspaceId: String(row.workspace_id),
     label: String(row.label),
@@ -41,7 +44,7 @@ function recordOf(row: Record<string, unknown>): AgentTokenRecord {
 }
 
 const columns =
-  "id, workspace_id, label, created_at, expires_at, revoked_at, scopes, monthly_cap_cents, spend_month, spent_cents";
+  "id, workspace_id, label, created_at, expires_at, revoked_at, scopes, monthly_cap_cents, spend_month, spent_cents, member_id";
 
 /** This month's spend: the row's, or nothing when it holds another month. */
 const spentThisMonth = "(CASE WHEN spend_month = $3::text THEN spent_cents ELSE 0 END)";
@@ -55,8 +58,9 @@ export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
       try {
         await client.query(
           `INSERT INTO agent_tokens
-             (id, workspace_id, label, secret_hash, created_at, expires_at, scopes, monthly_cap_cents)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+             (id, workspace_id, label, secret_hash, created_at, expires_at, scopes, monthly_cap_cents,
+              member_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             token.id,
             token.workspaceId,
@@ -66,6 +70,7 @@ export function createAgentTokenStore(client: SqlSession): AgentTokenStore {
             token.expiresAt,
             token.scopes.join(","),
             token.monthlyCapCents ?? null,
+            token.memberId ?? null,
           ],
         );
       } catch (error) {

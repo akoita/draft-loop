@@ -36,16 +36,33 @@ export function agentTokenHash(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-/** A new token's id and secret; the secret is shown once and only its hash is stored. */
-export function newAgentToken(): { readonly id: string; readonly token: string } {
+/** What a tenant id may look like where a token names it, such as an organisation's UUID. */
+const tenantPattern = /^[A-Za-z0-9-]{1,64}$/u;
+const tokenPattern = /^dlagent_[A-Za-z0-9_-]{43}(?:\.([A-Za-z0-9-]{1,64}))?$/u;
+
+/**
+ * A new token's id and secret; the secret is shown once and only its hash is stored. A token a
+ * signed-in member issues (#2784) ends with `.` and its tenant's id, so the server finds the
+ * tenant whose store holds its hash; the id names no secret, and the hash must still match there.
+ */
+export function newAgentToken(tenantId?: string): { readonly id: string; readonly token: string } {
+  if (tenantId !== undefined && !tenantPattern.test(tenantId)) {
+    throw new RangeError("The tenant id cannot be named in an agent token.");
+  }
+  const secret = `${agentTokenPrefix}${randomBytes(32).toString("base64url")}`;
   return {
     id: `dlat_${randomBytes(12).toString("base64url")}`,
-    token: `${agentTokenPrefix}${randomBytes(32).toString("base64url")}`,
+    token: tenantId === undefined ? secret : `${secret}.${tenantId}`,
   };
 }
 
 export function isAgentTokenShape(token: string): boolean {
-  return /^dlagent_[A-Za-z0-9_-]{43}$/u.test(token);
+  return tokenPattern.test(token);
+}
+
+/** The tenant a signed-in member's token names; undefined for the self-hosted owner's tokens. */
+export function agentTokenTenant(token: string): string | undefined {
+  return tokenPattern.exec(token)?.[1];
 }
 
 export type AgentAuthentication =
@@ -54,6 +71,8 @@ export type AgentAuthentication =
       readonly id: string;
       readonly workspaceId: string;
       readonly scopes: readonly AgentTokenScope[];
+      /** The signed-in member it acts as, for a token a member issued (#2784). */
+      readonly memberId?: string;
     }
   | { readonly outcome: "unauthenticated"; readonly reason: string };
 
@@ -76,5 +95,6 @@ export async function authenticateAgentToken(
     id: found.id,
     workspaceId: found.workspaceId,
     scopes: found.scopes,
+    ...(found.memberId === undefined ? {} : { memberId: found.memberId }),
   };
 }

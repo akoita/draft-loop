@@ -48,8 +48,8 @@ export interface AgentSpendStatus {
 }
 
 export interface AgentSpendGateOptions {
-  /** Owner mode's agent tokens; without them only connections are held to a cap. */
-  readonly tokens?: AgentTokenStore;
+  /** The request's tenant's agent tokens; without them only connections are held to a cap. */
+  readonly tokensFor?: (request: FastifyRequest) => AgentTokenStore | undefined;
   /** Sign-in mode's connection caps; without them only tokens are held to a cap. */
   readonly connectionCaps?: AgentConnectionCapsFor;
   readonly service: Pick<ApplicationService, "readWorkspace">;
@@ -96,8 +96,12 @@ export function registerAgentSpendGate(
     return centsOf(workspace.maxCostUsd ?? options.budgetCeiling.maxCostUsd);
   };
   const draftCents = centsOf(options.draftMaxCostUsd ?? defaultApplicationMaterialMaxCostUsd);
-  const find = async (workspaceId: string, id: string): Promise<AgentTokenRecord | undefined> =>
-    (await options.tokens?.list(workspaceId))?.find((token) => token.id === id);
+  const find = async (
+    request: FastifyRequest,
+    workspaceId: string,
+    id: string,
+  ): Promise<AgentTokenRecord | undefined> =>
+    (await options.tokensFor?.(request)?.list(workspaceId))?.find((token) => token.id === id);
   const ledgerOf = (request: FastifyRequest): Ledger | undefined => {
     const agent = request.agentToken;
     if (agent === undefined) return undefined;
@@ -114,7 +118,7 @@ export function registerAgentSpendGate(
           caps.releaseSpend({ workspaceId, clientId, month, key, cents }),
       };
     }
-    const { tokens } = options;
+    const tokens = options.tokensFor?.(request);
     if (tokens === undefined) return undefined;
     return {
       noun: "token",
@@ -200,7 +204,7 @@ export function registerAgentSpendGate(
         if (cap === undefined) return undefined;
         return statusOf(cap.monthlyCapCents, agentConnectionSpentCents(cap, month), root);
       }
-      const record = await find(agent.workspaceId, agent.id);
+      const record = await find(request, agent.workspaceId, agent.id);
       if (record?.monthlyCapCents === undefined) return undefined;
       return statusOf(record.monthlyCapCents, agentSpentCents(record, month), root);
     },
