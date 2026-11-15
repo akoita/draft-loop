@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type ReactNode, useState } from "react";
+import { PreferencesBar } from "./shell-actions.js";
 import { joinWaitlist, type WaitlistOutcome, waitlistNotice } from "./waitlist-model.js";
 
 /** Where #2462 serves the legal pages. */
@@ -110,25 +111,28 @@ export function Landing({
   readonly fetchImpl?: typeof fetch;
 }) {
   return (
-    <main className="sign-in landing">
-      <h1>{t`DraftLoop`}</h1>
-      <p>{t`DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out.`}</p>
-      <p className="notice">
-        {t`This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU.`}
-      </p>
-      <section aria-labelledby="landing-sign-in">
-        <h2 id="landing-sign-in">{t`Already invited?`}</h2>
-        {signIn}
-      </section>
-      <section aria-labelledby="landing-waitlist">
-        <h2 id="landing-waitlist">{t`Join the waitlist`}</h2>
-        <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
-      </section>
-      <footer>
-        <a href={legalLinks.privacy}>{t`Privacy policy`}</a>
-        {" · "}
-        <a href={legalLinks.terms}>{t`Terms of use`}</a>
-      </footer>
-    </main>
+    <>
+      <PreferencesBar />
+      <main className="sign-in landing">
+        <h1>{t`DraftLoop`}</h1>
+        <p>{t`DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out.`}</p>
+        <p className="notice">
+          {t`This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU.`}
+        </p>
+        <section aria-labelledby="landing-sign-in">
+          <h2 id="landing-sign-in">{t`Already invited?`}</h2>
+          {signIn}
+        </section>
+        <section aria-labelledby="landing-waitlist">
+          <h2 id="landing-waitlist">{t`Join the waitlist`}</h2>
+          <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
+        </section>
+        <footer>
+          <a href={legalLinks.privacy}>{t`Privacy policy`}</a>
+          {" · "}
+          <a href={legalLinks.terms}>{t`Terms of use`}</a>
+        </footer>
+      </main>
+    </>
   );
 }

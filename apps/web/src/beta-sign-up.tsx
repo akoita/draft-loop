@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useState } from "react";
 import type { ApiClient } from "./api-client.js";
 import { redeemInvite, signUpRefusal } from "./beta-sign-up-model.js";
+import { PreferencesBar } from "./shell-actions.js";
 
 export interface BetaSignUpViewProps {
   readonly code: string;
@@ -23,40 +24,43 @@ export function BetaSignUpView({
   onSignOut,
 }: BetaSignUpViewProps) {
   return (
-    <main className="sign-in">
-      <h1>{t`Join the DraftLoop beta`}</h1>
-      <p>{t`You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it.`}</p>
-      {notice === undefined ? null : (
-        <p className="notice" role="alert">
-          {notice}
-        </p>
-      )}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <label htmlFor="invite-code">{t`Invite code`}</label>
-        <input
-          id="invite-code"
-          name="invite-code"
-          autoComplete="one-time-code"
-          autoCapitalize="characters"
-          spellCheck={false}
-          maxLength={64}
-          value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
-        />
-        <button type="submit" disabled={busy || code.trim() === ""}>
-          {busy ? t`Creating your account` : t`Create my account`}
+    <>
+      <PreferencesBar />
+      <main className="sign-in">
+        <h1>{t`Join the DraftLoop beta`}</h1>
+        <p>{t`You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it.`}</p>
+        {notice === undefined ? null : (
+          <p className="notice" role="alert">
+            {notice}
+          </p>
+        )}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <label htmlFor="invite-code">{t`Invite code`}</label>
+          <input
+            id="invite-code"
+            name="invite-code"
+            autoComplete="one-time-code"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={64}
+            value={code}
+            onChange={(event) => onCodeChange(event.target.value)}
+          />
+          <button type="submit" disabled={busy || code.trim() === ""}>
+            {busy ? t`Creating your account` : t`Create my account`}
+          </button>
+        </form>
+        <p>{t`No invite? The beta is invite-only for now.`}</p>
+        <button type="button" className="link" onClick={onSignOut}>
+          {t`Sign out`}
         </button>
-      </form>
-      <p>{t`No invite? The beta is invite-only for now.`}</p>
-      <button type="button" className="link" onClick={onSignOut}>
-        {t`Sign out`}
-      </button>
-    </main>
+      </main>
+    </>
   );
 }
 

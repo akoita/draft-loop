@@ -188,6 +188,11 @@ label:where(:not(.shared-screens *)) {
   margin: 1rem 0;
 }
 
+/* The theme and language above sign-in and sign-up (#2772). */
+.preferences-bar {
+  padding-inline: 1rem;
+}
+
 .service-status {
   display: inline-flex;
   align-items: center;

@@ -1,8 +1,11 @@
+import { ScreensI18nProvider } from "@draft-loop/ui/i18n";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { type ApiClient, ApiRequestError } from "./api-client.js";
 import { App, ownerClient, Shell } from "./app.js";
+import { BetaSignUpView } from "./beta-sign-up.js";
 import type { OidcSession } from "./oidc-session.js";
 import { OidcApp, OidcSignIn, type ScreenNavigation } from "./oidc-sign-in.js";
 import { createTokenStore } from "./session.js";
@@ -73,7 +76,7 @@ describe("web screen", () => {
 
     expect(html).not.toContain("<h1>DraftLoop</h1>");
     expect(html).toMatch(
-      /<div class="page-actions"><span class="service-status service-checking" role="status">/u,
+      /<div class="page-actions">(?:<button[^>]*header-theme-toggle[\s\S]*?<\/button>)?<span class="service-status service-checking" role="status">/u,
     );
     expect(html).toContain("Sign out</button></div>");
   });
@@ -195,5 +198,54 @@ describe("web screen in sign-in mode", () => {
     const html = renderToStaticMarkup(<OidcSignIn notice="Signed out." onSignIn={() => {}} />);
 
     expect(html).toContain('role="status">Signed out.</p>');
+  });
+});
+
+/** Renders a screen the way the page does, with a screen language the person can change. */
+function withLanguageChoice(screen: ReactNode): string {
+  return renderToStaticMarkup(
+    <ScreensI18nProvider locale="en" onChoose={() => {}}>
+      {screen}
+    </ScreensI18nProvider>,
+  );
+}
+
+describe("screen language and theme before any record (#2772)", () => {
+  it("offers the language and the theme on every page before sign-in", () => {
+    const pages = [
+      <SignIn key="owner" onSignIn={() => {}} />,
+      <ServiceUnreachable key="down" />,
+      <OidcSignIn key="oidc" onSignIn={() => {}} />,
+      <OidcSignIn key="landing" waitlist onSignIn={() => {}} />,
+      <BetaSignUpView
+        key="beta"
+        code=""
+        busy={false}
+        onCodeChange={() => {}}
+        onSubmit={() => {}}
+        onSignOut={() => {}}
+      />,
+    ];
+    for (const page of pages) {
+      const html = withLanguageChoice(page);
+      expect(html).toContain('class="page-actions preferences-bar"');
+      expect(html).toContain('<span class="sr-only">Screen language</span>');
+      expect(html).toContain('<option value="fr" lang="fr">Français</option>');
+      expect(html).toContain("header-theme-toggle");
+    }
+  });
+
+  it("keeps the language in the shell's actions, so the record list and every header have it", () => {
+    for (const mode of ["owner", "sign-in"] as const) {
+      const html = withLanguageChoice(
+        <Shell mode={mode} client={unusedClient} onSignOut={() => {}} />,
+      );
+      expect(html).toMatch(/service-status[\s\S]*screen-language-menu[\s\S]*Sign out<\/button>/u);
+    }
+  });
+
+  it("shows no language control when the host offers no choice", () => {
+    const html = renderToStaticMarkup(<SignIn onSignIn={() => {}} />);
+    expect(html).not.toContain("screen-language-menu");
   });
 });

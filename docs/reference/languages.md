@@ -7,11 +7,11 @@ interview questions.
 
 ## What is supported
 
-| Language   | Screens               | Documents                                                         |
-| ---------- | --------------------- | ----------------------------------------------------------------- |
-| English    | Supported             | Supported                                                         |
-| French     | Beta                  | Supported; its quality gate is still running ([#583](https://github.com/akoita/draft-loop/issues/583)) |
-| German, Spanish, Italian, Dutch, Portuguese | Not offered | Preview: drafts work, but prompts, checks and export are not tuned yet |
+| Language                                    | Screens     | Documents                                                                                              |
+| ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
+| English                                     | Supported   | Supported                                                                                              |
+| French                                      | Beta        | Supported; its quality gate is still running ([#583](https://github.com/akoita/draft-loop/issues/583)) |
+| German, Spanish, Italian, Dutch, Portuguese | Not offered | Preview: drafts work, but prompts, checks and export are not tuned yet                                 |
 
 **Beta** means every screen message has a French translation, but it has not
 had a professional review. Counted words ("3 runs") take each language's
@@ -20,8 +20,9 @@ English. Legal pages stay in English.
 
 ## Choose the screen language
 
-1. Open **Home** and go to **Workspace settings**.
-2. Pick **English** or **Français** under **Screen language**.
+Use the globe control (🌐 **English** or **Français**) at the top right of any
+screen. It is there from the sign-in page on, before you have an account or a
+candidate record. **Workspace settings** on Home has the same choice.
 
 The screens change at once. The choice changes no document: each CV and letter
 keeps its own document language.

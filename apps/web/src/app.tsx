@@ -1,4 +1,6 @@
 import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
+import { ScreenLanguageMenu } from "@draft-loop/ui/screen-language";
+import { HeaderThemeToggle } from "@draft-loop/ui/theme";
 import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
@@ -110,6 +112,7 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
   const actions = (
     <>
       <ServiceStatus health={health} />
+      <ScreenLanguageMenu />
       <SignOutButton onSignOut={onSignOut} />
     </>
   );
@@ -181,7 +184,9 @@ export function RecordScreens({ client, recordId, onSaved, mode = "owner" }: Rec
   if (workspace === undefined) {
     return (
       <RecordContext.Provider value={recordId}>
-        <PageActions />
+        <PageActions>
+          <HeaderThemeToggle />
+        </PageActions>
         <WorkspaceStep client={client} onWorkspace={onWorkspace} />
       </RecordContext.Provider>
     );
