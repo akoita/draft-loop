@@ -10199,36 +10199,103 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   justify-content: space-between;
 }
 
-/* What connected assistants may spend, in Workspace settings > Agents (#2657). */
-.agent-connection-caps {
+/* Connected agents in Workspace settings > Agents (#2785): one table, stacked when narrow. */
+.connected-agents {
   display: grid;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.agent-connection-caps p {
+.connected-agents h4,
+.connected-agents p {
   margin: 0;
 }
 
-.agent-connection-caps .work-journal-intake-title {
+.connected-agents-table {
+  container-type: inline-size;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.connected-agents-table table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.connected-agents-table th,
+.connected-agents-table td {
+  padding: 0.5rem 0.7rem;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--border);
+}
+
+.connected-agents-table tbody tr:last-child > * {
+  border-block-end: none;
+}
+
+.connected-agents-table thead th {
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.agent-connection-caps li.work-journal-intake-confirm {
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--amber);
-  border-radius: 0.4rem;
+.connected-agents-table tbody th {
+  font-weight: normal;
 }
 
-.agent-connection-caps-form {
+.connected-agents-name {
+  display: block;
+  font-weight: 600;
+}
+
+.connected-agents-actions {
+  text-align: end;
+}
+
+.connected-agents-limit,
+.connected-agents-confirm {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: end;
+  gap: 0.4rem;
+  align-items: center;
 }
 
-.agent-connection-caps-form p {
-  flex: 1 1 100%;
+.connected-agents-limit input {
+  inline-size: 5rem;
+}
+
+@container (inline-size < 36rem) {
+  .connected-agents-table thead {
+    display: none;
+  }
+
+  .connected-agents-table tr {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.5rem 0.7rem;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .connected-agents-table tbody tr:last-child {
+    border-block-end: none;
+  }
+
+  .connected-agents-table th,
+  .connected-agents-table td {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  .connected-agents-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--muted);
+  }
+
+  .connected-agents-actions {
+    text-align: start;
+  }
 }
 
 /* Suggested writing preferences under Workspace settings (#2265). */

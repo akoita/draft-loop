@@ -76,9 +76,11 @@ interface Held {
 interface Ledger {
   /** "token" or "connection", as the refusal names the agent. */
   readonly noun: "token" | "connection";
-  /** What the person types to set a connection's cap: its client id. */
+  /** The connection's client id, which the refusal names. */
   readonly clientId?: string;
   reserve(month: string, key: string, cents: number): Promise<AgentSpendOutcome>;
+  /** Lists a connection without a cap in Workspace settings, where its limit is set (#2785). */
+  noteWithoutCap?(): Promise<void>;
   release(month: string, key: string, cents: number): Promise<void>;
 }
 
@@ -116,6 +118,7 @@ export function registerAgentSpendGate(
           caps.reserveSpend({ workspaceId, clientId, month, key, cents }),
         release: (month, key, cents) =>
           caps.releaseSpend({ workspaceId, clientId, month, key, cents }),
+        noteWithoutCap: () => caps.note(workspaceId, clientId, now().toISOString()),
       };
     }
     const tokens = options.tokensFor?.(request);
@@ -156,9 +159,10 @@ export function registerAgentSpendGate(
       return;
     }
     if (outcome.outcome === "replayed") return;
+    if (outcome.outcome === "no_cap") await ledger.noteWithoutCap?.();
     const noCap =
       ledger.noun === "connection"
-        ? `This agent connection has no monthly spend cap; the person sets one in Workspace settings > Agents, for the assistant "${ledger.clientId}".`
+        ? `This agent connection has no monthly spend cap; the person sets one in Workspace settings > Agents, where the assistant "${ledger.clientId}" now waits under Connected agents.`
         : "This agent token has no monthly spend cap; create a token with Start runs and drafts in Workspace settings > Agents.";
     const raise =
       ledger.noun === "connection"
@@ -201,7 +205,7 @@ export function registerAgentSpendGate(
       const month = agentSpendMonth(now());
       if (agent.clientId !== undefined) {
         const cap = await options.connectionCaps?.(request)?.get(agent.workspaceId, agent.clientId);
-        if (cap === undefined) return undefined;
+        if (cap?.monthlyCapCents === undefined) return undefined;
         return statusOf(cap.monthlyCapCents, agentConnectionSpentCents(cap, month), root);
       }
       const record = await find(request, agent.workspaceId, agent.id);
