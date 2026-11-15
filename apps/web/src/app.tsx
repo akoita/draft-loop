@@ -1,3 +1,4 @@
+import { DisplayPreferenceProvider } from "@draft-loop/ui/display-preference";
 import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
 import { ScreenLanguageMenu } from "@draft-loop/ui/screen-language";
 import { HeaderThemeToggle } from "@draft-loop/ui/theme";
@@ -5,6 +6,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
+import { useDisplayPreference } from "./display-preference.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -97,6 +99,7 @@ export interface ShellProps {
 
 export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
+  const display = useDisplayPreference({ client, mode });
 
   useEffect(() => {
     let current = true;
@@ -119,33 +122,35 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
   // The page opens on the shared screens' own header, as on the desktop: the shell's actions sit
   // in it. Sign-in mode lists the records above the screens, so its actions stay at the top.
   return (
-    <div className="shell">
-      {health === "unreachable" ? <ServiceDown /> : null}
-      {mode === "sign-in" ? (
-        <>
+    <DisplayPreferenceProvider value={display}>
+      <div className="shell">
+        {health === "unreachable" ? <ServiceDown /> : null}
+        {mode === "sign-in" ? (
+          <>
+            <ShellActionsContext.Provider value={actions}>
+              <div className="record-rail">
+                <PageActions />
+              </div>
+            </ShellActionsContext.Provider>
+            <Records client={client} memory={memory}>
+              {(recordId, onSaved) => (
+                <RecordScreens
+                  key={recordId}
+                  client={client}
+                  recordId={recordId}
+                  mode="sign-in"
+                  onSaved={onSaved}
+                />
+              )}
+            </Records>
+          </>
+        ) : (
           <ShellActionsContext.Provider value={actions}>
-            <div className="record-rail">
-              <PageActions />
-            </div>
+            <RecordScreens client={client} recordId={ownerWorkspaceId} />
           </ShellActionsContext.Provider>
-          <Records client={client} memory={memory}>
-            {(recordId, onSaved) => (
-              <RecordScreens
-                key={recordId}
-                client={client}
-                recordId={recordId}
-                mode="sign-in"
-                onSaved={onSaved}
-              />
-            )}
-          </Records>
-        </>
-      ) : (
-        <ShellActionsContext.Provider value={actions}>
-          <RecordScreens client={client} recordId={ownerWorkspaceId} />
-        </ShellActionsContext.Provider>
-      )}
-    </div>
+        )}
+      </div>
+    </DisplayPreferenceProvider>
   );
 }
 

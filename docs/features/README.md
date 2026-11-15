@@ -98,6 +98,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | Feature                                                   | Status      | Where it runs | Agent access | What it does                                                                     |
 | --------------------------------------------------------- | ----------- | ------------- | ------------ | -------------------------------------------------------------------------------- |
 | [Screen language](../reference/languages.md)              | `available` | server        | `none`       | Shows the screens in English or French; switch from any screen, even sign-in.    |
+| [Display](../reference/display.md)                        | `available` | server        | `none`       | Simple, Guided or Show everything, which opens every Advanced options section.   |
 | [Plans and credits](plans-and-credits.md)                 | `partial`   | hosted        | `none`       | Plan entitlements and run credits; prices and sign-up are not live yet.          |
 | [Record archive](../reference/record-archive.md)          | `available` | hosted        | `none`       | Owners download everything kept about one candidate record as a zip.             |
 | [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and assign members to candidate records.                |

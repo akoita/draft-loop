@@ -11291,3 +11291,67 @@ body:has(.workspace-activity) .review-column > .claims-panel {
     animation: none;
   }
 }
+
+/* Display preference (#2789, #2790): a visible settings row and the two-choice card. */
+.display-setting {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.display-setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.display-setting .subtle {
+  margin: 0;
+}
+
+.display-choice {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.display-choice h2,
+.display-choice h3 {
+  margin: 0;
+}
+
+.display-choice-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.display-choice-option {
+  display: grid;
+  gap: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-1);
+  background: var(--surface);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.display-choice-option span {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.display-choice-option:hover,
+.display-choice-option[aria-pressed="true"] {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.display-choice-option:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}

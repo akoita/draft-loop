@@ -1,5 +1,7 @@
 import { t } from "@lingui/core/macro";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+
+import { useShowEverything } from "./display-preference.js";
 
 export interface AdvancedOptionsProps {
   /**
@@ -18,14 +20,23 @@ export interface AdvancedOptionsProps {
 
 /**
  * The one place a card keeps its technical choices: always labelled Advanced options, last in its
- * card and folded. Nothing the basic path needs goes inside.
+ * card and folded, or open when the person chose Show everything. Nothing the basic path needs
+ * goes inside.
  */
 export function AdvancedOptions({ open, onToggle, note = null, children }: AdvancedOptionsProps) {
+  // Show everything (#2789) starts every uncontrolled section open; the person can still fold it.
+  const everything = useShowEverything();
+  const [freeOpen, setFreeOpen] = useState(everything);
+  const shownOpen = open ?? freeOpen;
   return (
     <details
       className="advanced-options"
-      {...(open === undefined ? {} : { open })}
-      onToggle={(event) => onToggle?.(event.currentTarget.open)}
+      open={shownOpen}
+      onToggle={(event) => {
+        const next = event.currentTarget.open;
+        if (open === undefined) setFreeOpen(next);
+        onToggle?.(next);
+      }}
     >
       <summary>
         {t`Advanced options`}
