@@ -5,9 +5,11 @@ import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import { stripeApiVersion } from "./stripe-checkout.js";
 
 const key = "sk_test_fictional0123456789";
+const signingSecret = "whsec_fictional9876543210";
 const stripeEnv = {
   DRAFT_LOOP_PAYMENTS: "stripe",
   DRAFT_LOOP_STRIPE_SECRET_KEY: key,
+  DRAFT_LOOP_STRIPE_WEBHOOK_SECRET: signingSecret,
   DRAFT_LOOP_STRIPE_PRICE_PACK_1: "price_one",
   DRAFT_LOOP_STRIPE_PRICE_PACK_5: "price_five",
   DRAFT_LOOP_PAYMENTS_RETURN_URL: "https://app.example.test/",
@@ -31,6 +33,7 @@ describe("payments config", () => {
     expect(readPaymentsConfig(stripeEnv)).toEqual({
       mode: "stripe",
       secretKey: key,
+      webhookSecret: signingSecret,
       prices: { "pack-1": "price_one", "pack-5": "price_five" },
       returnUrl: "https://app.example.test/",
     });
@@ -41,6 +44,8 @@ describe("payments config", () => {
     ["a missing key", { DRAFT_LOOP_STRIPE_SECRET_KEY: "" }],
     ["a live secret key", { DRAFT_LOOP_STRIPE_SECRET_KEY: "sk_live_fictional0123456789" }],
     ["a live restricted key", { DRAFT_LOOP_STRIPE_SECRET_KEY: "rk_live_fictional0123456789" }],
+    ["a missing signing secret", { DRAFT_LOOP_STRIPE_WEBHOOK_SECRET: "" }],
+    ["a key as the signing secret", { DRAFT_LOOP_STRIPE_WEBHOOK_SECRET: key }],
     ["a missing price", { DRAFT_LOOP_STRIPE_PRICE_PACK_5: "" }],
     ["a product id as a price", { DRAFT_LOOP_STRIPE_PRICE_PACK_1: "prod_one" }],
     ["a plain HTTP return address", { DRAFT_LOOP_PAYMENTS_RETURN_URL: "http://app.example.test/" }],
@@ -56,6 +61,7 @@ describe("payments config", () => {
     }
     expect(message).not.toBe("");
     expect(message).not.toContain("fictional0123456789");
+    expect(message).not.toContain("fictional9876543210");
   });
 
   it("allows a local return address for a self-hosted test", () => {
@@ -73,7 +79,7 @@ describe("Stripe checkout", () => {
   const start = (fetcher: typeof fetch) => {
     const payments = paymentsFrom(readPaymentsConfig(stripeEnv), fetcher);
     if (payments === undefined) throw new Error("payments are configured");
-    return payments.startCreditPackCheckout({
+    return payments.checkout.startCreditPackCheckout({
       organisationId: "org-north",
       memberId: "m-1",
       pack,

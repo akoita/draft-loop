@@ -11,11 +11,11 @@ import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
-import type { BetaInvites, BetaWaitlist } from "@draft-loop/storage-postgres";
-
+import type { BetaInvites, BetaWaitlist, CreditPurchases } from "@draft-loop/storage-postgres";
 import { buildApi } from "./app.js";
 import type { TenantEntitlements } from "./entitlement-gate.js";
 import type { OperatorTenant } from "./operator-plan-routes.js";
+import type { PaymentEventsPort } from "./payment-checkout.js";
 import type { TenantErasure } from "./record-erasure-routes.js";
 
 /** The committed OpenAPI document, which the drift test keeps equal to the generated one. */
@@ -37,6 +37,7 @@ export async function generateOpenApiDocument(): Promise<string> {
       agentTokensFor: () => ({}) as AgentTokenStore,
       agentConnectionCapsFor: () => ({}) as AgentConnectionCapStore,
       runSpansFor: () => ({}) as RunSpanStore,
+      creditPurchasesFor: () => ({}) as CreditPurchases,
       entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,
@@ -54,6 +55,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     memberSettings: {} as MemberSettingsStore,
     betaInvites: { invites: {} as BetaInvites, cap: 0 },
     betaWaitlist: {} as BetaWaitlist,
+    paymentEvents: {} as PaymentEventsPort,
   });
   try {
     await app.ready();

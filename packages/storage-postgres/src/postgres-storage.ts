@@ -11,6 +11,7 @@ import { createContentScreening } from "./content-screening.js";
 import { contentScreeningGrants } from "./content-screening-migration.js";
 import { createCreditLedger } from "./credit-ledger.js";
 import { creditLedgerGrants } from "./credit-ledger-migration.js";
+import { createCreditPurchases } from "./credit-purchases.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
@@ -143,6 +144,7 @@ function tenantStorage(client: SqlSession) {
     organisationErasure: createOrganisationErasure(client),
     organisationPlans: createOrganisationPlans(client),
     creditLedger: createCreditLedger(client),
+    creditPurchases: createCreditPurchases(client),
     spendPool: createSpendPool(client),
     modelCalls: createModelCallMeter(client),
     prepareCalls: createPrepareCallMeter(client),

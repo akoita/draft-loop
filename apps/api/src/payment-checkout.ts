@@ -39,3 +39,35 @@ export class PaymentProviderError extends Error {
     this.status = status;
   }
 }
+
+/** The route the payment provider sends its events to; public, and trusted only by signature. */
+export const paymentEventsPath = "/v1/payments/events";
+
+/** What a provider event means to the service. Ids, codes and numbers only. */
+export type PaymentEvent =
+  | {
+      readonly kind: "credit_pack_paid";
+      readonly eventId: string;
+      readonly checkoutId: string;
+      readonly organisationId: string;
+      readonly packId: string;
+      /** What the buyer paid, tax included, in the currency's minor unit. */
+      readonly amountTotalCents?: number;
+      readonly currency?: string;
+    }
+  /** An event the service does not act on, with the reason for the log. */
+  | { readonly kind: "ignored"; readonly eventId?: string; readonly reason: string };
+
+/** The provider's signed events, as the API reads them (#2709). */
+export interface PaymentEventsPort {
+  /**
+   * Checks the signature over the raw body and reads the event. Throws `PaymentSignatureError`
+   * for a body the provider did not sign with the deployment's secret.
+   */
+  readonly readEvent: (rawBody: Buffer, signature: string | undefined, now: Date) => PaymentEvent;
+}
+
+/** The event was not signed by the provider, or its signature is too old. */
+export class PaymentSignatureError extends Error {
+  override readonly name = "PaymentSignatureError";
+}

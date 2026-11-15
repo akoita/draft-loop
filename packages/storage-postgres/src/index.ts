@@ -47,6 +47,14 @@ export {
 } from "./credit-ledger.js";
 export { startOfUtcDay } from "./credit-periods.js";
 export {
+  type CreditPurchase,
+  CreditPurchaseError,
+  type CreditPurchaseErrorCode,
+  type CreditPurchaseInput,
+  type CreditPurchases,
+  createCreditPurchases,
+} from "./credit-purchases.js";
+export {
   type HostedApplicationPorts,
   type HostedApplicationPortsOptions,
   hostedApplicationPorts,

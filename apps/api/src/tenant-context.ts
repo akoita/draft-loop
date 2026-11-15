@@ -10,6 +10,7 @@ import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
+import type { CreditPurchases } from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 
 import type { ApiOptions } from "./app.js";
@@ -118,6 +119,8 @@ export interface TenantApplications {
   readonly agentConnectionCapsFor?: (tenantId: string) => AgentConnectionCapStore;
   /** A tenant's stored run spans (#1103); without it the run trace route is not served. */
   readonly runSpansFor?: (tenantId: string) => Pick<RunSpanStore, "list">;
+  /** A tenant's credit pack purchases (#2709); without it payment events grant nothing. */
+  readonly creditPurchasesFor?: (tenantId: string) => Pick<CreditPurchases, "record">;
 }
 
 export const defaultTenantCacheSize = 100;

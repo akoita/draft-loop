@@ -70,13 +70,21 @@ export function createOrganisationErasure(client: SqlSession): OrganisationErasu
         );
         // The day counters of model calls (#2487) hold only dates and numbers, under the tenant.
         const counters = await executor.query("DELETE FROM model_call_counts RETURNING day");
+        // Its credit pack purchases (#2709) hold provider ids and numbers, under the tenant.
+        const purchases = await executor.query(
+          "DELETE FROM credit_purchases RETURNING checkout_id",
+        );
         // Its activity row (#2538) holds only timestamps, keyed by the organisation.
         const activity = await executor.query(
           "DELETE FROM organisation_activity WHERE organisation_id = current_setting('draft_loop.tenant_id', true) RETURNING organisation_id",
         );
         return {
           rowsRemoved:
-            Number(row?.removed ?? 0) + invites.length + counters.length + activity.length,
+            Number(row?.removed ?? 0) +
+            invites.length +
+            counters.length +
+            purchases.length +
+            activity.length,
         };
       });
     },

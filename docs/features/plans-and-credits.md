@@ -66,6 +66,7 @@ A plan sets these entitlements:
 | Screen | Credits and consent                                                           |
 | API    | `GET /v1/organisation/credits`, `GET /v1/workspaces/{id}/runs/estimate`       |
 | API    | `POST /v1/organisation/credit-purchases` (opens a hosted checkout, test mode) |
+| API    | `POST /v1/payments/events` (the payment provider's signed events)             |
 | API    | `/v1/operator/organisations/{id}/plan`, `.../credit-grants`, `.../credits`    |
 | API    | `GET /v1/usage`, `GET /v1/workspaces/{id}/runs/{runId}/usage` (cost by model) |
 | MCP    | none                                                                          |
@@ -73,8 +74,9 @@ A plan sets these entitlements:
 ## Limits
 
 - Partial: prices and self-service sign-up are not live, and production is held.
-- Buying a pack opens a Stripe test-mode checkout only. A completed checkout
-  does not add credits yet (#2709), and no screen offers it yet (#2711).
+- Buying a pack opens a Stripe test-mode checkout only, and a paid checkout
+  adds the pack's credits once. No screen offers it yet (#2711), and a refund
+  does not take credits back yet (#2710).
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - A credit covers 20 cover letter or question drafts, interview guides and

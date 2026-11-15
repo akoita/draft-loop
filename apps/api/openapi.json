@@ -6122,6 +6122,28 @@
           "firstOwner"
         ]
       },
+      "PaymentEventReceiptInput": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "const": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "already_granted",
+              "ignored"
+            ],
+            "description": "What the event did: credits granted, a repeat that changed nothing, or ignored."
+          }
+        },
+        "required": [
+          "received",
+          "outcome"
+        ]
+      },
       "PreferenceSuggestionInput": {
         "type": "object",
         "properties": {
@@ -13623,6 +13645,29 @@
         "required": [
           "organisation",
           "firstOwner"
+        ],
+        "additionalProperties": false
+      },
+      "PaymentEventReceipt": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "const": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "granted",
+              "already_granted",
+              "ignored"
+            ],
+            "description": "What the event did: credits granted, a repeat that changed nothing, or ignored."
+          }
+        },
+        "required": [
+          "received",
+          "outcome"
         ],
         "additionalProperties": false
       },
@@ -28563,6 +28608,45 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/events": {
+      "post": {
+        "summary": "Receive a payment provider event",
+        "description": "For the payment provider only. The body is the provider's event and the `Stripe-Signature` header signs it; a body without a valid, recent signature answers 400 invalid_signature. A completed, paid checkout of a credit pack grants the pack's credits once, by checkout id. Other events answer 200 with `ignored`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentEventReceipt"
+                }
+              }
+            }
+          },
+          "400": {
             "description": "Default Response",
             "content": {
               "application/json": {
