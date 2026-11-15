@@ -88,9 +88,12 @@ export async function issueAgentToken(input: IssueAgentTokenInput): Promise<Issu
   return { id: body.id, token: body.token };
 }
 
-/** The shape the server issues: the prefix and 43 URL-safe characters. */
+/**
+ * The shape the server issues: the prefix and 43 URL-safe characters, then, for a token a
+ * signed-in member issued on the hosted service, `.` and the organisation's id (#2784).
+ */
 export function isAgentTokenShape(token: string): boolean {
-  return /^dlagent_[A-Za-z0-9_-]{43}$/u.test(token);
+  return /^dlagent_[A-Za-z0-9_-]{43}(?:\.[A-Za-z0-9-]{1,64})?$/u.test(token);
 }
 
 /**

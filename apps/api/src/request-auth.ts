@@ -3,7 +3,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { JWTVerifyGetKey } from "jose";
 import { type AgentGrant, admitAgentGrant, agentGrantId, agentGrantOf } from "./agent-grant.js";
 import { admitAgentBody, admitAgentRoute } from "./agent-route-scopes.js";
-import { authenticateAgentToken, isAgentTokenShape } from "./agent-token-auth.js";
+import {
+  type AgentAuthentication,
+  agentTokenTenant,
+  authenticateAgentToken,
+  isAgentTokenShape,
+} from "./agent-token-auth.js";
 import { apiError } from "./errors.js";
 import {
   IdentityProviderUnavailableError,
@@ -53,6 +58,54 @@ type Authentication =
   | { readonly outcome: "forbidden"; readonly identity?: SignInIdentity };
 
 type Authenticator = (authorization: string | undefined) => Promise<Authentication>;
+
+/**
+ * Sign-in mode's agent tokens (#2784): a token a member issued names its tenant, whose store
+ * holds its hash, and acts as that member while they stay an active member.
+ */
+export interface MemberAgentTokens {
+  readonly tokensFor: (tenantId: string) => AgentTokenStore | undefined;
+  /** The member as they are now; undefined once they left the organisation or are not active. */
+  readonly memberOf: (tenantId: string, memberId: string) => Promise<SignedInMember | undefined>;
+}
+
+/** A presented token as an accepted agent, with the caller it acts as, or the refusal. */
+async function agentTokenCaller(
+  token: string,
+  ownerTokens: AgentTokenStore | undefined,
+  memberTokens: MemberAgentTokens | undefined,
+): Promise<
+  | {
+      readonly outcome: "agent";
+      readonly agent: AgentAuthentication & { outcome: "agent" };
+      readonly caller: Caller;
+    }
+  | { readonly outcome: "unauthenticated"; readonly reason: string }
+  | undefined
+> {
+  if (!isAgentTokenShape(token)) return undefined;
+  const tenantId = agentTokenTenant(token);
+  if (tenantId === undefined) {
+    if (ownerTokens === undefined) return undefined;
+    const agent = await authenticateAgentToken(ownerTokens, token);
+    // It acts in the owner's tenant, on the routes its scopes admit only.
+    return agent.outcome === "agent"
+      ? { outcome: "agent", agent, caller: { kind: "owner" } }
+      : agent;
+  }
+  const store = memberTokens?.tokensFor(tenantId);
+  if (memberTokens === undefined || store === undefined) return undefined;
+  const agent = await authenticateAgentToken(store, token);
+  if (agent.outcome !== "agent") return agent;
+  if (agent.memberId === undefined) {
+    return { outcome: "unauthenticated", reason: "agent token without a member" };
+  }
+  const member = await memberTokens.memberOf(tenantId, agent.memberId);
+  if (member === undefined || member.tenantId !== tenantId) {
+    return { outcome: "unauthenticated", reason: "agent token of an inactive member" };
+  }
+  return { outcome: "agent", agent, caller: { kind: "member", ...member } };
+}
 
 /**
  * The request's credential. A browser cannot set headers on a WebSocket, so the live interview
@@ -166,10 +219,13 @@ export function registerRequestAuthentication(
   agentTokens?: AgentTokenStore,
   /** Whether connection caps are kept (#2656); without them a grant never reaches a spend. */
   grantSpendCaps = false,
+  /** Sign-in mode's members' agent tokens (#2784); without them sign-in mode refuses tokens. */
+  memberTokens?: MemberAgentTokens,
 ): void {
   const authenticate = authenticatorFor(ownerToken, auth);
   const authenticateOperator = ownerAuthenticator(ownerToken);
   const agents = auth.mode === "owner" ? agentTokens : undefined;
+  const members = auth.mode === "oidc" ? memberTokens : undefined;
   app.decorateRequest("caller", undefined);
   app.decorateRequest("agentToken", undefined);
   app.decorateRequest("signUpIdentity", undefined);
@@ -190,23 +246,18 @@ export function registerRequestAuthentication(
       return;
     }
     const presented = bearerToken(requestAuthorization(request.headers));
-    if (
-      authentication.outcome === "unauthenticated" &&
-      !operator &&
-      agents !== undefined &&
-      presented !== undefined &&
-      isAgentTokenShape(presented)
-    ) {
-      const agent = await authenticateAgentToken(agents, presented);
-      if (agent.outcome === "agent") {
+    if (authentication.outcome === "unauthenticated" && !operator && presented !== undefined) {
+      const found = await agentTokenCaller(presented, agents, members);
+      if (found?.outcome === "agent") {
+        const { agent } = found;
         const admission = admitAgentRoute(request, agent);
         if (admission.outcome === "refused") {
           request.log.info({ agentTokenId: agent.id }, "agent token refused on this route");
           await reply.code(403).send(apiError("forbidden", admission.message));
           return;
         }
-        // It acts in the owner's tenant, on the routes its scopes admit only. The line ties
-        // each accepted request to the token, so a leaked token's use can be traced.
+        // On the routes its scopes admit only. The line ties each accepted request to the
+        // token, so a leaked token's use can be traced.
         request.log.info(
           {
             agentTokenId: agent.id,
@@ -216,12 +267,12 @@ export function registerRequestAuthentication(
           },
           "agent token accepted",
         );
-        request.caller = { kind: "owner" };
+        request.caller = found.caller;
         request.agentToken = { id: agent.id, workspaceId: agent.workspaceId, scopes: agent.scopes };
         return;
       }
-      // The reason (unknown, revoked or expired) is logged below; the answer stays one 401.
-      authentication = agent;
+      // The reason (unknown, revoked, expired or inactive) is logged below; the answer stays 401.
+      if (found !== undefined) authentication = found;
     }
     if (authentication.outcome === "authenticated") {
       const { grant } = authentication;

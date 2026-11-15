@@ -86,8 +86,10 @@ you commit. The section lists the active tokens with their scopes and revokes
 each one.
 
 The desktop client shows its server's screens, so it offers the same steps when
-connected to a self-hosted server. On the hosted service, signed-in accounts
-get no agent token yet, so the section says so and links here.
+connected to a self-hosted server. On the hosted service, a signed-in member
+creates tokens the same way. Such a token ends with `.` and the organisation's
+id, and acts as the member who created it: it stops working when that member
+leaves the organisation, and record access and credits apply as for them.
 
 ### Install it in another agent
 
@@ -410,8 +412,8 @@ two more checks:
 
 A candidate's own guide is [Connect DraftLoop to your assistant](connect-an-assistant.md).
 
-The hosted service issues no agent tokens. An assistant instead signs the
-person in through the identity provider and holds an access token issued to
+Besides a member's [agent token](#set-it-up), an assistant can sign the
+person in through the identity provider and hold an access token issued to
 its own client. The API treats that token as an **agent grant**:
 
 - **Same routes.** The grant acts as the signed-in member, on the routes the

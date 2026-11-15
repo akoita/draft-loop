@@ -12,7 +12,7 @@ import {
   maximumAgentMonthlyCapCents,
   maximumAgentTokenLifetimeDays,
 } from "@draft-loop/storage/agent-tokens";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
@@ -22,7 +22,15 @@ import { apiError, apiErrorSchema } from "./errors.js";
 export interface AgentTokenRoutesOptions {
   readonly service: ApplicationService;
   readonly workspaceRoot: (workspaceId: string) => string;
-  readonly tokens: AgentTokenStore;
+  /** The request's tenant's tokens. */
+  readonly tokensFor: (request: FastifyRequest) => AgentTokenStore;
+  /**
+   * In sign-in mode, the member a new token acts as and the tenant its secret names (#2784);
+   * undefined for the self-hosted owner, whose tokens name neither.
+   */
+  readonly issuerOf?: (
+    request: FastifyRequest,
+  ) => { readonly tenantId: string; readonly memberId: string } | undefined;
   readonly now?: () => Date;
 }
 
@@ -118,16 +126,16 @@ function view(token: AgentTokenRecord, at: Date) {
 }
 
 /**
- * The owner's agent tokens (#2159): issued for one workspace with scopes (#2438), listed without
- * their secrets and
- * revoked one at a time. An agent token itself never reaches these routes.
+ * Agent tokens (#2159): issued for one workspace with scopes (#2438), listed without their secrets
+ * and revoked one at a time, by the self-hosted owner or, on the hosted service, a signed-in
+ * member, whose token acts as them (#2784). An agent token itself never reaches these routes.
  */
 export function registerAgentTokenRoutes(
   parent: FastifyInstance,
   options: AgentTokenRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, tokens } = options;
+  const { service, workspaceRoot, tokensFor } = options;
   const now = options.now ?? (() => new Date());
   const requireWorkspace = async (workspaceId: string) => {
     await service.readWorkspace(workspaceRoot(workspaceId));
@@ -148,6 +156,8 @@ export function registerAgentTokenRoutes(
     async (request, reply) => {
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
+      const tokens = tokensFor(request);
+      const issuer = options.issuerOf?.(request);
       const at = now();
       const active = (await tokens.list(workspaceId)).filter((token) =>
         isAgentTokenActive(token, at),
@@ -176,7 +186,7 @@ export function registerAgentTokenRoutes(
             ),
           );
       }
-      const issued = newAgentToken();
+      const issued = newAgentToken(issuer?.tenantId);
       const lifetimeDays = request.body.expires_in_days ?? defaultAgentTokenLifetimeDays;
       const record: AgentTokenRecord = {
         id: issued.id,
@@ -186,6 +196,7 @@ export function registerAgentTokenRoutes(
         expiresAt: new Date(at.getTime() + lifetimeDays * dayMs).toISOString(),
         scopes,
         ...(cap === undefined ? {} : { monthlyCapCents: Math.round(cap * 100) }),
+        ...(issuer === undefined ? {} : { memberId: issuer.memberId }),
       };
       await tokens.insert({ ...record, secretHash: agentTokenHash(issued.token) });
       request.log.info(
@@ -216,7 +227,9 @@ export function registerAgentTokenRoutes(
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
       const at = now();
-      return { tokens: (await tokens.list(workspaceId)).map((token) => view(token, at)) };
+      return {
+        tokens: (await tokensFor(request).list(workspaceId)).map((token) => view(token, at)),
+      };
     },
   );
 
@@ -233,7 +246,7 @@ export function registerAgentTokenRoutes(
     async (request, reply) => {
       const { workspaceId, tokenId } = request.params;
       await requireWorkspace(workspaceId);
-      if (!(await tokens.revoke(workspaceId, tokenId, now().toISOString()))) {
+      if (!(await tokensFor(request).revoke(workspaceId, tokenId, now().toISOString()))) {
         return reply
           .code(404)
           .send(apiError("agent_token_not_found", "No such active agent token."));
