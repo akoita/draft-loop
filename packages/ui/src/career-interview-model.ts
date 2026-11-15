@@ -199,6 +199,10 @@ export function careerInterviewOffer(topics: readonly CareerInterviewTopicView[]
     return t`I have no topic to suggest today. Is there anything from your career you would like to tell me about?`;
   }
   if (topics.every((topic) => topic.kind === "career-start")) {
+    // Fewer than all the starting topics: one was already told or set aside (#2759).
+    if (topics.length < Object.keys(startTopics()).length) {
+      return t`Let's go on with the basics. Which would you like to talk about next?`;
+    }
     return t`Your record is empty, so let's begin with the basics. Which would you like to start with?`;
   }
   const one = careerInterviewTopicReason(first);

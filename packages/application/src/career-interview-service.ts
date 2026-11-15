@@ -201,6 +201,21 @@ export function createCareerInterviewService(
   ): CareerInterviewSessionTopic[] =>
     session.topics.map((existing, position) => (position === index ? topic : existing));
 
+  /** The starting topics whose summary the candidate already gave, across recent sessions. */
+  const toldStartTopics = async (
+    workspaceId: string,
+  ): Promise<{ readonly key: string; readonly title: string }[]> =>
+    (await store.list(workspaceId, 20)).flatMap((earlier) =>
+      earlier.topics
+        .filter(
+          (topic) =>
+            topic.kind === "career-start" &&
+            topic.summary !== undefined &&
+            (topic.status === "summarised" || topic.status === "closed"),
+        )
+        .map((topic) => ({ key: topic.key, title: topic.title ?? topic.reason })),
+    );
+
   const conversationTopic = async (
     workspaceId: string,
     topic: CareerInterviewSessionTopic,
@@ -217,11 +232,25 @@ export function createCareerInterviewService(
             maximumCareerInterviewContextEntries,
           )
         : topic.fact_ids;
-    const bounded = careerInterviewTopicContext(
+    const context = careerInterviewTopicContext(
       { kind: topic.kind, reason: topic.reason, factIds },
       record.facts,
       record.mayTransmit,
     );
+    // The profile has no fact from an earlier conversation yet, so a starting topic names the
+    // basics already told, by title only, and the interviewer does not ask for them again (#2759).
+    const bounded =
+      topic.kind === "career-start"
+        ? {
+            ...context,
+            context: [
+              ...context.context,
+              ...(await toldStartTopics(workspaceId))
+                .filter((told) => told.key !== topic.key)
+                .map((told) => `Already told in an earlier conversation: ${told.title}`),
+            ],
+          }
+        : context;
     const themes = record.requirements
       .filter((requirement) => topic.requirement_ids.includes(requirement.id))
       .map((requirement) => requirement.text);
@@ -270,18 +299,7 @@ export function createCareerInterviewService(
       // An empty record gets every starting topic at once (#2732), minus those already told:
       // their summaries are evidence, though the profile has no fact from them yet.
       const starting = record.facts.length === 0;
-      const told = starting
-        ? (await store.list(workspaceId, 20)).flatMap((earlier) =>
-            earlier.topics
-              .filter(
-                (topic) =>
-                  topic.kind === "career-start" &&
-                  topic.summary !== undefined &&
-                  (topic.status === "summarised" || topic.status === "closed"),
-              )
-              .map((topic) => topic.key),
-          )
-        : [];
+      const told = starting ? (await toldStartTopics(workspaceId)).map((topic) => topic.key) : [];
       const topics = findCareerInterviewTopics({
         facts: record.facts,
         requirements: record.requirements,

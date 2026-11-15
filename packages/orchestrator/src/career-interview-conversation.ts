@@ -71,14 +71,21 @@ const maximumAttempts = 2;
 export const careerInterviewFallbackQuestion = careerInterviewPhrases("en").fallbackQuestion;
 export const careerInterviewSummaryRequest = careerInterviewPhrases("en").summaryRequest;
 
+/** How many starting topics a first conversation offers; fewer left means one was already told. */
+export const careerInterviewStartTopicCount = 4;
+
 /** The opening proposal, worded without a model so it never suggests a detail. */
 export function careerInterviewProposal(
   topics: readonly (Pick<CareerInterviewConversationTopic, "reason"> & {
     readonly kind?: string;
   })[],
 ): string {
-  // A first conversation on an empty record (#2732): the screen lists the starting topics.
+  // A first conversation on an empty record (#2732): the screen lists the starting topics. Once
+  // one of them is told or set aside, the record is no longer called empty (#2759).
   if (topics.length > 0 && topics.every((topic) => topic.kind === "career-start")) {
+    if (topics.length < careerInterviewStartTopicCount) {
+      return "Let us go on with the basics. Which would you like to talk about next? You can also tell me about something else.";
+    }
     return "Your record is empty, so let us begin with the basics. Which would you like to start with? You can also tell me about something else.";
   }
   if (topics.length === 0) {

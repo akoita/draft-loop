@@ -4631,6 +4631,10 @@ msgstr ""
 msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Let's go on with the basics. Which would you like to talk about next?"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Lexical (default)"
 msgstr ""
