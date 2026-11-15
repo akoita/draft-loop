@@ -10,7 +10,7 @@ review and the legal pages (#2462).
 ## What you need
 
 - A Stripe account. A sandbox needs no business verification.
-- A hosted DraftLoop server in sign-in mode that Stripe can reach over HTTPS.
+- A DraftLoop server in sign-in mode: the hosted service, or the local stack.
 - Access to the server's settings and secrets.
 
 ## How the pieces fit
@@ -69,7 +69,8 @@ flowchart LR
 Put the two secrets in the deployment's secret store, never in a file under
 version control. On the hosted service, the infrastructure repository wires
 them ([server deploy](server-deploy.md)). The self-hosted stack does not pass
-these settings to the API yet.
+these settings to the API yet; the local development stack does
+([Try it on the local stack](#try-it-on-the-local-stack)).
 
 Restart the API. A wrong or missing value stops the start with a message
 that names the setting and never repeats a secret.
@@ -96,6 +97,41 @@ that names the setting and never repeats a secret.
    ```
 
    `grantsRemaining` is one higher than before, within a minute.
+
+## Try it on the local stack
+
+The [local server stack](local-server-stack.md) has a sign-in server at
+`http://127.0.0.1:58082`. Stripe cannot reach your machine, so the Stripe CLI
+forwards the events instead of the webhook endpoint of step 6.
+
+1. Do steps 1 to 5 and step 8 above.
+2. Install the [Stripe CLI](https://docs.stripe.com/stripe-cli) and sign in
+   to the sandbox with `stripe login`.
+3. Forward events, and leave this running:
+
+   ```sh
+   stripe listen --forward-to http://127.0.0.1:58082/v1/payments/events
+   ```
+
+   It prints a signing secret that starts with `whsec_`.
+4. In the repository's root, put the values in the ignored `.env` file:
+
+   ```text
+   DRAFT_LOOP_PAYMENTS=stripe
+   DRAFT_LOOP_STRIPE_SECRET_KEY=the test key
+   DRAFT_LOOP_STRIPE_WEBHOOK_SECRET=the secret from step 3
+   DRAFT_LOOP_STRIPE_PRICE_PACK_1=the first price id
+   DRAFT_LOOP_STRIPE_PRICE_PACK_5=the second price id
+   ```
+
+5. Start the stack with `pnpm server:up`, then
+   [set up an organisation](local-server-stack.md#set-up-an-organisation)
+   with a plan.
+6. [Check a test purchase](#check-a-test-purchase) against
+   `http://127.0.0.1:58082`. The `stripe listen` window shows the event
+   answered with 200.
+
+Unset, `DRAFT_LOOP_PAYMENTS` is `off` and the stack sells nothing.
 
 ## When it fails
 
