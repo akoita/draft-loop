@@ -13,7 +13,6 @@ import {
   isInterviewSource,
   isPastedSource,
 } from "./evidence-file-model.js";
-import { PrivateSections } from "./private-sections.js";
 import { useRecordId } from "./record-context.js";
 import { saveFile } from "./save-file.js";
 import { ScreeningNote, useScreening } from "./screening.js";
@@ -284,8 +283,8 @@ function DownloadFileButton({
 
 /**
  * The panels below the knowledge panel over one reading: file checks, then the optional ones, most
- * used first: the career interview and the work journal where the server serves them, then private
- * sections.
+ * used first: the career interview and the work journal where the server serves them. Private
+ * sections sit in the card's Advanced options (`evidence-advanced.tsx`).
  */
 export function EvidenceSections({
   client,
@@ -309,7 +308,6 @@ export function EvidenceSections({
       {workJournal === true ? (
         <WorkJournalSection client={client} bases={bases} openHome={openHome} />
       ) : null}
-      <PrivateSections client={client} bases={bases} />
     </>
   );
 }

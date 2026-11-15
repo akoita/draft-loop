@@ -3,6 +3,7 @@ import type { HostPanels } from "@draft-loop/ui/host-panels";
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { ApplicationMaterialSection } from "./application-material.js";
 import { CodingAgentsSection } from "./coding-agents.js";
+import { EvidenceAdvanced } from "./evidence-advanced.js";
 import { EvidenceSections, StoragePermissionPanel } from "./evidence-panels.js";
 import { HomeWorkJournal } from "./home-work-journal.js";
 import { PreferenceSuggestionsSection } from "./preference-suggestions.js";
@@ -40,6 +41,9 @@ export function webHostPanels(
     ),
     // The career interview is in the evidence panels, so an empty record may start there (#2734).
     careerConversation: mode === "owner",
+    evidenceAdvanced: ({ revision, setNote }) => (
+      <EvidenceAdvanced client={client} revision={revision} setNote={setNote} />
+    ),
     evidenceAfter: ({ revision, openHome, onChanged }) => (
       <EvidenceSections
         client={client}

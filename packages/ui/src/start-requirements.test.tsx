@@ -4,11 +4,7 @@ import type { OpportunityLatestBrief } from "./bridge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import { startChecklist } from "./start-checklist-model.js";
-import {
-  LatestRequirementsBriefView,
-  StartFromJobDescriptionChoice,
-  StartRequirementsSourceView,
-} from "./start-requirements.js";
+import { LatestRequirementsBriefView, StartRequirementsSourceView } from "./start-requirements.js";
 import {
   briefReviewActionKey,
   failedExtractionNote,
@@ -17,10 +13,7 @@ import {
   latestBriefTitle,
   offersRequirementsExtraction,
   pendingExtractionNote,
-  rawJobDescriptionChoiceLabel,
-  rawJobDescriptionChoiceNote,
   rawJobDescriptionLabel,
-  rawJobDescriptionOverDraftLabel,
   requirementRefusalAction,
   reviewedRequirementsLabel,
   reviewedRequirementsSelection,
@@ -215,47 +208,7 @@ describe("the raw job description over a draft brief", () => {
       rawJobKey: null,
     });
   });
-
-  it("offers the choice under Advanced with its cost, and states it once chosen", () => {
-    const changes: boolean[] = [];
-    const unchosen = StartFromJobDescriptionChoice({
-      chosen: false,
-      onChange: (chosen) => changes.push(chosen),
-    });
-    const html = renderToStaticMarkup(unchosen);
-    expect(html).toContain("<summary>Advanced: requirements for this run</summary>");
-    expect(html).toContain(rawJobDescriptionChoiceLabel());
-    expect(html).toContain(rawJobDescriptionChoiceNote());
-    expect(html).not.toContain(rawJobDescriptionOverDraftLabel());
-    const chosen = renderToStaticMarkup(
-      <StartFromJobDescriptionChoice chosen onChange={() => undefined} />,
-    );
-    expect(chosen).toContain('checked=""');
-    expect(chosen).toContain(rawJobDescriptionOverDraftLabel());
-    const input = findCheckbox(unchosen);
-    input.props.onChange({ target: { checked: true } });
-    expect(changes).toEqual([true]);
-  });
 });
-
-function findCheckbox(node: unknown): {
-  props: { onChange: (event: { target: { checked: boolean } }) => void };
-} {
-  const queue: unknown[] = [node];
-  while (queue.length > 0) {
-    const current = queue.shift() as { type?: unknown; props?: Record<string, unknown> } | null;
-    if (current === null || typeof current !== "object") continue;
-    if (Array.isArray(current)) {
-      queue.push(...current);
-      continue;
-    }
-    if (current.type === "input" && current.props?.type === "checkbox") {
-      return current as never;
-    }
-    queue.push(current.props?.children);
-  }
-  throw new Error("checkbox not found");
-}
 
 describe("guided requirement blocker", () => {
   const problem =
