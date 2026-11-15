@@ -10,7 +10,7 @@ interface KeyEvent {
   readonly ctrlKey?: boolean;
   readonly metaKey?: boolean;
   readonly shiftKey?: boolean;
-  readonly nativeEvent: { readonly isComposing: boolean };
+  readonly nativeEvent: { readonly isComposing: boolean; readonly keyCode?: number };
   readonly preventDefault: () => void;
 }
 
@@ -57,6 +57,7 @@ describe("submitOnEnter", () => {
       key({ ctrlKey: true }),
       key({ metaKey: true }),
       key({ nativeEvent: { isComposing: true } }),
+      key({ nativeEvent: { isComposing: false, keyCode: 229 } }),
     ]) {
       handler(event as never);
       expect(event.preventDefault).not.toHaveBeenCalled();

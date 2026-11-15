@@ -92,6 +92,13 @@ describe("workspace title rename control", () => {
     expect(onSave).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledOnce();
 
+    // Enter that confirms an input-method candidate does not save (also Safari's keyCode 229).
+    const composing = { ...enterKey, preventDefault: vi.fn() };
+    keyDown({ ...composing, nativeEvent: { isComposing: true } } as never);
+    keyDown({ ...composing, nativeEvent: { isComposing: false, keyCode: 229 } } as never);
+    expect(composing.preventDefault).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledOnce();
+
     (input.props.onBlur as () => void)();
     expect(onCommit).toHaveBeenCalledOnce();
   });
