@@ -869,3 +869,225 @@ button.small:where(:not(.shared-screens *)) {
   color: var(--text-2);
   font-size: var(--text-sm);
 }
+
+/* The candidate record bar (sign-in mode): one compact card above the screens, in the Home
+   column's width, in place of three stacked full-width panels. */
+.shell > .page-actions,
+.record-area {
+  width: calc(100% - 2.5rem);
+  max-width: 1440px;
+  margin-inline: auto;
+}
+
+.shell > .page-actions {
+  margin-block: 0.75rem 0.5rem;
+}
+
+.record-area {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(15, 20, 26, 0.05);
+}
+
+.record-area > .panel {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.record-area > .notice {
+  grid-column: 1 / -1;
+  margin: 0 1rem 0.5rem;
+}
+
+/* The bar: what the record is, which one is open, and a button that unfolds the new-record field. */
+.record-area > .records {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  min-height: 3.25rem;
+  padding-block: 0.625rem;
+}
+
+.record-area .records h2 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.record-area .records .muted {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* The heading and the placeholder already name these fields; the labels stay for screen readers. */
+.record-area .records label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.record-area .record-field select {
+  width: auto;
+  min-width: 14rem;
+  max-width: 100%;
+  font-weight: 600;
+}
+
+.record-area .records .record-add,
+.record-area .records .inline-form {
+  margin: 0 0 0 auto;
+}
+
+.record-area .records .inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+}
+
+.record-area .records .inline-form > * {
+  margin: 0;
+}
+
+.record-area .records .inline-form input {
+  width: 18rem;
+}
+
+.record-area .records .inline-form .problem {
+  order: 3;
+  flex-basis: 100%;
+}
+
+.record-area .records button {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Members and export: two slim disclosures side by side; an open one takes the full row. */
+.record-area > details {
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.record-area > details > summary {
+  cursor: pointer;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.record-area > details > summary:hover {
+  color: var(--teal);
+}
+
+.record-area > details[open] {
+  grid-column: 1 / -1;
+  padding-bottom: 1rem;
+}
+
+.record-area > details[open] > summary {
+  margin-bottom: 0.5rem;
+  color: var(--text-1);
+}
+
+/* Credits: the balance as a pill at the toolbar's height. Tabular digits and a reserved width
+   keep its neighbours still when the number changes, up to four digits. */
+.credit-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 21ch;
+  margin: 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.credit-chip-warning {
+  border-color: var(--amber);
+  background: var(--amber-wash);
+}
+
+.buy-credits {
+  margin: 0;
+}
+
+.buy-credits-packs {
+  gap: 0.5rem;
+  min-width: 17rem;
+  padding: 0.875rem;
+  box-shadow: 0 8px 24px rgba(15, 20, 26, 0.14);
+}
+
+.buy-credits-packs .button {
+  width: 100%;
+  min-height: 36px;
+  font-size: 0.875rem;
+}
+
+.buy-credits-packs .muted {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 40rem) {
+  .shell > .page-actions,
+  .record-area {
+    width: 100%;
+  }
+
+  .record-area {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .record-area .record-field,
+  .record-area .record-field select,
+  .record-area .records .inline-form {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .record-area .records .record-add {
+    margin-left: 0;
+  }
+
+  .record-area .records .inline-form input {
+    flex: 1 1 8rem;
+    width: auto;
+  }
+
+  /* The Home header: the title and the toolbar stack instead of running off the edge. */
+  .shared-screens .home-header {
+    flex-wrap: wrap;
+  }
+
+  .shared-screens .home-header-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .buy-credits-packs {
+    right: auto;
+    left: 0;
+  }
+}

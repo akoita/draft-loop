@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
@@ -99,29 +99,31 @@ export function Records({ client, memory, children }: RecordsProps) {
 
   return (
     <>
-      <RecordPicker
-        ids={state.ids}
-        chosen={chosen}
-        notice={noRecordNotice(state.me)}
-        onChoose={choose}
-      />
-      {deleted === undefined ? null : (
-        <p className="notice" role="status">
-          {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
-        </p>
-      )}
-      {chosen === undefined ? null : (
-        <MembersPanel
-          key={`${chosen}:${exists}`}
-          client={client}
-          recordId={chosen}
-          exists={exists}
-          manage={canManageMembers(state.me)}
+      <div className="record-area">
+        <RecordPicker
+          ids={state.ids}
+          chosen={chosen}
+          notice={noRecordNotice(state.me)}
+          onChoose={choose}
         />
-      )}
-      {exists && canExportAndDelete(state.me) ? (
-        <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
-      ) : null}
+        {deleted === undefined ? null : (
+          <p className="notice" role="status">
+            {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
+          </p>
+        )}
+        {chosen === undefined ? null : (
+          <MembersPanel
+            key={`${chosen}:${exists}`}
+            client={client}
+            recordId={chosen}
+            exists={exists}
+            manage={canManageMembers(state.me)}
+          />
+        )}
+        {exists && canExportAndDelete(state.me) ? (
+          <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
+        ) : null}
+      </div>
       {chosen === undefined ? null : (
         <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
           {children(chosen, onSaved)}
@@ -138,13 +140,36 @@ export interface RecordPickerProps {
   /** What to say when the caller reaches no record. */
   readonly notice: string;
   readonly onChoose: (recordId: string) => void;
+  /** Shows the new-record field from the start, for tests. */
+  readonly initiallyAdding?: boolean;
 }
 
-/** Chooses the record the screens work on, or names a new one. */
-export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProps) {
+/**
+ * Chooses the record the screens work on, or names a new one. The new-record field stays folded
+ * behind a button while there is a record to choose, so the bar stays one calm row.
+ */
+export function RecordPicker({
+  ids,
+  chosen,
+  notice,
+  onChoose,
+  initiallyAdding = false,
+}: RecordPickerProps) {
   const [newId, setNewId] = useState("");
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const options = chosen === undefined ? ids : withRecord(ids, chosen);
+  const [adding, setAdding] = useState(initiallyAdding);
+  const field = useRef<HTMLInputElement>(null);
+  const focusField = useRef(false);
+  // With no record to choose, naming one is the only thing to do: the field is always there.
+  const showForm = adding || options.length === 0;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the field is revealed
+  useEffect(() => {
+    if (!focusField.current) return;
+    focusField.current = false;
+    field.current?.focus();
+  }, [adding]);
 
   function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -153,7 +178,14 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
     setProblem(found);
     if (found !== undefined) return;
     setNewId("");
+    setAdding(false);
     onChoose(id);
+  }
+
+  function cancel() {
+    setNewId("");
+    setProblem(undefined);
+    setAdding(false);
   }
 
   return (
@@ -162,7 +194,7 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
       {options.length === 0 ? (
         <p className="muted">{notice}</p>
       ) : (
-        <>
+        <div className="record-field">
           <label htmlFor="record-picker">{t`Record`}</label>
           <select
             id="record-picker"
@@ -175,23 +207,42 @@ export function RecordPicker({ ids, chosen, notice, onChoose }: RecordPickerProp
               </option>
             ))}
           </select>
-        </>
+        </div>
       )}
-      <form className="inline-form" onSubmit={create}>
-        <label htmlFor="new-record-id">{t`New record id`}</label>
-        <input
-          id="new-record-id"
-          value={newId}
-          autoComplete="off"
-          onChange={(event) => setNewId(event.target.value)}
-        />
-        {problem === undefined ? null : (
-          <p className="problem" role="alert">
-            {problem}
-          </p>
-        )}
-        <button type="submit">{t`Create record`}</button>
-      </form>
+      {showForm ? (
+        <form className="inline-form" onSubmit={create}>
+          <label htmlFor="new-record-id">{t`New record id`}</label>
+          <input
+            id="new-record-id"
+            ref={field}
+            value={newId}
+            autoComplete="off"
+            placeholder={t`New record id`}
+            onChange={(event) => setNewId(event.target.value)}
+          />
+          {problem === undefined ? null : (
+            <p className="problem" role="alert">
+              {problem}
+            </p>
+          )}
+          <button type="submit">{t`Create record`}</button>
+          {options.length === 0 ? null : (
+            <button type="button" className="secondary" onClick={cancel}>{t`Cancel`}</button>
+          )}
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="secondary record-add"
+          onClick={() => {
+            focusField.current = true;
+            setAdding(true);
+          }}
+        >
+          <span aria-hidden="true">+ </span>
+          {t`New record`}
+        </button>
+      )}
     </section>
   );
 }
