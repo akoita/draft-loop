@@ -48,7 +48,7 @@ describe("model profile CLI commands", () => {
     },
     {
       modelPreset: "balanced",
-      author: { id: "economy-anthropic-author", version: 1 },
+      author: { id: "economy-anthropic-author", version: 3 },
       critic: { id: "balanced-openai-critic", version: 1 },
     },
     {
@@ -104,7 +104,7 @@ describe("model profile CLI commands", () => {
       {
         root: expect.stringContaining("workspace"),
         modelProfiles: {
-          author: { id: "economy-anthropic-author", version: 1, effort: "high" },
+          author: { id: "economy-anthropic-author", version: 3, effort: "high" },
           critic: { id: "balanced-openai-critic", version: 1 },
         },
         allowProviderData: false,
