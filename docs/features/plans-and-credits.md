@@ -91,3 +91,4 @@ A plan sets these entitlements:
 
 - [ADR 0011](../adr/0011-client-server-version.md), decision D13
 - [Organisations and consent](organisations-and-consent.md)
+- [Set up Stripe in test mode](../operations/stripe-test-mode.md)

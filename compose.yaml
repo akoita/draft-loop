@@ -185,6 +185,14 @@ services:
       DRAFT_LOOP_OIDC_WEB_CLIENT_ID: draft-loop-web
       # Tokens name the browser's address for Keycloak; the API fetches the keys inside the network.
       DRAFT_LOOP_OIDC_JWKS_URL: http://keycloak:8080/realms/draft-loop-local/protocol/openid-connect/certs
+      # Credit packs through Stripe in test mode, off unless the shell or the ignored .env sets
+      # these (docs/operations/stripe-test-mode.md). No value belongs in this file.
+      DRAFT_LOOP_PAYMENTS: ${DRAFT_LOOP_PAYMENTS:-off}
+      DRAFT_LOOP_STRIPE_SECRET_KEY: ${DRAFT_LOOP_STRIPE_SECRET_KEY:-}
+      DRAFT_LOOP_STRIPE_WEBHOOK_SECRET: ${DRAFT_LOOP_STRIPE_WEBHOOK_SECRET:-}
+      DRAFT_LOOP_STRIPE_PRICE_PACK_1: ${DRAFT_LOOP_STRIPE_PRICE_PACK_1:-}
+      DRAFT_LOOP_STRIPE_PRICE_PACK_5: ${DRAFT_LOOP_STRIPE_PRICE_PACK_5:-}
+      DRAFT_LOOP_PAYMENTS_RETURN_URL: ${DRAFT_LOOP_PAYMENTS_RETURN_URL:-http://127.0.0.1:58082/}
     ports:
       - "127.0.0.1:58082:8080"
     healthcheck:
