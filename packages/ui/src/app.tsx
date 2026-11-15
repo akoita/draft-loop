@@ -3,6 +3,7 @@ import { t } from "@lingui/core/macro";
 // English is active before the first render; a host may switch it with ScreensI18nProvider.
 import "./i18n.js";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AdvancedOption, AdvancedOptions } from "./advanced-options.js";
 import type {
   ApplicationModelProfilesView,
   ApplicationSummaryView,
@@ -2989,19 +2990,26 @@ export function App({
               <div className="home-settings-actions">
                 {modelSettingsButton}
                 {writingPolicyNode}
-                {activePort.compactHistory === undefined ? null : (
-                  <CompactHistoryAction
-                    key={state.workspaceId}
-                    workspaceId={state.workspaceId}
-                    compactHistory={activePort.compactHistory}
-                    disabled={modelSettingsDisabled || reviewRunning}
-                    disabledReason={modelSettingsDisabledReason}
-                  />
-                )}
               </div>
               <HostWorkspaceSettings openEvidence={openEvidenceScreen} />
               <ScreenLanguageSetting />
               {providerAuthentication}
+              {activePort.compactHistory === undefined ? null : (
+                <AdvancedOptions>
+                  <AdvancedOption
+                    title={t`Compact run history`}
+                    effect={t`Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup.`}
+                  >
+                    <CompactHistoryAction
+                      key={state.workspaceId}
+                      workspaceId={state.workspaceId}
+                      compactHistory={activePort.compactHistory}
+                      disabled={modelSettingsDisabled || reviewRunning}
+                      disabledReason={modelSettingsDisabledReason}
+                    />
+                  </AdvancedOption>
+                </AdvancedOptions>
+              )}
             </>
           }
         />
