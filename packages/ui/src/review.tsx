@@ -194,7 +194,7 @@ import {
   reviewedRequirementsSelection,
   startRequirementsChoice,
 } from "./start-requirements-model.js";
-import { submitOnEnter } from "./submit-on-enter.js";
+import { enterIsComposing, submitOnEnter } from "./submit-on-enter.js";
 import { ThemeToggle } from "./theme.js";
 import { usageLimitText } from "./usage-limit.js";
 
@@ -2359,6 +2359,8 @@ export function ReviewWorkspace({
                   event.preventDefault();
                   focusPaletteCommand(paletteMatches.length - 1);
                 } else if (event.key === "Enter") {
+                  // Enter that confirms an input-method candidate belongs to the input method.
+                  if (enterIsComposing(event)) return;
                   event.preventDefault();
                   const first = paletteMatches[0];
                   if (first !== undefined) runPaletteCommand(first);

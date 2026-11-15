@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import type { KeyboardEvent } from "react";
 import { useInlineRename } from "./inline-rename.js";
+import { enterIsComposing } from "./submit-on-enter.js";
 import { invalidWorkspaceNameMessage, normalizeWorkspaceDisplayName } from "./workspace-name.js";
 
 const nameInputId = "workspace-title-input";
@@ -84,6 +85,8 @@ export function WorkspaceTitleView({
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
+      // Enter that confirms an input-method candidate belongs to the input method.
+      if (enterIsComposing(event)) return;
       event.preventDefault();
       if (!busy) onSave();
       return;
