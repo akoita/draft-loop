@@ -283,7 +283,7 @@ function DownloadFileButton({
 
 /**
  * The panels below the knowledge panel over one reading: file checks, then the optional ones, most
- * used first: the career interview and the work journal where the server serves them. Private
+ * used first: the career interview, then the work journal where the server serves it. Private
  * sections sit in the card's Advanced options (`evidence-advanced.tsx`).
  */
 export function EvidenceSections({
@@ -302,9 +302,12 @@ export function EvidenceSections({
         <p className="eyebrow">{t`Optional`}</p>
         <p>{t`Add more evidence at any time. None of the sections below is needed before Career profile.`}</p>
       </div>
-      {workJournal === true ? (
-        <CareerInterviewSection client={client} bases={bases} onChanged={onChanged} />
-      ) : null}
+      <CareerInterviewSection
+        client={client}
+        bases={bases}
+        onChanged={onChanged}
+        liveVoice={workJournal === true}
+      />
       {workJournal === true ? (
         <WorkJournalSection client={client} bases={bases} openHome={openHome} />
       ) : null}
@@ -316,8 +319,8 @@ export interface EvidenceSectionsProps {
   readonly client: ApiClient;
   readonly revision: number;
   /**
-   * Shows the work journal review and the career interview; the web shows them only with the
-   * owner token for now.
+   * Shows the work journal review and the interview's live voice; the web shows them only with
+   * the owner token for now. The written career interview shows in every mode (#2735).
    */
   readonly workJournal?: boolean;
   /** Opens Home, for the Work journal's link to Agents. */

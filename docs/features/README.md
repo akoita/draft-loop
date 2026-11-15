@@ -53,7 +53,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Guided career interview](../reference/career-interview-method.md)                                           | `available` | server        | `none`       | An interviewer asks about your work and turns answers into facts you approve. An empty record gets four starting topics. |
 | [Start from a conversation](../reference/career-interview-method.md#a-first-conversation-on-an-empty-record) | `available` | server        | `none`       | With no documents yet, the Career evidence card and Home offer to start by talking with the interviewer.                 |
 | [Answer by voice](../reference/voice-input.md)                                                               | `available` | server        | `none`       | Dictate an interview answer; speech is turned into text before you send it.                                              |
-| [Talk live](../reference/voice-input.md)                                                                     | `partial`   | server        | `none`       | A spoken conversation with the interviewer; a measured staging walk is open (#2363).                                     |
+| [Talk live](../reference/voice-input.md)                                                                     | `partial`   | server        | `none`       | A spoken conversation with the interviewer, with the owner token only; a measured staging walk is open (#2363).          |
 
 ## Applications
 
