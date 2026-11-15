@@ -1,3 +1,5 @@
+import { ScreenLanguageMenu } from "@draft-loop/ui/screen-language";
+import { HeaderThemeToggle } from "@draft-loop/ui/theme";
 import { t } from "@lingui/core/macro";
 import { createContext, type ReactNode, useContext } from "react";
 
@@ -66,6 +68,19 @@ export function PageActions({ children }: { readonly children?: ReactNode }) {
     <div className="page-actions">
       {children}
       {shell}
+    </div>
+  );
+}
+
+/**
+ * The theme and the screen language above a screen that comes before any record, such as sign-in
+ * or sign-up (#2772), so a new person can change both before they have an account.
+ */
+export function PreferencesBar() {
+  return (
+    <div className="page-actions preferences-bar">
+      <HeaderThemeToggle />
+      <ScreenLanguageMenu />
     </div>
   );
 }

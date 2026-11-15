@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
 
 import { ownerTokenProblem } from "./session.js";
+import { PreferencesBar } from "./shell-actions.js";
 
 export interface SignInProps {
   /** Why the last session ended, such as a token the API refused. */
@@ -23,43 +24,49 @@ export function SignIn({ notice, onSignIn }: SignInProps) {
   }
 
   return (
-    <main className="sign-in">
-      <h1>{t`DraftLoop`}</h1>
-      <p>{t`Sign in with the owner token of this deployment. It stays in this tab until you close it.`}</p>
-      {notice === undefined ? null : (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
-      <form onSubmit={submit}>
-        <label htmlFor="owner-token">{t`Owner token`}</label>
-        <input
-          id="owner-token"
-          type="password"
-          autoComplete="current-password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-        />
-        {problem === undefined ? null : (
-          <p className="problem" role="alert">
-            {problem}
+    <>
+      <PreferencesBar />
+      <main className="sign-in">
+        <h1>{t`DraftLoop`}</h1>
+        <p>{t`Sign in with the owner token of this deployment. It stays in this tab until you close it.`}</p>
+        {notice === undefined ? null : (
+          <p className="notice" role="status">
+            {notice}
           </p>
         )}
-        <button type="submit">{t`Sign in`}</button>
-      </form>
-    </main>
+        <form onSubmit={submit}>
+          <label htmlFor="owner-token">{t`Owner token`}</label>
+          <input
+            id="owner-token"
+            type="password"
+            autoComplete="current-password"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+          />
+          {problem === undefined ? null : (
+            <p className="problem" role="alert">
+              {problem}
+            </p>
+          )}
+          <button type="submit">{t`Sign in`}</button>
+        </form>
+      </main>
+    </>
   );
 }
 
 /** Shown when the API cannot say how to sign in, so the screen cannot start. */
 export function ServiceUnreachable() {
   return (
-    <main className="sign-in">
-      <h1>{t`DraftLoop`}</h1>
-      <p
-        className="problem"
-        role="alert"
-      >{t`The service cannot be reached. Check your connection and reload the page.`}</p>
-    </main>
+    <>
+      <PreferencesBar />
+      <main className="sign-in">
+        <h1>{t`DraftLoop`}</h1>
+        <p
+          className="problem"
+          role="alert"
+        >{t`The service cannot be reached. Check your connection and reload the page.`}</p>
+      </main>
+    </>
   );
 }

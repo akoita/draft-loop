@@ -12,6 +12,7 @@ import {
   signedInClient,
   signInNotices,
 } from "./oidc-session.js";
+import { PreferencesBar } from "./shell-actions.js";
 
 export interface OidcSignInProps {
   /** Why the last session ended or the last attempt failed. */
@@ -44,10 +45,13 @@ export function OidcSignIn(props: OidcSignInProps & { readonly waitlist?: boolea
   // While the beta is open, a visitor who is not signed in sees the landing page (#2567).
   if (waitlist && signIn.busy !== true) return <Landing signIn={<SignInBlock {...signIn} />} />;
   return (
-    <main className="sign-in">
-      <h1>{t`DraftLoop`}</h1>
-      <SignInBlock {...signIn} />
-    </main>
+    <>
+      <PreferencesBar />
+      <main className="sign-in">
+        <h1>{t`DraftLoop`}</h1>
+        <SignInBlock {...signIn} />
+      </main>
+    </>
   );
 }
 

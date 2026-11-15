@@ -37,3 +37,36 @@ export function ScreenLanguageSetting() {
     </div>
   );
 }
+
+/**
+ * The compact screen language control in a page header (#2772): a globe and the language's own
+ * name, on every screen from sign-in on, so a new person never needs a record to change it.
+ * Renders nothing when the host offers no choice.
+ */
+export function ScreenLanguageMenu() {
+  const { locale, choose } = useScreenLocale();
+  if (choose === undefined) return null;
+  const value: ScreenLanguage = locale === "fr" ? "fr" : "en";
+  const hint = t`Menus, buttons and messages use this language. Each CV and letter keeps its own document language.`;
+  return (
+    <label className="button button-toolbar screen-language-menu" title={hint}>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.6" />
+        <path
+          d="M3.8 12h16.4M12 3.8c2.3 2.3 3.4 5 3.4 8.2s-1.1 5.9-3.4 8.2c-2.3-2.3-3.4-5-3.4-8.2s1.1-5.9 3.4-8.2Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="sr-only">{t`Screen language`}</span>
+      <select value={value} onChange={(event) => choose(event.target.value === "fr" ? "fr" : "en")}>
+        {screenLanguages.map((language) => (
+          <option key={language} value={language} lang={language}>
+            {screenLanguageNames[language]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
