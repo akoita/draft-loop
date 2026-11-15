@@ -188,7 +188,8 @@ describe("ReviewWorkspace with setup summary", () => {
     // The data-sent detail is folded; the acknowledgement needed to start stays visible.
     expect(html).toContain("<summary>See exactly what is sent</summary>");
     expect(html).toContain("Acknowledge provider transmission");
-    expect(html).toContain("Advanced: writing policy override for this job");
+    expect(html).toContain("<summary>Advanced options</summary>");
+    expect(html).toContain("Writing policy override for this job");
     expect(html).toContain("Start review · review the data sent first");
   });
 

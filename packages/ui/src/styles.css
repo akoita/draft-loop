@@ -5069,6 +5069,15 @@ input[type="text"].workspace-title-input {
   margin-top: 0;
 }
 
+/* A whole panel moved into the fold reads as one more section of it. */
+.advanced-options .panel {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: var(--space-4) 0 0;
+  background: transparent;
+}
+
 .knowledge-section {
   display: grid;
   gap: var(--space-3);

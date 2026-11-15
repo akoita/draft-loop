@@ -25,6 +25,9 @@ web servers.
    The review's **Job** tab shows it with the page's address.
 3. Check the brief, edit it, and mark the version reviewed. A run pins one
    reviewed version.
+   Before a start, **Advanced options** in the review step holds the two
+   rarely needed choices: starting from the raw job description while the
+   brief is still a draft, and a writing policy override for this job only.
 4. Home lists every application with search, a status filter, sort and a
    **List** view. Group applications in one-level **folders**; deleting a
    folder keeps its applications.

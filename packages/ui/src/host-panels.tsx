@@ -20,6 +20,11 @@ export interface HostPanels {
    */
   readonly evidenceAfter?: (context: EvidenceAfterContext) => ReactNode;
   /**
+   * Shown inside the Career evidence card's Advanced options, such as rules on what a model may
+   * read. `setNote` puts a short text on the folded line while a choice inside is not the default.
+   */
+  readonly evidenceAdvanced?: (context: EvidenceAdvancedContext) => ReactNode;
+  /**
    * Shown in the Start confirmation above its buttons, such as a consent and the run's cost.
    * `applicationId` is the application the run belongs to, when the screen knows it. While the
    * panel holds a reason through `setBlockedReason`, Start stays disabled and shows it; pass
@@ -53,6 +58,12 @@ export interface EvidenceAfterContext {
   readonly onChanged?: (() => void) | undefined;
 }
 
+/** What the host's panel in the Career evidence card's Advanced options is given. */
+export interface EvidenceAdvancedContext {
+  readonly revision: number;
+  readonly setNote: (note: string | null) => void;
+}
+
 /** What the host's panel on an application is given. */
 export interface ApplicationPanelContext {
   readonly applicationId: string;
@@ -80,6 +91,11 @@ export function HostEvidenceBefore() {
 /** The host's panel below the Career evidence page's knowledge panel; nothing without one. */
 export function HostEvidenceAfter(context: EvidenceAfterContext) {
   return useContext(HostPanelsContext).evidenceAfter?.(context) ?? null;
+}
+
+/** The host's panel in the Career evidence card's Advanced options, or undefined without one. */
+export function useHostEvidenceAdvanced(): HostPanels["evidenceAdvanced"] {
+  return useContext(HostPanelsContext).evidenceAdvanced;
 }
 
 /** The host's panel in the Start confirmation; nothing without one. */
