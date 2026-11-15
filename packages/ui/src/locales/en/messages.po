@@ -312,6 +312,11 @@ msgstr "{0} blocking · {1}"
 msgid "{0} exports were not imported because their files were missing."
 msgstr "{0} exports were not imported because their files were missing."
 
+#. placeholder {0}: creditCount(pack.credits)
+#: apps/web/src/credits-model.ts
+msgid "{0} for {price}"
+msgstr "{0} for {price}"
+
 #. placeholder {0}: countedNouns.sourceFile(legacySourceCount)
 #: packages/ui/src/home-model.ts
 msgid "{0} in this workspace"
@@ -1706,6 +1711,10 @@ msgstr "Build the profile from my career evidence with local fixtures. Nothing i
 #: packages/ui/src/career-panel.tsx
 msgid "builds"
 msgstr "builds"
+
+#: apps/web/src/credits.tsx
+msgid "Buy credits"
+msgstr "Buy credits"
 
 #: packages/ui/src/home-folders.tsx
 msgid "By folder"
@@ -6138,6 +6147,10 @@ msgstr "Paused: the same blocking finding persisted for two rounds — decide it
 msgid "pay"
 msgstr "pay"
 
+#: apps/web/src/credits-model.ts
+msgid "Payment received. Your credits arrive within a minute."
+msgstr "Payment received. Your credits arrive within a minute."
+
 #: packages/ui/src/review.tsx
 msgid "Pending"
 msgstr "Pending"
@@ -8281,6 +8294,10 @@ msgstr "Target job description"
 msgid "Target job description URL"
 msgstr "Target job description URL"
 
+#: apps/web/src/credits.tsx
+msgid "Tax included. You pay on Stripe's page, in test mode: no real money moves."
+msgstr "Tax included. You pay on Stripe's page, in test mode: no real money moves."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Teaching"
 msgstr "Teaching"
@@ -8969,6 +8986,10 @@ msgstr "The owner token is at least {ownerTokenMinimumLength} characters long."
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
 msgstr "The pair set on Home. Default."
+
+#: apps/web/src/credits-model.ts
+msgid "The payment was cancelled. Nothing was charged."
+msgstr "The payment was cancelled. Nothing was charged."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "The period {title}"

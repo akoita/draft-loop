@@ -8,8 +8,11 @@ import {
   estimateLine,
   estimateNotes,
   planRefusalMessage,
+  purchaseReturn,
+  purchaseReturnText,
   readCredits,
   readEstimate,
+  startPurchase,
 } from "./credits-model.js";
 import { syntheticCredits, syntheticEstimate } from "./test-fixtures.js";
 
@@ -232,5 +235,45 @@ describe("plan refusal messages", () => {
 
   it("counts credits plainly", () => {
     expect(creditCount(0)).toBe("0 credits");
+  });
+});
+
+describe("buying a credit pack", () => {
+  const clientAnswering = (checkoutUrl: string) => {
+    const calls: unknown[] = [];
+    const client = {
+      call: async (operation: string, input: unknown) => {
+        calls.push([operation, input]);
+        return { checkoutUrl };
+      },
+    } as unknown as ApiClient;
+    return { client, calls };
+  };
+
+  it("asks for the pack's checkout and answers its address", async () => {
+    const { client, calls } = clientAnswering("https://checkout.stripe.com/c/pay/cs_test_1");
+
+    await expect(startPurchase(client, "pack-5")).resolves.toBe(
+      "https://checkout.stripe.com/c/pay/cs_test_1",
+    );
+    expect(calls).toEqual([
+      ["POST /v1/organisation/credit-purchases", { body: { pack: "pack-5" } }],
+    ]);
+  });
+
+  it("refuses a payment page that is not HTTPS", async () => {
+    const { client } = clientAnswering("http://checkout.stripe.com/c/pay/cs_test_1");
+    await expect(startPurchase(client, "pack-1")).rejects.toThrow("not secure");
+  });
+
+  it("reads why the buyer is back from the address", () => {
+    expect(purchaseReturn("?purchase=done")).toBe("done");
+    expect(purchaseReturn("?x=1&purchase=cancelled")).toBe("cancelled");
+    expect(purchaseReturn("?purchase=free")).toBeUndefined();
+    expect(purchaseReturn("")).toBeUndefined();
+    expect(purchaseReturnText("done")).toBe(
+      "Payment received. Your credits arrive within a minute.",
+    );
+    expect(purchaseReturnText("cancelled")).toBe("The payment was cancelled. Nothing was charged.");
   });
 });

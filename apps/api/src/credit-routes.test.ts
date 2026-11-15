@@ -13,8 +13,8 @@ import type { CreditBalance, PlanAssignment } from "@draft-loop/storage-postgres
 import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { buildApi } from "./app.js";
+import type { PaymentCheckoutPort } from "./payment-checkout.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import type { TenantApplication } from "./tenant-context.js";
 
@@ -151,9 +151,13 @@ function fakeApplication(): TenantApplication {
   };
 }
 
-async function api(mode: "owner" | "oidc" = "oidc"): Promise<FastifyInstance> {
+async function api(
+  mode: "owner" | "oidc" = "oidc",
+  payments?: PaymentCheckoutPort,
+): Promise<FastifyInstance> {
   app = await buildApi({
     ownerToken,
+    ...(payments === undefined ? {} : { payments }),
     ...(mode === "oidc" ? { auth: signIn } : {}),
     tenants: {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
@@ -224,6 +228,7 @@ describe("GET /v1/organisation/credits", () => {
       grantsRemaining: 0,
       remaining: 6,
       warning: false,
+      creditPacks: [],
     });
   });
 
@@ -235,6 +240,17 @@ describe("GET /v1/organisation/credits", () => {
       await server.close();
       app = undefined;
     }
+  });
+
+  it("lists the credit packs only when the service sells them", async () => {
+    const server = await api("oidc", { startCreditPackCheckout: vi.fn() });
+
+    const response = await get(server, "/v1/organisation/credits");
+
+    expect(response.body.creditPacks).toEqual([
+      { id: "pack-1", credits: 1, priceEurCents: 500 },
+      { id: "pack-5", credits: 5, priceEurCents: 2200 },
+    ]);
   });
 
   it("refuses an organisation without a plan", async () => {
@@ -296,6 +312,7 @@ describe("GET /v1/organisation/credits", () => {
       remaining: null,
       used: 102,
       warning: false,
+      creditPacks: [],
     });
   });
 

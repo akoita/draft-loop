@@ -122,6 +122,7 @@ export const syntheticCredits: ApiSchemas["MemberCredits"] = {
   grantsRemaining: 0,
   remaining: 38,
   warning: false,
+  creditPacks: [],
 };
 
 export const syntheticEstimate: ApiSchemas["RunEstimate"] = {

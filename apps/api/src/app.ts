@@ -808,7 +808,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     });
   }
   if (entitlementsFor !== undefined) {
-    registerMemberCreditsRoute(app, { entitlementsFor, signIn: auth.mode === "oidc" });
+    registerMemberCreditsRoute(app, {
+      entitlementsFor,
+      signIn: auth.mode === "oidc",
+      sellsPacks: options.payments !== undefined,
+    });
     registerCreditPurchaseRoutes(app, { payments: options.payments, signIn: auth.mode === "oidc" });
   }
   const purchasesFor = options.tenants?.creditPurchasesFor;

@@ -306,6 +306,11 @@ msgstr "{0} bloquants · {1}"
 msgid "{0} exports were not imported because their files were missing."
 msgstr "{0} exports n’ont pas été importés car leurs fichiers manquaient."
 
+#. placeholder {0}: creditCount(pack.credits)
+#: apps/web/src/credits-model.ts
+msgid "{0} for {price}"
+msgstr "{0} pour {price}"
+
 #. placeholder {0}: countedNouns.sourceFile(legacySourceCount)
 #: packages/ui/src/home-model.ts
 msgid "{0} in this workspace"
@@ -1700,6 +1705,10 @@ msgstr "Construire le profil à partir de mes éléments de parcours avec des do
 #: packages/ui/src/career-panel.tsx
 msgid "builds"
 msgstr "compilations"
+
+#: apps/web/src/credits.tsx
+msgid "Buy credits"
+msgstr "Acheter des crédits"
 
 #: packages/ui/src/home-folders.tsx
 msgid "By folder"
@@ -6132,6 +6141,10 @@ msgstr "En pause : le même constat bloquant a persisté pendant deux tours — 
 msgid "pay"
 msgstr "la rémunération"
 
+#: apps/web/src/credits-model.ts
+msgid "Payment received. Your credits arrive within a minute."
+msgstr "Paiement reçu. Vos crédits arrivent dans la minute."
+
 #: packages/ui/src/review.tsx
 msgid "Pending"
 msgstr "En attente"
@@ -8275,6 +8288,10 @@ msgstr "Offre d’emploi visée"
 msgid "Target job description URL"
 msgstr "URL de l’offre d’emploi visée"
 
+#: apps/web/src/credits.tsx
+msgid "Tax included. You pay on Stripe's page, in test mode: no real money moves."
+msgstr "TVA incluse. Vous payez sur la page de Stripe, en mode test : aucun argent réel ne circule."
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Teaching"
 msgstr "Enseignement"
@@ -8963,6 +8980,10 @@ msgstr "Le jeton propriétaire compte au moins {ownerTokenMinimumLength} caract�
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
 msgstr "La paire définie sur l’accueil. Par défaut."
+
+#: apps/web/src/credits-model.ts
+msgid "The payment was cancelled. Nothing was charged."
+msgstr "Le paiement a été annulé. Rien n’a été débité."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "The period {title}"

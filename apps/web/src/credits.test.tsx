@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { CreditBalancePanel, RunEstimatePanel } from "./credits.js";
+import { BuyCredits, CreditBalancePanel, RunEstimatePanel } from "./credits.js";
 import { syntheticCredits, syntheticEstimate } from "./test-fixtures.js";
 
 describe("credit balance chip", () => {
@@ -43,6 +43,29 @@ describe("credit balance chip", () => {
   it("shows nothing while loading, in owner-token mode, without a plan or on a failure", () => {
     for (const kind of ["loading", "hidden", "no-plan", "failed"] as const)
       expect(renderToStaticMarkup(<CreditBalancePanel state={{ kind }} />)).toBe("");
+  });
+});
+
+describe("buy credits", () => {
+  const packs = [
+    { id: "pack-1", credits: 1, priceEurCents: 500 },
+    { id: "pack-5", credits: 5, priceEurCents: 2200 },
+  ] as const;
+
+  it("stays folded until asked", () => {
+    const html = renderToStaticMarkup(<BuyCredits packs={packs} onBuy={async () => undefined} />);
+    expect(html).toContain("Buy credits");
+    expect(html).not.toContain("€");
+  });
+
+  it("lists each pack with its price, tax included, and says it is test mode", () => {
+    const html = renderToStaticMarkup(
+      <BuyCredits packs={packs} onBuy={async () => undefined} locale="en-GB" initiallyOpen />,
+    );
+    expect(html).toContain("1 credit for €5.00");
+    expect(html).toContain("5 credits for €22.00");
+    expect(html).toContain("Tax included.");
+    expect(html).toContain("test mode");
   });
 });
 

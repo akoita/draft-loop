@@ -4716,6 +4716,38 @@
           "warning": {
             "type": "boolean",
             "description": "True once `used` is at least 80% of `allowance`."
+          },
+          "creditPacks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "enum": [
+                    "pack-1",
+                    "pack-5"
+                  ]
+                },
+                "credits": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "priceEurCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "The price in euro cents, tax included."
+                }
+              },
+              "required": [
+                "id",
+                "credits",
+                "priceEurCents"
+              ]
+            },
+            "description": "The credit packs this service sells now, bought through `POST /v1/organisation/credit-purchases`; empty when it sells none."
           }
         },
         "required": [
@@ -4730,7 +4762,8 @@
           "reserved",
           "grantsRemaining",
           "remaining",
-          "warning"
+          "warning",
+          "creditPacks"
         ]
       },
       "RunEstimateInput": {
@@ -12213,6 +12246,39 @@
           "warning": {
             "type": "boolean",
             "description": "True once `used` is at least 80% of `allowance`."
+          },
+          "creditPacks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "enum": [
+                    "pack-1",
+                    "pack-5"
+                  ]
+                },
+                "credits": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "priceEurCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "The price in euro cents, tax included."
+                }
+              },
+              "required": [
+                "id",
+                "credits",
+                "priceEurCents"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The credit packs this service sells now, bought through `POST /v1/organisation/credit-purchases`; empty when it sells none."
           }
         },
         "required": [
@@ -12227,7 +12293,8 @@
           "reserved",
           "grantsRemaining",
           "remaining",
-          "warning"
+          "warning",
+          "creditPacks"
         ],
         "additionalProperties": false
       },
