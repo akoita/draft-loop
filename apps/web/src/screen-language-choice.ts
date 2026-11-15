@@ -49,7 +49,8 @@ export interface ScreenLanguageSources {
   readonly development: boolean;
 }
 
-function savedLanguage(storage: () => Storage | undefined): ScreenLanguage | null {
+/** The language this browser saved from an earlier choice, or null when it saved none. */
+export function savedLanguage(storage: () => Storage | undefined): ScreenLanguage | null {
   try {
     const value = storage()?.getItem(screenLanguageKey) ?? null;
     return isScreenLanguage(value) ? value : null;
