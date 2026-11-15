@@ -1,3 +1,4 @@
+import { maximumUnplannedCanonicalCandidateProfileExtractionSourceCharacters } from "./candidate-profile-extraction.js";
 import type { CanonicalProfileExtractionTextWindow } from "./canonical-profile-extraction-sections.js";
 import {
   canonicalProfileExtractionWindowCharacters,
@@ -6,6 +7,9 @@ import {
 import { planCanonicalProfileExtractionStructureWindows } from "./canonical-profile-extraction-structure.js";
 
 const proactivePlanMinimumSourceCount = 1;
+// Above four sources a small corpus goes in one request. A source too large for one request has
+// no such fallback, so a set that holds one is planned whatever its size (#2729): leaving it
+// unplanned drops the source and every fact it gave.
 const proactivePlanMaximumSourceCount = 4;
 const proactivePlanTotalTextThreshold = 65_536;
 // One 512 Ki source with newline-shortened windows (down to ~80% of the window size) needs up to
@@ -42,9 +46,13 @@ export function planCanonicalProfileExtractionCalls(
   sources: readonly { readonly id: string; readonly text: string }[],
   maxOutputTokens?: number,
 ): readonly CanonicalProfileExtractionPlannedCall[] | null {
+  const needsWindows = sources.some(
+    (source) =>
+      source.text.length > maximumUnplannedCanonicalCandidateProfileExtractionSourceCharacters,
+  );
   if (
     sources.length < proactivePlanMinimumSourceCount ||
-    sources.length > proactivePlanMaximumSourceCount ||
+    (sources.length > proactivePlanMaximumSourceCount && !needsWindows) ||
     new Set(sources.map((source) => source.id)).size !== sources.length
   ) {
     return null;
