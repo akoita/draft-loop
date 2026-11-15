@@ -128,6 +128,7 @@ export function composeHostedApplication(
     researchBriefs: storage.researchBriefs,
     careerInterview: {
       sessions: storage.careerInterviewSessions,
+      calls: storage,
       allowProviderData: parts.screening?.allowProviderData ?? false,
       ...(parts.screening?.claudeRoute === undefined ? {} : { route: parts.screening.claudeRoute }),
     },

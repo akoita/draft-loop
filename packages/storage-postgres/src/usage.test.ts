@@ -237,4 +237,68 @@ describe.runIf(connectionString !== undefined)("Postgres month usage", () => {
     ]);
     expect(await tenantC.monthUsage("2026-09")).toMatchObject([{ calls: 1, inputTokens: 10 }]);
   });
+
+  it("counts each career interviewer call from its own event (#2758)", async () => {
+    const tenantD = await schema.open("tenant-d");
+    await tenantD.saveWorkspace({
+      id: "workspace-1",
+      state: "collecting",
+      createdAt: at,
+      updatedAt: at,
+    });
+    const call = (index: number, completedAt: string, extra: object = {}) =>
+      tenantD.appendAuditEvent({
+        id: `interview-call-${index}`,
+        workspaceId: "workspace-1",
+        eventType: "career-interview.model-call",
+        entityType: "career-interview-session",
+        entityId: "session-1",
+        payload: {
+          schemaVersion: 1,
+          provider: "anthropic",
+          modelId: "claude-sonnet-5-5",
+          route: "vertex-ai",
+          inputTokens: 1_000,
+          outputTokens: 200,
+          estimatedUsd: 0.006,
+          completedAt,
+          ...extra,
+        },
+        createdAt: completedAt,
+      });
+    try {
+      await call(0, "2026-10-02T10:00:00.000Z");
+      await call(1, "2026-10-02T10:01:00.000Z");
+      // A billed failure carries no route; an unpriced call counts but adds no cost.
+      await call(2, "2026-10-02T10:02:00.000Z", { route: null, inputTokens: 0, outputTokens: 0 });
+      await call(3, "2026-10-02T10:03:00.000Z", { estimatedUsd: null });
+      await call(4, "2026-11-01T00:00:00.000Z");
+
+      expect(await tenantD.monthUsage("2026-10")).toEqual([
+        {
+          company: "anthropic",
+          model: "claude-sonnet-5-5",
+          route: null,
+          calls: 1,
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedUsd: 0.006,
+          unpricedCalls: 0,
+        },
+        {
+          company: "anthropic",
+          model: "claude-sonnet-5-5",
+          route: "vertex-ai",
+          calls: 3,
+          inputTokens: 3_000,
+          outputTokens: 600,
+          estimatedUsd: 0.012,
+          unpricedCalls: 1,
+        },
+      ]);
+      expect(await tenantA.monthUsage("2026-11")).toEqual([]);
+    } finally {
+      await tenantD.close();
+    }
+  });
 });
