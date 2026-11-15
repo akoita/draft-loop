@@ -49,6 +49,8 @@ export const maximumSavedApplicationMaterialItemCharacters = 4_000;
 export const maximumSavedApplicationMaterialCitations = 20;
 /** The most critic findings one revised version keeps (#2524). */
 export const maximumMachineTellFindings = 8;
+/** What a career record may lack, so a cover letter cannot name it. */
+export const savedMaterialRecordGaps = ["employer", "dates"] as const;
 
 export const savedApplicationMaterialIdSchema = z
   .string()
@@ -167,6 +169,14 @@ export const savedApplicationMaterialSchema = z
      * state no fact. Absent when every topic had a source.
      */
     unsourced_topics: z.array(z.enum(researchTopics)).max(researchTopics.length).optional(),
+    /**
+     * For a cover letter (#2725): what the career record did not hold when it was drafted, so the
+     * letter could not name it. Absent when the record had both.
+     */
+    record_gaps: z
+      .array(z.enum(savedMaterialRecordGaps))
+      .max(savedMaterialRecordGaps.length)
+      .optional(),
     prompt_version: shortText,
     cost_usd: z.number().min(0),
     created_at: z.iso.datetime({ offset: true }),

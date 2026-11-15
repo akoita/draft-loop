@@ -79,6 +79,22 @@ export function applicationMaterialDraftLabel(
   return drafted ? t`Draft new interview questions` : t`Draft interview questions`;
 }
 
+/**
+ * Why a letter names no employer or no dates (#2725): the career record held none when it was
+ * drafted. Says what to add, so the gap is not taken for a fault of the draft.
+ */
+export function recordGapsNotice(gaps: readonly ("employer" | "dates")[]): string {
+  const employer = gaps.includes("employer");
+  const dates = gaps.includes("dates");
+  if (employer && dates) {
+    return t`Your career record holds no employer and no dates, so this letter names neither. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again.`;
+  }
+  if (employer) {
+    return t`Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again.`;
+  }
+  return t`Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again.`;
+}
+
 /** Named before the first draft: what goes to Anthropic, and what never does. */
 export const applicationMaterialDisclosure = () =>
   t`Drafting sends this application's job requirements and the facts in your career profile to Anthropic (Claude). Your name and contact details are never sent. Each draft is saved with this application, where you can reopen or delete it.`;

@@ -37,3 +37,21 @@ export function keepCareerFrame<T extends ApplicationMaterialFact>(
   }
   return kept;
 }
+
+export const careerRecordGaps = ["employer", "dates"] as const;
+export type CareerRecordGap = (typeof careerRecordGaps)[number];
+
+/**
+ * What a letter cannot say because the record does not hold it (#2725): a record built only from
+ * work notes has achievements and skills but no employer and no dates. Named to the candidate with
+ * the draft, so a letter with no employer in it is explained rather than taken for a fault.
+ */
+export function careerRecordGapsOf(
+  facts: readonly Pick<ApplicationMaterialFact, "category">[],
+): CareerRecordGap[] {
+  const has = (category: string) => facts.some((fact) => fact.category === category);
+  return [
+    ...(has("employer") ? [] : (["employer"] as const)),
+    ...(has("date") ? [] : (["dates"] as const)),
+  ];
+}

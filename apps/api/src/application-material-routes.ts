@@ -29,6 +29,7 @@ import {
   coverLetterClaimCheckPromptVersion,
   createModelCoverLetterClaimChecker,
 } from "@draft-loop/application/cover-letter-claims-model";
+import { careerRecordGapsOf } from "@draft-loop/application/cover-letter-facts";
 import { draftFreeFormCoverLetter } from "@draft-loop/application/cover-letter-free-form";
 import {
   createModelFreeFormCoverLetterWriter,
@@ -51,6 +52,7 @@ import {
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
   savedApplicationMaterialKinds,
+  savedMaterialRecordGaps,
 } from "@draft-loop/schemas/saved-application-material";
 import {
   type ConsentLedger,
@@ -257,6 +259,12 @@ export const draftView = z
       .optional()
       .describe(
         "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
+      ),
+    record_gaps: z
+      .array(z.enum(savedMaterialRecordGaps))
+      .optional()
+      .describe(
+        "For a cover letter: what the career record did not hold when it was drafted, so the letter could not name it.",
       ),
     unsourced_topics: z
       .array(z.enum(researchTopics))
@@ -580,6 +588,7 @@ export function registerApplicationMaterialRoutes(
           : await draftApplicationMaterial(writer, draftInput);
         const droppedSentences: readonly string[] =
           (draft as { readonly droppedSentences?: readonly string[] }).droppedSentences ?? [];
+        const recordGaps = draft.kind === "cover-letter" ? careerRecordGapsOf(facts) : [];
         const companyById = new Map(companyFacts.map((fact) => [fact.id, fact.text]));
         const usesResearch = draft.items.some((item) => (item.companyFactIds ?? []).length > 0);
         const byId = new Map(facts.map((fact) => [fact.id, fact]));
@@ -619,6 +628,7 @@ export function registerApplicationMaterialRoutes(
           ...(usesResearch && research !== undefined ? { research_brief_id: research.id } : {}),
           model: draft.model ?? { provider: model.company, model: model.modelId },
           ...(droppedSentences.length === 0 ? {} : { dropped_sentences: [...droppedSentences] }),
+          ...(recordGaps.length === 0 ? {} : { record_gaps: recordGaps }),
           prompt_version: freeForm
             ? freeFormCoverLetterPromptVersion
             : applicationMaterialPromptVersion,
