@@ -20,6 +20,13 @@ export const interviewGuideWindowMonths = 12;
 export const interviewGuideProcessWindowMonths = 24;
 /** The research cost caps per depth; the writer's own cap is separate. */
 export const interviewGuideResearchMaxCostUsd = { essential: 0.08, extensive: 0.15 } as const;
+/**
+ * One web search per query (#2719): each query already names one topic, and a query that ran three
+ * searches cost about US$0.03, so the cap stopped a guide's research after two of its queries.
+ */
+export const interviewGuideSearchesPerQuery = 1;
+/** One search (US$0.01) and its tokens, with room to spare; held back before each query. */
+export const interviewGuideWorstQueryCostUsd = 0.02;
 /** A brief younger than this is reused instead of searching again. */
 export const interviewGuideResearchReuseDays = 14;
 
@@ -131,11 +138,15 @@ export function interviewGuideResearchPlan(
 ): {
   readonly queries: readonly ResearchQuery[];
   readonly reliabilityOf: (url: string) => ResearchReliability;
+  readonly searchesPerQuery: number;
+  readonly worstQueryCostUsd: number;
   readonly maxCostUsd: number;
 } {
   return {
     queries: interviewGuideResearchQueries(subject, details, now),
     reliabilityOf: (url) => researchSourceReliability(url, subject.employer),
+    searchesPerQuery: interviewGuideSearchesPerQuery,
+    worstQueryCostUsd: interviewGuideWorstQueryCostUsd,
     maxCostUsd: interviewGuideResearchMaxCostUsd[details.depth],
   };
 }

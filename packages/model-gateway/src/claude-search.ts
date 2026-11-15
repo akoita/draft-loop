@@ -19,6 +19,8 @@ export interface ClaudeSearchRequest {
   readonly query: string;
   readonly fromDate: string;
   readonly maxResults: number;
+  /** The web searches this query may run, at most the adapter's own limit. */
+  readonly maxSearches?: number;
   readonly includeDomains?: readonly string[];
   readonly signal?: AbortSignal;
 }
@@ -53,11 +55,27 @@ export type ClaudeSearchRoute = "anthropic-api" | "vertex";
 export const defaultClaudeSearchModel = "claude-haiku-5-5";
 /** US$10 per 1,000 searches, on top of the call's tokens. */
 export const claudeWebSearchUsdPerSearch = 0.01;
-/** Claude Haiku 5.5's list prices, in US dollars per million tokens. */
+/**
+ * Claude Haiku 5.5's list prices, in US dollars per million tokens. A prompt above 100K tokens is
+ * billed at the higher card (#2719); a call whose input passes that size is priced there whole, an
+ * upper bound when the tokens were spread over the call's search turns.
+ */
 export const claudeSearchTokenPricing = {
   inputUsdPerMillion: 0.1,
   outputUsdPerMillion: 0.5,
+  longPrompt: { aboveInputTokens: 100_000, inputUsdPerMillion: 0.5, outputUsdPerMillion: 2.5 },
 } as const;
+
+export interface ClaudeSearchTokenPricing {
+  readonly inputUsdPerMillion: number;
+  readonly outputUsdPerMillion: number;
+  /** The prices of a call whose input passes `aboveInputTokens`, where the route has such a card. */
+  readonly longPrompt?: {
+    readonly aboveInputTokens: number;
+    readonly inputUsdPerMillion: number;
+    readonly outputUsdPerMillion: number;
+  };
+}
 /** The searches one brief query may run. */
 const maximumSearchesPerQuery = 3;
 
@@ -85,10 +103,7 @@ export interface ClaudeSearchOptions {
   readonly route: ClaudeSearchRoute;
   readonly model?: string;
   /** The route's token prices; Vertex AI's differ by location. */
-  readonly tokenPricing?: {
-    readonly inputUsdPerMillion: number;
-    readonly outputUsdPerMillion: number;
-  };
+  readonly tokenPricing?: ClaudeSearchTokenPricing;
   /** The search time that relative page ages count back from; the clock when unset. */
   readonly now?: () => Date;
 }
@@ -133,7 +148,10 @@ export function createClaudeResearchSearch(options: ClaudeSearchOptions): {
               claudeWebSearchTool(
                 options.route,
                 model,
-                maximumSearchesPerQuery,
+                Math.max(
+                  1,
+                  Math.min(request.maxSearches ?? maximumSearchesPerQuery, maximumSearchesPerQuery),
+                ),
                 request.includeDomains,
               ),
             ],
@@ -256,17 +274,20 @@ export function claudePageAgeDate(
 
 export function claudeSearchCostUsd(
   usage: Anthropic.Usage,
-  pricing: { readonly inputUsdPerMillion: number; readonly outputUsdPerMillion: number },
+  pricing: ClaudeSearchTokenPricing,
 ): number {
   const searches = usage.server_tool_use?.web_search_requests ?? 0;
   const input =
     usage.input_tokens +
     (usage.cache_creation_input_tokens ?? 0) +
     (usage.cache_read_input_tokens ?? 0);
+  const card =
+    pricing.longPrompt !== undefined && input > pricing.longPrompt.aboveInputTokens
+      ? pricing.longPrompt
+      : pricing;
   return (
     searches * claudeWebSearchUsdPerSearch +
-    (input * pricing.inputUsdPerMillion + usage.output_tokens * pricing.outputUsdPerMillion) /
-      1_000_000
+    (input * card.inputUsdPerMillion + usage.output_tokens * card.outputUsdPerMillion) / 1_000_000
   );
 }
 

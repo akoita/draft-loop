@@ -6,6 +6,8 @@ import {
   type ClaudeSearchClient,
   ClaudeSearchError,
   claudePageAgeDate,
+  claudeSearchCostUsd,
+  claudeSearchTokenPricing,
   claudeWebSearchTool,
   createClaudeResearchSearch,
   directClaudeSearchClient,
@@ -119,6 +121,37 @@ describe("Claude research search", () => {
       },
     ]);
     expect(JSON.stringify(bodies[0]?.messages)).toContain("2025-11-08");
+  });
+
+  it("runs at most the searches a query asks for, and prices a long prompt at its card (#2719)", async () => {
+    const { clientFor, bodies } = scripted(reply([]));
+    const search = createClaudeResearchSearch({ clientFor, route: "anthropic-api" });
+    await search.search({ ...request, maxSearches: 1 });
+    await search.search({ ...request, maxSearches: 9 });
+    expect(bodies.map((body) => (body.tools as { max_uses: number }[])[0]?.max_uses)).toEqual([
+      1, 3,
+    ]);
+
+    const usage = (input_tokens: number) =>
+      ({
+        input_tokens,
+        output_tokens: 1_000,
+        server_tool_use: { web_search_requests: 1 },
+      }) as never;
+    // One search, then Haiku's tokens: US$0.10 and 0.50 per million up to 100K input tokens.
+    expect(claudeSearchCostUsd(usage(100_000), claudeSearchTokenPricing)).toBeCloseTo(
+      0.01 + 0.01 + 0.0005,
+      6,
+    );
+    // Above 100K the whole call is billed at US$0.50 and 2.50.
+    expect(claudeSearchCostUsd(usage(120_000), claudeSearchTokenPricing)).toBeCloseTo(
+      0.01 + 0.06 + 0.0025,
+      6,
+    );
+    // A route without that card keeps one price.
+    expect(
+      claudeSearchCostUsd(usage(120_000), { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 }),
+    ).toBeCloseTo(0.01 + 0.012 + 0.0005, 6);
   });
 
   it("picks the tool variant each route and model accept", () => {

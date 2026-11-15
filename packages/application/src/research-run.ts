@@ -74,6 +74,10 @@ export interface RunResearchInput {
   readonly plan?: {
     readonly queries: readonly ResearchQuery[];
     readonly reliabilityOf: (url: string) => ResearchReliability;
+    /** The web searches one query may run, where the provider runs several. */
+    readonly searchesPerQuery?: number;
+    /** What one query may cost at most with that many searches, held back before each query. */
+    readonly worstQueryCostUsd?: number;
   };
   readonly search: ResearchSearchPort;
   readonly screen: ResearchScreen;
@@ -140,13 +144,16 @@ export async function runResearch(input: RunResearchInput): Promise<ResearchBrie
   const seen = new Set<string>();
   const kept: ResearchSource[] = [];
 
+  const worstQueryCostUsd = input.plan?.worstQueryCostUsd ?? worstSearchCostUsd;
+  const searchesPerQuery = input.plan?.searchesPerQuery;
   for (const entry of planned) {
-    if (searchCostUsd + worstSearchCostUsd > cap) break;
+    if (searchCostUsd + worstQueryCostUsd > cap) break;
     const queryFrom = fromDateOf(entry);
     const reply = await input.search.search({
       query: entry.query,
       fromDate: queryFrom,
       maxResults: resultsPerQuery,
+      ...(searchesPerQuery === undefined ? {} : { maxSearches: searchesPerQuery }),
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
     searchCostUsd += reply.costUsd;

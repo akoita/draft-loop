@@ -80,6 +80,11 @@ export function researchSearchFor(
     tokenPricing: {
       inputUsdPerMillion: claudeSearchTokenPricing.inputUsdPerMillion * factor,
       outputUsdPerMillion: claudeSearchTokenPricing.outputUsdPerMillion * factor,
+      longPrompt: {
+        aboveInputTokens: claudeSearchTokenPricing.longPrompt.aboveInputTokens,
+        inputUsdPerMillion: claudeSearchTokenPricing.longPrompt.inputUsdPerMillion * factor,
+        outputUsdPerMillion: claudeSearchTokenPricing.longPrompt.outputUsdPerMillion * factor,
+      },
     },
   });
   // The same switch as the model calls' fallback: a Claude API key the deployment configured.

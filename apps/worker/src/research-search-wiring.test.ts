@@ -45,7 +45,7 @@ function claudeClient() {
             },
           ],
           usage: {
-            input_tokens: 1_000_000,
+            input_tokens: 100_000,
             output_tokens: 0,
             server_tool_use: { web_search_requests: 1 },
           },
@@ -72,8 +72,8 @@ describe("research search wiring", () => {
     const reply = await search?.search(request);
     expect(reply?.provider).toBe("claude");
     expect(reply?.sources.map((source) => source.url)).toEqual(["https://example.org/a"]);
-    // One search at US$0.01 plus a million input tokens at Haiku's US$0.10, times Vertex's 1.1.
-    expect(reply?.costUsd).toBeCloseTo(0.01 + 0.11, 6);
+    // One search at US$0.01 plus 100K input tokens at Haiku's US$0.10 a million, times Vertex's 1.1.
+    expect(reply?.costUsd).toBeCloseTo(0.01 + 0.011, 6);
     expect(scripted.bodies[0]?.tools?.[0]).toMatchObject({ type: "web_search_20250305" });
   });
 
@@ -124,7 +124,7 @@ describe("research search wiring", () => {
     const reply = await search?.search(request);
     expect(reply?.provider).toBe("claude-api-fallback");
     // Priced as the Claude API: no Vertex factor on the tokens.
-    expect(reply?.costUsd).toBeCloseTo(0.01 + 0.1, 6);
+    expect(reply?.costUsd).toBeCloseTo(0.01 + 0.01, 6);
     expect(scripted.bodies).toHaveLength(1);
     expect(scripted.bodies[0]?.tools?.[0]).toMatchObject({ type: "web_search_20250305" });
 
