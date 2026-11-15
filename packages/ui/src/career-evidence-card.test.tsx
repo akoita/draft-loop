@@ -60,7 +60,7 @@ describe("Career evidence setup card", () => {
     });
     expect(html).toContain("Career evidence");
     expect(html).not.toContain("Candidate source material");
-    expect(html).toContain("Engineering · 3 sources");
+    expect(html).toContain("Engineering · 3 documents");
     expect(html).toContain("Ready");
     expect(html).not.toContain("9 source");
     expect(html).not.toContain("legacy");
@@ -75,14 +75,53 @@ describe("Career evidence setup card", () => {
       knowledgeBase: <section id="candidate-knowledge-heading">Knowledge base</section>,
     });
     expect(html).not.toContain(">Manage<");
-    expect(html).toMatch(/Review and fetch source URL<\/button><section[^>]*>Knowledge base</);
     expect(html.indexOf("</section>")).toBeLessThan(html.indexOf("</article>"));
   });
 
-  it("offers Add folder next to Add documents only when evidence goes into a knowledge base", () => {
+  it("keeps the Knowledge base section folded under Advanced options, last in the card", () => {
+    const section = <section id="candidate-knowledge-heading">Knowledge base</section>;
+    const html = render(
+      { ...selected, displayName: "Career evidence" },
+      { knowledgeBase: section },
+    );
+    expect(html).toMatch(
+      /Review and fetch source URL<\/button><details class="advanced-options"><summary>Advanced options<\/summary>/,
+    );
+    expect(html).toMatch(/<section[^>]*>Knowledge base<\/section><\/div><\/details><\/article>$/);
+    expect(render({ kind: "unsupported" }, { knowledgeBase: section })).not.toContain(
+      "Advanced options",
+    );
+    expect(render(selected)).not.toContain("Advanced options");
+  });
+
+  it("shows the default base as the person's documents, without a base name", () => {
+    const html = render({ ...selected, displayName: "Career evidence" });
+    expect(html).toContain("<span>3 documents</span>");
+    expect(html).not.toContain("knowledge base");
+  });
+
+  it("names a base the person chose on the folded line", () => {
+    const section = <section>Knowledge base</section>;
+    expect(render(selected, { knowledgeBase: section })).toContain(
+      'Advanced options<span class="advanced-options-note"> · Knowledge base: Engineering</span>',
+    );
+  });
+
+  it("unfolds Advanced options when the next step is inside it", () => {
+    const section = <section>Knowledge base</section>;
+    const open = '<details class="advanced-options" open="">';
+    expect(render({ kind: "unavailable" }, { knowledgeBase: section })).toContain(open);
+    expect(render({ kind: "none" }, { knowledgeBase: section })).toContain(open);
+    expect(render({ kind: "none" }, { knowledgeBase: section, automatic: true })).not.toContain(
+      open,
+    );
+    expect(render(selected, { knowledgeBase: section, advancedOpen: true })).toContain(open);
+  });
+
+  it("offers Add folder under Advanced options only when evidence goes into a knowledge base", () => {
     const withFolder = { onAddFolder: () => undefined };
     expect(render(selected, withFolder)).toMatch(
-      />Add documents<\/button><button[^>]*>Add folder</,
+      /Advanced options.*Add a whole folder.*<button[^>]*>Add folder</s,
     );
     expect(render(selected)).not.toContain(">Add folder<");
     expect(render({ kind: "none" }, withFolder)).not.toContain(">Add folder<");
@@ -125,9 +164,9 @@ describe("Career evidence setup card", () => {
   it("shows the already-in-Career-evidence notice after an identical file is added again", () => {
     const html = render(
       { ...selected, displayName: "Career evidence" },
-      { message: "Already in Career evidence. 3 sources, 3 ready." },
+      { message: "Already in Career evidence. 3 documents, 3 ready." },
     );
-    expect(html).toContain("Already in Career evidence. 3 sources, 3 ready.");
+    expect(html).toContain("Already in Career evidence. 3 documents, 3 ready.");
     expect(html).toContain('role="status"');
     expect(html).not.toContain('role="alert"');
   });
@@ -160,8 +199,8 @@ describe("Career evidence setup card", () => {
       { ...selected, sourceCount: 0 },
       { setup: { ...setup, evidenceSourceCount: 4 } },
     );
-    expect(html).toContain("Engineering · 0 sources");
-    expect(html).toContain("Empty: add a CV, portfolio, or other source");
+    expect(html).toContain("Engineering · 0 documents");
+    expect(html).toContain("Empty: add a CV, portfolio, or other document");
     expect(html).toContain("Required");
     expect(html).not.toContain("setup-card-ready");
     expect(html).not.toContain("4 source");
@@ -196,7 +235,7 @@ describe("Career evidence setup card", () => {
   });
 
   it("disables the add actions while loading, busy, or without a URL", () => {
-    expect(render({ kind: "loading" })).toContain("Checking the knowledge base…");
+    expect(render({ kind: "loading" })).toContain("Checking your documents…");
     const busy = render(selected, { disabled: true, url: "https://example.com" });
     expect(busy.match(/disabled=""/gu)?.length).toBe(2);
     const idle = render(selected);
