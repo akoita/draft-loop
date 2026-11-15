@@ -312,6 +312,11 @@ msgstr ""
 msgid "{0} exports were not imported because their files were missing."
 msgstr ""
 
+#. placeholder {0}: creditCount(pack.credits)
+#: apps/web/src/credits-model.ts
+msgid "{0} for {price}"
+msgstr ""
+
 #. placeholder {0}: countedNouns.sourceFile(legacySourceCount)
 #: packages/ui/src/home-model.ts
 msgid "{0} in this workspace"
@@ -1705,6 +1710,10 @@ msgstr ""
 
 #: packages/ui/src/career-panel.tsx
 msgid "builds"
+msgstr ""
+
+#: apps/web/src/credits.tsx
+msgid "Buy credits"
 msgstr ""
 
 #: packages/ui/src/home-folders.tsx
@@ -6137,6 +6146,10 @@ msgstr ""
 msgid "pay"
 msgstr ""
 
+#: apps/web/src/credits-model.ts
+msgid "Payment received. Your credits arrive within a minute."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Pending"
 msgstr ""
@@ -8280,6 +8293,10 @@ msgstr ""
 msgid "Target job description URL"
 msgstr ""
 
+#: apps/web/src/credits.tsx
+msgid "Tax included. You pay on Stripe's page, in test mode: no real money moves."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Teaching"
 msgstr ""
@@ -8967,6 +8984,10 @@ msgstr ""
 
 #: packages/ui/src/application-model-pair.tsx
 msgid "The pair set on Home. Default."
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "The payment was cancelled. Nothing was charged."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts

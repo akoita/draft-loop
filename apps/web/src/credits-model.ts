@@ -1,4 +1,4 @@
-import { formatDate } from "@draft-loop/ui/locale-format";
+import { formatDate, formatEuros } from "@draft-loop/ui/locale-format";
 import { plural, t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { describeActionError } from "./consent-model.js";
@@ -208,4 +208,43 @@ function planLimitMessage(details: ApiRequestError["details"]): string {
 /** What to tell the member about a failed call: a plan refusal first, then a consent refusal. */
 export function describeStartError(error: unknown): string {
   return planRefusalMessage(error) ?? describeActionError(error);
+}
+
+export type CreditPackOffer = MemberCredits["creditPacks"][number];
+
+/** A pack as its buy button names it, such as `5 credits for €22.00`, tax included. */
+export function packLabel(pack: CreditPackOffer, locale?: string): string {
+  const price = formatEuros(pack.priceEurCents / 100, locale === undefined ? {} : { locale });
+  return t`${creditCount(pack.credits)} for ${price}`;
+}
+
+/** Why the buyer is back from the payment page, read from the address. */
+export type PurchaseReturn = "done" | "cancelled";
+
+export function purchaseReturn(search: string): PurchaseReturn | undefined {
+  const value = new URLSearchParams(search).get("purchase");
+  return value === "done" || value === "cancelled" ? value : undefined;
+}
+
+/** What to tell a buyer who came back from the payment page. */
+export function purchaseReturnText(back: PurchaseReturn): string {
+  return back === "done"
+    ? t`Payment received. Your credits arrive within a minute.`
+    : t`The payment was cancelled. Nothing was charged.`;
+}
+
+/**
+ * Opens the payment provider's checkout for a pack and answers its address. The page is on the
+ * provider's own domain; anything else is refused before the browser leaves.
+ */
+export async function startPurchase(
+  client: ApiClient,
+  pack: CreditPackOffer["id"],
+): Promise<string> {
+  const { checkoutUrl } = await client.call("POST /v1/organisation/credit-purchases", {
+    body: { pack },
+  });
+  const url = new URL(checkoutUrl);
+  if (url.protocol !== "https:") throw new Error("The payment page is not secure.");
+  return url.toString();
 }

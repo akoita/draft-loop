@@ -1,15 +1,21 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
-import type { ApiClient } from "./api-client.js";
+import { type ApiClient, describeError } from "./api-client.js";
 import {
   balanceChip,
   balanceLine,
+  type CreditPackOffer,
   type CreditsState,
   type EstimateState,
   estimateLine,
   estimateNotes,
+  packLabel,
+  purchaseReturn,
+  purchaseReturnText,
   readCredits,
   readEstimate,
+  startPurchase,
 } from "./credits-model.js";
 
 export interface CreditBalanceProps {
@@ -18,11 +24,23 @@ export interface CreditBalanceProps {
   readonly refresh: number;
 }
 
-/** Reads the organisation's credit balance as a chip; shows nothing in owner-token mode. */
+/** How often and how long the balance is read again after a payment, in milliseconds. */
+const purchasePollMs = 4_000;
+const purchasePolls = 8;
+
+/**
+ * Reads the organisation's credit balance as a chip, with the packs the service sells; shows
+ * nothing in owner-token mode. Back from a payment, it says so and reads the balance again until
+ * the credits arrive.
+ */
 export function CreditBalance({ client, refresh }: CreditBalanceProps) {
   const [state, setState] = useState<CreditsState>({ kind: "loading" });
+  const [back] = useState(() =>
+    typeof window === "undefined" ? undefined : purchaseReturn(window.location.search),
+  );
+  const [polls, setPolls] = useState(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh re-reads the balance
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh and polls re-read the balance
   useEffect(() => {
     let current = true;
     void readCredits(client).then((next) => {
@@ -31,9 +49,95 @@ export function CreditBalance({ client, refresh }: CreditBalanceProps) {
     return () => {
       current = false;
     };
-  }, [client, refresh]);
+  }, [client, refresh, polls]);
 
-  return <CreditBalancePanel state={state} />;
+  useEffect(() => {
+    if (back === undefined) return;
+    // The answer is shown once: a reload must not repeat it.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("purchase");
+    window.history.replaceState(window.history.state, "", url);
+    if (back !== "done") return;
+    let count = 0;
+    const timer = window.setInterval(() => {
+      count += 1;
+      setPolls(count);
+      if (count >= purchasePolls) window.clearInterval(timer);
+    }, purchasePollMs);
+    return () => window.clearInterval(timer);
+  }, [back]);
+
+  return (
+    <>
+      {back === undefined ? null : (
+        <span className="credit-chip" role="status">
+          {purchaseReturnText(back)}
+        </span>
+      )}
+      <CreditBalancePanel state={state} />
+      {state.kind === "ready" && state.credits.creditPacks.length > 0 ? (
+        <BuyCredits
+          packs={state.credits.creditPacks}
+          onBuy={async (pack) => {
+            window.location.assign(await startPurchase(client, pack));
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+export interface BuyCreditsProps {
+  readonly packs: readonly CreditPackOffer[];
+  /** Opens the payment page for the pack; a rejection is shown as the reason. */
+  readonly onBuy: (pack: CreditPackOffer["id"]) => Promise<void>;
+  /** Prices in this locale; the browser's when left out. */
+  readonly locale?: string;
+  /** Open from the start, for tests. */
+  readonly initiallyOpen?: boolean;
+}
+
+/** A "Buy credits" button that lists the packs; each one leads to the hosted payment page. */
+export function BuyCredits({ packs, onBuy, locale, initiallyOpen = false }: BuyCreditsProps) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  async function buy(pack: CreditPackOffer["id"]) {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await onBuy(pack);
+    } catch (failure) {
+      setError(describeError(failure));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <span className="buy-credits">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {t`Buy credits`}
+      </button>
+      {open ? (
+        <span className="buy-credits-packs">
+          {packs.map((pack) => (
+            <button key={pack.id} type="button" disabled={busy} onClick={() => void buy(pack.id)}>
+              {packLabel(pack, locale)}
+            </button>
+          ))}
+          <span className="muted">
+            {t`Tax included. You pay on Stripe's page, in test mode: no real money moves.`}
+          </span>
+          {error === undefined ? null : (
+            <span className="notice" role="alert">
+              {error}
+            </span>
+          )}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 export interface CreditBalancePanelProps {

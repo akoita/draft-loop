@@ -560,6 +560,11 @@ export interface ApiSchemas {
     readonly grantsRemaining: number;
     readonly remaining: number | null;
     readonly warning: boolean;
+    readonly creditPacks: readonly ({
+      readonly id: "pack-1" | "pack-5";
+      readonly credits: number;
+      readonly priceEurCents: number;
+    })[];
   };
   "MemberScreenLanguage": {
     readonly language: "en" | "fr" | null;

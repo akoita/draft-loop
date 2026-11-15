@@ -209,6 +209,29 @@ label:where(:not(.shared-screens *)) {
   color: var(--amber);
 }
 
+.buy-credits {
+  position: relative;
+  margin-right: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.buy-credits-packs {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: min(20rem, 90vw);
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  white-space: normal;
+}
+
 .service-dot {
   width: 0.5rem;
   height: 0.5rem;

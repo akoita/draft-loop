@@ -35,8 +35,10 @@ Business and Internal.
 - **Individual** grants 5 credits a month.
 
 The catalog also lists two **credit packs**, bought once with no subscription:
-1 credit for €5 and 5 credits for €22, valid 12 months. Buying one is not built
-yet; an operator grants the credits.
+1 credit for €5 and 5 credits for €22, valid 12 months. Where the service
+sells them, **Buy credits** beside the balance lists the packs and leads to
+the payment provider's page; the credits arrive within a minute of paying.
+Sales run in Stripe test mode only for now.
 
 A plan sets these entitlements:
 
@@ -64,6 +66,7 @@ A plan sets these entitlements:
 | Kind   | Surface                                                                       |
 | ------ | ----------------------------------------------------------------------------- |
 | Screen | Credits and consent                                                           |
+| Screen | **Buy credits** beside the balance, when the service sells packs              |
 | API    | `GET /v1/organisation/credits`, `GET /v1/workspaces/{id}/runs/estimate`       |
 | API    | `POST /v1/organisation/credit-purchases` (opens a hosted checkout, test mode) |
 | API    | `POST /v1/payments/events` (the payment provider's signed events)             |
@@ -75,8 +78,8 @@ A plan sets these entitlements:
 
 - Partial: prices and self-service sign-up are not live, and production is held.
 - Buying a pack opens a Stripe test-mode checkout only, and a paid checkout
-  adds the pack's credits once. No screen offers it yet (#2711), and a refund
-  does not take credits back yet (#2710).
+  adds the pack's credits once. A refund does not take credits back yet
+  (#2710).
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - A credit covers 20 cover letter or question drafts, interview guides and

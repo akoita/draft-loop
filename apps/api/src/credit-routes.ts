@@ -1,6 +1,6 @@
 import type { ApplicationService } from "@draft-loop/application";
 import type { RunCreditEstimateInput } from "@draft-loop/application/run-credit-estimate";
-import { resolveEntitlements } from "@draft-loop/schemas/entitlements";
+import { creditPackIds, planCatalog, resolveEntitlements } from "@draft-loop/schemas/entitlements";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -69,6 +69,17 @@ const memberCreditsSchema = z
     warning: z
       .boolean()
       .describe(`True once \`used\` is at least ${creditWarningPercent}% of \`allowance\`.`),
+    creditPacks: z
+      .array(
+        z.object({
+          id: z.enum(creditPackIds),
+          credits: z.number().int(),
+          priceEurCents: z.number().int().describe("The price in euro cents, tax included."),
+        }),
+      )
+      .describe(
+        "The credit packs this service sells now, bought through `POST /v1/organisation/credit-purchases`; empty when it sells none.",
+      ),
   })
   .meta({ id: "MemberCredits" });
 
@@ -144,6 +155,8 @@ export interface MemberCreditsRoutesOptions {
   readonly entitlementsFor: TenantEntitlementsFor;
   /** Sign-in mode. Owner-token mode has no organisation to hold a plan: the route answers 404. */
   readonly signIn: boolean;
+  /** Whether the deployment has a payment provider (#2711); without one no pack is listed. */
+  readonly sellsPacks?: boolean;
   readonly now?: () => Date;
 }
 
@@ -210,6 +223,14 @@ export function registerMemberCreditsRoute(
         grantsRemaining: balance.grantsRemaining,
         remaining: balance.unlimited ? null : balance.remaining,
         warning,
+        creditPacks:
+          options.sellsPacks === true
+            ? planCatalog.creditPacks.map(({ id, credits, priceEurCents }) => ({
+                id,
+                credits,
+                priceEurCents,
+              }))
+            : [],
       };
     },
   );
