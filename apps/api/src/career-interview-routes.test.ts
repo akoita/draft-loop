@@ -162,6 +162,56 @@ describe("career interview routes", () => {
     expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
   });
 
+  it("answers 502 and saves nothing when the model's answer cannot be used", async () => {
+    let fail = false;
+    const scripted = scriptedRoute([], []);
+    await build({
+      consent: granted,
+      route: (options) => {
+        const built = scripted(options);
+        return {
+          ...built,
+          execute: async (request) => {
+            if (fail) {
+              throw Object.assign(
+                new Error("The provider did not complete the structured response."),
+                {
+                  code: "invalid-response",
+                  diagnostics: [{ code: "max_tokens", path: "stop_reason" }],
+                },
+              );
+            }
+            return built.execute(request);
+          },
+        };
+      },
+    });
+    const body = (await call("POST", sessions)).json();
+    const id = body.session.id as string;
+    const key = body.session.topics[0].key as string;
+    await call("POST", `${sessions}/${id}/actions`, { action: "accept", topic_key: key });
+
+    fail = true;
+    const failed = await call("POST", `${sessions}/${id}/actions`, {
+      action: "answer",
+      topic_key: key,
+      text: "I rebuilt the loan reports.",
+    });
+    expect(failed.statusCode).toBe(502);
+    expect(failed.json().error.code).toBe("interview_model_failed");
+    expect((await call("GET", `${sessions}/${id}`)).json().session.topics[0].turns).toHaveLength(1);
+    expect(logs.join("\n")).toContain("max_tokens");
+    expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
+
+    fail = false;
+    const again = await call("POST", `${sessions}/${id}/actions`, {
+      action: "answer",
+      topic_key: key,
+      text: "I rebuilt the loan reports.",
+    });
+    expect(again.statusCode).toBe(200);
+  });
+
   it("refuses a model turn without consent or without a model route", async () => {
     await build({ route: scriptedRoute([], []) });
     const started = (await call("POST", sessions)).json();

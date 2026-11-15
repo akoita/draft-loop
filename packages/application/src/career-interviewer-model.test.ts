@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { CareerInterviewFact } from "./career-interview-topics.js";
 import {
   careerInterviewDefaultModelId,
+  careerInterviewMaxOutputTokens,
   careerInterviewPromptVersion,
   careerInterviewTopicContext,
   createModelCareerInterviewer,
@@ -91,6 +92,9 @@ describe("createModelCareerInterviewer", () => {
     });
     const request = fake.requests[0];
     expect(request?.contextSnapshotId).toBe("cis_fixture0001");
+    // Room for a closing turn's summary beside the model's own reasoning (#2757).
+    expect(request?.maxOutputTokens).toBe(careerInterviewMaxOutputTokens);
+    expect(careerInterviewMaxOutputTokens).toBeGreaterThanOrEqual(4_096);
     expect(request?.systemPrompt).toContain("professional career consultant");
     expect(JSON.stringify(request?.input)).not.toContain("Private health note");
     expect(request?.input).toMatchObject({

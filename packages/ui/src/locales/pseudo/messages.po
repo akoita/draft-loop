@@ -8887,6 +8887,10 @@ msgstr ""
 msgid "The interviewer is writing…"
 msgstr ""
 
+#: packages/ui/src/career-interview-model.ts
+msgid "The interviewer's answer could not be used. Your answer is still here: send it again."
+msgstr ""
+
 #: apps/web/src/screening-model.ts
 msgid "the job brief"
 msgstr ""

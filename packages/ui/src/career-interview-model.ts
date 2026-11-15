@@ -236,6 +236,7 @@ export function careerInterviewProgress(session: CareerInterviewSessionView): {
 const refusals = (): Readonly<Record<string, string>> => ({
   consent_required: t`The interviewer is Claude, by Anthropic, so your answers go to Anthropic to write each question. The interview needs your permission for that.`,
   interview_model_unavailable: t`This server has no model set up for the career interview. Ask whoever runs it to turn on the Claude route.`,
+  interview_model_failed: t`The interviewer's answer could not be used. Your answer is still here: send it again.`,
   topic_not_open: t`This topic is no longer being discussed. Reload to see where it stands.`,
   topic_not_summarised: t`This topic has no summary to confirm yet.`,
   too_many_topics: t`This session has enough topics. Finish or set one aside first.`,

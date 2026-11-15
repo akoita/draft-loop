@@ -27,6 +27,13 @@ export const careerInterviewDefaultModelId = "claude-sonnet-5-5";
 export const careerInterviewEconomyModelId = "claude-haiku-5-5";
 export const careerInterviewPromptVersion = "career-interview-v2";
 
+/**
+ * The ceiling on one interviewer turn's output. A closing turn carries the topic's summary beside
+ * the request to confirm it, and the model may reason before it answers, so the ceiling leaves
+ * room for both; a turn costs what it writes, not the ceiling.
+ */
+export const careerInterviewMaxOutputTokens = 4_096;
+
 /** The most record entries one topic sends, and the longest any of them may be. */
 export const maximumCareerInterviewContextEntries = 12;
 const maximumContextEntryCharacters = 300;
@@ -126,7 +133,7 @@ export function createModelCareerInterviewer(
         input: inputOf(request),
         outputSchema,
         outputName: "career_interview_turn",
-        maxOutputTokens: 1_024,
+        maxOutputTokens: careerInterviewMaxOutputTokens,
         dataPolicy: options.dataPolicy,
         ...(options.signal === undefined ? {} : { signal: options.signal }),
       });
