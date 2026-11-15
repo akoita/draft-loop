@@ -16,7 +16,6 @@ import {
   ApplicationJobStep,
   ApplicationStepsView,
   JobDescriptionInputs,
-  OpportunityOverrideDisclosure,
 } from "./application-steps.js";
 import { applicationStepStates, jobStepOffersExtraction } from "./application-steps-model.js";
 import { approvalAttemptNeedsGate, useApprovalGateFocus } from "./approval-gate-focus.js";
@@ -161,6 +160,7 @@ import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, SidePanelToggle, useSidePanelWidth } from "./side-panel-width.js";
+import { StartAdvancedOptions } from "./start-advanced-options.js";
 import { revealStartTarget, StartChecklistView, startActionTargets } from "./start-checklist.js";
 import {
   type StartActionId,
@@ -181,7 +181,6 @@ import {
 } from "./start-confirmation.js";
 import {
   LatestRequirementsBriefView,
-  StartFromJobDescriptionChoice,
   StartRequirementsSourceView,
   useLatestOpportunity,
   withLatestBriefRefresh,
@@ -2654,14 +2653,16 @@ export function ReviewWorkspace({
       else if (id === "open-provider-sign-in") onOpenHome?.();
       else revealStartTarget(startActionTargets[id] ?? []);
     };
+    const rawJobDescriptionOption =
+      rawJobKey === null || reviewedRequirements !== null
+        ? null
+        : {
+            chosen: startFromJobDescription,
+            disabled: readOnly || startPending,
+            onChange: (chosen: boolean) => setRawJobChoice(chosen ? rawJobKey : null),
+          };
     const requirementsSource =
-      rawJobKey === null ? null : reviewedRequirements === null ? (
-        <StartFromJobDescriptionChoice
-          chosen={startFromJobDescription}
-          disabled={readOnly || startPending}
-          onChange={(chosen) => setRawJobChoice(chosen ? rawJobKey : null)}
-        />
-      ) : (
+      rawJobKey === null || reviewedRequirements === null ? null : (
         <StartRequirementsSourceView
           selection={reviewedRequirements}
           useJobDescription={startFromJobDescription}
@@ -2764,18 +2765,20 @@ export function ReviewWorkspace({
                           )}
                           {renderProviderTransmissionPreflight(true)}
                           {requirementsSource}
-                          <OpportunityOverrideDisclosure
-                            reviewed={state.setup.reviewedOpportunity != null}
-                            pending={
-                              pendingOverride == null
-                                ? null
-                                : {
-                                    version: pendingOverride.version,
-                                    checksumLabel: policyChecksumLabel(pendingOverride.checksum),
-                                  }
-                            }
-                            disabled={onSelectFiles === undefined}
-                            onImport={() => onSelectFiles?.("writing-policy-override")}
+                          <StartAdvancedOptions
+                            rawJobDescription={rawJobDescriptionOption}
+                            policyOverride={{
+                              reviewed: state.setup.reviewedOpportunity != null,
+                              pending:
+                                pendingOverride == null
+                                  ? null
+                                  : {
+                                      version: pendingOverride.version,
+                                      checksumLabel: policyChecksumLabel(pendingOverride.checksum),
+                                    },
+                              disabled: onSelectFiles === undefined,
+                              onImport: () => onSelectFiles?.("writing-policy-override"),
+                            }}
                           />
                           {startControls}
                         </>
@@ -2885,6 +2888,7 @@ export function ReviewWorkspace({
                   {renderProviderTransmissionPreflight()}
                   {profilePanel}
                   {requirementsSource}
+                  <StartAdvancedOptions rawJobDescription={rawJobDescriptionOption} />
                   {startControls}
                 </>
               )}

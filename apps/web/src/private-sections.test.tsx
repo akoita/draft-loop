@@ -118,9 +118,9 @@ describe("private sections on the Career evidence page", () => {
     );
 
     expect(one).toContain("Rules of kb-1");
-    expect(one).not.toContain("<h3>");
-    expect(two).toContain("<h3>Career</h3>");
-    expect(two).toContain("<h3>Project notes</h3>");
+    expect(one).not.toContain("<h4>");
+    expect(two).toContain("<h4>Career</h4>");
+    expect(two).toContain("<h4>Project notes</h4>");
   });
 
   it("says rules apply once a knowledge base is chosen", () => {

@@ -793,6 +793,10 @@ msgstr ""
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
 msgstr ""
 
+#: apps/web/src/evidence-advanced.tsx
+msgid "{total, plural, one {# private-section rule} other {# private-section rules}}"
+msgstr ""
+
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
 msgstr ""
@@ -1164,12 +1168,8 @@ msgstr ""
 msgid "Advanced options"
 msgstr ""
 
-#: packages/ui/src/start-requirements.tsx
-msgid "Advanced: requirements for this run"
-msgstr ""
-
-#: packages/ui/src/application-steps.tsx
-msgid "Advanced: writing policy override for this job"
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Advanced options for this run"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
@@ -4164,7 +4164,7 @@ msgstr ""
 msgid "Implemented"
 msgstr ""
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import a policy version for this reviewed job without changing the workspace policy."
 msgstr ""
 
@@ -4176,8 +4176,8 @@ msgstr ""
 msgid "Import from another workspace"
 msgstr ""
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import opportunity override"
 msgstr ""
 
@@ -4461,6 +4461,10 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
+msgstr ""
+
+#: apps/web/src/private-sections.tsx
+msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
@@ -4814,10 +4818,6 @@ msgstr ""
 
 #: packages/ui/src/profile.tsx
 msgid "Mark latest draft reviewed"
-msgstr ""
-
-#: apps/web/src/private-sections.tsx
-msgid "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -5784,6 +5784,7 @@ msgstr ""
 msgid "of {0} and {1}"
 msgstr ""
 
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
@@ -5794,6 +5795,7 @@ msgid "Omission"
 msgstr ""
 
 #: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "On"
@@ -6250,6 +6252,7 @@ msgid "Policy fingerprint"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "policy override"
 msgstr ""
 
@@ -6495,6 +6498,10 @@ msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "Quota or rate limit"
+msgstr ""
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "raw job description"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -7280,7 +7287,7 @@ msgstr ""
 msgid "Review the job requirements first."
 msgstr ""
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Review the requirements before importing an override."
 msgstr ""
 
@@ -7740,7 +7747,6 @@ msgstr ""
 msgid "Selected"
 msgstr ""
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
 msgid "Selected override"
 msgstr ""
@@ -10046,6 +10052,10 @@ msgstr ""
 msgid "Use the local Codex CLI session with subscription billing."
 msgstr ""
 
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Use the raw job description"
+msgstr ""
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Use the raw job description instead"
 msgstr ""
@@ -10220,6 +10230,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-navigation.tsx
 msgid "Wait for the current workspace operation to finish before closing the workspace."
+msgstr ""
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Wait for the reviewed requirements"
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -10541,6 +10555,10 @@ msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Writing policy needs attention: it cannot be read."
+msgstr ""
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Writing policy override for this job"
 msgstr ""
 
 #: packages/ui/src/writing-policy-history.tsx

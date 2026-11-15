@@ -42,16 +42,22 @@ describe("the web's host panels", () => {
     expect(signIn).not.toContain("Work journal");
   });
 
-  it("puts the optional panels most used first: interview, work journal, private sections", () => {
+  it("puts the optional panels most used first, and private sections in Advanced options", () => {
     const owner = renderToStaticMarkup(
       webHostPanels(unusedClient, "owner", undefined).evidenceAfter?.({ revision: 0 }),
     );
     const interview = owner.indexOf(">Career interview</h2>");
     const journal = owner.indexOf(">Work journal</h2>");
-    const privateSections = owner.indexOf(">Private sections</h2>");
+    const advanced = renderToStaticMarkup(
+      webHostPanels(unusedClient, "owner", undefined).evidenceAdvanced?.({
+        revision: 0,
+        setNote: () => undefined,
+      }),
+    );
 
     expect(interview).toBeGreaterThan(-1);
     expect(interview).toBeLessThan(journal);
-    expect(journal).toBeLessThan(privateSections);
+    expect(owner).not.toContain("Private sections");
+    expect(advanced).toContain(">Private sections</h3>");
   });
 });
