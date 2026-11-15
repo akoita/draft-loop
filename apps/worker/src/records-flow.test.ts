@@ -31,7 +31,7 @@ import {
   currentRecordId,
   deleteRecordRequest,
   deleteRefusal,
-  newRecordIdProblem,
+  recordIdFromName,
   recordIds,
   setupRequestBody,
   unassignMemberRequest,
@@ -186,14 +186,14 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
 
     // The owner names two records in the picker and sets each up on the first-run screen.
     expect(await listed("owner")).toEqual([]);
-    for (const recordId of ["candidate-ana", "candidate-ben"]) {
-      expect(newRecordIdProblem(recordId, await listed("owner"))).toBeUndefined();
+    for (const name of ["Candidate Ana", "Candidate Ben"]) {
+      const recordId = recordIdFromName(name, await listed("owner"));
       await owner.call("PUT /v1/workspaces/{workspaceId}", {
         path: { workspaceId: recordId },
         body: setupRequestBody({ ...balancedFirstRun(), fixtureMode: true }),
       });
     }
-    expect(newRecordIdProblem("candidate-ana", await listed("owner"))).toContain("exists already");
+    expect(recordIdFromName("Candidate Ana", await listed("owner"))).toBe("candidate-ana-2");
     const ownerRecords = await listed("owner");
     expect(ownerRecords).toEqual(["candidate-ana", "candidate-ben"]);
     const memory = createRecordMemory(() => undefined);

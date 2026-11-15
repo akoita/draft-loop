@@ -30,13 +30,60 @@ export function currentRecordId(
   return ids[0];
 }
 
-/** Why a typed id cannot name a new record, or `undefined` when it can. */
-export function newRecordIdProblem(recordId: string, ids: readonly string[]): string | undefined {
-  if (recordId.length === 0) return t`Give the new record an id.`;
-  if (!recordIdPattern.test(recordId))
-    return t`Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit.`;
-  if (ids.includes(recordId)) return t`That record exists already. Choose it in the list.`;
+/** The longest name a record can carry, as the API enforces it. */
+export const recordNameMaxLength = 80;
+
+/** The names people gave the listed records, by record id. */
+export function recordNames(list: ApiSchemas["WorkspaceList"]): Map<string, string> {
+  return new Map(
+    list.workspaces.flatMap((workspace) =>
+      workspace.name === undefined ? [] : [[workspace.id, workspace.name] as const],
+    ),
+  );
+}
+
+/** How a record reads on screen: its name, or its id when it has none. */
+export function recordLabel(recordId: string, names: ReadonlyMap<string, string>): string {
+  return names.get(recordId) ?? recordId;
+}
+
+/** A typed name as it is stored: runs of white space become one space, and the ends are cut. */
+export function tidyRecordName(typed: string): string {
+  return typed.replace(/\s+/gu, " ").trim();
+}
+
+/** Why a tidied name cannot name a new record, or `undefined` when it can. */
+export function newRecordNameProblem(
+  name: string,
+  names: ReadonlyMap<string, string>,
+): string | undefined {
+  if (name.length === 0) return t`Give the new record a name.`;
+  if (name.length > recordNameMaxLength) return t`Use up to ${recordNameMaxLength} characters.`;
+  const taken = [...names.values()].some((other) => other.toLowerCase() === name.toLowerCase());
+  if (taken) return t`A record has that name already. Choose it in the list.`;
   return undefined;
+}
+
+/**
+ * A new record id made from its name: lower-case letters and digits joined by dashes, with a
+ * number added while another record holds it. A name without Latin letters or digits gives
+ * `record`.
+ */
+export function recordIdFromName(name: string, ids: readonly string[]): string {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 48)
+    .replace(/-+$/u, "");
+  const base = slug.length === 0 ? "record" : slug;
+  if (!ids.includes(base)) return base;
+  for (let count = 2; ; count += 1) {
+    const candidate = `${base}-${count}`;
+    if (!ids.includes(candidate)) return candidate;
+  }
 }
 
 /** Whether the caller assigns members to records: the owner token, and owners and admins. */

@@ -11,10 +11,15 @@ import {
   canManageMembers,
   currentRecordId,
   memberLabel,
-  newRecordIdProblem,
+  newRecordNameProblem,
   noRecordNotice,
   type RecordMemory,
+  recordIdFromName,
   recordIds,
+  recordLabel,
+  recordNameMaxLength,
+  recordNames,
+  tidyRecordName,
   unassignMemberRequest,
   withRecord,
 } from "./records-model.js";
@@ -28,7 +33,13 @@ type RecordMember = ApiSchemas["RecordMember"];
 type RecordsState =
   | { readonly kind: "loading" }
   | { readonly kind: "failed"; readonly message: string }
-  | { readonly kind: "ready"; readonly me: Me; readonly ids: readonly string[] };
+  | {
+      readonly kind: "ready";
+      readonly me: Me;
+      readonly ids: readonly string[];
+      /** The names people gave the records, by id; a new record's name is here before it is saved. */
+      readonly names: ReadonlyMap<string, string>;
+    };
 
 export interface RecordsProps {
   readonly client: ApiClient;
@@ -39,12 +50,15 @@ export interface RecordsProps {
 
 /**
  * Sign-in mode: the candidate records the caller reaches, the one the screen works on, and who is
- * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under its new id.
+ * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under an id made
+ * from the name the person typed; the name is saved once the record exists.
  */
 export function Records({ client, memory, children }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
+  /** New records whose name waits for the record to exist, by id. */
+  const unsavedNames = useRef(new Map<string, string>());
 
   useEffect(() => {
     let current = true;
@@ -52,7 +66,7 @@ export function Records({ client, memory, children }: RecordsProps) {
       ([me, list]) => {
         if (!current) return;
         const ids = recordIds(list);
-        setState({ kind: "ready", me, ids });
+        setState({ kind: "ready", me, ids, names: recordNames(list) });
         setChosen(currentRecordId(ids, memory.read()));
       },
       (error: unknown) => {
@@ -64,13 +78,33 @@ export function Records({ client, memory, children }: RecordsProps) {
     };
   }, [client, memory]);
 
-  const onSaved = useCallback((recordId: string) => {
-    setState((previous) =>
-      previous.kind === "ready"
-        ? { ...previous, ids: withRecord(previous.ids, recordId) }
-        : previous,
-    );
-  }, []);
+  const onSaved = useCallback(
+    (recordId: string) => {
+      setState((previous) =>
+        previous.kind === "ready"
+          ? { ...previous, ids: withRecord(previous.ids, recordId) }
+          : previous,
+      );
+      const name = unsavedNames.current.get(recordId);
+      if (name === undefined) return;
+      unsavedNames.current.delete(recordId);
+      client
+        .call("PUT /v1/workspaces/{workspaceId}/name", {
+          path: { workspaceId: recordId },
+          body: { name },
+        })
+        .catch(() => {
+          // The record exists without its name: show the id, which is what a reload would show.
+          setState((previous) => {
+            if (previous.kind !== "ready") return previous;
+            const names = new Map(previous.names);
+            names.delete(recordId);
+            return { ...previous, names };
+          });
+        });
+    },
+    [client],
+  );
 
   if (state.kind === "loading") return <p role="status">{t`Reading your candidate records…`}</p>;
   if (state.kind === "failed")
@@ -86,13 +120,21 @@ export function Records({ client, memory, children }: RecordsProps) {
     setDeleted(undefined);
     setChosen(recordId);
   };
+  const create = (name: string) => {
+    const recordId = recordIdFromName(name, state.ids);
+    unsavedNames.current.set(recordId, name);
+    setState({ ...state, names: new Map(state.names).set(recordId, name) });
+    choose(recordId);
+  };
   // Back to the record list: the first record left, or none.
   const onDeleted = (recordId: string) => {
     const ids = withoutRecord(state.ids, recordId);
     const next = currentRecordId(ids, undefined);
     if (next !== undefined) memory.remember(next);
-    setState({ ...state, ids });
-    setDeleted(recordId);
+    const names = new Map(state.names);
+    names.delete(recordId);
+    setState({ ...state, ids, names });
+    setDeleted(recordLabel(recordId, state.names));
     setChosen(next);
   };
   const exists = chosen !== undefined && state.ids.includes(chosen);
@@ -103,9 +145,11 @@ export function Records({ client, memory, children }: RecordsProps) {
         <div className="record-area">
           <RecordPicker
             ids={state.ids}
+            names={state.names}
             chosen={chosen}
             notice={noRecordNotice(state.me)}
             onChoose={choose}
+            onCreate={create}
           />
           {deleted === undefined ? null : (
             <p className="notice" role="status">
@@ -137,11 +181,15 @@ export function Records({ client, memory, children }: RecordsProps) {
 
 export interface RecordPickerProps {
   readonly ids: readonly string[];
+  /** The names people gave the records, by id; a record without one shows its id. */
+  readonly names: ReadonlyMap<string, string>;
   /** The record shown, which may be a new id not yet set up. */
   readonly chosen: string | undefined;
   /** What to say when the caller reaches no record. */
   readonly notice: string;
   readonly onChoose: (recordId: string) => void;
+  /** Called with the tidied name of a new record. */
+  readonly onCreate: (name: string) => void;
   /** Shows the new-record field from the start, for tests. */
   readonly initiallyAdding?: boolean;
 }
@@ -152,12 +200,14 @@ export interface RecordPickerProps {
  */
 export function RecordPicker({
   ids,
+  names,
   chosen,
   notice,
   onChoose,
+  onCreate,
   initiallyAdding = false,
 }: RecordPickerProps) {
-  const [newId, setNewId] = useState("");
+  const [newName, setNewName] = useState("");
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const options = chosen === undefined ? ids : withRecord(ids, chosen);
   const [adding, setAdding] = useState(initiallyAdding);
@@ -175,17 +225,17 @@ export function RecordPicker({
 
   function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const id = newId.trim();
-    const found = newRecordIdProblem(id, ids);
+    const name = tidyRecordName(newName);
+    const found = newRecordNameProblem(name, names);
     setProblem(found);
     if (found !== undefined) return;
-    setNewId("");
+    setNewName("");
     setAdding(false);
-    onChoose(id);
+    onCreate(name);
   }
 
   function cancel() {
-    setNewId("");
+    setNewName("");
     setProblem(undefined);
     setAdding(false);
   }
@@ -203,24 +253,28 @@ export function RecordPicker({
             value={chosen}
             onChange={(event) => onChoose(event.target.value)}
           >
-            {options.map((id) => (
-              <option key={id} value={id}>
-                {ids.includes(id) ? id : t`${id} (new, set it up when you open it)`}
-              </option>
-            ))}
+            {options.map((id) => {
+              const label = recordLabel(id, names);
+              return (
+                <option key={id} value={id}>
+                  {ids.includes(id) ? label : t`${label} (new, set it up below)`}
+                </option>
+              );
+            })}
           </select>
         </div>
       )}
       {showForm ? (
         <form className="inline-form" onSubmit={create}>
-          <label htmlFor="new-record-id">{t`New record id`}</label>
+          <label htmlFor="new-record-name">{t`Name of the new record`}</label>
           <input
-            id="new-record-id"
+            id="new-record-name"
             ref={field}
-            value={newId}
+            value={newName}
             autoComplete="off"
-            placeholder={t`New record id`}
-            onChange={(event) => setNewId(event.target.value)}
+            maxLength={recordNameMaxLength}
+            placeholder={t`For example: Product roles 2026`}
+            onChange={(event) => setNewName(event.target.value)}
           />
           {problem === undefined ? null : (
             <p className="problem" role="alert">

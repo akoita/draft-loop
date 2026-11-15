@@ -639,13 +639,13 @@ msgstr "{first}, {second} and {third}"
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 
-#: apps/web/src/records.tsx
-msgid "{id} (new, set it up when you open it)"
-msgstr "{id} (new, set it up when you open it)"
-
 #: apps/web/src/screening-model.ts
 msgid "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
 msgstr "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
+
+#: apps/web/src/records.tsx
+msgid "{label} (new, set it up below)"
+msgstr "{label} (new, set it up below)"
 
 #: packages/ui/src/app.tsx
 msgid "{label} company"
@@ -921,6 +921,10 @@ msgstr "A pay range is given only from a dated source research finds; otherwise 
 #: packages/ui/src/new-application-form.tsx
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
+
+#: apps/web/src/records-model.ts
+msgid "A record has that name already. Choose it in the list."
+msgstr "A record has that name already. Choose it in the list."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement can be at most {maximumRequirementTextLength} characters."
@@ -3740,6 +3744,10 @@ msgstr "For an interview of an hour or more: adds the market, a requirement matr
 msgid "For example: my move into team leadership"
 msgstr "For example: my move into team leadership"
 
+#: apps/web/src/records.tsx
+msgid "For example: Product roles 2026"
+msgstr "For example: Product roles 2026"
+
 #: apps/web/src/interview-guide.tsx
 msgid "For example: recruiter, or engineering manager"
 msgstr "For example: recruiter, or engineering manager"
@@ -3950,8 +3958,8 @@ msgid "Give the folder a name."
 msgstr "Give the folder a name."
 
 #: apps/web/src/records-model.ts
-msgid "Give the new record an id."
-msgstr "Give the new record an id."
+msgid "Give the new record a name."
+msgstr "Give the new record a name."
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
@@ -5104,6 +5112,10 @@ msgstr "Name at least one technology."
 msgid "Name it"
 msgstr "Name it"
 
+#: apps/web/src/records.tsx
+msgid "Name of the new record"
+msgstr "Name of the new record"
+
 #: packages/ui/src/new-application-model.ts
 msgid "Name the application, for example a company and role."
 msgstr "Name the application, for example a company and role."
@@ -5230,10 +5242,6 @@ msgstr "New notes from your agents will be refused until you turn this back on."
 #: apps/web/src/records.tsx
 msgid "New record"
 msgstr "New record"
-
-#: apps/web/src/records.tsx
-msgid "New record id"
-msgstr "New record id"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "New runs use the workspace's current models."
@@ -8457,10 +8465,6 @@ msgstr "That invite was withdrawn. Ask for a new invite."
 msgid "That knowledge store is not on this service."
 msgstr "That knowledge store is not on this service."
 
-#: apps/web/src/records-model.ts
-msgid "That record exists already. Choose it in the list."
-msgstr "That record exists already. Choose it in the list."
-
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr "That usage level was not saved. Try again."
@@ -10111,8 +10115,8 @@ msgid "Use this run's draft"
 msgstr "Use this run's draft"
 
 #: apps/web/src/records-model.ts
-msgid "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit."
-msgstr "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit."
+msgid "Use up to {recordNameMaxLength} characters."
+msgstr "Use up to {recordNameMaxLength} characters."
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Use workspace models"

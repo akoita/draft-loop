@@ -38,40 +38,52 @@ describe("record picker", () => {
     const html = renderToStaticMarkup(
       <RecordPicker
         ids={["record-a", "record-b"]}
+        names={new Map([["record-b", "Fictional search"]])}
         chosen="record-b"
         notice="unused"
         onChoose={() => {}}
+        onCreate={() => {}}
       />,
     );
 
     expect(html).toContain('<label for="record-picker">Record</label>');
-    expect(html).toContain('<option value="record-b" selected="">record-b</option>');
+    expect(html).toContain('<option value="record-a">record-a</option>');
+    expect(html).toContain('<option value="record-b" selected="">Fictional search</option>');
     expect(html).toContain("New record");
-    expect(html).not.toContain("new-record-id");
+    expect(html).not.toContain("new-record-name");
   });
 
   it("shows a labelled new-record field once asked, with a way back", () => {
     const html = renderToStaticMarkup(
       <RecordPicker
         ids={["record-a", "record-b"]}
+        names={new Map([["record-b", "Fictional search"]])}
         chosen="record-b"
         notice="unused"
         onChoose={() => {}}
+        onCreate={() => {}}
         initiallyAdding
       />,
     );
 
-    expect(html).toContain('<label for="new-record-id">New record id</label>');
+    expect(html).toContain('<label for="new-record-name">Name of the new record</label>');
     expect(html).toContain("Create record");
     expect(html).toContain("Cancel");
   });
 
-  it("marks a new id not set up yet", () => {
+  it("marks a new record not set up yet, by its name", () => {
     const html = renderToStaticMarkup(
-      <RecordPicker ids={["record-a"]} chosen="record-new" notice="unused" onChoose={() => {}} />,
+      <RecordPicker
+        ids={["record-a"]}
+        names={new Map([["product-roles", "Product roles"]])}
+        chosen="product-roles"
+        notice="unused"
+        onChoose={() => {}}
+        onCreate={() => {}}
+      />,
     );
 
-    expect(html).toContain("record-new (new, set it up when you open it)");
+    expect(html).toContain("Product roles (new, set it up below)");
   });
 
   it("says why there is no record to choose", () => {
@@ -79,15 +91,17 @@ describe("record picker", () => {
       <RecordPicker
         ids={[]}
         chosen={undefined}
+        names={new Map()}
         notice="No candidate record is assigned to you yet."
         onChoose={() => {}}
+        onCreate={() => {}}
       />,
     );
 
     expect(html).toContain("No candidate record is assigned to you yet.");
     expect(html).not.toContain("record-picker");
     // Naming the first record is the only thing to do, so the field is not folded.
-    expect(html).toContain('<label for="new-record-id">New record id</label>');
+    expect(html).toContain('<label for="new-record-name">Name of the new record</label>');
     expect(html).not.toContain("Cancel");
   });
 });
