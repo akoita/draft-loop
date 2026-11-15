@@ -63,6 +63,7 @@ import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { registerCreditPurchaseRoutes } from "./credit-purchase-routes.js";
 import { registerMemberCreditsRoute, registerRunEstimateRoute } from "./credit-routes.js";
 import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.js";
 import { sendError, sendNotFound } from "./errors.js";
@@ -88,6 +89,7 @@ import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerOwnerTokenKnowledge } from "./owner-token-knowledge.js";
 import { registerOwnerTokenProofRoutes } from "./owner-token-proof-routes.js";
+import type { PaymentCheckoutPort } from "./payment-checkout.js";
 import { createPlanLimits } from "./plan-limits.js";
 import { registerPreferenceSuggestionRoutes } from "./preference-suggestion-routes.js";
 import {
@@ -228,6 +230,8 @@ export interface ApiOptions {
   readonly localModels?: readonly string[];
   /** Speech for the live career interview (#2361); unset, the live route is not served. */
   readonly liveSpeech?: LiveInterviewSpeech;
+  /** The payment provider that sells credit packs (#2708); without one nothing is sold. */
+  readonly payments?: PaymentCheckoutPort;
   /** How cover letters are written (#2586); cited paragraphs when unset. */
   readonly coverLetterWriter?: CoverLetterWriter;
 }
@@ -802,6 +806,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (entitlementsFor !== undefined) {
     registerMemberCreditsRoute(app, { entitlementsFor, signIn: auth.mode === "oidc" });
+    registerCreditPurchaseRoutes(app, { payments: options.payments, signIn: auth.mode === "oidc" });
   }
   if (erasureFor !== undefined) {
     registerOrganisationErasureRoutes(app, {

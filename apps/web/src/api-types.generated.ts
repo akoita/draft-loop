@@ -434,6 +434,12 @@ export interface ApiSchemas {
     readonly remaining: number;
     readonly unlimited: boolean;
   };
+  "CreditPackCheckout": {
+    readonly pack: "pack-1" | "pack-5";
+    readonly credits: number;
+    readonly priceEurCents: number;
+    readonly checkoutUrl: string;
+  };
   "DeletedApplicationFolder": {
     readonly folderId: string;
     readonly movedApplications: number;
@@ -2650,6 +2656,12 @@ export interface ApiOperations {
   };
   "GET /v1/organisation/credits": {
     readonly response: ApiSchemas["MemberCredits"];
+  };
+  "POST /v1/organisation/credit-purchases": {
+    readonly body: {
+      readonly pack: "pack-1" | "pack-5";
+    };
+    readonly response: ApiSchemas["CreditPackCheckout"];
   };
   "DELETE /v1/organisation": {
     readonly body: {

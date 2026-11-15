@@ -789,6 +789,42 @@ flowchart TD
 - **Not covered.** The derived default application has no bound runs, so its
   Prepare calls always count against the day.
 
+### Buying a credit pack
+
+A member starts a purchase with `POST /v1/organisation/credit-purchases` and
+a pack id (#2708). The answer is the address of the payment provider's hosted
+checkout. The provider is the merchant of record: it sells the pack, collects
+the buyer's details and tax on its own page and sends the receipt.
+
+```mermaid
+sequenceDiagram
+  participant M as Member
+  participant A as API
+  participant P as Payment provider
+  M->>A: POST credit-purchases {pack}
+  A->>P: Create a hosted checkout (organisation, member, pack)
+  P-->>A: Checkout address
+  A-->>M: 201 checkoutUrl
+  M->>P: Pays on the provider's page
+  Note over A,P: The completion event grants the credits (planned, #2709)
+```
+
+- **Port.** `payment-checkout.ts` is all the routes know. The Stripe adapter
+  (`stripe-checkout.ts`) creates a Checkout Session with Managed Payments on.
+- **What the provider receives.** The organisation id, the member id, the
+  pack id and its credits. No email, name or candidate material.
+- **Test mode only.** A live key stops the start.
+- **Refusals.** 503 `payments_unavailable` when nothing is sold, 502
+  `payment_provider_failed` when the provider refuses or cannot be reached,
+  and 404 with the owner token.
+
+| Setting                                                            | Value                                                    |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| `DRAFT_LOOP_PAYMENTS`                                              | `off` (default) or `stripe`; another value stops the start |
+| `DRAFT_LOOP_STRIPE_SECRET_KEY`                                     | A test-mode secret or restricted key, from a secret      |
+| `DRAFT_LOOP_STRIPE_PRICE_PACK_1`, `DRAFT_LOOP_STRIPE_PRICE_PACK_5` | The Stripe price id of each pack                         |
+| `DRAFT_LOOP_PAYMENTS_RETURN_URL`                                   | The web screen's HTTPS address, where the buyer returns  |
+
 ### Operator routes
 
 Operator routes take only the deployment's owner token, in both auth modes,

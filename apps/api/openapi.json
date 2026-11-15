@@ -4517,6 +4517,40 @@
           "workspaces"
         ]
       },
+      "CreditPackCheckoutInput": {
+        "type": "object",
+        "properties": {
+          "pack": {
+            "type": "string",
+            "enum": [
+              "pack-1",
+              "pack-5"
+            ]
+          },
+          "credits": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The credits the pack adds once the payment completes."
+          },
+          "priceEurCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The pack's catalog price in euro cents."
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "description": "The payment provider's hosted checkout page; send the buyer there."
+          }
+        },
+        "required": [
+          "pack",
+          "credits",
+          "priceEurCents",
+          "checkoutUrl"
+        ]
+      },
       "MemberCreditsInput": {
         "type": "object",
         "properties": {
@@ -11953,6 +11987,41 @@
         },
         "required": [
           "workspaces"
+        ],
+        "additionalProperties": false
+      },
+      "CreditPackCheckout": {
+        "type": "object",
+        "properties": {
+          "pack": {
+            "type": "string",
+            "enum": [
+              "pack-1",
+              "pack-5"
+            ]
+          },
+          "credits": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The credits the pack adds once the payment completes."
+          },
+          "priceEurCents": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The pack's catalog price in euro cents."
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "description": "The payment provider's hosted checkout page; send the buyer there."
+          }
+        },
+        "required": [
+          "pack",
+          "credits",
+          "priceEurCents",
+          "checkoutUrl"
         ],
         "additionalProperties": false
       },
@@ -27259,6 +27328,88 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organisation/credit-purchases": {
+      "post": {
+        "summary": "Start buying a credit pack",
+        "description": "Opens a hosted checkout for one credit pack and answers its address. The payment provider sells the pack, collects the buyer's details and tax on its own page and sends the receipt. The credits reach the balance when the provider confirms the payment, not when this route answers. 503 payments_unavailable when the service sells nothing; 502 payment_provider_failed when the provider refuses or cannot be reached. Sign-in mode only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pack": {
+                    "type": "string",
+                    "enum": [
+                      "pack-1",
+                      "pack-5"
+                    ],
+                    "description": "The credit pack to buy, by its catalog id."
+                  }
+                },
+                "required": [
+                  "pack"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditPackCheckout"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {

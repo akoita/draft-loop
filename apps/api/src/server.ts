@@ -17,6 +17,7 @@ import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
+import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
@@ -26,6 +27,7 @@ const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const coverLetterWriter = readCoverLetterWriter(process.env);
+const payments = paymentsFrom(readPaymentsConfig(process.env));
 const storageConfig = readHostedStorageConfig(process.env, config.auth.mode);
 // Read before anything opens, so an unknown mode stops the start.
 const screening = {
@@ -91,6 +93,7 @@ const app = await buildApi({
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),
+  ...(payments === undefined ? {} : { payments }),
   coverLetterWriter,
 });
 
