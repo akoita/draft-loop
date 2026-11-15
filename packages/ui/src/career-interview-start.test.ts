@@ -34,8 +34,15 @@ describe("career interview starting topics on the screen", () => {
   });
 
   it("opens with the basics instead of listing two reasons", () => {
-    expect(careerInterviewOffer([start("work history"), start("education")])).toBe(
+    const all = ["work history", "education", "skills", "proud of"].map(start);
+    expect(careerInterviewOffer(all)).toBe(
       "Your record is empty, so let's begin with the basics. Which would you like to start with?",
+    );
+  });
+
+  it("no longer calls the record empty once a starting topic is told or set aside", () => {
+    expect(careerInterviewOffer([start("education"), start("skills")])).toBe(
+      "Let's go on with the basics. Which would you like to talk about next?",
     );
   });
 });

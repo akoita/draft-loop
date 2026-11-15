@@ -4626,6 +4626,10 @@ msgstr "Durée en minutes"
 msgid "Let Claude Code, Codex or another agent work with DraftLoop for you. Approvals, review decisions and settings always stay with you here."
 msgstr "Laissez Claude Code, Codex ou un autre agent travailler avec DraftLoop pour vous. Les approbations, les décisions de relecture et les réglages restent toujours entre vos mains, ici."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Let's go on with the basics. Which would you like to talk about next?"
+msgstr "Continuons avec l’essentiel. De quoi voulez-vous parler ensuite ?"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Lexical (default)"
 msgstr "Lexicale (par défaut)"

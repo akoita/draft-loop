@@ -1,4 +1,8 @@
-import { type CareerInterviewerPort, careerInterviewProposal } from "@draft-loop/orchestrator";
+import {
+  type CareerInterviewerPort,
+  careerInterviewProposal,
+  careerInterviewStartTopicCount,
+} from "@draft-loop/orchestrator";
 import { createMemoryCareerInterviewSessionStore } from "@draft-loop/storage/career-interview-sessions";
 import { describe, expect, it } from "vitest";
 
@@ -6,15 +10,18 @@ import { createCareerInterviewService } from "./career-interview-service.js";
 import {
   type CareerInterviewFact,
   careerStartTopicKey,
+  careerStartTopics,
   findCareerInterviewTopics,
 } from "./career-interview-topics.js";
 
 /** A first conversation on a record with no fact (#2732). */
 function harness(facts: readonly CareerInterviewFact[] = []) {
   const kinds: string[] = [];
+  const contexts: (readonly string[])[] = [];
   const port: CareerInterviewerPort = {
     reply: async (request) => {
       kinds.push(request.topic.kind);
+      contexts.push(request.topic.context);
       return request.closing
         ? {
             text: "Here is what I noted. Is it right?",
@@ -37,7 +44,7 @@ function harness(facts: readonly CareerInterviewFact[] = []) {
     now: () => new Date(Date.UTC(2026, 10, 15, 9, 0, clock++)).toISOString(),
     newId: () => `cis_fixture000${++ids}`,
   });
-  return { service, kinds };
+  return { service, kinds, contexts };
 }
 
 describe("career interview starting topics", () => {
@@ -76,7 +83,7 @@ describe("career interview starting topics", () => {
   });
 
   it("does not offer again a starting topic already told, while the profile is still empty", async () => {
-    const { service, kinds } = harness();
+    const { service, kinds, contexts } = harness();
     const first = await service.start("owner");
     const key = careerStartTopicKey("work history");
     await service.accept("owner", first.id, key);
@@ -88,6 +95,14 @@ describe("career interview starting topics", () => {
 
     const second = await service.start("owner");
     expect(second.topics.map((topic) => topic.title)).toEqual(["education", "skills", "proud of"]);
+    // The record is no longer called empty, and the interviewer is told what was covered (#2759).
+    expect(careerStartTopics).toHaveLength(careerInterviewStartTopicCount);
+    const offer = careerInterviewProposal(second.topics);
+    expect(offer).not.toContain("Your record is empty");
+    expect(offer).toContain("go on with the basics");
+    expect(contexts[0]).toEqual([]);
+    await service.accept("owner", second.id, careerStartTopicKey("skills"));
+    expect(contexts.at(-1)).toEqual(["Already told in an earlier conversation: work history"]);
   });
 
   it("keeps two topics per proposal for a record with facts", async () => {
