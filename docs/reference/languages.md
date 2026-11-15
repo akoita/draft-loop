@@ -30,7 +30,9 @@ keeps its own document language.
 Where the choice is kept:
 
 - **Signed in to the hosted service:** with your account, so every browser and
-  device switches to it after you sign in. This browser keeps it too.
+  device switches to it after you sign in. This browser keeps it too. A
+  language you pick on the sign-in page is saved with your account the first
+  time you sign in, if the account has none yet.
 - **Owner token or self-hosted:** in this browser. Another browser starts from
   its own language.
 - **Desktop app:** on this computer, for every server you open. The app's own

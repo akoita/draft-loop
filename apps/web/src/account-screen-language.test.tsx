@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   accountLanguageToApply,
+  accountLanguageToSave,
   readAccountScreenLanguage,
   saveAccountScreenLanguage,
 } from "./account-screen-language.js";
@@ -61,6 +62,12 @@ describe("a member's screen language on the hosted service", () => {
     expect(accountLanguageToApply("fr", "fr", false)).toBeUndefined();
     expect(accountLanguageToApply("fr", "en", true)).toBeUndefined();
     expect(accountLanguageToApply(null, "en", false)).toBeUndefined();
+  });
+
+  it("saves on the account a language chosen before sign-in, when the account has none (#2773)", () => {
+    expect(accountLanguageToSave(null, "fr")).toBe("fr");
+    expect(accountLanguageToSave(null, null)).toBeUndefined();
+    expect(accountLanguageToSave("en", "fr")).toBeUndefined();
   });
 
   it("passes each choice in the screens to the browser and to the server", () => {
