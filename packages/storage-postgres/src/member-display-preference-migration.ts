@@ -6,7 +6,7 @@ import type { PostgresMigration } from "./migrations.js";
  * a member or an organisation removes them with the rest of that row.
  */
 export const memberDisplayPreferenceMigration: PostgresMigration = {
-  version: 47,
+  version: 48,
   name: "member display preference",
   sql: `
     ALTER TABLE member_settings

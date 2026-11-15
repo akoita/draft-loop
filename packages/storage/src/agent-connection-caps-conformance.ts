@@ -100,4 +100,36 @@ export async function expectAgentConnectionCapStore(
   expect(
     (await store.set({ ...assistant, monthlyCapCents: 500, updatedAt: later })).spend,
   ).toBeUndefined();
+
+  // An assistant that asks to spend without a cap is kept without one, and starts nothing.
+  await store.note("owner", "assistant-n", at);
+  expect(await store.get("owner", "assistant-n")).toEqual({
+    workspaceId: "owner",
+    clientId: "assistant-n",
+    updatedAt: at,
+  });
+  expect(
+    await store.reserveSpend({ ...reservation, clientId: "assistant-n", key: "run:key-6" }),
+  ).toEqual({ outcome: "no_cap" });
+  // Noting it again, or a connection that has a cap, changes nothing.
+  await store.note("owner", "assistant-a", later);
+  expect((await store.get("owner", "assistant-a"))?.monthlyCapCents).toBe(500);
+  await store.note("owner", "assistant-n", later);
+  expect((await store.get("owner", "assistant-n"))?.updatedAt).toBe(at);
+  expect((await store.list("owner")).map((cap) => cap.clientId)).toEqual([
+    "assistant-a",
+    "assistant-b",
+    "assistant-n",
+  ]);
+  // Its limit is then set on its row like any other.
+  expect(
+    (
+      await store.set({
+        workspaceId: "owner",
+        clientId: "assistant-n",
+        monthlyCapCents: 200,
+        updatedAt: later,
+      })
+    ).monthlyCapCents,
+  ).toBe(200);
 }

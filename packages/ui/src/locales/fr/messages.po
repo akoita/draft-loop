@@ -418,10 +418,6 @@ msgstr "{attemptCount, plural, one {# appel de modèle} other {# appels de modè
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr "{base} Vérifiez l’adresse du serveur de modèles local : elle doit être sur cette machine, comme http://127.0.0.1:11434/v1, et ne contenir ni nom d’utilisateur ni mot de passe."
 
-#: packages/ui/src/agent-setup.tsx
-msgid "{can}; created {created}, expires {until}"
-msgstr "{can} ; créé le {created}, expire le {until}"
-
 #. placeholder {0}: countedNouns.source(sources)
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{chunks, plural, one {# relevant excerpt} other {# relevant excerpts}} selected from {0}"
@@ -1009,6 +1005,7 @@ msgstr "Pris en compte le"
 msgid "Acknowledgement required"
 msgstr "Prise en compte requise"
 
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/home-applications-view.tsx
 msgid "Actions"
 msgstr "Actions"
@@ -1018,11 +1015,6 @@ msgstr "Actions"
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Active"
 msgstr "Actif"
-
-#. placeholder {0}: active.length
-#: packages/ui/src/agent-setup.tsx
-msgid "Active agent tokens: {0}"
-msgstr "Jetons d'agent actifs : {0}"
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "Active now:"
@@ -1184,6 +1176,7 @@ msgid "Advanced options for this run"
 msgstr "Options avancées pour cette exécution"
 
 #: packages/ui/src/agent-setup.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Agent"
 msgstr "Agent"
 
@@ -1276,10 +1269,6 @@ msgstr "Déjà invité ?"
 #: apps/web/src/sensitivity-model.ts
 msgid "Always allow"
 msgstr "Toujours autoriser"
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "An assistant you connect by signing in, such as Claude or ChatGPT, starts CV runs and drafts only within a monthly limit you set here. Without a limit it starts none."
-msgstr "Un assistant que vous connectez en vous identifiant, comme Claude ou ChatGPT, ne lance des exécutions de CV et des brouillons que dans la limite mensuelle que vous fixez ici. Sans limite, il n'en lance aucun."
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
@@ -1514,10 +1503,6 @@ msgstr "Attribuer"
 #: apps/web/src/records.tsx
 msgid "Assign a member"
 msgstr "Attribuer à un membre"
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Assistant"
-msgstr "Assistant"
 
 #: apps/web/src/http-bridge.ts
 #: packages/ui/src/new-application-model.ts
@@ -1782,6 +1767,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -1824,6 +1810,10 @@ msgstr "Annulation…"
 #: apps/web/src/records.tsx
 msgid "Candidate record"
 msgstr "Dossier candidat"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Cannot spend"
+msgstr "Ne peut rien dépenser"
 
 #: packages/ui/src/home-applications-view.tsx
 msgid "Cards"
@@ -1897,7 +1887,7 @@ msgstr "Changer"
 msgid "Change in Workspace settings"
 msgstr "Modifier dans les réglages de l’espace de travail"
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Change limit"
 msgstr "Modifier la limite"
 
@@ -2367,6 +2357,10 @@ msgstr "Valeurs contradictoires"
 #: packages/ui/src/agent-setup.tsx
 msgid "Connect an agent"
 msgstr "Connecter un agent"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Connected agents"
+msgstr "Agents connectés"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server."
@@ -2880,6 +2874,14 @@ msgstr "Supprimer l’enregistrement"
 msgid "Discard the note"
 msgstr "Abandonner la note"
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Disconnect"
+msgstr "Déconnecter"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Disconnect {name}? Its token stops working now."
+msgstr "Déconnecter {name} ? Son jeton cesse de fonctionner dès maintenant."
+
 #. placeholder {0}: response.status
 #: apps/web/src/oidc-session.ts
 msgid "Discovery answered {0}."
@@ -3178,7 +3180,6 @@ msgstr "p. ex. cv-data-engineer-senior"
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées avant utilisation. Les fichiers en quarantaine attendent qu’un propriétaire ou un administrateur les libère."
 
-#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace, et chaque brouillon pour son plafond de coût. De 0,01 à 500."
@@ -4437,10 +4438,6 @@ msgstr "Problèmes par gravité et état"
 msgid "It is empty."
 msgstr "Il est vide."
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "It will start no run or draft until you set a limit again. It keeps its other permissions."
-msgstr "Il ne lancera plus aucune exécution ni aucun brouillon tant que vous n'aurez pas fixé une nouvelle limite. Il garde ses autres autorisations."
-
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -4550,6 +4547,10 @@ msgstr "Gardez au moins une exigence."
 msgid "Keep each heading to 200 characters or fewer."
 msgstr "Limitez chaque titre à 200 caractères."
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Keep it"
+msgstr "Le garder"
+
 #: apps/web/src/landing.tsx
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr "Conserver mon adresse e-mail pour m'inviter à la bêta de DraftLoop. Elle est supprimée dès que je suis invité, ou au bout de six mois."
@@ -4561,10 +4562,6 @@ msgstr "Gardez des parties de vos documents, comme Salaire ou Santé, hors de po
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Limitez le texte du titre à 200 caractères."
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Keep the limit"
-msgstr "Garder la limite"
 
 #: packages/ui/src/workspace-model-settings.ts
 msgid "Keep the model pairing rationale under 500 characters without control characters."
@@ -4952,6 +4949,10 @@ msgstr "Nombre maximal de tours de relecture"
 msgid "Maximum run budget"
 msgstr "Budget maximal de l’exécution"
 
+#: packages/ui/src/connected-agents.tsx
+msgid "May"
+msgstr "Peut"
+
 #: packages/ui/src/run-switcher.tsx
 msgid "Mean of the latest evaluation's readiness dimensions"
 msgstr "Moyenne des dimensions de préparation de la dernière évaluation"
@@ -5105,7 +5106,10 @@ msgstr "Modèles, politique de rédaction et connexion se règlent sur l’accue
 msgid "Modern"
 msgstr "Moderne"
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
+msgid "Monthly limit in US dollars"
+msgstr "Limite mensuelle en dollars US"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Monthly spend limit in US dollars"
 msgstr "Limite de dépense mensuelle en dollars US"
@@ -5422,6 +5426,10 @@ msgstr "Pas d’accès au modèle"
 msgid "No active knowledge bases are available."
 msgstr "Aucune base de connaissances active n’est disponible."
 
+#: packages/ui/src/connected-agents.tsx
+msgid "No agent is connected yet. Connect one below."
+msgstr "Aucun agent n’est encore connecté. Connectez-en un ci-dessous."
+
 #: packages/ui/src/home.tsx
 msgid "No application matches this search or filter."
 msgstr "Aucune candidature ne correspond à cette recherche ou à ce filtre."
@@ -5429,10 +5437,6 @@ msgstr "Aucune candidature ne correspond à cette recherche ou à ce filtre."
 #: packages/ui/src/home.tsx
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
 msgstr "Aucune candidature pour l’instant. Commencez-en une pour le poste visé. Elle utilise votre profil et vos éléments de parcours."
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "No assistant has a spend limit."
-msgstr "Aucun assistant n'a de limite de dépense."
 
 #: packages/ui/src/review.tsx
 msgid "No blocking findings need action."
@@ -5555,6 +5559,10 @@ msgstr "Aucun problème n’est enregistré dans cette version."
 #: packages/ui/src/career-evidence-card.tsx
 msgid "No knowledge base selected — runs will use legacy workspace evidence"
 msgstr "Aucune base de connaissances choisie — les exécutions utiliseront les éléments de l’ancien espace de travail"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "No limit yet, so it starts no run or draft"
+msgstr "Pas encore de limite : il ne lance donc aucune exécution ni brouillon"
 
 #: packages/ui/src/run-details.tsx
 msgid "No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded."
@@ -5904,7 +5912,6 @@ msgstr "Désactivé"
 msgid "Omission"
 msgstr "Omission"
 
-#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
@@ -6919,6 +6926,7 @@ msgstr "Télétravail et déplacements"
 
 #: apps/web/src/private-sections.tsx
 #: apps/web/src/records.tsx
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -6934,6 +6942,10 @@ msgstr "Retirer {0} des espaces de travail récents"
 #: apps/web/src/records.tsx
 msgid "Remove {0} from this record"
 msgstr "Retirer {0} de ce dossier"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Remove {name} from this list? It shows again if it asks to spend."
+msgstr "Retirer {name} de cette liste ? Il réapparaît s’il demande à dépenser."
 
 #: apps/web/src/credits-model.ts
 msgid "Remove a member, or ask the owner for a bigger plan, before inviting someone."
@@ -7513,10 +7525,6 @@ msgstr "Réviser"
 msgid "Revision"
 msgstr "Révision"
 
-#: packages/ui/src/agent-setup.tsx
-msgid "Revoke"
-msgstr "Révoquer"
-
 #: packages/ui/src/app.tsx
 msgid "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
 msgstr "Réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Une confirmation est demandée et une sauvegarde est conservée."
@@ -7713,6 +7721,10 @@ msgstr "Enregistrer"
 #: packages/ui/src/profile.tsx
 msgid "Save draft edits"
 msgstr "Enregistrer l’ébauche"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Save limit"
+msgstr "Enregistrer la limite"
 
 #: packages/ui/src/app.tsx
 msgid "Save models"
@@ -7975,6 +7987,10 @@ msgstr "Service disponible"
 msgid "Session memory only"
 msgstr "Mémoire de session uniquement"
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Set a limit"
+msgstr "Fixer une limite"
+
 #: packages/ui/src/profile-issue-bulk-status.tsx
 msgid "Set all"
 msgstr "Tout définir"
@@ -7982,10 +7998,6 @@ msgstr "Tout définir"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Set aside"
 msgstr "Mettre de côté"
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Set spend limit"
-msgstr "Fixer la limite de dépense"
 
 #. placeholder {0}: issues.length
 #: packages/ui/src/profile-issue-bulk-status.tsx
@@ -8040,10 +8052,6 @@ msgstr "Afficher {0}"
 #: packages/ui/src/coverage-panel.tsx
 msgid "show all"
 msgstr "tout afficher"
-
-#: packages/ui/src/agent-setup.tsx
-msgid "Show and revoke"
-msgstr "Afficher et révoquer"
 
 #. placeholder {0}: shownArchived.length
 #: packages/ui/src/home.tsx
@@ -8141,6 +8149,10 @@ msgstr "La connexion n’a pas pu aboutir. Réessayez."
 msgid "Sign-in is on Home, under Workspace settings."
 msgstr "La connexion se trouve sur l’accueil, dans Réglages de l’espace de travail."
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Signed in from the assistant"
+msgstr "Connecté depuis l’assistant"
+
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Signing in"
 msgstr "Connexion"
@@ -8219,9 +8231,9 @@ msgstr "Interventions publiques"
 msgid "Spelling locale"
 msgstr "Langue d’orthographe"
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Spending by connected assistants"
-msgstr "Dépenses des assistants connectés"
+#: packages/ui/src/connected-agents.tsx
+msgid "Spending"
+msgstr "Dépenses"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Splitting the job text with local fixtures. Nothing is sent to a provider."
@@ -8379,13 +8391,13 @@ msgstr "Arrêter la relecture"
 msgid "Stop run"
 msgstr "Arrêter l’exécution"
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Stop spending"
 msgstr "Arrêter les dépenses"
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Stop spending by {name}?"
-msgstr "Arrêter les dépenses de {name} ?"
+#: packages/ui/src/connected-agents.tsx
+msgid "Stop spending by {name}? It starts no run or draft until you set a limit again."
+msgstr "Arrêter les dépenses de {name} ? Il ne lance plus d’exécution ni de brouillon tant que vous ne fixez pas de nouvelle limite."
 
 #: packages/ui/src/app.tsx
 msgid "Stop the review before changing models."
@@ -9952,6 +9964,11 @@ msgstr "Titre (facultatif)"
 msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 msgstr "Pour commencer, créez un espace de travail pour votre recherche d’emploi, ouvrez-en un récent, ou essayez la démo avec des éléments d’exemple."
 
+#. placeholder {0}: formatDate(row.token.expires_at) ?? ""
+#: packages/ui/src/connected-agents.tsx
+msgid "Token, expires {0}"
+msgstr "Jeton, expire le {0}"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr "Jeton :"
@@ -10059,10 +10076,6 @@ msgstr "Deux pages, nom aligné à gauche, titres et dates en bleu-vert, texte j
 #: packages/ui/src/career-interview-model.ts
 msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
 msgstr "Deux choses mériteraient d’être racontées. 1. {one} 2. {two} Voulez-vous parler de l’une d’elles, ou d’autre chose ?"
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Type the assistant's id. When an assistant has no limit, it tells you its id."
-msgstr "Saisissez l'identifiant de l'assistant. Un assistant sans limite vous indique son identifiant."
 
 #: apps/web/src/record-actions.tsx
 msgid "Type the record id,"
@@ -10172,10 +10185,12 @@ msgstr "Mise à jour des connaissances candidat…"
 msgid "Uploaded {when}"
 msgstr "Ajouté le {when}"
 
-#: packages/ui/src/agent-connection-caps.tsx
-#: packages/ui/src/agent-setup.tsx
-msgid "US${spent} of US${limit} used this month."
-msgstr "{spent} $US sur {limit} $US utilisés ce mois-ci."
+#. placeholder {0}: formatNumber(spent ?? 0)
+#. placeholder {0}: formatNumber(spent)
+#. placeholder {1}: formatNumber(limit)
+#: packages/ui/src/connected-agents.tsx
+msgid "US${0} of US${1} this month"
+msgstr "{0} US$ sur {1} US$ ce mois-ci"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Usage"
@@ -10547,6 +10562,10 @@ msgstr "Que faire des sections correspondantes"
 #: apps/web/src/application-material.tsx
 msgid "What to stress"
 msgstr "Ce qu'il faut mettre en avant"
+
+#: packages/ui/src/connected-agents.tsx
+msgid "What you allowed when it signed in"
+msgstr "Ce que vous avez autorisé à sa connexion"
 
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
