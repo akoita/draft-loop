@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { activateScreenLocale, ScreensI18nProvider } from "./i18n.js";
 import {
+  proposedCvLanguage,
   WorkspaceSetupScreen,
+  workspaceSetupAdvancedNote,
   workspaceSetupLanguages,
   workspaceSetupPresets,
 } from "./workspace-setup.js";
@@ -25,20 +28,25 @@ describe("first-run workspace setup", () => {
     }
   });
 
-  it("asks for the language, the round limit, a preset and demo mode, Balanced first", () => {
+  it("asks for the language, with rounds, a preset and demo mode under Advanced options", () => {
     const html = renderToStaticMarkup(<WorkspaceSetupScreen onCreate={() => undefined} />);
 
     expect(html).toContain("Set up your workspace");
     for (const { label } of workspaceSetupLanguages) expect(html).toContain(`>${label}</option>`);
-    expect(html).toContain('<option value="2" selected="">2 rounds</option>');
-    expect(html).toContain('checked="" value="balanced"');
-    expect(html).toContain("<strong>Economy</strong>");
-    expect(html).toContain("<strong>Standard</strong>");
-    expect(html).toContain("Demo mode: runs use fixtures and call no model");
+    const [basic = "", advanced = ""] = html.split('<details class="advanced-options">');
+    expect(basic).toContain("CV language");
+    expect(basic).not.toContain("Rounds at most");
+    expect(advanced).toContain("<summary>Advanced options</summary>");
+    expect(advanced).toContain('<option value="2" selected="">2 rounds</option>');
+    expect(advanced).toContain('checked="" value="balanced"');
+    expect(advanced).toContain("<strong>Economy</strong>");
+    expect(advanced).toContain("<strong>Standard</strong>");
+    expect(advanced).toContain("Runs use fixtures and call no model.");
+    expect(advanced).toContain('aria-pressed="false">Turn demo mode on</button>');
     expect(html).toContain(">Create workspace</button>");
     // No free-text model ids or language codes to type.
     expect(html).not.toContain('type="text"');
-    expect(html).not.toMatch(/<input(?![^>]*type="(radio|checkbox)")/u);
+    expect(html).not.toMatch(/<input(?![^>]*type="radio")/u);
   });
 
   it("shows the failure and the busy state", () => {
@@ -47,5 +55,31 @@ describe("first-run workspace setup", () => {
     );
     expect(html).toContain('role="alert">The service refused.</p>');
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Creating…<\/button>/u);
+  });
+
+  it("proposes the screen language as the CV language (#2774)", () => {
+    expect(proposedCvLanguage("fr")).toBe("fr");
+    expect(proposedCvLanguage("en")).toBe("en");
+    expect(proposedCvLanguage("pseudo")).toBe("en");
+    const html = renderToStaticMarkup(
+      <ScreensI18nProvider locale="fr">
+        <WorkspaceSetupScreen onCreate={() => undefined} />
+      </ScreensI18nProvider>,
+    );
+    expect(html).toMatch(/<option value="fr" selected="">/u);
+    activateScreenLocale("en");
+  });
+
+  it("names on the folded line each choice that is not the default", () => {
+    activateScreenLocale("en");
+    const presets = workspaceSetupPresets();
+    const balanced = presets.find(({ id }) => id === "balanced");
+    const economy = presets.find(({ id }) => id === "economy");
+    expect(
+      workspaceSetupAdvancedNote({ maxRounds: 2, preset: balanced, fixtureMode: false }),
+    ).toBeNull();
+    expect(workspaceSetupAdvancedNote({ maxRounds: 3, preset: economy, fixtureMode: true })).toBe(
+      "Economy · 3 rounds · Demo mode on",
+    );
   });
 });

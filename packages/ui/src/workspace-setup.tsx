@@ -1,6 +1,8 @@
 import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
+import { AdvancedOption, AdvancedOptions } from "./advanced-options.js";
 import { countedNouns } from "./counted-nouns.js";
+import { useScreenLocale } from "./i18n.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import {
   defaultWorkspaceSetupPresetId,
@@ -28,8 +30,34 @@ function modelLine({ company, model }: WorkspaceSetupModel): string {
 }
 
 /**
- * The first screen of a workspace that does not exist yet: the CV's language, how many rounds a
- * run may take, the model preset and demo mode. The rest is set from Home once it exists.
+ * The CV language a new workspace proposes (#2774): the screen language when CVs can be written
+ * in it, else English.
+ */
+export function proposedCvLanguage(screenLocale: string): string {
+  return workspaceSetupLanguages.some(({ code }) => code === screenLocale) ? screenLocale : "en";
+}
+
+/** What differs from the defaults under Advanced options, for its folded line. */
+export function workspaceSetupAdvancedNote(choice: {
+  readonly maxRounds: number;
+  readonly preset: WorkspaceSetupPreset | undefined;
+  readonly fixtureMode: boolean;
+}): string | null {
+  const notes: string[] = [];
+  if (choice.preset !== undefined && choice.preset.id !== defaultWorkspaceSetupPresetId) {
+    notes.push(choice.preset.label);
+  }
+  if (choice.maxRounds !== defaultWorkspaceSetupRounds) {
+    notes.push(countedNouns.round(choice.maxRounds));
+  }
+  if (choice.fixtureMode) notes.push(t`Demo mode on`);
+  return notes.length === 0 ? null : notes.join(" · ");
+}
+
+/**
+ * The first screen of a workspace that does not exist yet: the CV's language, which follows the
+ * screen language, and under Advanced options how many rounds a run may take, the model preset
+ * and demo mode. The rest is set from Home once it exists.
  */
 export function WorkspaceSetupScreen({
   presets = workspaceSetupPresets(),
@@ -37,7 +65,8 @@ export function WorkspaceSetupScreen({
   problem = null,
   onCreate,
 }: WorkspaceSetupScreenProps) {
-  const [language, setLanguage] = useState("en");
+  const { locale } = useScreenLocale();
+  const [language, setLanguage] = useState(() => proposedCvLanguage(locale));
   const [maxRounds, setMaxRounds] = useState<number>(defaultWorkspaceSetupRounds);
   const [presetId, setPresetId] = useState(
     presets.some(({ id }) => id === defaultWorkspaceSetupPresetId)
@@ -69,44 +98,56 @@ export function WorkspaceSetupScreen({
             ))}
           </select>
         </label>
-        <label className="workspace-setup-field">
-          <span>{t`Rounds at most`}</span>
-          <select value={maxRounds} onChange={(event) => setMaxRounds(Number(event.target.value))}>
-            {workspaceSetupRoundLimits.map((rounds) => (
-              <option key={rounds} value={rounds}>
-                {countedNouns.round(rounds)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <fieldset className="workspace-setup-presets">
-          <legend>{t`Models`}</legend>
-          {presets.map((option) => (
-            <label key={option.id} className="workspace-setup-preset">
-              <input
-                type="radio"
-                name="workspace-setup-preset"
-                value={option.id}
-                checked={option.id === presetId}
-                onChange={() => setPresetId(option.id)}
-              />
-              <span>
-                <strong>{option.label}</strong>
-                <span className="workspace-setup-preset-models">
-                  {t`Writer`} {modelLine(option.author)} {t`· Reviewer`} {modelLine(option.critic)}
+        <AdvancedOptions note={workspaceSetupAdvancedNote({ maxRounds, preset, fixtureMode })}>
+          <label className="workspace-setup-field">
+            <span>{t`Rounds at most`}</span>
+            <select
+              value={maxRounds}
+              onChange={(event) => setMaxRounds(Number(event.target.value))}
+            >
+              {workspaceSetupRoundLimits.map((rounds) => (
+                <option key={rounds} value={rounds}>
+                  {countedNouns.round(rounds)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <fieldset className="workspace-setup-presets">
+            <legend>{t`Models`}</legend>
+            {presets.map((option) => (
+              <label key={option.id} className="workspace-setup-preset">
+                <input
+                  type="radio"
+                  name="workspace-setup-preset"
+                  value={option.id}
+                  checked={option.id === presetId}
+                  onChange={() => setPresetId(option.id)}
+                />
+                <span>
+                  <strong>{option.label}</strong>
+                  <span className="workspace-setup-preset-models">
+                    {t`Writer`} {modelLine(option.author)} {t`· Reviewer`}{" "}
+                    {modelLine(option.critic)}
+                  </span>
                 </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <label className="workspace-setup-toggle">
-          <input
-            type="checkbox"
-            checked={fixtureMode}
-            onChange={(event) => setFixtureMode(event.target.checked)}
-          />
-          <span>{t`Demo mode: runs use fixtures and call no model`}</span>
-        </label>
+              </label>
+            ))}
+          </fieldset>
+          <AdvancedOption
+            title={t`Demo mode`}
+            state={fixtureMode ? t`On` : t`Off`}
+            effect={t`Runs use fixtures and call no model.`}
+          >
+            <button
+              className="button button-outline"
+              type="button"
+              aria-pressed={fixtureMode}
+              onClick={() => setFixtureMode(!fixtureMode)}
+            >
+              {fixtureMode ? t`Turn demo mode off` : t`Turn demo mode on`}
+            </button>
+          </AdvancedOption>
+        </AdvancedOptions>
         {problem === null ? null : (
           <p className="setup-blocker" role="alert">
             {problem}
