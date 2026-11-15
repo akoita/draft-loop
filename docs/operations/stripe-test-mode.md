@@ -48,11 +48,12 @@ flowchart LR
    starts with `price_`, not `prod_`.
 6. **Add a webhook endpoint.** In Developers, Webhooks, add an endpoint:
    - Address: your server's address followed by `/v1/payments/events`.
-   - Events: `checkout.session.completed` and
-     `checkout.session.async_payment_succeeded`.
+   - Events: `checkout.session.completed`,
+     `checkout.session.async_payment_succeeded` and `charge.refunded`.
 7. **Copy the signing secret** of that endpoint. It starts with `whsec_`.
 8. **Create a restricted key.** In Developers, API keys, create a restricted
-   key with write access to Checkout Sessions only. It starts with `rk_test_`.
+   key with write access to Checkout Sessions only; write access includes the
+   read a refund needs. It starts with `rk_test_`.
    A standard `sk_test_` key works too, with more access than needed.
 
 ## Settings on the server
@@ -111,7 +112,7 @@ forwards the events instead of the webhook endpoint of step 6.
 
    ```sh
    stripe listen \
-     --events checkout.session.completed,checkout.session.async_payment_succeeded \
+     --events checkout.session.completed,checkout.session.async_payment_succeeded,charge.refunded \
      --forward-to http://127.0.0.1:58082/v1/payments/events
    ```
 
@@ -135,6 +136,18 @@ forwards the events instead of the webhook endpoint of step 6.
 
 Unset, `DRAFT_LOOP_PAYMENTS` is `off` and the stack sells nothing.
 
+## Check a refund
+
+A full refund takes back the credits of the purchase that are not spent. Spent
+credits stay spent, so a balance never goes below zero. A partial refund takes
+nothing back.
+
+1. In Stripe, open Transactions, open the test payment and choose **Refund**
+   for the full amount.
+2. Reload the web screen: the balance drops by the purchase's unspent credits.
+3. The event delivery shows 200 with `refunded`. Sent again, it answers
+   `already_refunded` and changes nothing.
+
 ## When it fails
 
 | What you see                              | Cause and fix                                                                                     |
@@ -146,6 +159,8 @@ Unset, `DRAFT_LOOP_PAYMENTS` is `off` and the stack sells nothing.
 | Paid, but no credits                      | In Stripe, open the webhook endpoint's deliveries. A 400 means the signing secret does not match. |
 | The delivery shows 200 and `ignored`      | The API log line `payment event ignored` gives the reason, such as `live_event` or `not_paid`.    |
 | The same purchase delivered twice         | Nothing to do: the second answers `already_granted` and adds nothing.                             |
+| A refund delivery shows 500               | The API could not ask Stripe which checkout was refunded. Check the key's access; Stripe retries. |
+| Refunded, but the credits stay            | The refund is partial, or the endpoint does not receive `charge.refunded`.                        |
 
 ## Related
 

@@ -11,6 +11,7 @@ import { careerInterviewMigration } from "./career-interview-migration.js";
 import { consentLedgerMigration } from "./consent-ledger-migration.js";
 import { contentScreeningMigration } from "./content-screening-migration.js";
 import { creditLedgerMigration } from "./credit-ledger-migration.js";
+import { creditPurchaseRefundsMigration } from "./credit-purchase-refunds-migration.js";
 import { creditPurchasesMigration } from "./credit-purchases-migration.js";
 import { interviewGuideMigration } from "./interview-guide-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
@@ -825,6 +826,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   prepareCallMeterMigration,
   creditPurchasesMigration,
   recordNamesMigration,
+  creditPurchaseRefundsMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

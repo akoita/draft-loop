@@ -6201,9 +6201,11 @@
             "enum": [
               "granted",
               "already_granted",
+              "refunded",
+              "already_refunded",
               "ignored"
             ],
-            "description": "What the event did: credits granted, a repeat that changed nothing, or ignored."
+            "description": "What the event did: credits granted, unspent credits of a refunded purchase taken back, a repeat that changed nothing, or ignored."
           }
         },
         "required": [
@@ -13811,9 +13813,11 @@
             "enum": [
               "granted",
               "already_granted",
+              "refunded",
+              "already_refunded",
               "ignored"
             ],
-            "description": "What the event did: credits granted, a repeat that changed nothing, or ignored."
+            "description": "What the event did: credits granted, unspent credits of a refunded purchase taken back, a repeat that changed nothing, or ignored."
           }
         },
         "required": [
@@ -28958,7 +28962,7 @@
     "/v1/payments/events": {
       "post": {
         "summary": "Receive a payment provider event",
-        "description": "For the payment provider only. The body is the provider's event and the `Stripe-Signature` header signs it; a body without a valid, recent signature answers 400 invalid_signature. A completed, paid checkout of a credit pack grants the pack's credits once, by checkout id. Other events answer 200 with `ignored`.",
+        "description": "For the payment provider only. The body is the provider's event and the `Stripe-Signature` header signs it; a body without a valid, recent signature answers 400 invalid_signature. A completed, paid checkout of a credit pack grants the pack's credits once, by checkout id. A full refund of that payment takes the purchase's unspent credits back once. Other events answer 200 with `ignored`.",
         "requestBody": {
           "required": true,
           "content": {

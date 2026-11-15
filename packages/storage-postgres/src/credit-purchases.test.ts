@@ -70,6 +70,67 @@ describe.runIf(connectionString !== undefined)("Postgres credit purchases", () =
     }
   });
 
+  it("takes a refunded purchase's unspent credits back, once, and never below zero", async () => {
+    const schema = await createTestSchema(url, "credit_purchases");
+    const tenancy = await schema.openTenancy();
+    try {
+      await schema.admin.query(
+        "INSERT INTO organisations (id, name) VALUES ('org-north', 'North')",
+      );
+      const { creditPurchases, creditLedger } = tenancy.forTenant("org-north");
+      await creditPurchases.record(purchase);
+      await creditPurchases.record({
+        ...purchase,
+        checkoutId: "cs_test_fictional2",
+        eventId: "evt_fictional2",
+        packId: "pack-1",
+        credits: 1,
+      });
+      const at = (minutes: number) => new Date(now.getTime() + minutes * 60_000);
+      const run = (runId: string, minutes: number) =>
+        creditLedger.reserve({ runId, credits: 1, estimateVersion: 1, now: at(minutes) });
+      // One credit of the pack of 5 is spent and one is held by a run that is still open.
+      await run("run-spent", 1);
+      await creditLedger.settle({ runId: "run-spent", now: at(2) });
+      await run("run-open", 3);
+      await expect(creditLedger.balance(at(4))).resolves.toMatchObject({ remaining: 4 });
+
+      const refund = { checkoutId: purchase.checkoutId, eventId: "evt_refund1", now: at(5) };
+      const refunded = await creditPurchases.refund(refund);
+      expect(refunded).toMatchObject({
+        outcome: "refunded",
+        purchase: { refundedAt: at(5).toISOString(), creditsTakenBack: 3 },
+      });
+      // Only the other purchase's credit is left; the spent credit stays spent.
+      await expect(creditLedger.balance(at(6))).resolves.toMatchObject({
+        grantsRemaining: 1,
+        remaining: 1,
+      });
+
+      const repeated = await creditPurchases.refund({ ...refund, eventId: "evt_refund2" });
+      expect(repeated).toMatchObject({
+        outcome: "already_refunded",
+        purchase: { refundedAt: at(5).toISOString(), creditsTakenBack: 3 },
+      });
+
+      // The open run gives its credit back: it belongs to the refunded purchase and is forfeited.
+      await creditLedger.refund({ runId: "run-open", now: at(7) });
+      await expect(creditLedger.balance(at(8))).resolves.toMatchObject({
+        grantsRemaining: 1,
+        remaining: 1,
+      });
+      await expect(creditPurchases.get(purchase.checkoutId)).resolves.toMatchObject({
+        refundedAt: at(5).toISOString(),
+      });
+      await expect(
+        creditPurchases.refund({ ...refund, checkoutId: "cs_test_unknown" }),
+      ).resolves.toEqual({ outcome: "not_found" });
+    } finally {
+      await tenancy.close();
+      await schema.drop();
+    }
+  });
+
   it("refuses an unknown organisation and a malformed purchase, storing nothing", async () => {
     const schema = await createTestSchema(url, "credit_purchases");
     const tenancy = await schema.openTenancy();

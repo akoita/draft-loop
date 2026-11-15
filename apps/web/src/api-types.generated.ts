@@ -742,7 +742,7 @@ export interface ApiSchemas {
   };
   "PaymentEventReceipt": {
     readonly received: true;
-    readonly outcome: "granted" | "already_granted" | "ignored";
+    readonly outcome: "granted" | "already_granted" | "refunded" | "already_refunded" | "ignored";
   };
   "PlanAssignment": {
     readonly planId: string;

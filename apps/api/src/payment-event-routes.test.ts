@@ -18,21 +18,56 @@ afterEach(async () => {
 });
 
 type Record_ = CreditPurchases["record"];
+type Refund = CreditPurchases["refund"];
 
-async function server(record: Record_ = async () => ({ created: true }) as never) {
+/** What Stripe answers when asked for the Checkout Session of a payment. */
+const sessionOfPayment = {
+  data: [{ id: "cs_test_fictional1", metadata: { organisation_id: "org-north" } }],
+};
+
+async function server(
+  record: Record_ = async () => ({ created: true }) as never,
+  refund: Refund = async () =>
+    ({ outcome: "refunded", purchase: { creditsTakenBack: 3 } }) as never,
+  lookup: () => Promise<Response> = async () => Response.json(sessionOfPayment),
+) {
   const stored = vi.fn(record);
-  const purchasesFor = vi.fn(() => ({ record: stored }));
+  const refunded = vi.fn(refund);
+  const stripe = vi.fn(lookup);
+  const purchasesFor = vi.fn(() => ({ record: stored, refund: refunded }));
   app = Fastify();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler(sendError);
   registerPaymentEventRoutes(app, {
-    events: createStripeEvents({ webhookSecret: secret }),
+    events: createStripeEvents({
+      webhookSecret: secret,
+      secretKey: "sk_test_fictional",
+      fetch: stripe as unknown as typeof fetch,
+    }),
     purchasesFor,
     now: () => now,
   });
   await app.ready();
-  return { app, stored, purchasesFor };
+  return { app, stored, refunded, stripe, purchasesFor };
+}
+
+function refundEvent(charge: Record<string, unknown> = {}, change: Record<string, unknown> = {}) {
+  return {
+    id: "evt_refund1",
+    type: "charge.refunded",
+    livemode: false,
+    data: {
+      object: {
+        id: "ch_fictional1",
+        payment_intent: "pi_fictional1",
+        refunded: true,
+        amount_refunded: 2200,
+        ...charge,
+      },
+    },
+    ...change,
+  };
 }
 
 function paid(change: Record<string, unknown> = {}, session: Record<string, unknown> = {}) {
@@ -147,7 +182,7 @@ describe("payment events", () => {
 
   it.each([
     ["a live event", paid({ livemode: true })],
-    ["another event type", paid({ type: "charge.refunded" })],
+    ["another event type", paid({ type: "customer.created" })],
     ["a checkout that is not paid yet", paid({}, { payment_status: "unpaid" })],
     ["a checkout without an organisation", paid({}, { metadata: { pack_id: "pack-5" } })],
     [
@@ -177,6 +212,86 @@ describe("payment events", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().outcome).toBe("ignored");
+  });
+
+  it("takes a fully refunded purchase's unspent credits back", async () => {
+    const { app: api, refunded, stripe, purchasesFor, stored } = await server();
+
+    const response = await send(api, refundEvent());
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ received: true, outcome: "refunded" });
+    const [url, init] = stripe.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(
+      "https://api.stripe.com/v1/checkout/sessions?payment_intent=pi_fictional1&limit=1",
+    );
+    expect(new Headers(init.headers).get("authorization")).toBe("Bearer sk_test_fictional");
+    expect(purchasesFor).toHaveBeenCalledWith("org-north");
+    expect(refunded).toHaveBeenCalledWith({
+      checkoutId: "cs_test_fictional1",
+      eventId: "evt_refund1",
+      now,
+    });
+    expect(stored).not.toHaveBeenCalled();
+  });
+
+  it("says when a repeated refund changed nothing", async () => {
+    const { app: api } = await server(
+      undefined,
+      async () => ({ outcome: "already_refunded", purchase: { creditsTakenBack: 3 } }) as never,
+    );
+
+    const response = await send(api, refundEvent());
+
+    expect(response.json()).toEqual({ received: true, outcome: "already_refunded" });
+  });
+
+  it.each([
+    ["a partial refund", refundEvent({ refunded: false, amount_refunded: 500 }), 0],
+    ["a live refund", refundEvent({}, { livemode: true }), 0],
+    ["a refund without a payment", refundEvent({ payment_intent: null }), 0],
+    ["a refund of a payment that is no checkout of ours", refundEvent(), 1],
+  ])("acknowledges %s without taking credits back", async (_, event, lookups) => {
+    const {
+      app: api,
+      refunded,
+      stripe,
+    } = await server(undefined, undefined, async () => Response.json({ data: [] }));
+
+    const response = await send(api, event);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ received: true, outcome: "ignored" });
+    expect(stripe).toHaveBeenCalledTimes(lookups);
+    expect(refunded).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a refund of a purchase the organisation does not hold", async () => {
+    const { app: api } = await server(undefined, async () => ({ outcome: "not_found" }));
+
+    const response = await send(api, refundEvent());
+
+    expect(response.json()).toEqual({ received: true, outcome: "ignored" });
+  });
+
+  it.each([
+    [
+      "the provider cannot say which checkout was refunded",
+      async () => new Response("", { status: 503 }),
+    ],
+    [
+      "the provider cannot be reached",
+      async () => {
+        throw new Error("network down");
+      },
+    ],
+  ])("answers 500 when %s, so that the provider retries", async (_, lookup) => {
+    const { app: api, refunded } = await server(undefined, undefined, lookup as never);
+
+    const response = await send(api, refundEvent());
+
+    expect(response.statusCode).toBe(500);
+    expect(refunded).not.toHaveBeenCalled();
   });
 
   it("answers 500 on a storage failure so that the provider retries", async () => {
