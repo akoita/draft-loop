@@ -116,6 +116,7 @@ import { registerTenantApplications, type TenantApplications } from "./tenant-co
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
+import { createWorkJournalSignInChecks } from "./work-journal-sign-in.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 import { registerWritingSamplesRoutes } from "./writing-samples-routes.js";
@@ -675,13 +676,27 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         consents: application.consents,
       });
     }
-    if (application.workJournal !== undefined && auth.mode !== "oidc") {
+    // In sign-in mode the journal keeps notes only with consent checks; without them, no routes.
+    const journalSignIn =
+      auth.mode === "oidc" && application.consents !== undefined && knowledgeOwnersFor !== undefined
+        ? createWorkJournalSignInChecks({
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            consents: application.consents,
+            knowledgeOwnersFor,
+          })
+        : undefined;
+    if (
+      application.workJournal !== undefined &&
+      (auth.mode !== "oidc" || journalSignIn !== undefined)
+    ) {
       registerWorkJournalRoutes(app, {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
         agentTokens: agentTokens !== undefined,
+        ...(journalSignIn === undefined ? {} : { signIn: journalSignIn }),
         ...(knowledgeIntake === undefined ||
         application.sensitivityRules === undefined ||
         application.sourceEvidenceKinds === undefined
