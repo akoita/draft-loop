@@ -269,6 +269,11 @@ msgstr "{0, plural, one {Aucune correspondance lexicale ; # extrait de repli lim
 msgid "{0, plural, one {Suggested from # run} other {Suggested from # runs}}"
 msgstr "{0, plural, one {Suggéré à partir de # exécution} other {Suggéré à partir de # exécutions}}"
 
+#. placeholder {0}: status.displayName
+#: packages/ui/src/career-evidence.ts
+msgid "{0} · {documents}"
+msgstr "{0} · {documents}"
+
 #. placeholder {0}: made.created ? t`Created knowledge base “${shown}”.` : t`Knowledge base “${shown}” already exists.`
 #: packages/ui/src/knowledge.tsx
 msgid "{0} Add a source to it to use it in this workspace."
@@ -385,7 +390,7 @@ msgstr "{0} sélectionné pour OpenAI. Fermez et rouvrez DraftLoop pour l’appl
 msgid "{0}, {1} critical."
 msgstr "{0}, dont {1} critiques."
 
-#. placeholder {0}: countedNouns.source(readiness.sourceCount)
+#. placeholder {0}: countedNouns.document(readiness.sourceCount)
 #. placeholder {1}: readiness.readyCount
 #: packages/ui/src/career-evidence.ts
 msgid "{0}, {1} ready."
@@ -449,6 +454,10 @@ msgstr "{count, plural, one {# crédit} other {# crédits}}"
 #: packages/ui/src/counted-nouns.ts
 msgid "{count, plural, one {# day} other {# days}}"
 msgstr "{count, plural, one {# jour} other {# jours}}"
+
+#: packages/ui/src/counted-nouns.ts
+msgid "{count, plural, one {# document} other {# documents}}"
+msgstr "{count, plural, one {# document} other {# documents}}"
 
 #: packages/ui/src/counted-nouns.ts
 msgid "{count, plural, one {# excerpt} other {# excerpts}}"
@@ -691,11 +700,6 @@ msgstr "{listed} listés d’après une consultation récente."
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "{matched} (not a valid choice)"
 msgstr "{matched} (choix non valide)"
-
-#. placeholder {0}: countedNouns.source(status.sourceCount)
-#: packages/ui/src/career-evidence.ts
-msgid "{name} · {0}"
-msgstr "{name} · {0}"
 
 #: apps/web/src/application-material-model.ts
 msgid "{name} ({role}), about {cost} a draft"
@@ -1032,6 +1036,10 @@ msgstr "Ajouter une candidature à partir d’une offre d’emploi collée"
 msgid "Add a target job description."
 msgstr "Ajoutez une description de poste cible."
 
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Add a whole folder"
+msgstr "Ajouter un dossier entier"
+
 #: packages/ui/src/home-model.ts
 msgid "Add career evidence"
 msgstr "Ajouter des éléments de parcours"
@@ -1117,7 +1125,11 @@ msgstr "Ajouter à la politique"
 msgid "Add URL to legacy evidence"
 msgstr "Ajouter l’URL aux éléments hérités"
 
-#. placeholder {0}: countedNouns.source(result.sourceCount)
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Add your career documents"
+msgstr "Ajoutez vos documents de parcours"
+
+#. placeholder {0}: countedNouns.document(result.sourceCount)
 #: packages/ui/src/career-evidence.ts
 msgid "Added {0} from the folder to {displayName}."
 msgstr "{0} du dossier ajouté(s) à {displayName}."
@@ -1137,6 +1149,14 @@ msgstr "Ajouté à {displayName}."
 #: apps/web/src/application-material.tsx
 msgid "Address it to"
 msgstr "Destinataire"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Adds every supported document in a folder at once."
+msgstr "Ajoute en une fois tous les documents pris en charge d’un dossier."
+
+#: packages/ui/src/advanced-options.tsx
+msgid "Advanced options"
+msgstr "Options avancées"
 
 #: packages/ui/src/start-requirements.tsx
 msgid "Advanced: requirements for this run"
@@ -1921,10 +1941,6 @@ msgstr "Vérification de la prise en charge des profils pour les modes d’authe
 msgid "Checking the candidate's consent to send material…"
 msgstr "Vérification du consentement du candidat à l’envoi du contenu…"
 
-#: packages/ui/src/career-evidence-card.tsx
-msgid "Checking the knowledge base…"
-msgstr "Vérification de la base de connaissances…"
-
 #: apps/web/src/shell-actions.tsx
 msgid "Checking the service"
 msgstr "Vérification du service"
@@ -1932,6 +1948,10 @@ msgstr "Vérification du service"
 #: packages/ui/src/app.tsx
 msgid "Checking whether the author and critic lineages differ…"
 msgstr "Vérification que les filiations du rédacteur et du relecteur diffèrent…"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Checking your documents…"
+msgstr "Vérification de vos documents…"
 
 #: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/start-confirmation.tsx
@@ -2487,11 +2507,6 @@ msgstr "Créé"
 #: apps/web/src/evidence-file-model.ts
 msgid "Created {when}"
 msgstr "Créé le {when}"
-
-#. placeholder {0}: defaultKnowledgeStoreDestinationLabel()
-#: packages/ui/src/career-evidence-setup.ts
-msgid "Created knowledge base “{displayName}” in {0} and selected it for this workspace."
-msgstr "Base de connaissances « {displayName} » créée dans {0} et sélectionnée pour cet espace de travail."
 
 #: packages/ui/src/knowledge.tsx
 msgid "Created knowledge base “{shown}”."
@@ -3224,8 +3239,8 @@ msgid "Empty"
 msgstr "Vide"
 
 #: packages/ui/src/career-evidence.ts
-msgid "Empty: add a CV, portfolio, or other source"
-msgstr "Vide : ajoutez un CV, un portfolio ou une autre source"
+msgid "Empty: add a CV, portfolio, or other document"
+msgstr "Vide : ajoutez un CV, un portfolio ou un autre document"
 
 #: packages/ui/src/home.tsx
 msgid "Empty. Use Move to in an application's ⋯ menu to put it here."
@@ -4480,6 +4495,11 @@ msgstr "La base de connaissances « {shown} » existe déjà."
 msgid "Knowledge base selected for this workspace."
 msgstr "Base de connaissances sélectionnée pour cet espace de travail."
 
+#. placeholder {0}: status.displayName
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Knowledge base: {0}"
+msgstr "Base de connaissances : {0}"
+
 #: packages/ui/src/knowledge.tsx
 msgid "Knowledge-store selection is unavailable in this desktop host."
 msgstr "Le choix du stockage de connaissances est indisponible dans cet hôte de bureau."
@@ -4996,6 +5016,10 @@ msgstr "de plus dans la file"
 msgid "More reasoning usually costs more and can improve the draft or the review."
 msgstr "Plus de raisonnement coûte généralement plus cher et peut améliorer l’ébauche ou la relecture."
 
+#: packages/ui/src/advanced-options.tsx
+msgid "Most people never need these."
+msgstr "La plupart des personnes n’en ont jamais besoin."
+
 #: packages/ui/src/review.tsx
 msgid "move"
 msgstr "déplacer"
@@ -5306,8 +5330,8 @@ msgid "No career evidence yet"
 msgstr "Aucun élément de parcours"
 
 #: packages/ui/src/career-evidence-card.tsx
-msgid "No career evidence yet. Adding the first source creates a knowledge base for this workspace in"
-msgstr "Aucun élément de parcours pour l’instant. Ajouter la première source crée une base de connaissances pour cet espace de travail dans"
+msgid "No career evidence yet. Your CV is enough to start, and you can add more at any time."
+msgstr "Aucun élément de parcours pour l’instant. Votre CV suffit pour commencer, et vous pourrez en ajouter à tout moment."
 
 #: packages/ui/src/review.tsx
 msgid "No command matches that search."
@@ -7695,10 +7719,6 @@ msgstr "Sélectionnez un profil rédacteur et un profil relecteur pris en charge
 msgid "Selected"
 msgstr "Sélectionné"
 
-#: packages/ui/src/career-evidence-setup.ts
-msgid "Selected knowledge base “{displayName}” for this workspace."
-msgstr "Base de connaissances « {displayName} » sélectionnée pour cet espace de travail."
-
 #: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
 msgid "Selected override"
@@ -8049,6 +8069,10 @@ msgstr "Lancer des exécutions de CV sur les offres dont vous avez relu les exig
 #: packages/ui/src/start-requirements-model.ts
 msgid "Start from the raw job description instead"
 msgstr "Partir plutôt de la description de poste brute"
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Start here"
+msgstr "Commencez ici"
 
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
@@ -9207,10 +9231,6 @@ msgstr "Le filtre n’a pas pu le lire. L’exécution est refusée tant qu’il
 #: apps/web/src/screening.tsx
 msgid "The screening status could not be read. {0}"
 msgstr "L’état du filtrage n’a pas pu être lu. {0}"
-
-#: packages/ui/src/career-evidence-card.tsx
-msgid "The selected knowledge base could not be opened. Open its store in the Knowledge base section below."
-msgstr "La base de connaissances choisie n’a pas pu être ouverte. Ouvrez son stockage dans la section Base de connaissances ci-dessous."
 
 #: packages/ui/src/home-model.ts
 msgid "The selected knowledge base could not be read"
@@ -10599,6 +10619,10 @@ msgstr "Vos documents"
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Your documents are saved. DraftLoop reads them and lists the facts it finds for you to check. You can add more documents at any time."
 msgstr "Vos documents sont enregistrés. DraftLoop les lit et liste les faits trouvés pour que vous les vérifiiez. Vous pouvez ajouter d’autres documents quand vous voulez."
+
+#: packages/ui/src/career-evidence-card.tsx
+msgid "Your documents could not be opened. Open their store under Advanced options below."
+msgstr "Vos documents n’ont pas pu être ouverts. Ouvrez leur stockage dans Options avancées ci-dessous."
 
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."

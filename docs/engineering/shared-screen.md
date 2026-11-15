@@ -37,6 +37,23 @@ flowchart LR
    `packages/review-state`, which fills it on the host side for both the
    desktop host and the hosted API.
 
+## Advanced options
+
+A card shows the basic path only. Its technical choices go in one
+`AdvancedOptions` section (`packages/ui/src/advanced-options.tsx`), the last
+element of the card and folded by default.
+
+- Never put a step the basic path needs inside it.
+- Pass `note` when a choice inside is not the default, so the folded line says
+  so.
+- Pass `open` when an error or a button elsewhere must unfold it.
+- Show each choice as an `AdvancedOption`: name, state, one-sentence effect and
+  one control. Do not use a bare checkbox.
+- Simple-view text uses the person's words, such as "documents", not
+  "knowledge base" or "store".
+
+The Career evidence card (`career-evidence-card.tsx`) is the model.
+
 ## Web platform guidance
 
 Before you build or rework a component, overlay, layout, animation, form,

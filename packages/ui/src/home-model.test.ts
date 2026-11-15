@@ -177,7 +177,7 @@ describe("career evidence presentation", () => {
   it("shows the knowledge base name and source readiness", () => {
     expect(evidencePresentation(selected(4), 0)).toMatchObject({
       chip: "Ready",
-      headline: "Engineering · 4 sources",
+      headline: "Engineering · 4 documents",
       empty: false,
     });
     expect(evidencePresentation(selected(4, 2), 0)).toMatchObject({

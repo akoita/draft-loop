@@ -111,7 +111,7 @@ describe("ApplicationSetupSummaryView", () => {
     expect(html).toContain("Using fx11 · version 3 · reviewed 2026-10-09");
     expect(html).toContain("Reviewed version");
     expect(html).toContain("Update in Career profile");
-    expect(html).toContain("Career evidence: Main career evidence · 4 sources");
+    expect(html).toContain("Career evidence: Main career evidence · 4 documents");
     expect(html).toContain(">Manage</button>");
     expect(html).toContain("Models, writing policy and sign-in are set on Home");
     expect(html).toContain(">Open Home</button>");
