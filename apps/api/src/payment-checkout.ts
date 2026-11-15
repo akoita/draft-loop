@@ -55,6 +55,8 @@ export type PaymentEvent =
       readonly amountTotalCents?: number;
       readonly currency?: string;
     }
+  /** The provider refunded a payment in full. The payment's checkout is looked up by its id. */
+  | { readonly kind: "payment_refunded"; readonly eventId: string; readonly paymentId: string }
   /** An event the service does not act on, with the reason for the log. */
   | { readonly kind: "ignored"; readonly eventId?: string; readonly reason: string };
 
@@ -65,6 +67,14 @@ export interface PaymentEventsPort {
    * for a body the provider did not sign with the deployment's secret.
    */
   readonly readEvent: (rawBody: Buffer, signature: string | undefined, now: Date) => PaymentEvent;
+  /**
+   * The checkout a payment paid for, read from the provider (#2710): a refund event names the
+   * payment, not the checkout or the organisation. Undefined when the payment is not a credit
+   * pack checkout of this service. Throws `PaymentProviderError` when the provider cannot answer.
+   */
+  readonly findCheckoutOfPayment: (
+    paymentId: string,
+  ) => Promise<{ readonly checkoutId: string; readonly organisationId: string } | undefined>;
 }
 
 /** The event was not signed by the provider, or its signature is too old. */

@@ -117,6 +117,10 @@ export function paymentsFrom(config: PaymentsConfig, fetcher?: typeof fetch): Pa
       cancelUrl: back("cancelled"),
       ...(fetcher === undefined ? {} : { fetch: fetcher }),
     }),
-    events: createStripeEvents({ webhookSecret: config.webhookSecret }),
+    events: createStripeEvents({
+      webhookSecret: config.webhookSecret,
+      secretKey: config.secretKey,
+      ...(fetcher === undefined ? {} : { fetch: fetcher }),
+    }),
   };
 }

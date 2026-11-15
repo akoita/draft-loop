@@ -10,6 +10,7 @@ import {
   PaymentSignatureError,
   paymentEventsPath,
 } from "./payment-checkout.js";
+import { takeBackRefundedCredits } from "./payment-refund.js";
 
 /** Larger than any event the provider sends; a bigger body is refused before it is read. */
 const maximumEventBytes = 262_144;
@@ -17,7 +18,7 @@ const maximumEventBytes = 262_144;
 export interface PaymentEventRoutesOptions {
   readonly events: PaymentEventsPort;
   /** An organisation's purchases, by the organisation id the checkout named. */
-  readonly purchasesFor: (organisationId: string) => Pick<CreditPurchases, "record">;
+  readonly purchasesFor: (organisationId: string) => Pick<CreditPurchases, "record" | "refund">;
   readonly now?: () => Date;
 }
 
@@ -25,8 +26,10 @@ const receivedSchema = z
   .object({
     received: z.literal(true),
     outcome: z
-      .enum(["granted", "already_granted", "ignored"])
-      .describe("What the event did: credits granted, a repeat that changed nothing, or ignored."),
+      .enum(["granted", "already_granted", "refunded", "already_refunded", "ignored"])
+      .describe(
+        "What the event did: credits granted, unspent credits of a refunded purchase taken back, a repeat that changed nothing, or ignored.",
+      ),
   })
   .meta({ id: "PaymentEventReceipt" });
 
@@ -34,7 +37,8 @@ const receivedSchema = z
  * The payment provider reports a completed checkout (#2709) and the pack's credits reach the
  * organisation's balance, once. The route takes no credential: the provider's signature over the
  * raw body is the proof, checked before anything is read. The credits and their validity come
- * from the plan catalog by pack id, never from the event. An event that cannot grant (unknown
+ * from the plan catalog by pack id, never from the event. A full refund takes the purchase's
+ * unspent credits back (#2710). An event that cannot grant (unknown
  * pack or organisation, another event type, a live event) answers 200 so that the provider stops
  * retrying it; a storage failure answers 500 so that it retries.
  */
@@ -61,7 +65,7 @@ export function registerPaymentEventRoutes(
         schema: {
           summary: "Receive a payment provider event",
           description:
-            "For the payment provider only. The body is the provider's event and the `Stripe-Signature` header signs it; a body without a valid, recent signature answers 400 invalid_signature. A completed, paid checkout of a credit pack grants the pack's credits once, by checkout id. Other events answer 200 with `ignored`.",
+            "For the payment provider only. The body is the provider's event and the `Stripe-Signature` header signs it; a body without a valid, recent signature answers 400 invalid_signature. A completed, paid checkout of a credit pack grants the pack's credits once, by checkout id. A full refund of that payment takes the purchase's unspent credits back once. Other events answer 200 with `ignored`.",
           security: [],
           body: z.unknown().meta({ type: "object" }),
           response: { 200: receivedSchema, 400: apiErrorSchema },
@@ -92,6 +96,13 @@ export function registerPaymentEventRoutes(
           return reply.send({ received: true as const, outcome: "ignored" as const });
         };
         if (event.kind === "ignored") return ignore(event.reason, event.eventId);
+        if (event.kind === "payment_refunded") {
+          const outcome = await takeBackRefundedCredits(
+            { events, purchasesFor, event, at },
+            (entry) => request.log.info(entry, "payment refund handled"),
+          );
+          return reply.send({ received: true as const, outcome });
+        }
 
         const pack = planCatalog.creditPacks.find(({ id }) => id === event.packId);
         if (pack === undefined) return ignore("unknown_pack", event.eventId);

@@ -122,7 +122,7 @@ export interface TenantApplications {
   /** A tenant's candidate record names (#2737); without it records are shown by id only. */
   readonly recordNamesFor?: (tenantId: string) => RecordNames;
   /** A tenant's credit pack purchases (#2709); without it payment events grant nothing. */
-  readonly creditPurchasesFor?: (tenantId: string) => Pick<CreditPurchases, "record">;
+  readonly creditPurchasesFor?: (tenantId: string) => Pick<CreditPurchases, "record" | "refund">;
 }
 
 export const defaultTenantCacheSize = 100;

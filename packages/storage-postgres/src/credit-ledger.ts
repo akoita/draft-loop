@@ -266,9 +266,17 @@ function grantState(row: SqlRow): GrantState {
   };
 }
 
+/**
+ * Every grant with its totals. A refunded purchase's grant (#2710) counts as expired from the
+ * refund, so what is left of it is forfeited and a later run refund into it never comes back.
+ */
 async function loadGrantStates(executor: SqlExecutor): Promise<GrantState[]> {
   const rows = await executor.query(
-    `SELECT g.sequence, g.bucket, g.amount, g.expires_at,
+    `SELECT g.sequence, g.bucket, g.amount,
+            LEAST(g.expires_at, (
+              SELECT min(p.refunded_at) FROM credit_purchases p
+               WHERE p.tenant_id = g.tenant_id AND p.grant_sequence = g.sequence
+            )) AS expires_at,
             to_char(g.period_start, 'YYYY-MM-DD') AS period,
             COALESCE(sum(l.amount) FILTER (WHERE l.kind = 'reserve'), 0) AS reserved,
             COALESCE(sum(l.amount) FILTER (WHERE l.kind = 'settle'), 0) AS settled,

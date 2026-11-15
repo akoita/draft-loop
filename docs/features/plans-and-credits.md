@@ -78,8 +78,8 @@ A plan sets these entitlements:
 
 - Partial: prices and self-service sign-up are not live, and production is held.
 - Buying a pack opens a Stripe test-mode checkout only, and a paid checkout
-  adds the pack's credits once. A refund does not take credits back yet
-  (#2710).
+  adds the pack's credits once. A full refund takes back the purchase's
+  unspent credits; a partial refund takes nothing back.
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Brief extraction is free.
 - A credit covers 20 cover letter or question drafts, interview guides and
