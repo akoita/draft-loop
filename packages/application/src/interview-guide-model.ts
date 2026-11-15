@@ -1,10 +1,7 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
 
-import {
-  type ApplicationMaterialModelExecutor,
-  applicationMaterialMaxOutputTokens,
-} from "./application-material-model.js";
+import { type ApplicationMaterialModelExecutor } from "./application-material-model.js";
 import { withDocumentLanguage } from "./document-language-instruction.js";
 import type {
   InterviewGuideWriterPort,
@@ -21,6 +18,13 @@ import type {
 export const interviewGuidePromptVersion = "interview-guide-v1";
 /** Hard cost caps per guide, writer and check together. */
 export const interviewGuideMaxCostUsd = { essential: 0.2, extensive: 0.4 } as const;
+/**
+ * Room for one writer call's whole answer (#2623). The model's reasoning counts against the same
+ * budget as its visible answer: an essential guide of about 4,500 tokens was cut off at 8,192
+ * after 4,277 tokens of reasoning. At this size the worst priced call still fits the essential
+ * cap on the default model.
+ */
+export const interviewGuideMaxOutputTokens = 14_000;
 
 const outputSchema = {
   type: "object",
@@ -139,7 +143,7 @@ export function createModelInterviewGuideWriter(
         input: inputOf(request),
         outputSchema,
         outputName: "interview_guide",
-        maxOutputTokens: applicationMaterialMaxOutputTokens,
+        maxOutputTokens: interviewGuideMaxOutputTokens,
         dataPolicy: options.dataPolicy,
         ...(options.signal === undefined ? {} : { signal: options.signal }),
       });

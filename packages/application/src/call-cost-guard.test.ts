@@ -2,7 +2,7 @@ import type { ModelSelection } from "@draft-loop/domain";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import type { JsonObject, ModelRequest, ModelResponse } from "@draft-loop/providers";
 import { describe, expect, it, vi } from "vitest";
-import { guardCallCost, worstCallCostUsd } from "./call-cost-guard.js";
+import { failedCallCostUsd, guardCallCost, worstCallCostUsd } from "./call-cost-guard.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 
 const opusCritic = defaultModelProfileRegistry.resolve("standard-anthropic-critic", 1, "critic");
@@ -159,5 +159,24 @@ describe("call cost guard", () => {
       expect(failing.execute).toHaveBeenCalledTimes(2);
       expect(await second).not.toBeInstanceOf(CallCostBudgetError);
     });
+  });
+
+  it("keeps what the provider billed for a call that failed after it answered", async () => {
+    const cutOff = Object.assign(new Error("cut off"), {
+      billed: { cost: { estimatedUsd: 0.09 } },
+    });
+    expect(failedCallCostUsd(cutOff)).toBe(0.09);
+    expect(failedCallCostUsd(new Error("no answer"))).toBe(0);
+    expect(failedCallCostUsd({ billed: { cost: { estimatedUsd: null } } })).toBe(0);
+
+    // US$0.30 to spend and US$0.204 a call: after a failure billed US$0.15, the next cannot fit.
+    const adapter = { execute: vi.fn(async () => Promise.reject(cutOff)) };
+    const guarded = guardCallCost(adapter as never, 0.3);
+    await expect(guarded.execute(modelRequest())).rejects.toBe(cutOff);
+    await expect(guarded.execute(modelRequest())).rejects.toBe(cutOff);
+    cutOff.billed.cost.estimatedUsd = 0.15;
+    const third = guardCallCost(adapter as never, 0.3);
+    await expect(third.execute(modelRequest())).rejects.toBe(cutOff);
+    await expect(third.execute(modelRequest())).rejects.toBeInstanceOf(CallCostBudgetError);
   });
 });
