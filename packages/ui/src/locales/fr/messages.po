@@ -2766,13 +2766,17 @@ msgstr "« {name} » supprimé."
 msgid "Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy."
 msgstr "La suppression efface définitivement ce dossier et tout ce qui est enregistré pour lui. Elle est irréversible. Exportez tout d’abord si vous avez besoin d’une copie."
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "Demo mode"
+msgstr "Mode démo"
+
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Demo mode (no provider authentication required)"
 msgstr "Mode démo (aucune authentification de fournisseur requise)"
 
 #: packages/ui/src/workspace-setup.tsx
-msgid "Demo mode: runs use fixtures and call no model"
-msgstr "Mode démo : les exécutions utilisent des données d’exemple et n’appellent aucun modèle"
+msgid "Demo mode on"
+msgstr "Mode démo activé"
 
 #: packages/ui/src/review.tsx
 msgid "Demo remains local"
@@ -5813,6 +5817,7 @@ msgstr "sur {0} et {1}"
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Off"
 msgstr "Désactivé"
 
@@ -5824,6 +5829,7 @@ msgstr "Omission"
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "On"
 msgstr "Activé"
 
@@ -7546,6 +7552,10 @@ msgstr "Exécutions"
 #: apps/web/src/consent.tsx
 msgid "Runs send the approved parts of the candidate's material to {0} to draft and review the CV. The providers do not keep it."
 msgstr "Les exécutions envoient les parties approuvées du contenu du candidat à {0} pour rédiger et relire le CV. Les fournisseurs ne le conservent pas."
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Runs use fixtures and call no model."
+msgstr "Les exécutions utilisent des données d’exemple et n’appellent aucun modèle."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in"
@@ -9887,6 +9897,14 @@ msgstr "Réessayer"
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Essayer la démo"
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Turn demo mode off"
+msgstr "Désactiver le mode démo"
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Turn demo mode on"
+msgstr "Activer le mode démo"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Turn on in Workspace settings"

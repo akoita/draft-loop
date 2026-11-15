@@ -2772,13 +2772,17 @@ msgstr "Deleted \"{name}\"."
 msgid "Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy."
 msgstr "Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy."
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "Demo mode"
+msgstr "Demo mode"
+
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Demo mode (no provider authentication required)"
 msgstr "Demo mode (no provider authentication required)"
 
 #: packages/ui/src/workspace-setup.tsx
-msgid "Demo mode: runs use fixtures and call no model"
-msgstr "Demo mode: runs use fixtures and call no model"
+msgid "Demo mode on"
+msgstr "Demo mode on"
 
 #: packages/ui/src/review.tsx
 msgid "Demo remains local"
@@ -5819,6 +5823,7 @@ msgstr "of {0} and {1}"
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Off"
 msgstr "Off"
 
@@ -5830,6 +5835,7 @@ msgstr "Omission"
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "On"
 msgstr "On"
 
@@ -7552,6 +7558,10 @@ msgstr "Runs"
 #: apps/web/src/consent.tsx
 msgid "Runs send the approved parts of the candidate's material to {0} to draft and review the CV. The providers do not keep it."
 msgstr "Runs send the approved parts of the candidate's material to {0} to draft and review the CV. The providers do not keep it."
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Runs use fixtures and call no model."
+msgstr "Runs use fixtures and call no model."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Runs use these files while no knowledge base is selected. Adding a source creates a knowledge base for this workspace in"
@@ -9893,6 +9903,14 @@ msgstr "Try again"
 #: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Try demo workspace"
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Turn demo mode off"
+msgstr "Turn demo mode off"
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "Turn demo mode on"
+msgstr "Turn demo mode on"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Turn on in Workspace settings"
