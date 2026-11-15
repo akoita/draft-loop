@@ -1032,6 +1032,10 @@ msgstr "Actif maintenant :"
 msgid "Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools, batch, regional premiums, and unsupported long context. The scenario estimates list-rate API usage only and does not change the selected profiles or their runtime budgets."
 msgstr "Les coûts réels peuvent différer. Sont exclus les appels supplémentaires, les nouvelles tentatives, la croissance des entrées, le cache, les outils, le traitement par lots, les suppléments régionaux et le contexte long non pris en charge. Le scénario estime uniquement l’usage de l’API au tarif public et ne modifie ni les profils choisis ni leurs budgets d’exécution."
 
+#: packages/ui/src/getting-started.tsx
+msgid "Add a CV or other documents, or tell your story in a conversation."
+msgstr "Ajoutez un CV ou d’autres documents, ou racontez votre parcours dans une conversation."
+
 #: packages/ui/src/home-model.ts
 msgid "Add a CV, portfolio or other source so DraftLoop can quote you accurately."
 msgstr "Ajoutez un CV, un portfolio ou une autre source pour que DraftLoop vous cite fidèlement."
@@ -1121,6 +1125,10 @@ msgstr "Ajoutez les éléments de parcours que DraftLoop peut utiliser. Vos fich
 #: packages/ui/src/application-steps-model.ts
 msgid "Add the job description from a file or a public URL, then extract and review its requirements."
 msgstr "Ajoutez l’offre d’emploi depuis un fichier ou une URL publique, puis extrayez et relisez ses exigences."
+
+#: packages/ui/src/getting-started.tsx
+msgid "Add the job you want"
+msgstr "Ajoutez le poste visé"
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Add the target job description."
@@ -1929,6 +1937,10 @@ msgstr "Vérifiez ces chiffres : aucune source n'indique {0}."
 #: packages/ui/src/start-confirmation.tsx
 msgid "Check what the run will use. No provider call is made until you start."
 msgstr "Vérifiez ce que l’exécution utilisera. Aucun appel au fournisseur n’est fait avant que vous ne lanciez."
+
+#: packages/ui/src/getting-started.tsx
+msgid "Check what we found"
+msgstr "Vérifiez ce que nous avons trouvé"
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "Checked at"
@@ -2890,6 +2902,10 @@ msgstr "Document — l’ébauche"
 msgid "Documents live in Career evidence. The profile is rebuilt from them."
 msgstr "Les documents se trouvent dans Éléments de parcours. Le profil est reconstruit à partir d’eux."
 
+#: packages/ui/src/getting-started.tsx
+msgid "done"
+msgstr "fait"
+
 #: packages/ui/src/application-steps-model.ts
 #: packages/ui/src/start-checklist.tsx
 msgid "Done"
@@ -2914,6 +2930,10 @@ msgstr "Télécharger"
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Download cancelled. Nothing was installed."
 msgstr "Téléchargement annulé. Rien n’a été installé."
+
+#: packages/ui/src/getting-started.tsx
+msgid "Download it"
+msgstr "Téléchargez-le"
 
 #: apps/web/src/application-material.tsx
 msgid "Download Markdown"
@@ -3950,6 +3970,10 @@ msgstr "Génération…"
 msgid "Generation failed"
 msgstr "Échec de la génération"
 
+#: packages/ui/src/getting-started.tsx
+msgid "Getting started"
+msgstr "Premiers pas"
+
 #. placeholder {0}: Math.round(state.loaded * 100)
 #: packages/ui/src/speech-button.tsx
 msgid "Getting voice input ready ({0}%)…"
@@ -3981,6 +4005,7 @@ msgid "GLM-5.3 Flash"
 msgstr "GLM-5.3 Flash"
 
 #: packages/ui/src/career-signposts.tsx
+#: packages/ui/src/getting-started.tsx
 msgid "Go to Career evidence"
 msgstr "Aller à Éléments de parcours"
 
@@ -4107,6 +4132,10 @@ msgstr "Masquer les archives"
 #: packages/ui/src/side-panel-width.tsx
 msgid "Hide side panel"
 msgstr "Masquer le panneau latéral"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Hide the guide"
+msgstr "Masquer le guide"
 
 #: packages/ui/src/model-profile-presentation.ts
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -5240,6 +5269,7 @@ msgstr "Ne jamais partager avec un modèle"
 msgid "Never use \"{0}\""
 msgstr "Ne jamais utiliser « {0} »"
 
+#: packages/ui/src/getting-started.tsx
 #: packages/ui/src/home.tsx
 #: packages/ui/src/new-application-form.tsx
 msgid "New application"
@@ -5264,6 +5294,10 @@ msgstr "Nouveau dossier"
 #: packages/ui/src/home-folders.tsx
 msgid "New folder name"
 msgstr "Nom du nouveau dossier"
+
+#: packages/ui/src/getting-started.tsx
+msgid "New here? A short step-by-step guide can show you what to do first."
+msgstr "Nouveau ici ? Un court guide pas à pas peut vous montrer par où commencer."
 
 #: packages/ui/src/knowledge.tsx
 msgid "New knowledge base"
@@ -5651,6 +5685,10 @@ msgstr "Cette exécution n’existe pas."
 msgid "No such workspace."
 msgstr "Cet espace de travail n’existe pas."
 
+#: packages/ui/src/getting-started.tsx
+msgid "No thanks"
+msgstr "Non merci"
+
 #: packages/ui/src/review.tsx
 msgid "No unresolved blocking findings; provider recovery remains before approval."
 msgstr "Aucun constat bloquant non résolu ; une reprise auprès du fournisseur reste à faire avant l’approbation."
@@ -5973,6 +6011,7 @@ msgid "Open career evidence to choose or repair it."
 msgstr "Ouvrez les éléments de parcours pour les choisir ou les réparer."
 
 #: packages/ui/src/career-signposts.tsx
+#: packages/ui/src/getting-started.tsx
 msgid "Open Career profile"
 msgstr "Ouvrir Profil professionnel"
 
@@ -6023,6 +6062,10 @@ msgstr "ouvrir l’exécution"
 #: packages/ui/src/career-interview-model.ts
 msgid "Open source"
 msgstr "Open source"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Open the application"
+msgstr "Ouvrir la candidature"
 
 #: packages/ui/src/review.tsx
 msgid "Open the command palette"
@@ -6220,6 +6263,10 @@ msgstr "Collez l’offre d’emploi"
 msgid "Paste the job description first."
 msgstr "Collez d’abord l’offre d’emploi."
 
+#: packages/ui/src/getting-started.tsx
+msgid "Paste the job description or its link."
+msgstr "Collez l’offre d’emploi ou son lien."
+
 #: packages/ui/src/new-application-model.ts
 msgid "Paste the job description to work from."
 msgstr "Collez la description de poste à utiliser."
@@ -6299,6 +6346,10 @@ msgstr "Autorisation de stocker ces éléments"
 #: apps/web/src/interview-guide-model.ts
 msgid "Phone"
 msgstr "Téléphone"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Pick a template and save the file."
+msgstr "Choisissez un modèle et enregistrez le fichier."
 
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Pick a version to read its text."
@@ -6608,6 +6659,14 @@ msgstr "Lu dans les données d’annonce de la page."
 #: packages/ui/src/review.tsx
 msgid "Read the draft as it stands, without change marks"
 msgstr "Lire l’ébauche telle quelle, sans marques de modification"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Read the draft, keep or change each suggestion, then approve it."
+msgstr "Lisez le brouillon, gardez ou modifiez chaque suggestion, puis approuvez-le."
+
+#: packages/ui/src/getting-started.tsx
+msgid "Read the facts taken from your documents, then confirm or fix them."
+msgstr "Lisez les faits tirés de vos documents, puis confirmez-les ou corrigez-les."
 
 #: packages/ui/src/review.tsx
 msgid "Read the full draft"
@@ -7372,6 +7431,10 @@ msgstr "Relisez d’abord les exigences de cette candidature."
 msgid "Review work"
 msgstr "Relire le travail"
 
+#: packages/ui/src/getting-started.tsx
+msgid "Review your CV"
+msgstr "Relisez votre CV"
+
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/profile-status-view.tsx
 #: packages/ui/src/work-journal-model.ts
@@ -7991,6 +8054,10 @@ msgstr "Afficher les archives ({0})"
 msgid "Show everything"
 msgstr "Tout afficher"
 
+#: packages/ui/src/getting-started.tsx
+msgid "Show me the steps"
+msgstr "Montrez-moi les étapes"
+
 #: packages/ui/src/review-panels.tsx
 msgid "Show only recent events"
 msgstr "N’afficher que les événements récents"
@@ -8014,6 +8081,10 @@ msgstr "Afficher la ligne de l’ébauche pour :"
 #: packages/ui/src/review.tsx
 msgid "Show the draft line this claim comes from"
 msgstr "Afficher la ligne de l’ébauche d’où vient cette affirmation"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Show the guide"
+msgstr "Afficher le guide"
 
 #: packages/ui/src/coverage-panel.tsx
 msgid "Show this block in the draft"
@@ -8257,6 +8328,11 @@ msgstr "Oriente la sélection et la présentation au prochain tour. Ce n’est p
 msgid "Step"
 msgstr "Étape"
 
+#. placeholder {0}: view.position
+#: packages/ui/src/getting-started.tsx
+msgid "Step {0} of {total}"
+msgstr "Étape {0} sur {total}"
+
 #: packages/ui/src/review.tsx
 msgid "step where it stopped."
 msgstr "l’étape où elle s’est arrêtée."
@@ -8475,6 +8551,10 @@ msgstr "Technologies, séparées par des virgules"
 #: packages/ui/src/career-conversation-start.tsx
 msgid "Tell it in a conversation"
 msgstr "Le raconter dans une conversation"
+
+#: packages/ui/src/getting-started.tsx
+msgid "Tell us about your career"
+msgstr "Parlez-nous de votre parcours"
 
 #: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx

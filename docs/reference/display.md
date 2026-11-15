@@ -7,7 +7,7 @@ screen shows at once.
 | Display         | What you see                                                                                  |
 | --------------- | --------------------------------------------------------------------------------------------- |
 | Simple          | The default. Each card shows the basic path; technical choices sit under **Advanced options**. |
-| Guided          | The simple view for now; a step-by-step guide on Home follows ([#2791](https://github.com/akoita/draft-loop/issues/2791)). |
+| Guided          | The simple view plus a **Getting started** list on Home that walks you to your first CV. |
 | Show everything | Every **Advanced options** section and the Prepare panel start open. You can still fold one.  |
 
 Show everything adds nothing new to a screen. It only removes the click that
@@ -22,6 +22,24 @@ The first time you open Home, one card asks **How would you like to start?**
 - **Decide later** keeps the simple view.
 
 The card does not come back once you answer.
+
+## Getting started
+
+Guided people see five steps at the top of Home. Each step ticks itself once
+the work is done:
+
+1. Tell us about your career: add documents, or tell it in a conversation.
+2. Check what we found in **Career profile**.
+3. Add the job you want.
+4. Review your CV and approve it.
+5. Download it.
+
+The current step has one button that opens the right screen. **Hide the
+guide** folds the list to one line, and **Show the guide** brings it back. The
+list goes away after your first download.
+
+On the simple view, Home offers the guide once in one line: **Show me the
+steps** turns Guided on, **No thanks** hides the offer.
 
 ## Change it
 
