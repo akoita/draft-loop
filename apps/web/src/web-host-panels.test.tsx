@@ -29,7 +29,7 @@ describe("the web's host panels", () => {
     expect(panels.evidenceAfter?.({ revision: 0 })).toBeDefined();
   });
 
-  it("adds the work journal review with the owner token only, where the server serves it", () => {
+  it("adds the work journal review in both modes, which both serve it (#2783)", () => {
     const owner = renderToStaticMarkup(
       webHostPanels(unusedClient, "owner", undefined).evidenceAfter?.({ revision: 0 }),
     );
@@ -39,7 +39,8 @@ describe("the web's host panels", () => {
 
     expect(owner).toContain(">Work journal</h2>");
     expect(owner).not.toContain("Accept notes from agents");
-    expect(signIn).not.toContain("Work journal");
+    expect(signIn).toContain(">Work journal</h2>");
+    expect(webHostPanels(unusedClient, "sign-in", undefined).homeEvidence).toBeDefined();
   });
 
   it("shows the career interview and its way to start to signed-in users too (#2735)", () => {

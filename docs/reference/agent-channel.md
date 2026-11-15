@@ -29,11 +29,11 @@ open defects. The [plugin walk](../evaluation/agent-plugin-walk.md) of
 You need a running [self-hosted server](../operations/self-hosted.md) and
 `draftloop-mcp` on your `PATH` (step 1 below). Then pick one way:
 
-| Way                          | For                     | What it adds                                          |
-| ---------------------------- | ----------------------- | ----------------------------------------------------- |
-| The Claude Code plugin       | Claude Code             | The tools, the [commands](#commands), the Stop hook   |
-| A copied configuration       | Claude Code, Codex, any | The tools only                                        |
-| `draftloop-mcp init`         | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project   |
+| Way                    | For                     | What it adds                                        |
+| ---------------------- | ----------------------- | --------------------------------------------------- |
+| The Claude Code plugin | Claude Code             | The tools, the [commands](#commands), the Stop hook |
+| A copied configuration | Claude Code, Codex, any | The tools only                                      |
+| `draftloop-mcp init`   | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project |
 
 The Agents section of Workspace settings on Home shows the first two and
 holds the **Accept notes from agents** button; the Work journal panel links
@@ -67,12 +67,12 @@ to it.
    until you choose to share your exported CVs and saved drafts.
 3. Pick your agent's tab and copy what it shows:
 
-   | Tab                     | What to do                                                             |
-   | ----------------------- | ---------------------------------------------------------------------- |
+   | Tab                     | What to do                                                                                                    |
+   | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
    | Claude Code plugin      | Run the two `/plugin` lines in Claude Code, then `draftloop-mcp save-token` in a terminal and paste the token |
-   | Claude Code             | Run the `claude mcp add --scope user` command, which holds the token, in a terminal |
-   | Codex                   | Add the table, which holds the token, to `~/.codex/config.toml`        |
-   | Other MCP agents (JSON) | Add the entry, which holds the token, to the agent's `mcpServers` file |
+   | Claude Code             | Run the `claude mcp add --scope user` command, which holds the token, in a terminal                           |
+   | Codex                   | Add the table, which holds the token, to `~/.codex/config.toml`                                               |
+   | Other MCP agents (JSON) | Add the entry, which holds the token, to the agent's `mcpServers` file                                        |
 
    `save-token` reads the token from standard input, so it stays out of your
    shell history, and keeps it in `~/.config/draftloop/agent-token`
@@ -219,9 +219,9 @@ A failed call answers `isError` with one JSON object:
 `{"error": {"code", "message", "fields", "retryable"}}`. The message is one
 sentence, and `fields` names the note fields to fix.
 
-| `retryable` | When                                                                                       | What the agent does              |
-| ----------- | ------------------------------------------------------------------------------------------ | -------------------------------- |
-| `true`      | The server is unreachable, or answers 408, 425, 429, 500, 502, 503 or 504                  | Tries the same call again later  |
+| `retryable` | When                                                                                         | What the agent does              |
+| ----------- | -------------------------------------------------------------------------------------------- | -------------------------------- |
+| `true`      | The server is unreachable, or answers 408, 425, 429, 500, 502, 503 or 504                    | Tries the same call again later  |
 | `false`     | Validation, permission, not found, conflict, no token (`not_signed_in`), or `internal_error` | Fixes the input or asks the user |
 
 ## Job applications and runs
@@ -231,20 +231,20 @@ applications, read the job description one keeps, and add one. With
 `drafts:read`, it reads what the candidate already exported or saved. No tool
 returns a run's open draft, its findings or career evidence.
 
-| Tool                | Scope               | What it does                                                               |
-| ------------------- | ------------------- | -------------------------------------------------------------------------- |
-| `list_applications` | `applications:read` | Lists applications with status, folder and latest run; archived on request |
-| `get_application`   | `applications:read` | Reads one application by id                                                |
-| `get_job_text`      | `applications:read` | Reads the job text an application keeps, or its page's address and copy    |
-| `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
-| `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
-| `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
-| `list_materials`    | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text |
-| `get_material`      | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list |
-| `estimate_run`      | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap        |
-| `start_cv_run`      | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap               |
-| `draft_cover_letter` | `runs:start`       | Drafts and saves a cover letter, within the cap                            |
-| `draft_interview_prep` | `runs:start`     | Drafts and saves interview questions with talking points, within the cap   |
+| Tool                   | Scope               | What it does                                                                                       |
+| ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------- |
+| `list_applications`    | `applications:read` | Lists applications with status, folder and latest run; archived on request                         |
+| `get_application`      | `applications:read` | Reads one application by id                                                                        |
+| `get_job_text`         | `applications:read` | Reads the job text an application keeps, or its page's address and copy                            |
+| `get_run_status`       | `applications:read` | Says where a CV run stands and what waits for the candidate                                        |
+| `add_job`              | `jobs:write`        | Adds an application from a job description pasted as text                                          |
+| `get_cv`               | `drafts:read`       | Reads the newest Markdown export of the CV the application uses                                    |
+| `list_materials`       | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text                        |
+| `get_material`         | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list |
+| `estimate_run`         | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap                                |
+| `start_cv_run`         | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                       |
+| `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |
+| `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
@@ -266,11 +266,11 @@ questions. The candidate gives it a monthly spend limit in
 US dollars when creating it; the token form and the API refuse one without
 the other.
 
-| Route                | What an agent token may do                                                |
-| -------------------- | ------------------------------------------------------------------------- |
-| `GET runs/estimate`  | Price a run; the answer adds `agentSpend`: cap, spent, remaining, per run |
-| `POST runs`          | Start a run with `applicationId` and `opportunityBrief` only              |
-| `POST applications/:id/material` | Draft a cover letter or interview questions on the default model |
+| Route                            | What an agent token may do                                                |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `GET runs/estimate`              | Price a run; the answer adds `agentSpend`: cap, spent, remaining, per run |
+| `POST runs`                      | Start a run with `applicationId` and `opportunityBrief` only              |
+| `POST applications/:id/material` | Draft a cover letter or interview questions on the default model          |
 
 - **Reservation.** Each run reserves the workspace's per-run cost limit
   against the cap for the UTC month, before it is saved; each draft reserves
@@ -328,12 +328,12 @@ It prints `DraftLoop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
 its own agent token as `Authorization: Bearer`, and the server forwards it to
 the API on each call. It keeps no token, no session and no candidate data.
 
-| Setting                       | Default                 | What it sets                         |
-| ----------------------------- | ----------------------- | ------------------------------------ |
-| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The DraftLoop API the tools call     |
-| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace the tools act in       |
-| `DRAFT_LOOP_MCP_PORT`         | `8090`                  | The port it listens on               |
-| `DRAFT_LOOP_MCP_HOST`         | `127.0.0.1`             | The address it binds                 |
+| Setting                       | Default                 | What it sets                     |
+| ----------------------------- | ----------------------- | -------------------------------- |
+| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The DraftLoop API the tools call |
+| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace the tools act in   |
+| `DRAFT_LOOP_MCP_PORT`         | `8090`                  | The port it listens on           |
+| `DRAFT_LOOP_MCP_HOST`         | `127.0.0.1`             | The address it binds             |
 
 A request without a credential answers `401`, and `GET /healthz` answers
 `200`. It speaks plain `http` on this computer only: to reach it from another
@@ -344,10 +344,10 @@ machine, put a TLS proxy in front of it.
 On a server in sign-in mode, set both addresses and the server asks
 assistants to sign the person in instead of taking an agent token:
 
-| Setting                     | What it sets                                                 |
-| --------------------------- | ------------------------------------------------------------ |
+| Setting                     | What it sets                                                    |
+| --------------------------- | --------------------------------------------------------------- |
 | `DRAFT_LOOP_MCP_PUBLIC_URL` | This server's `https` address as people enter it, ending `/mcp` |
-| `DRAFT_LOOP_OIDC_ISSUER`    | The identity provider's issuer, the same one the API trusts  |
+| `DRAFT_LOOP_OIDC_ISSUER`    | The identity provider's issuer, the same one the API trusts     |
 
 ```mermaid
 sequenceDiagram
@@ -397,6 +397,15 @@ workspace home shows how many notes wait. The same review runs from the CLI
 with `draft-loop work-journal`; see the
 [self-hosted server](../operations/self-hosted.md#work-journal) guide.
 
+On the hosted service, signed-in accounts get the same panel and switch, with
+two more checks:
+
+- **Consent.** Turning "Accept notes from agents" on and keeping a note need
+  the record's `material-storage` consent; without it they answer `409`
+  `storage_consent_required`.
+- **Same record.** A note is approved only into a knowledge base the same
+  record owns; another base answers `404` `knowledge_base_not_found`.
+
 ## On the hosted service: an assistant's sign-in
 
 A candidate's own guide is [Connect DraftLoop to your assistant](connect-an-assistant.md).
@@ -425,11 +434,11 @@ workspace and one assistant client.
 The screen calls these routes from the person's own sign-in; an assistant
 never reaches them.
 
-| Route                                                       | What it does                                 |
-| ----------------------------------------------------------- | -------------------------------------------- |
-| `GET /v1/workspaces/{id}/agent-connections`                 | Lists each cap and what it reserved this month |
-| `PUT /v1/workspaces/{id}/agent-connections`                 | Sets or changes a cap: `client_id`, `monthly_cap_usd` |
-| `DELETE /v1/workspaces/{id}/agent-connections?client_id=…` | Removes a cap; the connection stops spending |
+| Route                                                      | What it does                                          |
+| ---------------------------------------------------------- | ----------------------------------------------------- |
+| `GET /v1/workspaces/{id}/agent-connections`                | Lists each cap and what it reserved this month        |
+| `PUT /v1/workspaces/{id}/agent-connections`                | Sets or changes a cap: `client_id`, `monthly_cap_usd` |
+| `DELETE /v1/workspaces/{id}/agent-connections?client_id=…` | Removes a cap; the connection stops spending          |
 
 Each start reserves its worst case against the cap, as an
 [agent token's](#starting-runs-and-drafts-within-a-monthly-spend-cap) does: a

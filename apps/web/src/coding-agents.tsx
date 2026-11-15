@@ -20,10 +20,10 @@ import { workJournalProblem } from "./work-journal.js";
 
 /**
  * The web host's Agents section in Workspace settings (#2439): issues scoped agent tokens,
- * lists and revokes them. With the owner token the server says whether it issues them; signed-in
- * accounts get none, so the section shows what their connected assistants may spend instead
- * (#2657), where the server keeps those limits. With the owner token it also holds the work
- * journal's "Accept notes from agents" switch (#2625), with a link to the notes that wait.
+ * lists and revokes them where the server says it issues them. In both modes it holds the work
+ * journal's "Accept notes from agents" switch (#2625, signed-in accounts since #2783), with a
+ * link to the notes that wait. Signed-in accounts also see what their connected assistants may
+ * spend (#2657), where the server keeps those limits.
  */
 export function CodingAgentsSection({
   client,
@@ -36,7 +36,7 @@ export function CodingAgentsSection({
   readonly openEvidence?: (() => void) | undefined;
 }) {
   const workspaceId = useRecordId();
-  const [served, setServed] = useState<boolean | undefined>(mode === "owner" ? undefined : false);
+  const [served, setServed] = useState<boolean | undefined>(undefined);
   const [tokens, setTokens] = useState<readonly AgentTokenView[] | undefined>(undefined);
   const [intake, setIntake] = useState<boolean | undefined>(undefined);
   const [pending, setPending] = useState<number | undefined>(undefined);
@@ -53,7 +53,6 @@ export function CodingAgentsSection({
   }, [client, workspaceId]);
 
   useEffect(() => {
-    if (mode !== "owner") return;
     void (async () => {
       try {
         const intake = await client.call("GET /v1/workspaces/{workspaceId}/work-journal/intake", {
@@ -73,7 +72,7 @@ export function CodingAgentsSection({
         setServed(false);
       }
     })();
-  }, [client, mode, workspaceId, reloadTokens]);
+  }, [client, workspaceId, reloadTokens]);
 
   const reloadConnections = useCallback(async () => {
     const listed = await client.call("GET /v1/workspaces/{workspaceId}/agent-connections", {
@@ -110,7 +109,7 @@ export function CodingAgentsSection({
       workspaceId={workspaceId}
       tokens={tokens}
       workJournal={
-        mode !== "owner" || (intake === undefined && served === false) ? undefined : (
+        intake === undefined && served === false ? undefined : (
           <WorkJournalIntake
             enabled={intake}
             pending={pending}

@@ -116,6 +116,7 @@ import { registerTenantApplications, type TenantApplications } from "./tenant-co
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
+import { createWorkJournalSignInChecks } from "./work-journal-sign-in.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 import { registerWritingSamplesRoutes } from "./writing-samples-routes.js";
@@ -168,8 +169,9 @@ export interface ApiOptions {
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;
     /**
-     * The tenant's work journal (#2018); without it the work journal routes are not served. Only
-     * owner-token mode serves them until sign-in mode records the intake as a consent.
+     * The tenant's work journal (#2018); without it the work journal routes are not served. In
+     * sign-in mode the intake switch and every kept note need the record's material-storage
+     * consent, and the switch keeps when it changed (#2783).
      */
     readonly workJournal?: WorkJournalService;
     /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
@@ -675,13 +677,27 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         consents: application.consents,
       });
     }
-    if (application.workJournal !== undefined && auth.mode !== "oidc") {
+    // In sign-in mode the journal keeps notes only with consent checks; without them, no routes.
+    const journalSignIn =
+      auth.mode === "oidc" && application.consents !== undefined && knowledgeOwnersFor !== undefined
+        ? createWorkJournalSignInChecks({
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            consents: application.consents,
+            knowledgeOwnersFor,
+          })
+        : undefined;
+    if (
+      application.workJournal !== undefined &&
+      (auth.mode !== "oidc" || journalSignIn !== undefined)
+    ) {
       registerWorkJournalRoutes(app, {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
         agentTokens: agentTokens !== undefined,
+        ...(journalSignIn === undefined ? {} : { signIn: journalSignIn }),
         ...(knowledgeIntake === undefined ||
         application.sensitivityRules === undefined ||
         application.sourceEvidenceKinds === undefined

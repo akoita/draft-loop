@@ -290,6 +290,7 @@ export function EvidenceSections({
   client,
   revision,
   workJournal,
+  liveVoice,
   openHome,
   onChanged,
 }: EvidenceSectionsProps) {
@@ -306,7 +307,7 @@ export function EvidenceSections({
         client={client}
         bases={bases}
         onChanged={onChanged}
-        liveVoice={workJournal === true}
+        liveVoice={liveVoice === true}
       />
       {workJournal === true ? (
         <WorkJournalSection client={client} bases={bases} openHome={openHome} />
@@ -318,11 +319,13 @@ export function EvidenceSections({
 export interface EvidenceSectionsProps {
   readonly client: ApiClient;
   readonly revision: number;
-  /**
-   * Shows the work journal review and the interview's live voice; the web shows them only with
-   * the owner token for now. The written career interview shows in every mode (#2735).
-   */
+  /** Shows the work journal review, in both modes since #2783. */
   readonly workJournal?: boolean;
+  /**
+   * Shows the interview's live voice; the web shows it only with the owner token for now. The
+   * written career interview shows in every mode (#2735).
+   */
+  readonly liveVoice?: boolean;
   /** Opens Home, for the Work journal's link to Agents. */
   readonly openHome?: (() => void) | undefined;
   /** Tells the shared page a panel added evidence, so it reads the record again. */

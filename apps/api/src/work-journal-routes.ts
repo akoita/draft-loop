@@ -22,6 +22,7 @@ import { z } from "zod";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiErrorSchema } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
+import type { WorkJournalSignInChecks } from "./work-journal-sign-in.js";
 
 export interface WorkJournalRoutesOptions {
   readonly service: ApplicationService;
@@ -38,6 +39,8 @@ export interface WorkJournalRoutesOptions {
   readonly screening?: Pick<ContentScreeningHooks, "screenUpload">;
   /** Whether this server issues agent tokens, which the screen's setup steps need (#2427). */
   readonly agentTokens?: boolean;
+  /** Sign-in mode's consent and base-ownership checks (#2783); owner-token mode has none. */
+  readonly signIn?: WorkJournalSignInChecks;
 }
 
 /** The tenant's evidence-kind overrides, through which approval marks a note's source. */
@@ -147,7 +150,7 @@ export function registerWorkJournalRoutes(
   options: WorkJournalRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, journal, idempotency, knowledge, screening } = options;
+  const { service, workspaceRoot, journal, idempotency, knowledge, screening, signIn } = options;
   const publisherFor = (request: FastifyRequest) =>
     knowledge === undefined
       ? undefined
@@ -188,7 +191,7 @@ export function registerWorkJournalRoutes(
       schema: {
         summary: "Record a note about notable work, pending the candidate's review",
         description:
-          "What the MCP tool record_work sends. The note waits in the candidate's Work journal inbox; nothing becomes career evidence until they approve it. Refusals are content-free codes: invalid_note, secret_like_content, link_not_https, metric_without_how_measured, amend_not_pending, not_consented (403) and rate_limited (429). A repeat answers duplicate with the earlier note, and work the candidate discarded answers previously_discarded. dry_run validates without storing.",
+          "What the MCP tool record_work sends. The note waits in the candidate's Work journal inbox; nothing becomes career evidence until they approve it. Refusals are content-free codes: invalid_note, secret_like_content, link_not_https, metric_without_how_measured, amend_not_pending, not_consented (403) and rate_limited (429); in sign-in mode, storage_consent_required (409) without the record's material-storage consent. A repeat answers duplicate with the earlier note, and work the candidate discarded answers previously_discarded. dry_run validates without storing.",
         params: workspaceParams,
         headers: idempotencyHeaders,
         body: workJournalNoteInputSchema,
@@ -198,6 +201,7 @@ export function registerWorkJournalRoutes(
     async (request, reply) => {
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
+      await signIn?.requireStorageConsent(workspaceId);
       const key = request.headers["idempotency-key"];
       const agentTokenId = request.agentToken?.id;
       const produce = () => journal.record(workspaceId, request.body, { agentTokenId });
@@ -276,6 +280,10 @@ export function registerWorkJournalRoutes(
     async (request) => {
       const { workspaceId, noteId } = request.params;
       await requireWorkspace(workspaceId);
+      if (signIn !== undefined && request.body.action === "approve") {
+        await signIn.requireOwnedBase(request, workspaceId, request.body.knowledge_base_id);
+        await signIn.requireStorageConsent(workspaceId);
+      }
       const publish = publisherFor(request);
       const note = await journal.review(
         workspaceId,
@@ -327,6 +335,7 @@ export function registerWorkJournalRoutes(
     async (request) => {
       const { workspaceId } = request.params;
       await requireWorkspace(workspaceId);
+      if (request.body.enabled) await signIn?.requireStorageConsent(workspaceId);
       const intake = await journal.setIntake(workspaceId, request.body.enabled);
       request.log.info({ workspaceId, enabled: intake.enabled }, "work journal intake changed");
       return {
