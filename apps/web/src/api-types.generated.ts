@@ -570,6 +570,10 @@ export interface ApiSchemas {
       readonly priceEurCents: number;
     })[];
   };
+  "MemberDisplayPreference": {
+    readonly mode: "guided" | "standard" | "everything" | null;
+    readonly guideHidden: boolean;
+  };
   "MemberScreenLanguage": {
     readonly language: "en" | "fr" | null;
   };
@@ -2641,6 +2645,16 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: Blob;
+  };
+  "GET /v1/me/display-preference": {
+    readonly response: ApiSchemas["MemberDisplayPreference"];
+  };
+  "PUT /v1/me/display-preference": {
+    readonly body: {
+      readonly mode: "guided" | "standard" | "everything" | null;
+      readonly guideHidden: boolean;
+    };
+    readonly response: ApiSchemas["MemberDisplayPreference"];
   };
   "GET /v1/me/screen-language": {
     readonly response: ApiSchemas["MemberScreenLanguage"];

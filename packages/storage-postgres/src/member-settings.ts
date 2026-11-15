@@ -1,5 +1,8 @@
 import {
+  defaultMemberDisplayPreference,
+  isMemberDisplayMode,
   isMemberScreenLanguage,
+  type MemberDisplayPreference,
   type MemberScreenLanguage,
   type MemberSettingsKey,
   type MemberSettingsStore,
@@ -48,6 +51,37 @@ export function createPostgresMemberSettings(client: SqlClient): MemberSettingsS
            ON CONFLICT (tenant_id, member_id)
            DO UPDATE SET screen_language = EXCLUDED.screen_language, updated_at = now()`,
           [key.memberId, language satisfies MemberScreenLanguage],
+        );
+      }),
+    readDisplayPreference: (key) =>
+      asOrganisation(client, key, async (executor) => {
+        const [row] = await executor.query(
+          "SELECT display_mode, guide_hidden FROM member_settings WHERE member_id = $1",
+          [key.memberId],
+        );
+        if (row === undefined) return defaultMemberDisplayPreference;
+        return {
+          mode: isMemberDisplayMode(row.display_mode) ? row.display_mode : null,
+          guideHidden: row.guide_hidden === true,
+        } satisfies MemberDisplayPreference;
+      }),
+    saveDisplayPreference: ({ preference, ...key }) =>
+      asOrganisation(client, key, async (executor) => {
+        if (preference.mode !== null && !isMemberDisplayMode(preference.mode)) {
+          throw new TenantDirectoryError("invalid_input", "That display mode is not offered.");
+        }
+        const member = await executor.query("SELECT 1 FROM organisation_members WHERE id = $1", [
+          key.memberId,
+        ]);
+        if (member.length === 0) {
+          throw new TenantDirectoryError("member_not_found", "No such member.");
+        }
+        await executor.query(
+          `INSERT INTO member_settings (member_id, display_mode, guide_hidden) VALUES ($1, $2, $3)
+           ON CONFLICT (tenant_id, member_id)
+           DO UPDATE SET display_mode = EXCLUDED.display_mode,
+             guide_hidden = EXCLUDED.guide_hidden, updated_at = now()`,
+          [key.memberId, preference.mode, preference.guideHidden],
         );
       }),
   };
