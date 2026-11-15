@@ -29,7 +29,27 @@ export interface CreditPurchase {
   /** The ledger grant that added the credits. */
   readonly grantSequence: number;
   readonly purchasedAt: string;
+  /** When the provider refunded the purchase; null while it stands. */
+  readonly refundedAt: string | null;
+  /** The unspent credits the refund took from the balance; null while the purchase stands. */
+  readonly creditsTakenBack: number | null;
 }
+
+/** A full refund of a purchase, as the payment provider reported it. */
+export interface CreditPurchaseRefundInput {
+  readonly checkoutId: string;
+  /** The provider's id of the event that reported the refund. */
+  readonly eventId: string;
+  readonly now: Date;
+}
+
+export type CreditPurchaseRefundResult =
+  /** The purchase is refunded now, and its unspent credits left the balance. */
+  | { readonly outcome: "refunded"; readonly purchase: CreditPurchase }
+  /** The purchase was refunded before; nothing changed. */
+  | { readonly outcome: "already_refunded"; readonly purchase: CreditPurchase }
+  /** The organisation holds no such purchase. */
+  | { readonly outcome: "not_found" };
 
 /** One tenant's credit pack purchases. */
 export interface CreditPurchases {
@@ -41,6 +61,13 @@ export interface CreditPurchases {
   readonly record: (
     input: CreditPurchaseInput,
   ) => Promise<{ readonly created: boolean; readonly purchase: CreditPurchase }>;
+  /**
+   * Marks the purchase refunded, once, under the organisation's ledger lock. The credits of the
+   * purchase that are neither spent nor held by a run leave the balance; spent credits stay
+   * spent, so a balance never goes below zero. Credits a run holds are forfeited if the run gives
+   * them back. The same refund again changes nothing.
+   */
+  readonly refund: (input: CreditPurchaseRefundInput) => Promise<CreditPurchaseRefundResult>;
   readonly get: (checkoutId: string) => Promise<CreditPurchase | undefined>;
 }
 
@@ -87,11 +114,15 @@ function requirePurchase(input: CreditPurchaseInput): void {
   if (Number.isNaN(input.now.getTime())) throw invalid("A clock must be a valid date.");
 }
 
-const purchaseSelect =
-  "SELECT checkout_id, event_id, pack_id, credits, amount_total_cents, currency, grant_sequence, purchased_at FROM credit_purchases";
+const purchaseColumns =
+  "checkout_id, event_id, pack_id, credits, amount_total_cents, currency, grant_sequence, purchased_at, refunded_at, credits_taken_back";
+const purchaseSelect = `SELECT ${purchaseColumns} FROM credit_purchases`;
+
+function isoTime(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
+}
 
 function purchase(row: SqlRow): CreditPurchase {
-  const at = row.purchased_at;
   return {
     checkoutId: String(row.checkout_id),
     eventId: String(row.event_id),
@@ -100,7 +131,13 @@ function purchase(row: SqlRow): CreditPurchase {
     amountTotalCents: row.amount_total_cents === null ? null : Number(row.amount_total_cents),
     currency: row.currency === null ? null : String(row.currency),
     grantSequence: Number(row.grant_sequence),
-    purchasedAt: at instanceof Date ? at.toISOString() : new Date(String(at)).toISOString(),
+    purchasedAt: isoTime(row.purchased_at),
+    refundedAt:
+      row.refunded_at === null || row.refunded_at === undefined ? null : isoTime(row.refunded_at),
+    creditsTakenBack:
+      row.credits_taken_back === null || row.credits_taken_back === undefined
+        ? null
+        : Number(row.credits_taken_back),
   };
 }
 
@@ -139,8 +176,7 @@ export function createCreditPurchases(client: SqlSession): CreditPurchases {
                (checkout_id, event_id, pack_id, credits, amount_total_cents, currency,
                 grant_sequence, purchased_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING checkout_id, event_id, pack_id, credits, amount_total_cents, currency,
-               grant_sequence, purchased_at`,
+             RETURNING ${purchaseColumns}`,
             [
               input.checkoutId,
               input.eventId,
@@ -161,6 +197,46 @@ export function createCreditPurchases(client: SqlSession): CreditPurchases {
         }
         throw error;
       }
+    },
+    refund: async (input) => {
+      if (!providerIdPattern.test(input.checkoutId)) throw invalid("The checkout id is not valid.");
+      if (!providerIdPattern.test(input.eventId)) throw invalid("The event id is not valid.");
+      if (Number.isNaN(input.now.getTime())) throw invalid("A clock must be a valid date.");
+      return await client.transaction(async (executor) => {
+        // The ledger's lock: no reservation draws on the grant while its remainder is counted.
+        const locked = await executor.query("SELECT tenant_id FROM credit_balances FOR UPDATE");
+        const [stored] = await executor.query(`${purchaseSelect} WHERE checkout_id = $1`, [
+          input.checkoutId,
+        ]);
+        if (locked.length === 0 || stored === undefined) return { outcome: "not_found" as const };
+        if (stored.refunded_at !== null && stored.refunded_at !== undefined) {
+          return { outcome: "already_refunded" as const, purchase: purchase(stored) };
+        }
+        // What a reservation could still draw on: the grant less what runs reserved and did not
+        // give back, less what already expired.
+        const [left] = await executor.query(
+          `SELECT g.amount
+                  - COALESCE(sum(l.amount) FILTER (WHERE l.kind = 'reserve'), 0)
+                  + COALESCE(sum(l.amount) FILTER (WHERE l.kind = 'refund'), 0)
+                  - COALESCE(sum(l.amount) FILTER (WHERE l.kind = 'expire'), 0) AS available
+             FROM credit_ledger g
+             LEFT JOIN credit_ledger l
+               ON l.tenant_id = g.tenant_id AND l.grant_sequence = g.sequence
+            WHERE g.kind = 'grant' AND g.sequence = $1
+            GROUP BY g.tenant_id, g.sequence`,
+          [Number(stored.grant_sequence)],
+        );
+        const takenBack = Math.max(0, Number(left?.available ?? 0));
+        const [row] = await executor.query(
+          `UPDATE credit_purchases
+              SET refunded_at = $2, refund_event_id = $3, credits_taken_back = $4
+            WHERE checkout_id = $1
+            RETURNING ${purchaseColumns}`,
+          [input.checkoutId, input.now.toISOString(), input.eventId, takenBack],
+        );
+        if (row === undefined) throw invalid("The refund could not be stored.");
+        return { outcome: "refunded" as const, purchase: purchase(row) };
+      });
     },
     get: async (checkoutId) => {
       if (!providerIdPattern.test(checkoutId)) throw invalid("The checkout id is not valid.");

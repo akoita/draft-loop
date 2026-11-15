@@ -3,8 +3,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   type PaymentEvent,
   type PaymentEventsPort,
+  PaymentProviderError,
   PaymentSignatureError,
 } from "./payment-checkout.js";
+import { stripeApiVersion } from "./stripe-checkout.js";
 
 /** How old a signed event may be, in seconds, as Stripe's own libraries allow. */
 export const stripeSignatureToleranceSeconds = 300;
@@ -43,14 +45,70 @@ const paidEvents = new Set([
   "checkout.session.async_payment_succeeded",
 ]);
 
+const organisationIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+const paymentIdPattern = /^pi_[A-Za-z0-9]{1,250}$/u;
+
+export interface StripeEventsOptions {
+  readonly webhookSecret: string;
+  /** The test-mode key that reads a refunded payment's Checkout Session; sent only to Stripe. */
+  readonly secretKey: string;
+  readonly fetch?: typeof fetch;
+  /** How long one call may take, in milliseconds. */
+  readonly timeoutMs?: number;
+}
+
 /**
- * Stripe's signed events behind the payment port (#2709). A completed Checkout Session whose
- * payment is settled becomes `credit_pack_paid`; everything else is ignored with a reason. The
- * deployment runs in test mode, so a live event is ignored: a live payment must never grant
- * credits on a test deployment.
+ * Stripe's signed events behind the payment port (#2709, #2710). A completed Checkout Session
+ * whose payment is settled becomes `credit_pack_paid`, and a charge refunded in full becomes
+ * `payment_refunded`; everything else is ignored with a reason. A partial refund is ignored: it
+ * takes no credits back. The deployment runs in test mode, so a live event is ignored: a live
+ * payment must never grant credits on a test deployment.
  */
-export function createStripeEvents(options: { readonly webhookSecret: string }): PaymentEventsPort {
+export function createStripeEvents(options: StripeEventsOptions): PaymentEventsPort {
+  const call = options.fetch ?? fetch;
+  const timeoutMs = options.timeoutMs ?? 10_000;
   return {
+    findCheckoutOfPayment: async (paymentId) => {
+      if (!paymentIdPattern.test(paymentId)) return undefined;
+      const query = new URLSearchParams({ payment_intent: paymentId, limit: "1" });
+      let response: Response;
+      try {
+        response = await call(`https://api.stripe.com/v1/checkout/sessions?${query.toString()}`, {
+          headers: {
+            authorization: `Bearer ${options.secretKey}`,
+            "stripe-version": stripeApiVersion,
+          },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch {
+        throw new PaymentProviderError("The payment provider could not be reached.");
+      }
+      if (!response.ok) {
+        throw new PaymentProviderError(
+          `The payment provider refused the checkout lookup (HTTP ${response.status}).`,
+          response.status,
+        );
+      }
+      const list = (await response.json().catch(() => undefined)) as
+        | { readonly data?: readonly Record<string, unknown>[] }
+        | undefined;
+      if (!Array.isArray(list?.data)) {
+        throw new PaymentProviderError("The payment provider answered without a checkout list.");
+      }
+      const session = list.data[0];
+      const checkoutId = text(session?.id);
+      const organisationId = text(
+        (session?.metadata as Record<string, unknown> | undefined)?.organisation_id,
+      );
+      if (
+        checkoutId === undefined ||
+        organisationId === undefined ||
+        !organisationIdPattern.test(organisationId)
+      ) {
+        return undefined;
+      }
+      return { checkoutId, organisationId };
+    },
     readEvent: (rawBody, signature, now): PaymentEvent => {
       verify(rawBody, signature, options.webhookSecret, now);
       let event: Record<string, unknown>;
@@ -67,9 +125,18 @@ export function createStripeEvents(options: { readonly webhookSecret: string }):
       });
       if (eventId === undefined) return ignored("unreadable");
       if (event.livemode !== false) return ignored("live_event");
+      const object = (event.data as { object?: Record<string, unknown> } | undefined)?.object;
+      if (event.type === "charge.refunded") {
+        const paymentId = text(object?.payment_intent);
+        if (object?.refunded !== true) return ignored("partial_refund");
+        if (paymentId === undefined || !paymentIdPattern.test(paymentId)) {
+          return ignored("not_a_credit_pack");
+        }
+        return { kind: "payment_refunded", eventId, paymentId };
+      }
       if (!paidEvents.has(String(event.type))) return ignored("other_event");
 
-      const session = (event.data as { object?: Record<string, unknown> } | undefined)?.object;
+      const session = object;
       // A delayed payment method completes the session before the money arrives; the
       // `async_payment_succeeded` event reports it paid later.
       if (session?.payment_status !== "paid") return ignored("not_paid");
@@ -80,7 +147,7 @@ export function createStripeEvents(options: { readonly webhookSecret: string }):
       if (
         checkoutId === undefined ||
         organisationId === undefined ||
-        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(organisationId) ||
+        !organisationIdPattern.test(organisationId) ||
         packId === undefined
       ) {
         return ignored("not_a_credit_pack");
