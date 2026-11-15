@@ -213,6 +213,7 @@ export async function openHostedTenants(
         agentConnectionCapsFor: (tenantId) => tenancy.forTenant(tenantId).agentConnectionCaps,
         runSpansFor: (tenantId) => tenancy.forTenant(tenantId).runSpans,
         creditPurchasesFor: (tenantId) => tenancy.forTenant(tenantId).creditPurchases,
+        recordNamesFor: (tenantId) => tenancy.forTenant(tenantId).recordNames,
         erasureFor: (tenantId) => ({
           records: tenancy.forTenant(tenantId).recordErasure,
           blobs: blobs.erasureFor(tenantId),

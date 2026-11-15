@@ -50,7 +50,11 @@ afterEach(async () => {
  * test asks for.
  */
 async function recordServer(
-  options: { readonly claimable?: boolean; readonly ownerTenantId?: string } = {},
+  options: {
+    readonly claimable?: boolean;
+    readonly ownerTenantId?: string;
+    readonly names?: ReadonlyMap<string, string>;
+  } = {},
 ) {
   const access = fakeAccess(options.claimable ?? true);
   const lines: string[] = [];
@@ -68,6 +72,9 @@ async function recordServer(
   registerRecordAccess(server, {
     recordAccessFor: () => access as unknown as CandidateRecordAccess,
     ...(options.ownerTenantId === undefined ? {} : { ownerTenantId: options.ownerTenantId }),
+    ...(options.names === undefined
+      ? {}
+      : { recordNamesFor: () => ({ list: async () => options.names ?? new Map() }) }),
     service,
     workspaceRoot: (workspaceId) => `root/${workspaceId}`,
   });
@@ -219,6 +226,19 @@ describe("registerRecordAccess", () => {
     });
     expect(await list({ "x-test-owner": "yes" })).toEqual({
       workspaces: [{ id: "record-a" }, { id: "record-b" }],
+    });
+  });
+
+  it("lists each record with the name people gave it, when it has one", async () => {
+    const { server } = await recordServer({ names: new Map([["record-b", "Fictional search"]]) });
+
+    const response = await server.inject({
+      url: "/v1/workspaces",
+      headers: member("member-x", "admin"),
+    });
+
+    expect(response.json()).toEqual({
+      workspaces: [{ id: "record-a" }, { id: "record-b", name: "Fictional search" }],
     });
   });
 

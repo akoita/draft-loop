@@ -6,6 +6,7 @@ import { plural } from "@lingui/core/macro";
  */
 export const countedNouns = {
   source: (count: number) => plural(count, { one: "# source", other: "# sources" }),
+  document: (count: number) => plural(count, { one: "# document", other: "# documents" }),
   sourceFile: (count: number) => plural(count, { one: "# source file", other: "# source files" }),
   run: (count: number) => plural(count, { one: "# run", other: "# runs" }),
   chunk: (count: number) => plural(count, { one: "# chunk", other: "# chunks" }),

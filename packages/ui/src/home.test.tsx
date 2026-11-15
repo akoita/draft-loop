@@ -93,7 +93,7 @@ describe("Home dashboard", () => {
 
   it("shows the knowledge base name and source readiness", () => {
     const html = render();
-    expect(html).toContain("Engineering · 5 sources");
+    expect(html).toContain("Engineering · 5 documents");
     expect(html).toContain("Add or manage documents");
   });
 
