@@ -48,8 +48,11 @@ export function useShowEverything(): boolean {
   return useDisplayPreference().preference.mode === "everything";
 }
 
-/** The two choices a person makes between, with what each does. */
-export function displayChoices(): readonly {
+/**
+ * The two choices a person makes between, with what each does. The first-run question words the
+ * second one for a person deciding how familiar they are; settings name the mode itself.
+ */
+export function displayChoices(wording: "settings" | "first-run" = "settings"): readonly {
   readonly mode: "guided" | "everything";
   readonly label: string;
   readonly effect: string;
@@ -60,11 +63,17 @@ export function displayChoices(): readonly {
       label: t`Guide me step by step`,
       effect: t`We show one thing to do at a time and explain each screen.`,
     },
-    {
-      mode: "everything",
-      label: t`Show everything`,
-      effect: t`Every Advanced options section starts open, so nothing is a click away.`,
-    },
+    wording === "first-run"
+      ? {
+          mode: "everything",
+          label: t`I know apps like this`,
+          effect: t`We show every screen and option, including advanced ones.`,
+        }
+      : {
+          mode: "everything",
+          label: t`Show everything`,
+          effect: t`Every Advanced options section starts open, so nothing is a click away.`,
+        },
   ];
 }
 
@@ -84,7 +93,9 @@ export function DisplayChoiceCard({
   quietLabel,
   headingLevel = 3,
   heading,
+  wording = "settings",
 }: {
+  readonly wording?: "settings" | "first-run";
   readonly current: DisplayMode | null;
   readonly onChoose: (mode: DisplayMode) => void;
   /** The quiet link that keeps the simple view, such as "Decide later". */
@@ -97,7 +108,7 @@ export function DisplayChoiceCard({
     <section className="display-choice" aria-label={heading}>
       <Heading>{heading}</Heading>
       <div className="display-choice-options">
-        {displayChoices().map((choice) => (
+        {displayChoices(wording).map((choice) => (
           <button
             key={choice.mode}
             type="button"

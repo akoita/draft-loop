@@ -2662,6 +2662,10 @@ msgstr "Envoi des données aux fournisseurs pris en compte"
 msgid "Date created"
 msgstr "Date de création"
 
+#: packages/ui/src/first-run-question.tsx
+msgid "Decide later"
+msgstr "Décider plus tard"
+
 #: packages/ui/src/review.tsx
 msgid "Decision for"
 msgstr "Décision pour"
@@ -4156,6 +4160,10 @@ msgstr "Comment choisir les modèles"
 msgid "How would you like DraftLoop to look?"
 msgstr "Comment voulez-vous que DraftLoop s’affiche ?"
 
+#: packages/ui/src/first-run-question.tsx
+msgid "How would you like to start?"
+msgstr "Comment voulez-vous commencer ?"
+
 #: packages/ui/src/app.tsx
 msgid "http://127.0.0.1:11434/v1"
 msgstr "http://127.0.0.1:11434/v1"
@@ -4193,6 +4201,10 @@ msgstr "Je ne me souviens pas"
 #: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
 msgstr "Je n’ai pas de sujet à vous proposer aujourd’hui. Y a-t-il un moment de votre parcours que vous aimeriez me raconter ?"
+
+#: packages/ui/src/display-preference.tsx
+msgid "I know apps like this"
+msgstr "Je connais ce genre d’application"
 
 #: packages/ui/src/review.tsx
 msgid "I reviewed these destinations, data categories, retention preference, and limits."
@@ -10373,6 +10385,10 @@ msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
 
 #: packages/ui/src/display-preference.tsx
+msgid "We show every screen and option, including advanced ones."
+msgstr "Nous montrons chaque écran et chaque option, y compris les options avancées."
+
+#: packages/ui/src/display-preference.tsx
 msgid "We show one thing to do at a time and explain each screen."
 msgstr "Nous montrons une seule chose à faire à la fois et expliquons chaque écran."
 
@@ -10681,6 +10697,10 @@ msgstr "Vous"
 #: apps/web/src/beta-sign-up.tsx
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
+
+#: packages/ui/src/first-run-question.tsx
+msgid "You can change this any time in Workspace settings."
+msgstr "Vous pourrez changer cela à tout moment dans les réglages de l’espace de travail."
 
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."

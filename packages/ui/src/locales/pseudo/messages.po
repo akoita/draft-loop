@@ -2668,6 +2668,10 @@ msgstr ""
 msgid "Date created"
 msgstr ""
 
+#: packages/ui/src/first-run-question.tsx
+msgid "Decide later"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Decision for"
 msgstr ""
@@ -4162,6 +4166,10 @@ msgstr ""
 msgid "How would you like DraftLoop to look?"
 msgstr ""
 
+#: packages/ui/src/first-run-question.tsx
+msgid "How would you like to start?"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "http://127.0.0.1:11434/v1"
 msgstr ""
@@ -4197,6 +4205,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "I have no topic to suggest today. Is there anything from your career you would like to tell me about?"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "I know apps like this"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -10378,6 +10390,10 @@ msgid "was opened after the configured maximum of"
 msgstr ""
 
 #: packages/ui/src/display-preference.tsx
+msgid "We show every screen and option, including advanced ones."
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
 msgid "We show one thing to do at a time and explain each screen."
 msgstr ""
 
@@ -10685,6 +10701,10 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr ""
+
+#: packages/ui/src/first-run-question.tsx
+msgid "You can change this any time in Workspace settings."
 msgstr ""
 
 #: packages/ui/src/review.tsx
