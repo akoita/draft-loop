@@ -110,7 +110,9 @@ forwards the events instead of the webhook endpoint of step 6.
 3. Forward events, and leave this running:
 
    ```sh
-   stripe listen --forward-to http://127.0.0.1:58082/v1/payments/events
+   stripe listen \
+     --events checkout.session.completed,checkout.session.async_payment_succeeded \
+     --forward-to http://127.0.0.1:58082/v1/payments/events
    ```
 
    It prints a signing secret that starts with `whsec_`.

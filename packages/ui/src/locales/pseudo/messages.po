@@ -337,6 +337,11 @@ msgstr ""
 msgid "{0} known gaps settled in review: {reasons}"
 msgstr ""
 
+#. placeholder {0}: creditCount(remaining)
+#: apps/web/src/credits-model.ts
+msgid "{0} left"
+msgstr ""
+
 #. placeholder {0}: modelCompanyLabels()[company]
 #. placeholder {1}: editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."
 #: packages/ui/src/app.tsx
@@ -740,6 +745,11 @@ msgstr ""
 
 #: packages/ui/src/work-journal-pending.tsx
 msgid "{pendingNoteCountLimit} or more work journal notes wait for your review."
+msgstr ""
+
+#. placeholder {0}: creditCount(allowance)
+#: apps/web/src/credits-model.ts
+msgid "{remaining} of {0} left"
 msgstr ""
 
 #. placeholder {0}: countedNouns.responsibility(selection.responsibilityCount)
@@ -6147,7 +6157,7 @@ msgid "pay"
 msgstr ""
 
 #: apps/web/src/credits-model.ts
-msgid "Payment received. Your credits arrive within a minute."
+msgid "Payment received. New credits show in your balance within a minute."
 msgstr ""
 
 #: packages/ui/src/review.tsx

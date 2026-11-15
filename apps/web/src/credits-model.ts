@@ -79,14 +79,24 @@ export function balanceLine(credits: MemberCredits, locale?: string): string {
     credits.grantsRemaining > 0
       ? t` That includes ${creditCount(credits.grantsRemaining)} granted to you.`
       : "";
-  return `${credits.remaining} of ${creditCount(credits.allowance)} left.${ends}${extra}`;
+  return `${remainingOfAllowance(credits.remaining, credits.allowance)}.${ends}${extra}`;
 }
 
 /** The balance as a few words for the header, such as `38 of 50 credits left`. */
 export function balanceChip(credits: MemberCredits): string {
   if (credits.unlimited || credits.remaining === null || credits.allowance === null)
     return t`Unlimited credits`;
-  return `${credits.remaining} of ${creditCount(credits.allowance)} left`;
+  return remainingOfAllowance(credits.remaining, credits.allowance);
+}
+
+/**
+ * What is left against the period's allowance, such as `38 of 50 credits left`. Bought or granted
+ * credits can exceed the allowance; then only the count is given, such as `9 credits left`.
+ */
+function remainingOfAllowance(remaining: number, allowance: number): string {
+  return remaining > allowance
+    ? t`${creditCount(remaining)} left`
+    : t`${remaining} of ${creditCount(allowance)} left`;
 }
 
 /** The estimate beside the start button, such as `This run uses 2 credits`. */
@@ -229,7 +239,7 @@ export function purchaseReturn(search: string): PurchaseReturn | undefined {
 /** What to tell a buyer who came back from the payment page. */
 export function purchaseReturnText(back: PurchaseReturn): string {
   return back === "done"
-    ? t`Payment received. Your credits arrive within a minute.`
+    ? t`Payment received. New credits show in your balance within a minute.`
     : t`The payment was cancelled. Nothing was charged.`;
 }
 

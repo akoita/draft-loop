@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import {
+  balanceChip,
   balanceLine,
   creditCount,
   describeStartError,
@@ -50,6 +51,12 @@ describe("credit balance", () => {
     });
     expect(line).toContain("1 of 1 credit left.");
     expect(line).toContain("1 credit granted to you");
+  });
+
+  it("gives only the count when bought credits exceed the allowance", () => {
+    const bought = { ...syntheticCredits, allowance: 8, remaining: 9, grantsRemaining: 1 };
+    expect(balanceChip(bought)).toBe("9 credits left");
+    expect(balanceLine(bought)).toContain("9 credits left.");
   });
 
   it("says plainly that an unlimited plan has no limit", () => {
@@ -272,7 +279,7 @@ describe("buying a credit pack", () => {
     expect(purchaseReturn("?purchase=free")).toBeUndefined();
     expect(purchaseReturn("")).toBeUndefined();
     expect(purchaseReturnText("done")).toBe(
-      "Payment received. Your credits arrive within a minute.",
+      "Payment received. New credits show in your balance within a minute.",
     );
     expect(purchaseReturnText("cancelled")).toBe("The payment was cancelled. Nothing was charged.");
   });
