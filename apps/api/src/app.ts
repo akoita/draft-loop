@@ -169,8 +169,9 @@ export interface ApiOptions {
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;
     /**
-     * The tenant's work journal (#2018); without it the work journal routes are not served. Only
-     * owner-token mode serves them until sign-in mode records the intake as a consent.
+     * The tenant's work journal (#2018); without it the work journal routes are not served. In
+     * sign-in mode the intake switch and every kept note need the record's material-storage
+     * consent, and the switch keeps when it changed (#2783).
      */
     readonly workJournal?: WorkJournalService;
     /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
