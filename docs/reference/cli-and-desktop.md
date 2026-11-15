@@ -576,6 +576,9 @@ It refuses while a run is working, when the audit chain does not verify, or
 when the disk cannot hold the backup and the copy. Any failure leaves the
 history as it was. Delete the backup yourself once you are satisfied.
 
+**On screen**, **Compact run history** sits under **Advanced options** at the
+end of Home's Workspace settings, where the host offers it.
+
 ## Opportunity briefs
 
 A **brief** is the reviewed version of a job post: its role, requirements,

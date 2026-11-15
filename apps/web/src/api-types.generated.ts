@@ -288,7 +288,7 @@ export interface ApiSchemas {
       readonly status: "open" | "paused" | "closed";
       readonly topics: readonly ({
         readonly key: string;
-        readonly kind: "role-gap" | "untold-period" | "untold-theme" | "application-relevance" | "candidate-subject";
+        readonly kind: "role-gap" | "untold-period" | "untold-theme" | "application-relevance" | "candidate-subject" | "career-start";
         readonly reason: string;
         readonly title?: string;
         readonly missing?: readonly ("dates" | "outcome" | "scope")[];

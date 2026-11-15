@@ -13,6 +13,8 @@ export const careerInterviewTopicKinds = [
   "untold-theme",
   "application-relevance",
   "candidate-subject",
+  /** A starting topic offered while the record holds no fact at all (#2732). */
+  "career-start",
 ] as const;
 export type CareerInterviewTopicKindName = (typeof careerInterviewTopicKinds)[number];
 

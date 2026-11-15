@@ -1,6 +1,6 @@
 import { knowledgeBaseDisplayName } from "@draft-loop/ui/career-evidence";
 import { t } from "@lingui/core/macro";
-import type { FormEvent, ReactNode } from "react";
+import { type FormEvent, type ReactNode, useEffect } from "react";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { useSensitivityRules } from "./sensitivity.js";
@@ -23,9 +23,9 @@ export interface PrivateSectionsPanelProps {
 /** The private-section rules of the selected knowledge bases, one group per base. */
 export function PrivateSectionsPanel({ bases, rulesFor }: PrivateSectionsPanelProps) {
   return (
-    <section className="panel host-panel" aria-labelledby="private-sections-heading">
-      <h2 id="private-sections-heading">{t`Private sections`}</h2>
-      <p className="muted">{t`Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material.`}</p>
+    <section className="knowledge-section" aria-labelledby="private-sections-heading">
+      <h3 id="private-sections-heading">{t`Private sections`}</h3>
+      <p className="muted">{t`Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material.`}</p>
       {bases === undefined ? (
         <p role="status">{t`Reading your knowledge bases…`}</p>
       ) : bases.length === 0 ? (
@@ -33,7 +33,7 @@ export function PrivateSectionsPanel({ bases, rulesFor }: PrivateSectionsPanelPr
       ) : (
         bases.map((base) => (
           <div key={base.id}>
-            {bases.length > 1 ? <h3>{knowledgeBaseDisplayName(base.displayName)}</h3> : null}
+            {bases.length > 1 ? <h4>{knowledgeBaseDisplayName(base.displayName)}</h4> : null}
             {rulesFor(base)}
           </div>
         ))
@@ -143,11 +143,17 @@ export function BaseRules(props: BaseRulesProps) {
 function LiveBaseRules({
   client,
   knowledgeBaseId,
+  onCount,
 }: {
   readonly client: ApiClient;
   readonly knowledgeBaseId: string;
+  readonly onCount?: ((knowledgeBaseId: string, count: number) => void) | undefined;
 }) {
   const state = useSensitivityRules(client, knowledgeBaseId);
+  const count = state.rules?.length;
+  useEffect(() => {
+    if (count !== undefined) onCount?.(knowledgeBaseId, count);
+  }, [count, knowledgeBaseId, onCount]);
   return (
     <BaseRules
       knowledgeBaseId={knowledgeBaseId}
@@ -166,14 +172,18 @@ function LiveBaseRules({
 export interface PrivateSectionsProps {
   readonly client: ApiClient;
   readonly bases: readonly KnowledgeBase[] | undefined;
+  /** Told each base's rule count once it is read, and again when it changes. */
+  readonly onCount?: (knowledgeBaseId: string, count: number) => void;
 }
 
 /** The Career evidence page's private-section rules, read and changed through the API. */
-export function PrivateSections({ client, bases }: PrivateSectionsProps) {
+export function PrivateSections({ client, bases, onCount }: PrivateSectionsProps) {
   return (
     <PrivateSectionsPanel
       bases={bases}
-      rulesFor={(base) => <LiveBaseRules client={client} knowledgeBaseId={base.id} />}
+      rulesFor={(base) => (
+        <LiveBaseRules client={client} knowledgeBaseId={base.id} onCount={onCount} />
+      )}
     />
   );
 }

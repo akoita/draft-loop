@@ -73,8 +73,14 @@ export const careerInterviewSummaryRequest = careerInterviewPhrases("en").summar
 
 /** The opening proposal, worded without a model so it never suggests a detail. */
 export function careerInterviewProposal(
-  topics: readonly Pick<CareerInterviewConversationTopic, "reason">[],
+  topics: readonly (Pick<CareerInterviewConversationTopic, "reason"> & {
+    readonly kind?: string;
+  })[],
 ): string {
+  // A first conversation on an empty record (#2732): the screen lists the starting topics.
+  if (topics.length > 0 && topics.every((topic) => topic.kind === "career-start")) {
+    return "Your record is empty, so let us begin with the basics. Which would you like to start with? You can also tell me about something else.";
+  }
   if (topics.length === 0) {
     return "I have no topic to suggest today. Is there anything from your career you would like to tell me about?";
   }

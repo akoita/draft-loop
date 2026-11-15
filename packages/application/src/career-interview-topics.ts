@@ -26,7 +26,8 @@ export type CareerInterviewTopicKind =
   | "role-gap"
   | "untold-period"
   | "untold-theme"
-  | "application-relevance";
+  | "application-relevance"
+  | "career-start";
 
 export type CareerInterviewRoleGap = "dates" | "outcome" | "scope";
 
@@ -52,7 +53,10 @@ export interface CareerInterviewTopic {
 export interface FindCareerInterviewTopicsInput {
   readonly facts: readonly CareerInterviewFact[];
   readonly requirements?: readonly CareerInterviewRequirement[];
-  /** Keys of topics the candidate declined; an unchanged topic is not proposed again. */
+  /**
+   * Keys of topics the candidate declined, and of starting topics already told; an unchanged
+   * topic is not proposed again.
+   */
   readonly declinedTopicKeys?: ReadonlySet<string> | readonly string[];
   readonly maximumTopics?: number;
 }
@@ -234,7 +238,37 @@ const kindOrder: Record<CareerInterviewTopicKind, number> = {
   "role-gap": 1,
   "untold-period": 2,
   "untold-theme": 3,
+  "career-start": 4,
 };
+
+/**
+ * What a first conversation covers when the record holds no fact (#2732), in the order offered.
+ * The title is the topic's stable name; each screen words it in its own language.
+ */
+export const careerStartTopics: readonly { readonly title: string; readonly reason: string }[] = [
+  {
+    title: "work history",
+    reason:
+      "Your record has no work history yet: the jobs you held, with employer, title, dates and what you did.",
+  },
+  {
+    title: "education",
+    reason: "Your record has no education or training yet: degrees, courses and certificates.",
+  },
+  {
+    title: "skills",
+    reason: "Your record has no skills yet: what you know how to do and the tools you use.",
+  },
+  {
+    title: "proud of",
+    reason: "Your record tells no story yet: one project or result you are proud of.",
+  },
+];
+
+/** The key of a starting topic. It does not follow the record, which is empty when it is offered. */
+export function careerStartTopicKey(title: string): string {
+  return `career-start:${title.replaceAll(" ", "-")}`;
+}
 
 const priorityWeight: Record<CareerInterviewRequirement["priority"], number> = {
   critical: 4,
@@ -246,6 +280,7 @@ const priorityWeight: Record<CareerInterviewRequirement["priority"], number> = {
 /**
  * Topics worth proposing, most relevant to the candidate's applications first, then most recent.
  * An empty list is a valid answer: the interviewer proposes nothing when nothing is worth it.
+ * A record with no fact gets the starting topics instead.
  */
 export function findCareerInterviewTopics(
   input: FindCareerInterviewTopicsInput,
@@ -254,6 +289,23 @@ export function findCareerInterviewTopics(
   const requirements = input.requirements ?? [];
   const declined = new Set(input.declinedTopicKeys ?? []);
   const facts = input.facts;
+  // An empty record has no gap to point at: a first conversation starts with the basics, and the
+  // job posts' themes wait until there is a record to compare them with.
+  if (facts.length === 0) {
+    return careerStartTopics
+      .map(
+        ({ title, reason }): CareerInterviewTopic => ({
+          key: careerStartTopicKey(title),
+          kind: "career-start",
+          reason,
+          title,
+          factIds: [],
+          requirementIds: [],
+        }),
+      )
+      .filter((topic) => !declined.has(topic.key))
+      .slice(0, input.maximumTopics ?? defaultMaximumCareerInterviewTopics);
+  }
   const requirementWords = requirements.map((requirement) => ({
     requirement,
     words: significantWords(requirement.text),

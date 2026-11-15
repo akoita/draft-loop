@@ -1,6 +1,8 @@
 import { t } from "@lingui/core/macro";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+import { careerConversationRequestStarts } from "./career-conversation-model.js";
+import { useCareerConversationRequest } from "./career-conversation-start.js";
 import {
   CareerInterviewLiveStage,
   type CareerInterviewLiveVoice,
@@ -44,6 +46,11 @@ export interface CareerInterviewPanelProps {
   readonly problem?: string | undefined;
   /** Where a confirmed summary can go; the first is preselected. */
   readonly knowledgeBases: readonly CareerInterviewKnowledgeBase[];
+  /**
+   * True when the host creates the record's first knowledge base on a confirmation that names
+   * none (#2733), so a person with no career evidence yet can still save a summary.
+   */
+  readonly createsFirstBase?: boolean | undefined;
   /** Starts or resumes a session; resolves with a problem to show, or undefined. */
   readonly onStart: () => Promise<CareerInterviewProblem>;
   /** Resolves with a problem to show, or undefined once the session is saved. */
@@ -66,6 +73,7 @@ export function CareerInterviewPanel({
   proposal,
   problem,
   knowledgeBases,
+  createsFirstBase,
   onStart,
   onAction,
   loadConflicts,
@@ -104,13 +112,24 @@ export function CareerInterviewPanel({
   );
   const act = (action: CareerInterviewAction) => run(pendingFor(action), () => onAction(action));
 
+  // The card or Home asked to start from a conversation (#2734): come into view, then start.
+  const section = useRef<HTMLElement>(null);
+  useCareerConversationRequest(section, () => {
+    if (!busy && careerConversationRequestStarts(session)) void run({ kind: "start" }, onStart);
+  });
+
   const active = session === undefined ? undefined : careerInterviewActiveTopic(session);
   const proposed = session?.topics.filter((topic) => topic.status === "proposed") ?? [];
   const taken = session?.topics.some((topic) => topic.status !== "proposed") ?? false;
   const progress = session === undefined ? undefined : careerInterviewProgress(session);
 
   return (
-    <section className="panel host-panel career-interview" aria-labelledby={`${id}-heading`}>
+    <section
+      ref={section}
+      tabIndex={-1}
+      className="panel host-panel career-interview"
+      aria-labelledby={`${id}-heading`}
+    >
       <h2 id={`${id}-heading`}>{t`Career interview`}</h2>
       <p className="hint">{t`Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time.`}</p>
       {problem === undefined ? null : <p role="alert">{problem}</p>}
@@ -174,6 +193,7 @@ export function CareerInterviewPanel({
                 topic={active}
                 busy={busy}
                 knowledgeBases={knowledgeBases}
+                createsFirstBase={createsFirstBase}
                 loadConflicts={loadConflicts}
                 onAction={act}
               />
@@ -672,12 +692,14 @@ function SummaryReview({
   topic,
   busy,
   knowledgeBases,
+  createsFirstBase,
   loadConflicts,
   onAction,
 }: {
   readonly topic: CareerInterviewTopicView;
   readonly busy: boolean;
   readonly knowledgeBases: readonly CareerInterviewKnowledgeBase[];
+  readonly createsFirstBase?: boolean | undefined;
   readonly loadConflicts: (topicKey: string) => Promise<readonly CareerInterviewConflictView[]>;
   readonly onAction: (action: CareerInterviewAction) => Promise<boolean>;
 }) {
@@ -685,6 +707,8 @@ function SummaryReview({
   const [summary, setSummary] = useState(topic.summary ?? "");
   const [chosenBase, setBase] = useState("");
   const base = knowledgeBaseChoice(knowledgeBases, chosenBase);
+  // With no base yet, the host makes the first one; the confirmation then names none.
+  const first = knowledgeBases.length === 0 && createsFirstBase === true;
   const [tier, setTier] = useState<CareerInterviewTier>("normal");
   const [conflicts, setConflicts] = useState<readonly CareerInterviewConflictView[]>([]);
 
@@ -738,14 +762,24 @@ function SummaryReview({
             ))}
           </ul>
         )}
-        <label htmlFor={`${id}-base`}>{t`Save to`}</label>
-        <select id={`${id}-base`} value={base} onChange={(event) => setBase(event.target.value)}>
-          {knowledgeBases.map((knowledgeBase) => (
-            <option key={knowledgeBase.id} value={knowledgeBase.id}>
-              {knowledgeBase.name}
-            </option>
-          ))}
-        </select>
+        {first ? (
+          <p className="hint">{t`This becomes your first career evidence. You can add documents later.`}</p>
+        ) : (
+          <>
+            <label htmlFor={`${id}-base`}>{t`Save to`}</label>
+            <select
+              id={`${id}-base`}
+              value={base}
+              onChange={(event) => setBase(event.target.value)}
+            >
+              {knowledgeBases.map((knowledgeBase) => (
+                <option key={knowledgeBase.id} value={knowledgeBase.id}>
+                  {knowledgeBase.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
         <label htmlFor={`${id}-tier`}>{t`Who may read it`}</label>
         <select
           id={`${id}-tier`}
@@ -760,7 +794,7 @@ function SummaryReview({
           <button
             type="submit"
             className="button button-primary"
-            disabled={busy || base === "" || summary.trim() === ""}
+            disabled={busy || (base === "" && !first) || summary.trim() === ""}
           >{t`Confirm as evidence`}</button>
           <button
             type="button"

@@ -793,6 +793,10 @@ msgstr "{theme}: your record mentions it but tells no story about it."
 msgid "{tierLabel} tier · {profiles} · {roleStatus}"
 msgstr "{tierLabel} tier · {profiles} · {roleStatus}"
 
+#: apps/web/src/evidence-advanced.tsx
+msgid "{total, plural, one {# private-section rule} other {# private-section rules}}"
+msgstr "{total, plural, one {# private-section rule} other {# private-section rules}}"
+
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
 msgstr "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
@@ -852,6 +856,10 @@ msgstr "A credential is required."
 #: apps/web/src/application-material.tsx
 msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 msgstr "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "A CV, a profile export or notes about your work."
+msgstr "A CV, a profile export or notes about your work."
 
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -1062,6 +1070,7 @@ msgstr "Add career evidence from the Career evidence card above to create your k
 msgid "Add directory"
 msgstr "Add directory"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add documents"
 msgstr "Add documents"
@@ -1168,13 +1177,9 @@ msgstr "Adds every supported document in a folder at once."
 msgid "Advanced options"
 msgstr "Advanced options"
 
-#: packages/ui/src/start-requirements.tsx
-msgid "Advanced: requirements for this run"
-msgstr "Advanced: requirements for this run"
-
-#: packages/ui/src/application-steps.tsx
-msgid "Advanced: writing policy override for this job"
-msgstr "Advanced: writing policy override for this job"
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Advanced options for this run"
+msgstr "Advanced options for this run"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Agent"
@@ -2229,6 +2234,7 @@ msgstr "Commands"
 msgid "Compact"
 msgstr "Compact"
 
+#: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 msgid "Compact run history"
 msgstr "Compact run history"
@@ -2699,6 +2705,10 @@ msgstr "defer"
 #: packages/ui/src/review.tsx
 msgid "Defer"
 msgstr "Defer"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Degrees, courses and certificates."
+msgstr "Degrees, courses and certificates."
 
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
@@ -3216,6 +3226,10 @@ msgstr "Editing version {savedVersion}. Saving creates a new version and applies
 msgid "Edits you make here are applied when you approve; the critic has not reviewed them."
 msgstr "Edits you make here are applied when you approve; the critic has not reviewed them."
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Education and training"
+msgstr "Education and training"
+
 #: packages/ui/src/run-details.tsx
 msgid "Effective checksum"
 msgstr "Effective checksum"
@@ -3223,6 +3237,10 @@ msgstr "Effective checksum"
 #: packages/ui/src/model-profile-details.tsx
 msgid "effort"
 msgstr "effort"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+msgstr "Either way, you check every fact before DraftLoop uses it. You can add documents later."
 
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
@@ -4099,6 +4117,10 @@ msgstr "Home"
 msgid "How deep"
 msgstr "How deep"
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "How do you want to start?"
+msgstr "How do you want to start?"
+
 #: packages/ui/src/agent-setup.tsx
 msgid "How it works"
 msgstr "How it works"
@@ -4165,7 +4187,7 @@ msgstr "Illustrative public API token-cost scenario"
 msgid "Implemented"
 msgstr "Implemented"
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import a policy version for this reviewed job without changing the workspace policy."
 msgstr "Import a policy version for this reviewed job without changing the workspace policy."
 
@@ -4177,8 +4199,8 @@ msgstr "Import a policy version for this reviewed opportunity without changing t
 msgid "Import from another workspace"
 msgstr "Import from another workspace"
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import opportunity override"
 msgstr "Import opportunity override"
 
@@ -4424,6 +4446,10 @@ msgstr "Job requirements read from the job description"
 msgid "Job requirements reviewed"
 msgstr "Job requirements reviewed"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Jobs you held: employer, title, dates and what you did."
+msgstr "Jobs you held: employer, title, dates and what you did."
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "Join the DraftLoop beta"
 msgstr "Join the DraftLoop beta"
@@ -4459,6 +4485,10 @@ msgstr "Keep each heading to 200 characters or fewer."
 #: apps/web/src/landing.tsx
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
+
+#: apps/web/src/private-sections.tsx
+msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
+msgstr "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
@@ -4812,10 +4842,6 @@ msgstr "Mark every word that changed since the previous version"
 #: packages/ui/src/profile.tsx
 msgid "Mark latest draft reviewed"
 msgstr "Mark latest draft reviewed"
-
-#: apps/web/src/private-sections.tsx
-msgid "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
-msgstr "Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Mark reviewed"
@@ -5339,6 +5365,7 @@ msgstr "No blocking findings need action."
 msgid "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
 msgstr "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
 
+#: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
 msgstr "No career evidence yet"
@@ -5362,6 +5389,10 @@ msgstr "no cost cap"
 #: packages/ui/src/provider-authentication.tsx
 msgid "No credential"
 msgstr "No credential"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "No CV needed. An interviewer asks about your work, in writing or out loud."
+msgstr "No CV needed. An interviewer asks about your work, in writing or out loud."
 
 #: packages/ui/src/review.tsx
 msgid "No draft artifact available"
@@ -5781,6 +5812,7 @@ msgstr "of {0}"
 msgid "of {0} and {1}"
 msgstr "of {0} and {1}"
 
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
@@ -5791,6 +5823,7 @@ msgid "Omission"
 msgstr "Omission"
 
 #: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "On"
@@ -5824,6 +5857,10 @@ msgstr "One page or two is saved as your writing policy's page target, and the d
 #: packages/ui/src/export-template.ts
 msgid "One page with smaller type and tighter spacing, so the most fits on each page."
 msgstr "One page with smaller type and tighter spacing, so the most fits on each page."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "One project or result, told as a story."
+msgstr "One project or result, told as a story."
 
 #: packages/ui/src/application-archive-model.ts
 msgid "Only applications without runs, briefs or exports can be deleted. Archiving keeps everything and can be undone."
@@ -6243,6 +6280,7 @@ msgid "Policy fingerprint"
 msgstr "Policy fingerprint"
 
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "policy override"
 msgstr "policy override"
 
@@ -6489,6 +6527,10 @@ msgstr "Quick replies"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Quota or rate limit"
 msgstr "Quota or rate limit"
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "raw job description"
+msgstr "raw job description"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Raw job description, chosen under Advanced (coverage scoring is less reliable)"
@@ -7273,7 +7315,7 @@ msgstr "Review running"
 msgid "Review the job requirements first."
 msgstr "Review the job requirements first."
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Review the requirements before importing an override."
 msgstr "Review the requirements before importing an override."
 
@@ -7366,6 +7408,10 @@ msgstr "Revision"
 #: packages/ui/src/agent-setup.tsx
 msgid "Revoke"
 msgstr "Revoke"
+
+#: packages/ui/src/app.tsx
+msgid "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
+msgstr "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Role"
@@ -7733,7 +7779,6 @@ msgstr "Select one supported author profile and one supported critic profile bef
 msgid "Selected"
 msgstr "Selected"
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
 msgid "Selected override"
 msgstr "Selected override"
@@ -7976,6 +8021,10 @@ msgstr "Sign-in is on Home, under Workspace settings."
 msgid "Signing in"
 msgstr "Signing in"
 
+#: packages/ui/src/career-interview-model.ts
+msgid "Skills and tools"
+msgstr "Skills and tools"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Skip this question"
 msgstr "Skip this question"
@@ -7987,6 +8036,10 @@ msgstr "Skipped this question."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
 msgstr "Social announcement"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Something you are proud of"
+msgstr "Something you are proud of"
 
 #: packages/ui/src/home-applications-view.tsx
 msgid "Sort"
@@ -8059,6 +8112,7 @@ msgstr "Standard (311M parameters, recommended)"
 msgid "Start"
 msgstr "Start"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
 msgstr "Start a conversation"
@@ -8104,6 +8158,10 @@ msgstr "Start the review"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr "Start this review?"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Start with a conversation"
+msgstr "Start with a conversation"
 
 #: packages/ui/src/run-details.tsx
 msgid "Starting new review…"
@@ -8356,6 +8414,10 @@ msgstr "Technical interview"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
 msgstr "Technologies, separated by commas"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Tell it in a conversation"
+msgstr "Tell it in a conversation"
 
 #: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx
@@ -9436,6 +9498,10 @@ msgstr "This application uses its own model pair"
 msgid "This application's job description could not be read. Its file may have been moved or emptied."
 msgstr "This application's job description could not be read. Its file may have been moved or emptied."
 
+#: packages/ui/src/career-interview-panel.tsx
+msgid "This becomes your first career evidence. You can add documents later."
+msgstr "This becomes your first career evidence. You can add documents later."
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "This brief changed since you opened it. The latest version has been loaded; review it and try again."
 msgstr "This brief changed since you opened it. The latest version has been loaded; review it and try again."
@@ -10023,6 +10089,10 @@ msgstr "Use nonnegative whole-token counts and planned call counts, with no more
 msgid "Use the local Codex CLI session with subscription billing."
 msgstr "Use the local Codex CLI session with subscription billing."
 
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Use the raw job description"
+msgstr "Use the raw job description"
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Use the raw job description instead"
 msgstr "Use the raw job description instead"
@@ -10199,6 +10269,10 @@ msgstr "Wait for the current workspace operation to finish before changing model
 msgid "Wait for the current workspace operation to finish before closing the workspace."
 msgstr "Wait for the current workspace operation to finish before closing the workspace."
 
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Wait for the reviewed requirements"
+msgstr "Wait for the reviewed requirements"
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Waiting for {providerName} ({modelName}). Cancel to stop the request; nothing is saved unless extraction finishes."
 msgstr "Waiting for {providerName} ({modelName}). Cancel to stop the request; nothing is saved unless extraction finishes."
@@ -10316,6 +10390,10 @@ msgstr "What to stress"
 #: packages/ui/src/career-flow.tsx
 msgid "What you give"
 msgstr "What you give"
+
+#: packages/ui/src/career-interview-model.ts
+msgid "What you know how to do, and the tools you use."
+msgstr "What you know how to do, and the tools you use."
 
 #: apps/web/src/interview-guide.tsx
 msgid "When"
@@ -10516,6 +10594,10 @@ msgstr "Writing policy"
 msgid "Writing policy needs attention: it cannot be read."
 msgstr "Writing policy needs attention: it cannot be read."
 
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Writing policy override for this job"
+msgstr "Writing policy override for this job"
+
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Writing policy versions"
 msgstr "Writing policy versions"
@@ -10712,6 +10794,10 @@ msgid "Your plan's runs for today are used. Try again later."
 msgstr "Your plan's runs for today are used. Try again later."
 
 #: packages/ui/src/career-interview-model.ts
+msgid "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+msgstr "Your record is empty, so let's begin with the basics. Which would you like to start with?"
+
+#: packages/ui/src/career-interview-model.ts
 msgid "Your record names {title} but leaves out part of this role."
 msgstr "Your record names {title} but leaves out part of this role."
 
@@ -10735,6 +10821,10 @@ msgstr "Your sign-in has expired. Sign in again."
 #: packages/ui/src/career-interview-live.tsx
 msgid "Your voice goes to {0} to become text."
 msgstr "Your voice goes to {0} to become text."
+
+#: packages/ui/src/career-interview-model.ts
+msgid "Your work history"
+msgstr "Your work history"
 
 #: apps/web/src/workspace-model.ts
 msgid "Your workspace"

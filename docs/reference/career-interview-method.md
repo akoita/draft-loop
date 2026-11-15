@@ -73,6 +73,34 @@ candidate's target jobs ask for. The interviewer offers them like this:
   A broad subject that names no fact, such as "where is my profile thin?",
   gets an overview instead: roles, employers and dates first.
 
+### A first conversation on an empty record
+
+A record with no fact has no gap to point at. The finder then offers four
+starting topics at once, in this order, and no job-post theme (#2732):
+
+| Starting topic             | What the interviewer gathers                         |
+| -------------------------- | ---------------------------------------------------- |
+| Your work history          | Each job: employer, title, start and end years, work |
+| Education and training     | Degrees, courses and certificates                    |
+| Skills and tools           | What the candidate can do and the tools they use     |
+| Something you are proud of | One project or result, told as a story               |
+
+- **Where it starts.** While the record has no document, the Career evidence
+  card and Home offer **Tell it in a conversation** beside **Add documents**,
+  on servers that show the interview (#2734). The web shows the written
+  interview to signed-in users and with the owner token; live voice stays
+  with the owner token until plans say who may use it (#2735).
+- **Facts before stories.** For work history the interviewer takes one job at
+  a time, most recent first, and asks for the employer, title and years the
+  candidate has not given. It still suggests none of them.
+- **Told once.** A starting topic with a summary is not offered again, even
+  while the profile has no fact from it yet. A declined one stays away too.
+- **First evidence.** A record with no knowledge base gets one from the first
+  confirmed summary: the web screen creates it, saves the summary, then
+  selects it for the record (#2733).
+- **Back to normal.** Once the profile holds a fact, the finder proposes gaps,
+  periods and themes as above.
+
 The screen numbers the proposed topics as the interviewer does, and **End
 this conversation** closes the session so the next one proposes afresh.
 
