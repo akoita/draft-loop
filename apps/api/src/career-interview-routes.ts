@@ -5,6 +5,7 @@ import {
   type HostedKnowledgeIntake,
   type HostedSensitivityRules,
 } from "@draft-loop/application";
+import { failedCallCostUsd } from "@draft-loop/application/call-cost-guard";
 import { createCareerInterviewPublisher } from "@draft-loop/application/career-interview-evidence";
 import {
   CareerInterviewError,
@@ -36,7 +37,7 @@ import {
   permitsTransmission,
 } from "@draft-loop/storage/consent-ledger";
 import "@fastify/websocket";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyBaseLogger, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { providerFailureOf } from "./application-material-routes.js";
@@ -256,6 +257,7 @@ export function registerCareerInterviewRoutes(
     workspaceId: string,
     sessionId: string,
     language: "fr" | "en" | undefined,
+    log: FastifyBaseLogger,
   ): CareerInterviewerPort => ({
     reply: async (request) => {
       if (interview.route === undefined || !interview.allowProviderData) {
@@ -271,10 +273,35 @@ export function registerCareerInterviewRoutes(
           "Allow sending career material to Anthropic in this record's consent to use the interview.",
         );
       }
-      const executor = interview.route({
+      const routed = interview.route({
         configuredModel: model,
         ...(pricing === undefined ? {} : { pricing }),
       });
+      // Each interviewer call leaves its model, tokens and cost in the log, never its words
+      // (#2758); a rejected answer, such as one cut off at its output limit, was billed too.
+      const executor = {
+        execute: async (modelRequest: Parameters<typeof routed.execute>[0]) => {
+          const response = await routed.execute(modelRequest).catch((error: unknown) => {
+            log.info(
+              { workspaceId, sessionId, model: model.modelId, costUsd: failedCallCostUsd(error) },
+              "career interview model call failed",
+            );
+            throw error;
+          });
+          log.info(
+            {
+              workspaceId,
+              sessionId,
+              model: response.modelId,
+              inputTokens: response.usage.inputTokens,
+              outputTokens: response.usage.outputTokens,
+              costUsd: response.cost.estimatedUsd ?? null,
+            },
+            "career interview model call",
+          );
+          return response;
+        },
+      };
       return createModelCareerInterviewer({
         executor: executor as never,
         model,
@@ -311,7 +338,8 @@ export function registerCareerInterviewRoutes(
     return createCareerInterviewService({
       store: interview.sessions,
       loadRecord: () => loadRecord(service, workspaceRoot(workspaceId)),
-      interviewer: (workspace, session) => interviewerFor(workspace, session, language),
+      interviewer: (workspace, session) =>
+        interviewerFor(workspace, session, language, request.log),
       language,
       publish:
         knowledge === undefined

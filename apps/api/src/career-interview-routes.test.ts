@@ -160,6 +160,19 @@ describe("career interview routes", () => {
     expect(answered.statusCode).toBe(200);
     expect((await call("GET", `${sessions}/${id}`)).json().session.topics[0].turns).toHaveLength(3);
     expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
+    // Each interviewer call records its model, tokens and cost, and nothing it said (#2758).
+    const recorded = logs
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .filter((entry) => entry.msg === "career interview model call");
+    expect(recorded).toHaveLength(2);
+    expect(recorded[0]).toMatchObject({
+      workspaceId: expect.any(String),
+      sessionId: id,
+      model: "claude-sonnet-5-5",
+      inputTokens: 10,
+      outputTokens: 5,
+      costUsd: 0.001,
+    });
   });
 
   it("answers 502 and saves nothing when the model's answer cannot be used", async () => {
@@ -178,6 +191,7 @@ describe("career interview routes", () => {
                 {
                   code: "invalid-response",
                   diagnostics: [{ code: "max_tokens", path: "stop_reason" }],
+                  billed: { cost: { estimatedUsd: 0.02 } },
                 },
               );
             }
@@ -201,6 +215,12 @@ describe("career interview routes", () => {
     expect(failed.json().error.code).toBe("interview_model_failed");
     expect((await call("GET", `${sessions}/${id}`)).json().session.topics[0].turns).toHaveLength(1);
     expect(logs.join("\n")).toContain("max_tokens");
+    // The rejected answer was billed, so its cost is recorded too (#2758).
+    expect(
+      logs
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .find((entry) => entry.msg === "career interview model call failed"),
+    ).toMatchObject({ sessionId: id, costUsd: 0.02 });
     expect(logs.join("\n")).not.toContain("rebuilt the loan reports");
 
     fail = false;
