@@ -851,6 +851,10 @@ msgstr "Un identifiant est requis."
 msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 msgstr "Un critique d'une autre entreprise relit cette lettre pour repérer les phrases qui semblent écrites par une machine. S'il en trouve, une version révisée s'ouvrira ici."
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "A CV, a profile export or notes about your work."
+msgstr "Un CV, un export de profil ou des notes sur votre travail."
+
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr "Une sauvegarde complète de l’historique actuel est conservée à côté, l’ancien historique n’est donc pas perdu. La sauvegarde occupe autant d’espace disque que l’historique actuel ; supprimez-la une fois satisfait. Le compactage peut prendre une minute sur un gros historique et est refusé pendant qu’une exécution travaille. Rien n’est envoyé nulle part."
@@ -1056,6 +1060,7 @@ msgstr "Ajoutez des éléments de parcours depuis la carte Éléments de parcour
 msgid "Add directory"
 msgstr "Ajouter un répertoire"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add documents"
 msgstr "Ajouter des documents"
@@ -3223,6 +3228,10 @@ msgstr "Somme de contrôle effective"
 msgid "effort"
 msgstr "effort"
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+msgstr "Dans les deux cas, vous vérifiez chaque fait avant que DraftLoop ne l’utilise. Vous pourrez ajouter des documents plus tard."
+
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
 msgstr "Écoulé"
@@ -4093,6 +4102,10 @@ msgstr "Accueil"
 #: apps/web/src/interview-guide.tsx
 msgid "How deep"
 msgstr "Niveau de détail"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "How do you want to start?"
+msgstr "Comment voulez-vous commencer ?"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "How it works"
@@ -5338,6 +5351,7 @@ msgstr "Aucun constat bloquant n’attend d’action."
 msgid "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
 msgstr "Aucun dossier candidat ne vous est encore attribué. Créez-en un, ou demandez à un propriétaire ou un administrateur de votre organisation de vous en attribuer un."
 
+#: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
 msgstr "Aucun élément de parcours"
@@ -5361,6 +5375,10 @@ msgstr "pas de plafond de coût"
 #: packages/ui/src/provider-authentication.tsx
 msgid "No credential"
 msgstr "Aucun identifiant"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "No CV needed. An interviewer asks about your work, in writing or out loud."
+msgstr "Pas besoin de CV. Un intervieweur vous pose des questions sur votre travail, par écrit ou à voix haute."
 
 #: packages/ui/src/review.tsx
 msgid "No draft artifact available"
@@ -8080,6 +8098,7 @@ msgstr "Standard (311 M de paramètres, recommandé)"
 msgid "Start"
 msgstr "Démarrer"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
 msgstr "Démarrer une conversation"
@@ -8125,6 +8144,10 @@ msgstr "Démarrer la relecture"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr "Démarrer cette relecture ?"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Start with a conversation"
+msgstr "Commencer par une conversation"
 
 #: packages/ui/src/run-details.tsx
 msgid "Starting new review…"
@@ -8377,6 +8400,10 @@ msgstr "Entretien technique"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
 msgstr "Technologies, séparées par des virgules"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Tell it in a conversation"
+msgstr "Le raconter dans une conversation"
 
 #: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx

@@ -6,6 +6,11 @@ import type { LoadExportPreview } from "./export-preview.js";
  * host leaves it out, so a host without extras, such as the desktop, shows the screens unchanged.
  */
 export interface HostPanels {
+  /**
+   * True when `evidenceAfter` shows the career interview, so the screens may offer to start an
+   * empty career record from a conversation (#2734).
+   */
+  readonly careerConversation?: boolean;
   /** Shown above the Career evidence card, such as a consent the host must record first. */
   readonly evidenceBefore?: ReactNode;
   /**

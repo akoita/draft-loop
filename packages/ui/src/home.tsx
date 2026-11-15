@@ -26,6 +26,7 @@ import {
   invalidApplicationNameMessage,
   needsApplicationName,
 } from "./application-name-model.js";
+import { HomeConversationStart } from "./career-conversation-start.js";
 import {
   type CareerEvidenceCapabilities,
   type CareerEvidenceStatus,
@@ -815,9 +816,18 @@ export function HomeView({
               presentation: evidenceView,
               headline: evidenceView.headline,
               action: (
-                <button className="button button-outline" type="button" onClick={onManageEvidence}>
-                  {evidenceView.action}
-                </button>
+                <>
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    onClick={onManageEvidence}
+                  >
+                    {evidenceView.action}
+                  </button>
+                  {evidenceView.empty ? (
+                    <HomeConversationStart onOpenEvidence={onManageEvidence} />
+                  ) : null}
+                </>
               ),
               children: (
                 <>

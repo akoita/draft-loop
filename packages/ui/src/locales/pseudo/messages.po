@@ -857,6 +857,10 @@ msgstr ""
 msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 msgstr ""
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "A CV, a profile export or notes about your work."
+msgstr ""
+
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr ""
@@ -1062,6 +1066,7 @@ msgstr ""
 msgid "Add directory"
 msgstr ""
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add documents"
 msgstr ""
@@ -3229,6 +3234,10 @@ msgstr ""
 msgid "effort"
 msgstr ""
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+msgstr ""
+
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
 msgstr ""
@@ -4098,6 +4107,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide.tsx
 msgid "How deep"
+msgstr ""
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "How do you want to start?"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
@@ -5343,6 +5356,7 @@ msgstr ""
 msgid "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
 msgstr ""
 
+#: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
 msgstr ""
@@ -5365,6 +5379,10 @@ msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "No credential"
+msgstr ""
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "No CV needed. An interviewer asks about your work, in writing or out loud."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -8085,6 +8103,7 @@ msgstr ""
 msgid "Start"
 msgstr ""
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
 msgstr ""
@@ -8129,6 +8148,10 @@ msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
+msgstr ""
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Start with a conversation"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -8381,6 +8404,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
+msgstr ""
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Tell it in a conversation"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
