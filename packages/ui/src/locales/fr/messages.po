@@ -1162,13 +1162,9 @@ msgstr "Ajoute en une fois tous les documents pris en charge d’un dossier."
 msgid "Advanced options"
 msgstr "Options avancées"
 
-#: packages/ui/src/start-requirements.tsx
-msgid "Advanced: requirements for this run"
-msgstr "Avancé : exigences pour cette exécution"
-
-#: packages/ui/src/application-steps.tsx
-msgid "Advanced: writing policy override for this job"
-msgstr "Avancé : politique de rédaction propre à cette offre"
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Advanced options for this run"
+msgstr "Options avancées pour cette exécution"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Agent"
@@ -4155,7 +4151,7 @@ msgstr "Scénario indicatif de coût en jetons au tarif public de l’API"
 msgid "Implemented"
 msgstr "Réalisé"
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import a policy version for this reviewed job without changing the workspace policy."
 msgstr "Importez une version de politique pour cette offre relue sans modifier la politique de l’espace de travail."
 
@@ -4167,8 +4163,8 @@ msgstr "Importez une version de politique pour cette opportunité relue sans mod
 msgid "Import from another workspace"
 msgstr "Importer depuis un autre espace de travail"
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Import opportunity override"
 msgstr "Importer une politique propre"
 
@@ -5771,6 +5767,7 @@ msgstr "sur {0}"
 msgid "of {0} and {1}"
 msgstr "sur {0} et {1}"
 
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Off"
@@ -5781,6 +5778,7 @@ msgid "Omission"
 msgstr "Omission"
 
 #: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 msgid "On"
@@ -6233,6 +6231,7 @@ msgid "Policy fingerprint"
 msgstr "Empreinte de la politique"
 
 #: packages/ui/src/run-details.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "policy override"
 msgstr "politique avec dérogation"
 
@@ -6479,6 +6478,10 @@ msgstr "Réponses rapides"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Quota or rate limit"
 msgstr "Quota ou limite de débit"
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "raw job description"
+msgstr "description de poste brute"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Raw job description, chosen under Advanced (coverage scoring is less reliable)"
@@ -7263,7 +7266,7 @@ msgstr "Relecture en cours"
 msgid "Review the job requirements first."
 msgstr "Relisez d’abord les exigences de l’offre."
 
-#: packages/ui/src/application-steps.tsx
+#: packages/ui/src/start-advanced-options.tsx
 msgid "Review the requirements before importing an override."
 msgstr "Relisez les exigences avant d’importer une politique propre."
 
@@ -7723,7 +7726,6 @@ msgstr "Sélectionnez un profil rédacteur et un profil relecteur pris en charge
 msgid "Selected"
 msgstr "Sélectionné"
 
-#: packages/ui/src/application-steps.tsx
 #: packages/ui/src/review.tsx
 msgid "Selected override"
 msgstr "Politique propre sélectionnée"
@@ -10017,6 +10019,10 @@ msgstr "Utilisez des nombres entiers positifs de jetons et d’appels prévus, a
 msgid "Use the local Codex CLI session with subscription billing."
 msgstr "Utiliser la session locale de la CLI Codex avec facturation par abonnement."
 
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Use the raw job description"
+msgstr "Utiliser la description de poste brute"
+
 #: packages/ui/src/start-requirements.tsx
 msgid "Use the raw job description instead"
 msgstr "Utiliser plutôt l’offre d’emploi brute"
@@ -10192,6 +10198,10 @@ msgstr "Attendez la fin de l’opération en cours sur l’espace de travail ava
 #: packages/ui/src/workspace-navigation.tsx
 msgid "Wait for the current workspace operation to finish before closing the workspace."
 msgstr "Attendez la fin de l’opération en cours sur l’espace de travail avant de le fermer."
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Wait for the reviewed requirements"
+msgstr "Attendre les exigences relues"
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Waiting for {providerName} ({modelName}). Cancel to stop the request; nothing is saved unless extraction finishes."
@@ -10509,6 +10519,10 @@ msgstr "Politique de rédaction"
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Writing policy needs attention: it cannot be read."
 msgstr "La politique de rédaction demande votre attention : elle est illisible."
+
+#: packages/ui/src/start-advanced-options.tsx
+msgid "Writing policy override for this job"
+msgstr "Politique de rédaction propre à cette offre"
 
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Writing policy versions"
