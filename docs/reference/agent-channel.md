@@ -160,9 +160,10 @@ Windows.
 ### Revoke an agent token
 
 An agent token expires 90 days after it is issued; create a new one under
-Agents or run `init` again. A workspace holds at most 20 active tokens. Revoke
-one under **Show and revoke** in Agents; a revoked token is refused at once
-and the others keep working. From a terminal, the owner lists and revokes them
+Agents or run `init` again. A workspace holds at most 20 active tokens. Each
+active token is a row of **Connected agents** in Agents; select
+**Disconnect** on its row and confirm. A revoked token is refused at once and
+the others keep working. From a terminal, the owner lists and revokes them
 through the API:
 
 ```text
@@ -428,10 +429,10 @@ its own client. The API treats that token as an **agent grant**:
 
 ### The connection's spend cap
 
-The person sets the cap in **Workspace settings > Agents**, under "Spending by
-connected assistants": the assistant's id and a monthly limit in US dollars.
-An assistant without a cap names its id in its refusal. One cap holds for one
-workspace and one assistant client.
+The person sets the cap in **Workspace settings > Agents**, on the
+assistant's row of **Connected agents**. An assistant that asks to spend
+without a cap is refused and listed there, waiting for a limit, so nobody
+types its id. One cap holds for one workspace and one assistant client.
 
 The screen calls these routes from the person's own sign-in; an assistant
 never reaches them.

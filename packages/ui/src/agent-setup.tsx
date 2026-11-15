@@ -19,7 +19,8 @@ import {
   defaultAgentScopes,
   parseAgentMonthlyCap,
 } from "./agent-setup-model.js";
-import { formatDate, formatNumber } from "./locale-format.js";
+import { type AssistantConnectionView, ConnectedAgents } from "./connected-agents.js";
+import { formatDate } from "./locale-format.js";
 import { codingAgentsSectionId } from "./shared-link.js";
 
 /**
@@ -56,11 +57,17 @@ export interface AgentSetupProps {
   /** The "Accept notes from agents" switch (#2625), from a host that serves the work journal. */
   readonly workJournal?: ReactNode;
   /**
-   * What connected assistants may spend (#2657), from a host where an assistant signs the
-   * person in. Shown above the token steps, or in place of the line that says agents cannot
-   * connect where the server issues no tokens.
+   * Assistants that signed in (#2657), from a host that keeps their spend limits; listed with the
+   * tokens under Connected agents (#2785).
    */
-  readonly connections?: ReactNode;
+  readonly assistants?: readonly AssistantConnectionView[] | undefined;
+  /** Resolves with a problem to show, or undefined once the assistant's limit is saved. */
+  readonly onSetAssistantLimit?: (
+    clientId: string,
+    monthlyCapUsd: number,
+  ) => Promise<string | undefined>;
+  /** Resolves with a problem to show, or undefined once the assistant's limit is removed. */
+  readonly onRemoveAssistant?: (clientId: string) => Promise<string | undefined>;
 }
 
 function GuideLink({ children }: { readonly children: string }) {
@@ -80,7 +87,9 @@ export function AgentSetup({
   onRevoke,
   open = false,
   workJournal,
-  connections,
+  assistants,
+  onSetAssistantLimit,
+  onRemoveAssistant,
 }: AgentSetupProps) {
   const id = useId();
   const [host, setHost] = useState<AgentHost>("plugin");
@@ -88,7 +97,6 @@ export function AgentSetup({
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"configuration" | "token" | undefined>(undefined);
-  const [showTokens, setShowTokens] = useState(false);
   const [scopes, setScopes] = useState<readonly AgentScope[]>(defaultAgentScopes);
   const [cap, setCap] = useState(defaultAgentMonthlyCapUsd);
 
@@ -102,15 +110,27 @@ export function AgentSetup({
       {workJournal}
     </>
   );
+  const active = tokens === undefined ? undefined : activeAgentTokens(tokens);
+  const connected = (
+    <ConnectedAgents
+      tokens={available ? (active ?? []) : undefined}
+      assistants={assistants}
+      onRevoke={onRevoke}
+      {...(onSetAssistantLimit === undefined ? {} : { onSetLimit: onSetAssistantLimit })}
+      {...(onRemoveAssistant === undefined ? {} : { onRemoveAssistant })}
+    />
+  );
   if (!available) {
     return (
       <section className="coding-agents" id={codingAgentsSectionId}>
         {heading}
-        {connections ?? (
+        {assistants === undefined ? (
           <p className="muted">
             {t`Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server.`}{" "}
             <GuideLink>{t`How it works`}</GuideLink>
           </p>
+        ) : (
+          connected
         )}
       </section>
     );
@@ -121,7 +141,6 @@ export function AgentSetup({
     workspaceId,
     token: issued?.token,
   });
-  const active = tokens === undefined ? undefined : activeAgentTokens(tokens);
   const holdsToken = agentConfigurationHoldsToken(host);
   const startsRuns = scopes.includes("runs:start");
   const monthlyCap = parseAgentMonthlyCap(cap);
@@ -149,10 +168,6 @@ export function AgentSetup({
     }
   }
 
-  async function revoke(tokenId: string) {
-    setProblem(await onRevoke(tokenId));
-  }
-
   const expires = issued === undefined ? undefined : (formatDate(issued.expires_at) ?? "");
 
   function toggle(scope: AgentScope, on: boolean) {
@@ -162,7 +177,7 @@ export function AgentSetup({
   return (
     <section className="coding-agents" id={codingAgentsSectionId}>
       {heading}
-      {connections}
+      {connected}
       <details className="agent-setup" open={open || undefined}>
         <summary>{t`Connect an agent`}</summary>
         <ol>
@@ -266,55 +281,9 @@ export function AgentSetup({
             </p>
           )}
         </div>
-        {active === undefined ? null : (
-          <p className="muted">
-            {t`Active agent tokens: ${active.length}`}
-            {active.length === 0 ? null : (
-              <>
-                {" · "}
-                <button
-                  type="button"
-                  className="link-action"
-                  aria-expanded={showTokens}
-                  onClick={() => setShowTokens(!showTokens)}
-                >
-                  {t`Show and revoke`}
-                </button>
-              </>
-            )}
-            {" · "}
-            <GuideLink>{t`Full setup guide`}</GuideLink>
-          </p>
-        )}
-        {showTokens && active !== undefined && active.length > 0 ? (
-          <ul className="agent-setup-tokens">
-            {active.map((token) => {
-              const created = formatDate(token.created_at) ?? "";
-              const until = formatDate(token.expires_at) ?? "";
-              const can = token.scopes.map(agentScopeName).join(", ");
-              const cap = token.monthly_cap_usd;
-              const spent = formatNumber(token.spent_this_month_usd ?? 0);
-              const limit = cap === undefined ? "" : formatNumber(cap);
-              return (
-                <li key={token.id}>
-                  <span>
-                    {token.label}{" "}
-                    <span className="muted">{t`${can}; created ${created}, expires ${until}`}</span>
-                    {cap === undefined ? null : (
-                      <span className="muted">
-                        {" "}
-                        {t`US$${spent} of US$${limit} used this month.`}
-                      </span>
-                    )}
-                  </span>{" "}
-                  <button type="button" onClick={() => void revoke(token.id)}>
-                    {t`Revoke`}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
+        <p className="muted">
+          <GuideLink>{t`Full setup guide`}</GuideLink>
+        </p>
       </details>
     </section>
   );

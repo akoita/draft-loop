@@ -13,8 +13,11 @@ export interface AgentConnectionCap {
   readonly workspaceId: string;
   /** The assistant's client at the identity provider; 1 to 200 visible characters. */
   readonly clientId: string;
-  /** What the connection may reserve each UTC month, in US cents. */
-  readonly monthlyCapCents: number;
+  /**
+   * What the connection may reserve each UTC month, in US cents; absent for an assistant that
+   * asked to spend before the person set a limit (#2785), which starts nothing until they do.
+   */
+  readonly monthlyCapCents?: number;
   readonly updatedAt: string;
   /** What it reserved in `month` (`YYYY-MM`, UTC); absent before its first start. */
   readonly spend?: { readonly month: string; readonly cents: number };
@@ -30,9 +33,19 @@ export interface AgentConnectionSpendReservation {
   readonly cents: number;
 }
 
+/** A cap as the person sets it. */
+export type AgentConnectionCapInput = Omit<AgentConnectionCap, "spend" | "monthlyCapCents"> & {
+  readonly monthlyCapCents: number;
+};
+
 export interface AgentConnectionCapStore {
   /** Sets or changes a connection's cap; what it reserved this month is kept. */
-  set(cap: Omit<AgentConnectionCap, "spend">): Promise<AgentConnectionCap>;
+  set(cap: AgentConnectionCapInput): Promise<AgentConnectionCap>;
+  /**
+   * Keeps an assistant that asked to spend without a cap (#2785), so the person sees it in the
+   * list and sets its limit there; a connection already kept is left as it is.
+   */
+  note(workspaceId: string, clientId: string, at: string): Promise<void>;
   get(workspaceId: string, clientId: string): Promise<AgentConnectionCap | undefined>;
   /** A workspace's caps, by client id. */
   list(workspaceId: string): Promise<readonly AgentConnectionCap[]>;
@@ -59,9 +72,7 @@ export class AgentConnectionCapStoreError extends Error {
 const clientIdPattern = /^[\x21-\x7e]{1,200}$/u;
 
 /** Checks a cap before it is stored, so a store never holds a malformed one. */
-export function requireAgentConnectionCap(
-  cap: Omit<AgentConnectionCap, "spend">,
-): Omit<AgentConnectionCap, "spend"> {
+export function requireAgentConnectionCap(cap: AgentConnectionCapInput): AgentConnectionCapInput {
   if (
     cap.workspaceId.length < 1 ||
     cap.workspaceId.length > 256 ||
@@ -101,6 +112,18 @@ export function createMemoryAgentConnectionCapStore(): AgentConnectionCapStore {
       caps.set(id, stored);
       return stored;
     },
+    note: async (workspaceId, clientId, at) => {
+      if (
+        workspaceId.length < 1 ||
+        workspaceId.length > 256 ||
+        !clientIdPattern.test(clientId) ||
+        Number.isNaN(Date.parse(at))
+      ) {
+        throw new AgentConnectionCapStoreError();
+      }
+      const id = idOf(workspaceId, clientId);
+      if (!caps.has(id)) caps.set(id, { workspaceId, clientId, updatedAt: at });
+    },
     get: async (workspaceId, clientId) => caps.get(idOf(workspaceId, clientId)),
     list: async (workspaceId) =>
       [...caps.values()]
@@ -114,7 +137,7 @@ export function createMemoryAgentConnectionCapStore(): AgentConnectionCapStore {
     reserveSpend: async ({ workspaceId, clientId, month, key, cents }) => {
       const id = idOf(workspaceId, clientId);
       const cap = caps.get(id);
-      if (cap === undefined) return { outcome: "no_cap" };
+      if (cap?.monthlyCapCents === undefined) return { outcome: "no_cap" };
       const spent = agentConnectionSpentCents(cap, month);
       const held = keys.get(id);
       const reserved = held?.month === month ? held.keys : new Map<string, number>();

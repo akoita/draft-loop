@@ -3,7 +3,7 @@
 export interface ApiSchemas {
   "AgentConnectionCap": {
     readonly client_id: string;
-    readonly monthly_cap_usd: number;
+    readonly monthly_cap_usd?: number;
     readonly spent_this_month_usd: number;
     readonly updated_at: string;
   };
