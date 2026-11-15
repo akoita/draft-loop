@@ -27610,7 +27610,7 @@
     "/v1/operator/organisations": {
       "post": {
         "summary": "Create an organisation and invite its first owner",
-        "description": "Operator only: takes the deployment's owner token in both authentication modes, never a member's sign-in.",
+        "description": "Operator only: takes the deployment's owner token in both authentication modes, never a member's sign-in. The organisation starts on the Free plan where plans are kept.",
         "requestBody": {
           "required": true,
           "content": {
