@@ -21,6 +21,7 @@ import {
   supportsAutomaticKnowledgeBase,
 } from "./career-evidence-setup.js";
 import { countedNouns } from "./counted-nouns.js";
+import { useHostEvidenceAdvanced } from "./host-panels.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import type { WorkspaceReadiness } from "./model.js";
@@ -136,6 +137,10 @@ export interface CareerEvidenceCardViewProps {
    */
   readonly advancedOpen?: boolean | null;
   readonly onAdvancedToggle?: (open: boolean) => void;
+  /** More advanced choices from the page or the host, shown after the card's own. */
+  readonly advancedExtra?: ReactNode;
+  /** What is not at its default among them, for the folded line. */
+  readonly advancedExtraNote?: string | null;
 }
 
 /** The card's next step once a document is ready. */
@@ -174,6 +179,8 @@ export function CareerEvidenceCardView({
   onAddText,
   advancedOpen = null,
   onAdvancedToggle,
+  advancedExtra = null,
+  advancedExtraNote = null,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -206,14 +213,17 @@ export function CareerEvidenceCardView({
   const showKinds = status.kind === "selected" && evidenceKinds !== undefined;
   const hasKnowledgeBase =
     knowledgeBase !== null && knowledgeBase !== undefined && status.kind !== "unsupported";
-  const showAdvanced = showFolder || showKinds || hasKnowledgeBase;
+  const hasExtra = advancedExtra !== null && advancedExtra !== undefined;
+  const showAdvanced = showFolder || showKinds || hasKnowledgeBase || hasExtra;
   // The next step is inside the section when the base cannot be opened or none can be made here.
   const advancedNeeded = status.kind === "unavailable" || mode === "legacy";
   // A base the person named themselves is a choice away from the default, so the fold says so.
-  const advancedNote =
+  const baseNote =
     status.kind === "selected" && status.displayName !== defaultCareerEvidenceName
       ? t`Knowledge base: ${status.displayName}`
       : null;
+  const notes = [baseNote, advancedExtraNote].filter((note) => note !== null);
+  const advancedNote = notes.length === 0 ? null : notes.join(" · ");
   return (
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
@@ -357,6 +367,7 @@ https://www.linkedin.com/in/…`}
           ) : null}
           {showKinds ? <SourceEvidenceKindList {...evidenceKinds} disabled={blocked} /> : null}
           {knowledgeBase}
+          {advancedExtra}
         </AdvancedOptions>
       ) : null}
     </article>
@@ -372,6 +383,8 @@ export interface CareerEvidenceCardProps {
   readonly knowledgeBase?: ReactNode;
   /** Opens Career profile, the next step once a document is ready. */
   readonly onOpenProfile?: (() => void) | undefined;
+  /** The page's own advanced panel, such as how the documents are searched. */
+  readonly advanced?: ReactNode;
 }
 
 function failureText(reason: unknown): string {
@@ -388,7 +401,10 @@ export function CareerEvidenceCard({
   onAddLegacyUrl,
   knowledgeBase,
   onOpenProfile,
+  advanced = null,
 }: CareerEvidenceCardProps) {
+  const hostAdvanced = useHostEvidenceAdvanced();
+  const [hostNote, setHostNote] = useState<string | null>(null);
   const capabilities = knowledge?.capabilities;
   const supported = capabilities !== undefined && supportsCareerEvidence(capabilities);
   const automatic = supported && supportsAutomaticKnowledgeBase(capabilities);
@@ -591,6 +607,15 @@ export function CareerEvidenceCard({
       canAddUrl={inKnowledgeBase || onAddLegacyUrl !== undefined}
       advancedOpen={advancedOpen}
       onAdvancedToggle={setAdvancedOpen}
+      advancedExtra={
+        advanced === null && hostAdvanced === undefined ? null : (
+          <>
+            {advanced}
+            {hostAdvanced?.({ revision: revision ?? 0, setNote: setHostNote })}
+          </>
+        )
+      }
+      advancedExtraNote={hostNote}
       onChooseKnowledgeBase={() => {
         setAdvancedOpen(true);
         knowledge?.onRequestStoreForm?.();

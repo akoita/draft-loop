@@ -107,6 +107,18 @@ describe("Career evidence setup card", () => {
     );
   });
 
+  it("adds the page's and the host's advanced choices, and their note, to the same fold", () => {
+    const html = render(
+      { kind: "unsupported" },
+      { advancedExtra: <section>Private sections</section>, advancedExtraNote: "2 rules" },
+    );
+    expect(html).toContain('<span class="advanced-options-note"> · 2 rules</span>');
+    expect(html).toMatch(/<section>Private sections<\/section><\/div><\/details><\/article>$/);
+    expect(
+      render(selected, { knowledgeBase: <section>Base</section>, advancedExtraNote: "2 rules" }),
+    ).toContain(" · Knowledge base: Engineering · 2 rules</span>");
+  });
+
   it("unfolds Advanced options when the next step is inside it", () => {
     const section = <section>Knowledge base</section>;
     const open = '<details class="advanced-options" open="">';
