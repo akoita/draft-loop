@@ -13,38 +13,6 @@
       }
     },
     "schemas": {
-      "ApplicationMaterialGuidanceInput": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
       "ScreeningOutcomeInput": {
         "type": "object",
         "properties": {
@@ -637,6 +605,250 @@
           "error"
         ]
       },
+      "AgentConnectionCapInput": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "pattern": "^[\\x21-\\x7e]{1,200}$",
+            "description": "The assistant's client at the identity provider."
+          },
+          "monthly_cap_usd": {
+            "type": "number",
+            "description": "What the connection may reserve each UTC month."
+          },
+          "spent_this_month_usd": {
+            "type": "number",
+            "description": "What it reserved this UTC month."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "monthly_cap_usd",
+          "spent_this_month_usd",
+          "updated_at"
+        ]
+      },
+      "InterviewDetailsInput": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchSourceInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFindingInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialGuidanceInput": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntryInput": {
         "type": "object",
         "properties": {
@@ -812,12 +1024,18 @@
             "type": "string",
             "enum": [
               "cover-letter",
-              "interview-questions"
-            ]
+              "interview-questions",
+              "interview-guide"
+            ],
+            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          },
+          "interview_details": {
+            "description": "For an interview preparation guide: the interview it was written for.",
+            "$ref": "#/components/schemas/InterviewDetailsInput"
           },
           "items": {
             "type": "array",
@@ -831,6 +1049,32 @@
                 "text": {
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
+                },
+                "section": {
+                  "description": "For an interview preparation guide: the section the item belongs to.",
+                  "type": "string",
+                  "enum": [
+                    "read-first",
+                    "interview",
+                    "company",
+                    "role",
+                    "market",
+                    "matrix",
+                    "pitch",
+                    "stories",
+                    "defense",
+                    "questions",
+                    "ask",
+                    "practical",
+                    "topic",
+                    "never-say",
+                    "checklist",
+                    "sources"
+                  ]
+                },
+                "trap": {
+                  "description": "For a likely question in a guide: the answer to avoid, and why.",
+                  "type": "string"
                 },
                 "edited": {
                   "description": "True when the candidate rewrote this item; the text is then theirs.",
@@ -1001,10 +1245,25 @@
             }
           },
           "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "description": "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "unsourced_topics": {
+            "description": "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "company",
+                "news",
+                "role",
+                "field",
+                "process",
+                "salary"
+              ]
             }
           },
           "prompt_version": {
@@ -1081,7 +1340,7 @@
         "properties": {
           "items": {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 80,
             "type": "array",
             "items": {
               "type": "object",
@@ -4587,7 +4846,7 @@
               },
               "spentThisMonthUsd": {
                 "type": "number",
-                "description": "What the token reserved this UTC month."
+                "description": "What the token or connection reserved this UTC month."
               },
               "remainingUsd": {
                 "type": "number"
@@ -4724,6 +4983,82 @@
           "sections",
           "facts"
         ]
+      },
+      "InterviewGuideRequestInput": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "description": "The interview the guide prepares for: its stage, depth, length and what to cover. `notes`, `other_topics` and `never_say` are the candidate's own words, never facts.",
+            "$ref": "#/components/schemas/InterviewDetailsInput"
+          },
+          "model": {
+            "description": "The model that writes the guide; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "research": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "skip"
+            ],
+            "description": "`approved` queues web research about the employer, the role and the field when the newest brief is older than 14 days or misses a topic the guide needs, and answers 202 while it runs; draft again with `skip` once it is done. `skip` drafts from the briefs that exist; topics without a source are reported in `unsourced_topics`."
+          },
+          "parts": {
+            "description": "For an extensive guide: write only these parts again and keep the rest of `based_on`. Needs `based_on`.",
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "context",
+                "story",
+                "practice"
+              ]
+            }
+          },
+          "based_on": {
+            "description": "The saved guide whose other parts are kept when `parts` is set.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "details",
+          "research"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewGuideResearchingInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "researching"
+          },
+          "research": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "research"
+        ],
+        "additionalProperties": false
       },
       "KnowledgeBaseInput": {
         "type": "object",
@@ -5047,78 +5382,6 @@
           "defaultPresetId",
           "localModels"
         ]
-      },
-      "ResearchSourceInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFindingInput": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
-        ],
-        "additionalProperties": false
       },
       "PlanAssignmentInput": {
         "type": "object",
@@ -6496,6 +6759,93 @@
         ],
         "additionalProperties": {}
       },
+      "RunSpanInput": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.retrieved_chunks"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ]
+      },
       "SensitivityRuleMatchInput": {
         "oneOf": [
           {
@@ -7694,38 +8044,6 @@
         ],
         "additionalProperties": false
       },
-      "ApplicationMaterialGuidance": {
-        "type": "object",
-        "properties": {
-          "emphasis": {
-            "description": "What to stress, in the candidate's words.",
-            "type": "string",
-            "maxLength": 400
-          },
-          "tone": {
-            "type": "string",
-            "enum": [
-              "formal",
-              "warm",
-              "direct"
-            ]
-          },
-          "length": {
-            "type": "string",
-            "enum": [
-              "short",
-              "standard",
-              "long"
-            ]
-          },
-          "addressee": {
-            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
-            "type": "string",
-            "maxLength": 120
-          }
-        },
-        "additionalProperties": false
-      },
       "ScreeningOutcome": {
         "type": "object",
         "properties": {
@@ -8334,6 +8652,251 @@
         ],
         "additionalProperties": false
       },
+      "AgentConnectionCap": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "pattern": "^[\\x21-\\x7e]{1,200}$",
+            "description": "The assistant's client at the identity provider."
+          },
+          "monthly_cap_usd": {
+            "type": "number",
+            "description": "What the connection may reserve each UTC month."
+          },
+          "spent_this_month_usd": {
+            "type": "number",
+            "description": "What it reserved this UTC month."
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "monthly_cap_usd",
+          "spent_this_month_usd",
+          "updated_at"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewDetails": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "technical",
+              "manager",
+              "case",
+              "combined",
+              "final"
+            ]
+          },
+          "depth": {
+            "type": "string",
+            "enum": [
+              "essential",
+              "extensive"
+            ]
+          },
+          "scheduled_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2})?$"
+          },
+          "length_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 480
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "video",
+              "phone",
+              "onsite"
+            ]
+          },
+          "interviewer_role": {
+            "description": "Such as recruiter or engineering manager; never searched as a person.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "topics": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "salary",
+                "availability",
+                "remote-and-travel",
+                "language",
+                "career-gap",
+                "departure",
+                "management",
+                "unused-technology"
+              ]
+            }
+          },
+          "other_topics": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "never_say": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "stage",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^src_[0-9]{1,3}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "company-page",
+              "web-result"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "published_on": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "topic": {
+            "type": "string",
+            "enum": [
+              "company",
+              "news",
+              "role",
+              "field",
+              "process",
+              "salary"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "press",
+              "weak"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "excerpt"
+        ],
+        "additionalProperties": false
+      },
+      "ResearchFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^fnd_[0-9]{1,3}$"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "source_ids": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^src_[0-9]{1,3}$"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "source_ids"
+        ],
+        "additionalProperties": false
+      },
+      "ApplicationMaterialGuidance": {
+        "type": "object",
+        "properties": {
+          "emphasis": {
+            "description": "What to stress, in the candidate's words.",
+            "type": "string",
+            "maxLength": 400
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "formal",
+              "warm",
+              "direct"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard",
+              "long"
+            ]
+          },
+          "addressee": {
+            "description": "Whom a cover letter is addressed to, such as a hiring manager's name.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "additionalProperties": false
+      },
       "ConsentEntry": {
         "type": "object",
         "properties": {
@@ -8514,12 +9077,18 @@
             "type": "string",
             "enum": [
               "cover-letter",
-              "interview-questions"
-            ]
+              "interview-questions",
+              "interview-guide"
+            ],
+            "description": "A cover letter, interview questions, or an interview preparation guide, which its own route drafts."
           },
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          },
+          "interview_details": {
+            "description": "For an interview preparation guide: the interview it was written for.",
+            "$ref": "#/components/schemas/InterviewDetails"
           },
           "items": {
             "type": "array",
@@ -8533,6 +9102,32 @@
                 "text": {
                   "type": "string",
                   "description": "The paragraph, or the talking point for the question."
+                },
+                "section": {
+                  "description": "For an interview preparation guide: the section the item belongs to.",
+                  "type": "string",
+                  "enum": [
+                    "read-first",
+                    "interview",
+                    "company",
+                    "role",
+                    "market",
+                    "matrix",
+                    "pitch",
+                    "stories",
+                    "defense",
+                    "questions",
+                    "ask",
+                    "practical",
+                    "topic",
+                    "never-say",
+                    "checklist",
+                    "sources"
+                  ]
+                },
+                "trap": {
+                  "description": "For a likely question in a guide: the answer to avoid, and why.",
+                  "type": "string"
                 },
                 "edited": {
                   "description": "True when the candidate rewrote this item; the text is then theirs.",
@@ -8711,10 +9306,25 @@
             }
           },
           "dropped_sentences": {
-            "description": "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+            "description": "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "unsourced_topics": {
+            "description": "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "company",
+                "news",
+                "role",
+                "field",
+                "process",
+                "salary"
+              ]
             }
           },
           "prompt_version": {
@@ -8793,7 +9403,7 @@
         "properties": {
           "items": {
             "minItems": 1,
-            "maxItems": 10,
+            "maxItems": 80,
             "type": "array",
             "items": {
               "type": "object",
@@ -11680,7 +12290,7 @@
               },
               "spentThisMonthUsd": {
                 "type": "number",
-                "description": "What the token reserved this UTC month."
+                "description": "What the token or connection reserved this UTC month."
               },
               "remainingUsd": {
                 "type": "number"
@@ -11819,6 +12429,82 @@
         "required": [
           "sections",
           "facts"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewGuideRequest": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "description": "The interview the guide prepares for: its stage, depth, length and what to cover. `notes`, `other_topics` and `never_say` are the candidate's own words, never facts.",
+            "$ref": "#/components/schemas/InterviewDetails"
+          },
+          "model": {
+            "description": "The model that writes the guide; the default model when absent.",
+            "type": "string",
+            "enum": [
+              "claude-sonnet-5-5",
+              "claude-haiku-5-5"
+            ]
+          },
+          "research": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "skip"
+            ],
+            "description": "`approved` queues web research about the employer, the role and the field when the newest brief is older than 14 days or misses a topic the guide needs, and answers 202 while it runs; draft again with `skip` once it is done. `skip` drafts from the briefs that exist; topics without a source are reported in `unsourced_topics`."
+          },
+          "parts": {
+            "description": "For an extensive guide: write only these parts again and keep the rest of `based_on`. Needs `based_on`.",
+            "minItems": 1,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "context",
+                "story",
+                "practice"
+              ]
+            }
+          },
+          "based_on": {
+            "description": "The saved guide whose other parts are kept when `parts` is set.",
+            "type": "string",
+            "pattern": "^amd_[A-Za-z0-9_-]{8,64}$"
+          }
+        },
+        "required": [
+          "details",
+          "research"
+        ],
+        "additionalProperties": false
+      },
+      "InterviewGuideResearching": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "researching"
+          },
+          "research": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "pending"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "research"
         ],
         "additionalProperties": false
       },
@@ -12151,78 +12837,6 @@
           "presets",
           "defaultPresetId",
           "localModels"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchSource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^src_[0-9]{1,3}$"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "company-page",
-              "web-result"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "maxLength": 2000,
-            "format": "uri"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 300
-          },
-          "excerpt": {
-            "type": "string",
-            "maxLength": 1200
-          },
-          "published_on": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "excerpt"
-        ],
-        "additionalProperties": false
-      },
-      "ResearchFinding": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^fnd_[0-9]{1,3}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 600
-          },
-          "source_ids": {
-            "minItems": 1,
-            "maxItems": 5,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^src_[0-9]{1,3}$"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "text",
-          "source_ids"
         ],
         "additionalProperties": false
       },
@@ -13632,6 +14246,94 @@
           "state"
         ],
         "additionalProperties": {}
+      },
+      "RunSpan": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.retrieved_chunks"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ],
+        "additionalProperties": false
       },
       "SensitivityRuleMatch": {
         "oneOf": [
@@ -24764,7 +25466,8 @@
               "type": "string",
               "enum": [
                 "cover-letter",
-                "interview-questions"
+                "interview-questions",
+                "interview-guide"
               ]
             },
             "in": "query",
@@ -25088,6 +25791,134 @@
             "description": "Default Response"
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
+      "post": {
+        "summary": "Draft an interview preparation guide for an application",
+        "description": "Drafts a sectioned guide for one interview from the facts the candidate allowed for interviews, the newest brief's requirements and the application's research brief. Every sentence about the candidate cites a fact or admits a gap, every sentence about the employer or the field cites a finding, and sentences that fail, or come close to a never-say entry, are left out and listed in `dropped_sentences`. An essential guide is one writer call (cost cap US$0.20); an extensive one is three (US$0.40), and `parts` writes some of them again. With `research: approved` and a brief that is stale or misses a topic, research is queued and the answer is 202. Errors as the material route: 403 consent_required, 503 material_model_unavailable, 409 material_quarantined, material_unscreened, no_citable_facts or cost_cap_reached, 422 invalid_draft, 502 material_model_failed; 404 when `based_on` is not a guide of this application, 400 when `parts` is set without it or for an essential guide.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewGuideRequestInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,78}[A-Za-z0-9])?$"
+            },
+            "in": "path",
+            "name": "applicationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationMaterialDraft"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewGuideResearching"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -25596,6 +26427,263 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/trace": {
+      "get": {
+        "summary": "Read a run's trace",
+        "description": "The steps the worker executed for the run, in start order: each advance, each author, critic or revision attempt, and each evidence retrieval, with its timing, status, model, token counts and estimated cost. Content-free: no prompt, draft or candidate material. Empty for a run no worker has executed since traces were recorded.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spans": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RunSpan"
+                      }
+                    }
+                  },
+                  "required": [
+                    "spans"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/agent-connections": {
+      "get": {
+        "summary": "List assistant connection caps",
+        "description": "The monthly spend cap of each assistant connection in the workspace, by client id. A connection without a cap starts no run or draft.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connections": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentConnectionCap"
+                      }
+                    }
+                  },
+                  "required": [
+                    "connections"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set an assistant connection's monthly spend cap",
+        "description": "Sets or changes what one assistant connection may reserve each UTC month in this workspace. What it reserved this month is kept. The assistant must also be granted the runs:start scope when it connects.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "pattern": "^[\\x21-\\x7e]{1,200}$",
+                    "description": "The assistant's client at the identity provider."
+                  },
+                  "monthly_cap_usd": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 500,
+                    "multipleOf": 0.01,
+                    "description": "The US dollars the connection may reserve each UTC month. Each run reserves the workspace's per-run cost limit, and each draft its cost cap."
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "monthly_cap_usd"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentConnectionCap"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove an assistant connection's monthly spend cap",
+        "description": "The connection starts no run or draft from now on; it keeps its other scopes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[\\x21-\\x7e]{1,200}$"
+            },
+            "in": "query",
+            "name": "client_id",
+            "required": true,
+            "description": "The assistant's client at the identity provider."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -26352,7 +27440,7 @@
                   "planId": {
                     "type": "string",
                     "maxLength": 64,
-                    "description": "The plan's id in catalog v1: beta, individual, job-search-pass, pro, team, business, internal. Anything else answers 422."
+                    "description": "The plan's id in the plan catalog: free, beta, individual, job-search-pass, pro, team, business, internal. Anything else answers 422."
                   },
                   "overrides": {
                     "description": "Per-organisation entitlement overrides, merged over the plan.",

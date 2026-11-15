@@ -28,6 +28,18 @@ import {
   applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
 } from "./application-material-model.js";
+import {
+  InterviewGuideForm,
+  InterviewGuideReader,
+  useInterviewGuideDrafting,
+} from "./interview-guide.js";
+import {
+  emptyInterviewDetailsForm,
+  type InterviewDetailsForm,
+  type InterviewGuidePart,
+  interviewDetailsFormOf,
+  interviewGuideRefusals,
+} from "./interview-guide-model.js";
 import { useRecordId } from "./record-context.js";
 import { ResearchBriefSection } from "./research-brief.js";
 import { saveFile } from "./save-file.js";
@@ -40,8 +52,11 @@ import { saveFile } from "./save-file.js";
  * the rest of the page working.
  */
 
+/** The panel's tabs: a cover letter, or an interview preparation guide (#2621). */
+export type ApplicationMaterialPanelKind = "cover-letter" | "interview-guide";
+
 export interface ApplicationMaterialViewProps {
-  readonly kind: ApplicationMaterialKind;
+  readonly kind: ApplicationMaterialPanelKind;
   /** The version on screen: the newest saved one unless the candidate picked another. */
   readonly draft: ApplicationMaterialDraft | undefined;
   /** This kind's saved versions, newest first; empty on a server that keeps no drafts. */
@@ -63,7 +78,7 @@ export interface ApplicationMaterialViewProps {
   /** Folded to its heading row, so a feature the candidate does not use takes one line. */
   readonly collapsed: boolean;
   readonly onToggle: () => void;
-  readonly onKind: (kind: ApplicationMaterialKind) => void;
+  readonly onKind: (kind: ApplicationMaterialPanelKind) => void;
   readonly onDraft: () => void;
   readonly onDownload: () => void;
   readonly onSelect: (id: string) => void;
@@ -84,9 +99,15 @@ export interface ApplicationMaterialViewProps {
   readonly reviewNote?: string | undefined;
   /** Research about the employer (#2545), shown before the drafts when the server offers it. */
   readonly research?: ReactNode;
+  /** The interview details form, shown on the guide tab in place of the letter's guidance. */
+  readonly guideForm?: ReactNode;
+  /** True while research runs before a guide is drafted. */
+  readonly guideResearching?: boolean;
+  /** Writes one part of the open extensive guide again. */
+  readonly onGuidePart?: ((part: InterviewGuidePart) => void) | undefined;
 }
 
-const kinds = () => Object.keys(applicationMaterialKindLabels()) as ApplicationMaterialKind[];
+const kinds = (): readonly ApplicationMaterialPanelKind[] => ["cover-letter", "interview-guide"];
 
 export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
   const { kind, draft, problem, busy, versions, guidance } = props;
@@ -127,7 +148,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             {t`Prepare`}
           </button>
         </h2>
-        <span className="application-material-hint">{t`Optional · cover letter or interview questions`}</span>
+        <span className="application-material-hint">{t`Optional · cover letter or interview guide`}</span>
       </div>
       <div id="material-body" className="application-material-body" hidden={props.collapsed}>
         <fieldset className="view-toggle" disabled={busy}>
@@ -144,72 +165,79 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             </button>
           ))}
         </fieldset>
-        <p className="application-material-lead">{t`A cover letter or interview questions for this application, when you need them. Your CV does not depend on them.`}</p>
+        <p className="application-material-lead">{t`A cover letter or an interview preparation guide for this application, when you need them. Your CV does not depend on them.`}</p>
         {props.research}
-        {draft === undefined ? (
+        {draft === undefined && kind === "cover-letter" ? (
           <p className="application-material-note">{applicationMaterialDisclosure()}</p>
         ) : null}
+        {kind === "interview-guide" ? props.guideForm : null}
         <details className="application-material-guidance">
-          <summary>{t`Guide this draft (optional)`}</summary>
-          <label>
-            {t`What to stress`}
-            <textarea
-              className="input"
-              rows={2}
-              maxLength={400}
-              disabled={busy}
-              value={guidance.emphasis ?? ""}
-              placeholder={t`For example: my move into team leadership`}
-              onChange={(event) => change("emphasis", event.currentTarget.value)}
-            />
-          </label>
-          <div className="application-material-guidance-row">
-            <label>
-              {t`Tone`}
-              <select
-                className="input"
-                disabled={busy}
-                value={guidance.tone ?? ""}
-                onChange={(event) => change("tone", event.currentTarget.value)}
-              >
-                <option value="">{t`Default`}</option>
-                {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t`Length`}
-              <select
-                className="input"
-                disabled={busy}
-                value={guidance.length ?? ""}
-                onChange={(event) => change("length", event.currentTarget.value)}
-              >
-                <option value="">{t`Default`}</option>
-                {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {kind === "cover-letter" ? (
+          <summary>
+            {kind === "cover-letter" ? t`Guide this draft (optional)` : t`Model (optional)`}
+          </summary>
+          {kind === "cover-letter" ? (
+            <>
               <label>
-                {t`Address it to`}
-                <input
+                {t`What to stress`}
+                <textarea
                   className="input"
-                  maxLength={120}
+                  rows={2}
+                  maxLength={400}
                   disabled={busy}
-                  value={guidance.addressee ?? ""}
-                  placeholder={t`For example: the hiring team`}
-                  onChange={(event) => change("addressee", event.currentTarget.value)}
+                  value={guidance.emphasis ?? ""}
+                  placeholder={t`For example: my move into team leadership`}
+                  onChange={(event) => change("emphasis", event.currentTarget.value)}
                 />
               </label>
-            ) : null}
-          </div>
+              <div className="application-material-guidance-row">
+                <label>
+                  {t`Tone`}
+                  <select
+                    className="input"
+                    disabled={busy}
+                    value={guidance.tone ?? ""}
+                    onChange={(event) => change("tone", event.currentTarget.value)}
+                  >
+                    <option value="">{t`Default`}</option>
+                    {Object.entries(applicationMaterialToneLabels()).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t`Length`}
+                  <select
+                    className="input"
+                    disabled={busy}
+                    value={guidance.length ?? ""}
+                    onChange={(event) => change("length", event.currentTarget.value)}
+                  >
+                    <option value="">{t`Default`}</option>
+                    {Object.entries(applicationMaterialLengthLabels()).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {kind === "cover-letter" ? (
+                  <label>
+                    {t`Address it to`}
+                    <input
+                      className="input"
+                      maxLength={120}
+                      disabled={busy}
+                      value={guidance.addressee ?? ""}
+                      placeholder={t`For example: the hiring team`}
+                      onChange={(event) => change("addressee", event.currentTarget.value)}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            </>
+          ) : null}
           {props.models.length > 1 ? (
             <label>
               {t`Model`}
@@ -227,7 +255,7 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               </select>
             </label>
           ) : null}
-          {props.samples === undefined ? null : (
+          {props.samples === undefined || kind !== "cover-letter" ? null : (
             <fieldset className="application-material-samples" disabled={busy}>
               <legend>{t`Your writing samples`}</legend>
               <p className="application-material-note">{t`Paste up to three texts you wrote, such as an old letter or a long email. Drafts copy how you write, never what the samples say.`}</p>
@@ -258,7 +286,9 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
               </div>
             </fieldset>
           )}
-          <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
+          {kind === "cover-letter" ? (
+            <p className="application-material-note">{t`Guidance shapes the writing only. Every claim still comes from your career record.`}</p>
+          ) : null}
         </details>
         <div className="application-material-actions">
           <button
@@ -267,9 +297,18 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
             disabled={busy}
             onClick={props.onDraft}
           >
-            {busy ? t`Drafting…` : applicationMaterialDraftLabel(kind, draft !== undefined)}
+            {props.guideResearching === true
+              ? t`Researching…`
+              : busy
+                ? t`Drafting…`
+                : applicationMaterialDraftLabel(kind, draft !== undefined)}
           </button>
         </div>
+        {props.guideResearching === true ? (
+          <p className="application-material-note" role="status">
+            {t`Researching the employer, the role and the field. The guide is drafted as soon as the research ends, usually within two minutes.`}
+          </p>
+        ) : null}
         {problem === undefined ? null : <p role="alert">{problem}</p>}
         {props.reviewing === true ? (
           <p className="application-material-note" role="status">
@@ -299,55 +338,68 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                 </select>
               </label>
             ) : null}
-            <ol className="material-items">
-              {draft.items.map((item, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: a draft's items have no id and never reorder.
-                <li key={index} className="material-item">
-                  <div>
-                    {item.question === "" ? null : <h3>{item.question}</h3>}
-                    {props.edits === undefined ? (
-                      <p>{item.text}</p>
-                    ) : (
-                      <textarea
-                        className="input"
-                        rows={5}
-                        maxLength={4000}
-                        aria-label={t`Item ${index + 1}`}
-                        value={props.edits[index] ?? ""}
-                        disabled={busy}
-                        onChange={(event) => props.onEditText?.(index, event.currentTarget.value)}
-                      />
-                    )}
-                    {item.edited === true && props.edits === undefined ? (
-                      <p className="application-material-edited">{t`Edited by you`}</p>
-                    ) : null}
-                    {item.unsupported_numbers === undefined || props.edits !== undefined ? null : (
-                      <p className="application-material-note" role="note">
-                        {t`Check these numbers: none of the sources states ${item.unsupported_numbers.join(", ")}.`}
-                      </p>
-                    )}
-                  </div>
-                  <aside aria-label={t`Sources`}>
-                    <ul>
-                      {item.citations.map((citation) => (
-                        <li key={citation.fact_id}>{citation.text}</li>
-                      ))}
-                    </ul>
-                    {item.company_citations === undefined ? null : (
-                      <>
-                        <p className="application-material-source-kind">{t`About the company`}</p>
-                        <ul>
-                          {item.company_citations.map((citation) => (
-                            <li key={citation.finding_id}>{citation.text}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </aside>
-                </li>
-              ))}
-            </ol>
-            {draft.dropped_sentences === undefined ? null : (
+            {draft.kind === "interview-guide" ? (
+              <InterviewGuideReader
+                draft={draft}
+                busy={busy}
+                edits={props.edits}
+                onEditText={props.onEditText}
+                onPart={
+                  draft.interview_details?.depth === "extensive" ? props.onGuidePart : undefined
+                }
+              />
+            ) : (
+              <ol className="material-items">
+                {draft.items.map((item, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a draft's items have no id and never reorder.
+                  <li key={index} className="material-item">
+                    <div>
+                      {item.question === "" ? null : <h3>{item.question}</h3>}
+                      {props.edits === undefined ? (
+                        <p>{item.text}</p>
+                      ) : (
+                        <textarea
+                          className="input"
+                          rows={5}
+                          maxLength={4000}
+                          aria-label={t`Item ${index + 1}`}
+                          value={props.edits[index] ?? ""}
+                          disabled={busy}
+                          onChange={(event) => props.onEditText?.(index, event.currentTarget.value)}
+                        />
+                      )}
+                      {item.edited === true && props.edits === undefined ? (
+                        <p className="application-material-edited">{t`Edited by you`}</p>
+                      ) : null}
+                      {item.unsupported_numbers === undefined ||
+                      props.edits !== undefined ? null : (
+                        <p className="application-material-note" role="note">
+                          {t`Check these numbers: none of the sources states ${item.unsupported_numbers.join(", ")}.`}
+                        </p>
+                      )}
+                    </div>
+                    <aside aria-label={t`Sources`}>
+                      <ul>
+                        {item.citations.map((citation) => (
+                          <li key={citation.fact_id}>{citation.text}</li>
+                        ))}
+                      </ul>
+                      {item.company_citations === undefined ? null : (
+                        <>
+                          <p className="application-material-source-kind">{t`About the company`}</p>
+                          <ul>
+                            {item.company_citations.map((citation) => (
+                              <li key={citation.finding_id}>{citation.text}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </aside>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {draft.dropped_sentences === undefined || draft.kind === "interview-guide" ? null : (
               <section className="application-material-tells" aria-labelledby="material-dropped">
                 <h3 id="material-dropped">{t`Left out`}</h3>
                 <p>{t`No fact in your career record supports these sentences, so they are not in the letter.`}</p>
@@ -487,7 +539,10 @@ export function ApplicationMaterialSection({
   applicationId,
 }: ApplicationMaterialSectionProps) {
   const workspaceId = useRecordId();
-  const [kind, setKind] = useState<ApplicationMaterialKind>("cover-letter");
+  const [kind, setKind] = useState<ApplicationMaterialPanelKind>("cover-letter");
+  const [guideForm, setGuideForm] = useState<InterviewDetailsForm>(emptyInterviewDetailsForm);
+  const [guideResearch, setGuideResearch] = useState(true);
+  const guides = useInterviewGuideDrafting(client, workspaceId, applicationId);
   const [versions, setVersions] = useState<readonly ApplicationMaterialDraft[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [unsaved, setUnsaved] = useState<ApplicationMaterialDraft | undefined>(undefined);
@@ -593,27 +648,92 @@ export function ApplicationMaterialSection({
   useEffect(() => {
     if (collapsed) return;
     let current = true;
-    client
-      .call("GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material", {
-        path: { workspaceId, applicationId },
-        query: { kind },
-      })
-      .then(
-        (listed) => {
-          if (current) setVersions(listed.drafts);
-        },
-        () => {
-          if (current) setVersions([]);
-        },
-      );
+    const list = (listed: "cover-letter" | "interview-guide" | "interview-questions") =>
+      client
+        .call("GET /v1/workspaces/{workspaceId}/applications/{applicationId}/material", {
+          path: { workspaceId, applicationId },
+          query: { kind: listed },
+        })
+        .then((answer) => answer.drafts);
+    // The guide tab also lists earlier interview questions, which guides replaced (#2621).
+    const loaded =
+      kind === "cover-letter"
+        ? list("cover-letter")
+        : Promise.all([list("interview-guide"), list("interview-questions")]).then(
+            ([guidesSaved, questions]) =>
+              [...guidesSaved, ...questions].sort((left, right) =>
+                (right.created_at ?? "").localeCompare(left.created_at ?? ""),
+              ),
+          );
+    loaded.then(
+      (drafts) => {
+        if (current) setVersions(drafts);
+      },
+      () => {
+        if (current) setVersions([]);
+      },
+    );
     return () => {
       current = false;
     };
   }, [client, workspaceId, applicationId, kind, collapsed]);
 
+  // Drafts a guide, or one part of it again, researching first when the candidate approved.
+  const draftGuide = async (options: {
+    readonly form: InterviewDetailsForm;
+    readonly parts?: readonly InterviewGuidePart[];
+    readonly basedOn?: string;
+  }) => {
+    setBusy(true);
+    setProblem(undefined);
+    try {
+      const drafted = await guides.draft({
+        ...options,
+        research: options.parts === undefined && guideResearch,
+        modelId,
+      });
+      if (drafted === undefined) return;
+      if (drafted.id === undefined) {
+        setUnsaved(drafted);
+      } else {
+        setUnsaved(undefined);
+        setVersions((saved) => [drafted, ...saved]);
+        setSelectedId(drafted.id);
+      }
+    } catch (error) {
+      const code = (error as { readonly code?: unknown } | null)?.code;
+      setProblem(
+        (typeof code === "string" ? interviewGuideRefusals()[code] : undefined) ??
+          applicationMaterialProblem(error),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <ApplicationMaterialView
       kind={kind}
+      guideForm={
+        <InterviewGuideForm
+          form={guideForm}
+          onForm={setGuideForm}
+          research={guideResearch}
+          onResearch={setGuideResearch}
+          busy={busy}
+          firstGuide={!versions.some((version) => version.kind === "interview-guide")}
+        />
+      }
+      guideResearching={guides.researching}
+      onGuidePart={async (part) => {
+        const basedOn = draft?.id;
+        if (basedOn === undefined || draft?.interview_details === undefined) return;
+        await draftGuide({
+          form: interviewDetailsFormOf(draft.interview_details),
+          parts: [part],
+          basedOn,
+        });
+      }}
       research={
         collapsed ? undefined : (
           <ResearchBriefSection client={client} applicationId={applicationId} />
@@ -711,6 +831,10 @@ export function ApplicationMaterialSection({
         }
       }}
       onDraft={async () => {
+        if (kind === "interview-guide") {
+          await draftGuide({ form: guideForm });
+          return;
+        }
         setBusy(true);
         setProblem(undefined);
         try {

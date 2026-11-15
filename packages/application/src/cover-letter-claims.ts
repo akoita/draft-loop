@@ -27,12 +27,21 @@ export interface CoverLetterClaimLink {
   readonly kind: CoverLetterClaimKind;
   readonly factIds: readonly string[];
   readonly companyFactIds: readonly string[];
+  /** The job requirements a sentence about the employer or the role restates (#2639). */
+  readonly requirementIds?: readonly string[];
+}
+
+/** A requirement of the job post, which may support a sentence about the role. */
+export interface CoverLetterClaimRequirement {
+  readonly id: string;
+  readonly text: string;
 }
 
 export interface CoverLetterClaimCheckRequest {
   readonly sentences: readonly CoverLetterSentence[];
   readonly facts: readonly PickedCoverLetterFact[];
   readonly companyFacts: readonly ApplicationMaterialCompanyFact[];
+  readonly requirements?: readonly CoverLetterClaimRequirement[];
 }
 
 /** The model step: one link per sentence it can read; a missing link counts as unsupported. */
@@ -47,6 +56,7 @@ export type CoverLetterClaimProblem =
   | "no_fact"
   | "unknown_fact"
   | "unknown_company_fact"
+  | "unknown_requirement"
   | "company_fact_for_candidate"
   | "career_fact_for_employer"
   | "cross_group"
@@ -87,8 +97,8 @@ export function coverLetterSentences(letter: string): CoverLetterSentence[] {
 
 /**
  * Holds each sentence to its links. A candidate sentence cites at least one picked fact, all from
- * one group when they have groups, and states no number they do not; an employer sentence cites
- * company facts only; a courtesy sentence is short and states no number. No sentence talks about
+ * one group when they have groups, and states no number they do not; a sentence about the employer
+ * or the role cites company facts or the job's own requirements, never a career fact; a courtesy sentence is short and states no number. No sentence talks about
  * the record or the rules.
  */
 export function checkCoverLetterClaims(
@@ -97,6 +107,7 @@ export function checkCoverLetterClaims(
 ): CoverLetterClaimCheck {
   const facts = new Map(request.facts.map((fact) => [fact.id, fact]));
   const company = new Map(request.companyFacts.map((fact) => [fact.id, fact]));
+  const requirements = new Map((request.requirements ?? []).map((each) => [each.id, each]));
   const linkOf = new Map(links.map((link) => [link.sentenceId, link]));
   const sentences = request.sentences.map((sentence): CheckedCoverLetterSentence => {
     const link = linkOf.get(sentence.id);
@@ -114,6 +125,9 @@ export function checkCoverLetterClaims(
     const citedCompany = link.companyFactIds.flatMap((id) => company.get(id) ?? []);
     if (cited.length < link.factIds.length) problems.push("unknown_fact");
     if (citedCompany.length < link.companyFactIds.length) problems.push("unknown_company_fact");
+    const requirementIds = link.requirementIds ?? [];
+    const citedRequirements = requirementIds.flatMap((id) => requirements.get(id) ?? []);
+    if (citedRequirements.length < requirementIds.length) problems.push("unknown_requirement");
     let sources: string[] = [];
     if (link.kind === "candidate") {
       if (link.factIds.length === 0) problems.push("no_fact");
@@ -122,9 +136,14 @@ export function checkCoverLetterClaims(
       if (groups.size > 1) problems.push("cross_group");
       sources = cited.map((fact) => fact.brief);
     } else if (link.kind === "employer") {
-      if (link.companyFactIds.length === 0) problems.push("no_fact");
+      if (link.companyFactIds.length === 0 && citedRequirements.length === 0) {
+        problems.push("no_fact");
+      }
       if (link.factIds.length > 0) problems.push("career_fact_for_employer");
-      sources = citedCompany.map((fact) => fact.text);
+      sources = [
+        ...citedCompany.map((fact) => fact.text),
+        ...citedRequirements.map((requirement) => requirement.text),
+      ];
     } else if (sentence.text.length > maximumCourtesyCharacters) {
       problems.push("long_courtesy");
     }
@@ -149,8 +168,9 @@ export async function checkCoverLetter(
   facts: readonly PickedCoverLetterFact[],
   companyFacts: readonly ApplicationMaterialCompanyFact[],
   port: CoverLetterClaimCheckPort,
+  requirements: readonly CoverLetterClaimRequirement[] = [],
 ): Promise<CoverLetterClaimCheck> {
-  const request = { sentences: coverLetterSentences(letter), facts, companyFacts };
+  const request = { sentences: coverLetterSentences(letter), facts, companyFacts, requirements };
   const { links } = await port.link(request);
   return checkCoverLetterClaims(request, links);
 }

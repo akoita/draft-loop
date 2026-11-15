@@ -6,6 +6,7 @@ import { CareerPageTabs } from "./career-page-tabs.js";
 import { EvidenceSignpost, ProfileSignpostArea } from "./career-signposts.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import { HostEvidenceAfter, HostEvidenceBefore } from "./host-panels.js";
+import { HeaderThemeToggle } from "./theme.js";
 
 interface CareerPageFrameProps {
   readonly page: Extract<CareerFlowStep, "evidence" | "profile">;
@@ -40,7 +41,10 @@ function CareerPageFrame({
               <WorkspaceLocation current={current} back={back} />
               {workspaceTitle}
             </div>
-            <div className="home-header-actions">{workspaceNavigation}</div>
+            <div className="home-header-actions">
+              <HeaderThemeToggle />
+              {workspaceNavigation}
+            </div>
           </header>
           {errorMessage === null ? null : (
             <div className="error-banner" role="alert">

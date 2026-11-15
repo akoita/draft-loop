@@ -47,7 +47,7 @@ describe("the draftloop-mcp command", () => {
   });
 
   it("prints its usage and exits 2 for an unknown command", async () => {
-    const outcome = await run(["serve-http"], { cwd: root });
+    const outcome = await run(["serve-websocket"], { cwd: root });
     expect(outcome.code).toBe(2);
     expect(outcome.stdout).toBe("");
     expect(outcome.stderr).toContain("draftloop-mcp init --host claude-code|codex|generic");

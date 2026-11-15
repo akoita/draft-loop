@@ -11,11 +11,13 @@ import type { PreferenceSuggestions } from "@draft-loop/application/preference-s
 import type { WorkJournalService } from "@draft-loop/application/work-journal";
 import type { WritingSamplesService } from "@draft-loop/application/writing-samples";
 import type { UrlFetcher } from "@draft-loop/ingestion";
+import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
+import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import helmet from "@fastify/helmet";
@@ -31,7 +33,8 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
-import { registerAgentSpendGate } from "./agent-spend-gate.js";
+import { registerAgentConnectionCapRoutes } from "./agent-connection-cap-routes.js";
+import { type AgentConnectionCapsFor, registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
 import { registerApplicationFileRoutes } from "./application-file-routes.js";
 import { registerApplicationFolderRoutes } from "./application-folder-routes.js";
@@ -67,6 +70,7 @@ import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
@@ -101,6 +105,7 @@ import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
+import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
@@ -187,6 +192,16 @@ export interface ApiOptions {
    * tenant's through `agentTokensFor`. Owner mode only; without them agent tokens are refused.
    */
   readonly agentTokens?: AgentTokenStore;
+  /**
+   * Assistant connection caps with one fixed `application` (#2656); with `tenants`, each
+   * tenant's through `agentConnectionCapsFor`. Without them an assistant's sign-in never spends.
+   */
+  readonly agentConnectionCaps?: AgentConnectionCapStore;
+  /**
+   * Stored run spans with one fixed `application` (#1103); with `tenants`, each tenant's through
+   * `runSpansFor`. Without them the run trace route is not served.
+   */
+  readonly runSpans?: Pick<RunSpanStore, "list">;
   /** Serves each request from its caller's tenant instead of one fixed `application`. */
   readonly tenants?: TenantApplications;
   /**
@@ -286,7 +301,35 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           ? undefined
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
-  registerRequestAuthentication(app, options.ownerToken, auth, agentTokens);
+  const tenantConnectionCaps = options.tenants?.agentConnectionCapsFor;
+  const connectionCaps: AgentConnectionCapsFor | undefined =
+    options.agentConnectionCaps !== undefined
+      ? () => options.agentConnectionCaps
+      : tenantConnectionCaps === undefined
+        ? undefined
+        : (request) => {
+            const tenantId =
+              request.caller?.kind === "member" ? request.caller.tenantId : ownerTenantId;
+            return tenantId === undefined ? undefined : tenantConnectionCaps(tenantId);
+          };
+  const tenantRunSpans = options.tenants?.runSpansFor;
+  const runSpans: RunSpansFor | undefined =
+    options.runSpans !== undefined
+      ? () => options.runSpans
+      : tenantRunSpans === undefined
+        ? undefined
+        : (request) => {
+            const tenantId =
+              request.caller?.kind === "member" ? request.caller.tenantId : ownerTenantId;
+            return tenantId === undefined ? undefined : tenantRunSpans(tenantId);
+          };
+  registerRequestAuthentication(
+    app,
+    options.ownerToken,
+    auth,
+    agentTokens,
+    connectionCaps !== undefined,
+  );
   const recordActivity =
     options.organisationActivity === undefined
       ? undefined
@@ -440,10 +483,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
     // Before the routes, so a start an agent token makes is held to its monthly cap (#2599).
     const agentSpend =
-      agentTokens === undefined
+      agentTokens === undefined && connectionCaps === undefined
         ? undefined
         : registerAgentSpendGate(app, {
-            tokens: agentTokens,
+            ...(agentTokens === undefined ? {} : { tokens: agentTokens }),
+            ...(connectionCaps === undefined ? {} : { connectionCaps }),
             service: application.service,
             workspaceRoot: application.workspaceRoot,
             budgetCeiling: application.budgetCeiling,
@@ -563,6 +607,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
       ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
+      ...(application.preferenceSuggestions === undefined
+        ? {}
+        : {
+            // Read per request: in sign-in mode the suggestions belong to the request's tenant.
+            preferenceSources: (root: string) =>
+              application.preferenceSuggestions?.sources(root) ?? Promise.resolve([]),
+          }),
     });
     registerExportRoutes(app, {
       service: application.service,
@@ -679,6 +730,28 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
           ? {}
           : { researchBriefs: application.researchBriefs }),
       });
+      if (application.applicationMaterialDrafts !== undefined) {
+        registerInterviewGuideRoutes(app, {
+          service: application.service,
+          workspaceRoot: application.workspaceRoot,
+          material: {
+            get route() {
+              return interview.route;
+            },
+            get allowProviderData() {
+              return interview.allowProviderData;
+            },
+          },
+          drafts: application.applicationMaterialDrafts,
+          ...(application.consents === undefined ? {} : { consents: application.consents }),
+          ...(screening === undefined ? {} : { screening }),
+          ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+          ...(application.researchBriefs === undefined
+            ? {}
+            : { researchBriefs: application.researchBriefs }),
+          ...(application.researchRuns === undefined ? {} : { runs: application.researchRuns }),
+        });
+      }
     }
     if (application.researchBriefs !== undefined) {
       registerResearchBriefRoutes(app, {
@@ -693,6 +766,20 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         tokens: agentTokens,
+      });
+    }
+    if (runSpans !== undefined) {
+      registerRunTraceRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        spansFor: runSpans,
+      });
+    }
+    if (connectionCaps !== undefined) {
+      registerAgentConnectionCapRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        capsFor: connectionCaps,
       });
     }
     if (application.recordArchives !== undefined) {

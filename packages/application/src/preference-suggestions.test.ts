@@ -51,6 +51,7 @@ describe("suggestPreferences", () => {
         term: "passionate",
         occurrences: 3,
         applications: 2,
+        runIds: ["run-0", "run-1", "run-2"],
         reason: 'You removed "passionate" from 3 drafts across 2 applications.',
       }),
     ]);
@@ -72,6 +73,7 @@ describe("suggestPreferences", () => {
         sectionOrder: reordered,
         occurrences: 3,
         applications: 2,
+        runIds: ["r1", "r2", "r3"],
       }),
     ]);
     const twoOnly = { ...none, sectionOrders: signals.sectionOrders.slice(0, 2) };
@@ -120,6 +122,7 @@ describe("applyPreferenceSuggestion", () => {
     term: "passionate",
     occurrences: 3,
     applications: 2,
+    runIds: [],
     reason: "",
   };
   const sections: PreferenceSuggestion = {
@@ -128,6 +131,7 @@ describe("applyPreferenceSuggestion", () => {
     sectionOrder: reordered,
     occurrences: 3,
     applications: 2,
+    runIds: [],
     reason: "",
   };
 
@@ -219,9 +223,10 @@ describe("preference suggestions service", () => {
         configureWritingPolicy: async (command) => {
           content = command.content ?? content;
           saved.push(content);
-          return {} as never;
+          return { activeWritingPolicy: { checksum: "c".repeat(64) } } as never;
         },
       },
+      now: () => new Date("2026-11-11T10:00:00.000Z"),
     });
     return { suggestions, saved, settings };
   }
@@ -233,6 +238,23 @@ describe("preference suggestions service", () => {
     await suggestions.accept(root, suggestion?.id ?? "");
     expect(saved).toEqual(["# Policy\n- Forbidden term: passionate\n"]);
     expect(await suggestions.list(root)).toEqual([]);
+  });
+
+  it("records the runs an accepted suggestion came from, with its policy version (#2384)", async () => {
+    const { suggestions } = open();
+    expect(await suggestions.sources(root)).toEqual([]);
+    const [suggestion] = await suggestions.list(root);
+    expect(suggestion?.runIds).toEqual(["r1", "r2", "r3"]);
+    await suggestions.accept(root, suggestion?.id ?? "");
+    const recorded = [
+      {
+        suggestionId: suggestion?.id,
+        policyChecksum: "c".repeat(64),
+        runIds: ["r1", "r2", "r3"],
+        acceptedAt: "2026-11-11T10:00:00.000Z",
+      },
+    ];
+    expect(await suggestions.sources(root)).toEqual(recorded);
   });
 
   it("dismissing records only the id and never offers it again", async () => {

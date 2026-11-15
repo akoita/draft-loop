@@ -8,7 +8,7 @@ import { plural, t } from "@lingui/core/macro";
  *
  * The drawer holds the author and critic with their claimed lineages, the data and writing
  * policy, the evidence mode, the author input, the run's event timeline once it is not running,
- * and **Start a new review**. What the reviewer must act on or weigh stays outside it: run
+ * the steps the server executed when the host records them, and **Start a new review**. What the reviewer must act on or weigh stays outside it: run
  * progress and Stop while a run executes, Resume for a paused or interrupted run, and the
  * shared-lineage warning, which a person about to approve has to see.
  *
@@ -41,6 +41,7 @@ import {
 import { runApplicationPlanDisplay } from "./run-application-plan.js";
 import { runAuthorInputDisplay } from "./run-author-input-display.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
+import { type LoadRunTrace, RunSteps } from "./run-steps.js";
 import { plainStopReason } from "./stop-reason.js";
 
 /** The time a direction was given, in the reader's locale; the recorded text when unreadable. */
@@ -80,11 +81,11 @@ export function recordedRunModels(
   };
 }
 
-const modelsNotRecorded = "models not recorded";
+const modelsNotRecorded = (): string => t`models not recorded`;
 
 /** One role's recorded model, or "unknown" when only the other role's was recorded. */
 function recordedModelLabel(modelId: string, name: (id: string) => string = (id) => id): string {
-  return modelId === "" ? "unknown" : name(modelId);
+  return modelId === "" ? t`unknown` : name(modelId);
 }
 
 type RunDetailsSummaryInput = Pick<
@@ -114,14 +115,14 @@ export function runDetailsSummary(state: RunDetailsSummaryInput): string {
   const recorded = recordedRunModels(state);
   const models =
     recorded === null
-      ? modelsNotRecorded
+      ? modelsNotRecorded()
       : `${recordedModelLabel(recorded.author, shortModelName)} → ${recordedModelLabel(recorded.critic, shortModelName)}`;
   const policy =
     state.writingPolicy === undefined || state.writingPolicy === null
-      ? "no policy"
+      ? t`no policy`
       : state.writingPolicy.lineage.kind === "workspace"
-        ? "policy active"
-        : "policy override";
+        ? t`policy active`
+        : t`policy override`;
   return `${models} · ${evidenceSummary(state)} · ${policy}`;
 }
 
@@ -148,7 +149,9 @@ export function policyChecksumLabel(checksum: string): string {
 
 function policyLineageLabel(policy: RunWritingPolicyProjection): string {
   if (policy.lineage.kind === "workspace") return t`Workspace policy`;
-  return `Base ${policy.base?.version ?? policy.lineage.base.version} → override ${policy.override?.version ?? policy.lineage.override.version}`;
+  const base = policy.base?.version ?? policy.lineage.base.version;
+  const override = policy.override?.version ?? policy.lineage.override.version;
+  return t`Base ${base} → override ${override}`;
 }
 
 /** How the trust facts present a recorded independence claim. */
@@ -180,7 +183,7 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
   if (view === null) {
     return {
       tone: "unrecorded",
-      mark: "not recorded",
+      mark: t`not recorded`,
       detail: t`No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.`,
       overrideRationale: null,
     };
@@ -188,17 +191,17 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
   if (!view.required) {
     return {
       tone: "unrecorded",
-      mark: "not required",
-      detail: t`Independent review was not required for this run; the claimed lineages ${
-        view.lineagesDistinct ? "differ" : "are the same"
-      }.`,
+      mark: t`not required`,
+      detail: view.lineagesDistinct
+        ? t`Independent review was not required for this run; the claimed lineages differ.`
+        : t`Independent review was not required for this run; the claimed lineages are the same.`,
       overrideRationale: null,
     };
   }
   if (view.lineagesDistinct) {
     return {
       tone: "independent",
-      mark: "lineages differ",
+      mark: t`lineages differ`,
       detail: t`Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.`,
       overrideRationale: null,
     };
@@ -206,14 +209,14 @@ function independenceSummary(view: IndependentReviewView | null): IndependenceSu
   if (view.overrideRationale !== null) {
     return {
       tone: "shared",
-      mark: "overridden",
+      mark: t`overridden`,
       detail: t`Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.`,
       overrideRationale: view.overrideRationale,
     };
   }
   return {
     tone: "shared",
-    mark: "not independent",
+    mark: t`not independent`,
     detail: t`Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.`,
     overrideRationale: null,
   };
@@ -278,7 +281,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
       <div className="trust-fact">
         <span className="label">{t`Author`}</span>
         <strong>
-          {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.author)}
+          {recorded === null ? modelsNotRecorded() : recordedModelLabel(recorded.author)}
         </strong>
         {recorded?.authorEffort === undefined ? null : (
           <span>
@@ -294,7 +297,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
       <div className="trust-fact">
         <span className="label">{t`Critic`}</span>
         <strong>
-          {recorded === null ? modelsNotRecorded : recordedModelLabel(recorded.critic)}
+          {recorded === null ? modelsNotRecorded() : recordedModelLabel(recorded.critic)}
         </strong>
         {recorded?.criticEffort === undefined ? null : (
           <span>
@@ -503,6 +506,7 @@ export function RunDetailsDrawer({
   describeState,
   start,
   autopilot,
+  loadTrace,
 }: {
   readonly id: string;
   readonly open: boolean;
@@ -515,6 +519,8 @@ export function RunDetailsDrawer({
   readonly start: RunDetailsStart | null;
   /** The autopilot switch for a run that has not finished; null hides it. */
   readonly autopilot: ReactNode;
+  /** Reads the run's trace for the Steps section; without it there is no section. */
+  readonly loadTrace?: LoadRunTrace;
 }): JSX.Element {
   const headingId = useId();
   const drawerRef = useRef<HTMLElement>(null);
@@ -590,6 +596,9 @@ export function RunDetailsDrawer({
               <p className="setup-note">{t`The run's progress is in the side panel while it runs.`}</p>
             ) : (
               <RunTimeline events={state.events} describeState={describeState} />
+            )}
+            {loadTrace === undefined ? null : (
+              <RunSteps runId={state.runId} active={open && !runInProgress} load={loadTrace} />
             )}
           </section>
           <RunTrustFacts state={state} />

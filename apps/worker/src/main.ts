@@ -4,6 +4,7 @@ import process from "node:process";
 import { createFactUsageService } from "@draft-loop/application/fact-usage";
 import { materialReviewPorts } from "@draft-loop/application/material-review-ports";
 import { researchFindingsPorts, researchScreen } from "@draft-loop/application/research-ports";
+import { createRunSpanRecorder } from "@draft-loop/application/run-span-recorder";
 import { createWritingSamplesService } from "@draft-loop/application/writing-samples";
 import {
   hostedWorkspaceReference,
@@ -96,6 +97,15 @@ const worker = await startWorker({
     workspaceRoot,
     allowProviderData: config.allowProviderData,
     ...(consentFor === undefined ? {} : { consentFor }),
+    // The run's content-free spans (#2686); a failed save is logged and never reaches the run.
+    spansFor: (job) =>
+      createRunSpanRecorder({
+        store: tenancy.forTenant(job.tenantId).runSpans,
+        workspaceId: job.workspaceId,
+        runId: job.runId,
+        onError: (error) =>
+          console.error(logLine("ERROR", "run span not saved", { err: errorFields(error) })),
+      }),
     budgetCeiling: config.budgetCeiling,
     // Material flagged after a run was queued, or with no result while screening is on, pauses the
     // run before any provider call.

@@ -511,12 +511,22 @@ plan decides what is enabled.
 
   | Plan | Price | Included |
   |---|---|---|
-  | Individual | €19/month | 4 CVs, economy model pair |
-  | Job-search pass | €49 once, 3 months | 12 CVs |
-  | Pro | €49/month | 8 CVs, frontier pair, provenance report |
-  | Team | €149/month per coach seat | 30 CVs, pooled |
+  | Free | €0, no card | 1 welcome application on the standard pair, 20 light model calls a day |
+  | Credit pack | 1 for €5, 5 for €22, valid 12 months | Pay per application, no subscription |
+  | Individual | €19/month | 5 applications, economy model pair |
+  | Job-search pass | €49 once, 3 months | 12 applications |
+  | Pro | €49/month | 8 applications, frontier pair, provenance report |
+  | Team | €149/month per coach seat | 30 applications, pooled |
   | Business | Quote | BYOK, SSO, retention controls |
-  | Extra CV | €5 | |
+
+  - **Free to paid (amended 2026-11-11, #2677).** A person climbs from Free
+    to a credit pack, then to a pass or a subscription, and is never forced
+    into a subscription to continue. Catalog v2 holds the Free plan and the
+    packs as data; buying a pack and self-service sign-up are not built.
+  - **One credit is one application:** the CV run and that job's cover
+    letter, interview guide and research. A premium pair costs 2 credits.
+  - **Nothing the user made is locked.** With no credit left they still
+    open, edit and export.
 
   - **Margin rule:** an included CV costs the platform no more than about
     half of what the user pays for it.
@@ -734,7 +744,11 @@ not a second product.
     path without the self-hosted stack is not served.
   - *Hosted:* the same process and tools against the cloud API (D10), with
     a signed-in token from the identity provider and plan credits (D13).
-    A remote MCP endpoint with OAuth on the API comes later.
+  - *Remote (#2647):* `draftloop-mcp serve-http` serves the same tools over
+    Streamable HTTP on one URL, forwarding each caller's own credential to
+    the API and keeping none. In sign-in mode it is an OAuth protected
+    resource (#2648): it publishes its metadata, and the identity provider
+    signs the person in for a client created per assistant.
 - **First tools: the work journal (decided 2026-11-01, #2018).**
   `record_work` lets the candidate's coding agent file a short note about
   notable work it just helped ship, and `list_work` lists those notes by
@@ -761,6 +775,12 @@ not a second product.
   `journal` only. The API admits an agent token through one route-to-scope
   table, and a test fails when a route is not classified, so a new route is
   refused to agents until someone decides.
+- **Agent grants on the hosted service (#2646).** There, an assistant holds
+  the identity provider's access token, issued to its own client. The API
+  admits it as the member on the same route-to-scope table, with scopes
+  spelled `draftloop:<scope>`. A grant spends only within the monthly cap its
+  person set for that assistant in the workspace (#2653), and never without
+  one.
 - **Human-only:** approving a draft, deciding findings, editing draft blocks,
   consent, erasure, releasing quarantined material, models, budget, writing
   policy and its suggestions, members, tokens and the career interview, which

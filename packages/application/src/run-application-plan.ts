@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import type { ApplicationPlanner, AuthorAgent, CriticAgent } from "@draft-loop/orchestrator";
+import type {
+  ApplicationPlanner,
+  AuthorAgent,
+  CriticAgent,
+  RunTracer,
+} from "@draft-loop/orchestrator";
 import {
   type ApplicationPlan,
   type ApplicationPlanReview,
@@ -41,6 +46,8 @@ export interface RunRecorders {
   readonly recordAuthorInput: RecordAuthorInput;
   /** Absent turns the plan step off for the run. */
   readonly recordApplicationPlan?: (runId: string, state: ApplicationPlanState) => Promise<void>;
+  /** Receives the run's content-free spans; absent records none. */
+  readonly tracer?: RunTracer;
 }
 
 /** The recorders of a run; planning is on unless the run options turn it off. */
@@ -49,9 +56,11 @@ export function runRecorders(
   workspaceId: string,
   recordAuthorInput: RecordAuthorInput,
   applicationPlan: boolean | undefined,
+  tracer?: RunTracer,
 ): RunRecorders {
   return {
     recordAuthorInput,
+    ...(tracer === undefined ? {} : { tracer }),
     ...(applicationPlan === false
       ? {}
       : {

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   type ClaudeSearchClient,
   ClaudeSearchError,
+  claudePageAgeDate,
   claudeWebSearchTool,
   createClaudeResearchSearch,
   directClaudeSearchClient,
@@ -158,5 +159,40 @@ describe("Claude research search", () => {
     await expect(directClaudeSearchClient(async () => undefined)()).rejects.toMatchObject({
       code: "no_key",
     });
+  });
+
+  it("dates each page from its absolute, ISO or relative page age (#2579)", () => {
+    const searchedAt = new Date("2026-11-11T09:30:00Z");
+    expect(claudePageAgeDate("October 3, 2026", searchedAt)).toBe("2026-10-03");
+    expect(claudePageAgeDate("2026-09-30T23:30:00Z", searchedAt)).toBe("2026-09-30");
+    expect(claudePageAgeDate("2 days ago", searchedAt)).toBe("2026-11-09");
+    expect(claudePageAgeDate("a week ago", searchedAt)).toBe("2026-11-04");
+    expect(claudePageAgeDate("3 Months ago", searchedAt)).toBe("2026-08-11");
+    expect(claudePageAgeDate("1 year ago", searchedAt)).toBe("2025-11-11");
+    expect(claudePageAgeDate("5 hours ago", searchedAt)).toBe("2026-11-11");
+    expect(claudePageAgeDate("yesterday", searchedAt)).toBe("2026-11-10");
+    for (const undated of [null, undefined, "", "recently", "2026-13-45"]) {
+      expect(claudePageAgeDate(undated, searchedAt)).toBeUndefined();
+    }
+  });
+
+  it("keeps a relative page age as a dated source, counted from the search time", async () => {
+    const relative = {
+      ...results,
+      content: [{ ...results.content[0], page_age: "2 days ago" }],
+    };
+    const { clientFor } = scripted(
+      reply([
+        relative,
+        { type: "text", text: "x", citations: [cite("https://example.org/news", "A")] },
+      ]),
+    );
+    const search = createClaudeResearchSearch({
+      route: "anthropic-api",
+      clientFor,
+      now: () => new Date("2026-11-11T09:30:00Z"),
+    });
+    const sources = (await search.search(request)).sources;
+    expect(sources).toEqual([expect.objectContaining({ publishedOn: "2026-11-09" })]);
   });
 });

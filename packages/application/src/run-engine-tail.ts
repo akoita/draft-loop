@@ -41,6 +41,7 @@ export function runEngineTail(
       workspaceId,
       runAuthorInputRecorder(storage, workspaceId, retrieval),
       options.applicationPlan,
+      options.tracer,
     ),
   ];
 }

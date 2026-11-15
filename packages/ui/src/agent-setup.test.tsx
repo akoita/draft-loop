@@ -172,6 +172,15 @@ describe("AgentSetup", () => {
     expect(html.indexOf("the switch")).toBeLessThan(html.indexOf("Connect an agent"));
   });
 
+  it("shows what connected assistants may spend where the host keeps their limits", () => {
+    const html = renderToStaticMarkup(
+      <AgentSetup {...props} available={false} connections={<p>the limits</p>} />,
+    );
+    expect(html).toContain("the limits");
+    expect(html).not.toContain("is not available yet");
+    expect(html).not.toContain("Connect an agent</summary>");
+  });
+
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} available={false} />);
     expect(html).toContain("is not available yet");

@@ -239,8 +239,8 @@ returns a run's open draft, its findings or career evidence.
 | `get_run_status`    | `applications:read` | Says where a CV run stands and what waits for the candidate                |
 | `add_job`           | `jobs:write`        | Adds an application from a job description pasted as text                  |
 | `get_cv`            | `drafts:read`       | Reads the newest Markdown export of the CV the application uses            |
-| `list_materials`    | `drafts:read`       | Lists saved cover letters and interview question sets, without their text  |
-| `get_material`      | `drafts:read`       | Reads one saved cover letter or question set, without the facts it cites   |
+| `list_materials`    | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text |
+| `get_material`      | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list |
 | `estimate_run`      | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap        |
 | `start_cv_run`      | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap               |
 | `draft_cover_letter` | `runs:start`       | Drafts and saves a cover letter, within the cap                            |
@@ -315,6 +315,69 @@ tool the server offers.
 With the plugin installed, Claude Code also lists each MCP prompt, as
 `/plugin:draftloop:draftloop:<prompt> (MCP)`.
 
+## Serve the tools over HTTP
+
+Some assistants connect to an MCP server by address instead of starting a
+command. `draftloop-mcp serve-http` serves the same tools over Streamable HTTP:
+
+```sh
+DRAFT_LOOP_SERVER_URL=http://127.0.0.1:8080 draftloop-mcp serve-http
+```
+
+It prints `DraftLoop MCP tools on http://127.0.0.1:8090/mcp`. The caller sends
+its own agent token as `Authorization: Bearer`, and the server forwards it to
+the API on each call. It keeps no token, no session and no candidate data.
+
+| Setting                       | Default                 | What it sets                         |
+| ----------------------------- | ----------------------- | ------------------------------------ |
+| `DRAFT_LOOP_SERVER_URL`       | `http://127.0.0.1:8080` | The DraftLoop API the tools call     |
+| `DRAFT_LOOP_SERVER_WORKSPACE` | `owner`                 | The workspace the tools act in       |
+| `DRAFT_LOOP_MCP_PORT`         | `8090`                  | The port it listens on               |
+| `DRAFT_LOOP_MCP_HOST`         | `127.0.0.1`             | The address it binds                 |
+
+A request without a credential answers `401`, and `GET /healthz` answers
+`200`. It speaks plain `http` on this computer only: to reach it from another
+machine, put a TLS proxy in front of it.
+
+### With OAuth sign-in
+
+On a server in sign-in mode, set both addresses and the server asks
+assistants to sign the person in instead of taking an agent token:
+
+| Setting                     | What it sets                                                 |
+| --------------------------- | ------------------------------------------------------------ |
+| `DRAFT_LOOP_MCP_PUBLIC_URL` | This server's `https` address as people enter it, ending `/mcp` |
+| `DRAFT_LOOP_OIDC_ISSUER`    | The identity provider's issuer, the same one the API trusts  |
+
+```mermaid
+sequenceDiagram
+  participant A as Assistant
+  participant M as MCP server
+  participant I as Identity provider
+  participant D as DraftLoop API
+  A->>M: POST /mcp without a token
+  M-->>A: 401 with the metadata address and default scopes
+  A->>M: GET /.well-known/oauth-protected-resource
+  A->>I: Sign the person in (PKCE), who grants scopes
+  A->>M: POST /mcp with the access token
+  M->>D: GET /v1/workspaces with that token
+  M->>D: The tool's call, in the person's workspace
+```
+
+- **Default scopes.** The server asks for `journal`, `applications:read` and
+  `jobs:write`. `drafts:read` and `runs:start` are granted only when the
+  person adds them.
+- **Runs and drafts.** With `runs:start`, the assistant starts them within
+  [the connection's spend cap](#the-connections-spend-cap). Without a cap, the
+  tool tells the person to set one in Workspace settings > Agents.
+- **Workspace.** The tools act in the signed-in person's workspace. A person
+  who reaches several gets the first by id; choosing one is not built.
+- **A dead token** answers `401` with `invalid_token`, so the assistant
+  refreshes it. An account without a workspace answers `403`.
+- **Identity provider.** It needs one confidential client per assistant with
+  that assistant's redirect address, PKCE with S256, refresh tokens, the API's
+  audience on the token and the `draftloop:` scopes as optional client scopes.
+
 ## How the candidate reviews
 
 Each pending note shows its title, period, project, technologies, role,
@@ -333,6 +396,50 @@ A pending note's review link, `/#work-journal`, opens this panel, and the
 workspace home shows how many notes wait. The same review runs from the CLI
 with `draft-loop work-journal`; see the
 [self-hosted server](../operations/self-hosted.md#work-journal) guide.
+
+## On the hosted service: an assistant's sign-in
+
+A candidate's own guide is [Connect DraftLoop to your assistant](connect-an-assistant.md).
+
+The hosted service issues no agent tokens. An assistant instead signs the
+person in through the identity provider and holds an access token issued to
+its own client. The API treats that token as an **agent grant**:
+
+- **Same routes.** The grant acts as the signed-in member, on the routes the
+  agent scopes admit and no other. A decision, a setting or sign-up answers
+  `403`.
+- **Scopes.** The token's `scope` claim carries each granted scope as
+  `draftloop:<scope>`, such as `draftloop:applications:read`. A token of any
+  client other than the web screen's is a grant, even with no scope.
+- **Spending needs a cap.** A grant with `runs:start` starts a run or a draft
+  only within the monthly cap its person set for that assistant in the
+  workspace. Without a cap it answers `429`, like a token past its cap.
+
+### The connection's spend cap
+
+The person sets the cap in **Workspace settings > Agents**, under "Spending by
+connected assistants": the assistant's id and a monthly limit in US dollars.
+An assistant without a cap names its id in its refusal. One cap holds for one
+workspace and one assistant client.
+
+The screen calls these routes from the person's own sign-in; an assistant
+never reaches them.
+
+| Route                                                       | What it does                                 |
+| ----------------------------------------------------------- | -------------------------------------------- |
+| `GET /v1/workspaces/{id}/agent-connections`                 | Lists each cap and what it reserved this month |
+| `PUT /v1/workspaces/{id}/agent-connections`                 | Sets or changes a cap: `client_id`, `monthly_cap_usd` |
+| `DELETE /v1/workspaces/{id}/agent-connections?client_id=…` | Removes a cap; the connection stops spending |
+
+Each start reserves its worst case against the cap, as an
+[agent token's](#starting-runs-and-drafts-within-a-monthly-spend-cap) does: a
+run reserves the workspace's per-run cost limit and a draft its cost cap. The organisation's plan and credits still
+apply to each run. A server that keeps no caps refuses every grant's start
+with `403`.
+
+The assistant gets that token through the
+[remote server's OAuth sign-in](#with-oauth-sign-in). A grant also lists the
+ids of the workspaces its member reaches, and nothing else outside a workspace.
 
 ## Privacy lines
 

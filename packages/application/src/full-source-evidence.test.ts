@@ -15,9 +15,11 @@ import {
   announceRunEvidenceMode,
   decideFullSourceEvidence,
   defaultFullSourceBudgetCharacters,
+  evidenceModePreflightLine,
   fullSourceBudgetCharacters,
 } from "./full-source-evidence.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
+import { withRequirementPickedEvidence } from "./requirement-picked-evidence.js";
 import { createSourceSensitivityService } from "./source-sensitivity-service.js";
 import type { EvidenceMode } from "./workspace-evidence-mode.js";
 
@@ -271,7 +273,47 @@ describe("full-source evidence", () => {
     expect(appendAuditEvent).not.toHaveBeenCalled();
   });
 
-  it("derives the budget from the smaller known context window, else the default", () => {
+  it("fills the cost cap with requirement-picked chunks and never a withheld one", async () => {
+    const fixture = await createFixture(rules);
+    const runtime = candidateKnowledgeRuntimeRetrieval(
+      { appendCandidateKnowledgeRetrievalTrace: async (input) => input as never },
+      {
+        id: "workspace-full-source",
+        requiredSections: [],
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot: fixture.storeRoot, knowledgeBaseId: fixture.knowledgeBaseId }],
+        },
+      },
+      contextWith(fixture),
+      undefined,
+      "full-source",
+      undefined,
+      2_500,
+    );
+    if (runtime === undefined) throw new Error("Expected candidate knowledge retrieval.");
+    const decision = await runtime.evidenceModeDecision();
+    expect(decision).toMatchObject({
+      fallbackReason: "cost-cap-exceeded",
+      budgetCharacters: 10_000,
+    });
+
+    const retrieved = await runtime.port.queryEvidence(query);
+    const picked = await withRequirementPickedEvidence(runtime, {
+      requirements: [
+        { id: "r1", text: "Fictional salary history and platform milestone 7", priority: "must" },
+      ],
+    } as never).port.queryEvidence(query);
+
+    expect(picked.slice(0, retrieved.length)).toEqual(retrieved);
+    expect(picked.length).toBeGreaterThan(retrieved.length);
+    expect(new Set(picked.map(({ id }) => id)).size).toBe(picked.length);
+    expect(JSON.stringify(picked).length).toBeLessThanOrEqual(decision.budgetCharacters);
+    expect(picked.some(({ text }) => text.includes(withheldMarker))).toBe(false);
+    const eligibleIds = new Set((await runtime.fullSourceEvidence()).map(({ id }) => id));
+    expect(picked.slice(retrieved.length).every(({ id }) => eligibleIds.has(id))).toBe(true);
+  });
+
+  it("derives the budget from the smaller known context window and the cost cap", () => {
     const selection = (contextWindowTokens?: number) =>
       contextWindowTokens === undefined
         ? {}
@@ -287,6 +329,11 @@ describe("full-source evidence", () => {
       defaultFullSourceBudgetCharacters,
     );
     expect(fullSourceBudgetCharacters(configuration())).toBe(240_000);
+    // A workspace cost cap lowers the budget and never raises it.
+    expect(fullSourceBudgetCharacters(configuration(200_000, 1_000_000), 50_000)).toBe(200_000);
+    expect(fullSourceBudgetCharacters(configuration(), 50_000)).toBe(200_000);
+    expect(fullSourceBudgetCharacters(configuration(200_000, 1_000_000), 500_000)).toBe(400_000);
+    expect(fullSourceBudgetCharacters(configuration(), 1_000_000)).toBe(240_000);
   });
 
   it("counts the distinct sources among the eligible chunks", () => {
@@ -305,5 +352,21 @@ describe("full-source evidence", () => {
       effectiveMode: "retrieval",
       fallbackReason: "no-eligible-chunks",
     });
+  });
+
+  it("names the cost cap when the evidence fits the models but not the cap", () => {
+    const evidence = [{ id: "chunk-1", sourceId: "source-1", text: "x".repeat(500) }] as never;
+    // Too large for the capped budget, small enough for the context budget.
+    expect(decideFullSourceEvidence(evidence, 100, 10_000)).toMatchObject({
+      effectiveMode: "retrieval",
+      fallbackReason: "cost-cap-exceeded",
+      budgetCharacters: 100,
+    });
+    // Too large for the models whatever the cap.
+    expect(decideFullSourceEvidence(evidence, 100, 200).fallbackReason).toBe("budget-exceeded");
+    expect(decideFullSourceEvidence(evidence, 100).fallbackReason).toBe("budget-exceeded");
+    expect(evidenceModePreflightLine(decideFullSourceEvidence(evidence, 100, 10_000))).toContain(
+      "exceeds the workspace cost cap",
+    );
   });
 });

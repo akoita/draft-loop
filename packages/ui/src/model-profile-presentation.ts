@@ -17,6 +17,9 @@ const modelNames = (): Readonly<Record<string, string>> => ({
   "zai-org/GLM-5.3-Flash": t`GLM-5.3 Flash`,
   "gemini-3.7-flash": t`Gemini 3.7 Flash`,
   "gemini-3.8-flash": t`Gemini 3.8 Flash`,
+  "gemini-4-hydrogen": t`Gemini 4 Hydrogen`,
+  "gemini-4-carbon": t`Gemini 4 Carbon`,
+  "gemini-4-argon": t`Gemini 4 Argon`,
   "mistral-large-4": t`Mistral Large 4 (preview)`,
 });
 

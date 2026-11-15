@@ -1,4 +1,5 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { enterIsComposing } from "./submit-on-enter.js";
 
 export interface InlineRenameOptions {
   /** The name shown while not editing. */
@@ -126,6 +127,8 @@ export function useInlineRename({
     cancel,
     onKeyDown: (event) => {
       if (event.key === "Enter") {
+        // Enter that confirms an input-method candidate belongs to the input method.
+        if (enterIsComposing(event)) return;
         event.preventDefault();
         if (!busyRef.current) void store(true);
         return;

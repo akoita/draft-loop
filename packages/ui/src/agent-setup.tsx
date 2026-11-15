@@ -55,6 +55,11 @@ export interface AgentSetupProps {
   readonly onRevoke: (tokenId: string) => Promise<string | undefined>;
   /** The "Accept notes from agents" switch (#2625), from a host that serves the work journal. */
   readonly workJournal?: ReactNode;
+  /**
+   * What connected assistants may spend (#2657), from a host where an assistant signs the
+   * person in. It replaces the line that says agents cannot connect.
+   */
+  readonly connections?: ReactNode;
 }
 
 function GuideLink({ children }: { readonly children: string }) {
@@ -74,6 +79,7 @@ export function AgentSetup({
   onRevoke,
   open = false,
   workJournal,
+  connections,
 }: AgentSetupProps) {
   const id = useId();
   const [host, setHost] = useState<AgentHost>("plugin");
@@ -99,10 +105,12 @@ export function AgentSetup({
     return (
       <section className="coding-agents" id={codingAgentsSectionId}>
         {heading}
-        <p className="muted">
-          {t`Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server.`}{" "}
-          <GuideLink>{t`How it works`}</GuideLink>
-        </p>
+        {connections ?? (
+          <p className="muted">
+            {t`Connecting an agent to the hosted service is not available yet. It works today with a self-hosted server.`}{" "}
+            <GuideLink>{t`How it works`}</GuideLink>
+          </p>
+        )}
       </section>
     );
   }

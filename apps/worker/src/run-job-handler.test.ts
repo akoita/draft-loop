@@ -73,6 +73,42 @@ describe("run job handler", () => {
     expect(requeue).not.toHaveBeenCalled();
   });
 
+  it("hands the run its span recorder and waits for its saves, also when the step throws", async () => {
+    const flushed: string[] = [];
+    const tracer = { startSpan: vi.fn() };
+    const service = {
+      status: vi.fn<Service["status"]>(async () => snapshot("drafting")),
+      resume: vi.fn<Service["resume"]>(async () => snapshot("awaiting-approval")),
+    };
+    const handler = createRunJobHandler({
+      serviceFor: () => service,
+      workspaceRoot: () => root,
+      allowProviderData: true,
+      budgetCeiling,
+      spansFor: (queued) => ({
+        tracer,
+        flush: async () => {
+          flushed.push(queued.runId);
+        },
+      }),
+    });
+
+    await handler(job, { requeue: async () => undefined });
+    expect(service.resume).toHaveBeenCalledWith({
+      root,
+      runId: "run-1",
+      allowProviderData: true,
+      tracer,
+    });
+    expect(flushed).toEqual(["run-1"]);
+
+    service.resume.mockRejectedValueOnce(new Error("the step failed"));
+    await expect(handler(job, { requeue: async () => undefined })).rejects.toThrow(
+      "the step failed",
+    );
+    expect(flushed).toEqual(["run-1", "run-1"]);
+  });
+
   it("drafts the next round of a run the person sent back for revision", async () => {
     const { service, outcome } = await handle(snapshot("revising"), snapshot("awaiting-approval"));
 

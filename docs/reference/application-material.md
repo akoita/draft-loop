@@ -13,7 +13,7 @@ The drafter builds a bounded context, then asks the model behind
 
 | Input            | Rule                                                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. |
+| Career facts     | Identity and contact facts are always withheld; the host's rules may withhold more. Ranked by the words they share with the requirements, weighted by priority, then at most 60, each cut to 300 characters. The title, employer and dates of the best-matching roles are always kept. |
 | Job requirements | Third-party text from the job post. Sent as data, never as instructions. At most 20, critical first.                        |
 | Guidance         | Optional, the candidate's own: what to stress (400 characters), tone, length and, for a cover letter, the addressee.        |
 | Voice            | Optional: up to three writing samples (2,000 characters each sent), the writing policy's forbidden terms, tone and spelling. Style only. |
@@ -23,7 +23,7 @@ The drafter builds a bounded context, then asks the model behind
 Guidance steers the writing and is never a fact. The model may not cite it,
 and the refusal rules below check claims and numbers against cited facts
 only, so a number stated only in the guidance is refused. The prompt is
-`application-material-v10`.
+`application-material-v11`.
 
 A cover letter also follows a human writing brief: 250 to 350 words, plain
 words, varied sentences, one concrete detail from a cited fact, no stock
@@ -141,25 +141,30 @@ flowchart LR
   check -- every sentence holds --> keep[Paragraphs with citations]
   check -- some fail --> revise[Writer revises those sentences once]
   revise --> check2[Claim check]
-  check2 --> drop[Drop what still fails]
-  drop --> keep
+  check2 -- every sentence holds --> keep
+  check2 -- some still fail --> drop[Drop them]
+  drop --> repair[Writer repairs the paragraphs]
+  repair --> check3[Claim check]
+  check3 --> keep
 ```
 
 | Step         | What happens                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project.   |
-| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v1`.        |
+| Pick         | `cover-letter-facts.ts` keeps 8 to 12 allowed facts that best match the job, at most 4 per role or project and at least 3 from career roles, then adds each picked role's title, employer and dates (up to 6 more). |
+| Write        | The chosen model writes 250 to 350 words from them, citing nothing. Prompt `cover-letter-free-form-v3`.        |
 | Check        | Claude Haiku links each sentence to the facts behind it; `cover-letter-claims.ts` decides whether the link holds. |
 | Revise       | One more call rewrites only the failing sentences, with why they failed.                                      |
 | Drop         | Sentences that still fail are left out and listed in the view's `dropped_sentences`.                          |
+| Repair       | When a sentence was dropped, one call makes the remaining paragraphs read whole, adding no claim. The repair is checked again; what fails is dropped and listed too. If the repair keeps no claim about the candidate, the unrepaired letter stands. |
 
 A candidate sentence holds when it cites a picked fact, all its facts share
 one group, it states no number they do not, and it never talks about the
-record. An employer sentence cites research findings only, and a courtesy
+record. A sentence about the employer or the role cites research findings or
+the job's own requirements, never a career fact, and a courtesy
 sentence is short and states no number. A letter with no supported claim
 about the candidate is refused as `invalid_draft`. The writer and the check
 share the request's cost cap, and the saved draft's `prompt_version` is
-`cover-letter-free-form-v1`.
+`cover-letter-free-form-v3`.
 
 ## The hosted route
 
@@ -186,6 +191,43 @@ self-hosted server saves each draft as a new version and returns its `id` and
 
 Each model call is logged with its model, tokens and cost, never the draft. A
 refused or failed draft is not saved.
+
+## Interview preparation guides
+
+A guide prepares the candidate for one interview (#2615 to #2632). It is a
+sectioned draft of kind `interview-guide`, written from the facts allowed for
+interviews, the job's requirements and a research brief. The Prepare panel
+offers it (see [The guide tab](#the-guide-tab)) through the API route below.
+
+```mermaid
+flowchart LR
+  R["POST .../interview-guide"] --> C{Brief recent and<br/>covers the topics?}
+  C -- "no, research approved" --> Q["Queue guide research<br/>202 researching"]
+  Q -. "done: post again<br/>with research skip" .-> R
+  C -- "yes, or research skip" --> W[Writer: 1 call essential,<br/>3 calls extensive]
+  W --> K[Claim check per sentence]
+  K --> S[Server adds matrix,<br/>never say, sources]
+  S --> V[(Saved guide)]
+```
+
+| Body field | Holds                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| `details`  | The interview: stage, `essential` or `extensive` depth, length, interviewer role, topics, notes, never say. |
+| `research` | `approved` queues research when the newest brief is older than 14 days or misses a topic; `skip` drafts now. |
+| `model`    | `claude-sonnet-5-5` by default, or `claude-haiku-5-5`.                                                    |
+| `parts`    | For an extensive guide with `based_on`: `context`, `story` or `practice` to write again; the rest is kept. |
+
+A sentence about the candidate must cite an allowed fact, or admit a gap the
+matrix found. A sentence about the employer or the field must cite a finding.
+Sentences that fail, or come close to a never-say entry, are left out and
+listed in `dropped_sentences`. Topics research found no source for are listed
+in `unsourced_topics`, and their sections state no fact.
+
+Never-said facts and the candidate's never-say list never reach a model. The
+cost cap is US$0.20 for an essential guide and US$0.40 for an extensive one,
+writer and check together. Errors are the material route's, plus 400
+`invalid_input` for `parts` without an extensive `based_on`, and 404 when
+`based_on` is not a guide of the application.
 
 ## Saved drafts
 
@@ -243,7 +285,7 @@ fixtures. The worker logs ids, counts and cost only, never sources or findings.
 | ----------- | ---------------------------------------------------------------------------------------------- |
 | `queries`   | What the run searched for.                                                                     |
 | `from_date` | The oldest publication date kept; older sources are dropped and counted in `dropped.outdated`. |
-| `sources`   | Uploads, company pages and web results, each with an excerpt; no `published_on` means undated. |
+| `sources`   | Uploads, company pages and web results, each with an excerpt; no `published_on` means undated. A relative page age such as "2 days ago" counts back from the search time. |
 | `findings`  | Facts about the employer, each citing one to five of the brief's sources.                      |
 | `dropped`   | Sources the run dropped: `flagged` by screening, `outdated` by the window.                     |
 | `cost_usd`  | What the run's searches and model calls cost.                                                  |
@@ -279,9 +321,10 @@ The request must send one text for each item, in order; another count answers
 ## The web panel
 
 Each application page on the web shows an optional **Prepare** panel after the CV. It starts folded to one line, and the browser remembers when you open it. The **Cover letter or interview** button above the draft opens it and scrolls to it.
-The candidate picks a cover letter or interview questions on its toggle and
-selects the button named after it, **Draft cover letter** or **Draft
-interview questions**. **Guide this draft** opens optional fields: what to stress,
+The candidate picks a cover letter or an interview preparation guide on its
+toggle and selects the button named after it, **Draft cover letter** or
+**Draft interview guide**. Interview questions drafted before guides existed
+stay readable in the guide tab's version list. **Guide this draft** opens optional fields: what to stress,
 tone, length and, for a cover letter, whom to address. A saved draft keeps the
 guidance it was written with. With two models offered, a **Model** list in
 the same fields names each with its cost. Under a cover letter, **Writing check** lists the
@@ -318,6 +361,26 @@ such as a 503 from a server without a Claude route, shows in the panel; the
 rest of the page keeps working. The panel lives in
 `apps/web/src/application-material.tsx` and fills the shared screens'
 `application` host slot; a host that leaves the slot empty shows nothing new.
+
+### The guide tab
+
+The guide tab asks for the interview: its kind, length, time, format and who
+the candidate meets, by role. **How deep** offers **Essential** and
+**Extensive** with their cost, and marks the one the interview suggests.
+**Topics to cover** offers quick picks and free text; **Notes and what never
+to say** holds notes and the never-say list. A checked research box lets the
+guide research first.
+
+While research runs, the button reads **Researching…** and the panel waits
+for the run, then drafts. The guide opens with **Guide contents** and its
+sections folded, the first one open. Likely questions show the trap to avoid,
+and statements from research list it under **From research**. **Left out**
+lists the sentences the check dropped, and a note names topics research found
+no source for. An extensive guide offers one button per part to write it
+again. **Download Word**, **Download PDF** and **Download Markdown** keep one
+heading per section, each question with its talking point and the trap to
+avoid. Agents read a saved guide with `get_material`, without its citations
+or its never-say list. The tab lives in `apps/web/src/interview-guide.tsx`.
 
 ## Validation walk
 

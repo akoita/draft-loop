@@ -104,12 +104,17 @@ and account or provider availability is unchecked.
 | `standard`            | Claude Opus 5.5                                | GPT-6.1 Sol                                                   | Anthropic, OpenAI          |
 | `balanced-anthropic`  | Claude Sonnet 5.5                              | Claude Opus 5.5 (`standard-anthropic-critic@1`), low effort   | Anthropic                  |
 | `standard-anthropic`  | Claude Opus 5.5                                | Claude Sonnet 5.5 (`balanced-anthropic-critic@1`), low effort | Anthropic                  |
+| `balanced-google` | Gemini 4 Hydrogen | GPT-6.1 Terra | Gemini (paid tier), OpenAI |
+| `standard-google` | Gemini 4 Carbon | GPT-6.1 Sol | Gemini (paid tier), OpenAI |
 | `development-glm`     | Z.ai `zai-org/GLM-5.3-Flash` through DeepInfra | GPT-6 Luna                                                    | DeepInfra, OpenAI          |
 | `development-gemini`  | Gemini 3.8 Flash                               | GPT-6 Luna                                                    | Gemini (paid tier), OpenAI |
 | `development-mistral` | Mistral Large 4 (public preview)               | GPT-6 Luna                                                    | Mistral, OpenAI            |
 
 - **Balanced** sits between economy and standard on cost.
 - **The two Anthropic-only pairs** suit a deployment without an OpenAI budget.
+- **The two Google writer pairs** run in the CLI and the local-first desktop with
+  your own Gemini key. A DraftLoop server does not route Gemini yet
+  ([#2704](https://github.com/akoita/draft-loop/issues/2704)).
   A different Claude model reviews each draft, so author and critic still
   differ.
 - **The active catalog** holds eleven exact profile versions. Older versions
@@ -158,6 +163,20 @@ and versions, with the time it was applied. Each role may also store an
 | No applied pair                                                                                                            | The preflight says no profiles are attached. The run uses provider-default controls and unknown context windows. |
 | A corrupt selection file                                                                                                   | `start` stops before any provider work. Fix it with `apply` or `clear`.                                          |
 | Resume                                                                                                                     | Never reads the applied pair. It reuses the profiles recorded in the run.                                        |
+
+### Gemini 4 authors
+
+Three Gemini 4 authors are opt-in, and their quality is unvalidated. All use
+`GEMINI_API_KEY` from a paid-tier Gemini API project.
+
+| Author | Select it with | Thinking level |
+| --- | --- | --- |
+| Gemini 4 Hydrogen | `--model-preset balanced-google`, or `--author-profile balanced-google-author@1` | `high`, the model default |
+| Gemini 4 Carbon | `--model-preset standard-google`, or `--author-profile standard-google-author@1` | `medium`, the model default |
+| Gemini 4 Argon | `--author-profile standard-google-argon-author@1` with an exact critic profile | `medium`, the model default |
+
+Argon has no preset: it costs the same as Carbon and scores below Hydrogen on
+Google's published benchmarks. Each profile keeps one fixed thinking level.
 
 ### Development authors
 
@@ -275,6 +294,8 @@ User-session routes show public rates only.
 | GLM-5.3-Flash (DeepInfra) | $0.15 / $0.50                     | Reviewed 2026-10-02                                                |
 | Gemini 3.8 Flash          | $0.75 / $3.75                     | Reviewed 2026-10-04                                                |
 | Mistral Large 4           | $1.36 / $4.18                     | Reviewed 2026-10-08, without the launch discount; 1M-token context |
+| Gemini 4 Hydrogen | $1.50 / $7.50 | Reviewed 2026-11-12; flat across the 1M-token context |
+| Gemini 4 Carbon and Argon | $4 / $20 | Reviewed 2026-11-12; the list rate from 2026-12-01, so an upper bound during the $2 / $10 introductory rate |
 
 Claude and OpenAI rates are in the catalog (`model-profiles`).
 
@@ -302,7 +323,8 @@ Each catalog entry shows its metadata review date, which is not a live probe.
 Sources: [Anthropic model overview], [Claude models overview],
 [Claude Sonnet 5.5 overview], [GPT-6.1 Sol], [GPT-6.1 Terra], [GPT-6 Luna],
 the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
-[Gemini API pricing], [Gemini models] and the [Mistral Large 4 model page].
+[Gemini API pricing], [Gemini models], the [Gemini 4 guide], the
+[Gemini 4 Hydrogen announcement] and the [Mistral Large 4 model page].
 
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
 [Claude models overview]: https://platform.claude.com/docs/en/about-claude/models/overview
@@ -315,6 +337,8 @@ the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 [Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
 [Gemini models]: https://ai.google.dev/gemini-api/docs/models
+[Gemini 4 guide]: https://ai.google.dev/gemini-api/docs/latest-model
+[Gemini 4 Hydrogen announcement]: https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/
 [Mistral Large 4 model page]: https://docs.mistral.ai/models/mistral-large-4
 
 ## Provider credentials
@@ -327,7 +351,7 @@ own provider.
 | `ANTHROPIC_API_KEY` | Anthropic | Claude authors and critics                              |
 | `OPENAI_API_KEY`    | OpenAI    | GPT critics                                             |
 | `DEEPINFRA_API_KEY` | DeepInfra | The GLM development author                              |
-| `GEMINI_API_KEY`    | Google    | The Gemini development author, from a paid-tier project |
+| `GEMINI_API_KEY`    | Google    | The Gemini 4 and Gemini development authors, from a paid-tier project |
 | `MISTRAL_API_KEY`   | Mistral   | The Mistral development author                          |
 
 ## Autopilot
@@ -946,8 +970,13 @@ is separate from sensitivity, which decides what may reach a model provider.
 | `never-say`      | Never say        | No                    | No                  |
 
 Cover letters and interview questions on the **Prepare** panel follow these
-levels. CV runs do not yet; that is
-[#2304](https://github.com/akoita/draft-loop/issues/2304).
+levels, and so do CV runs. A CV run leaves out each held-back fact and the
+source chunk it was quoted from, so the writer never sees either.
+
+- **Whole chunks.** Other text in the same chunk is left out too.
+- **Kept per run.** A run records the levels in force when it first reads its
+  evidence, as a `run.fact-usage` audit event holding keys and levels only. A
+  level changed while the run waits applies to the next run.
 
 - **Unset is `cv`.** Nothing changes until you mark a fact or section.
 - **A fact's own level wins.** "Like section" follows the section's level.
@@ -982,7 +1011,8 @@ extracts every source again.
 | ------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 (API key) | 32,768 tokens                                                                         | Profile default                                                                                       |
 | GLM through DeepInfra                            | 32,768 tokens                                                                         | `reasoning_effort: "none"` ([DeepInfra reasoning control](https://docs.deepinfra.com/chat/reasoning)) |
-| Gemini                                           | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
+| Gemini 3.8 Flash                                 | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
+| Gemini 4 | 65,536 tokens, shared by thinking and the answer | `thinkingLevel: "LOW"`, because Gemini 4 thinking cannot be disabled here |
 | Mistral Large 4                                  | 32,768-token answer budget, sent as the 65,536-token model limit when reasoning is on | `reasoningEffort: "none"`                                                                             |
 | User-session, local and other routes             | 8,192 tokens                                                                          | Route default                                                                                         |
 
@@ -1096,12 +1126,18 @@ you decide. Nothing changes until you accept one, and no model is called.
 pnpm --filter @draft-loop/cli start preferences list ./workspace
 pnpm --filter @draft-loop/cli start preferences accept ./workspace preference-0123456789abcdef
 pnpm --filter @draft-loop/cli start preferences dismiss ./workspace preference-0123456789abcdef
+pnpm --filter @draft-loop/cli start preferences sources ./workspace
 ```
 
 - **What is suggested.** A word you removed from at least 3 drafts across at
   least 2 applications becomes a forbidden term. A section order you approved
   as often becomes `Section order`.
-- **Why.** Each suggestion shows the pattern it comes from, so you can check it.
+- **Why.** Each suggestion shows the pattern it comes from and the runs that
+  showed it, so you can check it.
+- **Sources.** Accepting records the new policy version with those run ids,
+  never their content. `preferences sources` lists them; rules you wrote by
+  hand have no source. On the server's screens, the policy's **History** tab
+  marks such a version "Suggested from N runs".
 - **Accept** adds the preference to the policy as a new version for future runs.
 - **Dismiss** keeps the policy as it is, and the suggestion is never offered
   again. Only its id is stored.
@@ -1380,6 +1416,7 @@ run starts or resumes.
 pnpm --filter @draft-loop/cli start evidence mode ./workspace
 pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source
 pnpm --filter @draft-loop/cli start evidence mode ./workspace retrieval --json
+pnpm --filter @draft-loop/cli start evidence mode ./workspace full-source --max-evidence-tokens 50000
 ```
 
 The workspace argument is required. Without a mode, the command shows the
@@ -1391,10 +1428,21 @@ current one. It never starts a run.
 - **Size budget.** The evidence must fit half the smaller known context window
   of the two profiles, at four characters per token, or 240,000 characters when
   a window is unknown. Serialized chunks and their ids count.
+- **Cost cap.** `--max-evidence-tokens` (1,000 to 1,000,000) lowers that budget
+  to about this many tokens, so a large collection uses retrieval instead of a
+  costly prompt. It never raises the budget. There is no cap by default, and
+  saving a mode without the option clears a saved cap.
 - **Fallback.** When the evidence does not fit, or no chunk is eligible, the run
-  uses retrieval. The preflight prints an `Evidence mode:` line with the chunk
+  uses retrieval. The recorded reason is `budget-exceeded` when the evidence is
+  too large for the models, `cost-cap-exceeded` when only the cost cap refused
+  it, and `no-eligible-chunks`. The preflight prints an `Evidence mode:` line with the chunk
   count and budget, or the reason. A `run.evidence-mode` audit event records the
   decision.
+- **Above the cost cap.** A `cost-cap-exceeded` run sends retrieval's excerpts,
+  then fills the room left under the cap with the eligible chunks that best
+  match each job requirement, at most eight per requirement. The choice is
+  local word matching with no model call. The other fallbacks send retrieval's
+  excerpts only.
 - **Errors.** A missing setting means `full-source`, and an unreadable one stops
   the run before anything is sent.
 - **Unchanged rules.** Sensitivity, evidence ids, citation rules and validation

@@ -408,10 +408,10 @@ describe.runIf(connectionString !== undefined)("plans and credits across two org
     });
     const maple = {
       planId: "individual",
-      allowance: 4,
+      allowance: 5,
       used: 0,
       reserved: 0,
-      remaining: 4,
+      remaining: 5,
       warning: false,
     };
     expect(await creditsOf("maple")).toEqual(maple);
@@ -465,7 +465,7 @@ describe.runIf(connectionString !== undefined)("plans and credits across two org
     expect(mapleRun.status).toBe(201);
     await drain();
     expect(await creditsOf("fern")).toMatchObject({ used: 2, reserved: 0, remaining: 3 });
-    const mapleAfterItsRun = { ...maple, used: 1, remaining: 3 };
+    const mapleAfterItsRun = { ...maple, used: 1, remaining: 4 };
     expect(await creditsOf("maple")).toEqual(mapleAfterItsRun);
 
     // Runs go on until the allowance is used: the warning at 80%, then exhaustion, then 402.
@@ -541,11 +541,11 @@ describe.runIf(connectionString !== undefined)("plans and credits across two org
     });
     expect((await operator("GET", "/org-maple/credits")).body.balance).toMatchObject({
       grantsRemaining: 0,
-      remaining: 3,
+      remaining: 4,
     });
     expect((await startRun("maple", begin.maple)).status).toBe(201);
     await drain();
-    expect(await creditsOf("maple")).toMatchObject({ used: 2, remaining: 2, warning: false });
+    expect(await creditsOf("maple")).toMatchObject({ used: 2, remaining: 3, warning: false });
     expect(closed.filter((entry) => entry.organisationId === "org-maple")).toHaveLength(2);
   }, 240_000);
 });

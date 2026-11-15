@@ -69,7 +69,7 @@ the default pair is cross-company and provider/model identities are recorded.
 Model choice balances capability, cost, and the amount of configuration the
 project can maintain. The current scope is three Anthropic authors and three OpenAI
 critics: Claude Haiku 5.5, Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna,
-GPT-6.1 Terra, and GPT-6.1 Sol, plus opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
+GPT-6.1 Terra, and GPT-6.1 Sol, plus opt-in Google authors (Gemini 4 Hydrogen, Carbon, and Argon) and opt-in development authors (GLM-5.3 Flash, Gemini 3.8 Flash, and Mistral Large 4). Representative
 CV quality has not been validated for these choices.
 
 The current curated choices use three tiers:
@@ -128,6 +128,14 @@ The opt-in `development-gemini` preset pairs it with the GPT-6 Luna critic in
 the CLI and desktop. Default pairs and representative quality claims are
 unchanged. Free-tier Gemini API terms may allow Google to use submitted content,
 so candidate material needs a paid-tier key.
+
+The same adapter serves Gemini 4 Hydrogen, Carbon, and Argon as opt-in authors
+([#2703](https://github.com/akoita/draft-loop/issues/2703)). The `balanced-google`
+preset pairs Hydrogen with GPT-6.1 Terra, and `standard-google` pairs Carbon with
+GPT-6.1 Sol; Argon is selectable by profile only. They run in the CLI and the
+local-first desktop. The server route through Vertex AI in the EU is blocked on
+Google's regional availability
+([#2704](https://github.com/akoita/draft-loop/issues/2704)).
 
 The opt-in `development-mistral` preset pairs Mistral Large 4 (public preview)
 with the GPT-6 Luna critic. Mistral says that
@@ -384,6 +392,10 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   candidate's coding agent into a pending inbox for approval, with
   `draftloop-mcp init` for Claude Code and Codex and the
   [agent channel](reference/agent-channel.md) reference. Built 2026-11-03.
+  Assistant directories as a first channel (#2646–#2650, #2653): the remote
+  MCP server, OAuth sign-in and a spend limit per assistant are built, and the
+  [listing material](operations/directory-listing.md) is written. Nothing is
+  deployed or submitted; each submission needs the owner's go.
 - **Desktop client (D9, amended 2026-11-03).** The desktop is a first-class
   client of the server beside the web, built in its
   [milestone](https://github.com/akoita/draft-loop/milestone/65) (#2089–#2094)
@@ -586,6 +598,15 @@ Then, in order: guidance on tone, length and emphasis (#2478), a human voice
 from your own writing samples (#2479), editing per paragraph (#2480), Word and
 PDF export (#2481), a research brief from your uploads and current public
 sources (#2482), and a capped walk with a blind writing test (#2483).
+
+**Building:** an interview preparation guide, in
+[milestone 95](https://github.com/akoita/draft-loop/milestone/95), which
+replaces interview questions in the Prepare panel. The candidate describes the
+interview and picks an essential guide (capped at US$0.20) or an extensive one
+(US$0.40). Research on the employer, the role and the field comes first and
+keeps recent, rated sources. Every sentence then cites a career fact, an
+admitted gap or a finding, and never-say entries never reach a model. Issues
+2615 to 2622 and 2632 are built; a capped paid walk (#2623) is left.
 
 **Built:** usage level, in
 [milestone 75](https://github.com/akoita/draft-loop/milestone/75). Each fact or

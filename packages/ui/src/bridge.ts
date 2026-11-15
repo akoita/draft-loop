@@ -194,6 +194,12 @@ import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
 import { normalizeRunInputs } from "./run-inputs.js";
 import {
+  normalizeRunTraceResult,
+  type RunTraceInput,
+  type RunTraceResult,
+  validateRunTraceInput,
+} from "./run-trace-contract.js";
+import {
   type EmbeddingModelCancelResult,
   type EmbeddingModelInstallInput,
   type EmbeddingModelPlanResult,
@@ -297,6 +303,7 @@ export type {
   ProfileFreshnessResult,
   ProfileFreshnessState,
 } from "./profile-freshness-contract.js";
+export type { RunTraceInput, RunTraceResult, RunTraceSpanView } from "./run-trace-contract.js";
 export type {
   EmbeddingModelCancelResult,
   EmbeddingModelInstallInput,
@@ -2096,6 +2103,7 @@ const writingPolicyVersionMetadataKeys = resultKeys<WritingPolicyVersionMetadata
   "schemaVersion",
   "createdAt",
   "priorChecksum",
+  "suggestedFromRunCount",
 ]);
 const writingPolicyIdentityKeys = resultKeys<WritingPolicyIdentity>()(["version", "checksum"]);
 const writingPolicyLineageKeys = ["kind", "base", "override"] as const;
@@ -3232,6 +3240,7 @@ export interface BridgeCommandInputMap {
   "application-folder.delete": ApplicationFolderDeleteInput;
   "fact-usage.get": FactUsageGetInput;
   "fact-usage.set": FactUsageSetInput;
+  "run.trace": RunTraceInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3356,6 +3365,7 @@ export interface BridgeCommandOutputMap {
   "application-folder.delete": ApplicationFolderDeleteResult;
   "fact-usage.get": FactUsageResult;
   "fact-usage.set": FactUsageResult;
+  "run.trace": RunTraceResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -5986,6 +5996,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "fact-usage.set",
         input: validateFactUsageSetInput(command.input) ?? invalidInput(),
       };
+    case "run.trace":
+      return { type: "run.trace", input: validateRunTraceInput(command.input) ?? invalidInput() };
     case "workspace.recent-remove":
       return {
         type: "workspace.recent-remove",
@@ -7584,12 +7596,18 @@ function normalizeWritingPolicyVersionMetadata(value: unknown): WritingPolicyVer
     metadata.priorChecksum === null ? null : writingPolicyChecksumValue(metadata.priorChecksum);
   const checksum = writingPolicyChecksumValue(metadata.checksum);
   if (priorChecksum === checksum) return invalidInput();
+  const suggestedFromRunCount =
+    metadata.suggestedFromRunCount === undefined
+      ? undefined
+      : finiteInteger(metadata.suggestedFromRunCount, 256);
+  if (suggestedFromRunCount === 0) return invalidInput();
   return {
     checksum,
     version: identifier(metadata.version),
     schemaVersion,
     createdAt: timestampValue(metadata.createdAt),
     priorChecksum,
+    ...(suggestedFromRunCount === undefined ? {} : { suggestedFromRunCount }),
   };
 }
 
@@ -8647,6 +8665,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "fact-usage.get":
     case "fact-usage.set":
       return normalizeFactUsageResult(value) ?? invalidInput();
+    case "run.trace":
+      return normalizeRunTraceResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":

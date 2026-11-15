@@ -105,6 +105,7 @@ import {
   type ProfileGenerationActivity,
   ProfileGenerationSummary,
 } from "./profile-generation-progress.js";
+import { HeaderThemeToggle } from "./theme.js";
 import { PencilIcon } from "./workspace-title.js";
 
 /**
@@ -793,6 +794,7 @@ export function HomeView({
                   onClick={openHomeSettings}
                 >{t`Workspace settings`}</button>
               )}
+              <HeaderThemeToggle />
               {workspaceNavigation}
             </div>
           </header>

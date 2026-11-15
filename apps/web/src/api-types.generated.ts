@@ -1,6 +1,12 @@
 // Generated from apps/api/openapi.json by `pnpm --filter @draft-loop/web api-types`. Do not edit.
 
 export interface ApiSchemas {
+  "AgentConnectionCap": {
+    readonly client_id: string;
+    readonly monthly_cap_usd: number;
+    readonly spent_this_month_usd: number;
+    readonly updated_at: string;
+  };
   "AgentToken": {
     readonly id: string;
     readonly label: string;
@@ -107,11 +113,14 @@ export interface ApiSchemas {
   "ApplicationMaterialDraft": {
     readonly id?: string;
     readonly created_at?: string;
-    readonly kind: "cover-letter" | "interview-questions";
+    readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
+    readonly interview_details?: ApiSchemas["InterviewDetails"];
     readonly items: readonly ({
       readonly question: string;
       readonly text: string;
+      readonly section?: "read-first" | "interview" | "company" | "role" | "market" | "matrix" | "pitch" | "stories" | "defense" | "questions" | "ask" | "practical" | "topic" | "never-say" | "checklist" | "sources";
+      readonly trap?: string;
       readonly edited?: boolean;
       readonly unsupported_numbers?: readonly (string)[];
       readonly citations: readonly ({
@@ -148,6 +157,7 @@ export interface ApiSchemas {
       readonly match?: string;
     })[];
     readonly dropped_sentences?: readonly (string)[];
+    readonly unsourced_topics?: readonly ("company" | "news" | "role" | "field" | "process" | "salary")[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
@@ -443,6 +453,45 @@ export interface ApiSchemas {
   };
   "Health": {
     readonly status: "ok";
+  };
+  "InterviewDetails": {
+    readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
+    readonly depth: "essential" | "extensive";
+    readonly scheduled_at?: string;
+    readonly length_minutes?: number;
+    readonly format?: "video" | "phone" | "onsite";
+    readonly interviewer_role?: string;
+    readonly language?: string;
+    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
+    readonly other_topics?: readonly (string)[];
+    readonly notes?: string;
+    readonly never_say?: readonly (string)[];
+  };
+  "InterviewDetailsInput": {
+    readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
+    readonly depth: "essential" | "extensive";
+    readonly scheduled_at?: string;
+    readonly length_minutes?: number;
+    readonly format?: "video" | "phone" | "onsite";
+    readonly interviewer_role?: string;
+    readonly language?: string;
+    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
+    readonly other_topics?: readonly (string)[];
+    readonly notes?: string;
+    readonly never_say?: readonly (string)[];
+  };
+  "InterviewGuideRequestInput": {
+    readonly details: ApiSchemas["InterviewDetailsInput"];
+    readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
+    readonly research: "approved" | "skip";
+    readonly parts?: readonly ("context" | "story" | "practice")[];
+    readonly based_on?: string;
+  };
+  "InterviewGuideResearching": {
+    readonly status: "researching";
+    readonly research: {
+      readonly status: "pending";
+    };
   };
   "IssuedAgentToken": {
     readonly id: string;
@@ -783,6 +832,8 @@ export interface ApiSchemas {
     readonly title: string;
     readonly excerpt: string;
     readonly published_on?: string;
+    readonly topic?: "company" | "news" | "role" | "field" | "process" | "salary";
+    readonly reliability?: "primary" | "press" | "weak";
   };
   "ResearchStartInput": {
     readonly approved: true;
@@ -954,6 +1005,15 @@ export interface ApiSchemas {
       readonly blockers: readonly (string)[];
     } | null;
     readonly candidateDirection: string | null;
+  };
+  "RunSpan": {
+    readonly span_id: string;
+    readonly parent_span_id: string | null;
+    readonly name: "invoke_workflow" | "invoke_agent" | "retrieve_evidence";
+    readonly started_at: string;
+    readonly ended_at: string | null;
+    readonly status: "ok" | "error" | null;
+    readonly attributes: Record<string, never>;
   };
   "RunUsage": {
     readonly calls: number;
@@ -2384,7 +2444,7 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly query?: {
-      readonly kind?: "cover-letter" | "interview-questions";
+      readonly kind?: "cover-letter" | "interview-questions" | "interview-guide";
     };
     readonly response: ApiSchemas["ApplicationMaterialDraftList"];
   };
@@ -2427,6 +2487,14 @@ export interface ApiOperations {
       readonly materialId: string;
     };
     readonly response: void;
+  };
+  "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/interview-guide": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly applicationId: string;
+    };
+    readonly body: ApiSchemas["InterviewGuideRequestInput"];
+    readonly response: ApiSchemas["ApplicationMaterialDraft"] | ApiSchemas["InterviewGuideResearching"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
     readonly path: {
@@ -2490,6 +2558,42 @@ export interface ApiOperations {
     readonly path: {
       readonly workspaceId: string;
       readonly tokenId: string;
+    };
+    readonly response: void;
+  };
+  "GET /v1/workspaces/{workspaceId}/runs/{runId}/trace": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly response: {
+      readonly spans: readonly (ApiSchemas["RunSpan"])[];
+    };
+  };
+  "GET /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly connections: readonly (ApiSchemas["AgentConnectionCap"])[];
+    };
+  };
+  "PUT /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly client_id: string;
+      readonly monthly_cap_usd: number;
+    };
+    readonly response: ApiSchemas["AgentConnectionCap"];
+  };
+  "DELETE /v1/workspaces/{workspaceId}/agent-connections": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query: {
+      readonly client_id: string;
     };
     readonly response: void;
   };

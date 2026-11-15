@@ -31,6 +31,10 @@
       "types": "./src/model-profile-selection.ts",
       "import": "./src/model-profile-selection.ts"
     },
+    "./run-span-recorder": {
+      "types": "./src/run-span-recorder.ts",
+      "import": "./src/run-span-recorder.ts"
+    },
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
@@ -126,6 +130,26 @@
     "./material-review": {
       "types": "./src/material-review.ts",
       "import": "./src/material-review.ts"
+    },
+    "./interview-guide": {
+      "types": "./src/interview-guide.ts",
+      "import": "./src/interview-guide.ts"
+    },
+    "./interview-guide-model": {
+      "types": "./src/interview-guide-model.ts",
+      "import": "./src/interview-guide-model.ts"
+    },
+    "./interview-guide-extensive": {
+      "types": "./src/interview-guide-extensive.ts",
+      "import": "./src/interview-guide-extensive.ts"
+    },
+    "./interview-guide-matrix": {
+      "types": "./src/interview-guide-matrix.ts",
+      "import": "./src/interview-guide-matrix.ts"
+    },
+    "./interview-guide-research": {
+      "types": "./src/interview-guide-research.ts",
+      "import": "./src/interview-guide-research.ts"
     },
     "./research-ports": {
       "types": "./src/research-ports.ts",

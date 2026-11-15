@@ -49,6 +49,13 @@ export function runEvidenceModeDisplay(
       panelDetail: t`retrieval; full source did not fit`,
     };
   }
+  if (mode.fallbackReason === "cost-cap-exceeded") {
+    return {
+      kind: "fallback",
+      stripStatus: t`Full source passed this workspace's cost cap (${countedNouns.chunk(mode.chunkCount)}), so retrieval was used`,
+      panelDetail: t`retrieval; full source passed the cost cap`,
+    };
+  }
   if (mode.fallbackReason === "no-eligible-chunks") {
     return {
       kind: "fallback",

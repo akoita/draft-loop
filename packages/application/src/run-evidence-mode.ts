@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 
 import { z } from "zod";
-
 import { previewEvidenceMode } from "./evidence-mode-preview.js";
+import type { FullSourceFallbackReason } from "./full-source-evidence.js";
 import type { ApplicationDriver, StatusCommand } from "./index.js";
 import { type LocalApplicationDriverOptions, readWorkspace } from "./local.js";
 import { readRunApplicationPlan } from "./run-application-plan-read.js";
@@ -27,7 +27,7 @@ export interface RunEvidenceMode {
   readonly chunkCount: number;
   /** Absent on events recorded before the source count was kept. */
   readonly sourceCount?: number;
-  readonly fallbackReason?: "budget-exceeded" | "no-eligible-chunks";
+  readonly fallbackReason?: FullSourceFallbackReason;
 }
 
 const runEvidenceModePayloadSchema = z.object({
@@ -35,7 +35,7 @@ const runEvidenceModePayloadSchema = z.object({
   effectiveMode: z.enum(evidenceModes),
   chunkCount: z.number().int().nonnegative(),
   sourceCount: z.number().int().nonnegative().optional(),
-  fallbackReason: z.enum(["budget-exceeded", "no-eligible-chunks"]).optional(),
+  fallbackReason: z.enum(["budget-exceeded", "cost-cap-exceeded", "no-eligible-chunks"]).optional(),
 });
 
 /** The parsed payload, or `undefined` when it does not have the recorded shape. */

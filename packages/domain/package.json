@@ -31,6 +31,10 @@
       "types": "./src/application-folder.ts",
       "import": "./src/application-folder.ts"
     },
+    "./run-span": {
+      "types": "./src/run-span.ts",
+      "import": "./src/run-span.ts"
+    },
     "./fact-usage": {
       "types": "./src/fact-usage.ts",
       "import": "./src/fact-usage.ts"

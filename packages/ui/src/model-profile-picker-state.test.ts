@@ -68,6 +68,8 @@ describe("desktop model profile picker state", () => {
       "standard",
       "balanced-anthropic",
       "standard-anthropic",
+      "balanced-google",
+      "standard-google",
       "development-glm",
       "development-gemini",
       "development-mistral",

@@ -30,6 +30,7 @@
     "tsx": "4.23.12"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.117.1",
     "@draft-loop/api": "workspace:*",
     "@draft-loop/ingestion": "workspace:*",
     "@draft-loop/ui": "workspace:*",

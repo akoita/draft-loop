@@ -41,12 +41,16 @@ import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { CallCostBudgetError } from "@draft-loop/orchestrator";
 import { materialReviewOutcomes } from "@draft-loop/run-queue";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
+import { interviewDetailsSchema } from "@draft-loop/schemas/interview-details";
+import { researchTopics } from "@draft-loop/schemas/research-brief";
 import {
   applicationMaterialGuidanceSchema,
+  interviewGuideSections,
   maximumSavedApplicationMaterialItemCharacters,
-  maximumSavedApplicationMaterialItems,
+  maximumSavedInterviewGuideItems,
   type SavedApplicationMaterial,
   savedApplicationMaterialIdSchema,
+  savedApplicationMaterialKinds,
 } from "@draft-loop/schemas/saved-application-material";
 import {
   type ConsentLedger,
@@ -124,7 +128,7 @@ export interface ApplicationMaterialRoutesOptions {
 /** The default cap on one request: two Sonnet calls with a full context stay well below it. */
 export const defaultApplicationMaterialMaxCostUsd = 0.5;
 
-const params = z.strictObject({
+export const params = z.strictObject({
   workspaceId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u, "must be a safe identifier"),
   applicationId: applicationIdSchema,
 });
@@ -153,22 +157,37 @@ const body = z
   })
   .meta({ id: "ApplicationMaterialRequest" });
 
-const draftView = z
+export const draftView = z
   .object({
     id: savedApplicationMaterialIdSchema
       .optional()
       .describe("The saved draft's id; absent when this server keeps no drafts."),
     created_at: z.string().optional().describe("When the draft was written and saved."),
-    kind: z.enum(applicationMaterialKinds),
+    kind: z
+      .enum(savedApplicationMaterialKinds)
+      .describe(
+        "A cover letter, interview questions, or an interview preparation guide, which its own route drafts.",
+      ),
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe("The guidance the draft was written with, as the model received it."),
+    interview_details: interviewDetailsSchema
+      .optional()
+      .describe("For an interview preparation guide: the interview it was written for."),
     items: z.array(
       z.object({
         question: z
           .string()
           .describe("Empty for a cover letter paragraph; the interview question otherwise."),
         text: z.string().describe("The paragraph, or the talking point for the question."),
+        section: z
+          .enum(interviewGuideSections)
+          .optional()
+          .describe("For an interview preparation guide: the section the item belongs to."),
+        trap: z
+          .string()
+          .optional()
+          .describe("For a likely question in a guide: the answer to avoid, and why."),
         edited: z
           .boolean()
           .optional()
@@ -237,7 +256,13 @@ const draftView = z
       .array(z.string())
       .optional()
       .describe(
-        "For a free-form cover letter: sentences left out because no career fact supported them, even after one revision.",
+        "For a free-form cover letter or a guide: sentences left out because no career fact or finding supported them, or because they came close to something the candidate never says.",
+      ),
+    unsourced_topics: z
+      .array(z.enum(researchTopics))
+      .optional()
+      .describe(
+        "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
       ),
     prompt_version: z.string(),
     cost_usd: z.number().describe("The provider cost recorded for this draft's calls."),
@@ -254,7 +279,7 @@ const draftList = z
   })
   .meta({ id: "ApplicationMaterialDraftList" });
 
-const listQuery = z.strictObject({ kind: z.enum(applicationMaterialKinds).optional() });
+const listQuery = z.strictObject({ kind: z.enum(savedApplicationMaterialKinds).optional() });
 
 const draftParams = params.extend({ materialId: savedApplicationMaterialIdSchema });
 
@@ -292,13 +317,13 @@ const editBody = z
         }),
       )
       .min(1)
-      .max(maximumSavedApplicationMaterialItems)
+      .max(maximumSavedInterviewGuideItems)
       .describe("Every item's text, in the saved draft's order; one entry for each of its items."),
   })
   .meta({ id: "ApplicationMaterialEdit" });
 
 /** A saved draft as the API shows it: its stored fields without the workspace and application. */
-function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
+export function viewOf(draft: SavedApplicationMaterial): z.infer<typeof draftView> {
   const { workspace_id: _workspace, application_id: _application, ...view } = draft;
   const sources = view.items.flatMap((item) => [
     ...item.citations.map((citation) => citation.text),
@@ -322,11 +347,11 @@ function withTells<View extends Pick<z.infer<typeof draftView>, "kind" | "items"
   return { ...view, tells: writingTells(view.items.map((item) => item.text)) };
 }
 
-function newMaterialId(): string {
+export function newMaterialId(): string {
   return `amd_${randomBytes(12).toString("base64url")}`;
 }
 
-const errors = {
+export const errors = {
   400: apiErrorSchema,
   403: apiErrorSchema,
   404: apiErrorSchema,
@@ -336,7 +361,7 @@ const errors = {
   503: apiErrorSchema,
 } as const;
 
-function permitsAnthropic(state: ConsentState): boolean {
+export function permitsAnthropic(state: ConsentState): boolean {
   return permitsTransmission(state, {
     author: { company: "anthropic" },
     critic: { company: "anthropic" },
@@ -907,7 +932,7 @@ export function registerApplicationMaterialRoutes(
 }
 
 /** A provider adapter's failure, named by its code and diagnostics, never by its text. */
-function providerFailureOf(
+export function providerFailureOf(
   error: unknown,
 ): { readonly code: string; readonly diagnostics: readonly string[] } | undefined {
   if (!(error instanceof Error) || !("diagnostics" in error) || !("code" in error)) {

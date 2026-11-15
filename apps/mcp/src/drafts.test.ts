@@ -182,6 +182,45 @@ describe("draft read tools", () => {
     await client.close();
   });
 
+  it("read a saved guide with sections and traps, without its never-say list", async () => {
+    const guide = {
+      id: "amd_guide01",
+      kind: "interview-guide",
+      created_at: "2026-11-10T09:00:00.000Z",
+      items: [
+        {
+          section: "questions",
+          question: "How do you report?",
+          text: "A fictional talking point.",
+          trap: "A fictional trap.",
+          citations: [{ fact_id: "t", text: "career fact" }],
+        },
+        { section: "never-say", question: "", text: "a fictional subject", citations: [] },
+      ],
+    };
+    const { config } = scripted({
+      [`GET ${base}/applications/app_fixture_0001/material`]: json({ drafts: [guide] }),
+    });
+    const client = await connect(config);
+    const read = parsed(
+      await client.callTool({
+        name: "get_material",
+        arguments: { application_id: "app_fixture_0001", material_id: "amd_guide01" },
+      }),
+    );
+    expect(read.item_count).toBe(1);
+    expect(read.items).toEqual([
+      {
+        section: "questions",
+        question: "How do you report?",
+        text: "A fictional talking point.",
+        trap: "A fictional trap.",
+      },
+    ]);
+    expect(JSON.stringify(read)).not.toContain("a fictional subject");
+    await client.close();
+  });
+
   it("pass on a missing drafts:read refusal", async () => {
     const { config } = scripted({
       [`GET ${base}/applications/app_fixture_0001/material`]: json(

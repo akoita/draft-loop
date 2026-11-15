@@ -1,4 +1,5 @@
 import type { ApplicationService } from "@draft-loop/application";
+import { interviewGuideResearchPlan } from "@draft-loop/application/interview-guide-research";
 import {
   type ResearchFindingsPort,
   type ResearchScreen,
@@ -83,11 +84,22 @@ export function createResearchHandler(options: ResearchHandlerOptions): Research
     const ports = options.portsFor(job);
     if (ports === undefined) return refused("unavailable");
     let brief: Awaited<ReturnType<typeof runResearch>>;
+    const subject = { employer, role: opportunity?.brief.role?.value ?? "" };
+    const now = options.now ?? (() => new Date());
+    const plan =
+      job.guide === undefined
+        ? undefined
+        : interviewGuideResearchPlan(
+            subject,
+            { depth: job.guide.depth, ...(job.guide.salary ? { topics: ["salary"] } : {}) },
+            now(),
+          );
     try {
       brief = await runResearch({
         workspaceId: job.workspaceId,
         applicationId: job.applicationId,
-        subject: { employer, role: opportunity?.brief.role?.value ?? "" },
+        subject,
+        ...(plan === undefined ? {} : { plan, maxCostUsd: plan.maxCostUsd }),
         language: application.language ?? workspace.language,
         ...(job.windowMonths === undefined ? {} : { windowMonths: job.windowMonths }),
         search: ports.search,
@@ -95,7 +107,7 @@ export function createResearchHandler(options: ResearchHandlerOptions): Research
         findings: ports.findings,
         findingsSpentUsd: ports.findingsSpentUsd,
         newId: options.newId,
-        now: options.now ?? (() => new Date()),
+        now,
       });
     } catch (error) {
       // A search provider with no key configured is a deployment state, not a failure to retry.

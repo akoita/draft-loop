@@ -157,7 +157,7 @@ Use the operator token for each step.
      -d '{"organisationId":"org-a","name":"Org A","firstOwnerEmail":"ada@org-a.example"}'
    ```
 
-2. Assign a plan. The plan id is one of `beta`, `individual`, `job-search-pass`,
+2. Assign a plan. The plan id is one of `free`, `beta`, `individual`, `job-search-pass`,
    `pro`, `team`, `business` or `internal`; `team` and `business` also need `seats`:
 
    ```sh

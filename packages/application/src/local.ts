@@ -1355,14 +1355,14 @@ function engine(
           recorders,
         )
     : noopAgents();
-  const store = createStorageRunStore(storage);
   return createOrchestrationEngine({
     author: agents.author,
     critic: agents.critic,
     ...(agents.planner === undefined ? {} : { planner: agents.planner }),
     autopilot: config.autopilot === true,
     ...(coverageJudgement === undefined ? {} : { coverageJudgement }),
-    store,
+    ...(recorders?.tracer === undefined ? {} : { tracer: recorders.tracer }),
+    store: createStorageRunStore(storage),
     retrieval: retrieval ?? createChronologyRetrieval(storage, context),
     contextResolver: async (contextSnapshotId) => {
       const record = await storage.getContextSnapshot(contextSnapshotId);

@@ -99,7 +99,8 @@ describe("draftFreeFormCoverLetter", () => {
       [link("p0.s0", "candidate", ["f1"]), link("p0.s1", "candidate", ["f2"])],
     ]);
     const draft = await draftFreeFormCoverLetter(writer, checker, input);
-    expect(calls()).toBe(2);
+    // The third check is of the repair, which answered nothing here, so the letter stands.
+    expect(calls()).toBe(3);
     expect(requests[1]?.revision).toEqual({
       letter: "I cut report time by 45%. I did it in SQL.",
       sentences: [{ text: "I cut report time by 45%.", problems: ["unsupported_number"] }],
@@ -107,6 +108,46 @@ describe("draftFreeFormCoverLetter", () => {
     expect(draft.items).toEqual([{ question: "", text: "I did it in SQL.", factIds: ["f2"] }]);
     expect(draft.droppedSentences).toEqual(["I cut report time by 45% again."]);
     expect(draft.model).toEqual({ provider: "anthropic", model: "scripted-2" });
+  });
+
+  it("repairs the paragraphs that lost a sentence, and checks the repair", async () => {
+    const { writer, requests } = scriptedWriter([
+      "I used to export reports by hand. I cut report time by 45%. I did it in SQL.",
+      "I used to export reports by hand. I cut report time by 45%. I did it in SQL.",
+      "I write reports in SQL. I cut report time by 50%.",
+    ]);
+    const firstLinks = [
+      link("p0.s0", "candidate", ["f1"]),
+      link("p0.s1", "candidate", ["f1"]),
+      link("p0.s2", "candidate", ["f2"]),
+    ];
+    const { checker, calls } = scriptedChecker([
+      firstLinks,
+      firstLinks,
+      [link("p0.s0", "candidate", ["f2"]), link("p0.s1", "candidate", ["f1"])],
+    ]);
+    const draft = await draftFreeFormCoverLetter(writer, checker, input);
+    expect(calls()).toBe(3);
+    expect(requests[2]?.repair).toEqual({
+      paragraphs: ["I used to export reports by hand. I did it in SQL."],
+      removed: ["I cut report time by 45%."],
+    });
+    // The repair is held to the same check: its own unsupported sentence is dropped too.
+    expect(draft.items).toEqual([
+      { question: "", text: "I write reports in SQL.", factIds: ["f2"] },
+    ]);
+    expect(draft.droppedSentences).toEqual([
+      "I cut report time by 45%.",
+      "I cut report time by 50%.",
+    ]);
+    expect(draft.model).toEqual({ provider: "anthropic", model: "scripted-3" });
+  });
+
+  it("does not repair a letter that lost nothing", async () => {
+    const { writer, requests } = scriptedWriter(["I did it in SQL."]);
+    const { checker } = scriptedChecker([[link("p0.s0", "candidate", ["f2"])]]);
+    await draftFreeFormCoverLetter(writer, checker, input);
+    expect(requests).toHaveLength(1);
   });
 
   it("refuses a letter that keeps no supported claim about the candidate", async () => {
@@ -169,6 +210,7 @@ describe("createModelFreeFormCoverLetterWriter", () => {
       companyFacts: [],
       requirements: [{ id: "q1", text: "SQL", priority: "critical" }],
       revision: { letter: "Old.", sentences: [{ text: "Old.", problems: ["no_fact"] }] },
+      repair: { paragraphs: ["Kept."], removed: ["Gone."] },
     });
     expect(reply).toEqual({
       letter: "I did it in SQL.",
@@ -179,6 +221,7 @@ describe("createModelFreeFormCoverLetterWriter", () => {
     expect(requests[0]?.input).toMatchObject({
       facts: [{ id: "f2", text: "skill name: SQL", group: "r1" }],
       revision: { letter: "Old.", sentences: [{ text: "Old.", problems: ["no_fact"] }] },
+      repair: { paragraphs: ["Kept."], removed: ["Gone."] },
     });
   });
 });

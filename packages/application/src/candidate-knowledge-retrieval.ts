@@ -239,6 +239,8 @@ export function candidateKnowledgeRuntimeRetrieval(
    * exactly as before. Every other query stays lexical.
    */
   semanticOptions?: RunSemanticRetrievalOptions,
+  /** Workspace cost cap on full-source evidence, in estimated tokens; absent means none. */
+  maxEvidenceTokens?: number,
 ):
   | (EvidenceModeRetrieval & {
       readonly port: RetrievalPort;
@@ -254,6 +256,8 @@ export function candidateKnowledgeRuntimeRetrieval(
       ) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]>;
       /** Eligible chunks across the pinned sources, the set full source would send; memoized. */
       readonly knowledgeChunkCount: () => Promise<number>;
+      /** Those chunks themselves when full source was requested, else none; memoized. */
+      readonly fullSourceEvidence: () => Promise<readonly ScoredEvidenceChunk[]>;
     })
   | undefined {
   const binding = config.candidateKnowledgeSelection;
@@ -769,6 +773,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const evidence = hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
       const decision = decideFullSourceEvidence(
         evidence,
+        fullSourceBudgetCharacters(context.modelConfiguration, maxEvidenceTokens),
         fullSourceBudgetCharacters(context.modelConfiguration),
       );
       return { decision, hits, evidence };
@@ -782,6 +787,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       reservedIdsByQuery.get(JSON.stringify([text, limit])) ?? new Set(),
     loadPinnedSourceChunks: (references) => loadPinnedSourceReferences(references),
     evidenceModeDecision: async () => (await resolveFullSource()).decision,
+    fullSourceEvidence: async () => (await resolveFullSource()).evidence,
     knowledgeChunkCount: (): Promise<number> => {
       knowledgeChunkCount ??= (async () =>
         evidenceMode === "full-source"

@@ -5,7 +5,7 @@ import type {
   WritingPolicy,
   WritingPolicyLineage,
 } from "@draft-loop/domain";
-import type { RunSnapshot } from "@draft-loop/orchestrator";
+import type { RunSnapshot, RunTracer } from "@draft-loop/orchestrator";
 import type { OutputFormat, PdfPrinter } from "@draft-loop/rendering";
 import type {
   AdjudicatedRevisionEffectOverride,
@@ -328,6 +328,8 @@ export interface ResumeRunCommand {
   readonly runId?: string;
   readonly allowProviderData?: boolean;
   readonly signal?: AbortSignal;
+  /** Receives the run's content-free spans (#2686); absent records none. */
+  readonly tracer?: RunTracer;
 }
 
 export type LifecycleAction =

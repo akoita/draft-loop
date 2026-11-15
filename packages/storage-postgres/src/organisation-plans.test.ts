@@ -1,4 +1,8 @@
-import { type EntitlementOverrides, resolveEntitlements } from "@draft-loop/schemas/entitlements";
+import {
+  type EntitlementOverrides,
+  planCatalog,
+  resolveEntitlements,
+} from "@draft-loop/schemas/entitlements";
 import { describe, expect, it } from "vitest";
 import { PlanAssignmentError } from "./organisation-plans.js";
 import { createSqlPool } from "./sql-client.js";
@@ -49,7 +53,7 @@ describe.runIf(connectionString !== undefined)("Postgres organisation plans", ()
       });
       expect(stored).toEqual({
         planId: "pro",
-        catalogVersion: 1,
+        catalogVersion: planCatalog.version,
         overrides: {},
         seats: null,
         periodStart: "2026-10-01",
@@ -120,7 +124,7 @@ describe.runIf(connectionString !== undefined)("Postgres organisation plans", ()
         { planId: "pro", overrides: { unknownLimit: 1 } },
         { planId: "pro", overrides: { runsPerDay: -1 } },
         { planId: "pro", overrides: { modelTiers: [] } },
-        { planId: "free" },
+        { planId: "starter" },
         { planId: "team" },
         { planId: "team", seats: 0 },
         { planId: "pro", periodStart: "2026-02-30" },
@@ -150,6 +154,30 @@ describe.runIf(connectionString !== undefined)("Postgres organisation plans", ()
       );
       await expect(
         tenancy.forTenant("org-north").organisationPlans.currentPlanAssignment(),
+      ).rejects.toMatchObject({ code: "stored_plan_invalid" });
+    });
+  });
+
+  it("reads an assignment stored under an earlier catalog version, and refuses a later one", async () => {
+    await withTenancy(async ({ tenancy, admin }) => {
+      const insert = (tenant: string, version: number) =>
+        admin.query(
+          `INSERT INTO organisation_plans (tenant_id, plan_id, catalog_version, overrides, period_start, assigned_at)
+           VALUES ($1, 'individual', $2, '{}', '2026-10-01', $3)`,
+          [tenant, version, assignedAt],
+        );
+      await insert("org-north", 1);
+      const north = tenancy.forTenant("org-north").organisationPlans;
+      await expect(north.currentPlanAssignment()).resolves.toMatchObject({
+        planId: "individual",
+        catalogVersion: 1,
+      });
+      await expect(north.currentEntitlements()).resolves.toMatchObject({
+        creditsPerPeriod: planCatalog.plans.individual.entitlements.creditsPerPeriod,
+      });
+      await insert("org-south", planCatalog.version + 1);
+      await expect(
+        tenancy.forTenant("org-south").organisationPlans.currentPlanAssignment(),
       ).rejects.toMatchObject({ code: "stored_plan_invalid" });
     });
   });

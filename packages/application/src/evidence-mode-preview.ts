@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 
 import type { ContextSnapshot } from "@draft-loop/domain";
-
 import { candidateKnowledgeRuntimeRetrieval } from "./candidate-knowledge-retrieval.js";
+import type { FullSourceFallbackReason } from "./full-source-evidence.js";
 import { resolveProviderAuthModes } from "./glm-provider-routing.js";
 import type { ModelProfileReferences } from "./index.js";
 import type { LocalApplicationDriverOptions } from "./local.js";
@@ -36,7 +36,7 @@ export interface EvidenceModePreview {
   readonly chunkCount: number;
   /** Distinct sources among those chunks; absent when retrieval is requested. */
   readonly sourceCount?: number;
-  readonly fallbackReason?: "budget-exceeded" | "no-eligible-chunks";
+  readonly fallbackReason?: FullSourceFallbackReason;
 }
 
 /** The run's trace port, which a decision never reaches; a preview must not write history. */
@@ -62,7 +62,7 @@ export async function previewEvidenceMode(
   const config = await readWorkspace(root);
   const selection = await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
   if (selection === undefined) return undefined;
-  const { mode } = await readWorkspaceEvidenceMode(root);
+  const { mode, maxEvidenceTokens } = await readWorkspaceEvidenceMode(root);
   const profiles = resolveRequestedRunModelProfiles(
     command.modelProfiles,
     options.modelProfileRegistry,
@@ -91,6 +91,8 @@ export async function previewEvidenceMode(
     context,
     withheld,
     mode,
+    undefined,
+    maxEvidenceTokens,
   );
   if (runtime === undefined) return undefined;
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } =

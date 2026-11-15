@@ -1,5 +1,9 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
 import { canonicalProfileEvidenceKindInstructions } from "./canonical-profile-evidence-kinds.js";
+import {
+  isGoogleGemini4AuthorProfile,
+  isGoogleGemini4ExtractionProfile,
+} from "./gemini-4-profiles.js";
 import { isGoogleGeminiAuthorProfile, isGoogleGeminiModel } from "./gemini-development-profile.js";
 import { isGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
@@ -63,7 +67,10 @@ export function canonicalProfileRequest(
     isGoogleGeminiModel(model.company, model.modelId) &&
     model.profile !== undefined &&
     model.profile.modelId === model.modelId &&
-    (isGoogleGeminiAuthorProfile(model.profile) || isGoogleGeminiExtractionProfile(model.profile))
+    (isGoogleGeminiAuthorProfile(model.profile) ||
+      isGoogleGeminiExtractionProfile(model.profile) ||
+      isGoogleGemini4AuthorProfile(model.profile) ||
+      isGoogleGemini4ExtractionProfile(model.profile))
       ? model.profile
       : undefined;
   const mistralProfile =

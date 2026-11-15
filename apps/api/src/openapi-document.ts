@@ -3,11 +3,13 @@ import type {
   HostedKnowledgeIntake,
   HostedSensitivityRules,
 } from "@draft-loop/application";
+import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import type { BetaInvites, BetaWaitlist } from "@draft-loop/storage-postgres";
 
@@ -33,6 +35,8 @@ export async function generateOpenApiDocument(): Promise<string> {
       operatorFor: () => ({}) as OperatorTenant,
       ownerTenantId: "openapi-owner",
       agentTokensFor: () => ({}) as AgentTokenStore,
+      agentConnectionCapsFor: () => ({}) as AgentConnectionCapStore,
+      runSpansFor: () => ({}) as RunSpanStore,
       entitlementsFor: () => ({}) as TenantEntitlements,
       applicationFor: () => ({
         service: {} as ApplicationService,

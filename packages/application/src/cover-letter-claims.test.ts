@@ -48,6 +48,23 @@ describe("coverLetterSentences", () => {
 describe("checkCoverLetterClaims", () => {
   const request = { sentences: coverLetterSentences(letter), facts, companyFacts };
 
+  it("lets a job requirement support a sentence about the role, never one about the candidate", () => {
+    const sentences = coverLetterSentences(
+      "The role leads threat modelling for 2 teams. The role needs 5 years. I led threat modelling.",
+    );
+    const requirements = [{ id: "q1", text: "Lead threat modelling for 2 teams" }];
+    const check = checkCoverLetterClaims({ sentences, facts, companyFacts, requirements }, [
+      { ...link("p0.s0", "employer"), requirementIds: ["q1"] },
+      { ...link("p0.s1", "employer"), requirementIds: ["q1", "q9"] },
+      { ...link("p0.s2", "candidate"), requirementIds: ["q1"] },
+    ]);
+    expect(check.sentences.map((sentence) => sentence.problems)).toEqual([
+      [],
+      ["unknown_requirement", "unsupported_number"],
+      ["no_fact"],
+    ]);
+  });
+
   it("passes a letter whose every sentence holds", () => {
     const check = checkCoverLetterClaims(request, [
       link("p0.s0", "courtesy"),

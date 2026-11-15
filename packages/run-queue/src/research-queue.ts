@@ -15,6 +15,16 @@ export const researchJobSchema = z.strictObject({
   workspaceId: identifierSchema,
   applicationId: identifierSchema,
   windowMonths: z.number().int().min(1).max(36).optional(),
+  /**
+   * Set when the run researches for an interview preparation guide (#2617): the guide's depth,
+   * and whether the candidate asked to cover pay. No other interview detail travels in the job.
+   */
+  guide: z
+    .strictObject({
+      depth: z.enum(["essential", "extensive"]),
+      salary: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export type ResearchJob = z.infer<typeof researchJobSchema>;

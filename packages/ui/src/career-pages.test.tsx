@@ -74,6 +74,20 @@ function profilePage(): string {
   return renderToStaticMarkup(<CareerProfilePage {...frame} workflow={workflow} />);
 }
 
+describe("Career page header", () => {
+  it.each([
+    ["evidence", evidencePage],
+    ["profile", profilePage],
+  ])("keeps the theme control beside the workspace actions on the %s page", (_page, page) => {
+    const html = page();
+    const header = html.slice(
+      html.indexOf('class="home-header-actions"'),
+      html.indexOf("</header>"),
+    );
+    expect(header).toContain('class="button button-toolbar header-theme-toggle"');
+  });
+});
+
 describe("Career evidence page", () => {
   it("holds the knowledge and retrieval panels and no profile workflow", () => {
     const html = evidencePage();

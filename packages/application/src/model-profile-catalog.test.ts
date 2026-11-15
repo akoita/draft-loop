@@ -24,11 +24,15 @@ describe("model profile catalog", () => {
       "standard-openai-critic@2",
       "standard-anthropic-critic@1",
       "balanced-anthropic-critic@1",
+      "balanced-google-author@1",
+      "standard-google-author@1",
       "dev-deepinfra-glm-author@1",
       "dev-google-gemini-author@2",
       "dev-mistral-author@1",
+      "standard-google-argon-author@1",
     ]);
     const inputCaps: Record<string, number> = {
+      "balanced-google-author@1": 1000000,
       "standard-anthropic-author@2": 1000000,
       "economy-anthropic-author@1": 1000000,
       "economy-anthropic-author@2": 1000000,
@@ -50,6 +54,9 @@ describe("model profile catalog", () => {
       expect(entry.sources.length).toBeGreaterThan(0);
       expect(entry.sources.every((source) => source.startsWith("https://"))).toBe(true);
       const reviewDates: Record<string, string> = {
+        "balanced-google-author@1": "2026-11-12",
+        "standard-google-author@1": "2026-11-12",
+        "standard-google-argon-author@1": "2026-11-12",
         "dev-deepinfra-glm-author@1": "2026-10-02",
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
@@ -84,9 +91,12 @@ describe("model profile catalog", () => {
       "standard-openai-critic@2": [2, 10],
       "standard-anthropic-critic@1": [4, 20],
       "balanced-anthropic-critic@1": [2, 10],
+      "balanced-google-author@1": [1.5, 7.5],
+      "standard-google-author@1": [4, 20],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
       "dev-google-gemini-author@2": [0.75, 3.75],
       "dev-mistral-author@1": [1.36, 4.18],
+      "standard-google-argon-author@1": [4, 20],
     });
     expect(
       Object.fromEntries(
@@ -189,7 +199,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(11);
+    expect(next).toHaveLength(14);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -248,6 +258,20 @@ describe("model profile catalog", () => {
         tier: "standard",
         author: { id: "standard-anthropic-author", version: 2 },
         critic: { id: "balanced-anthropic-critic", version: 1 },
+      },
+      {
+        id: "balanced-google",
+        label: "Balanced, Google writer — unvalidated",
+        tier: "standard",
+        author: { id: "balanced-google-author", version: 1 },
+        critic: { id: "balanced-openai-critic", version: 1 },
+      },
+      {
+        id: "standard-google",
+        label: "Standard, Google writer — unvalidated",
+        tier: "standard",
+        author: { id: "standard-google-author", version: 1 },
+        critic: { id: "standard-openai-critic", version: 2 },
       },
       {
         id: "development-glm",

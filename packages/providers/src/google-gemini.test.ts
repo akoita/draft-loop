@@ -248,6 +248,33 @@ describe("Google Gemini adapter", () => {
     });
   });
 
+  it.each([
+    ["gemini-4-hydrogen", "high", "HIGH"],
+    ["gemini-4-carbon", "medium", "MEDIUM"],
+    ["gemini-4-argon", "medium", "MEDIUM"],
+  ] as const)("sends %s its %s thinking level", async (modelId, effort, level) => {
+    const model = selection({ modelId, profile: profile({ modelId, effort }) });
+    const fixture = harness(validStream({ modelVersion: modelId }), { configuredModel: model });
+
+    await fixture.adapter.execute(request(model));
+
+    const sent = sentParameters(fixture.generate);
+    expect(sent.model).toBe(modelId);
+    expect(sent.config?.thinkingConfig).toEqual({ thinkingLevel: level });
+  });
+
+  it("refuses to disable thinking on a Gemini 4 model", async () => {
+    const modelId = "gemini-4-hydrogen";
+    const model = selection({ modelId, profile: profile({ modelId, thinking: "disabled" }) });
+    const fixture = harness(validStream(), { configuredModel: model });
+
+    await expect(fixture.adapter.execute(request(model))).rejects.toMatchObject({
+      code: "invalid-request",
+      diagnostics: [{ code: "unsupported_thinking", path: "request" }],
+    });
+    expect(fixture.generate).not.toHaveBeenCalled();
+  });
+
   it("never requests thought text", async () => {
     const model = selection({ profile: profile({ effort: "high" }) });
     const fixture = harness(validStream(), { configuredModel: model });
@@ -274,7 +301,13 @@ describe("Google Gemini adapter", () => {
 
   it("defaults to Gemini 3.8 Flash and keeps 3.7 Flash supported", () => {
     expect(googleGeminiModelId).toBe("gemini-3.8-flash");
-    expect(googleGeminiSupportedModelIds).toEqual(["gemini-3.7-flash", "gemini-3.8-flash"]);
+    expect(googleGeminiSupportedModelIds).toEqual([
+      "gemini-3.7-flash",
+      "gemini-3.8-flash",
+      "gemini-4-hydrogen",
+      "gemini-4-carbon",
+      "gemini-4-argon",
+    ]);
     expect(isGoogleGeminiSupportedModelId("gemini-3.6-flash")).toBe(false);
   });
 

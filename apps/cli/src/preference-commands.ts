@@ -14,7 +14,7 @@ function describe(suggestion: PreferenceSuggestion): string {
 }
 
 /**
- * Registers `preferences list|accept|dismiss` (#2253): writing preferences suggested from the
+ * Registers `preferences list|accept|dismiss|sources` (#2253, #2384): writing preferences suggested from the
  * person's own review choices. DraftLoop suggests; the person decides. Accepting saves a new
  * writing-policy version; dismissing means it is never offered again. No model is called.
  */
@@ -46,6 +46,7 @@ export function registerPreferenceCommands(
       for (const suggestion of listed) {
         io.write(`${suggestion.id}: ${describe(suggestion)}`);
         io.write(`  why: ${suggestion.reason}`);
+        io.write(`  from runs: ${suggestion.runIds.join(", ")}`);
       }
       io.write('Accept one with "draft-loop preferences accept <workspace> <id>".');
     });
@@ -68,5 +69,29 @@ export function registerPreferenceCommands(
     .action(async (workspace: string, id: string) => {
       await suggestions.dismiss(workspaceRoot(workspace), id);
       io.write(`Dismissed ${id}. The writing policy is unchanged.`);
+    });
+
+  preferences
+    .command("sources")
+    .description("Show which runs suggested each accepted preference; hand-written rules have none")
+    .argument("<workspace>", "workspace directory")
+    .option("--json", "print machine-readable JSON")
+    .action(async (workspace: string, options: { readonly json?: boolean }) => {
+      const sources = await suggestions.sources(workspaceRoot(workspace));
+      if (options.json === true) {
+        io.write(JSON.stringify(sources));
+        return;
+      }
+      if (sources.length === 0) {
+        io.write("No accepted suggestions. Rules you wrote yourself show no source.");
+        return;
+      }
+      for (const source of sources) {
+        const runs = source.runIds.length;
+        io.write(
+          `policy ${source.policyChecksum.slice(0, 12)}: suggested from ${runs} run${runs === 1 ? "" : "s"} (${source.suggestionId}, accepted ${source.acceptedAt})`,
+        );
+        io.write(`  runs: ${source.runIds.join(", ")}`);
+      }
     });
 }

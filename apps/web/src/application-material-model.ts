@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
+import { interviewGuideMarkdown } from "./interview-guide-model.js";
 
 /**
  * The web's application material (#2217): what the prepare panel says before the first draft,
@@ -8,6 +9,8 @@ import { ApiRequestError, type ApiSchemas, describeError } from "./api-client.js
 
 export type ApplicationMaterialKind = ApiSchemas["ApplicationMaterialRequestInput"]["kind"];
 export type ApplicationMaterialDraft = ApiSchemas["ApplicationMaterialDraft"];
+/** A saved draft's kind: a new draft's kind, or an interview preparation guide (#2615). */
+export type SavedApplicationMaterialKind = ApplicationMaterialDraft["kind"];
 export type ApplicationMaterialGuidance = NonNullable<
   ApiSchemas["ApplicationMaterialRequestInput"]["guidance"]
 >;
@@ -57,18 +60,22 @@ export function applicationMaterialGuidanceFor(
 }
 
 export const applicationMaterialKindLabels = (): Readonly<
-  Record<ApplicationMaterialKind, string>
+  Record<SavedApplicationMaterialKind, string>
 > => ({
   "cover-letter": t`Cover letter`,
   "interview-questions": t`Interview questions`,
+  "interview-guide": t`Interview preparation guide`,
 });
 
 /** The Draft button names the open tab, so it reads as that tab's action (#2595). */
 export function applicationMaterialDraftLabel(
-  kind: ApplicationMaterialKind,
+  kind: SavedApplicationMaterialKind,
   drafted: boolean,
 ): string {
   if (kind === "cover-letter") return drafted ? t`Draft a new cover letter` : t`Draft cover letter`;
+  if (kind === "interview-guide") {
+    return drafted ? t`Draft a new interview guide` : t`Draft interview guide`;
+  }
   return drafted ? t`Draft new interview questions` : t`Draft interview questions`;
 }
 
@@ -158,7 +165,7 @@ export function applicationMaterialProblem(error: unknown): string {
 
 /** The file name the download is saved under. */
 export function applicationMaterialFileName(
-  kind: ApplicationMaterialKind,
+  kind: SavedApplicationMaterialKind,
   format: "md" | "docx" | "pdf" = "md",
 ): string {
   return `${kind}.${format}`;
@@ -169,6 +176,14 @@ export function applicationMaterialFileName(
  * cites under it, so the candidate can check every claim before using the text.
  */
 export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): string {
+  if (draft.kind === "interview-guide") {
+    return [
+      interviewGuideMarkdown(draft, applicationMaterialKindLabels()[draft.kind]).trimEnd(),
+      "",
+      `_Drafted by ${draft.model.model} (${draft.model.provider}). Check before use._`,
+      "",
+    ].join("\n");
+  }
   const lines = [`# ${applicationMaterialKindLabels()[draft.kind]}`, ""];
   draft.items.forEach((item, index) => {
     if (draft.kind === "interview-questions") {

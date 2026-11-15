@@ -161,7 +161,7 @@ function requirementsValue(state: DesktopReviewState, context: StartConfirmation
 
 /** The evidence line: the mode the run would use and how much of the source that is. */
 export function evidencePreviewValue(preview: StartEvidencePreview): string {
-  if (preview.status === "checking") return "Checking…";
+  if (preview.status === "checking") return t`Checking…`;
   const { requestedMode, effectiveMode, chunkCount, sourceCount, fallbackReason } = preview.preview;
   if (requestedMode === "retrieval") return t`Retrieval`;
   if (effectiveMode === "full-source") {
@@ -172,6 +172,9 @@ export function evidencePreviewValue(preview: StartEvidencePreview): string {
   }
   if (fallbackReason === "no-eligible-chunks") {
     return t`Full source has no eligible chunks; retrieval will be used`;
+  }
+  if (fallbackReason === "cost-cap-exceeded") {
+    return t`Full source passes this workspace's cost cap (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
   }
   return t`Full source does not fit the budget for this pair (${countedNouns.chunk(chunkCount)}); retrieval will be used`;
 }

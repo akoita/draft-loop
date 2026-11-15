@@ -37,6 +37,35 @@ flowchart LR
    `packages/review-state`, which fills it on the host side for both the
    desktop host and the hosted API.
 
+## Web platform guidance
+
+Before you build or rework a component, overlay, layout, animation, form,
+media control, or a performance or accessibility fix, read
+[`building-draftloop-web-ui`](../../.agents/skills/building-draftloop-web-ui/SKILL.md).
+It looks the pattern up in [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance)
+and lists where DraftLoop's rules take precedence. Prefer a native element or
+API over a hand-built one or a new dependency, with a fallback for browsers
+that lack it.
+
+| Agent       | How it finds the skill                                         |
+| ----------- | -------------------------------------------------------------- |
+| Codex       | `.agents/skills`, and the pointer in `AGENTS.md`               |
+| Claude Code | A short file in `.claude/skills` that sends it to the same file |
+
+Three choices are deliberate and should survive edits:
+
+- **Pinned version.** Every command names an exact version, never `@latest`,
+  and passes `--ignore-scripts`. Upgrade in one reviewed commit that changes
+  the version in the skill body and its `metadata.upstream`.
+- **Usage reporting off.** Every command sets `DISABLE_TELEMETRY=1`. By
+  default the tool reports search queries and guide ids to its publisher.
+- **No upstream installer or plugin.** Either would add an unpinned, always-on
+  copy of the upstream skill to one agent only. The project skill gives every
+  agent one committed file with the same scope and safeguards.
+
+When guides shaped a change, add the skill's one-line `Web guidance:` note to
+the PR body.
+
 ## Strings in two languages
 
 Every visible string uses the Lingui macros, for example

@@ -13,6 +13,7 @@ import {
   deepInfraGLMModelId,
   type GoogleGeminiClient,
   googleGeminiCompany,
+  isGoogleGemini4ModelId,
   isGoogleGeminiSupportedModelId,
   type JsonObject,
   type LocalClient,
@@ -187,8 +188,9 @@ export async function createProviderAdapter(
     return createGoogleGeminiAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
       retry: config.retry ?? developmentProviderRetry,
-      // Google's paid-tier list prices through 2026-12-31; they double from 2027-01-01.
-      pricing: {
+      // Gemini 4 is priced from the catalog. For the Flash models: Google's paid-tier list prices
+      // through 2026-12-31; they double from 2027-01-01.
+      pricing: (isGoogleGemini4ModelId(model.modelId) ? catalogModelPricing(model) : undefined) ?? {
         inputUsdPerMillionTokens: 0.75,
         outputUsdPerMillionTokens: 3.75,
         cachedInputUsdPerMillionTokens: 0.075,

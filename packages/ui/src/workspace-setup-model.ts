@@ -37,7 +37,10 @@ export const workspaceSetupRoundLimits = [1, 2, 3, 4, 5] as const;
 export const defaultWorkspaceSetupRounds = 2;
 export const defaultWorkspaceSetupPresetId = "balanced";
 
-/** The presets a new workspace can start from, with their models; development presets stay out. */
+/**
+ * The presets a new workspace can start from, with their models. Development presets stay out, and
+ * so do the presets with another company's author, which need a key a first run does not ask for.
+ */
 export function workspaceSetupPresets(): readonly WorkspaceSetupPreset[] {
   return modelProfilePresets.flatMap((preset) => {
     if (isDevelopmentPreset(preset)) return [];
@@ -48,6 +51,7 @@ export function workspaceSetupPresets(): readonly WorkspaceSetupPreset[] {
     const author = side(preset.author);
     const critic = side(preset.critic);
     if (author === undefined || critic === undefined) return [];
+    if (author.provider !== "anthropic") return [];
     return [
       {
         id: preset.id,

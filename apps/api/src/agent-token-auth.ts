@@ -24,6 +24,8 @@ declare module "fastify" {
           readonly id: string;
           readonly workspaceId: string;
           readonly scopes: readonly AgentTokenScope[];
+          /** Set for an assistant's sign-in (#2646): its client, which holds the spend cap. */
+          readonly clientId?: string;
         }
       | undefined;
   }

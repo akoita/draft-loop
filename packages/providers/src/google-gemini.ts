@@ -28,6 +28,7 @@ import {
   googleGeminiModelId,
   googleGeminiProvider,
   googleGeminiSupportedModelIds,
+  isGoogleGemini4ModelId,
   isGoogleGeminiSupportedModelId,
 } from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
@@ -45,6 +46,7 @@ export {
   googleGeminiModelId,
   googleGeminiProvider,
   googleGeminiSupportedModelIds,
+  isGoogleGemini4ModelId,
   isGoogleGeminiSupportedModelId,
 };
 
@@ -204,10 +206,17 @@ function resolveSelectionControls(
         "unsupported_thinking",
       );
     }
+    if (thinkingMode === "disabled" && isGoogleGemini4ModelId(requestedData.modelId)) {
+      throw invalidRequest(
+        "Gemini 4 models cannot run with thinking disabled.",
+        "unsupported_thinking",
+      );
+    }
     if (
       selectedEffort !== "provider-default" &&
       selectedEffort !== "low" &&
-      selectedEffort !== "high"
+      selectedEffort !== "high" &&
+      !(selectedEffort === "medium" && isGoogleGemini4ModelId(requestedData.modelId))
     ) {
       throw invalidRequest(
         "This Google Gemini model does not support the selected effort control.",
@@ -226,7 +235,9 @@ function resolveSelectionControls(
     outputTokens = profile.runtime.maxOutputTokens;
     if (thinkingMode === "disabled") thinking = { kind: "disabled" };
     else if (selectedEffort === "low") thinking = { kind: "level", level: ThinkingLevel.LOW };
-    else if (selectedEffort === "high") thinking = { kind: "level", level: ThinkingLevel.HIGH };
+    else if (selectedEffort === "medium") {
+      thinking = { kind: "level", level: ThinkingLevel.MEDIUM };
+    } else if (selectedEffort === "high") thinking = { kind: "level", level: ThinkingLevel.HIGH };
   }
 
   if (!Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > maxOutputTokens) {

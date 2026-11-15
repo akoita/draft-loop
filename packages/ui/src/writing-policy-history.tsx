@@ -1,4 +1,4 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { formatDateTime } from "./locale-format.js";
 import type { WritingPolicyVersionMetadata } from "./model.js";
 
@@ -106,6 +106,14 @@ export function WritingPolicyHistoryView({
               {entry.checksum === activeChecksum ? (
                 <span className="policy-history-active">{t`Active`}</span>
               ) : null}
+              {entry.suggestedFromRunCount === undefined ? null : (
+                <span className="policy-history-source">
+                  {plural(entry.suggestedFromRunCount, {
+                    one: "Suggested from # run",
+                    other: "Suggested from # runs",
+                  })}
+                </span>
+              )}
             </button>
           </li>
         ))}

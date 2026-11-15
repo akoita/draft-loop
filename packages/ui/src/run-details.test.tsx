@@ -2,6 +2,7 @@ import { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
+import { activateScreenLocale } from "./i18n.js";
 import {
   createFixtureReviewState,
   type DesktopReviewState,
@@ -111,6 +112,18 @@ describe("runDetailsSummary", () => {
     expect(runDetailsSummary(fullSource)).toBe(
       "Opus 5.5 → GPT-6.1 Sol · full source, 282 chunks · policy active",
     );
+  });
+
+  it("reads in French with no English word left", () => {
+    activateScreenLocale("fr");
+    try {
+      expect(runDetailsSummary({ ...fixture, applicationRuns: [] })).toMatch(
+        /^modèles non enregistrés · .+ · aucune politique$/u,
+      );
+      expect(runDetailsSummary(fullSource)).toMatch(/ · politique active$/u);
+    } finally {
+      activateScreenLocale("en");
+    }
   });
 
   it("reads a retrieval run's excerpts and a run without a policy", () => {

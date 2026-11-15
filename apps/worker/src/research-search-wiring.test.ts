@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import type { ClaudeSearchClient } from "@draft-loop/model-gateway";
 import { describe, expect, it } from "vitest";
 
@@ -9,10 +10,12 @@ const direct: WorkerModelRoutes = {
   kind: "direct",
   direct: { secretsDirectory: "/run/secrets", openAiEndpoint: "global" },
 };
-const vertex = {
-  kind: "vertex",
-  gateway: { vertexProjectId: "example-project", vertexLocation: "eu", vertexPriceFactor: 1.1 },
-} as unknown as WorkerModelRoutes;
+const vertexGateway = {
+  vertexProjectId: "example-project",
+  vertexLocation: "eu",
+  vertexPriceFactor: 1.1,
+};
+const vertex = { kind: "vertex", gateway: vertexGateway } as unknown as WorkerModelRoutes;
 const request = { query: "Example Corp news", fromDate: "2025-11-08", maxResults: 5 };
 
 // An invented page only.
@@ -94,5 +97,51 @@ describe("research search wiring", () => {
     );
     expect((await search?.search(request))?.provider).toBe("linkup");
     expect(asked).toEqual(["linkup"]);
+  });
+
+  it("moves a search Vertex AI refuses for quota to the Claude API once, at its prices", async () => {
+    const withFallback = {
+      kind: "vertex",
+      gateway: { ...vertexGateway, anthropicKeySecret: "anthropic-key" },
+    } as unknown as WorkerModelRoutes;
+    const refusals: number[] = [];
+    const refusing = (status: number) => async () =>
+      ({
+        messages: {
+          create: async () => {
+            refusals.push(status);
+            throw new Anthropic.APIError(status, undefined, "RESOURCE_EXHAUSTED", new Headers());
+          },
+        },
+      }) as ClaudeSearchClient;
+    const scripted = claudeClient();
+    const search = researchSearchFor(
+      {},
+      withFallback,
+      {},
+      { claudeClient: refusing(429), fallbackClaudeClient: scripted.claudeClient },
+    );
+    const reply = await search?.search(request);
+    expect(reply?.provider).toBe("claude-api-fallback");
+    // Priced as the Claude API: no Vertex factor on the tokens.
+    expect(reply?.costUsd).toBeCloseTo(0.01 + 0.1, 6);
+    expect(scripted.bodies).toHaveLength(1);
+    expect(scripted.bodies[0]?.tools?.[0]).toMatchObject({ type: "web_search_20250305" });
+
+    // Another failure stays a failure, and nothing reaches the Claude API.
+    const other = claudeClient();
+    const failing = researchSearchFor(
+      {},
+      withFallback,
+      {},
+      { claudeClient: refusing(500), fallbackClaudeClient: other.claudeClient },
+    );
+    await expect(failing?.search(request)).rejects.toMatchObject({ code: "status_500" });
+    expect(other.bodies).toHaveLength(0);
+
+    // Without the deployment's fallback, a quota refusal fails as before.
+    const alone = researchSearchFor({}, vertex, {}, { claudeClient: refusing(429) });
+    await expect(alone?.search(request)).rejects.toMatchObject({ code: "status_429" });
+    expect(refusals).toEqual([429, 500, 429]);
   });
 });

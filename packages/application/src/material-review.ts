@@ -56,7 +56,9 @@ export interface MaterialReviewResult {
 }
 
 /** Whether the pass may review this version: a drafted cover letter nobody has changed. */
-export function reviewableMaterial(material: SavedApplicationMaterial): boolean {
+export function reviewableMaterial(
+  material: SavedApplicationMaterial,
+): material is SavedApplicationMaterial & { readonly kind: "cover-letter" } {
   return (
     material.kind === "cover-letter" &&
     material.based_on === undefined &&
@@ -65,7 +67,9 @@ export function reviewableMaterial(material: SavedApplicationMaterial): boolean 
   );
 }
 
-function draftOf(material: SavedApplicationMaterial): ApplicationMaterialDraft {
+function draftOf(
+  material: SavedApplicationMaterial & { readonly kind: "cover-letter" },
+): ApplicationMaterialDraft {
   return {
     kind: material.kind,
     items: material.items.map((item) => ({

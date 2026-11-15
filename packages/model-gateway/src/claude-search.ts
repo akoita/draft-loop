@@ -33,7 +33,8 @@ export interface ClaudeSearchSource {
 export interface ClaudeSearchReply {
   readonly sources: readonly ClaudeSearchSource[];
   readonly costUsd: number;
-  readonly provider: "claude";
+  /** `claude`, or `claude-api-fallback` when Vertex AI refused for quota (#2582). */
+  readonly provider: "claude" | "claude-api-fallback";
 }
 
 /** The one call the search makes, on the Claude API or on Vertex AI. */
@@ -88,6 +89,8 @@ export interface ClaudeSearchOptions {
     readonly inputUsdPerMillion: number;
     readonly outputUsdPerMillion: number;
   };
+  /** The search time that relative page ages count back from; the clock when unset. */
+  readonly now?: () => Date;
 }
 
 /**
@@ -154,7 +157,7 @@ export function createClaudeResearchSearch(options: ClaudeSearchOptions): {
         throw new ClaudeSearchError("Claude declined the search.", "refusal");
       }
       return {
-        sources: claudeSearchSources(message),
+        sources: claudeSearchSources(message, (options.now ?? (() => new Date()))()),
         costUsd: claudeSearchCostUsd(message.usage, pricing),
         provider: "claude",
       };
@@ -163,7 +166,10 @@ export function createClaudeResearchSearch(options: ClaudeSearchOptions): {
 }
 
 /** The search results Claude cited, in the order the searches returned them. */
-export function claudeSearchSources(message: Anthropic.Message): ClaudeSearchSource[] {
+export function claudeSearchSources(
+  message: Anthropic.Message,
+  searchedAt: Date = new Date(),
+): ClaudeSearchSource[] {
   const found = new Map<string, { title: string; publishedOn?: string; passages: string[] }>();
   let failure: string | undefined;
   for (const block of message.content) {
@@ -174,9 +180,10 @@ export function claudeSearchSources(message: Anthropic.Message): ClaudeSearchSou
     }
     for (const result of block.content) {
       if (found.has(result.url)) continue;
+      const publishedOn = claudePageAgeDate(result.page_age, searchedAt);
       found.set(result.url, {
         title: result.title,
-        ...(result.page_age === null ? {} : { publishedOn: result.page_age }),
+        ...(publishedOn === undefined ? {} : { publishedOn }),
         passages: [],
       });
     }
@@ -200,6 +207,51 @@ export function claudeSearchSources(message: Anthropic.Message): ClaudeSearchSou
     excerpt: source.passages.join(" "),
     ...(source.publishedOn === undefined ? {} : { publishedOn: source.publishedOn }),
   }));
+}
+
+const isoDayPrefix = /^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/u;
+const relativeAge = /^(\d+|an?|one)\s+(minute|hour|day|week|month|year)s?\s+ago$/iu;
+
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+
+/**
+ * A search result's `page_age` as `YYYY-MM-DD`, or undefined (#2579). The tool gives an absolute
+ * date such as "October 3, 2026", an ISO timestamp, or a relative age such as "2 days ago", which
+ * counts back from the search time. An absolute date keeps its own calendar day whatever the
+ * server's time zone; text that names no date leaves the source undated.
+ */
+export function claudePageAgeDate(
+  pageAge: string | null | undefined,
+  searchedAt: Date,
+): string | undefined {
+  const text = (pageAge ?? "").trim();
+  if (text === "") return undefined;
+  const iso = isoDayPrefix.exec(text);
+  if (iso?.[1] !== undefined) {
+    return Number.isNaN(Date.parse(`${iso[1]}T00:00:00Z`)) ? undefined : iso[1];
+  }
+  const lower = text.toLowerCase();
+  if (lower === "today" || lower === "just now") return isoDay(searchedAt);
+  if (lower === "yesterday") return isoDay(new Date(searchedAt.getTime() - 86_400_000));
+  const relative = relativeAge.exec(text);
+  if (relative?.[1] !== undefined && relative[2] !== undefined) {
+    const amount = /^\d+$/u.test(relative[1]) ? Number(relative[1]) : 1;
+    const day = new Date(searchedAt.getTime());
+    const unit = relative[2].toLowerCase();
+    if (unit === "minute") day.setUTCMinutes(day.getUTCMinutes() - amount);
+    if (unit === "hour") day.setUTCHours(day.getUTCHours() - amount);
+    if (unit === "day") day.setUTCDate(day.getUTCDate() - amount);
+    if (unit === "week") day.setUTCDate(day.getUTCDate() - 7 * amount);
+    if (unit === "month") day.setUTCMonth(day.getUTCMonth() - amount);
+    if (unit === "year") day.setUTCFullYear(day.getUTCFullYear() - amount);
+    return isoDay(day);
+  }
+  // A date with no time parses at local midnight: read its calendar day back in local time.
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const date = String(parsed.getDate()).padStart(2, "0");
+  return `${parsed.getFullYear()}-${month}-${date}`;
 }
 
 export function claudeSearchCostUsd(
@@ -245,4 +297,31 @@ export function vertexClaudeSearchClient(
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
   return async () => client as unknown as ClaudeSearchClient;
+}
+
+/** What a search that fell back to the Claude API records as its provider (#2582). */
+export const claudeSearchFallbackProvider = "claude-api-fallback";
+
+/**
+ * Vertex AI's search with the direct Claude API as its fallback (#2582), for a deployment that
+ * turned the fallback on. Only a quota refusal (status 429, Vertex AI's RESOURCE_EXHAUSTED) moves
+ * a search to the Claude API, once; the reply is priced at the Claude API's rates and records the
+ * fallback as its provider. Any other failure stays a failure.
+ */
+export function withClaudeApiSearchFallback(
+  primary: ReturnType<typeof createClaudeResearchSearch>,
+  fallback: ReturnType<typeof createClaudeResearchSearch>,
+): ReturnType<typeof createClaudeResearchSearch> {
+  return {
+    search: async (request) => {
+      try {
+        return await primary.search(request);
+      } catch (error) {
+        if (!(error instanceof ClaudeSearchError) || error.code !== "status_429") throw error;
+        if (request.signal?.aborted === true) throw error;
+      }
+      const reply = await fallback.search(request);
+      return { ...reply, provider: claudeSearchFallbackProvider };
+    },
+  };
 }

@@ -37,7 +37,8 @@ const preferenceSuggestionSchema = z
   })
   .meta({ id: "PreferenceSuggestion" });
 
-const view = (suggestion: PreferenceSuggestion) =>
+// The source run ids stay off the route until the History tab shows them (#2670).
+const view = ({ runIds: _runIds, ...suggestion }: PreferenceSuggestion) =>
   suggestion.kind === "forbidden-term"
     ? { ...suggestion }
     : { ...suggestion, sectionOrder: [...suggestion.sectionOrder] };

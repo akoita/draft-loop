@@ -75,7 +75,18 @@ describe("signInTokenVerifier", () => {
     expect(await verifier()(await token())).toEqual({
       status: "verified",
       identity: { issuer, subject: "person-1", email: "ada@example.test", emailVerified: true },
+      grantedScopes: [],
     });
+  });
+
+  it("reads the client the token was issued to and its scopes", async () => {
+    const issued = await verifier()(
+      await token({ claims: { azp: "assistant", client_id: "ignored", scope: "openid  a:b" } }),
+    );
+    const byClientId = await verifier()(await token({ claims: { client_id: "assistant-2" } }));
+
+    expect(issued).toMatchObject({ clientId: "assistant", grantedScopes: ["openid", "a:b"] });
+    expect(byClientId).toMatchObject({ clientId: "assistant-2", grantedScopes: [] });
   });
 
   it("counts an email as verified only when the provider says exactly true", async () => {

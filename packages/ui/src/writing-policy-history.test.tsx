@@ -57,6 +57,15 @@ describe("WritingPolicyHistoryView", () => {
     expect(html).not.toContain("Restore as new version");
   });
 
+  it("says how many runs suggested a version, and nothing for one written by hand (#2670)", () => {
+    const suggested = { ...active, suggestedFromRunCount: 3 };
+    expect(render({ versions: [older, suggested] })).toContain("Suggested from 3 runs");
+    expect(render({ versions: [older, { ...active, suggestedFromRunCount: 1 }] })).toContain(
+      "Suggested from 1 run<",
+    );
+    expect(render()).not.toContain("Suggested from");
+  });
+
   it("shows an earlier version's text with its differences and offers to restore it", () => {
     const html = render({
       selectedChecksum: older.checksum,

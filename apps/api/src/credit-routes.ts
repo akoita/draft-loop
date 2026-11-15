@@ -124,7 +124,9 @@ const runEstimateSchema = z
     agentSpend: z
       .object({
         monthlyCapUsd: z.number(),
-        spentThisMonthUsd: z.number().describe("What the token reserved this UTC month."),
+        spentThisMonthUsd: z
+          .number()
+          .describe("What the token or connection reserved this UTC month."),
         remainingUsd: z.number(),
         runReservesUsd: z
           .number()
@@ -268,9 +270,8 @@ export function registerRunEstimateRoute(
         authorTier,
         criticTier,
       };
-      const agent = request.agentToken;
-      if (agent !== undefined && options.agentSpend !== undefined) {
-        const spend = await options.agentSpend.status(agent, root);
+      if (request.agentToken !== undefined && options.agentSpend !== undefined) {
+        const spend = await options.agentSpend.status(request, root);
         return spend === undefined ? view : { ...view, agentSpend: spend };
       }
       const { caller } = request;

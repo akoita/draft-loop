@@ -1,3 +1,4 @@
+import { agentConnectionCapsMigration } from "./agent-connection-caps-migration.js";
 import { agentTokenExpiryMigration } from "./agent-token-expiry-migration.js";
 import { agentTokenScopesMigration } from "./agent-token-scopes-migration.js";
 import { agentTokenSpendMigration } from "./agent-token-spend-migration.js";
@@ -10,6 +11,7 @@ import { careerInterviewMigration } from "./career-interview-migration.js";
 import { consentLedgerMigration } from "./consent-ledger-migration.js";
 import { contentScreeningMigration } from "./content-screening-migration.js";
 import { creditLedgerMigration } from "./credit-ledger-migration.js";
+import { interviewGuideMigration } from "./interview-guide-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
 import { memberSettingsMigration } from "./member-settings-migration.js";
 import { modelCallMeterMigration } from "./model-call-meter-migration.js";
@@ -17,8 +19,10 @@ import { organisationActivityMigration } from "./organisation-activity-migration
 import { organisationClosingMigration } from "./organisation-closing-migration.js";
 import { organisationErasureMigration } from "./organisation-erasure-migration.js";
 import { organisationPlansMigration } from "./organisation-plans-migration.js";
+import { prepareCallMeterMigration } from "./prepare-call-meter-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import { researchBriefsMigration } from "./research-briefs-migration.js";
+import { runSpansMigration } from "./run-spans-migration.js";
 import { savedApplicationMaterialMigration } from "./saved-application-material-migration.js";
 import { sourceEvidenceKindsMigration } from "./source-evidence-kinds-migration.js";
 import { spendPoolMigration } from "./spend-pool-migration.js";
@@ -813,6 +817,10 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   researchBriefsMigration,
   betaWaitlistMigration,
   agentTokenSpendMigration,
+  interviewGuideMigration,
+  agentConnectionCapsMigration,
+  runSpansMigration,
+  prepareCallMeterMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

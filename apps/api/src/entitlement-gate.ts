@@ -9,6 +9,7 @@ import type {
   CreditLedger,
   ModelCallMeter,
   OrganisationPlans,
+  PrepareCallMeter,
   SpendPool,
 } from "@draft-loop/storage-postgres";
 import type { FastifyBaseLogger } from "fastify";
@@ -35,6 +36,8 @@ export interface TenantEntitlements {
   };
   /** The organisation's daily count of model calls outside runs (#2487); uncounted when absent. */
   readonly modelCalls?: Pick<ModelCallMeter, "take">;
+  /** The count of Prepare calls per credited application (#2680); uncounted when absent. */
+  readonly prepareCalls?: Pick<PrepareCallMeter, "take">;
 }
 
 /** One organisation's entitlements and ledger, by organisation id. */

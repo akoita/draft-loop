@@ -409,8 +409,24 @@ nothing.
   must be a short identifier, so a prompt or a draft sentence is dropped.
 - **Names.** Attributes follow the OpenTelemetry GenAI conventions where one
   exists, pinned to one version.
-- **Plan.** Storing spans beside run history (#1103) and exporting them
-  locally (#1104) are planned.
+- **Vocabulary.** The span and attribute names live in
+  `packages/domain/src/run-span.ts`, shared by the port and the store.
+- **Store.** A span store (`packages/storage/src/run-spans.ts`) keeps a run's
+  spans and reads them back as a tree. It refuses an attribute outside the
+  listed names instead of dropping it. On Postgres the `run_spans` table is
+  confined to its tenant and erased with the candidate record.
+- **Recording.** The worker gives each run it resumes a recorder
+  (`packages/application/src/run-span-recorder.ts`). It saves a span when it
+  starts and when it ends. A failed save is logged once and never changes the
+  run's outcome. The CLI records none.
+- **Reading.** `GET /v1/workspaces/{id}/runs/{runId}/trace` lists a run's
+  spans in start order. Whoever can read the run can read its trace; an agent
+  token cannot.
+- **On screen.** On the hosted service, **Run details** has a folded **Steps**
+  section (`packages/ui/src/run-steps.tsx`). It lists each advance with its
+  author, critic and revision attempts: duration, model, estimated cost and,
+  for a failed attempt, the error type. A run with no trace shows no section.
+- **Plan.** Exporting spans locally (#1104) is planned.
 
 ## Clients and adapters
 

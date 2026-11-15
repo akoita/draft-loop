@@ -1,4 +1,5 @@
 import type { BridgeCommand } from "@draft-loop/ui/bridge";
+import { knowledgeFileImportCancelledMessage } from "@draft-loop/ui/knowledge-cancel";
 import { t } from "@lingui/core/macro";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
@@ -169,7 +170,8 @@ export function createKnowledgeAnswers(client: ApiClient, pickFile: PickFile = b
         inStore(storeId);
         const file = await pickFile(acceptedSourceFiles);
         if (file === undefined) {
-          throw new Refusal("permission-denied", t`Candidate knowledge file import was cancelled.`);
+          // Untranslated: the screen recognizes this message and shows nothing for a cancel.
+          throw new Refusal("permission-denied", knowledgeFileImportCancelledMessage);
         }
         const contentType = evidenceMediaType(file.name);
         const problem = sourceFileProblem(file);
