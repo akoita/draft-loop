@@ -5,7 +5,6 @@ import {
   type CareerEvidenceCapabilities,
   type CareerEvidenceSource,
 } from "./career-evidence.js";
-import { defaultKnowledgeStoreDestinationLabel } from "./career-evidence-contract.js";
 
 /**
  * What the Career evidence card does while the workspace has no knowledge base selected.
@@ -24,12 +23,6 @@ export function supportsAutomaticKnowledgeBase(capabilities: CareerEvidenceCapab
 
 export function noSelectionMode(automatic: boolean): NoSelectionMode {
   return automatic ? "first-add" : "legacy";
-}
-
-function createdNotice(displayName: string, created: boolean): string {
-  return created
-    ? t`Created knowledge base “${displayName}” in ${defaultKnowledgeStoreDestinationLabel()} and selected it for this workspace.`
-    : t`Selected knowledge base “${displayName}” for this workspace.`;
 }
 
 function requireAutomatic(capabilities: CareerEvidenceCapabilities) {
@@ -73,6 +66,7 @@ export async function addFirstCareerEvidence(input: {
   if (outcome.status !== "added") return outcome;
   return {
     status: "added",
-    message: `${createdNotice(displayName, base.created)} ${outcome.message}`,
+    // The base is made without a word: the person added a document, and that is what they hear.
+    message: outcome.message,
   };
 }

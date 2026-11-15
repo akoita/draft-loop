@@ -120,7 +120,7 @@ export function careerEvidenceReady(
 }
 
 /** The stored name of a workspace's default knowledge base. */
-const defaultCareerEvidenceName = "Career evidence";
+export const defaultCareerEvidenceName = "Career evidence";
 
 /** A knowledge base's name as shown: the default base keeps its stored English name, so translate it. */
 export function knowledgeBaseDisplayName(displayName: string): string {
@@ -130,14 +130,16 @@ export function knowledgeBaseDisplayName(displayName: string): string {
 export function careerEvidenceSourcesText(
   status: Extract<CareerEvidenceStatus, { kind: "selected" }>,
 ): string {
-  const name = knowledgeBaseDisplayName(status.displayName);
-  return t`${name} · ${countedNouns.source(status.sourceCount)}`;
+  const documents = countedNouns.document(status.sourceCount);
+  // The default base needs no name: it is simply the person's documents.
+  if (status.displayName === defaultCareerEvidenceName) return documents;
+  return t`${status.displayName} · ${documents}`;
 }
 
 export function careerEvidenceReadinessText(
   status: Extract<CareerEvidenceStatus, { kind: "selected" }>,
 ): string {
-  if (status.sourceCount === 0) return t`Empty: add a CV, portfolio, or other source`;
+  if (status.sourceCount === 0) return t`Empty: add a CV, portfolio, or other document`;
   if (status.blockedCount > 0) return `${status.blockedCount} not ready`;
   return t`Ready`;
 }
@@ -164,7 +166,7 @@ function careerEvidenceAddLead(
 
 /** Says how many of the folder's files reached the base, and when the import stopped early. */
 function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
-  const lead = t`Added ${countedNouns.source(result.sourceCount)} from the folder to ${displayName}.`;
+  const lead = t`Added ${countedNouns.document(result.sourceCount)} from the folder to ${displayName}.`;
   return result.status === "partial" ? t`${lead} Some files could not be imported.` : lead;
 }
 
@@ -244,7 +246,7 @@ export async function addCareerEvidence(input: {
   const counts =
     readiness === null
       ? ` ${t`Readiness could not be checked.`}`
-      : ` ${t`${countedNouns.source(readiness.sourceCount)}, ${readiness.readyCount} ready.`}`;
+      : ` ${t`${countedNouns.document(readiness.sourceCount)}, ${readiness.readyCount} ready.`}`;
   const reopen = refreshFailed ? ` ${t`Reopen the workspace to refresh the review.`}` : "";
   return { status: "added", message: `${lead}${counts}${reopen}` };
 }

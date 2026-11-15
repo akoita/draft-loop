@@ -1,5 +1,6 @@
 import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { AdvancedOption, AdvancedOptions } from "./advanced-options.js";
 import { CareerStartChoice, useCareerConversationOffered } from "./career-conversation-start.js";
 import {
   addCareerEvidence,
@@ -9,6 +10,7 @@ import {
   careerEvidenceReadinessText,
   careerEvidenceReady,
   careerEvidenceSourcesText,
+  defaultCareerEvidenceName,
   loadCareerEvidenceStatus,
   supportsCareerEvidence,
 } from "./career-evidence.js";
@@ -131,6 +133,12 @@ export interface CareerEvidenceCardViewProps {
   }) => Promise<boolean>;
   /** True when the host shows the career interview, so an empty card offers a conversation too. */
   readonly conversationOffered?: boolean;
+  /**
+   * Whether Advanced options is unfolded. Without it the section follows the card: open only
+   * when the next step is inside it, such as a base that could not be opened.
+   */
+  readonly advancedOpen?: boolean | null;
+  readonly onAdvancedToggle?: (open: boolean) => void;
 }
 
 /** The card's next step once a document is ready. */
@@ -168,6 +176,8 @@ export function CareerEvidenceCardView({
   onOpenProfile,
   onAddText,
   conversationOffered = false,
+  advancedOpen = null,
+  onAdvancedToggle,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -196,16 +206,30 @@ export function CareerEvidenceCardView({
       : urlCount > 1
         ? t`Review and fetch ${urlCount} source URLs`
         : t`Review and fetch source URL`;
+  // Nothing added yet and the host makes the base itself: the card is the person's first step.
+  const firstDocument = mode === "first-add" && legacyCount === 0;
+  const showFolder = showAdd && inKnowledgeBase && onAddFolder !== undefined;
+  const showKinds = status.kind === "selected" && evidenceKinds !== undefined;
+  const hasKnowledgeBase =
+    knowledgeBase !== null && knowledgeBase !== undefined && status.kind !== "unsupported";
+  const showAdvanced = showFolder || showKinds || hasKnowledgeBase;
+  // The next step is inside the section when the base cannot be opened or none can be made here.
+  const advancedNeeded = status.kind === "unavailable" || mode === "legacy";
+  // A base the person named themselves is a choice away from the default, so the fold says so.
+  const advancedNote =
+    status.kind === "selected" && status.displayName !== defaultCareerEvidenceName
+      ? t`Knowledge base: ${status.displayName}`
+      : null;
   return (
     <article className={`setup-card${ready ? " setup-card-ready" : ""}`}>
       <div className="setup-card-head">
         <span className={`setup-state${ready ? " setup-state-ready" : ""}`}>
-          {ready ? t`Ready` : t`Required`}
+          {ready ? t`Ready` : firstDocument ? t`Start here` : t`Required`}
         </span>
       </div>
-      <strong>{t`Your documents`}</strong>
+      <strong>{firstDocument ? t`Add your career documents` : t`Your documents`}</strong>
       {status.kind === "loading" ? (
-        <span role="status">{t`Checking the knowledge base…`}</span>
+        <span role="status">{t`Checking your documents…`}</span>
       ) : status.kind === "selected" ? (
         <>
           <span>{careerEvidenceSourcesText(status)}</span>
@@ -215,12 +239,9 @@ export function CareerEvidenceCardView({
           {status.semanticLine === null ? null : (
             <span className="setup-card-line">{status.semanticLine}</span>
           )}
-          {evidenceKinds === undefined ? null : (
-            <SourceEvidenceKindList {...evidenceKinds} disabled={blocked} />
-          )}
         </>
       ) : status.kind === "unavailable" ? (
-        <span role="status">{t`The selected knowledge base could not be opened. Open its store in the Knowledge base section below.`}</span>
+        <span role="status">{t`Your documents could not be opened. Open their store under Advanced options below.`}</span>
       ) : status.kind === "none" && mode === "first-add" && legacyCount > 0 ? (
         <>
           <span>{t`Workspace evidence files: ${countedNouns.file(legacyCount)}`}</span>
@@ -238,23 +259,18 @@ export function CareerEvidenceCardView({
         </>
       ) : status.kind === "none" && mode === "first-add" ? (
         <>
-          <span role="status">
-            {t`No career evidence yet. Adding the first source creates a knowledge base for this workspace in`}{" "}
-            {defaultKnowledgeStoreDestinationLabel()}.
-          </span>
           {startChoice ? (
-            <CareerStartChoice
-              onAddDocuments={onAddFile}
-              addDisabled={addDisabled || !canAddFile}
-              disabled={blocked}
-            />
-          ) : null}
-          <button
-            className="button button-quiet"
-            type="button"
-            disabled={blocked}
-            onClick={onChooseKnowledgeBase}
-          >{t`Create or choose a knowledge base`}</button>
+            <>
+              <span role="status">{t`No career evidence yet`}</span>
+              <CareerStartChoice
+                onAddDocuments={onAddFile}
+                addDisabled={addDisabled || !canAddFile}
+                disabled={blocked}
+              />
+            </>
+          ) : (
+            <span role="status">{t`No career evidence yet. Your CV is enough to start, and you can add more at any time.`}</span>
+          )}
         </>
       ) : status.kind === "none" ? (
         <>
@@ -308,14 +324,6 @@ export function CareerEvidenceCardView({
           {inKnowledgeBase && onAddText !== undefined ? (
             <PastedEvidenceForm onSave={onAddText} disabled={addDisabled} />
           ) : null}
-          {inKnowledgeBase && onAddFolder !== undefined ? (
-            <button
-              className="button button-quiet"
-              type="button"
-              disabled={addDisabled}
-              onClick={onAddFolder}
-            >{t`Add folder`}</button>
-          ) : null}
           {urlsOffered ? (
             <>
               <label className="url-input-label">
@@ -347,7 +355,29 @@ https://www.linkedin.com/in/…`}
       {ready && !pending && onOpenProfile !== undefined ? (
         <CareerEvidenceNextStep onOpenProfile={onOpenProfile} />
       ) : null}
-      {knowledgeBase}
+      {showAdvanced ? (
+        <AdvancedOptions
+          open={advancedOpen ?? advancedNeeded}
+          note={advancedNote}
+          {...(onAdvancedToggle === undefined ? {} : { onToggle: onAdvancedToggle })}
+        >
+          {showFolder ? (
+            <AdvancedOption
+              title={t`Add a whole folder`}
+              effect={t`Adds every supported document in a folder at once.`}
+            >
+              <button
+                className="button button-outline"
+                type="button"
+                disabled={addDisabled}
+                onClick={onAddFolder}
+              >{t`Add folder`}</button>
+            </AdvancedOption>
+          ) : null}
+          {showKinds ? <SourceEvidenceKindList {...evidenceKinds} disabled={blocked} /> : null}
+          {knowledgeBase}
+        </AdvancedOptions>
+      ) : null}
     </article>
   );
 }
@@ -396,6 +426,8 @@ export function CareerEvidenceCard({
   const loadGeneration = useRef(0);
   const operationGeneration = useRef(0);
   const pendingLatch = useRef(false);
+  const [advancedOpen, setAdvancedOpen] = useState<boolean | null>(null);
+  const [chooseRequest, setChooseRequest] = useState(0);
   const loadedWorkspace = useRef<string | undefined>(undefined);
 
   useEffect(
@@ -430,6 +462,11 @@ export function CareerEvidenceCard({
       loadGeneration.current += 1;
     };
   }, [workspaceId, revision, supported]);
+
+  // The Knowledge base section sits in Advanced options, so it is unfolded before it takes focus.
+  useEffect(() => {
+    if (chooseRequest > 0) focusKnowledgeStore();
+  }, [chooseRequest]);
 
   /**
    * Runs one host operation under the card's single-flight latch. `work` resolves to the text to
@@ -573,9 +610,12 @@ export function CareerEvidenceCard({
       conversationOffered={conversationOffered}
       canAddFile={inKnowledgeBase || onSelectLegacyFiles !== undefined}
       canAddUrl={inKnowledgeBase || onAddLegacyUrl !== undefined}
+      advancedOpen={advancedOpen}
+      onAdvancedToggle={setAdvancedOpen}
       onChooseKnowledgeBase={() => {
+        setAdvancedOpen(true);
         knowledge?.onRequestStoreForm?.();
-        focusKnowledgeStore();
+        setChooseRequest((current) => current + 1);
       }}
       {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeUrl === undefined
         ? { urlsOffered: false }
