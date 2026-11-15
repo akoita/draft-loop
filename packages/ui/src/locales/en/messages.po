@@ -1746,6 +1746,7 @@ msgid "Can't start yet: {0}"
 msgstr "Can't start yet: {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
@@ -5175,6 +5176,10 @@ msgstr "New name for {0}"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "New notes from your agents will be refused until you turn this back on."
 msgstr "New notes from your agents will be refused until you turn this back on."
+
+#: apps/web/src/records.tsx
+msgid "New record"
+msgstr "New record"
 
 #: apps/web/src/records.tsx
 msgid "New record id"
