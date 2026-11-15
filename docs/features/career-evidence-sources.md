@@ -23,6 +23,10 @@ source-only CLI takes files into a local workspace instead
 3. **Your files** lists each source with the date it was added, its
    injection screening and a **Download** button. Each knowledge base shows
    its file count, and a long list scrolls inside its own box.
+4. **Advanced options**, folded at the bottom of the card, holds what most
+   people never need: adding a whole folder, correcting what each source is,
+   and choosing or creating a knowledge base. DraftLoop creates one knowledge
+   base for you on the first add, so you can leave this closed.
 
 Every source is screened for hidden instructions before a run may use it; see
 [Sensitivity and screening](sensitivity-and-screening.md). Imported pull

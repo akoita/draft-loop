@@ -124,6 +124,13 @@ export {
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";
 export { createCandidateRecordErasure, objectKeyOf } from "./record-erasure.js";
+export {
+  createRecordNames,
+  normaliseRecordName,
+  RecordNameError,
+  type RecordNames,
+  recordNameMaxLength,
+} from "./record-names.js";
 export { ensureRuntimeRole, parseRuntimeRoleMembers } from "./runtime-role.js";
 export {
   createSpendPool,

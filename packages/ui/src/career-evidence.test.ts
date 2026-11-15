@@ -119,7 +119,9 @@ describe("career evidence status", () => {
       name,
     );
     if (status.kind !== "selected") throw new Error("Expected a selected base.");
-    expect(careerEvidenceReadinessText(status)).toBe("Empty: add a CV, portfolio, or other source");
+    expect(careerEvidenceReadinessText(status)).toBe(
+      "Empty: add a CV, portfolio, or other document",
+    );
     // A workspace evidence count of 4 is legacy material the run does not use.
     expect(careerEvidenceReady(status, 4)).toBe(false);
   });
@@ -218,7 +220,7 @@ describe("adding career evidence", () => {
     expect(order).toEqual(["import", "readiness", "refresh"]);
     expect(outcome).toEqual({
       status: "added",
-      message: "Added to Engineering. 4 sources, 4 ready.",
+      message: "Added to Engineering. 4 documents, 4 ready.",
     });
   });
 
@@ -239,21 +241,21 @@ describe("adding career evidence", () => {
   it("says a file is already in Career evidence when the host reports identical content", async () => {
     await expect(addFile({ created: false, outcome: "already-present" })).resolves.toEqual({
       status: "added",
-      message: "Already in Career evidence. 1 source, 1 ready.",
+      message: "Already in Career evidence. 1 document, 1 ready.",
     });
   });
 
   it("says a changed file became a new version of its source, not a second source", async () => {
     await expect(addFile({ version: 2, outcome: "new-version" })).resolves.toEqual({
       status: "added",
-      message: "Added a new version of that file to Career evidence. 1 source, 1 ready.",
+      message: "Added a new version of that file to Career evidence. 1 document, 1 ready.",
     });
   });
 
   it("reports a brand-new file as added", async () => {
     await expect(addFile({ outcome: "added" })).resolves.toEqual({
       status: "added",
-      message: "Added to Career evidence. 1 source, 1 ready.",
+      message: "Added to Career evidence. 1 document, 1 ready.",
     });
   });
 
@@ -286,12 +288,12 @@ describe("adding career evidence", () => {
   it("imports a folder into the selected base and says how many sources it added", async () => {
     await expect(addFolder(folderResult())).resolves.toEqual({
       status: "added",
-      message: "Added 2 sources from the folder to Engineering. 5 sources, 5 ready.",
+      message: "Added 2 documents from the folder to Engineering. 5 documents, 5 ready.",
     });
     await expect(addFolder(folderResult({ status: "partial", sourceCount: 1 }))).resolves.toEqual({
       status: "added",
       message:
-        "Added 1 source from the folder to Engineering. Some files could not be imported. 5 sources, 5 ready.",
+        "Added 1 document from the folder to Engineering. Some files could not be imported. 5 documents, 5 ready.",
     });
   });
 
@@ -334,7 +336,7 @@ describe("adding career evidence", () => {
     expect(importCandidateKnowledgeFile).not.toHaveBeenCalled();
     expect(outcome).toEqual({
       status: "added",
-      message: "Already in Engineering. 1 source, 1 ready.",
+      message: "Already in Engineering. 1 document, 1 ready.",
     });
   });
 
@@ -366,7 +368,7 @@ describe("adding career evidence", () => {
     });
     expect(outcome).toEqual({
       status: "added",
-      message: "Added to Engineering. 4 sources, 4 ready.",
+      message: "Added to Engineering. 4 documents, 4 ready.",
     });
   });
 

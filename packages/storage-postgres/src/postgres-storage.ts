@@ -27,6 +27,7 @@ import { createPrepareCallMeter } from "./prepare-call-meter.js";
 import { createRecordArchiveRows } from "./record-archive.js";
 import { createCandidateRecordErasure } from "./record-erasure.js";
 import { recordErasureGrants } from "./record-erasure-migration.js";
+import { createRecordNames } from "./record-names.js";
 import { createResearchBriefStore } from "./research-briefs.js";
 import { createRunHistory } from "./run-history.js";
 import { createRunSpanStore } from "./run-spans.js";
@@ -148,6 +149,7 @@ function tenantStorage(client: SqlSession) {
     spendPool: createSpendPool(client),
     modelCalls: createModelCallMeter(client),
     prepareCalls: createPrepareCallMeter(client),
+    recordNames: createRecordNames(client),
     workspaceSettings: createWorkspaceSettings(client),
     consentLedger: createConsentLedger(client),
     contentScreening: createContentScreening(client),
