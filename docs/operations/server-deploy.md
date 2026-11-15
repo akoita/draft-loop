@@ -27,7 +27,9 @@ flowchart LR
 3. **Smoke.** It runs `pnpm test:server-smoke`, the same smoke as on the local
    stack, against staging. It also reads the fictional job page
    `apps/api/fixtures/smoke-job-page.txt` through the page fetcher. A failure
-   stops the release.
+   stops the release. On a server in sign-in mode, the smoke signs in as a
+   synthetic member instead of using the owner token
+   ([smoke in sign-in mode](#smoke-in-sign-in-mode)).
 4. **Release notes.** Once the smoke passes, the run publishes a GitHub Release
    for the tag ([Server release notes](#server-release-notes)).
 5. **Production.** A second, manual run deploys the same image digests to
@@ -104,20 +106,20 @@ The images read the settings listed in
 [the local server stack](local-server-stack.md#configuration). A deployment
 sets them from its infrastructure and differs from the local stack here:
 
-| Setting                                                 | Deployment value and why                                                                                                                                                     |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DRAFT_LOOP_GCS_ENDPOINT`                               | Unset, so blobs go to Cloud Storage                                                                                                                                          |
-| `DRAFT_LOOP_CLOUD_SQL_INSTANCE`                         | Set, so services use the Cloud SQL connector with no runtime password; IAM users go in `DRAFT_LOOP_RUNTIME_MEMBERS`                                                          |
-| `DRAFT_LOOP_WORKER_MODE`, `DRAFT_LOOP_WORKER_JOB`       | `drain` on the worker; the API names the job and starts it after each queued run. Its identity needs permission to run the job                                               |
-| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes   | Set on the worker. The API reads the flag too, as the ceiling above consent for model screening                                                                              |
-| `DRAFT_LOOP_AUTH_MODE=oidc`                             | In sign-in mode, the same on API and worker. The worker then always checks consent and refuses `DRAFT_LOOP_REQUIRE_CONSENT=false`                                            |
-| `DRAFT_LOOP_SCREENING`                                  | The same value on API and worker, so material with no stored result is held by one and refused by the other                                                                  |
-| `DRAFT_LOOP_COVER_LETTER_WRITER`                        | Unset (`items`) on the API until the blind test (#2483) picks the writer; `free-form` on staging to try prose letters checked sentence by sentence |
+| Setting                                                 | Deployment value and why                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_GCS_ENDPOINT`                               | Unset, so blobs go to Cloud Storage                                                                                                                                                                                                                                                                  |
+| `DRAFT_LOOP_CLOUD_SQL_INSTANCE`                         | Set, so services use the Cloud SQL connector with no runtime password; IAM users go in `DRAFT_LOOP_RUNTIME_MEMBERS`                                                                                                                                                                                  |
+| `DRAFT_LOOP_WORKER_MODE`, `DRAFT_LOOP_WORKER_JOB`       | `drain` on the worker; the API names the job and starts it after each queued run. Its identity needs permission to run the job                                                                                                                                                                       |
+| `DRAFT_LOOP_ALLOW_PROVIDER_DATA` and the model routes   | Set on the worker. The API reads the flag too, as the ceiling above consent for model screening                                                                                                                                                                                                      |
+| `DRAFT_LOOP_AUTH_MODE=oidc`                             | In sign-in mode, the same on API and worker. The worker then always checks consent and refuses `DRAFT_LOOP_REQUIRE_CONSENT=false`                                                                                                                                                                    |
+| `DRAFT_LOOP_SCREENING`                                  | The same value on API and worker, so material with no stored result is held by one and refused by the other                                                                                                                                                                                          |
+| `DRAFT_LOOP_COVER_LETTER_WRITER`                        | Unset (`items`) on the API until the blind test (#2483) picks the writer; `free-form` on staging to try prose letters checked sentence by sentence                                                                                                                                                   |
 | `DRAFT_LOOP_RESEARCH_SEARCH`                            | Unset (`claude`) on the worker, so research searches with Claude on Vertex AI in the EU; with the Claude API fallback on, a search Vertex refuses for quota runs once on the Claude API and records `claude-api-fallback`; `linkup` has no Secret Manager key yet and ends each run as `unavailable` |
-| `DRAFT_LOOP_PAGE_FETCHER_URL`                           | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                                                           |
-| `DRAFT_LOOP_BETA_ACCOUNT_CAP`                           | `25` on the public beta's API, so invites create at most 25 accounts; unset (closed) elsewhere ([beta invites](../architecture/hosted-service.md#beta-invites))              |
-| `DRAFT_LOOP_SPEND_POOL_USD`                             | Set on the public beta's API to its monthly model budget; unset elsewhere ([spend pool](../architecture/hosted-service.md#monthly-spend-pool))                               |
-| `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models)) |
+| `DRAFT_LOOP_PAGE_FETCHER_URL`                           | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                                                                                                                                                                                   |
+| `DRAFT_LOOP_BETA_ACCOUNT_CAP`                           | `25` on the public beta's API, so invites create at most 25 accounts; unset (closed) elsewhere ([beta invites](../architecture/hosted-service.md#beta-invites))                                                                                                                                      |
+| `DRAFT_LOOP_SPEND_POOL_USD`                             | Set on the public beta's API to its monthly model budget; unset elsewhere ([spend pool](../architecture/hosted-service.md#monthly-spend-pool))                                                                                                                                                       |
+| `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models))                                                                                                                         |
 
 A Cloud Scheduler sweep starts the worker job every 10 minutes for retries and
 resumed runs.
@@ -132,6 +134,26 @@ Haiku on the EU Vertex route with its own identity. It then needs the Vertex
 settings, permission to call Vertex AI and egress to Google APIs, which the
 infrastructure repository grants. Without them every model screening fails
 closed to `unscreened`.
+
+## Smoke in sign-in mode
+
+In sign-in mode the API takes the owner token on operator routes only. Set
+these and the smoke signs in as a synthetic member through the identity
+provider's password grant:
+
+| Setting                                | Value                                                           |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `DRAFT_LOOP_TEST_SIGN_IN_ISSUER`       | The realm's issuer address, ending in `/realms/<realm>`         |
+| `DRAFT_LOOP_TEST_SIGN_IN_CLIENT_ID`    | A client that allows the password grant, for the smoke only     |
+| `DRAFT_LOOP_TEST_SIGN_IN_USERNAME`     | The synthetic member's username                                 |
+| `DRAFT_LOOP_TEST_SIGN_IN_PASSWORD`     | Its password, from the deployment's secret store                |
+| `DRAFT_LOOP_TEST_SIGN_IN_EMAIL`        | Its verified email, which the organisation names as first owner |
+| `DRAFT_LOOP_TEST_SIGN_IN_ORGANISATION` | Optional; the organisation id, `smoke` by default               |
+
+The smoke then creates the organisation with the owner token, or reuses it,
+and gives it the internal plan. It records the storage and provider
+transmission consents on its fresh workspace, and renews the member's token
+before it expires. Unset, the smoke uses the owner token as before.
 
 ## Before a provider run on staging
 

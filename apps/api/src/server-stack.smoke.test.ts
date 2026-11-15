@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * Set by `pnpm server:test` once the local stack is up (docs/operations/local-server-stack.md);
@@ -13,6 +13,59 @@ const apiUrl = process.env.DRAFT_LOOP_TEST_API_URL;
  * brief, as `fixtures/smoke-job-page.txt` at the deployed commit has.
  */
 const jobPageUrl = process.env.DRAFT_LOOP_TEST_JOB_PAGE_URL;
+const ownerToken = process.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN ?? "";
+
+/**
+ * A server in sign-in mode refuses the owner token outside the operator routes (#2770). With these
+ * set, the smoke signs in as a synthetic member of `organisationId` through the provider's
+ * password grant; unset, it uses the owner token as before.
+ */
+const member =
+  process.env.DRAFT_LOOP_TEST_SIGN_IN_ISSUER === undefined
+    ? undefined
+    : {
+        issuer: process.env.DRAFT_LOOP_TEST_SIGN_IN_ISSUER,
+        clientId: process.env.DRAFT_LOOP_TEST_SIGN_IN_CLIENT_ID ?? "",
+        username: process.env.DRAFT_LOOP_TEST_SIGN_IN_USERNAME ?? "",
+        password: process.env.DRAFT_LOOP_TEST_SIGN_IN_PASSWORD ?? "",
+        email: process.env.DRAFT_LOOP_TEST_SIGN_IN_EMAIL ?? "",
+        organisationId: process.env.DRAFT_LOOP_TEST_SIGN_IN_ORGANISATION ?? "smoke",
+      };
+
+/** The member's access token, renewed a minute before it expires; the owner token otherwise. */
+let memberToken: { readonly value: string; readonly renewAt: number } | undefined;
+async function credential(): Promise<string> {
+  if (member === undefined) return ownerToken;
+  if (memberToken !== undefined && Date.now() < memberToken.renewAt) return memberToken.value;
+  const response = await fetch(`${member.issuer}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "password",
+      client_id: member.clientId,
+      username: member.username,
+      password: member.password,
+      scope: "openid email",
+    }),
+  });
+  if (response.status !== 200) throw new Error(`Sign-in refused with ${response.status}.`);
+  const token = (await response.json()) as { access_token: string; expires_in: number };
+  memberToken = {
+    value: token.access_token,
+    renewAt: Date.now() + Math.max(token.expires_in - 60, 30) * 1_000,
+  };
+  return token.access_token;
+}
+
+/** Calls an operator route, which takes only the owner token in both modes. */
+async function operator(method: string, path: string, body: object) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method,
+    headers: { authorization: `Bearer ${ownerToken}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.status;
+}
 
 const career =
   "# Experience\n\n## Platform Engineer, Example Ledger (2020-2024)\n\nBuilt TypeScript services with deterministic testing.\n";
@@ -55,11 +108,29 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
   const workspaceId = `smoke-${suffix}`;
   const workspacePath = `/v1/workspaces/${workspaceId}`;
 
+  // The member's organisation persists across runs; a later run reuses it. Runs need a plan, and
+  // the internal plan is unlimited.
+  beforeAll(async () => {
+    if (member === undefined) return;
+    expect([201, 409]).toContain(
+      await operator("POST", "/v1/operator/organisations", {
+        organisationId: member.organisationId,
+        name: "Deployment smoke",
+        firstOwnerEmail: member.email,
+      }),
+    );
+    expect(
+      await operator("PUT", `/v1/operator/organisations/${member.organisationId}/plan`, {
+        planId: "internal",
+      }),
+    ).toBe(200);
+  });
+
   const request = async (path: string, init: RequestInit = {}) => {
     const response = await fetch(`${apiUrl}${path}`, {
       ...init,
       headers: {
-        authorization: `Bearer ${process.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN ?? ""}`,
+        authorization: `Bearer ${await credential()}`,
         "content-type": "application/json",
         ...init.headers,
       },
@@ -103,8 +174,26 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
       expect(await send("PUT", workspacePath, { fixtureMode: true })).toMatchObject({
         status: 201,
       });
+      // In sign-in mode a record stores material and starts runs only with recorded consent.
+      if (member !== undefined) {
+        for (const consent of [
+          { kind: "material-storage", action: "granted", basis: "contract" },
+          {
+            kind: "provider-transmission",
+            action: "granted",
+            basis: "candidate-consent",
+            providers: ["anthropic", "openai"],
+          },
+        ]) {
+          expect((await send("POST", `${workspacePath}/consents`, consent)).status).toBe(201);
+        }
+      }
 
-      const base = await send("POST", "/v1/knowledge-bases", { displayName: `Career ${suffix}` });
+      // In sign-in mode each base belongs to the record that creates it.
+      const base = await send("POST", "/v1/knowledge-bases", {
+        displayName: `Career ${suffix}`,
+        ...(member === undefined ? {} : { workspaceId }),
+      });
       expect(base.status).toBe(201);
       const upload = await request(`/v1/knowledge-bases/${base.body.id}/sources?name=career.md`, {
         method: "POST",
@@ -222,7 +311,7 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
     ]);
     const download = await fetch(
       `${apiUrl}${runPath}/exports/${encodeURIComponent(exported.body.id)}/content`,
-      { headers: { authorization: `Bearer ${process.env.DRAFT_LOOP_TEST_API_OWNER_TOKEN ?? ""}` } },
+      { headers: { authorization: `Bearer ${await credential()}` } },
     );
     expect(download.status).toBe(200);
     const bytes = Buffer.from(await download.arrayBuffer());
