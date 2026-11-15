@@ -327,6 +327,27 @@ describe("the prepare panel's model", () => {
     expect(applicationMaterialReviewNote({ status: "none" })).toBeUndefined();
   });
 
+  it("says why a letter names no employer or dates when the record holds none", () => {
+    const html = renderToStaticMarkup(
+      <ApplicationMaterialView
+        {...props}
+        draft={{ ...draft, kind: "cover-letter", record_gaps: ["employer", "dates"] }}
+      />,
+    );
+    expect(html).toContain("holds no employer and no dates");
+    expect(
+      renderToStaticMarkup(
+        <ApplicationMaterialView
+          {...props}
+          draft={{ ...draft, kind: "cover-letter", record_gaps: ["dates"] }}
+        />,
+      ),
+    ).toContain("holds no dates");
+    expect(
+      renderToStaticMarkup(<ApplicationMaterialView {...props} draft={draft} />),
+    ).not.toContain("career record holds no");
+  });
+
   it("lists the sentences a free-form letter left out", () => {
     const html = renderToStaticMarkup(
       <ApplicationMaterialView

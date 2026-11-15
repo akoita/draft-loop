@@ -1766,6 +1766,7 @@ msgid "Can't start yet: {0}"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
@@ -5197,6 +5198,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-intake.tsx
 msgid "New notes from your agents will be refused until you turn this back on."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "New record"
 msgstr ""
 
 #: apps/web/src/records.tsx
@@ -10593,6 +10598,18 @@ msgstr ""
 
 #: packages/ui/src/career-flow.tsx
 msgid "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer and no dates, so this letter names neither. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
 msgstr ""
 
 #: packages/ui/src/footer-running-round.tsx

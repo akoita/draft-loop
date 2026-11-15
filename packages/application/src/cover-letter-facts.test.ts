@@ -5,7 +5,7 @@ import type {
   ApplicationMaterialRequirement,
 } from "./application-material.js";
 import { keepCareerFrame } from "./career-frame-facts.js";
-import { pickCoverLetterFacts } from "./cover-letter-facts.js";
+import { careerRecordGapsOf, pickCoverLetterFacts } from "./cover-letter-facts.js";
 
 // An invented record: one long role, one short role, and many loose notes.
 const role = (id: string, subjectId: string, value: string): ApplicationMaterialFact => ({
@@ -148,5 +148,15 @@ describe("pickCoverLetterFacts", () => {
 
   it("returns what there is when the record is small", () => {
     expect(pickCoverLetterFacts([note("n1", "Plays chess")], requirements)).toHaveLength(1);
+  });
+});
+
+describe("careerRecordGapsOf", () => {
+  it("names what a record of work notes cannot give a letter", () => {
+    expect(careerRecordGapsOf([note("n1", "Fixed a flaky test")])).toEqual(["employer", "dates"]);
+    expect(careerRecordGapsOf([{ category: "employer" }, { category: "achievement" }])).toEqual([
+      "dates",
+    ]);
+    expect(careerRecordGapsOf([{ category: "employer" }, { category: "date" }])).toEqual([]);
   });
 });

@@ -6,6 +6,8 @@ import {
 } from "./application-material.js";
 import { careerFrameCategories, grouped } from "./career-frame-facts.js";
 
+export { type CareerRecordGap, careerRecordGapsOf } from "./career-frame-facts.js";
+
 /**
  * The facts a free-form cover letter is written from (#2584): a short list the writer can tell as
  * one story, not the whole record. Pure and local, so it costs nothing and is tested without a

@@ -1760,6 +1760,7 @@ msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
@@ -5193,6 +5194,10 @@ msgstr "Nouveau nom pour {0}"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "New notes from your agents will be refused until you turn this back on."
 msgstr "Les nouvelles notes de vos agents seront refusées jusqu’à ce que vous réactiviez ce réglage."
+
+#: apps/web/src/records.tsx
+msgid "New record"
+msgstr "Nouveau dossier candidat"
 
 #: apps/web/src/records.tsx
 msgid "New record id"
@@ -10589,6 +10594,18 @@ msgstr "Votre profil professionnel est en cours de génération. Vous pouvez con
 #: packages/ui/src/career-flow.tsx
 msgid "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
 msgstr "Votre profil professionnel regroupe les faits que DraftLoop extrait de vos documents : postes, dates, réalisations et compétences, chacun avec une citation exacte. Vous le relisez une fois, et chaque candidature réutilise la version relue."
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Votre parcours ne contient aucune date, cette lettre n'en donne donc aucune. Ajoutez votre CV dans Éléments de parcours, ou reconstruisez votre profil si le CV s'y trouve déjà, puis rédigez à nouveau."
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer and no dates, so this letter names neither. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Votre parcours ne contient ni employeur ni date, cette lettre n'en cite donc aucun. Ajoutez votre CV dans Éléments de parcours, ou reconstruisez votre profil si le CV s'y trouve déjà, puis rédigez à nouveau."
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Votre parcours ne contient aucun employeur, cette lettre n'en cite donc aucun. Ajoutez votre CV dans Éléments de parcours, ou reconstruisez votre profil si le CV s'y trouve déjà, puis rédigez à nouveau."
 
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/run-details.tsx

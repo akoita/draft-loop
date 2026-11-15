@@ -127,6 +127,13 @@ Each paragraph, or each question with its talking point, must pass all rules:
 A record with no fact the draft may cite is refused before any model call
 (`no_facts`). The drafter never stores a draft.
 
+## Record gaps
+
+A cover letter's view carries `record_gaps` when the career record held no
+`employer` fact, no `date` fact, or neither at drafting time. The Prepare panel
+then says why the letter names no employer or dates and what to add. The field
+is saved with the draft and is absent when the record has both.
+
 ## Free-form cover letters
 
 With `DRAFT_LOOP_COVER_LETTER_WRITER=free-form` on the API, a cover letter is

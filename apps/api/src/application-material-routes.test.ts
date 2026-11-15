@@ -822,6 +822,8 @@ describe("application material route", () => {
       },
     ]);
     expect(body.dropped_sentences).toEqual(["I cut report time by 45% again."]);
+    // The fixture record has a title and an outcome, but no employer and no dates.
+    expect(body.record_gaps).toEqual(["employer", "dates"]);
     expect(body.prompt_version).toBe("cover-letter-free-form-v3");
     // Two letters, the repair and three checks, all under the request's cost cap.
     expect(seen).toHaveLength(6);

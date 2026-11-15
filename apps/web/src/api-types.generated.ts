@@ -157,6 +157,7 @@ export interface ApiSchemas {
       readonly match?: string;
     })[];
     readonly dropped_sentences?: readonly (string)[];
+    readonly record_gaps?: readonly ("employer" | "dates")[];
     readonly unsourced_topics?: readonly ("company" | "news" | "role" | "field" | "process" | "salary")[];
     readonly prompt_version: string;
     readonly cost_usd: number;
