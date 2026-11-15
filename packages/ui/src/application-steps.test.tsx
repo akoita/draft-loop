@@ -281,12 +281,12 @@ describe("ReviewWorkspace as three steps", () => {
     expect(job).toContain("<summary>Replace the job description</summary>");
     expect(profile).toContain("SETUP SUMMARY");
     expect(review).toContain('aria-labelledby="provider-preflight-title"');
-    expect(review).toContain("Advanced: writing policy override for this job");
+    expect(review).toContain("Writing policy override for this job");
     expect(review).toContain('id="start-checklist"');
     expect(review.indexOf("provider-preflight-title")).toBeLessThan(
-      review.indexOf("Advanced: writing policy override"),
+      review.indexOf("Writing policy override for this job"),
     );
-    expect(review.indexOf("Advanced: writing policy override")).toBeLessThan(
+    expect(review.indexOf("Writing policy override for this job")).toBeLessThan(
       review.indexOf('id="start-checklist"'),
     );
     // No setup-card numbering and no workspace-level controls.
