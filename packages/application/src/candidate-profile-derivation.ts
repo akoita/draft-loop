@@ -152,7 +152,6 @@ interface MaterializationResult {
   readonly materials: readonly CanonicalCandidateProfileExtractionMaterial[];
   readonly failedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   readonly oversizedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
-  readonly unboundableReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   /** Sources whose every section was excluded by sensitivity rules; they are never extracted. */
   readonly fullyExcludedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
   readonly sensitivityRulesApplied: readonly CanonicalProfileSensitivityRulesApplied[];
@@ -414,12 +413,10 @@ async function materializeSelection(
   if (logicalSelections.size !== snapshot.entries.length) {
     throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
   }
-  const { boundable, unboundable } = partitionCanonicalProfileUnboundableSources(materials);
   return {
-    materials: boundable,
+    materials,
     failedReferences,
     oversizedReferences,
-    unboundableReferences: unboundable.map((material) => material.reference),
     fullyExcludedReferences,
     sensitivityRulesApplied,
   };
@@ -535,12 +532,19 @@ export function createCanonicalCandidateProfileDerivationService(
         materials: materialization.materials,
         sensitivity,
       });
+      // Only the sources sent now can be too large to window (#2729): an unchanged large source
+      // keeps its facts and is not sent, so other sources joining the selection cannot drop it.
+      const { boundable, unboundable } = partitionCanonicalProfileUnboundableSources(
+        plan.materials,
+      );
+      const unboundableReferences = unboundable.map((material) => material.reference);
+      const unboundableKeys = new Set(unboundableReferences.map(referenceKey));
       const freshlyExtracted =
-        plan.materials.length === 0
+        boundable.length === 0
           ? { facts: [], issues: [] }
           : await processCanonicalCandidateProfileExtraction(dependencies.extractor, {
               operationId: operationId(command.profileId, snapshot),
-              sources: plan.materials,
+              sources: boundable,
               allowProviderData: true,
               ...(command.signal === undefined ? {} : { signal: command.signal }),
               ...(command.onProgress === undefined ? {} : { onProgress: command.onProgress }),
@@ -570,13 +574,13 @@ export function createCanonicalCandidateProfileDerivationService(
                 materialization.oversizedReferences,
               ),
             ]),
-        ...(materialization.unboundableReferences.length === 0
+        ...(unboundableReferences.length === 0
           ? []
           : [
               materializationIssue(
                 "source-too-large",
                 canonicalProfileUnboundableSourceMessage,
-                materialization.unboundableReferences,
+                unboundableReferences,
               ),
             ]),
         ...(materialization.fullyExcludedReferences.length === 0
@@ -648,7 +652,12 @@ export function createCanonicalCandidateProfileDerivationService(
               extraction: {
                 ...dependencies.extractionIdentity,
                 sensitivity,
-                evidenceKinds: recordedCanonicalProfileEvidenceKinds(materialization.materials),
+                // A source left out as too large was not extracted, so no kind vouches for it.
+                evidenceKinds: recordedCanonicalProfileEvidenceKinds(
+                  materialization.materials.filter(
+                    (material) => !unboundableKeys.has(referenceKey(material.reference)),
+                  ),
+                ),
               },
             }),
         facts: extracted.facts,

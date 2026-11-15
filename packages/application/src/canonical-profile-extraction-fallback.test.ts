@@ -1402,15 +1402,12 @@ describe("canonical profile extraction output-limit fallback", () => {
 
     it("refuses before any provider call when a source above 128 KiB cannot be planned", async () => {
       expect(largeText.length).toBeGreaterThan(unplannedBound);
-      const sources = ["a", "b", "c", "d"].map((id) => source(`source-${id}`, "React\n"));
+      // Five large sources need more calls than the plan's cap allows.
+      const sources = ["a", "b", "c", "d", "e"].map((id) => source(`source-${id}`, largeText));
       const { calls, executor } = executorFor(() => proposal([]));
 
       await expect(
-        executeCanonicalProfileExtractionWithFallback(
-          executor,
-          request([source("source-large", largeText), ...sources]),
-          controls,
-        ),
+        executeCanonicalProfileExtractionWithFallback(executor, request(sources), controls),
       ).rejects.toMatchObject({ name: "CliUserError" });
       expect(calls).toHaveLength(0);
     });

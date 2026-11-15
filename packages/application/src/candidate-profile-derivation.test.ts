@@ -493,11 +493,12 @@ describe("canonical candidate profile derivation", () => {
     expect(request.sources[0]?.text.length).toBeGreaterThan(190_000);
   });
 
-  it("records a size issue instead of sending a source above 128 KiB that cannot be windowed", async () => {
-    const small = (index: number) => ({
-      sourceId: `source-small-${index}`,
-      content: `# Notes ${index}\n\nRepresentative experience.`,
-    });
+  const small = (index: number) => ({
+    sourceId: `source-small-${index}`,
+    content: `# Notes ${index}\n\nRepresentative experience.`,
+  });
+
+  it("sends a source above 128 KiB among more than four sources, to be windowed (#2729)", async () => {
     const { saved, extract } = await deriveFromSources(
       [
         { sourceId: "source-large", content: largeMarkdown() },
@@ -509,16 +510,65 @@ describe("canonical candidate profile derivation", () => {
       { schemaVersion: 1, facts: [], issues: [] },
     );
 
+    expect(
+      saved.profile.issues.filter((issue) =>
+        issue.message.includes("too large to extract in bounded windows"),
+      ),
+    ).toEqual([]);
+    const request = extract.mock.calls[0]?.[0] as { sources: { id: string }[] };
+    expect(request.sources).toHaveLength(5);
+  });
+
+  it("records a size issue for sources above 128 KiB that no window plan fits", async () => {
+    // Five 200,000-character sources need more calls than the plan's cap allows.
+    const large = (index: number) => ({
+      sourceId: `source-large-${index}`,
+      content: largeMarkdown(),
+    });
+    const { saved, extract } = await deriveFromSources(
+      [large(1), large(2), large(3), large(4), large(5), small(1)],
+      { schemaVersion: 1, facts: [], issues: [] },
+    );
+
     const tooLarge = saved.profile.issues.filter((issue) =>
       issue.message.includes("too large to extract in bounded windows"),
     );
     expect(tooLarge).toHaveLength(1);
-    expect(tooLarge[0]?.sourceRefs).toEqual([
-      expect.objectContaining({ sourceId: "source-large" }),
-    ]);
+    expect(tooLarge[0]?.sourceRefs).toHaveLength(5);
     const request = extract.mock.calls[0]?.[0] as { sources: { text: string }[] };
-    expect(request.sources).toHaveLength(4);
+    expect(request.sources).toHaveLength(1);
     expect(request.sources.every((entry) => entry.text.length < 128 * 1_024)).toBe(true);
+  });
+
+  it("keeps an unchanged large source out of the request when other sources join it (#2729)", async () => {
+    const identity = {
+      company: "anthropic" as const,
+      modelId: "scripted-model",
+      promptTemplateVersion: "scripted-v1",
+    };
+    const largeSource = { sourceId: "source-large", content: largeMarkdown() };
+    const first = await deriveFromSources(
+      [largeSource],
+      { schemaVersion: 1, facts: [], issues: [] },
+      { identity },
+    );
+    const second = await deriveFromSources(
+      [largeSource, small(1), small(2), small(3), small(4), small(5)],
+      { schemaVersion: 1, facts: [], issues: [] },
+      { identity, latest: first.saved },
+    );
+
+    expect(second.saved).toMatchObject({ reusedSourceCount: 1, extractedSourceCount: 5 });
+    expect(
+      second.saved.profile.issues.filter((issue) =>
+        issue.message.includes("too large to extract in bounded windows"),
+      ),
+    ).toEqual([]);
+    const request = second.extract.mock.calls[0]?.[0] as { sources: { id: string }[] };
+    expect(request.sources).toHaveLength(5);
+    expect(
+      second.saved.profile.extraction?.evidenceKinds?.map((entry) => entry.sourceId),
+    ).toContain("source-large");
   });
 
   it("keeps the generic issue for a selected source that normalizes to empty text", async () => {
@@ -583,6 +633,8 @@ function emptyMarkdown(): string {
 async function deriveFromSources(
   sources: readonly { readonly sourceId: string; readonly content: string }[],
   extractOutput?: unknown,
+  // biome-ignore lint/suspicious/noExplicitAny: the scripted persistence and identity of one test
+  earlier: { readonly identity?: any; readonly latest?: any } = {},
 ) {
   const selected = createCandidateKnowledgeSelectionSnapshot({
     capturedAt: createdAt,
@@ -651,10 +703,11 @@ async function deriveFromSources(
   }));
   const service = createCanonicalCandidateProfileDerivationService({
     persistence: {
-      getLatestCanonicalCandidateProfile: vi.fn(async () => undefined),
+      getLatestCanonicalCandidateProfile: vi.fn(async () => earlier.latest),
       saveCanonicalCandidateProfile,
     },
     extractor: { extract },
+    ...(earlier.identity === undefined ? {} : { extractionIdentity: earlier.identity }),
     knowledgeService: { createKnowledgeSelectionSnapshot },
     openKnowledgeStore: async () => handle,
     now: () => createdAt,

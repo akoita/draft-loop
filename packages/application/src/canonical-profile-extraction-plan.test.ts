@@ -102,6 +102,14 @@ describe("canonical profile extraction proactive plan", () => {
       ),
     ).toBeNull();
 
+    // A source too large for one request is planned among any number of sources (#2729).
+    const mixed = planCanonicalProfileExtractionCalls([
+      source("large", 200_000),
+      ...["a", "b", "c", "d", "e", "f"].map((id) => source(id, 1_000)),
+    ]);
+    expect(mixed?.filter((call) => call.sourceId === "large").length).toBeGreaterThan(1);
+    expect(mixed?.filter((call) => call.sourceId !== "large")).toHaveLength(6);
+
     // Four 200,000-unit sources need 25 calls each: 100 calls exceeds the 96-call cap.
     expect(
       planCanonicalProfileExtractionCalls(["a", "b", "c", "d"].map((id) => source(id, 200_000))),

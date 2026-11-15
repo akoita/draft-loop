@@ -1025,7 +1025,9 @@ settings promises speed or quality.
 ### Large inputs
 
 Above 65,536 UTF-16 text units, across one to four sources, extraction plans one
-call per source, and splits larger sources into contiguous windows.
+call per source, and splits larger sources into contiguous windows. A selection
+that holds a source above 131,072 units is planned the same way whatever the
+number of sources, because such a source cannot go in one request.
 
 | Setting                      | Value                                                                                                                        |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -1055,9 +1057,10 @@ call per source, and splits larger sources into contiguous windows.
   halves, cut at the heading or newline nearest the middle. Halves split again up
   to three levels and never below 1,000 characters, and the splits count toward
   the 96-call cap.
-- **Sources too large.** A source that cannot be windowed, for example with more
-  than four sources selected, is left out with a source-too-large issue. Sources
-  over 524,288 characters are skipped the same way.
+- **Sources too large.** A source that cannot be windowed, because the plan
+  would pass the 96-call cap, is left out with a source-too-large issue. Sources
+  over 524,288 characters are skipped the same way. Only sources sent in this
+  update are checked: an unchanged source keeps its facts and is not sent again.
 - **Conflicts and duplicates** across calls come from local detection, which
   depends on consistent subject naming.
 - **Checking the ratio.** `pnpm test:profile-windows:live` checks the ratio on a
