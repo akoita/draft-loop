@@ -1,6 +1,8 @@
 import { t } from "@lingui/core/macro";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+import { careerConversationRequestStarts } from "./career-conversation-model.js";
+import { useCareerConversationRequest } from "./career-conversation-start.js";
 import {
   CareerInterviewLiveStage,
   type CareerInterviewLiveVoice,
@@ -110,13 +112,24 @@ export function CareerInterviewPanel({
   );
   const act = (action: CareerInterviewAction) => run(pendingFor(action), () => onAction(action));
 
+  // The card or Home asked to start from a conversation (#2734): come into view, then start.
+  const section = useRef<HTMLElement>(null);
+  useCareerConversationRequest(section, () => {
+    if (!busy && careerConversationRequestStarts(session)) void run({ kind: "start" }, onStart);
+  });
+
   const active = session === undefined ? undefined : careerInterviewActiveTopic(session);
   const proposed = session?.topics.filter((topic) => topic.status === "proposed") ?? [];
   const taken = session?.topics.some((topic) => topic.status !== "proposed") ?? false;
   const progress = session === undefined ? undefined : careerInterviewProgress(session);
 
   return (
-    <section className="panel host-panel career-interview" aria-labelledby={`${id}-heading`}>
+    <section
+      ref={section}
+      tabIndex={-1}
+      className="panel host-panel career-interview"
+      aria-labelledby={`${id}-heading`}
+    >
       <h2 id={`${id}-heading`}>{t`Career interview`}</h2>
       <p className="hint">{t`Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time.`}</p>
       {problem === undefined ? null : <p role="alert">{problem}</p>}

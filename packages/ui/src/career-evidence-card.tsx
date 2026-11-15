@@ -1,5 +1,6 @@
 import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { CareerStartChoice, useCareerConversationOffered } from "./career-conversation-start.js";
 import {
   addCareerEvidence,
   type CareerEvidenceCapabilities,
@@ -128,6 +129,8 @@ export interface CareerEvidenceCardViewProps {
     readonly title: string;
     readonly text: string;
   }) => Promise<boolean>;
+  /** True when the host shows the career interview, so an empty card offers a conversation too. */
+  readonly conversationOffered?: boolean;
 }
 
 /** The card's next step once a document is ready. */
@@ -164,6 +167,7 @@ export function CareerEvidenceCardView({
   evidenceKinds,
   onOpenProfile,
   onAddText,
+  conversationOffered = false,
 }: CareerEvidenceCardViewProps) {
   const legacyCount = setup.evidenceSourceCount;
   const mode: NoSelectionMode | null = status.kind === "none" ? noSelectionMode(automatic) : null;
@@ -180,6 +184,8 @@ export function CareerEvidenceCardView({
       : status.kind === "unsupported"
         ? t`Add source files`
         : t`Add documents`;
+  // An empty record with an interview on the page: the two ways to start carry Add documents.
+  const startChoice = conversationOffered && mode === "first-add" && legacyCount === 0;
   const urlCount = parseSourceUrls(url).length;
   // Legacy workspace evidence imports one URL per request; only a knowledge base takes several.
   const tooManyForLegacy = !inKnowledgeBase && urlCount > 1;
@@ -236,6 +242,13 @@ export function CareerEvidenceCardView({
             {t`No career evidence yet. Adding the first source creates a knowledge base for this workspace in`}{" "}
             {defaultKnowledgeStoreDestinationLabel()}.
           </span>
+          {startChoice ? (
+            <CareerStartChoice
+              onAddDocuments={onAddFile}
+              addDisabled={addDisabled || !canAddFile}
+              disabled={blocked}
+            />
+          ) : null}
           <button
             className="button button-quiet"
             type="button"
@@ -282,14 +295,16 @@ export function CareerEvidenceCardView({
       )}
       {showAdd ? (
         <>
-          <button
-            className="button button-quiet"
-            type="button"
-            disabled={addDisabled || !canAddFile}
-            onClick={onAddFile}
-          >
-            {fileLabel}
-          </button>
+          {startChoice ? null : (
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={addDisabled || !canAddFile}
+              onClick={onAddFile}
+            >
+              {fileLabel}
+            </button>
+          )}
           {inKnowledgeBase && onAddText !== undefined ? (
             <PastedEvidenceForm onSave={onAddText} disabled={addDisabled} />
           ) : null}
@@ -365,6 +380,7 @@ export function CareerEvidenceCard({
 }: CareerEvidenceCardProps) {
   const capabilities = knowledge?.capabilities;
   const supported = capabilities !== undefined && supportsCareerEvidence(capabilities);
+  const conversationOffered = useCareerConversationOffered();
   const automatic = supported && supportsAutomaticKnowledgeBase(capabilities);
   const workspaceId = knowledge?.workspaceId;
   const revision = knowledge?.revision;
@@ -554,6 +570,7 @@ export function CareerEvidenceCard({
       url={url}
       onUrlChange={setUrl}
       automatic={automatic}
+      conversationOffered={conversationOffered}
       canAddFile={inKnowledgeBase || onSelectLegacyFiles !== undefined}
       canAddUrl={inKnowledgeBase || onAddLegacyUrl !== undefined}
       onChooseKnowledgeBase={() => {

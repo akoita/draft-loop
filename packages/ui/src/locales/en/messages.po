@@ -849,6 +849,10 @@ msgstr "A credential is required."
 msgid "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 msgstr "A critic from another company is checking this letter for sentences that read as machine-written. A revised version opens here if it finds any."
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "A CV, a profile export or notes about your work."
+msgstr "A CV, a profile export or notes about your work."
+
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
 msgstr "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -1050,6 +1054,7 @@ msgstr "Add career evidence from the Career evidence card above to create your k
 msgid "Add directory"
 msgstr "Add directory"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add documents"
 msgstr "Add documents"
@@ -3213,6 +3218,10 @@ msgstr "Effective checksum"
 msgid "effort"
 msgstr "effort"
 
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+msgstr "Either way, you check every fact before DraftLoop uses it. You can add documents later."
+
 #: packages/ui/src/profile-generation-progress.tsx
 msgid "Elapsed"
 msgstr "Elapsed"
@@ -4083,6 +4092,10 @@ msgstr "Home"
 #: apps/web/src/interview-guide.tsx
 msgid "How deep"
 msgstr "How deep"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "How do you want to start?"
+msgstr "How do you want to start?"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "How it works"
@@ -5342,6 +5355,10 @@ msgstr "no cost cap"
 #: packages/ui/src/provider-authentication.tsx
 msgid "No credential"
 msgstr "No credential"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "No CV needed. An interviewer asks about your work, in writing or out loud."
+msgstr "No CV needed. An interviewer asks about your work, in writing or out loud."
 
 #: packages/ui/src/review.tsx
 msgid "No draft artifact available"
@@ -8055,6 +8072,7 @@ msgstr "Standard (311M parameters, recommended)"
 msgid "Start"
 msgstr "Start"
 
+#: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
 msgstr "Start a conversation"
@@ -8096,6 +8114,10 @@ msgstr "Start the review"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start this review?"
 msgstr "Start this review?"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Start with a conversation"
+msgstr "Start with a conversation"
 
 #: packages/ui/src/run-details.tsx
 msgid "Starting new review…"
@@ -8348,6 +8370,10 @@ msgstr "Technical interview"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Technologies, separated by commas"
 msgstr "Technologies, separated by commas"
+
+#: packages/ui/src/career-conversation-start.tsx
+msgid "Tell it in a conversation"
+msgstr "Tell it in a conversation"
 
 #: apps/web/src/application-material.tsx
 #: packages/ui/src/export-preview.tsx

@@ -85,6 +85,9 @@ starting topics at once, in this order, and no job-post theme (#2732):
 | Skills and tools           | What the candidate can do and the tools they use     |
 | Something you are proud of | One project or result, told as a story               |
 
+- **Where it starts.** While the record has no document, the Career evidence
+  card and Home offer **Tell it in a conversation** beside **Add documents**,
+  on servers that show the interview (#2734).
 - **Facts before stories.** For work history the interviewer takes one job at
   a time, most recent first, and asks for the employer, title and years the
   candidate has not given. It still suggests none of them.

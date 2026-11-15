@@ -5084,6 +5084,53 @@ input[type="text"].workspace-title-input {
   color: var(--text-1);
 }
 
+/* An empty career record: documents or a conversation, side by side, stacked on a phone. */
+.career-start-choice {
+  display: grid;
+  gap: var(--space-3);
+  justify-self: stretch;
+  margin-top: var(--space-2);
+}
+
+.career-start-choice h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.career-start-ways {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+}
+
+.career-start-way {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.career-start-way-conversation {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.career-start-way p,
+.career-start-choice .hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
 .knowledge-store-disclosure {
   display: grid;
   justify-items: start;
