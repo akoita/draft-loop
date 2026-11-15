@@ -871,15 +871,34 @@ button.small:where(:not(.shared-screens *)) {
 }
 
 /* The candidate record bar (sign-in mode): one compact card above the screens, in the Home
-   column's width, in place of three stacked full-width panels. */
-.shell > .page-actions,
+   column's width, in place of three stacked full-width panels. Its rail copies the box of the
+   screens' scrolling column, side padding and scrollbar gutter, so the card's edges meet the
+   column's whether or not a scrollbar shows. */
+.record-rail {
+  padding: 0 1.25rem 2px;
+}
+
+/* The column scrolls by itself only above this width; below it the page scrolls. The threshold
+   mirrors the shared `.main-column` rule in packages/ui/src/styles.css and must follow it. */
+@media (min-width: 1025px) {
+  .record-rail {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .shared-screens .main-column {
+    scrollbar-gutter: stable;
+  }
+}
+
+.record-rail > .page-actions,
 .record-area {
-  width: calc(100% - 2.5rem);
+  width: 100%;
   max-width: 1440px;
   margin-inline: auto;
 }
 
-.shell > .page-actions {
+.record-rail > .page-actions {
   margin-block: 0.75rem 0.5rem;
 }
 
@@ -1051,9 +1070,8 @@ button.small:where(:not(.shared-screens *)) {
 }
 
 @media (max-width: 40rem) {
-  .shell > .page-actions,
-  .record-area {
-    width: 100%;
+  .record-rail {
+    padding-inline: 0.75rem;
   }
 
   .record-area {

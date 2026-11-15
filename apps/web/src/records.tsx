@@ -99,30 +99,32 @@ export function Records({ client, memory, children }: RecordsProps) {
 
   return (
     <>
-      <div className="record-area">
-        <RecordPicker
-          ids={state.ids}
-          chosen={chosen}
-          notice={noRecordNotice(state.me)}
-          onChoose={choose}
-        />
-        {deleted === undefined ? null : (
-          <p className="notice" role="status">
-            {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
-          </p>
-        )}
-        {chosen === undefined ? null : (
-          <MembersPanel
-            key={`${chosen}:${exists}`}
-            client={client}
-            recordId={chosen}
-            exists={exists}
-            manage={canManageMembers(state.me)}
+      <div className="record-rail">
+        <div className="record-area">
+          <RecordPicker
+            ids={state.ids}
+            chosen={chosen}
+            notice={noRecordNotice(state.me)}
+            onChoose={choose}
           />
-        )}
-        {exists && canExportAndDelete(state.me) ? (
-          <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
-        ) : null}
+          {deleted === undefined ? null : (
+            <p className="notice" role="status">
+              {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
+            </p>
+          )}
+          {chosen === undefined ? null : (
+            <MembersPanel
+              key={`${chosen}:${exists}`}
+              client={client}
+              recordId={chosen}
+              exists={exists}
+              manage={canManageMembers(state.me)}
+            />
+          )}
+          {exists && canExportAndDelete(state.me) ? (
+            <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
+          ) : null}
+        </div>
       </div>
       {chosen === undefined ? null : (
         <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
