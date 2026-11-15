@@ -32,6 +32,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         createdAt: "2026-11-04T11:00:00.000Z",
         expiresAt: "2027-01-01T00:00:00.000Z",
         scopes: ["journal", "applications:read", "jobs:write"],
+        memberId: "member-1",
         secretHash: "b".repeat(64),
       });
       await expect(
@@ -64,6 +65,7 @@ describe.runIf(connectionString !== undefined)("Postgres agent tokens", () => {
         "applications:read",
         "jobs:write",
       ]);
+      expect((await storeA.list("owner"))[0]?.memberId).toBe("member-1");
       expect(await storeB.list("owner")).toEqual([]);
 
       expect(await storeB.revoke("owner", "dlat_fixture0001", "2026-11-04T13:00:00.000Z")).toBe(

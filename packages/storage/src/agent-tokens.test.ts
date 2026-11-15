@@ -31,6 +31,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
     createdAt: "2026-11-04T11:00:00.000Z",
     expiresAt: "2027-01-01T00:00:00.000Z",
     scopes: ["journal"],
+    memberId: "member-1",
     secretHash: hashB,
   });
   await expect(
@@ -66,6 +67,7 @@ async function expectAgentTokenContract(store: AgentTokenStore): Promise<void> {
     scopes: ["journal"],
   });
   expect(found).not.toHaveProperty("secretHash");
+  expect(await store.findByHash(hashB)).toMatchObject({ memberId: "member-1" });
   expect(await store.findByHash("d".repeat(64))).toBeUndefined();
 
   expect((await store.list("owner")).map((token) => token.id)).toEqual([
