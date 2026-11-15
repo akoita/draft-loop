@@ -12,7 +12,7 @@ import { CareerInterviewPanel } from "@draft-loop/ui/career-interview-panel";
 import { useScreenLocale } from "@draft-loop/ui/i18n";
 import type { SpeechInput } from "@draft-loop/ui/speech-to-text";
 import { t } from "@lingui/core/macro";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { firstInterviewBase } from "./career-interview-first-base.js";
@@ -44,6 +44,25 @@ export interface CareerInterviewSectionProps {
    * use it (#2735); the written conversation and dictation stay.
    */
   readonly liveVoice?: boolean | undefined;
+}
+
+/**
+ * The record's unfinished conversation, if any (#2760). Reading it starts nothing and calls no
+ * model; a failed read answers undefined, since the Start button resumes it all the same.
+ */
+export async function currentInterview(
+  client: ApiClient,
+  workspaceId: string,
+): Promise<ApiSchemas["CareerInterviewSessionView"] | undefined> {
+  try {
+    const read = await client.call(
+      "GET /v1/workspaces/{workspaceId}/career-interview/sessions/current",
+      { path: { workspaceId } },
+    );
+    return read.current ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** What to tell the candidate when a career interview call is refused. */
@@ -198,7 +217,9 @@ export function CareerInterviewSection({
   const [session, setSession] = useState<CareerInterviewSessionView | undefined>(undefined);
   const [proposal, setProposal] = useState<string | undefined>(undefined);
 
+  const shown = useRef(false);
   const show = useCallback((read: ApiSchemas["CareerInterviewSessionView"]) => {
+    shown.current = true;
     setSession(
       careerInterviewSessionView(
         read.session,
@@ -208,6 +229,19 @@ export function CareerInterviewSection({
     );
     setProposal(read.proposal);
   }, []);
+
+  // A conversation left open or paused shows again after a reload (#2760). Reading it starts
+  // nothing; a failure leaves the Start button, which resumes it all the same. An answer that
+  // arrives after the candidate already started is dropped, so it never shows an older state.
+  useEffect(() => {
+    let wanted = true;
+    void currentInterview(client, workspaceId).then((read) => {
+      if (wanted && read !== undefined && !shown.current) show(read);
+    });
+    return () => {
+      wanted = false;
+    };
+  }, [client, workspaceId, show]);
 
   const loadConflicts = useCallback(
     async (topicKey: string): Promise<readonly CareerInterviewConflictView[]> => {

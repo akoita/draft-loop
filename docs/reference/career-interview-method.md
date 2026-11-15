@@ -107,6 +107,9 @@ starting topics at once, in this order, and no job-post theme (#2732):
 
 The screen numbers the proposed topics as the interviewer does, and **End
 this conversation** closes the session so the next one proposes afresh.
+A conversation left open or paused shows again when the page is reloaded:
+the screen reads it from `GET .../career-interview/sessions/current`, which
+starts nothing and calls no model (#2760).
 
 ## Asking and listening
 

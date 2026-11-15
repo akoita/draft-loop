@@ -98,6 +98,8 @@ export interface CareerInterviewService {
   /** The newest unfinished session, or a new one proposing the finder's top topics. */
   start(workspaceId: string): Promise<CareerInterviewSession>;
   get(workspaceId: string, sessionId: string): Promise<CareerInterviewSession>;
+  /** The newest session not closed, read without starting or resuming anything (#2760). */
+  unfinished(workspaceId: string): Promise<CareerInterviewSession | undefined>;
   list(workspaceId: string, limit?: number): Promise<readonly CareerInterviewSession[]>;
   accept(workspaceId: string, sessionId: string, topicKey: string): Promise<CareerInterviewSession>;
   decline(
@@ -289,6 +291,7 @@ export function createCareerInterviewService(
   };
 
   return {
+    unfinished: (workspaceId) => store.latestUnfinished(workspaceId),
     start: async (workspaceId) => {
       const unfinished = await store.latestUnfinished(workspaceId);
       if (unfinished !== undefined) {

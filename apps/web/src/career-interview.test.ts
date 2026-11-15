@@ -6,6 +6,7 @@ import {
   careerInterviewProblem,
   careerInterviewRefused,
   careerInterviewSessionView,
+  currentInterview,
   interviewLanguage,
   withInterviewLanguage,
 } from "./career-interview.js";
@@ -28,6 +29,23 @@ function consentClient(current: unknown) {
 }
 
 describe("the web career interview", () => {
+  it("reads the unfinished conversation after a reload, and nothing when there is none", async () => {
+    const open = { session: { id: "cis_1" } };
+    const reading = (answer: unknown): ApiClient => ({
+      call: async (operation) => {
+        expect(operation).toBe(
+          "GET /v1/workspaces/{workspaceId}/career-interview/sessions/current",
+        );
+        if (answer instanceof Error) throw answer;
+        return answer as never;
+      },
+    });
+    expect(await currentInterview(reading({ current: open }), "owner")).toBe(open);
+    expect(await currentInterview(reading({ current: null }), "owner")).toBeUndefined();
+    // A failed read leaves the Start button, which resumes the conversation all the same.
+    expect(await currentInterview(reading(new TypeError("fetch failed")), "owner")).toBeUndefined();
+  });
+
   it("explains a refusal for missing consent and falls back to the API's words", () => {
     expect(
       careerInterviewProblem(new ApiRequestError(403, "consent_required", "Consent needed.")),

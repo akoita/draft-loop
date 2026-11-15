@@ -281,6 +281,9 @@ export interface ApiSchemas {
       readonly fact_value: string;
     })[];
   };
+  "CareerInterviewCurrentSession": {
+    readonly current: ApiSchemas["CareerInterviewSessionView"] | null;
+  };
   "CareerInterviewSessionView": {
     readonly session: {
       readonly id: string;
@@ -2434,6 +2437,12 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: ApiSchemas["CareerInterviewSessionView"];
+  };
+  "GET /v1/workspaces/{workspaceId}/career-interview/sessions/current": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: ApiSchemas["CareerInterviewCurrentSession"];
   };
   "GET /v1/workspaces/{workspaceId}/career-interview/sessions/{sessionId}": {
     readonly path: {

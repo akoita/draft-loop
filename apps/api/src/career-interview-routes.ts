@@ -136,6 +136,10 @@ const sessionView = z
   })
   .meta({ id: "CareerInterviewSessionView" });
 
+const currentSessionView = z
+  .object({ current: sessionView.nullable() })
+  .meta({ id: "CareerInterviewCurrentSession" });
+
 const conflictsView = z
   .object({
     conflicts: z.array(
@@ -432,6 +436,25 @@ export function registerCareerInterviewRoutes(
         "career interview session started",
       );
       return reply.send(view(session));
+    },
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/career-interview/sessions/current",
+    {
+      schema: {
+        summary: "Read the unfinished guided career interview session, if any",
+        description:
+          "The newest session that is open or paused, so a screen can offer to continue it. Reading starts nothing, resumes nothing and calls no model; `current` is null when every session is closed.",
+        params: workspaceParams,
+        response: { 200: currentSessionView, ...errors },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = request.params;
+      await service.readWorkspace(workspaceRoot(workspaceId));
+      const session = await serviceFor(workspaceId, request).unfinished(workspaceId);
+      return reply.send({ current: session === undefined ? null : view(session) });
     },
   );
 
