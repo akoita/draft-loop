@@ -633,13 +633,13 @@ msgstr "{first}, {second} et {third}"
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Afficher # événement antérieur} other {Afficher # événements antérieurs}}"
 
-#: apps/web/src/records.tsx
-msgid "{id} (new, set it up when you open it)"
-msgstr "{id} (nouveau, configurez-le à l’ouverture)"
-
 #: apps/web/src/screening-model.ts
 msgid "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
 msgstr "{knowledge, plural, one {# source de connaissances} other {# sources de connaissances}}"
+
+#: apps/web/src/records.tsx
+msgid "{label} (new, set it up below)"
+msgstr "{label} (nouveau, à configurer ci-dessous)"
 
 #: packages/ui/src/app.tsx
 msgid "{label} company"
@@ -907,6 +907,10 @@ msgstr "Une fourchette de salaire n’est donnée qu’à partir d’une source 
 #: packages/ui/src/new-application-form.tsx
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr "Un fichier PDF, DOCX, Markdown ou texte brut. Seul son texte est conservé, comme s’il avait été collé."
+
+#: apps/web/src/records-model.ts
+msgid "A record has that name already. Choose it in the list."
+msgstr "Un dossier porte déjà ce nom. Choisissez-le dans la liste."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement can be at most {maximumRequirementTextLength} characters."
@@ -3716,6 +3720,10 @@ msgstr "Pour un entretien d’une heure ou plus : ajoute le marché, une grille 
 msgid "For example: my move into team leadership"
 msgstr "Par exemple : mon passage au management d'équipe"
 
+#: apps/web/src/records.tsx
+msgid "For example: Product roles 2026"
+msgstr "Par exemple : Postes produit 2026"
+
 #: apps/web/src/interview-guide.tsx
 msgid "For example: recruiter, or engineering manager"
 msgstr "Par exemple : recruteur, ou responsable d’équipe technique"
@@ -3926,8 +3934,8 @@ msgid "Give the folder a name."
 msgstr "Donnez un nom au dossier."
 
 #: apps/web/src/records-model.ts
-msgid "Give the new record an id."
-msgstr "Donnez un identifiant au nouveau dossier."
+msgid "Give the new record a name."
+msgstr "Donnez un nom au nouveau dossier."
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
@@ -5072,6 +5080,10 @@ msgstr "Indiquez au moins une technologie."
 msgid "Name it"
 msgstr "Nommez-la"
 
+#: apps/web/src/records.tsx
+msgid "Name of the new record"
+msgstr "Nom du nouveau dossier"
+
 #: packages/ui/src/new-application-model.ts
 msgid "Name the application, for example a company and role."
 msgstr "Nommez la candidature, par exemple une entreprise et un poste."
@@ -5198,10 +5210,6 @@ msgstr "Les nouvelles notes de vos agents seront refusées jusqu’à ce que vou
 #: apps/web/src/records.tsx
 msgid "New record"
 msgstr "Nouveau dossier candidat"
-
-#: apps/web/src/records.tsx
-msgid "New record id"
-msgstr "Identifiant du nouveau dossier"
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "New runs use the workspace's current models."
@@ -8389,10 +8397,6 @@ msgstr "Cette invitation a été retirée. Demandez une nouvelle invitation."
 msgid "That knowledge store is not on this service."
 msgstr "Ce stockage de connaissances n’est pas sur ce service."
 
-#: apps/web/src/records-model.ts
-msgid "That record exists already. Choose it in the list."
-msgstr "Ce dossier existe déjà. Choisissez-le dans la liste."
-
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr "Ce niveau d’utilisation n’a pas été enregistré. Réessayez."
@@ -10035,8 +10039,8 @@ msgid "Use this run's draft"
 msgstr "Utiliser cette ébauche"
 
 #: apps/web/src/records-model.ts
-msgid "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit."
-msgstr "Utilisez jusqu’à 128 lettres, chiffres, points, tirets ou tirets bas, en commençant par une lettre ou un chiffre."
+msgid "Use up to {recordNameMaxLength} characters."
+msgstr "Utilisez au plus {recordNameMaxLength} caractères."
 
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Use workspace models"

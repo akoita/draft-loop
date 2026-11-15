@@ -639,12 +639,12 @@ msgstr ""
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "{id} (new, set it up when you open it)"
-msgstr ""
-
 #: apps/web/src/screening-model.ts
 msgid "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "{label} (new, set it up below)"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -912,6 +912,10 @@ msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
+msgstr ""
+
+#: apps/web/src/records-model.ts
+msgid "A record has that name already. Choose it in the list."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -3722,6 +3726,10 @@ msgstr ""
 msgid "For example: my move into team leadership"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "For example: Product roles 2026"
+msgstr ""
+
 #: apps/web/src/interview-guide.tsx
 msgid "For example: recruiter, or engineering manager"
 msgstr ""
@@ -3932,7 +3940,7 @@ msgid "Give the folder a name."
 msgstr ""
 
 #: apps/web/src/records-model.ts
-msgid "Give the new record an id."
+msgid "Give the new record a name."
 msgstr ""
 
 #: packages/ui/src/work-journal-model.ts
@@ -5077,6 +5085,10 @@ msgstr ""
 msgid "Name it"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Name of the new record"
+msgstr ""
+
 #: packages/ui/src/new-application-model.ts
 msgid "Name the application, for example a company and role."
 msgstr ""
@@ -5202,10 +5214,6 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "New record"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "New record id"
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx
@@ -8394,10 +8402,6 @@ msgstr ""
 msgid "That knowledge store is not on this service."
 msgstr ""
 
-#: apps/web/src/records-model.ts
-msgid "That record exists already. Choose it in the list."
-msgstr ""
-
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr ""
@@ -10040,7 +10044,7 @@ msgid "Use this run's draft"
 msgstr ""
 
 #: apps/web/src/records-model.ts
-msgid "Use up to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit."
+msgid "Use up to {recordNameMaxLength} characters."
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx

@@ -8,9 +8,13 @@ import {
   createRecordMemory,
   currentRecordId,
   memberLabel,
-  newRecordIdProblem,
+  newRecordNameProblem,
   noRecordNotice,
+  recordIdFromName,
   recordIds,
+  recordLabel,
+  recordNames,
+  tidyRecordName,
   unassignMemberRequest,
   withRecord,
 } from "./records-model.js";
@@ -86,13 +90,35 @@ describe("candidate records", () => {
     expect(currentRecordId([], "record-a")).toBeUndefined();
   });
 
-  it("checks a new record id with the API's safe-id rule", () => {
-    expect(newRecordIdProblem("candidate-ana.2026", [])).toBeUndefined();
-    expect(newRecordIdProblem("", [])).toBe("Give the new record an id.");
-    expect(newRecordIdProblem("-starts-with-dash", [])).toContain("starting with a letter");
-    expect(newRecordIdProblem("has space", [])).toContain("letters, digits");
-    expect(newRecordIdProblem("a".repeat(129), [])).toContain("128");
-    expect(newRecordIdProblem("record-a", ["record-a"])).toContain("exists already");
+  it("reads the names people gave the records, and shows the id without one", () => {
+    const names = recordNames({
+      workspaces: [{ id: "record-a" }, { id: "record-b", name: "Fictional search" }],
+    });
+
+    expect([...names]).toEqual([["record-b", "Fictional search"]]);
+    expect(recordLabel("record-b", names)).toBe("Fictional search");
+    expect(recordLabel("record-a", names)).toBe("record-a");
+  });
+
+  it("takes a plain name of up to 80 characters for a new record", () => {
+    const names = new Map([["record-b", "Fictional search"]]);
+
+    expect(tidyRecordName("  Product   roles\t2026 ")).toBe("Product roles 2026");
+    expect(newRecordNameProblem("Product roles 2026", names)).toBeUndefined();
+    expect(newRecordNameProblem("a".repeat(80), names)).toBeUndefined();
+    expect(newRecordNameProblem("", names)).toBe("Give the new record a name.");
+    expect(newRecordNameProblem("a".repeat(81), names)).toBe("Use up to 80 characters.");
+    expect(newRecordNameProblem("fictional SEARCH", names)).toContain("has that name already");
+  });
+
+  it("makes a safe, unused record id from a name", () => {
+    expect(recordIdFromName("Product roles 2026", [])).toBe("product-roles-2026");
+    expect(recordIdFromName("Été à Genève: design!", [])).toBe("ete-a-geneve-design");
+    expect(recordIdFromName("求職", [])).toBe("record");
+    expect(recordIdFromName("Search", ["search", "search-2"])).toBe("search-3");
+    const long = recordIdFromName(`${"word ".repeat(15)}end`, []);
+    expect(long.length).toBeLessThanOrEqual(48);
+    expect(long).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/u);
   });
 
   it("lets owners, admins and the owner token manage members", () => {
