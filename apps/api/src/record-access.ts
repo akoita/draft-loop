@@ -1,5 +1,6 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
+import type { RecordNames } from "@draft-loop/storage-postgres";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -14,6 +15,8 @@ export type RecordAccessFor = (tenantId: string) => CandidateRecordAccess;
 
 export interface RecordAccessOptions {
   readonly recordAccessFor: RecordAccessFor;
+  /** The names people gave the records (#2737); without it the listing carries ids only. */
+  readonly recordNamesFor?: (tenantId: string) => Pick<RecordNames, "list">;
   /** The tenant the owner token acts in, for its listing of every record. */
   readonly ownerTenantId?: string;
   /** The caller's tenant's application, bound to the request before this module's hooks run. */
@@ -25,7 +28,15 @@ const createRoute = "/v1/workspaces/:workspaceId";
 
 const workspaceListSchema = z
   .object({
-    workspaces: z.array(z.object({ id: z.string() })),
+    workspaces: z.array(
+      z.object({
+        id: z.string(),
+        name: z
+          .string()
+          .optional()
+          .describe("The name people gave the record; absent when it has none."),
+      }),
+    ),
   })
   .meta({ id: "WorkspaceList" });
 
@@ -141,7 +152,7 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
       schema: {
         summary: "List the workspaces the caller can reach",
         description:
-          "Owners and admins, and the owner token, see every workspace of the organisation; a member sees the workspaces assigned to them. Sorted by id.",
+          "Owners and admins, and the owner token, see every workspace of the organisation; a member sees the workspaces assigned to them. Sorted by id, each with the name people gave it, if any.",
         response: { 200: workspaceListSchema },
       },
     },
@@ -154,7 +165,13 @@ export function registerRecordAccess(parent: FastifyInstance, options: RecordAcc
         caller.kind === "member" && !reachesEveryRecord(caller)
           ? (await access.listMemberRecords(caller.memberId)).map((record) => record.workspaceId)
           : await access.listRecords();
-      return { workspaces: [...new Set(ids)].sort().map((id) => ({ id })) };
+      const names = (await options.recordNamesFor?.(tenantId).list()) ?? new Map<string, string>();
+      return {
+        workspaces: [...new Set(ids)].sort().map((id) => {
+          const name = names.get(id);
+          return name === undefined ? { id } : { id, name };
+        }),
+      };
     },
   );
 }

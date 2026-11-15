@@ -120,6 +120,13 @@ export {
   type PrepareCallTake,
 } from "./prepare-call-meter.js";
 export {
+  createRecordNames,
+  normaliseRecordName,
+  RecordNameError,
+  type RecordNames,
+  recordNameMaxLength,
+} from "./record-names.js";
+export {
   openPostgresRecordArchives,
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";
