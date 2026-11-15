@@ -2219,6 +2219,7 @@ msgstr "Commandes"
 msgid "Compact"
 msgstr "Compact"
 
+#: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 msgid "Compact run history"
 msgstr "Compacter l’historique des exécutions"
@@ -7375,6 +7376,10 @@ msgstr "Révision"
 #: packages/ui/src/agent-setup.tsx
 msgid "Revoke"
 msgstr "Révoquer"
+
+#: packages/ui/src/app.tsx
+msgid "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
+msgstr "Réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Une confirmation est demandée et une sauvegarde est conservée."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Role"
