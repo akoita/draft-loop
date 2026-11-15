@@ -161,6 +161,15 @@ function readAuthConfig(env: NodeJS.ProcessEnv): ApiAuthConfig {
   if (!isProviderUrl(issuer, allowHttp) || new URL(issuer).search !== "") {
     throw new ApiConfigError(`DRAFT_LOOP_OIDC_ISSUER must be ${scheme} with no query.`);
   }
+  const memberClientIds = (env.DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id !== "");
+  if (memberClientIds.some((id) => !clientIdentifierPattern.test(id))) {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS must be client ids separated by commas.",
+    );
+  }
   const jwksUrl = env.DRAFT_LOOP_OIDC_JWKS_URL ?? "";
   if (jwksUrl !== "" && !isProviderUrl(jwksUrl, allowHttp)) {
     throw new ApiConfigError(`DRAFT_LOOP_OIDC_JWKS_URL must be ${scheme}.`);
@@ -170,6 +179,7 @@ function readAuthConfig(env: NodeJS.ProcessEnv): ApiAuthConfig {
     issuer,
     audience: clientIdentifier(env, "DRAFT_LOOP_OIDC_AUDIENCE"),
     webClientId: clientIdentifier(env, "DRAFT_LOOP_OIDC_WEB_CLIENT_ID"),
+    ...(memberClientIds.length === 0 ? {} : { memberClientIds }),
     ...(jwksUrl === "" ? {} : { jwksUrl }),
     allowHttp,
   };

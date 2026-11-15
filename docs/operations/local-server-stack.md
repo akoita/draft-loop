@@ -259,16 +259,17 @@ With `filesystem`, the host disk's encryption protects the files.
 
 ### Sign-in
 
-| Variable                        | Used by     | Meaning                                                                                       |
-| ------------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
-| `DRAFT_LOOP_AUTH_MODE`          | API, worker | `owner` (default) accepts only the owner token; `oidc` accepts provider tokens for members    |
-| `DRAFT_LOOP_API_OWNER_TOKEN`    | API         | The owner's bearer token, 32 characters or more; the only credential `/v1/operator/*` accepts |
-| `DRAFT_LOOP_TENANT_ID`          | API         | The owner token's tenant: required in `owner` mode, optional in `oidc` mode                   |
-| `DRAFT_LOOP_OIDC_ISSUER`        | API         | The provider's issuer, an https URL matched exactly                                           |
-| `DRAFT_LOOP_OIDC_AUDIENCE`      | API         | The audience the API's tokens carry                                                           |
-| `DRAFT_LOOP_OIDC_WEB_CLIENT_ID` | API         | The web screen's public client id                                                             |
-| `DRAFT_LOOP_OIDC_JWKS_URL`      | API         | The provider's key set; discovered from the issuer when unset                                 |
-| `DRAFT_LOOP_OIDC_ALLOW_HTTP`    | API         | `1` accepts plain-http provider addresses, for the local stack only                           |
+| Variable                            | Used by     | Meaning                                                                                                                                            |
+| ----------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_AUTH_MODE`              | API, worker | `owner` (default) accepts only the owner token; `oidc` accepts provider tokens for members                                                         |
+| `DRAFT_LOOP_API_OWNER_TOKEN`        | API         | The owner's bearer token, 32 characters or more; the only credential `/v1/operator/*` accepts                                                      |
+| `DRAFT_LOOP_TENANT_ID`              | API         | The owner token's tenant: required in `owner` mode, optional in `oidc` mode                                                                        |
+| `DRAFT_LOOP_OIDC_ISSUER`            | API         | The provider's issuer, an https URL matched exactly                                                                                                |
+| `DRAFT_LOOP_OIDC_AUDIENCE`          | API         | The audience the API's tokens carry                                                                                                                |
+| `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`     | API         | The web screen's public client id                                                                                                                  |
+| `DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS` | API         | Optional; other client ids, comma-separated, that act as the member like the web screen, such as the deploy smoke's. They cannot create an account |
+| `DRAFT_LOOP_OIDC_JWKS_URL`          | API         | The provider's key set; discovered from the issuer when unset                                                                                      |
+| `DRAFT_LOOP_OIDC_ALLOW_HTTP`        | API         | `1` accepts plain-http provider addresses, for the local stack only                                                                                |
 
 ### Runs, safety and limits
 
@@ -277,8 +278,8 @@ With `filesystem`, the host disk's encryption protects the files.
 | `DRAFT_LOOP_ALLOW_PROVIDER_DATA` | API, worker | `true` lets runs and the model screener send approved material to providers; default `false`                                                                                                                                                        |
 | `DRAFT_LOOP_SCREENING`           | API, worker | `off`, `rules` (default) or `rules+model`; any other value fails at start. Give the worker the API's value                                                                                                                                          |
 | `DRAFT_LOOP_SCREENING_SHADOW`    | API         | `off` (default) or `jev`: job pages also go to Jev, which only logs. Needs `DRAFT_LOOP_JEV_API_KEY`; daily cap `DRAFT_LOOP_SCREENING_SHADOW_MAX_DAILY_USD`, default $0.10 ([decision models](../architecture/runtime-and-trust.md#decision-models)) |
-| `DRAFT_LOOP_COVER_LETTER_WRITER` | API | `items` (default) or `free-form`: how a cover letter is written; any other value fails at start ([free-form letters](../reference/application-material.md#free-form-cover-letters)) |
-| `DRAFT_LOOP_RESEARCH_SEARCH` | worker | `claude` (default), `linkup` or `off`: the research brief's web search; any other value fails at start ([research briefs](../reference/application-material.md#research-briefs)) |
+| `DRAFT_LOOP_COVER_LETTER_WRITER` | API         | `items` (default) or `free-form`: how a cover letter is written; any other value fails at start ([free-form letters](../reference/application-material.md#free-form-cover-letters))                                                                 |
+| `DRAFT_LOOP_RESEARCH_SEARCH`     | worker      | `claude` (default), `linkup` or `off`: the research brief's web search; any other value fails at start ([research briefs](../reference/application-material.md#research-briefs))                                                                    |
 | `DRAFT_LOOP_REQUIRE_CONSENT`     | worker      | `true` checks each record's transmission consent before a provider call. Always on, and required, in `oidc` mode                                                                                                                                    |
 | `DRAFT_LOOP_RUN_MAX_ROUNDS`      | API, worker | Required ceiling on a run's rounds                                                                                                                                                                                                                  |
 | `DRAFT_LOOP_RUN_MAX_COST_USD`    | API, worker | Required ceiling on a run's estimated cost, in US dollars                                                                                                                                                                                           |

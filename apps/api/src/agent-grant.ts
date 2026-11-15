@@ -21,15 +21,22 @@ export interface AgentGrant {
 }
 
 /**
- * The grant a verified token carries, or none when the web screen's own client holds it. A
- * token of any other client is a grant, with or without scopes, so a client nobody classified
- * never gets a member's full access.
+ * The grant a verified token carries, or none when the web screen's own client, or a member
+ * client the deployment names, holds it. A token of any other client is a grant, with or without
+ * scopes, so a client nobody classified never gets a member's full access.
  */
 export function agentGrantOf(
   token: { readonly clientId?: string; readonly grantedScopes: readonly string[] },
   webClientId: string,
+  memberClientIds: readonly string[] = [],
 ): AgentGrant | undefined {
-  if (token.clientId === undefined || token.clientId === webClientId) return undefined;
+  if (
+    token.clientId === undefined ||
+    token.clientId === webClientId ||
+    memberClientIds.includes(token.clientId)
+  ) {
+    return undefined;
+  }
   const granted = new Set(
     token.grantedScopes
       .filter((scope) => scope.startsWith(agentGrantScopePrefix))

@@ -127,6 +127,17 @@ describe("readApiConfig's sign-in settings", () => {
     });
   });
 
+  it("reads the member clients a deployment names beside the web client", () => {
+    expect(readApiConfig(oidc).auth).not.toHaveProperty("memberClientIds");
+    expect(
+      readApiConfig({ ...oidc, DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS: " draft-loop-smoke, other ," })
+        .auth,
+    ).toMatchObject({ memberClientIds: ["draft-loop-smoke", "other"] });
+    expect(() =>
+      readApiConfig({ ...oidc, DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS: "smoke client" }),
+    ).toThrow(ApiConfigError);
+  });
+
   it("still requires the owner token, the operator's credential", () => {
     expect(() => readApiConfig({ ...oidc, DRAFT_LOOP_API_OWNER_TOKEN: "" })).toThrow(
       ApiConfigError,

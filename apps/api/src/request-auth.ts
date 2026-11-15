@@ -86,6 +86,7 @@ function signInAuthenticator(
   verify: VerifySignInToken,
   resolve: ResolveSignIn,
   webClientId: string,
+  memberClientIds: readonly string[],
 ): Authenticator {
   return async (authorization) => {
     const token = bearerToken(authorization);
@@ -94,11 +95,13 @@ function signInAuthenticator(
     if (verification.status === "refused") {
       return { outcome: "unauthenticated", reason: verification.reason };
     }
-    const grant = agentGrantOf(verification, webClientId);
+    const grant = agentGrantOf(verification, webClientId, memberClientIds);
     const member = await resolve(verification.identity);
     // Only the web screen's own sign-in may go on to create an account (#2646).
     if (member === undefined) {
-      return grant === undefined
+      const memberClient =
+        verification.clientId !== undefined && memberClientIds.includes(verification.clientId);
+      return grant === undefined && !memberClient
         ? { outcome: "forbidden", identity: verification.identity }
         : { outcome: "forbidden" };
     }
@@ -121,6 +124,7 @@ function authenticatorFor(ownerToken: string, auth: ApiAuthOptions): Authenticat
     signInTokenVerifier(auth, auth.keys ?? remoteSignInKeys(auth)),
     auth.resolveSignIn,
     auth.webClientId,
+    auth.memberClientIds ?? [],
   );
 }
 
