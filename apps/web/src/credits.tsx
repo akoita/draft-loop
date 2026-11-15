@@ -30,8 +30,8 @@ const purchasePolls = 8;
 
 /**
  * Reads the organisation's credit balance as a chip, with the packs the service sells; shows
- * nothing in owner-token mode. Back from a payment, it says so and reads the balance again until
- * the credits arrive.
+ * nothing in owner-token mode. Back from a payment, it says so while it reads the balance again
+ * for the credits to arrive.
  */
 export function CreditBalance({ client, refresh }: CreditBalanceProps) {
   const [state, setState] = useState<CreditsState>({ kind: "loading" });
@@ -69,12 +69,15 @@ export function CreditBalance({ client, refresh }: CreditBalanceProps) {
 
   return (
     <>
-      {back === undefined ? null : (
-        <span className="credit-chip" role="status">
-          {purchaseReturnText(back)}
-        </span>
-      )}
-      <CreditBalancePanel state={state} />
+      <span className="credit-balance">
+        <CreditBalancePanel state={state} />
+        {/* Below the chip and out of the flow, so the header's buttons never move. */}
+        {back === undefined || (back === "done" && polls >= purchasePolls) ? null : (
+          <span className="credit-notice" role="status">
+            {purchaseReturnText(back)}
+          </span>
+        )}
+      </span>
       {state.kind === "ready" && state.credits.creditPacks.length > 0 ? (
         <BuyCredits
           packs={state.credits.creditPacks}
