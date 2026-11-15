@@ -181,6 +181,13 @@ describe("AgentSetup", () => {
     expect(html).not.toContain("Connect an agent</summary>");
   });
 
+  it("shows assistants' limits beside the token steps where the host issues tokens too", () => {
+    const html = renderToStaticMarkup(<AgentSetup {...props} connections={<p>the limits</p>} />);
+    expect(html.indexOf("the limits")).toBeGreaterThan(-1);
+    expect(html.indexOf("the limits")).toBeLessThan(html.indexOf("Connect an agent"));
+    expect(html).toContain("Create agent token");
+  });
+
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} available={false} />);
     expect(html).toContain("is not available yet");

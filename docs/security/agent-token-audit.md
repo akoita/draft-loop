@@ -31,7 +31,8 @@ stateDiagram-v2
 
 | Stage  | Rule now                                                                                                                                                                                |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Issue  | Owner token only, in owner mode only. 32 random bytes behind a `dlagent_` prefix; the secret is shown once and only its SHA-256 is stored. At most 20 active tokens per workspace.      |
+| Issue  | The owner token in owner mode, or a signed-in member in sign-in mode. 32 random bytes behind a `dlagent_` prefix; a member's token adds `.` and the organisation id, which only picks the tenant whose store must hold its hash. The secret is shown once and only its SHA-256 is stored. At most 20 active tokens per workspace. |
+| Member | In sign-in mode a token acts as the member who issued it, looked up again at each request: it answers 401 once the member is no longer active, and record access, consent and credits apply as for that member. |
 | Scope  | One workspace. Only `POST` and title-only `GET` on that workspace's `/work-journal/notes`. Every other route answers 403, a malformed or unknown token 401.                             |
 | Expiry | 90 days by default, `expires_in_days` from 1 to 365. A token stored before expiry existed expires 90 days after it was issued.                                                          |
 | Revoke | Immediate: each request looks the token up again. Revoking one leaves the others working. Erasing a record or an organisation deletes its tokens.                                       |
