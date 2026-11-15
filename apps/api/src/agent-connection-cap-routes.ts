@@ -31,7 +31,12 @@ const clientIdSchema = z
 const connectionSchema = z
   .object({
     client_id: clientIdSchema,
-    monthly_cap_usd: z.number().describe("What the connection may reserve each UTC month."),
+    monthly_cap_usd: z
+      .number()
+      .optional()
+      .describe(
+        "What the connection may reserve each UTC month; absent for an assistant that asked to spend before a limit was set, which starts nothing.",
+      ),
     spent_this_month_usd: z.number().describe("What it reserved this UTC month."),
     updated_at: z.string(),
   })
@@ -54,7 +59,7 @@ const errors = { 400: apiErrorSchema, 404: apiErrorSchema } as const;
 function view(cap: AgentConnectionCap, at: Date) {
   return {
     client_id: cap.clientId,
-    monthly_cap_usd: cap.monthlyCapCents / 100,
+    ...(cap.monthlyCapCents === undefined ? {} : { monthly_cap_usd: cap.monthlyCapCents / 100 }),
     spent_this_month_usd: agentConnectionSpentCents(cap, agentSpendMonth(at)) / 100,
     updated_at: cap.updatedAt,
   };
@@ -87,7 +92,7 @@ export function registerAgentConnectionCapRoutes(
       schema: {
         summary: "List assistant connection caps",
         description:
-          "The monthly spend cap of each assistant connection in the workspace, by client id. A connection without a cap starts no run or draft.",
+          "The monthly spend cap of each assistant connection in the workspace, by client id, and each assistant that asked to spend before a cap was set, without monthly_cap_usd. A connection without a cap starts no run or draft.",
         params: workspaceParams,
         response: { 200: z.object({ connections: z.array(connectionSchema) }), ...errors },
       },

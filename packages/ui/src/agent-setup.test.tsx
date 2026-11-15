@@ -130,7 +130,7 @@ describe("AgentSetup", () => {
     expect(html).toContain("draftloop-mcp save-token");
     expect(html).not.toContain("&lt;agent-token&gt;");
     expect(html).toMatch(/<button type="button">Copy<\/button>/u);
-    expect(html).toContain("Active agent tokens: 0");
+    expect(html).toContain("No agent is connected yet");
     expect(html).toContain(agentChannelGuideUrl);
   });
 
@@ -163,7 +163,11 @@ describe("AgentSetup", () => {
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
     expect(html).toContain("See your job applications");
     expect(html).toContain("Add a job application from a pasted job description");
-    expect(html).toContain("Active agent tokens: 1");
+    // The token is a row of Connected agents, above the steps, with its scopes and a way out.
+    expect(html).toContain("Connected agents");
+    expect(html).toContain("Work journal · Read applications");
+    expect(html.indexOf("Connected agents")).toBeLessThan(html.indexOf("Connect an agent"));
+    expect(html).toContain(">Disconnect</button>");
   });
 
   it("shows the host's work journal switch above Connect an agent", () => {
@@ -172,19 +176,29 @@ describe("AgentSetup", () => {
     expect(html.indexOf("the switch")).toBeLessThan(html.indexOf("Connect an agent"));
   });
 
-  it("shows what connected assistants may spend where the host keeps their limits", () => {
+  const assistants = [
+    { client_id: "draftloop-claude", monthly_cap_usd: 5, spent_this_month_usd: 1.2 },
+    { client_id: "https://assistant.example.test/client.json", spent_this_month_usd: 0 },
+  ];
+
+  it("lists signed-in assistants by name where the host keeps their limits, with no id to type", () => {
     const html = renderToStaticMarkup(
-      <AgentSetup {...props} available={false} connections={<p>the limits</p>} />,
+      <AgentSetup {...props} available={false} assistants={assistants} />,
     );
-    expect(html).toContain("the limits");
+    expect(html).toContain("Connected agents");
+    expect(html).toContain(">Claude</span>");
+    expect(html).toContain(">assistant.example.test</span>");
+    expect(html).toContain("No limit yet, so it starts no run or draft");
+    expect(html).not.toContain("draftloop-claude");
+    expect(html).not.toContain("Type the assistant");
     expect(html).not.toContain("is not available yet");
     expect(html).not.toContain("Connect an agent</summary>");
   });
 
-  it("shows assistants' limits beside the token steps where the host issues tokens too", () => {
-    const html = renderToStaticMarkup(<AgentSetup {...props} connections={<p>the limits</p>} />);
-    expect(html.indexOf("the limits")).toBeGreaterThan(-1);
-    expect(html.indexOf("the limits")).toBeLessThan(html.indexOf("Connect an agent"));
+  it("lists tokens and assistants in one table where the host issues tokens too", () => {
+    const html = renderToStaticMarkup(<AgentSetup {...props} assistants={assistants} />);
+    expect(html.match(/<table /gu)).toHaveLength(1);
+    expect(html.indexOf(">Claude</span>")).toBeLessThan(html.indexOf("Connect an agent"));
     expect(html).toContain("Create agent token");
   });
 
