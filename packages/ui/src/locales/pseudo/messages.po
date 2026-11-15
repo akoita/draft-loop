@@ -424,10 +424,6 @@ msgstr ""
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr ""
 
-#: packages/ui/src/agent-setup.tsx
-msgid "{can}; created {created}, expires {until}"
-msgstr ""
-
 #. placeholder {0}: countedNouns.source(sources)
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{chunks, plural, one {# relevant excerpt} other {# relevant excerpts}} selected from {0}"
@@ -1015,6 +1011,7 @@ msgstr ""
 msgid "Acknowledgement required"
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/home-applications-view.tsx
 msgid "Actions"
 msgstr ""
@@ -1023,11 +1020,6 @@ msgstr ""
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Active"
-msgstr ""
-
-#. placeholder {0}: active.length
-#: packages/ui/src/agent-setup.tsx
-msgid "Active agent tokens: {0}"
 msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx
@@ -1182,6 +1174,7 @@ msgid "Advanced options for this run"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Agent"
 msgstr ""
 
@@ -1273,10 +1266,6 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Always allow"
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "An assistant you connect by signing in, such as Claude or ChatGPT, starts CV runs and drafts only within a monthly limit you set here. Without a limit it starts none."
 msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx
@@ -1511,10 +1500,6 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Assign a member"
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Assistant"
 msgstr ""
 
 #: apps/web/src/http-bridge.ts
@@ -1780,6 +1765,7 @@ msgstr ""
 #: apps/web/src/screening.tsx
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -1821,6 +1807,10 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Candidate record"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Cannot spend"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -1895,7 +1885,7 @@ msgstr ""
 msgid "Change in Workspace settings"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Change limit"
 msgstr ""
 
@@ -2360,6 +2350,10 @@ msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Connect an agent"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Connected agents"
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
@@ -2870,6 +2864,14 @@ msgstr ""
 msgid "Discard the note"
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Disconnect"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Disconnect {name}? Its token stops working now."
+msgstr ""
+
 #. placeholder {0}: response.status
 #: apps/web/src/oidc-session.ts
 msgid "Discovery answered {0}."
@@ -3160,7 +3162,6 @@ msgstr ""
 msgid "Each file is checked for hidden instructions before runs use it. Quarantined files wait until an owner or admin releases them."
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr ""
@@ -4401,10 +4402,6 @@ msgstr ""
 msgid "It is empty."
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "It will start no run or draft until you set a limit again. It keeps its other permissions."
-msgstr ""
-
 #. placeholder {0}: index + 1
 #: apps/web/src/application-material.tsx
 #: apps/web/src/interview-guide.tsx
@@ -4514,6 +4511,10 @@ msgstr ""
 msgid "Keep each heading to 200 characters or fewer."
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Keep it"
+msgstr ""
+
 #: apps/web/src/landing.tsx
 msgid "Keep my email address to invite me to the DraftLoop beta. It is deleted once I am invited, or after six months."
 msgstr ""
@@ -4524,10 +4525,6 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Keep the limit"
 msgstr ""
 
 #: packages/ui/src/workspace-model-settings.ts
@@ -4916,6 +4913,10 @@ msgstr ""
 msgid "Maximum run budget"
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "May"
+msgstr ""
+
 #: packages/ui/src/run-switcher.tsx
 msgid "Mean of the latest evaluation's readiness dimensions"
 msgstr ""
@@ -5069,7 +5070,10 @@ msgstr ""
 msgid "Modern"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
+msgid "Monthly limit in US dollars"
+msgstr ""
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Monthly spend limit in US dollars"
 msgstr ""
@@ -5381,16 +5385,16 @@ msgstr ""
 msgid "No active knowledge bases are available."
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "No agent is connected yet. Connect one below."
+msgstr ""
+
 #: packages/ui/src/home.tsx
 msgid "No application matches this search or filter."
 msgstr ""
 
 #: packages/ui/src/home.tsx
 msgid "No applications yet. Start a new application for the job you are applying for. It uses your career profile and evidence."
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "No assistant has a spend limit."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -5513,6 +5517,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "No knowledge base selected — runs will use legacy workspace evidence"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "No limit yet, so it starts no run or draft"
 msgstr ""
 
 #: packages/ui/src/run-details.tsx
@@ -5859,7 +5867,6 @@ msgstr ""
 msgid "Omission"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
 #: packages/ui/src/start-advanced-options.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
@@ -6853,6 +6860,7 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 #: apps/web/src/records.tsx
+#: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -6867,6 +6875,10 @@ msgstr ""
 #. placeholder {0}: member.email
 #: apps/web/src/records.tsx
 msgid "Remove {0} from this record"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Remove {name} from this list? It shows again if it asks to spend."
 msgstr ""
 
 #: apps/web/src/credits-model.ts
@@ -7443,10 +7455,6 @@ msgstr ""
 msgid "Revision"
 msgstr ""
 
-#: packages/ui/src/agent-setup.tsx
-msgid "Revoke"
-msgstr ""
-
 #: packages/ui/src/app.tsx
 msgid "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
 msgstr ""
@@ -7642,6 +7650,10 @@ msgstr ""
 
 #: packages/ui/src/profile.tsx
 msgid "Save draft edits"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "Save limit"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -7905,16 +7917,16 @@ msgstr ""
 msgid "Session memory only"
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Set a limit"
+msgstr ""
+
 #: packages/ui/src/profile-issue-bulk-status.tsx
 msgid "Set all"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Set aside"
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Set spend limit"
 msgstr ""
 
 #. placeholder {0}: issues.length
@@ -7969,10 +7981,6 @@ msgstr ""
 
 #: packages/ui/src/coverage-panel.tsx
 msgid "show all"
-msgstr ""
-
-#: packages/ui/src/agent-setup.tsx
-msgid "Show and revoke"
 msgstr ""
 
 #. placeholder {0}: shownArchived.length
@@ -8063,6 +8071,10 @@ msgstr ""
 msgid "Sign-in is on Home, under Workspace settings."
 msgstr ""
 
+#: packages/ui/src/connected-agents.tsx
+msgid "Signed in from the assistant"
+msgstr ""
+
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Signing in"
 msgstr ""
@@ -8141,8 +8153,8 @@ msgstr ""
 msgid "Spelling locale"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Spending by connected assistants"
+#: packages/ui/src/connected-agents.tsx
+msgid "Spending"
 msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -8296,12 +8308,12 @@ msgstr ""
 msgid "Stop run"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
+#: packages/ui/src/connected-agents.tsx
 msgid "Stop spending"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Stop spending by {name}?"
+#: packages/ui/src/connected-agents.tsx
+msgid "Stop spending by {name}? It starts no run or draft until you set a limit again."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -9865,6 +9877,11 @@ msgstr ""
 msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
 msgstr ""
 
+#. placeholder {0}: formatDate(row.token.expires_at) ?? ""
+#: packages/ui/src/connected-agents.tsx
+msgid "Token, expires {0}"
+msgstr ""
+
 #: packages/ui/src/agent-setup.tsx
 msgid "Token:"
 msgstr ""
@@ -9971,10 +9988,6 @@ msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
-msgstr ""
-
-#: packages/ui/src/agent-connection-caps.tsx
-msgid "Type the assistant's id. When an assistant has no limit, it tells you its id."
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
@@ -10085,9 +10098,11 @@ msgstr ""
 msgid "Uploaded {when}"
 msgstr ""
 
-#: packages/ui/src/agent-connection-caps.tsx
-#: packages/ui/src/agent-setup.tsx
-msgid "US${spent} of US${limit} used this month."
+#. placeholder {0}: formatNumber(spent ?? 0)
+#. placeholder {0}: formatNumber(spent)
+#. placeholder {1}: formatNumber(limit)
+#: packages/ui/src/connected-agents.tsx
+msgid "US${0} of US${1} this month"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -10455,6 +10470,10 @@ msgstr ""
 
 #: apps/web/src/application-material.tsx
 msgid "What to stress"
+msgstr ""
+
+#: packages/ui/src/connected-agents.tsx
+msgid "What you allowed when it signed in"
 msgstr ""
 
 #: packages/ui/src/career-flow.tsx

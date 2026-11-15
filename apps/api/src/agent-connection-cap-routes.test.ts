@@ -287,6 +287,13 @@ describe("assistant connection caps", () => {
     expect(other.statusCode).toBe(429);
     expect(other.json().error.message).toContain("no monthly spend cap");
     expect(other.json().error.message).toContain('"another-assistant"');
+    // The assistant now waits in the list, without a cap, for the person to set one (#2785).
+    const listed = await api.inject({ method: "GET", url: connections, headers: await person() });
+    expect(listed.json().connections).toEqual([
+      expect.objectContaining({ client_id: "another-assistant", spent_this_month_usd: 0 }),
+      expect.objectContaining({ client_id: "assistant", monthly_cap_usd: 5 }),
+    ]);
+    expect(listed.json().connections[0]).not.toHaveProperty("monthly_cap_usd");
     const unscoped = await start(
       api,
       await assistant("draftloop:applications:read"),

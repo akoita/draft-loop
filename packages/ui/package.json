@@ -56,9 +56,9 @@
       "types": "./src/career-interview-panel.tsx",
       "import": "./src/career-interview-panel.tsx"
     },
-    "./agent-connection-caps": {
-      "types": "./src/agent-connection-caps.tsx",
-      "import": "./src/agent-connection-caps.tsx"
+    "./connected-agents": {
+      "types": "./src/connected-agents.tsx",
+      "import": "./src/connected-agents.tsx"
     },
     "./agent-setup": {
       "types": "./src/agent-setup.tsx",
