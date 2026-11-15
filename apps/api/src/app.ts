@@ -76,6 +76,7 @@ import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-ac
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
 import type { MaterialReviews } from "./material-reviews.js";
+import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCallGate } from "./model-call-gate.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
@@ -112,10 +113,15 @@ import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
-import { registerTenantApplications, type TenantApplications } from "./tenant-context.js";
+import {
+  registerTenantApplications,
+  type TenantApplications,
+  TenantContextMissingError,
+} from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
+import { createWorkJournalSignInChecks } from "./work-journal-sign-in.js";
 import { type KnowledgeStoreAddress, registerWorkspaceRoutes } from "./workspace-routes.js";
 import { registerWritingPolicyRoutes } from "./writing-policy-routes.js";
 import { registerWritingSamplesRoutes } from "./writing-samples-routes.js";
@@ -168,8 +174,9 @@ export interface ApiOptions {
     /** The worker's derivation of career profiles; without it a derivation start answers 503. */
     readonly profileDerivations?: ProfileDerivations;
     /**
-     * The tenant's work journal (#2018); without it the work journal routes are not served. Only
-     * owner-token mode serves them until sign-in mode records the intake as a consent.
+     * The tenant's work journal (#2018); without it the work journal routes are not served. In
+     * sign-in mode the intake switch and every kept note need the record's material-storage
+     * consent, and the switch keeps when it changed (#2783).
      */
     readonly workJournal?: WorkJournalService;
     /** The tenant's evidence-kind overrides; approving a note needs them with the intake. */
@@ -193,7 +200,8 @@ export interface ApiOptions {
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
-   * tenant's through `agentTokensFor`. Owner mode only; without them agent tokens are refused.
+   * tenant's through `agentTokensFor`. In sign-in mode each member's tenant's, through
+   * `agentTokensFor` and the directory (#2784); without them agent tokens are refused.
    */
   readonly agentTokens?: AgentTokenStore;
   /**
@@ -308,6 +316,11 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         (ownerTenantId === undefined
           ? undefined
           : options.tenants?.agentTokensFor?.(ownerTenantId)));
+  const memberTokens =
+    auth.mode === "oidc"
+      ? memberAgentTokens(options.tenants?.agentTokensFor, options.directory)
+      : undefined;
+  const agentTokensOf = requestAgentTokens(agentTokens, memberTokens);
   if (options.rateLimits !== undefined) registerRateLimit(app, options.rateLimits);
   const tenantConnectionCaps = options.tenants?.agentConnectionCapsFor;
   const connectionCaps: AgentConnectionCapsFor | undefined =
@@ -337,6 +350,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     auth,
     agentTokens,
     connectionCaps !== undefined,
+    memberTokens,
   );
   const recordActivity =
     options.organisationActivity === undefined
@@ -503,10 +517,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     const idempotency = application.idempotency ?? createMemoryIdempotencyStore();
     // Before the routes, so a start an agent token makes is held to its monthly cap (#2599).
     const agentSpend =
-      agentTokens === undefined && connectionCaps === undefined
+      agentTokensOf === undefined && connectionCaps === undefined
         ? undefined
         : registerAgentSpendGate(app, {
-            ...(agentTokens === undefined ? {} : { tokens: agentTokens }),
+            ...(agentTokensOf === undefined ? {} : { tokensFor: agentTokensOf }),
             ...(connectionCaps === undefined ? {} : { connectionCaps }),
             service: application.service,
             workspaceRoot: application.workspaceRoot,
@@ -675,13 +689,27 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         consents: application.consents,
       });
     }
-    if (application.workJournal !== undefined && auth.mode !== "oidc") {
+    // In sign-in mode the journal keeps notes only with consent checks; without them, no routes.
+    const journalSignIn =
+      auth.mode === "oidc" && application.consents !== undefined && knowledgeOwnersFor !== undefined
+        ? createWorkJournalSignInChecks({
+            service: application.service,
+            workspaceRoot: application.workspaceRoot,
+            consents: application.consents,
+            knowledgeOwnersFor,
+          })
+        : undefined;
+    if (
+      application.workJournal !== undefined &&
+      (auth.mode !== "oidc" || journalSignIn !== undefined)
+    ) {
       registerWorkJournalRoutes(app, {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         journal: application.workJournal,
         idempotency,
-        agentTokens: agentTokens !== undefined,
+        agentTokens: agentTokensOf !== undefined,
+        ...(journalSignIn === undefined ? {} : { signIn: journalSignIn }),
         ...(knowledgeIntake === undefined ||
         application.sensitivityRules === undefined ||
         application.sourceEvidenceKinds === undefined
@@ -781,11 +809,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         ...(application.researchRuns === undefined ? {} : { runs: application.researchRuns }),
       });
     }
-    if (application.workJournal !== undefined && agentTokens !== undefined) {
+    if (application.workJournal !== undefined && agentTokensOf !== undefined) {
       registerAgentTokenRoutes(app, {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
-        tokens: agentTokens,
+        tokensFor: (request) => {
+          const tokens = agentTokensOf(request);
+          if (tokens === undefined) throw new TenantContextMissingError();
+          return tokens;
+        },
+        ...(memberTokens === undefined ? {} : { issuerOf: agentTokenIssuer }),
       });
     }
     if (runSpans !== undefined) {

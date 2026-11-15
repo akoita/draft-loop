@@ -56,6 +56,11 @@ export interface AgentTokenRecord {
    * when the token has `runs:start`; the workspace's own run budget still applies to each run.
    */
   readonly monthlyCapCents?: number;
+  /**
+   * The signed-in member it acts as (#2784), on the hosted service; absent for a token the
+   * self-hosted owner issued.
+   */
+  readonly memberId?: string;
   /** What it reserved in `month` (`YYYY-MM`, UTC); absent before its first start. */
   readonly spend?: { readonly month: string; readonly cents: number };
 }
@@ -167,6 +172,7 @@ export function requireAgentTokenInsert(token: AgentTokenInsert): AgentTokenInse
     Date.parse(token.expiresAt) - Date.parse(token.createdAt) >
       maximumAgentTokenLifetimeDays * dayMs ||
     token.revokedAt !== undefined ||
+    (token.memberId !== undefined && (token.memberId.length < 1 || token.memberId.length > 256)) ||
     scopes.includes("runs:start") !== (token.monthlyCapCents !== undefined) ||
     (token.monthlyCapCents !== undefined &&
       (!Number.isInteger(token.monthlyCapCents) ||
