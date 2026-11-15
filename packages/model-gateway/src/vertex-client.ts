@@ -39,6 +39,9 @@ function refuseUnlistedModel(modelId: string): void {
   );
 }
 
+/** The Messages API version Vertex AI documents for Claude, sent as the body's `anthropic_version`. */
+export const vertexAnthropicVersion = "vertex-2023-10-16";
+
 /**
  * An Anthropic client that reaches Claude on Vertex AI in an EU location (ADR 0011, D5 and D14).
  * It keeps the provider package's client contract, so the shared author code runs unchanged, and
@@ -54,6 +57,9 @@ export function createVertexAnthropicClient(
     region: location,
     baseURL: vertexBaseUrl(location),
     maxRetries: 0,
+    // Vertex AI documents only this version. SDK 1.x would send the Claude API's 2026-10-21,
+    // which Google does not confirm and staging cannot test (no Claude quota), so pin it.
+    defaultHeaders: { "anthropic-version": vertexAnthropicVersion },
     ...(options.auth ?? {}),
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
