@@ -731,6 +731,10 @@ export interface ApiSchemas {
   "OwnerTokenProofRequestInput": {
     readonly challenge: string;
   };
+  "PaymentEventReceipt": {
+    readonly received: true;
+    readonly outcome: "granted" | "already_granted" | "ignored";
+  };
   "PlanAssignment": {
     readonly planId: string;
     readonly catalogVersion: number;
@@ -2792,5 +2796,9 @@ export interface ApiOperations {
     readonly body: Blob;
     readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain";
     readonly response: ApiSchemas["Application"];
+  };
+  "POST /v1/payments/events": {
+    readonly body: Record<string, never>;
+    readonly response: ApiSchemas["PaymentEventReceipt"];
   };
 }

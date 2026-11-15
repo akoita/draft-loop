@@ -89,7 +89,8 @@ import { registerOrganisationErasureRoutes } from "./organisation-erasure-routes
 import { registerOrganisationRoutes } from "./organisation-routes.js";
 import { registerOwnerTokenKnowledge } from "./owner-token-knowledge.js";
 import { registerOwnerTokenProofRoutes } from "./owner-token-proof-routes.js";
-import type { PaymentCheckoutPort } from "./payment-checkout.js";
+import type { PaymentCheckoutPort, PaymentEventsPort } from "./payment-checkout.js";
+import { registerPaymentEventRoutes } from "./payment-event-routes.js";
 import { createPlanLimits } from "./plan-limits.js";
 import { registerPreferenceSuggestionRoutes } from "./preference-suggestion-routes.js";
 import {
@@ -232,6 +233,8 @@ export interface ApiOptions {
   readonly liveSpeech?: LiveInterviewSpeech;
   /** The payment provider that sells credit packs (#2708); without one nothing is sold. */
   readonly payments?: PaymentCheckoutPort;
+  /** The payment provider's signed events (#2709); with a tenant's purchases, they grant credits. */
+  readonly paymentEvents?: PaymentEventsPort;
   /** How cover letters are written (#2586); cited paragraphs when unset. */
   readonly coverLetterWriter?: CoverLetterWriter;
 }
@@ -807,6 +810,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (entitlementsFor !== undefined) {
     registerMemberCreditsRoute(app, { entitlementsFor, signIn: auth.mode === "oidc" });
     registerCreditPurchaseRoutes(app, { payments: options.payments, signIn: auth.mode === "oidc" });
+  }
+  const purchasesFor = options.tenants?.creditPurchasesFor;
+  if (options.paymentEvents !== undefined && purchasesFor !== undefined) {
+    registerPaymentEventRoutes(app, { events: options.paymentEvents, purchasesFor });
   }
   if (erasureFor !== undefined) {
     registerOrganisationErasureRoutes(app, {

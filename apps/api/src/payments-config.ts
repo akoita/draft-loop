@@ -1,8 +1,9 @@
 import { type CreditPackId, creditPackIds } from "@draft-loop/schemas/entitlements";
 
 import { ApiConfigError } from "./config.js";
-import type { PaymentCheckoutPort } from "./payment-checkout.js";
+import type { PaymentCheckoutPort, PaymentEventsPort } from "./payment-checkout.js";
 import { createStripeCheckout } from "./stripe-checkout.js";
+import { createStripeEvents } from "./stripe-events.js";
 
 /** The deployment's payment choice, read before anything opens. */
 export type PaymentsConfig =
@@ -10,6 +11,8 @@ export type PaymentsConfig =
   | {
       readonly mode: "stripe";
       readonly secretKey: string;
+      /** The signing secret of the webhook endpoint that receives Stripe's events. */
+      readonly webhookSecret: string;
       readonly prices: Readonly<Record<CreditPackId, string>>;
       /** The web screen's address, where the buyer comes back. */
       readonly returnUrl: string;
@@ -30,10 +33,12 @@ function value(env: NodeJS.ProcessEnv, name: string): string {
  * - `DRAFT_LOOP_STRIPE_SECRET_KEY`: a test-mode secret or restricted key, from the deployment's
  *   secret. A live key stops the start: payments run in test mode until the live account and the
  *   legal pages are in place.
+ * - `DRAFT_LOOP_STRIPE_WEBHOOK_SECRET`: the signing secret of the webhook endpoint, from the
+ *   deployment's secret.
  * - `DRAFT_LOOP_STRIPE_PRICE_PACK_1` and `DRAFT_LOOP_STRIPE_PRICE_PACK_5`: the Stripe price ids.
  * - `DRAFT_LOOP_PAYMENTS_RETURN_URL`: the web screen's HTTPS address.
  *
- * No message repeats the key.
+ * No message repeats the key or the signing secret.
  */
 export function readPaymentsConfig(env: NodeJS.ProcessEnv): PaymentsConfig {
   const mode = value(env, "DRAFT_LOOP_PAYMENTS");
@@ -49,6 +54,12 @@ export function readPaymentsConfig(env: NodeJS.ProcessEnv): PaymentsConfig {
   if (!/^(sk|rk)_test_[A-Za-z0-9]+$/u.test(secretKey)) {
     throw new ApiConfigError(
       "DRAFT_LOOP_STRIPE_SECRET_KEY must be a Stripe test-mode key (sk_test_ or rk_test_); live keys are refused.",
+    );
+  }
+  const webhookSecret = value(env, "DRAFT_LOOP_STRIPE_WEBHOOK_SECRET");
+  if (!/^whsec_[A-Za-z0-9+/=_-]+$/u.test(webhookSecret)) {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_PAYMENTS=stripe needs DRAFT_LOOP_STRIPE_WEBHOOK_SECRET, the webhook endpoint's signing secret (whsec_).",
     );
   }
   const prices = Object.fromEntries(
@@ -81,25 +92,31 @@ export function readPaymentsConfig(env: NodeJS.ProcessEnv): PaymentsConfig {
       "DRAFT_LOOP_PAYMENTS=stripe needs DRAFT_LOOP_PAYMENTS_RETURN_URL, the web screen's HTTPS address.",
     );
   }
-  return { mode: "stripe", secretKey, prices, returnUrl: parsed.toString() };
+  return { mode: "stripe", secretKey, webhookSecret, prices, returnUrl: parsed.toString() };
 }
 
-/** Builds the payment port the config names; undefined when nothing is sold. */
-export function paymentsFrom(
-  config: PaymentsConfig,
-  fetcher?: typeof fetch,
-): PaymentCheckoutPort | undefined {
+/** The deployment's payment provider: the checkout it opens and the events it sends. */
+export interface Payments {
+  readonly checkout: PaymentCheckoutPort;
+  readonly events: PaymentEventsPort;
+}
+
+/** Builds the payment provider the config names; undefined when nothing is sold. */
+export function paymentsFrom(config: PaymentsConfig, fetcher?: typeof fetch): Payments | undefined {
   if (config.mode === "off") return undefined;
   const back = (purchase: string): string => {
     const url = new URL(config.returnUrl);
     url.searchParams.set("purchase", purchase);
     return url.toString();
   };
-  return createStripeCheckout({
-    secretKey: config.secretKey,
-    prices: config.prices,
-    successUrl: back("done"),
-    cancelUrl: back("cancelled"),
-    ...(fetcher === undefined ? {} : { fetch: fetcher }),
-  });
+  return {
+    checkout: createStripeCheckout({
+      secretKey: config.secretKey,
+      prices: config.prices,
+      successUrl: back("done"),
+      cancelUrl: back("cancelled"),
+      ...(fetcher === undefined ? {} : { fetch: fetcher }),
+    }),
+    events: createStripeEvents({ webhookSecret: config.webhookSecret }),
+  };
 }

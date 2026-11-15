@@ -93,7 +93,9 @@ const app = await buildApi({
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),
-  ...(payments === undefined ? {} : { payments }),
+  ...(payments === undefined
+    ? {}
+    : { payments: payments.checkout, paymentEvents: payments.events }),
   coverLetterWriter,
 });
 

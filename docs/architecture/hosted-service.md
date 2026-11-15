@@ -806,7 +806,8 @@ sequenceDiagram
   P-->>A: Checkout address
   A-->>M: 201 checkoutUrl
   M->>P: Pays on the provider's page
-  Note over A,P: The completion event grants the credits (planned, #2709)
+  P->>A: POST /v1/payments/events (signed)
+  A->>A: Record the purchase and grant the credits, once
 ```
 
 - **Port.** `payment-checkout.ts` is all the routes know. The Stripe adapter
@@ -814,6 +815,17 @@ sequenceDiagram
 - **What the provider receives.** The organisation id, the member id, the
   pack id and its credits. No email, name or candidate material.
 - **Test mode only.** A live key stops the start.
+- **Granting.** The provider's signed event reaches `POST /v1/payments/events`
+  (#2709). A paid checkout writes one `credit_purchases` row and one ledger
+  grant in a single transaction, keyed by the checkout id, so a repeated
+  event grants nothing. The credits and their 12-month validity come from the
+  plan catalog, never from the event.
+- **Trust.** The events route takes no credential. It checks the signature
+  over the raw body, refuses one older than five minutes with 400
+  `invalid_signature`, and ignores live events.
+- **Answers to the provider.** 200 for an event that granted, repeated or
+  cannot grant, so the provider stops retrying. 500 on a storage failure, so
+  it retries.
 - **Refusals.** 503 `payments_unavailable` when nothing is sold, 502
   `payment_provider_failed` when the provider refuses or cannot be reached,
   and 404 with the owner token.
@@ -822,6 +834,7 @@ sequenceDiagram
 | ------------------------------------------------------------------ | -------------------------------------------------------- |
 | `DRAFT_LOOP_PAYMENTS`                                              | `off` (default) or `stripe`; another value stops the start |
 | `DRAFT_LOOP_STRIPE_SECRET_KEY`                                     | A test-mode secret or restricted key, from a secret      |
+| `DRAFT_LOOP_STRIPE_WEBHOOK_SECRET`                                 | The webhook endpoint's signing secret, from a secret     |
 | `DRAFT_LOOP_STRIPE_PRICE_PACK_1`, `DRAFT_LOOP_STRIPE_PRICE_PACK_5` | The Stripe price id of each pack                         |
 | `DRAFT_LOOP_PAYMENTS_RETURN_URL`                                   | The web screen's HTTPS address, where the buyer returns  |
 
