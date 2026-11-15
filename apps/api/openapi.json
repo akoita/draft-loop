@@ -1251,6 +1251,17 @@
               "type": "string"
             }
           },
+          "record_gaps": {
+            "description": "For a cover letter: what the career record did not hold when it was drafted, so the letter could not name it.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "employer",
+                "dates"
+              ]
+            }
+          },
           "unsourced_topics": {
             "description": "For a guide: the topics research kept no source for; their sections state no fact and suggest what to check.",
             "type": "array",
@@ -9399,6 +9410,17 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "record_gaps": {
+            "description": "For a cover letter: what the career record did not hold when it was drafted, so the letter could not name it.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "employer",
+                "dates"
+              ]
             }
           },
           "unsourced_topics": {

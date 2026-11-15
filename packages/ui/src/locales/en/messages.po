@@ -10576,6 +10576,18 @@ msgstr "Your career profile is being generated. You can keep using DraftLoop mea
 msgid "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
 msgstr "Your career profile is the facts DraftLoop extracts from your documents: roles, dates, achievements and skills, each with an exact quote. You review it once, and every application reuses the reviewed version."
 
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Your career record holds no dates, so this letter gives none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer and no dates, so this letter names neither. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Your career record holds no employer and no dates, so this letter names neither. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+
+#: apps/web/src/application-material-model.ts
+msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Your directions for this round"
