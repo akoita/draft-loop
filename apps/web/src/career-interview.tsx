@@ -39,6 +39,11 @@ export interface CareerInterviewSectionProps {
   readonly bases: readonly ApiSchemas["KnowledgeBase"][] | undefined;
   /** Called after a summary became evidence, so the page reads the record's files again. */
   readonly onChanged?: (() => void) | undefined;
+  /**
+   * False keeps the live spoken conversation out, as for signed-in users until plans say who may
+   * use it (#2735); the written conversation and dictation stay.
+   */
+  readonly liveVoice?: boolean | undefined;
 }
 
 /** What to tell the candidate when a career interview call is refused. */
@@ -182,7 +187,12 @@ export async function allowInterviewProviders(
   }
 }
 
-export function CareerInterviewSection({ client, bases, onChanged }: CareerInterviewSectionProps) {
+export function CareerInterviewSection({
+  client,
+  bases,
+  onChanged,
+  liveVoice: liveVoiceOffered = true,
+}: CareerInterviewSectionProps) {
   const workspaceId = useRecordId();
   const language = interviewLanguage(useScreenLocale().locale);
   const [session, setSession] = useState<CareerInterviewSessionView | undefined>(undefined);
@@ -222,10 +232,10 @@ export function CareerInterviewSection({ client, bases, onChanged }: CareerInter
   const sessionId = session?.id;
   const live = useMemo(
     () =>
-      sessionId === undefined
+      sessionId === undefined || !liveVoiceOffered
         ? undefined
         : liveVoice(client, workspaceId, sessionId, language, show),
-    [client, workspaceId, sessionId, language, show],
+    [client, workspaceId, sessionId, language, show, liveVoiceOffered],
   );
 
   return (

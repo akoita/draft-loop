@@ -38,8 +38,9 @@ export function webHostPanels(
     application: ({ applicationId }) => (
       <ApplicationMaterialSection client={client} applicationId={applicationId} />
     ),
-    // The career interview is in the evidence panels, so an empty record may start there (#2734).
-    careerConversation: mode === "owner",
+    // The career interview is in the evidence panels in both modes (#2735), so an empty record
+    // may start there (#2734).
+    careerConversation: true,
     evidenceAfter: ({ revision, openHome, onChanged }) => (
       <EvidenceSections
         client={client}
