@@ -22,7 +22,7 @@ import {
   type JWTVerifyGetKey,
   SignJWT,
 } from "jose";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildApi } from "./app.js";
 import { cloudLoggingOptions } from "./logging.js";
@@ -548,6 +548,28 @@ describe("the operator's organisation creation", () => {
       error: { code: "unauthorized", message: "The operator's token is required." },
     });
     await expect(directory.listMembers("org-east")).rejects.toThrow(TenantDirectoryError);
+  });
+
+  it("starts the new organisation on the Free plan (#2781)", async () => {
+    const assignPlan = vi.fn(async () => ({}) as never);
+    app = await buildApi({
+      ownerToken,
+      directory,
+      tenants: {
+        budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+        // The tenant context composes a member's application; this route reads none of it.
+        applicationFor: () => ({}) as never,
+        recordAccessFor: () => ({ listRecords: async () => [] }),
+        knowledgeOwnersFor: () => ({}),
+        entitlementsFor: () => ({}),
+        operatorFor: () => ({ plans: { assignPlan }, ledger: {}, idempotency: {} }) as never,
+      } as never,
+    });
+
+    const created = await call(app, `Bearer ${ownerToken}`, create);
+
+    expect(created.statusCode).toBe(201);
+    expect(assignPlan).toHaveBeenCalledWith(expect.objectContaining({ planId: "free" }));
   });
 
   it("keeps the owner token refused on member routes in sign-in mode", async () => {

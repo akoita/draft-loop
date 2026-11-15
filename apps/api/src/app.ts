@@ -815,9 +815,22 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerMemberSettingsRoutes(app, { memberSettings: options.memberSettings });
   }
   if (options.directory !== undefined) {
+    const operatorFor = options.tenants?.operatorFor;
     registerOrganisationRoutes(app, {
       directory: options.directory,
       ...(planLimits === undefined ? {} : { planLimits }),
+      ...(operatorFor === undefined
+        ? {}
+        : {
+            // An operator-created organisation starts on Free, not on no plan at all (#2781).
+            assignInitialPlan: async (organisationId: string, at: Date) => {
+              await operatorFor(organisationId).plans.assignPlan({
+                planId: "free",
+                periodStart: at.toISOString().slice(0, 10),
+                assignedAt: at.toISOString(),
+              });
+            },
+          }),
     });
   }
   if (entitlementsFor !== undefined) {

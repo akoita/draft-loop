@@ -192,7 +192,7 @@ run reserves and settles credits.
 
 - **Plan ids:** `free`, `beta`, `individual`, `job-search-pass`, `pro`, `team`,
   `business` or `internal`. A new assignment replaces the current plan and keeps earlier
-  ones as history.
+  ones as history. An organisation the operator creates starts on `free`.
 - **Grants:** repeat the same key to retry safely. Granted credits expire after
   12 months and are spent after the plan's allowance. The reason is a code,
   never free text.

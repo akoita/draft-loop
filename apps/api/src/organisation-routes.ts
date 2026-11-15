@@ -16,6 +16,8 @@ export interface OrganisationRoutesOptions {
   readonly directory: TenantDirectory;
   /** Holds invitations to the plan's seats; absent in owner-token mode, where nothing is limited. */
   readonly planLimits?: PlanLimits;
+  /** Puts a new organisation on its first plan (#2781); absent where plans are not kept. */
+  readonly assignInitialPlan?: (organisationId: string, at: Date) => Promise<void>;
 }
 
 const identifierSchema = z
@@ -310,7 +312,7 @@ export function registerOrganisationRoutes(
         summary: "Create an organisation and invite its first owner",
         description:
           "Operator only: takes the deployment's owner token in both authentication modes, " +
-          "never a member's sign-in.",
+          "never a member's sign-in. The organisation starts on the Free plan where plans are kept.",
         body: organisationBody,
         response: {
           201: createdOrganisationSchema,
@@ -328,6 +330,7 @@ export function registerOrganisationRoutes(
           .send(apiError("forbidden", "Only the operator creates organisations."));
       }
       const created = await directory.createOrganisation(request.body);
+      await options.assignInitialPlan?.(created.organisation.organisationId, new Date());
       auditMembership(request, "organisation_created", {
         organisationId: created.organisation.organisationId,
         memberId: created.firstOwner.memberId,
