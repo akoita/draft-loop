@@ -5,6 +5,7 @@ import {
 } from "./application-material.js";
 import type { ApplicationMaterialCompanyFact } from "./application-material-company.js";
 import type { PickedCoverLetterFact } from "./cover-letter-facts.js";
+import { sentencesOf } from "./sentence-split.js";
 
 /**
  * The claim check of a free-form cover letter (#2585): a model links each sentence to the facts
@@ -79,8 +80,6 @@ export interface CoverLetterClaimCheck {
   readonly supported: boolean;
 }
 
-const sentencePattern = /[^.!?…]+(?:[.!?…]+["'”’)]*|$)/gu;
-
 /** A plain-text letter as sentences: paragraphs split on blank lines, then on end marks. */
 export function coverLetterSentences(letter: string): CoverLetterSentence[] {
   return letter
@@ -88,10 +87,11 @@ export function coverLetterSentences(letter: string): CoverLetterSentence[] {
     .map((paragraph) => paragraph.replace(/\s+/gu, " ").trim())
     .filter(Boolean)
     .flatMap((paragraph, index) =>
-      (paragraph.match(sentencePattern) ?? [])
-        .map((sentence) => sentence.trim())
-        .filter(Boolean)
-        .map((text, position) => ({ id: `p${index}.s${position}`, paragraph: index, text })),
+      sentencesOf(paragraph).map((text, position) => ({
+        id: `p${index}.s${position}`,
+        paragraph: index,
+        text,
+      })),
     );
 }
 
