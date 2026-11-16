@@ -8261,12 +8261,15 @@ input[type="text"].workspace-title-input {
 }
 
 /* The header's screen language control (#2772): a globe and a native select that shows the
-   language's own name, at the toolbar buttons' height. The select keeps the platform's picker. */
+   language's own name, at the toolbar buttons' height. The select keeps the platform's picker.
+   It is a label, so the margin is reset: above the shared screens (sign-in mode, the sign-in
+   screen) the web's form-label margin would push it below the buttons beside it. */
 .screen-language-menu {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   height: 32px;
+  margin: 0;
   padding-block: 0;
   cursor: pointer;
 }
@@ -8283,7 +8286,9 @@ input[type="text"].workspace-title-input {
   color: inherit;
   font: inherit;
   line-height: 1;
+  width: auto;
   height: 100%;
+  min-height: 0;
   padding: 0;
   cursor: pointer;
 }
