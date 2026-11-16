@@ -127,6 +127,7 @@ import {
   noopRunTracer,
   type RunSpan,
   type RunTracer,
+  revisionSpanAttributes,
 } from "./run-tracing.js";
 import { RunTransitionError } from "./run-transition-error.js";
 import { hasUnpricedMeteredCall, meteredCalls } from "./unpriced-cost.js";
@@ -254,6 +255,10 @@ export interface AgentExecution<T> {
   readonly appliedEdits?: readonly AppliedRevisionEdit[];
   /** How a revision was produced, recorded on the execution; absent for a first draft. */
   readonly revisionMode?: AuthorRevisionMode;
+  /** Why a targeted revision's patch was not used, as a short content-free code (#2855). */
+  readonly patchRejection?: string;
+  /** How many edits of a used patch were left out because they failed on their own (#2846). */
+  readonly droppedRevisionEdits?: number;
 }
 
 export interface AuthorRequest {
@@ -2130,6 +2135,7 @@ export function createOrchestrationEngine(
       await options.store.saveExecution(record);
       completedExecutionSaved = true;
       agentSpan.setAttributes(executionSpanAttributes(record));
+      agentSpan.setAttributes(revisionSpanAttributes(execution));
       agentSpan.end("ok");
       const updated = {
         ...snapshot,

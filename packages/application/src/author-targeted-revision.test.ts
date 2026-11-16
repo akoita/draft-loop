@@ -554,6 +554,58 @@ describe("provider author agent targeted revisions", () => {
     ]);
   });
 
+  it("applies an automatic round's patch and ignores the finding ids its edits name", async () => {
+    const previous = currentArtifact();
+    const id = ids(previous);
+    const { author, requests } = agent([
+      {
+        edits: [
+          {
+            ...noEdit,
+            op: "insert",
+            sectionId: id.experienceSection,
+            afterBlockId: id.deployBlock,
+            block: aliasedBlock("bullet", toolsText, alias.tools),
+            findingIds: ["omission-1"],
+          },
+        ],
+      },
+    ]);
+
+    const execution = await author.execute(request(previous));
+
+    expect(requests).toHaveLength(1);
+    expect(execution.revisionMode).toBe("patch");
+    expect(execution.patchRejection).toBeUndefined();
+    expect(execution.appliedEdits).toEqual([
+      { op: "insert", revisedBlockKey: "experience#0/b2", findingIds: [] },
+    ]);
+  });
+
+  it.each([
+    ["malformed-patch", (_id: ReturnType<typeof ids>) => "not edits"],
+    [
+      "ungrounded-edit",
+      (id: ReturnType<typeof ids>) => [
+        {
+          ...noEdit,
+          op: "insert",
+          sectionId: id.experienceSection,
+          afterBlockId: null,
+          block: aliasedBlock("bullet", "Reduced deployment time by 90 percent.", alias.deploy),
+        },
+      ],
+    ],
+  ])("records %s as the reason a patch fell back", async (reason, edits) => {
+    const previous = currentArtifact();
+    const { author } = agent([{ edits: edits(ids(previous)) } as JsonObject, fullProposal()]);
+
+    const execution = await author.execute(request(previous));
+
+    expect(execution.revisionMode).toBe("patch-fallback");
+    expect(execution.patchRejection).toBe(reason);
+  });
+
   it("warns when a delete removes the only block that covered a requirement", async () => {
     const previous = currentArtifact();
     const id = ids(previous);

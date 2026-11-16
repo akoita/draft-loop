@@ -25,6 +25,9 @@ export const runSpanAttributeNames = [
   "draftloop.estimated_usd",
   "draftloop.failure_stage",
   "draftloop.retrieved_chunks",
+  "draftloop.revision.mode",
+  "draftloop.revision.patch_rejection",
+  "draftloop.revision.dropped_edits",
 ] as const;
 export type RunSpanAttributeName = (typeof runSpanAttributeNames)[number];
 

@@ -8,7 +8,10 @@ import {
 } from "@draft-loop/schemas";
 
 import { buildGroundedAuthorArtifact } from "./author-output.js";
-import { applyAuthorRevisionPatch } from "./author-revision-patch.js";
+import {
+  type AuthorRevisionPatchRejection,
+  applyAuthorRevisionPatch,
+} from "./author-revision-patch.js";
 
 /** A patched revision that applied and passed the full grounding and validation. */
 export interface PatchedRevision {
@@ -23,19 +26,30 @@ export interface PatchedRevisionInputs {
   readonly context: ContextSnapshot;
   readonly currentArtifact: DraftArtifact;
   readonly retrievedEvidence: readonly ScoredEvidenceChunk[];
-  readonly acceptedFindingIds: readonly string[];
+  /** The accepted findings an edit may name; undefined when the revision is not adjudicated. */
+  readonly acceptedFindingIds: readonly string[] | undefined;
 }
+
+/** Why a patch, or one of its edits, could not be used; content-free, so it is safe to trace. */
+export type PatchedRevisionRejection =
+  | AuthorRevisionPatchRejection
+  | "ungrounded-edit"
+  | "invalid-artifact";
+
+type PatchAttempt =
+  | ({ readonly ok: true } & Omit<PatchedRevision, "droppedEdits">)
+  | { readonly ok: false; readonly reason: PatchedRevisionRejection };
 
 /**
  * Apply these edits and build the patched artifact with the same grounding, citation and coverage
- * validation as a full proposal. Undefined when the edits cannot be applied or the result fails
- * validation. A patched draft keeps every block the patch does not name, so a block that grounding
- * would leave out or shorten is not accepted here: that would silently lose a line nobody flagged.
+ * validation as a full proposal. A patched draft keeps every block the patch does not name, so a
+ * block that grounding would leave out or shorten is not accepted here: that would silently lose a
+ * line nobody flagged.
  */
 function patchWith(
   edits: readonly AuthorRevisionEdit[],
   inputs: PatchedRevisionInputs,
-): Omit<PatchedRevision, "droppedEdits"> | undefined {
+): PatchAttempt {
   const { context } = inputs;
   const applied = applyAuthorRevisionPatch({
     output: { edits },
@@ -44,7 +58,7 @@ function patchWith(
     evidenceManifest: context.evidenceManifest,
     acceptedFindingIds: inputs.acceptedFindingIds,
   });
-  if (!applied.ok) return undefined;
+  if (!applied.ok) return applied;
   try {
     const grounded = buildGroundedAuthorArtifact({
       proposal: applied.proposal,
@@ -54,17 +68,24 @@ function patchWith(
       retrievedEvidence: inputs.retrievedEvidence,
       requiredSections: context.outputConstraints.requiredSections,
     });
-    if (grounded.removedBlocks > 0 || grounded.shortenedBlocks > 0) return undefined;
-    return { artifact: grounded.artifact, edits: applied.edits };
+    if (grounded.removedBlocks > 0 || grounded.shortenedBlocks > 0) {
+      return { ok: false, reason: "ungrounded-edit" };
+    }
+    return { ok: true, artifact: grounded.artifact, edits: applied.edits };
   } catch {
-    return undefined;
+    return { ok: false, reason: "invalid-artifact" };
   }
 }
 
+/** A targeted revision patch either used, possibly without some edits, or rejected with a reason. */
+export type PatchedRevisionOutcome =
+  | ({ readonly ok: true } & PatchedRevision)
+  | { readonly ok: false; readonly reason: PatchedRevisionRejection };
+
 /**
- * Apply a targeted revision patch. Returns undefined when the patch cannot be used and the caller
- * should request the full-proposal revision instead: a malformed patch, or no edit that applies and
- * passes validation.
+ * Apply a targeted revision patch. A rejected outcome means the caller should request the
+ * full-proposal revision instead: a malformed patch, or no edit that applies and passes validation.
+ * Its reason is the check that failed the whole patch, recorded on the run's trace (#2855).
  *
  * One bad edit no longer discards the others (#2846). On the 2026-11-16 run of private reference G
  * one failing edit sent a twelve-omission revision to a full rewrite, which changed 25 of 65 blocks
@@ -74,18 +95,16 @@ function patchWith(
 export function buildPatchedRevision(
   response: ModelResponse<JsonObject>,
   inputs: PatchedRevisionInputs,
-): PatchedRevision | undefined {
+): PatchedRevisionOutcome {
   const parsed = authorRevisionPatchSchema.safeParse(response.output);
-  if (!parsed.success) return undefined;
+  if (!parsed.success) return { ok: false, reason: "malformed-patch" };
   const edits = parsed.data.edits;
   const whole = patchWith(edits, inputs);
-  if (whole !== undefined) return { ...whole, droppedEdits: 0 };
-  const kept = edits.filter((edit) => patchWith([edit], inputs) !== undefined);
-  if (kept.length === 0 || kept.length === edits.length) return undefined;
+  if (whole.ok) return { ...whole, droppedEdits: 0 };
+  const kept = edits.filter((edit) => patchWith([edit], inputs).ok);
+  if (kept.length === 0 || kept.length === edits.length) return whole;
   const salvaged = patchWith(kept, inputs);
-  return salvaged === undefined
-    ? undefined
-    : { ...salvaged, droppedEdits: edits.length - kept.length };
+  return salvaged.ok ? { ...salvaged, droppedEdits: edits.length - kept.length } : whole;
 }
 
 type OutputFinding = NonNullable<AgentExecution<unknown>["outputFindings"]>[number];

@@ -43,8 +43,11 @@ export interface ApplyAuthorRevisionPatchInput {
   readonly currentArtifact: DraftArtifact;
   readonly retrievedEvidence: readonly ScoredEvidenceChunk[];
   readonly evidenceManifest: readonly Pick<EvidenceSource, "id" | "path" | "checksum">[];
-  /** The accepted findings an edit may name; empty when the revision is not adjudicated. */
-  readonly acceptedFindingIds: readonly string[];
+  /**
+   * The accepted findings an edit may name. Undefined when the revision is not adjudicated: there
+   * is then no finding to name, so the edits' finding ids are ignored and recorded as empty.
+   */
+  readonly acceptedFindingIds: readonly string[] | undefined;
 }
 
 /** Positional key of each section: `<kind>#<n>`, the n-th section of that kind. */
@@ -157,12 +160,13 @@ export function applyAuthorRevisionPatch(
     ),
   );
   const sectionIndexById = new Map(artifact.sections.map((section, index) => [section.id, index]));
-  const accepted = new Set(input.acceptedFindingIds);
+  const accepted =
+    input.acceptedFindingIds === undefined ? undefined : new Set(input.acceptedFindingIds);
 
   const edits = parsed.data.edits;
   const changedIds = new Set<string>();
   for (const [editIndex, edit] of edits.entries()) {
-    if (edit.findingIds.some((id) => !accepted.has(id))) {
+    if (accepted !== undefined && edit.findingIds.some((id) => !accepted.has(id))) {
       return { ok: false, reason: "unknown-finding" };
     }
     const newBlock = edit.block;
@@ -192,7 +196,8 @@ export function applyAuthorRevisionPatch(
   }
 
   const applied: AppliedRevisionEdit[] = [];
-  const findingIdsOf = (edit: AuthorRevisionEdit) => [...new Set(edit.findingIds)];
+  const findingIdsOf = (edit: AuthorRevisionEdit) =>
+    accepted === undefined ? [] : [...new Set(edit.findingIds)];
   const sections: ProposalSection[] = [];
   for (const [sectionIndex, section] of artifact.sections.entries()) {
     const entry = sectionSlots[sectionIndex];
