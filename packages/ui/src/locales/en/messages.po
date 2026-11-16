@@ -9507,6 +9507,10 @@ msgstr "The service cannot be reached. Your work is saved; try again in a moment
 msgid "The service could not be reached. Check your connection and try again."
 msgstr "The service could not be reached. Check your connection and try again."
 
+#: apps/web/src/oidc-sign-in.tsx
+msgid "The sign-in service is waking up. After a quiet spell this can take up to a minute."
+msgstr "The sign-in service is waking up. After a quiet spell this can take up to a minute."
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "The source could not be added to the knowledge base."
 msgstr "The source could not be added to the knowledge base."

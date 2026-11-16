@@ -9501,6 +9501,10 @@ msgstr "Le service est injoignable. Votre travail est enregistré ; réessayez d
 msgid "The service could not be reached. Check your connection and try again."
 msgstr "Le service n’a pas pu être joint. Vérifiez votre connexion et réessayez."
 
+#: apps/web/src/oidc-sign-in.tsx
+msgid "The sign-in service is waking up. After a quiet spell this can take up to a minute."
+msgstr "Le service de connexion se réveille. Après une période calme, cela peut prendre jusqu’à une minute."
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "The source could not be added to the knowledge base."
 msgstr "La source n’a pas pu être ajoutée à la base de connaissances."

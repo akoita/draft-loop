@@ -123,6 +123,7 @@ function stubSession(overrides: Partial<OidcSession> = {}): OidcSession {
   };
   return {
     isSignedIn: () => false,
+    prepare: () => {},
     begin: unused,
     complete: unused,
     accessToken: unused,

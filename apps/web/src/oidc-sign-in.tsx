@@ -20,10 +20,30 @@ export interface OidcSignInProps {
   /** Set while the screen goes to the provider or finishes a sign-in. */
   readonly busy?: boolean;
   readonly onSignIn: () => void;
+  /** Called when the person points at or focuses the button, to wake the provider early. */
+  readonly onPrepare?: () => void;
+}
+
+/** How long Signing in shows before the screen says the provider may be waking up. */
+export const slowSignInMs = 4000;
+
+/** Whether `busy` has lasted longer than {@link slowSignInMs}. */
+function useSlow(busy: boolean): boolean {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), slowSignInMs);
+    return () => clearTimeout(timer);
+  }, [busy]);
+  return slow;
 }
 
 /** The sign-in text, the last notice and the button, without the page around them. */
-function SignInBlock({ notice, busy = false, onSignIn }: OidcSignInProps) {
+function SignInBlock({ notice, busy = false, onSignIn, onPrepare }: OidcSignInProps) {
+  const slow = useSlow(busy);
   return (
     <>
       <p>{t`Sign in with your organisation account. You stay signed in until you close this tab.`}</p>
@@ -32,9 +52,20 @@ function SignInBlock({ notice, busy = false, onSignIn }: OidcSignInProps) {
           {notice}
         </p>
       )}
-      <button type="button" disabled={busy} onClick={onSignIn}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onSignIn}
+        onPointerEnter={onPrepare}
+        onFocus={onPrepare}
+      >
         {busy ? t`Signing in` : t`Sign in`}
       </button>
+      {slow ? (
+        <p className="notice" role="status">
+          {t`The sign-in service is waking up. After a quiet spell this can take up to a minute.`}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -88,6 +119,12 @@ export function OidcApp({ session, createClient, navigation, waitlist = false }:
   const [needsAccount, setNeedsAccount] = useState(false);
   const [accountVersion, setAccountVersion] = useState(0);
 
+  // The provider may sleep when idle: start waking it as soon as the sign-in screen shows. The
+  // public landing page waits for the person to point at Sign in, so visitors do not wake it.
+  useEffect(() => {
+    if (phase === "signed-out" && !waitlist) session.prepare();
+  }, [phase, waitlist, session]);
+
   useEffect(() => {
     if (phase !== "completing") return;
     let current = true;
@@ -140,6 +177,7 @@ export function OidcApp({ session, createClient, navigation, waitlist = false }:
         waitlist={waitlist}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || leaving}
+        onPrepare={() => session.prepare()}
         onSignIn={() => {
           setLeaving(true);
           session.begin().then(

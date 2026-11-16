@@ -179,6 +179,39 @@ describe("sign-in through the identity provider", () => {
 
     await expect(session.begin()).rejects.toMatchObject({ notice: signInNotices().unreachable });
   });
+
+  it("wakes the provider before Sign in and reuses that answer when sign-in starts", async () => {
+    const context = setup();
+
+    context.session.prepare();
+    await context.session.begin();
+
+    expect(context.stub.discoveries()).toBe(1);
+  });
+
+  it("ignores a failed early wake and asks again when sign-in starts", async () => {
+    let calls = 0;
+    const stub = provider([]);
+    const session = createOidcSession({
+      issuer,
+      clientId: "draft-loop-web",
+      redirectUri: screen,
+      fetch: async (input, init) => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("still waking");
+        return stub.fetch(input, init);
+      },
+      crypto: globalThis.crypto,
+      storage: () => undefined,
+      now: () => start,
+    });
+
+    session.prepare();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await expect(session.begin()).resolves.toContain("/protocol/openid-connect/auth");
+    expect(calls).toBe(2);
+  });
 });
 
 describe("refresh", () => {
