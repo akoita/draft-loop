@@ -6,7 +6,7 @@ import {
   maximumFeedbackScreenCharacters,
 } from "@draft-loop/storage/feedback";
 import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
@@ -62,6 +62,43 @@ export function registerFeedbackRoutes(
   const { feedback } = options;
   const now = options.now ?? (() => new Date());
 
+  const send = async (
+    request: FastifyRequest<{ Body: z.infer<typeof sendBody> }>,
+    reply: FastifyReply,
+  ) => {
+    const { caller } = request;
+    if (caller === undefined) {
+      return reply.code(401).send(apiError("unauthorized", "A credential is required."));
+    }
+    if (caller.kind !== "member") {
+      return reply.code(404).send(apiError("not_found", "No such route."));
+    }
+    try {
+      const note = await feedback.send({
+        organisationId: caller.tenantId,
+        memberId: caller.memberId,
+        category: request.body.category ?? null,
+        screen: request.body.screen,
+        text: request.body.text,
+        now: now(),
+      });
+      // The log names the note, never its text.
+      request.log.info({ event: "feedback_sent", noteId: note.noteId }, "feedback sent");
+      return reply.code(201).send(note);
+    } catch (error) {
+      if (!(error instanceof TenantDirectoryError)) throw error;
+      return reply.code(400).send(apiError("invalid_input", error.message));
+    }
+  };
+
+  const sendResponses = {
+    201: noteSchema,
+    400: apiErrorSchema,
+    401: apiErrorSchema,
+    403: apiErrorSchema,
+    404: apiErrorSchema,
+  };
+
   app.post(
     "/v1/feedback",
     {
@@ -70,39 +107,28 @@ export function registerFeedbackRoutes(
         summary: "Send feedback about DraftLoop to the operator",
         description: `Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read. 400 invalid_input for an empty note or one over ${maximumFeedbackCharacters} characters.`,
         body: sendBody,
-        response: {
-          201: noteSchema,
-          400: apiErrorSchema,
-          401: apiErrorSchema,
-          404: apiErrorSchema,
-        },
+        response: sendResponses,
       },
     },
-    async (request, reply) => {
-      const { caller } = request;
-      if (caller === undefined) {
-        return reply.code(401).send(apiError("unauthorized", "A credential is required."));
-      }
-      if (caller.kind !== "member") {
-        return reply.code(404).send(apiError("not_found", "No such route."));
-      }
-      try {
-        const note = await feedback.send({
-          organisationId: caller.tenantId,
-          memberId: caller.memberId,
-          category: request.body.category ?? null,
-          screen: request.body.screen,
-          text: request.body.text,
-          now: now(),
-        });
-        // The log names the note, never its text.
-        request.log.info({ event: "feedback_sent", noteId: note.noteId }, "feedback sent");
-        return reply.code(201).send(note);
-      } catch (error) {
-        if (!(error instanceof TenantDirectoryError)) throw error;
-        return reply.code(400).send(apiError("invalid_input", error.message));
-      }
+    send,
+  );
+
+  // The same note through a candidate record's address, the only kind an agent token reaches; the
+  // note still belongs to the organisation (#2843).
+  app.post(
+    "/v1/workspaces/:workspaceId/feedback",
+    {
+      bodyLimit: 16 * 1024,
+      schema: {
+        summary: "Send feedback about DraftLoop to the operator, from an agent",
+        description:
+          "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation.",
+        params: z.strictObject({ workspaceId: z.string().min(1).max(256) }),
+        body: sendBody,
+        response: sendResponses,
+      },
     },
+    send,
   );
 
   app.get(

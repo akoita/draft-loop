@@ -103,7 +103,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Record archive](../reference/record-archive.md)          | `available` | hosted        | `none`       | Owners download everything kept about one candidate record as a zip.             |
 | [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and assign members to candidate records.                |
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
-| [Feedback](feedback.md) | `partial` | server | `none` | A member sends the operator a note about DraftLoop; API only until the menu entry ships (#2844). |
+| [Feedback](feedback.md) | `partial` | server | `send_feedback` | A member, or their agent, sends the operator a note about DraftLoop; no menu entry until #2844. |
 
 ## Planned
 

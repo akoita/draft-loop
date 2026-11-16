@@ -11,6 +11,7 @@ import {
   type WorkJournalApiConfig,
 } from "./client.js";
 import { createDraftsApi } from "./drafts.js";
+import { createFeedbackApi } from "./feedback.js";
 import { createMaterialApi } from "./material.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
@@ -104,6 +105,7 @@ export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServe
     createDraftsApi(call),
     createRunsApi(call),
     createMaterialApi(call),
+    createFeedbackApi(call),
   );
 }
 

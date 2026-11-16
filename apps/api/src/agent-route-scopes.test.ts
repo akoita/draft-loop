@@ -35,6 +35,13 @@ beforeEach(async () => {
     ownerToken,
     logger: false,
     agentTokens: createMemoryAgentTokenStore(),
+    // Owner mode has no members, so a note the route admits answers 404 rather than storing.
+    feedback: {
+      send: async () => {
+        throw new Error("stub: owner mode stores no feedback");
+      },
+      listNewest: async () => [],
+    },
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -183,5 +190,33 @@ describe("agent route scopes", () => {
       payload: { label: "Claude Code", scopes: ["runs"] },
     });
     expect(refused.statusCode).toBe(400);
+  });
+
+  it("reach the feedback route with the journal scope only (#2843)", async () => {
+    const payload = { text: "A fictional note.", screen: "agent" };
+    const journal = await agentWith();
+    const admitted = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/owner/feedback",
+      headers: journal.headers,
+      payload,
+    });
+    // Admitted past the scope check; the owner's tenant has no member to send as.
+    expect(admitted.statusCode).toBe(404);
+    const reader = await agentWith(["applications:read"]);
+    const refused = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/owner/feedback",
+      headers: reader.headers,
+      payload,
+    });
+    expect(refused.statusCode).toBe(403);
+    const direct = await app.inject({
+      method: "POST",
+      url: "/v1/feedback",
+      headers: journal.headers,
+      payload,
+    });
+    expect(direct.statusCode).toBe(403);
   });
 });
