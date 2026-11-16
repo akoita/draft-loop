@@ -104,14 +104,16 @@ import {
   writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { z } from "zod";
-
+import type { OpportunityBriefSourcedText } from "./opportunity-brief-entries.js";
 import {
-  opportunityBriefExcerptSchema,
-  opportunityBriefIdSchema,
-  opportunityBriefNonEmptyString,
-  opportunityBriefSourceIdsSchema,
-  opportunityBriefTextSchema,
-} from "./opportunity-brief-fields.js";
+  opportunityBriefCandidateInstructionsSchema,
+  opportunityBriefIssueSchema,
+  opportunityBriefPrioritySchema,
+  opportunityBriefRequirementSchema,
+  opportunityBriefResponsibilitySchema,
+  opportunityBriefSourcedTextSchema,
+} from "./opportunity-brief-entries.js";
+import { opportunityBriefIdSchema } from "./opportunity-brief-fields.js";
 
 export { opportunityBriefMaximumExcerptLength } from "./opportunity-brief-fields.js";
 
@@ -155,6 +157,7 @@ export * from "./canonical-candidate-profile.js";
 export * from "./finding-attribution.js";
 export type { ModelSelection } from "./model-selection.js";
 export { modelSelectionSchema } from "./model-selection.js";
+export * from "./opportunity-brief-entries.js";
 
 const checksumSchema = z
   .string()
@@ -228,10 +231,6 @@ export const opportunityBriefSourceClassificationSchema = z.enum(
 );
 export const opportunityBriefProvenanceKindSchema = z.enum(opportunityBriefProvenanceKinds);
 export const opportunityBriefSourceStatusSchema = z.enum(opportunityBriefSourceStatuses);
-export const opportunityBriefIssueCodeSchema = z.enum(opportunityBriefIssueCodes);
-export const opportunityBriefIssueStatusSchema = z.enum(opportunityBriefIssueStatuses);
-export const opportunityBriefIssueSeveritySchema = z.enum(opportunityBriefIssueSeverities);
-
 export const opportunityBriefSourceSchema = z
   .strictObject({
     id: opportunityBriefIdSchema,
@@ -267,60 +266,6 @@ export const opportunityBriefSourceSchema = z
     }
   });
 export type OpportunityBriefSource = z.infer<typeof opportunityBriefSourceSchema>;
-
-export const opportunityBriefSourcedTextSchema = z.strictObject({
-  value: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-export type OpportunityBriefSourcedText = z.infer<typeof opportunityBriefSourcedTextSchema>;
-
-export const opportunityBriefResponsibilitySchema = z.strictObject({
-  id: opportunityBriefIdSchema,
-  text: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-  excerpt: opportunityBriefExcerptSchema.optional(),
-});
-export type OpportunityBriefResponsibility = z.infer<typeof opportunityBriefResponsibilitySchema>;
-
-export const opportunityBriefRequirementSchema = z.strictObject({
-  id: opportunityBriefIdSchema,
-  text: opportunityBriefTextSchema,
-  priority: z.enum(requirementPriorities),
-  sourceIds: opportunityBriefSourceIdsSchema,
-  excerpt: opportunityBriefExcerptSchema.optional(),
-});
-export type OpportunityBriefRequirement = z.infer<typeof opportunityBriefRequirementSchema>;
-
-export const opportunityBriefPrioritySchema = z.strictObject({
-  id: opportunityBriefIdSchema,
-  text: opportunityBriefTextSchema,
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-export type OpportunityBriefPriority = z.infer<typeof opportunityBriefPrioritySchema>;
-
-export const opportunityBriefCandidateInstructionsSchema = z.strictObject({
-  tone: opportunityBriefSourcedTextSchema.nullable(),
-  applicationGoal: opportunityBriefSourcedTextSchema.nullable(),
-  forbiddenLanguage: z
-    .array(opportunityBriefSourcedTextSchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-  focusAreas: z
-    .array(opportunityBriefSourcedTextSchema)
-    .max(opportunityBriefMaximumCollectionEntries),
-});
-export type OpportunityBriefCandidateInstructions = z.infer<
-  typeof opportunityBriefCandidateInstructionsSchema
->;
-
-export const opportunityBriefIssueSchema = z.strictObject({
-  id: opportunityBriefIdSchema,
-  code: opportunityBriefIssueCodeSchema,
-  status: opportunityBriefIssueStatusSchema,
-  severity: opportunityBriefIssueSeveritySchema,
-  message: opportunityBriefNonEmptyString.max(opportunityBriefMaximumMessageLength),
-  sourceIds: opportunityBriefSourceIdsSchema,
-});
-export type OpportunityBriefIssue = z.infer<typeof opportunityBriefIssueSchema>;
 
 const opportunityBriefCollectionSchema = <T extends z.ZodType>(schema: T) =>
   z.array(schema).max(opportunityBriefMaximumCollectionEntries);
