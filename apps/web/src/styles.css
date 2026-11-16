@@ -429,30 +429,182 @@ form button[type="submit"]:where(:not(.button)) {
   color: var(--text-2);
 }
 
+/* A consent (#1937): what it covers, its state, the basis as choice cards, a note and one action.
+   Shown inside the shared screens, so it styles its own controls from the shared tokens. */
 .consent {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.start-confirmation-host .consent {
   border-top: 1px solid var(--border);
-  margin: 0.75rem 0;
-  padding-top: 0.75rem;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
 }
 
-.consent h3 {
-  font-size: 1rem;
+.consent > p,
+.consent .problem {
   margin: 0;
 }
 
-.consent-compact {
-  border-top: 0;
+.consent-title {
   margin: 0;
-  padding-top: 0;
+  color: var(--text-1);
+  font-size: var(--text-base);
+  font-weight: 650;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
-.consent-compact p {
+.consent-copy {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.consent-status {
+  font-size: var(--text-sm);
+}
+
+.consent .notice {
+  border: 1px solid var(--amber-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.consent-form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.consent-bases {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
   margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.consent-label {
+  padding: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.consent-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-2);
+}
+
+.consent-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-inset);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.consent-choice:hover {
+  border-color: var(--teal-line);
+}
+
+.consent-choice:has(input:checked) {
+  border-color: var(--teal-line);
+  background: var(--teal-wash);
+}
+
+.consent-choice:has(input:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.consent-choice input {
+  flex: none;
+  margin: 3px 0 0;
+  accent-color: var(--teal);
+}
+
+.consent-choice input:focus-visible {
+  outline: none;
+}
+
+.consent-note {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 36rem;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Once granted: one line with a teal mark, the summary, and the withdrawal at the end. */
+.consent-compact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.consent-granted-mark {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-wash);
+}
+
+.consent-compact-text {
+  flex: 1 1 16rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+}
+
+.consent-summary {
+  color: var(--text-2);
+}
+
+.consent-history {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.consent-history summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .consent-history ul {
-  margin: 0.5rem 0;
+  margin: var(--space-2) 0 0;
   padding-left: 1.25rem;
+}
+
+@media (max-width: 560px) {
+  .consent-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .consent-actions .button {
+    flex: 1 1 auto;
+  }
 }
 
 .inline-form {

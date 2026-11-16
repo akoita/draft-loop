@@ -27,11 +27,16 @@ describe("consent panel", () => {
 
     expect(html).toContain("Consent to store the candidate&#x27;s material");
     expect(html).toContain("Not recorded yet. Record this before the first upload.");
-    expect(html).toContain("<legend>Basis for storing the material</legend>");
+    expect(html).toContain('<legend class="consent-label">Basis for storing the material</legend>');
+    expect(html).toContain('<label class="consent-choice"><input type="radio"');
     expect(html).toContain('type="radio" name="consent-material-storage-basis" value="contract"');
     expect(html).toContain("A contract with the candidate");
     expect(html).toContain("Legitimate interest");
-    expect(html).toContain('<label for="consent-material-storage-note">Note (optional)</label>');
+    expect(html).toContain(
+      '<label class="consent-label" for="consent-material-storage-note">Note (optional)</label>',
+    );
+    expect(html).toContain('id="consent-material-storage-note" type="text"');
+    expect(html).toContain('<button type="submit" class="button button-primary">Record consent');
     expect(html).toContain("Record consent");
     expect(html).not.toContain("Withdraw consent");
     expect(html).not.toContain("History");
