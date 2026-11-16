@@ -1142,6 +1142,10 @@ msgstr "Ajouter l’URL aux éléments hérités"
 msgid "Add your career documents"
 msgstr "Ajoutez vos documents de parcours"
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Add your CV or other documents here. When they are in, go to Career profile."
+msgstr "Ajoutez ici votre CV ou d’autres documents. Une fois ajoutés, passez au Profil professionnel."
+
 #. placeholder {0}: countedNouns.document(result.sourceCount)
 #: packages/ui/src/career-evidence.ts
 msgid "Added {0} from the folder to {displayName}."
@@ -1652,6 +1656,10 @@ msgstr "Prix et distinctions"
 #: packages/ui/src/home.tsx
 msgid "Back to {0}"
 msgstr "Retour à {0}"
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Back to Getting started"
+msgstr "Retour aux premiers pas"
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
@@ -3992,6 +4000,10 @@ msgstr "Donnez-lui un nom que vous reconnaîtrez, comme le poste et l’entrepri
 #: packages/ui/src/home-folders.tsx
 msgid "Give the folder a name."
 msgstr "Donnez un nom au dossier."
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Give the job a name, paste its description or link, then select Create application."
+msgstr "Donnez un nom au poste, collez l’offre ou son lien, puis choisissez Créer la candidature."
 
 #: apps/web/src/records-model.ts
 msgid "Give the new record a name."
@@ -6655,6 +6667,10 @@ msgstr "Lire uniquement les modifications"
 msgid "Read CVs and drafts"
 msgstr "Lire les CV et les brouillons"
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read each fact and confirm or fix it. Your CVs use only the facts you keep."
+msgstr "Lisez chaque fait, puis confirmez-le ou corrigez-le. Vos CV n’utilisent que les faits que vous gardez."
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr "Lu depuis le texte de l’offre (pas de brief d’exigences)"
@@ -6663,13 +6679,17 @@ msgstr "Lu depuis le texte de l’offre (pas de brief d’exigences)"
 msgid "Read from the page's job posting data."
 msgstr "Lu dans les données d’annonce de la page."
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read the draft and each finding. Accept or reject each one, then select Approve artifact."
+msgstr "Lisez le brouillon et chaque remarque. Acceptez ou rejetez chacune, puis choisissez Approuver le document."
+
 #: packages/ui/src/review.tsx
 msgid "Read the draft as it stands, without change marks"
 msgstr "Lire l’ébauche telle quelle, sans marques de modification"
 
 #: packages/ui/src/getting-started.tsx
-msgid "Read the draft, keep or change each suggestion, then approve it."
-msgstr "Lisez le brouillon, gardez ou modifiez chaque suggestion, puis approuvez-le."
+msgid "Read the draft, accept or reject each finding, then approve it."
+msgstr "Lisez le brouillon, acceptez ou rejetez chaque remarque, puis approuvez-le."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Read the facts taken from your documents, then confirm or fix them."

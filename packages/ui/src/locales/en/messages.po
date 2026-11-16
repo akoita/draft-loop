@@ -1148,6 +1148,10 @@ msgstr "Add URL to legacy evidence"
 msgid "Add your career documents"
 msgstr "Add your career documents"
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Add your CV or other documents here. When they are in, go to Career profile."
+msgstr "Add your CV or other documents here. When they are in, go to Career profile."
+
 #. placeholder {0}: countedNouns.document(result.sourceCount)
 #: packages/ui/src/career-evidence.ts
 msgid "Added {0} from the folder to {displayName}."
@@ -1658,6 +1662,10 @@ msgstr "Awards"
 #: packages/ui/src/home.tsx
 msgid "Back to {0}"
 msgstr "Back to {0}"
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Back to Getting started"
+msgstr "Back to Getting started"
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Back to latest run"
@@ -3998,6 +4006,10 @@ msgstr "Give it a name you will recognise, such as the role and the company."
 #: packages/ui/src/home-folders.tsx
 msgid "Give the folder a name."
 msgstr "Give the folder a name."
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Give the job a name, paste its description or link, then select Create application."
+msgstr "Give the job a name, paste its description or link, then select Create application."
 
 #: apps/web/src/records-model.ts
 msgid "Give the new record a name."
@@ -6661,6 +6673,10 @@ msgstr "Read changes only"
 msgid "Read CVs and drafts"
 msgstr "Read CVs and drafts"
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read each fact and confirm or fix it. Your CVs use only the facts you keep."
+msgstr "Read each fact and confirm or fix it. Your CVs use only the facts you keep."
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr "Read from the job text (no requirements brief)"
@@ -6669,13 +6685,17 @@ msgstr "Read from the job text (no requirements brief)"
 msgid "Read from the page's job posting data."
 msgstr "Read from the page's job posting data."
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read the draft and each finding. Accept or reject each one, then select Approve artifact."
+msgstr "Read the draft and each finding. Accept or reject each one, then select Approve artifact."
+
 #: packages/ui/src/review.tsx
 msgid "Read the draft as it stands, without change marks"
 msgstr "Read the draft as it stands, without change marks"
 
 #: packages/ui/src/getting-started.tsx
-msgid "Read the draft, keep or change each suggestion, then approve it."
-msgstr "Read the draft, keep or change each suggestion, then approve it."
+msgid "Read the draft, accept or reject each finding, then approve it."
+msgstr "Read the draft, accept or reject each finding, then approve it."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Read the facts taken from your documents, then confirm or fix them."

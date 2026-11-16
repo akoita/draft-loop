@@ -1148,6 +1148,10 @@ msgstr ""
 msgid "Add your career documents"
 msgstr ""
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Add your CV or other documents here. When they are in, go to Career profile."
+msgstr ""
+
 #. placeholder {0}: countedNouns.document(result.sourceCount)
 #: packages/ui/src/career-evidence.ts
 msgid "Added {0} from the folder to {displayName}."
@@ -1657,6 +1661,10 @@ msgstr ""
 #. placeholder {0}: back.label
 #: packages/ui/src/home.tsx
 msgid "Back to {0}"
+msgstr ""
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Back to Getting started"
 msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
@@ -3997,6 +4005,10 @@ msgstr ""
 
 #: packages/ui/src/home-folders.tsx
 msgid "Give the folder a name."
+msgstr ""
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Give the job a name, paste its description or link, then select Create application."
 msgstr ""
 
 #: apps/web/src/records-model.ts
@@ -6660,6 +6672,10 @@ msgstr ""
 msgid "Read CVs and drafts"
 msgstr ""
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read each fact and confirm or fix it. Your CVs use only the facts you keep."
+msgstr ""
+
 #: packages/ui/src/start-confirmation.tsx
 msgid "Read from the job text (no requirements brief)"
 msgstr ""
@@ -6668,12 +6684,16 @@ msgstr ""
 msgid "Read from the page's job posting data."
 msgstr ""
 
+#: packages/ui/src/screen-hint.tsx
+msgid "Read the draft and each finding. Accept or reject each one, then select Approve artifact."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Read the draft as it stands, without change marks"
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
-msgid "Read the draft, keep or change each suggestion, then approve it."
+msgid "Read the draft, accept or reject each finding, then approve it."
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx

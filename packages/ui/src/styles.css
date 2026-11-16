@@ -11527,3 +11527,18 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .getting-started-text p {
   font-size: var(--text-sm);
 }
+
+/* The one-line hint on each guided screen (#2792). */
+.screen-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--teal);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  background: var(--teal-wash);
+  font-size: var(--text-sm);
+}

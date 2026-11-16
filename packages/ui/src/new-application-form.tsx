@@ -18,6 +18,7 @@ import {
   withChosenJobFile,
 } from "./new-application-model.js";
 import { useModalFocusTrap } from "./review.js";
+import { ScreenHint } from "./screen-hint.js";
 
 export interface NewApplicationFormViewProps {
   readonly draft: NewApplicationDraft;
@@ -92,6 +93,7 @@ export function NewApplicationFormView({
           }}
         >
           <h2 id="new-application-title">{t`New application`}</h2>
+          <ScreenHint screen="new-application" />
           <p
             className="modal-copy"
             id="new-application-copy"
