@@ -9,8 +9,8 @@ import { applicationMaterialDefaultModelId } from "@draft-loop/application/appli
 import { failedCallCostUsd, guardCallCost } from "@draft-loop/application/call-cost-guard";
 import {
   coverLetterClaimCheckModelId,
-  coverLetterClaimCheckPromptVersion,
   createModelCoverLetterClaimChecker,
+  interviewGuideClaimCheckPromptVersion,
 } from "@draft-loop/application/cover-letter-claims-model";
 import type { FactUsageService } from "@draft-loop/application/fact-usage";
 import {
@@ -278,7 +278,7 @@ export function registerInterviewGuideRoutes(
         company: "anthropic",
         modelId: coverLetterClaimCheckModelId,
         role: "author",
-        promptTemplateVersion: coverLetterClaimCheckPromptVersion,
+        promptTemplateVersion: interviewGuideClaimCheckPromptVersion,
       } as const;
       const buildRoute = material.route;
       // A route answers only its own selection, prompt version included: one for each model.
@@ -338,6 +338,7 @@ export function registerInterviewGuideRoutes(
         model: checkerModel,
         dataPolicy,
         applicationId,
+        purpose: "interview-guide",
       });
 
       try {
