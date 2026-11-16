@@ -76,19 +76,20 @@ then, its data is in the `draft-loop-self-hosted_*` volumes that
 Set these in the installed folder's `.env`, or in `deploy/local/.env` in a
 clone, which Git ignores:
 
-| Variable                          | Default  | Meaning                                                                        |
-| --------------------------------- | -------- | ------------------------------------------------------------------------------ |
-| `DRAFT_LOOP_PORT`                 | `8080`   | The port on `127.0.0.1` where the web screen and API listen; `8081` in a clone |
-| `DRAFT_LOOP_LOCAL_MODELS`         | none     | Local model names the stack offers, separated by commas                        |
-| `DRAFT_LOOP_LOCAL_MODEL_ENDPOINT` | none     | The OpenAI-compatible endpoint that serves them                                |
-| `DRAFT_LOOP_OPENAI_ENDPOINT`      | `global` | `eu` for an OpenAI project created with EU data residency                      |
-| `DRAFT_LOOP_SCREENING`            | `rules`  | `rules+model` also asks Claude Haiku to screen uploads and turns on the career interview |
-| `DRAFT_LOOP_LIVE_SPEECH`          | `off`    | `google` offers the live voice interview, with `keys/google_speech_api_key` ([voice input](../reference/voice-input.md#live-conversation)) |
-| `DRAFT_LOOP_SPEECH_PROJECT_ID`    | none     | The Google Cloud project live speech bills to                                  |
-| `DRAFT_LOOP_COVER_LETTER_WRITER`  | `items`  | `free-form` writes a cover letter as prose, then checks each sentence against your facts ([free-form letters](../reference/application-material.md#free-form-cover-letters)) |
-| `DRAFT_LOOP_RESEARCH_SEARCH`      | `claude` | The research brief's web search: `claude` with `keys/anthropic_api_key`, `linkup` with `keys/linkup_api_key`, or `off` ([research briefs](../reference/application-material.md#research-briefs)) |
-| `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`      | The most one run may spend on provider calls                                   |
-| `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`      | The most revision rounds one run may take                                      |
+| Variable                          | Default     | Meaning                                                                                                                                                                                          |
+| --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DRAFT_LOOP_PORT`                 | `8080`      | The port on `127.0.0.1` where the web screen and API listen; `8081` in a clone                                                                                                                   |
+| `DRAFT_LOOP_LOCAL_MODELS`         | none        | Local model names the stack offers, separated by commas                                                                                                                                          |
+| `DRAFT_LOOP_LOCAL_MODEL_ENDPOINT` | none        | The OpenAI-compatible endpoint that serves them                                                                                                                                                  |
+| `DRAFT_LOOP_OPENAI_ENDPOINT`      | `global`    | `eu` for an OpenAI project created with EU data residency                                                                                                                                        |
+| `DRAFT_LOOP_SCREENING`            | `rules`     | `rules+model` also asks Claude Haiku to screen uploads and turns on the career interview                                                                                                         |
+| `DRAFT_LOOP_LIVE_SPEECH`          | `off`       | `google` offers the live voice interview, with `keys/google_speech_api_key` ([voice input](../reference/voice-input.md#live-conversation))                                                       |
+| `DRAFT_LOOP_SPEECH_PROJECT_ID`    | none        | The Google Cloud project live speech bills to                                                                                                                                                    |
+| `DRAFT_LOOP_LIVE_TURN_PAUSE_MS`   | `2500,5000` | The silence that ends a spoken answer, then the longer wait when it sounds cut off                                                                                                               |
+| `DRAFT_LOOP_COVER_LETTER_WRITER`  | `items`     | `free-form` writes a cover letter as prose, then checks each sentence against your facts ([free-form letters](../reference/application-material.md#free-form-cover-letters))                     |
+| `DRAFT_LOOP_RESEARCH_SEARCH`      | `claude`    | The research brief's web search: `claude` with `keys/anthropic_api_key`, `linkup` with `keys/linkup_api_key`, or `off` ([research briefs](../reference/application-material.md#research-briefs)) |
+| `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`         | The most one run may spend on provider calls                                                                                                                                                     |
+| `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`         | The most revision rounds one run may take                                                                                                                                                        |
 
 The full list of server settings is in the
 [local server stack](local-server-stack.md) guide.

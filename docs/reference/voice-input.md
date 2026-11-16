@@ -5,10 +5,10 @@ need and what they send. Both are icon buttons in the toolbar row under the
 interview answer box: a microphone for **Answer by voice** and a sound wave for
 **Talk live**, next to the **Send** arrow. Their names show on hover.
 
-| Mode | The candidate | Audio goes to | Turn on with |
-| --- | --- | --- | --- |
-| **Answer by voice** | Speaks one answer, edits the text, presses **Send** | Nowhere: Whisper runs in the browser | The speech model on the server ([Install the model](#install-the-model)) |
-| **Talk live** | Talks the topic through and hears each question | Google Cloud speech in the EU | `DRAFT_LOOP_LIVE_SPEECH=google` ([Live conversation](#live-conversation)) |
+| Mode                | The candidate                                       | Audio goes to                        | Turn on with                                                              |
+| ------------------- | --------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| **Answer by voice** | Speaks one answer, edits the text, presses **Send** | Nowhere: Whisper runs in the browser | The speech model on the server ([Install the model](#install-the-model))  |
+| **Talk live**       | Talks the topic through and hears each question     | Google Cloud speech in the EU        | `DRAFT_LOOP_LIVE_SPEECH=google` ([Live conversation](#live-conversation)) |
 
 ## Answer by voice
 
@@ -34,13 +34,13 @@ sequenceDiagram
   P->>C: Text appended to the answer box
 ```
 
-| Part | Where |
-| --- | --- |
-| Model | `onnx-community/whisper-base`, pinned revision, q8 weights, Apache-2.0 ([pin](../../packages/application/src/speech-model.ts)) |
-| Model files | `GET /speech-models/whisper-base/<revision>/<path>`, refused unless size and SHA-256 match the pin |
-| ONNX runtime | `/ort/`, copied into the web build |
-| Recording | MediaRecorder, at most 120 seconds, released when stopped or discarded |
-| Content security policy | `script-src 'self' 'wasm-unsafe-eval'`, which allows WebAssembly and nothing from another origin |
+| Part                    | Where                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Model                   | `onnx-community/whisper-base`, pinned revision, q8 weights, Apache-2.0 ([pin](../../packages/application/src/speech-model.ts)) |
+| Model files             | `GET /speech-models/whisper-base/<revision>/<path>`, refused unless size and SHA-256 match the pin                             |
+| ONNX runtime            | `/ort/`, copied into the web build                                                                                             |
+| Recording               | MediaRecorder, at most 120 seconds, released when stopped or discarded                                                         |
+| Content security policy | `script-src 'self' 'wasm-unsafe-eval'`, which allows WebAssembly and nothing from another origin                               |
 
 The button appears only when the manifest says `available: true`. The
 first transcription downloads about 80 MB of model files, which the browser
@@ -109,16 +109,16 @@ sequenceDiagram
   end
 ```
 
-| Part | What it does |
-| --- | --- |
-| Recognition | Chirp 3 at `eu-speech.googleapis.com`; a turn ends after 1.5 s of silence, at 120 s, or on **Done speaking**; employer, project, skill and certification names from the career profile go with it as phrase hints |
-| Voice | Chirp 3 HD `Charon` at `eu-texttospeech.googleapis.com`, in French or English from the screen's language |
-| Language | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language. Its fixed sentences and the evidence file follow the same language (English or French) |
-| Consent | The record's transmission grant must name Anthropic and Google Cloud; the screen offers to add Google Cloud |
-| Limits | 30 minutes of audio per conversation, then `live_limit_reached`; one topic per conversation |
-| Reply | A short acknowledgement ("D'accord.", "All right.") plays while the interviewer writes; the question's first sentence plays while the rest is synthesised |
-| Logs | Per turn, `live career interview turn` with `heardMs`, `interviewerMs`, `firstAudioMs`, `questionAudioMs` and `totalMs`; at the end, turn count, audio seconds, spoken characters and estimated cost; never words or audio |
-| Content security policy | `media-src 'self' blob:` lets the question play from memory |
+| Part                    | What it does                                                                                                                                                                                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recognition             | Chirp 3 at `eu-speech.googleapis.com`; a turn ends after 2.5 s of silence (5 s when the last words sound cut off, such as "and" or "parce que"), at 120 s, or on **Done speaking**; employer, project, skill and certification names from the career profile go with it as phrase hints |
+| Voice                   | Chirp 3 HD `Charon` at `eu-texttospeech.googleapis.com`, in French or English from the screen's language                                                                                                                                                                                |
+| Language                | The interviewer asks in the screen's language, written or live; without one, in the workspace's document language. Its fixed sentences and the evidence file follow the same language (English or French)                                                                               |
+| Consent                 | The record's transmission grant must name Anthropic and Google Cloud; the screen offers to add Google Cloud                                                                                                                                                                             |
+| Limits                  | 30 minutes of audio per conversation, then `live_limit_reached`; one topic per conversation                                                                                                                                                                                             |
+| Reply                   | A short acknowledgement ("D'accord.", "All right.") plays while the interviewer writes; the question's first sentence plays while the rest is synthesised                                                                                                                               |
+| Logs                    | Per turn, `live career interview turn` with `heardMs`, `interviewerMs`, `firstAudioMs`, `questionAudioMs` and `totalMs`; at the end, turn count, audio seconds, spoken characters and estimated cost; never words or audio                                                              |
+| Content security policy | `media-src 'self' blob:` lets the question play from memory                                                                                                                                                                                                                             |
 
 The list prices put a 20-minute interview at about US$0.30 to US$0.45.
 Speech-to-Text keeps audio only when a project opts in to data logging, so
@@ -144,7 +144,10 @@ On a self-hosted server:
    DRAFT_LOOP_SPEECH_PROJECT_ID=your-project-id
    ```
 
-5. Run `draft-loop-server up` again.
+5. Optionally, set `DRAFT_LOOP_LIVE_TURN_PAUSE_MS=2500,5000` to change the
+   silence that ends an answer, normally then when it sounds cut off. Each is
+   in milliseconds, and the second is at most 15000.
+6. Run `draft-loop-server up` again.
 
 Expected result: an open interview topic shows **Talk live**. It stays hidden
 while the interviewer is off (`DRAFT_LOOP_SCREENING=rules+model` and a Claude

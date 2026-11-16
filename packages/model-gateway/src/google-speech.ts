@@ -130,11 +130,54 @@ function eventQueue<T>() {
   };
 }
 
+/**
+ * The silence that ends the candidate's turn. After `normalMs` the turn ends, unless the last
+ * words heard look unfinished; then it waits until `unfinishedMs` in all.
+ */
+export interface EndOfTurnPause {
+  readonly normalMs: number;
+  readonly unfinishedMs: number;
+}
+
+export const defaultEndOfTurnPause: EndOfTurnPause = { normalMs: 2_500, unfinishedMs: 5_000 };
+
+// Words a sentence rarely ends on: a speaker who stops after one is usually thinking.
+const connectors: Readonly<Record<Language, ReadonlySet<string>>> = {
+  en: new Set(
+    "and but or so because that which who whose whom then with to of for the a an my our your their when where while if like as than um uh".split(
+      " ",
+    ),
+  ),
+  fr: new Set(
+    "et mais ou donc car que qu qui dont puis avec de du des d le la les l un une pour par quand si comme parce lorsque mon ma mes notre nos sur dans euh".split(
+      " ",
+    ),
+  ),
+};
+
+/**
+ * Whether recognised words look cut off: no closing punctuation, a trailing ellipsis, or a last
+ * word such as "and" or "parce que" that a sentence rarely ends on. Unknown language checks both.
+ */
+export function looksUnfinished(text: string, language?: Language): boolean {
+  const trimmed = text.trim();
+  if (trimmed === "") return false;
+  if (/(\.\.\.|…)$/u.test(trimmed) || !/[.!?]$/u.test(trimmed)) return true;
+  const words = trimmed
+    .toLocaleLowerCase()
+    .split(/[^\p{L}]+/u)
+    .filter((word) => word !== "");
+  const last = words.at(-1);
+  if (last === undefined) return false;
+  const lists = language === undefined ? [connectors.en, connectors.fr] : [connectors[language]];
+  return lists.some((list) => list.has(last));
+}
+
 export interface GoogleStreamingSpeechToTextOptions {
   readonly projectId: string;
   readonly clients: GoogleSpeechClients;
-  /** Silence after speech that ends the candidate's turn; the default suits a thoughtful answer. */
-  readonly endOfTurnSilenceMs?: number;
+  /** The silence that ends a turn; the default suits a thoughtful spoken answer. */
+  readonly endOfTurnPause?: EndOfTurnPause;
   readonly setTimer?: (callback: () => void, ms: number) => unknown;
   readonly clearTimer?: (timer: unknown) => void;
 }
@@ -148,7 +191,10 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
   }): GoogleLiveRecognition;
 } {
   if (options.projectId.trim() === "") throw new RangeError("A Google Cloud project is required.");
-  const silenceMs = options.endOfTurnSilenceMs ?? 1_500;
+  const pause = options.endOfTurnPause ?? defaultEndOfTurnPause;
+  if (!(pause.normalMs > 0 && pause.unfinishedMs >= pause.normalMs)) {
+    throw new RangeError("The end-of-turn pause needs 0 < normal <= unfinished.");
+  }
   const setTimer = options.setTimer ?? ((callback, ms) => setTimeout(callback, ms));
   const clearTimer =
     options.clearTimer ?? ((timer) => clearTimeout(timer as ReturnType<typeof setTimeout>));
@@ -160,6 +206,7 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
       const queue = eventQueue<GoogleLiveTranscriptEvent>();
       const stream = options.clients.streamingRecognize();
       let silence: unknown;
+      let lastText = "";
       let finished = false;
       // Once the audio is ended, Google may still send its last finals, but the stream refuses
       // more writes; microphone frames that arrive in between are dropped.
@@ -185,11 +232,21 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
           silence = undefined;
         } else if (event === "SPEECH_ACTIVITY_END" || event === "3") {
           // Ending the audio lets Google send its last finals; the stream's end closes the turn.
-          silence = setTimer(endAudio, silenceMs);
+          // The words are judged when the normal pause runs out, so a late final still counts.
+          if (silence !== undefined) clearTimer(silence);
+          silence = setTimer(() => {
+            const extraMs = pause.unfinishedMs - pause.normalMs;
+            if (extraMs > 0 && looksUnfinished(lastText, request.language)) {
+              silence = setTimer(endAudio, extraMs);
+            } else {
+              endAudio();
+            }
+          }, pause.normalMs);
         }
         for (const result of response.results ?? []) {
           const text = result.alternatives?.[0]?.transcript?.trim() ?? "";
           if (text === "") continue;
+          lastText = text;
           queue.push({ kind: result.isFinal === true ? "final" : "partial", text });
         }
       });
