@@ -142,7 +142,12 @@ export function DisplaySetting() {
       <div className="display-setting-row">
         <strong>{t`Display`}</strong>
         <span className="meta-chip">{displayModeName(preference.mode)}</span>
-        <button type="button" onClick={() => setChanging((open) => !open)} aria-expanded={changing}>
+        <button
+          type="button"
+          className="button button-outline"
+          onClick={() => setChanging((open) => !open)}
+          aria-expanded={changing}
+        >
           {changing ? t`Keep as it is` : t`Change`}
         </button>
       </div>
