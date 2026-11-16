@@ -227,8 +227,8 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
           artifact,
           context,
         );
-      } catch {
-        throw invalidCritiqueError(response);
+      } catch (error) {
+        throw invalidCritiqueError(response, error);
       }
       const first = slices[0];
       if (first === undefined || billed === undefined) {
