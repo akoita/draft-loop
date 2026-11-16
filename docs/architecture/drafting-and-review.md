@@ -854,6 +854,9 @@ a rejection still use the full proposal.
   edit names are copied with their claims and evidence. The result goes through
   the same citation completion, grounding and validation as any proposal, and a
   deleted covering block still raises `coverage-block-dropped`.
+- **Finding ids.** An adjudicated revision's edits may name only accepted
+  findings. An automatic round has no adjudication, so its edits' finding ids
+  are ignored and recorded as empty instead of rejecting the edit (#2855).
 - **Dropped edits.** When the whole patch fails, each edit is tried on its own
   (#2846). An edit fails when it names an unknown block, section or finding id,
   leaves a section empty, or grounding would remove or shorten its block. The
@@ -866,7 +869,9 @@ a rejection still use the full proposal.
   cost.
 
 The mode is stored on the revision execution as `revisionMode`: `patch`, `full`
-or `patch-fallback`.
+or `patch-fallback`. The run trace's revision span also carries
+`draftloop.revision.mode`, the code of the check that rejected a patch in
+`draftloop.revision.patch_rejection`, and `draftloop.revision.dropped_edits`.
 
 ### Revision trace
 

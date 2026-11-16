@@ -106,6 +106,23 @@ export function createMemoryRunTracer(): RunTracer & {
   };
 }
 
+/**
+ * How an author revision was produced, as span attributes (#2855): its mode, the code of the
+ * check that rejected a targeted patch, and how many patch edits were dropped. Empty for a first
+ * draft and for every other step.
+ */
+export function revisionSpanAttributes(execution: {
+  readonly revisionMode?: string;
+  readonly patchRejection?: string;
+  readonly droppedRevisionEdits?: number;
+}): RunSpanAttributes {
+  return contentFreeSpanAttributes({
+    "draftloop.revision.mode": execution.revisionMode,
+    "draftloop.revision.patch_rejection": execution.patchRejection,
+    "draftloop.revision.dropped_edits": execution.droppedRevisionEdits,
+  });
+}
+
 /** The content-free fields of a saved execution, as span attributes. */
 export function executionSpanAttributes(execution: {
   readonly provider: string;

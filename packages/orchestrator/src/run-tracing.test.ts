@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { contentFreeSpanAttributes, createMemoryRunTracer, noopRunTracer } from "./run-tracing.js";
+import {
+  contentFreeSpanAttributes,
+  createMemoryRunTracer,
+  noopRunTracer,
+  revisionSpanAttributes,
+} from "./run-tracing.js";
 
 describe("run tracing", () => {
   it("keeps only allowed names with numbers, booleans and short identifiers", () => {
@@ -53,5 +58,19 @@ describe("run tracing", () => {
       span.setAttributes({ "draftloop.round": 1 });
       span.end("ok");
     }).not.toThrow();
+  });
+
+  it("records how a revision was produced and leaves other steps without revision attributes", () => {
+    expect(
+      revisionSpanAttributes({ revisionMode: "patch-fallback", patchRejection: "unknown-finding" }),
+    ).toEqual({
+      "draftloop.revision.mode": "patch-fallback",
+      "draftloop.revision.patch_rejection": "unknown-finding",
+    });
+    expect(revisionSpanAttributes({ revisionMode: "patch", droppedRevisionEdits: 2 })).toEqual({
+      "draftloop.revision.mode": "patch",
+      "draftloop.revision.dropped_edits": 2,
+    });
+    expect(revisionSpanAttributes({})).toEqual({});
   });
 });

@@ -204,6 +204,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       // states them. A patch that cannot be used falls back to the full-proposal revision below,
       // within this same attempt; a retry after a rejection always revises the full proposal.
       let patchResponse: ModelResponse<JsonObject> | undefined;
+      let patchRejection: string | undefined;
       if (
         currentArtifact !== null &&
         retryFeedback === undefined &&
@@ -230,12 +231,14 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
           context,
           currentArtifact,
           retrievedEvidence,
-          acceptedFindingIds:
-            pendingAdjudication?.plan.decisions
-              .filter(({ disposition }) => disposition === "accept")
-              .map(({ findingId }) => findingId) ?? [],
+          // An automatic round has no adjudication, so there is no finding an edit could name
+          // (#2855): its finding ids are ignored instead of rejecting the edit.
+          acceptedFindingIds: pendingAdjudication?.plan.decisions
+            .filter(({ disposition }) => disposition === "accept")
+            .map(({ findingId }) => findingId),
         });
-        if (patched !== undefined) {
+        if (!patched.ok) patchRejection = patched.reason;
+        if (patched.ok) {
           forgetAuthorRevision(revisionKey);
           const droppedEditFindings = droppedRevisionEditFindings(patched.droppedEdits);
           return {
@@ -243,6 +246,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             ...(droppedEditFindings.length === 0 ? {} : { outputFindings: droppedEditFindings }),
             appliedEdits: patched.edits,
             revisionMode: "patch" as const,
+            ...(patched.droppedEdits === 0 ? {} : { droppedRevisionEdits: patched.droppedEdits }),
           };
         }
       }
@@ -294,6 +298,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
               revisionMode:
                 patchResponse === undefined ? ("full" as const) : ("patch-fallback" as const),
             }),
+        ...(patchRejection === undefined ? {} : { patchRejection }),
       };
     },
   };
