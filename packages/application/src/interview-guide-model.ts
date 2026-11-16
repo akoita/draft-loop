@@ -1,7 +1,7 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { DataExposurePolicy, JsonObject } from "@draft-loop/providers";
 
-import { type ApplicationMaterialModelExecutor } from "./application-material-model.js";
+import type { ApplicationMaterialModelExecutor } from "./application-material-model.js";
 import { withDocumentLanguage } from "./document-language-instruction.js";
 import type {
   InterviewGuideWriterPort,

@@ -27,6 +27,10 @@ import {
 } from "./cover-letter-claims.js";
 import type { PickedCoverLetterFact } from "./cover-letter-facts.js";
 import {
+  interviewGuideClaimSources,
+  interviewGuideSentenceProblems,
+} from "./interview-guide-claims.js";
+import {
   type InterviewGuideMatrix,
   type InterviewGuideNeverSayEntry,
   interviewGuideDefenseLines,
@@ -207,13 +211,16 @@ function guideSentences(items: readonly InterviewGuideWrittenItem[]): CoverLette
   );
 }
 
-/** Whether a checked sentence holds: a long advice sentence is fine in a guide, unlike a letter. */
+/** Whether a checked sentence holds in a guide, and comes nowhere near a never-say entry. */
 function holds(
   sentence: CheckedCoverLetterSentence,
+  facts: readonly PickedCoverLetterFact[],
   neverSay: readonly InterviewGuideNeverSayEntry[],
 ) {
-  const problems = sentence.problems.filter((problem) => problem !== "long_courtesy");
-  return problems.length === 0 && !touchesNeverSay(sentence.text, neverSay);
+  return (
+    interviewGuideSentenceProblems(sentence, facts).length === 0 &&
+    !touchesNeverSay(sentence.text, neverSay)
+  );
 }
 
 /** One written and checked part of a guide: its kept items and the sentences it dropped. */
@@ -254,29 +261,17 @@ export async function writeInterviewGuidePart(
     }))
     .filter((item) => item.text !== "");
 
-  // Facts and gaps are what a candidate sentence may rest on; findings what any other may.
-  const facts: PickedCoverLetterFact[] = [
-    ...request.facts.map((fact) => ({
-      id: fact.id,
-      brief: fact.text,
-      score: 0,
-      ...(fact.group === undefined ? {} : { group: fact.group }),
-    })),
-    ...request.gaps.map((gap) => ({
-      id: gap.id,
-      brief: `No career fact shows this requirement: ${gap.requirement}`,
-      score: 0,
-    })),
-  ];
-  const companyFacts = request.findings.map((finding) => ({ id: finding.id, text: finding.text }));
+  // Facts and gaps hold candidate sentences; findings, the interview and the job hold the rest.
+  const sources = interviewGuideClaimSources(request);
   const sentences = guideSentences(written);
   const checked =
     sentences.length === 0
       ? []
       : checkCoverLetterClaims(
-          { sentences, facts, companyFacts },
-          (await checker.link({ sentences, facts, companyFacts })).links,
+          { sentences, ...sources },
+          (await checker.link({ sentences, ...sources })).links,
         ).sentences;
+  const findingIds = new Set(request.findings.map((finding) => finding.id));
 
   const dropped: string[] = [];
   const items: InterviewGuideItem[] = [];
@@ -284,7 +279,7 @@ export async function writeInterviewGuidePart(
     const part = (paragraph: number) =>
       checked.filter((sentence) => sentence.paragraph === paragraph);
     const keep = (parts: CheckedCoverLetterSentence[]) => {
-      const kept = parts.filter((sentence) => holds(sentence, neverSay));
+      const kept = parts.filter((sentence) => holds(sentence, sources.facts, neverSay));
       dropped.push(...parts.filter((sentence) => !kept.includes(sentence)).map((s) => s.text));
       return kept;
     };
@@ -302,7 +297,11 @@ export async function writeInterviewGuidePart(
           cited.flatMap((sentence) => sentence.factIds).filter((id) => !id.startsWith("gap_")),
         ),
       ],
-      findingIds: [...new Set(cited.flatMap((sentence) => sentence.companyFactIds))],
+      findingIds: [
+        ...new Set(
+          cited.flatMap((sentence) => sentence.companyFactIds).filter((id) => findingIds.has(id)),
+        ),
+      ],
     });
   });
   return {
