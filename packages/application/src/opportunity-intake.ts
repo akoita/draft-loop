@@ -352,7 +352,11 @@ function validateSourceInputs(
       throw new Error("Opportunity source kind is unsupported.");
     }
   }
-  return input.sources;
+  // Pasted text is kept trimmed, as an application keeps its pasted job text, so the checksum a
+  // brief records matches the text a later extraction reads (#2721).
+  return input.sources.map((source) =>
+    source.kind === "pasted-content" ? { ...source, content: source.content.trim() } : source,
+  );
 }
 
 function sourceStatus(result: IngestionResult): OpportunityBriefSource["status"] {
