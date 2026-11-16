@@ -491,6 +491,69 @@ describe("provider author agent targeted revisions", () => {
     expect(JSON.stringify(execution.output.sections)).not.toContain("90 percent");
   });
 
+  it.each([
+    [
+      "an edit that states an unsupported claim",
+      (id: ReturnType<typeof ids>) => ({
+        ...noEdit,
+        op: "replace",
+        blockId: id.deployBlock,
+        block: aliasedBlock("bullet", "Reduced deployment time by 90 percent.", alias.deploy),
+        findingIds: ["f-1"],
+      }),
+    ],
+    [
+      "an edit that names an unknown block",
+      (_id: ReturnType<typeof ids>) => ({ ...noEdit, op: "delete", blockId: "block-nowhere" }),
+    ],
+    [
+      "an edit that names a finding the run did not accept",
+      (id: ReturnType<typeof ids>) => ({
+        ...noEdit,
+        op: "delete",
+        blockId: id.deployBlock,
+        findingIds: ["f-unknown"],
+      }),
+    ],
+  ])("keeps the edits that ground and drops %s", async (_name, badEdit) => {
+    const previous = currentArtifact();
+    const id = ids(previous);
+    const { author, requests } = agent([
+      {
+        edits: [
+          badEdit(id),
+          {
+            ...noEdit,
+            op: "insert",
+            sectionId: id.experienceSection,
+            afterBlockId: id.deployBlock,
+            block: aliasedBlock("bullet", toolsText, alias.tools),
+            findingIds: ["f-1"],
+          },
+        ],
+      },
+    ]);
+
+    const execution = await author.execute(
+      request(previous, { pendingAdjudication: adjudication }),
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(execution.revisionMode).toBe("patch");
+    expect(execution.appliedEdits).toEqual([
+      { op: "insert", revisedBlockKey: "experience#0/b2", findingIds: ["f-1"] },
+    ]);
+    expect(
+      execution.output.sections.map((section) => section.blocks.map(({ text }) => text)),
+    ).toEqual([[summaryText], [migrationText, deployText, toolsText]]);
+    expect(execution.outputFindings?.map(({ code, message }) => ({ code, message }))).toEqual([
+      {
+        code: "revision-edits-dropped",
+        message: expect.stringMatching(/^1 revision edit was left out because it could not/u),
+      },
+    ]);
+  });
+
   it("warns when a delete removes the only block that covered a requirement", async () => {
     const previous = currentArtifact();
     const id = ids(previous);

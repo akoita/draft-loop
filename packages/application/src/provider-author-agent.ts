@@ -27,7 +27,11 @@ import {
   authorRunOutputSchemas,
   runStableInputMembers,
 } from "./author-run-prefix.js";
-import { buildPatchedRevision, withAddedUsage } from "./author-targeted-revision.js";
+import {
+  buildPatchedRevision,
+  droppedRevisionEditFindings,
+  withAddedUsage,
+} from "./author-targeted-revision.js";
 import { guardCallCost } from "./call-cost-guard.js";
 import { withDocumentLanguage } from "./document-language-instruction.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
@@ -233,8 +237,10 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         });
         if (patched !== undefined) {
           forgetAuthorRevision(revisionKey);
+          const droppedEditFindings = droppedRevisionEditFindings(patched.droppedEdits);
           return {
             ...responseExecution(patchResponse, patched.artifact),
+            ...(droppedEditFindings.length === 0 ? {} : { outputFindings: droppedEditFindings }),
             appliedEdits: patched.edits,
             revisionMode: "patch" as const,
           };
