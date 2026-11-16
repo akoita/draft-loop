@@ -11,6 +11,7 @@ explains why the boundaries are where they are.
 | [Change checklist](change-checklist.md)      | Finish any change and fill in the PR template's impact sections      |
 | [Add an API route](api-route.md)             | Expose a capability over the HTTP API, and so to the web and agents  |
 | [Add a shared screen](shared-screen.md)      | Add or change a screen in `packages/ui` that the web and desktop share |
+| [Change the database schema](database-schema.md) | Add a Postgres migration that the previous release can still run against |
 
 Write a new guide when a pull request repeats a pattern that no guide covers.
 Keep it under about 150 lines, link the architecture page instead of restating
