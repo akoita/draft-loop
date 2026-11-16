@@ -30,6 +30,8 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
 export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`POST ${workspace}/work-journal/notes`]: { scope: "journal" },
+  // Feedback goes with the journal scope, the one a token holds by default (#2843).
+  [`POST ${workspace}/feedback`]: { scope: "journal" },
   // Whole notes stay with the candidate's review; an agent lists titles only.
   [`GET ${workspace}/work-journal/notes`]: {
     scope: "journal",
@@ -162,7 +164,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "PATCH /v1/workspaces/:workspaceId/profiles/:profileId",
   "POST /v1/auth/proof",
   "POST /v1/client-errors",
-  // An agent sends feedback through its MCP tool once #2843 lands.
+  // A person's own note; an agent sends one through the record's address below.
   "POST /v1/feedback",
   "POST /v1/knowledge-bases",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules",

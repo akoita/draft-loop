@@ -2846,6 +2846,17 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["FeedbackNote"];
   };
+  "POST /v1/workspaces/{workspaceId}/feedback": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly body: {
+      readonly text: string;
+      readonly category?: "bug" | "idea" | "other";
+      readonly screen: string;
+    };
+    readonly response: ApiSchemas["FeedbackNote"];
+  };
   "GET /v1/operator/feedback": {
     readonly query?: {
       readonly limit?: number;

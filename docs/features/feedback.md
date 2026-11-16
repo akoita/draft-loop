@@ -5,9 +5,9 @@ status: partial
 # Feedback
 
 A signed-in member sends a short note about DraftLoop to the operator: a bug,
-an idea or anything else. The operator reads every organisation's notes,
-newest first. Today only the API takes notes; the header menu entry (#2844) and
-the agent tool (#2843) come next.
+an idea or anything else, through the API or their agent's `send_feedback`
+tool. The operator reads every organisation's notes, newest first. The header
+menu entry comes with #2844.
 
 ## Where it runs
 
@@ -42,11 +42,13 @@ covers the routes. The Postgres store and its erasure are tested in
 | Surface | What it does |
 | --- | --- |
 | `POST /v1/feedback` | A member sends a note: text up to 2,000 characters, an optional category (`bug`, `idea`, `other`) and the screen it came from |
+| `POST /v1/workspaces/:workspaceId/feedback` | The same, for a member's agent token with the `journal` scope |
+| `send_feedback` (MCP) | An agent passes on the candidate's note; its screen is `agent` |
 | `GET /v1/operator/feedback` | The operator lists notes, newest first, 100 by default and at most 500 |
 
 ## Limits
 
-- No screen or agent tool yet (#2844, #2843); no operator screen yet.
+- No header menu entry yet (#2844) and no operator screen yet.
 - Notes are shown to the operator only and no model reads them, so they are
   not screened for hidden instructions.
 - Erasing an organisation removes its notes. Erasing one candidate record does

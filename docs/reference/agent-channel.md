@@ -248,6 +248,7 @@ returns a run's open draft, its findings or career evidence.
 | `start_cv_run`         | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                       |
 | `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |
 | `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
+| `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload
