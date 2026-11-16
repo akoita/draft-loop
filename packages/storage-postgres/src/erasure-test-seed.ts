@@ -32,6 +32,8 @@ export const tenantWideTables = new Set([
   "organisation_activity",
   // Deployment-wide and held before any organisation exists (#2566): no tenant to erase.
   "beta_waitlist",
+  // A member's feedback for the operator (#2828): it belongs to the organisation, not a record.
+  "feedback_notes",
 ]);
 
 /**
@@ -59,6 +61,11 @@ export async function seedTenant(admin: SqlClient, tenant: string): Promise<void
       [tenant, at],
     );
   }
+  await admin.query(
+    `INSERT INTO feedback_notes (tenant_id, id, member_id, category, screen, body, sent_at)
+     VALUES ($1, 'note-1', 'member-1', 'idea', 'review', 'A fictional note.', $2)`,
+    [tenant, at],
+  );
   await admin.query("INSERT INTO credit_balances (tenant_id) VALUES ($1)", [tenant]);
   await admin.query(
     `INSERT INTO credit_ledger (tenant_id, kind, amount, bucket, expires_at, period_start, created_at)

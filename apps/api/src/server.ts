@@ -84,6 +84,7 @@ const app = await buildApi({
     : {
         directory,
         memberSettings: directory.memberSettings,
+        feedback: directory.feedback,
         betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),

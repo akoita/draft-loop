@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { FeedbackStore } from "@draft-loop/storage/feedback";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import {
   type CreatedOrganisation,
@@ -18,6 +19,7 @@ import {
 } from "@draft-loop/storage/tenant-directory";
 import { type BetaInvites, createBetaInvites } from "./beta-invites.js";
 import { type BetaWaitlist, createBetaWaitlist } from "./beta-waitlist.js";
+import { createPostgresFeedback } from "./feedback-notes.js";
 import { createPostgresMemberSettings } from "./member-settings.js";
 import { createOrganisationActivity, type OrganisationActivity } from "./organisation-activity.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
@@ -30,6 +32,8 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   /** The public beta's invite codes (#2501). */
   readonly betaInvites: BetaInvites;
   readonly betaWaitlist: BetaWaitlist;
+  /** Members' feedback notes for the operator (#2828). */
+  readonly feedback: FeedbackStore;
   /** When each organisation was last active, for the beta's retention (#2538). */
   readonly organisationActivity: OrganisationActivity;
   readonly close: () => Promise<void>;
@@ -294,6 +298,7 @@ export async function createPostgresTenantDirectory(
     memberSettings: createPostgresMemberSettings(client),
     betaInvites: createBetaInvites(client),
     betaWaitlist: createBetaWaitlist(client),
+    feedback: createPostgresFeedback(client),
     organisationActivity: createOrganisationActivity(client),
     close: () => client.close(),
   };

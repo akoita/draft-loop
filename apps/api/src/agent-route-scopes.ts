@@ -117,6 +117,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/me/display-preference",
   "GET /v1/me/screen-language",
   "GET /v1/model-catalog",
+  "GET /v1/operator/feedback",
   "GET /v1/operator/organisations/:organisationId/credits",
   "GET /v1/organisation/credits",
   "GET /v1/organisation/members",
@@ -161,6 +162,8 @@ export const humanOnlyRoutes: readonly string[] = [
   "PATCH /v1/workspaces/:workspaceId/profiles/:profileId",
   "POST /v1/auth/proof",
   "POST /v1/client-errors",
+  // An agent sends feedback through its MCP tool once #2843 lands.
+  "POST /v1/feedback",
   "POST /v1/knowledge-bases",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules",
   "POST /v1/knowledge-bases/:knowledgeBaseId/sources",

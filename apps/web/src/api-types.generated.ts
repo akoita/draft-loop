@@ -452,6 +452,15 @@ export interface ApiSchemas {
     readonly sections: Record<string, never>;
     readonly facts: Record<string, never>;
   };
+  "FeedbackNote": {
+    readonly noteId: string;
+    readonly organisationId: string;
+    readonly memberId: string;
+    readonly category: "bug" | "idea" | "other" | null;
+    readonly screen: string;
+    readonly text: string;
+    readonly sentAt: string;
+  };
   "GrantedCredits": {
     readonly grant: {
       readonly sequence: number;
@@ -2827,6 +2836,22 @@ export interface ApiOperations {
         readonly state: "open" | "revoked" | "redeemed";
       };
       readonly code: string;
+    };
+  };
+  "POST /v1/feedback": {
+    readonly body: {
+      readonly text: string;
+      readonly category?: "bug" | "idea" | "other";
+      readonly screen: string;
+    };
+    readonly response: ApiSchemas["FeedbackNote"];
+  };
+  "GET /v1/operator/feedback": {
+    readonly query?: {
+      readonly limit?: number;
+    };
+    readonly response: {
+      readonly notes: readonly (ApiSchemas["FeedbackNote"])[];
     };
   };
   "GET /speech-models/manifest.json": {

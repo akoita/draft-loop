@@ -5116,6 +5116,53 @@
           "facts"
         ]
       },
+      "FeedbackNoteInput": {
+        "type": "object",
+        "properties": {
+          "noteId": {
+            "type": "string"
+          },
+          "organisationId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "bug",
+                  "idea",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screen": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "noteId",
+          "organisationId",
+          "memberId",
+          "category",
+          "screen",
+          "text",
+          "sentAt"
+        ]
+      },
       "InterviewGuideRequestInput": {
         "type": "object",
         "properties": {
@@ -12764,6 +12811,54 @@
         "required": [
           "sections",
           "facts"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackNote": {
+        "type": "object",
+        "properties": {
+          "noteId": {
+            "type": "string"
+          },
+          "organisationId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "bug",
+                  "idea",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screen": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "noteId",
+          "organisationId",
+          "memberId",
+          "category",
+          "screen",
+          "text",
+          "sentAt"
         ],
         "additionalProperties": false
       },
@@ -29041,6 +29136,155 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/feedback": {
+      "post": {
+        "summary": "Send feedback about DraftLoop to the operator",
+        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read. 400 invalid_input for an empty note or one over 2000 characters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "The note, 2000 characters at most once trimmed."
+                  },
+                  "category": {
+                    "description": "Bug, idea or other; leave it out when unsure.",
+                    "type": "string",
+                    "enum": [
+                      "bug",
+                      "idea",
+                      "other"
+                    ]
+                  },
+                  "screen": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[A-Za-z0-9._:/-]+$",
+                    "description": "Where the note was written: the screen's name, or `agent`."
+                  }
+                },
+                "required": [
+                  "text",
+                  "screen"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/feedback": {
+      "get": {
+        "summary": "List members' feedback notes, newest first",
+        "description": "Operator only. At most `limit` notes, 100 by default.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FeedbackNote"
+                      }
+                    }
+                  },
+                  "required": [
+                    "notes"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Default Response",
             "content": {
               "application/json": {
