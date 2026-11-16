@@ -37,8 +37,11 @@ export interface InterviewGuideClaimSources {
 function interviewDetailFacts(
   interview: InterviewGuideClaimSourcesInput["interview"],
 ): ApplicationMaterialCompanyFact[] {
+  const [day, time] = interview.scheduled_at?.split("T") ?? [];
   const shape = [
     `The interview is the ${interview.stage} stage`,
+    day === undefined ? "" : `, on ${day}`,
+    time === undefined ? "" : ` at ${time}`,
     interview.length_minutes === undefined ? "" : `, ${interview.length_minutes} minutes long`,
     interview.format === undefined ? "" : `, by ${interview.format}`,
     interview.interviewer_role === undefined ? "" : `, with the ${interview.interviewer_role}`,
@@ -90,21 +93,34 @@ export function interviewGuideClaimSources(
   };
 }
 
-const durationAfter = String.raw`\s*(?:-|–)?\s*(?:min(?:ute)?s?|mn|seconds?|secondes?|hours?|heures?|h)\b`;
+const countedNumber = String.raw`(?:\d+(?:[.,]\d+)?|two|three|four|five|six|seven|eight|nine|ten|deux|trois|quatre|cinq|sept|huit|neuf|dix)`;
+const numberJoin = String.raw`\s*(?:/|,|\+|-|–|to|or|and|à|ou|et)\s*`;
+const adviceUnit = String.raw`(?:min(?:ute)?s?|mn|sec(?:ond)?s?|secondes?|hours?|heures?|h|sentences?|phrases?|examples?|exemples?|points?|beats?|questions?|stor(?:y|ies)|histoires?|words?|mots?|steps?|étapes?|parts?|parties?)`;
+/** A run of counts and their unit, such as "3/6/5-minute", "about 90 seconds" or "two examples". */
+const adviceMeasure = new RegExp(
+  String.raw`(?<![\p{L}\d])${countedNumber}(?:${numberJoin}${countedNumber})*\s*(?:-|–)?\s*${adviceUnit}(?!\p{L})`,
+  "giu",
+);
 
-/** Whether every number a sentence states without a source is a duration, as advice gives. */
-function onlyDurations(sentence: CheckedCoverLetterSentence): boolean {
-  return (sentence.numbers ?? []).every((number) =>
-    new RegExp(`${number.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}${durationAfter}`, "iu").test(
-      sentence.text,
+/** Whether every number a sentence states without a source is a duration or a count of advice. */
+function onlyAdviceMeasures(sentence: CheckedCoverLetterSentence): boolean {
+  const measured = new Set(
+    [...sentence.text.matchAll(adviceMeasure)].flatMap((match) =>
+      [...match[0].matchAll(new RegExp(countedNumber, "giu"))].map((n) => n[0].toLowerCase()),
     ),
   );
+  return (sentence.numbers ?? []).every((number) => measured.has(number.toLowerCase()));
 }
+
+/** Whether every career fact a sentence cites is a gap the record admits. */
+const citesOnlyGaps = (sentence: CheckedCoverLetterSentence) =>
+  sentence.factIds.every((id) => id.startsWith("gap_"));
 
 /**
  * The problems that still count in a guide. A long courtesy sentence is advice, not a letter's
- * flourish; a courtesy sentence may name durations ("spend 10 minutes"); and a gap admitted beside
- * a fact does not mix two groups of the record.
+ * flourish. Advice and sentences about the interview may give durations and counts ("a 3/6/5
+ * minute plan", "two examples"); a candidate's own claims may not. A gap admitted beside a fact,
+ * or beside the job's requirement, mixes nothing from the record.
  */
 export function interviewGuideSentenceProblems(
   sentence: CheckedCoverLetterSentence,
@@ -114,8 +130,9 @@ export function interviewGuideSentenceProblems(
   return sentence.problems.filter((problem) => {
     if (problem === "long_courtesy") return false;
     if (problem === "unsupported_number") {
-      return !(sentence.kind === "courtesy" && onlyDurations(sentence));
+      return !(sentence.kind !== "candidate" && onlyAdviceMeasures(sentence));
     }
+    if (problem === "career_fact_for_employer") return !citesOnlyGaps(sentence);
     if (problem === "cross_group") {
       const groups = new Set(
         sentence.factIds.filter((id) => !id.startsWith("gap_")).map((id) => groupOf.get(id)),

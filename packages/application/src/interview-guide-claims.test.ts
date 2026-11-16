@@ -15,6 +15,7 @@ const sources = interviewGuideClaimSources({
     format: "video",
     topics: ["motivation"],
     notes: "Recruiter screen first.",
+    scheduled_at: "2026-11-20T10:00",
   } as never,
   facts: [
     { id: "f1", text: "Led a team of four", group: "acme" },
@@ -58,7 +59,7 @@ describe("interview guide claim sources (#2807)", () => {
       "unsourced_0",
     ]);
     expect(sources.companyFacts[1]?.text).toBe(
-      "The interview is the screen stage, 30 minutes long, by video.",
+      "The interview is the screen stage, on 2026-11-20 at 10:00, 30 minutes long, by video.",
     );
     expect(sources.requirements).toEqual([{ id: "req_0", text: "Improve deployment workflows" }]);
   });
@@ -100,5 +101,46 @@ describe("interview guide claim sources (#2807)", () => {
         factIds: ["f1", "gap_1"],
       }),
     ).toEqual([]);
+  });
+
+  it("keeps the interview's date and time (walk #5)", () => {
+    expect(
+      check("It is a video screen on 2026-11-20 at 10:00, lasting 30 minutes.", {
+        kind: "employer",
+        companyFactIds: ["interview_shape"],
+      }),
+    ).toEqual([]);
+  });
+
+  it("keeps a time plan and counts of advice beside the interview, never in a claim", () => {
+    const plan = "Split the 30 minutes as 3/6/5/6/5/5-minute blocks.";
+    expect(check(plan, { kind: "employer", companyFactIds: ["interview_shape"] })).toEqual([]);
+    expect(check("Rehearse it to about 90 seconds.", { kind: "courtesy" })).toEqual([]);
+    expect(check("Answer in three sentences, with two examples.", { kind: "courtesy" })).toEqual(
+      [],
+    );
+    expect(
+      check("You shipped 12 releases in three hours.", { kind: "candidate", factIds: ["f1"] }),
+    ).toContain("unsupported_number");
+    expect(check("Revenue grew 3/6 points in 40% of teams.", { kind: "courtesy" })).toContain(
+      "unsupported_number",
+    );
+  });
+
+  it("keeps a gap admitted beside the job's requirement", () => {
+    expect(
+      check("Kafka is listed, and it is the clearest item you have not shown.", {
+        kind: "employer",
+        factIds: ["gap_1"],
+        requirementIds: ["req_0"],
+      }),
+    ).toEqual([]);
+    expect(
+      check("They value the team of four you led.", {
+        kind: "employer",
+        factIds: ["f1"],
+        requirementIds: ["req_0"],
+      }),
+    ).toContain("career_fact_for_employer");
   });
 });
