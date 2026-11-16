@@ -80,7 +80,8 @@ describe("the consent that holds Start", () => {
     const done = renderToStaticMarkup(
       <ConsentView kind="provider-transmission" state={stateOf(granted)} compact />,
     );
-    expect(done).toContain("Permission to send material to model providers</strong> ·");
+    expect(done).toContain("Permission to send material to model providers</strong>");
+    expect(done).toContain('class="button button-outline"');
     expect(done).toContain("Granted on");
     expect(done).not.toContain("<form");
   });

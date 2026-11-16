@@ -192,46 +192,53 @@ export function ConsentPanel(props: ConsentPanelProps) {
   if (compact === true && granted && missing.length === 0)
     return (
       <section className="consent consent-compact" aria-labelledby={headingId}>
-        <p>
-          <strong id={headingId}>{compactTitles()[kind]}</strong> ·{" "}
-          <span className="muted">{consentSummary(consents, kind, locale)}</span>{" "}
+        <div className="consent-compact-row">
+          <span className="consent-granted-mark" aria-hidden="true" />
+          <p className="consent-compact-text">
+            <strong id={headingId}>{compactTitles()[kind]}</strong>{" "}
+            <span className="consent-summary">{consentSummary(consents, kind, locale)}</span>
+          </p>
           <button
             type="button"
-            className="secondary"
+            className="button button-outline"
             disabled={busy}
             onClick={props.onWithdraw}
           >{t`Withdraw consent`}</button>
-        </p>
+        </div>
         <Alerts messages={props.messages} />
       </section>
     );
 
   return (
     <section className="consent" aria-labelledby={headingId}>
-      <h3 id={headingId}>{compact === true ? compactTitles()[kind] : titles()[kind]}</h3>
-      <p>
+      <h3 id={headingId} className="consent-title">
+        {compact === true ? compactTitles()[kind] : titles()[kind]}
+      </h3>
+      <p className="consent-copy">
         {kind === "material-storage"
           ? t`DraftLoop stores the CVs, notes and records you upload for this candidate, in the EU.`
           : t`Runs send the approved parts of the candidate's material to ${providerList(providers)} to draft and review the CV. The providers do not keep it.`}
       </p>
-      <p className={granted ? "muted" : "notice"}>
+      <p className={granted ? "consent-status muted" : "consent-status notice"}>
         {consentSummary(consents, kind, locale)}
         {granted ? null : ` ${firstSteps()[kind]}`}
       </p>
       {missing.length === 0 ? null : (
-        <p className="notice">
+        <p className="consent-status notice">
           {t`The consent does not name`} {providerList(missing)}
           {t`. Withdraw it and record it again for`} {providerList(providers)}.
         </p>
       )}
       <Alerts messages={props.messages} />
       {granted ? (
-        <button
-          type="button"
-          className="secondary"
-          disabled={busy}
-          onClick={props.onWithdraw}
-        >{t`Withdraw consent`}</button>
+        <div className="consent-actions">
+          <button
+            type="button"
+            className="button button-outline"
+            disabled={busy}
+            onClick={props.onWithdraw}
+          >{t`Withdraw consent`}</button>
+        </div>
       ) : (
         <GrantForm kind={kind} providers={providers} busy={busy} onGrant={props.onGrant} />
       )}
@@ -274,42 +281,53 @@ function GrantForm({ kind, providers, busy, onGrant }: GrantFormProps) {
   }
 
   return (
-    <form onSubmit={submit}>
+    <form className="consent-form" onSubmit={submit}>
       {kind === "material-storage" ? (
-        <fieldset>
-          <legend>{t`Basis for storing the material`}</legend>
-          {bases.map((item) => (
-            <label key={item} className="check">
-              <input
-                type="radio"
-                name={`consent-${kind}-basis`}
-                value={item}
-                checked={basis === item}
-                onChange={() => setBasis(item)}
-              />
-              {basisLabel(item)}
-            </label>
-          ))}
+        <fieldset className="consent-bases">
+          <legend className="consent-label">{t`Basis for storing the material`}</legend>
+          <div className="consent-choices">
+            {bases.map((item) => (
+              <label key={item} className="consent-choice">
+                <input
+                  type="radio"
+                  name={`consent-${kind}-basis`}
+                  value={item}
+                  checked={basis === item}
+                  onChange={() => setBasis(item)}
+                />
+                <span>{basisLabel(item)}</span>
+              </label>
+            ))}
+          </div>
         </fieldset>
       ) : (
-        <label className="check">
+        <label className="consent-choice consent-confirm">
           <input
             type="checkbox"
             checked={confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
           />
-          {t`The candidate agreed that runs send their material to`} {providerList(providers)}
+          <span>
+            {t`The candidate agreed that runs send their material to`} {providerList(providers)}
+          </span>
         </label>
       )}
-      <label htmlFor={noteId}>{t`Note (optional)`}</label>
-      <input
-        id={noteId}
-        maxLength={maximumConsentNoteLength}
-        placeholder={t`Where the agreement is kept`}
-        value={note}
-        onChange={(event) => setNote(event.target.value)}
-      />
-      <button type="submit" disabled={busy}>{t`Record consent`}</button>
+      <div className="consent-note">
+        <label className="consent-label" htmlFor={noteId}>{t`Note (optional)`}</label>
+        <input
+          id={noteId}
+          type="text"
+          maxLength={maximumConsentNoteLength}
+          placeholder={t`Where the agreement is kept`}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </div>
+      <div className="consent-actions">
+        <button type="submit" className="button button-primary" disabled={busy}>
+          {t`Record consent`}
+        </button>
+      </div>
     </form>
   );
 }
