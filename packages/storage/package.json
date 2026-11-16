@@ -59,6 +59,10 @@
       "types": "./src/tenant-directory.ts",
       "import": "./src/tenant-directory.ts"
     },
+    "./feedback": {
+      "types": "./src/feedback.ts",
+      "import": "./src/feedback.ts"
+    },
     "./member-settings": {
       "types": "./src/member-settings.ts",
       "import": "./src/member-settings.ts"

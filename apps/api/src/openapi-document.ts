@@ -7,6 +7,7 @@ import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connecti
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-records";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { FeedbackStore } from "@draft-loop/storage/feedback";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { RecordArchives } from "@draft-loop/storage/record-archive";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
@@ -61,6 +62,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     memberSettings: {} as MemberSettingsStore,
     betaInvites: { invites: {} as BetaInvites, cap: 0 },
     betaWaitlist: {} as BetaWaitlist,
+    feedback: {} as FeedbackStore,
     paymentEvents: {} as PaymentEventsPort,
   });
   try {

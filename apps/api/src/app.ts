@@ -70,6 +70,7 @@ import { sendError, sendNotFound } from "./errors.js";
 import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
+import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
@@ -228,6 +229,8 @@ export interface ApiOptions {
    * With it, the auth config tells the signed-out screen to show the landing page (#2567).
    */
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
+  /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
+  readonly feedback?: FeedbackRoutesOptions["feedback"];
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
@@ -911,6 +914,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (options.betaWaitlist !== undefined) {
     registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
+  if (options.feedback !== undefined) registerFeedbackRoutes(app, { feedback: options.feedback });
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 
