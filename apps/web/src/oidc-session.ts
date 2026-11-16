@@ -58,6 +58,11 @@ export interface OidcSessionOptions {
 export interface OidcSession {
   /** Whether tokens are stored, so the screen can open without signing in again. */
   isSignedIn(): boolean;
+  /**
+   * Asks the provider for its endpoints in the background, so a provider that sleeps when idle
+   * starts waking before the person presses Sign in. A failure is ignored and retried by `begin`.
+   */
+  prepare(): void;
   /** Starts an attempt and returns the provider's sign-in page to go to. */
   begin(): Promise<string>;
   /**
@@ -171,6 +176,10 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
 
   const session: OidcSession = {
     isSignedIn: () => storedTokens() !== undefined,
+
+    prepare() {
+      providerEndpoints().catch(() => {});
+    },
 
     async begin() {
       let found: ProviderEndpoints;
