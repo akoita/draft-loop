@@ -9,6 +9,16 @@ import { t } from "@lingui/core/macro";
 
 import { type ApiClient, type ApiInput, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { refuse } from "./bridge-refusal.js";
+import { isConsentProvider } from "./consent-model.js";
+import { addTransmissionProviders } from "./transmission-grant.js";
+
+function isTransmissionRefusal(error: unknown): boolean {
+  return (
+    error instanceof ApiRequestError &&
+    error.status === 409 &&
+    error.code === "transmission_consent_required"
+  );
+}
 
 /** The career profile commands the hosted service serves, in the port's order. */
 export const hostedProfileCapabilities = [
@@ -84,13 +94,36 @@ export function createProfileAnswers(client: ApiClient, options: ProfileAnswerOp
     switch (command.type) {
       case "profile.derive": {
         const { workspaceId, profileId } = command.input;
-        await client.call("POST /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation", {
-          ...profilePath(workspaceId, profileId),
-          body: {
-            providerDataApproved: command.input.providerTransmissionApproved === true,
-            ...(command.input.fullExtraction === true ? { fullExtraction: true } : {}),
-          },
-        });
+        const approved = command.input.providerTransmissionApproved === true;
+        const queue = () =>
+          client.call("POST /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation", {
+            ...profilePath(workspaceId, profileId),
+            body: {
+              providerDataApproved: approved,
+              ...(command.input.fullExtraction === true ? { fullExtraction: true } : {}),
+            },
+          });
+        try {
+          await queue();
+        } catch (error) {
+          // In sign-in mode the record's grant must name the author's company (#2811). The
+          // person just ticked the box that says the evidence goes there, so that tick is
+          // recorded as the grant, keeping every provider it already named, and the call is
+          // made once more. Without the tick, or for any other refusal, the error stands.
+          if (!approved || !isTransmissionRefusal(error)) throw error;
+          const workspace = await client.call("GET /v1/workspaces/{workspaceId}", {
+            path: { workspaceId },
+          });
+          const company = workspace.author.company;
+          if (!isConsentProvider(company)) throw error;
+          await addTransmissionProviders(
+            client,
+            workspaceId,
+            [company],
+            t`Career profile: send career evidence to build the profile`,
+          );
+          await queue();
+        }
         for (;;) {
           const state = await derivation(workspaceId, profileId);
           if (state?.status === "derived") {

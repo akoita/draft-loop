@@ -32,9 +32,11 @@ organisation; it erases everything with `draft-loop-server`
    On the web, **New record** asks for the name only: the screen makes the id
    from it and saves the name once the record is set up.
 3. Record the candidate's two consents under **Credits and consent**: to store
-   their material, and to send it to model providers. Uploads need the first;
-   runs and profile derivation need the second. A withdrawal is recorded too,
-   and the history is kept.
+   their material, and to send it to model providers. Uploads need the first.
+   Runs need the second, naming both the writer's and the reviewer's
+   companies. A profile derivation calls only the writer's model, so it needs
+   the writer's company; on the web, the profile's send approval records it.
+   A withdrawal is recorded too, and the history is kept.
 4. Owners download a record's [archive](../reference/record-archive.md), erase
    one record, or delete the whole organisation.
 

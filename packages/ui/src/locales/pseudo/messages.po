@@ -1884,6 +1884,10 @@ msgstr ""
 msgid "Career profile version"
 msgstr ""
 
+#: apps/web/src/profile-bridge.ts
+msgid "Career profile: send career evidence to build the profile"
+msgstr ""
+
 #: apps/web/src/interview-guide-model.ts
 msgid "Case study"
 msgstr ""
