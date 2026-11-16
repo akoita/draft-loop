@@ -84,7 +84,13 @@ export function createResearchHandler(options: ResearchHandlerOptions): Research
     const ports = options.portsFor(job);
     if (ports === undefined) return refused("unavailable");
     let brief: Awaited<ReturnType<typeof runResearch>>;
-    const subject = { employer, role: opportunity?.brief.role?.value ?? "" };
+    // The job's location scopes the role and salary searches to where the job is (#2805).
+    const location = opportunity?.brief.location?.value?.trim();
+    const subject = {
+      employer,
+      role: opportunity?.brief.role?.value ?? "",
+      ...(location ? { country: location } : {}),
+    };
     const now = options.now ?? (() => new Date());
     const plan =
       job.guide === undefined

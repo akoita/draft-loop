@@ -164,6 +164,7 @@ export async function extractApplicationBrief(
         patch: {
           role: extracted.role,
           employer: extracted.employer,
+          location: extracted.location,
           responsibilities: [...extracted.responsibilities],
           requirements: [...extracted.requirements],
           priorities: [...extracted.priorities],

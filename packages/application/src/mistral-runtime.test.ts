@@ -319,6 +319,7 @@ describe("Mistral application route", () => {
       schemaVersion: 1,
       role: null,
       employer: null,
+      location: null,
       responsibilities: [],
       requirements: [],
       priorities: [],

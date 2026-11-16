@@ -107,6 +107,7 @@ import { z } from "zod";
 import type { OpportunityBriefSourcedText } from "./opportunity-brief-entries.js";
 import {
   opportunityBriefCandidateInstructionsSchema,
+  opportunityBriefCollectionSchema,
   opportunityBriefIssueSchema,
   opportunityBriefPrioritySchema,
   opportunityBriefRequirementSchema,
@@ -267,9 +268,6 @@ export const opportunityBriefSourceSchema = z
   });
 export type OpportunityBriefSource = z.infer<typeof opportunityBriefSourceSchema>;
 
-const opportunityBriefCollectionSchema = <T extends z.ZodType>(schema: T) =>
-  z.array(schema).max(opportunityBriefMaximumCollectionEntries);
-
 function addOpportunityBriefDuplicateIdIssues(
   values: readonly { readonly id: string }[],
   field: string,
@@ -322,6 +320,7 @@ export const opportunityBriefSchema = z
     sources: z.array(opportunityBriefSourceSchema).min(1).max(opportunityBriefMaximumSourceCount),
     role: opportunityBriefSourcedTextSchema.nullable(),
     employer: opportunityBriefSourcedTextSchema.nullable(),
+    location: opportunityBriefSourcedTextSchema.nullable().optional(),
     responsibilities: opportunityBriefCollectionSchema(opportunityBriefResponsibilitySchema),
     requirements: opportunityBriefCollectionSchema(opportunityBriefRequirementSchema),
     priorities: opportunityBriefCollectionSchema(opportunityBriefPrioritySchema),

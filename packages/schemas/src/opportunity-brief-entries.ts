@@ -75,3 +75,7 @@ export const opportunityBriefIssueSchema = z.strictObject({
   sourceIds: opportunityBriefSourceIdsSchema,
 });
 export type OpportunityBriefIssue = z.infer<typeof opportunityBriefIssueSchema>;
+
+/** A brief collection, bounded like every other. */
+export const opportunityBriefCollectionSchema = <T extends z.ZodType>(schema: T) =>
+  z.array(schema).max(opportunityBriefMaximumCollectionEntries);

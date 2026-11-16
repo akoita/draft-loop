@@ -112,6 +112,7 @@ function fixtureOpportunityProposal(
     schemaVersion: opportunityExtractionSchemaVersion,
     role,
     employer: null,
+    location: null,
     responsibilities: [],
     requirements,
     priorities: [],

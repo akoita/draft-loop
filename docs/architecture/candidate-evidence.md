@@ -50,7 +50,7 @@ instructions. Every field cites its source.
 
 | Source kind                                       | May support                                                  |
 | ------------------------------------------------- | ------------------------------------------------------------ |
-| Job posting, social announcement, company context | Opportunity facts (role, employer, requirements, priorities) |
+| Job posting, social announcement, company context | Opportunity facts (role, employer, location, requirements, priorities) |
 | Candidate instructions                            | Only the instruction fields, never opportunity facts         |
 
 Opportunity requirements are employer context, never candidate facts. Each
