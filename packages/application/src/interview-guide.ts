@@ -10,7 +10,6 @@
 import type { InterviewDetails } from "@draft-loop/schemas/interview-details";
 import type { ResearchBrief } from "@draft-loop/schemas/research-brief";
 import type { InterviewGuideSection } from "@draft-loop/schemas/saved-application-material";
-
 import {
   ApplicationMaterialError,
   type ApplicationMaterialFact,
@@ -34,6 +33,7 @@ import {
   touchesNeverSay,
 } from "./interview-guide-matrix.js";
 import { interviewGuideMissingTopics } from "./interview-guide-research.js";
+import { sentencesOf } from "./sentence-split.js";
 
 /** The sections an essential guide's model call writes, in reading order. */
 export const essentialInterviewGuideSections = [
@@ -195,14 +195,6 @@ export function interviewGuideWriterRequest(
     questionCount,
     ...(input.language === undefined ? {} : { language: input.language }),
   };
-}
-
-const sentencePattern = /[^.!?…]+(?:[.!?…]+["'”’)]*|$)/gu;
-
-function sentencesOf(text: string): string[] {
-  return (text.replace(/\s+/gu, " ").trim().match(sentencePattern) ?? [])
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
 }
 
 /** The guide's sentences: each item's text as paragraph `2i`, its trap as paragraph `2i + 1`. */
