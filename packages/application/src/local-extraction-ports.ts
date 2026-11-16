@@ -28,6 +28,7 @@ import {
   type ProviderCredentialResolver,
   type ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
+import { meterAdapter } from "./model-call-meter.js";
 import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
@@ -81,15 +82,19 @@ export function createProviderOpportunityExtractionPort(
   };
   return Object.freeze({
     extract: async (request: OpportunityExtractionRequest) => {
-      const adapter = await createProviderAdapter(
-        config,
-        model,
-        options.allowProviderData === true,
-        options.resolveCredential ?? environmentCredentialResolver,
-        options.providerClientFactories,
-        providerAuthModeConfiguration,
-        options.userSessionRunners,
-        options.userSessionTimeoutMs,
+      const adapter = meterAdapter(
+        await createProviderAdapter(
+          config,
+          model,
+          options.allowProviderData === true,
+          options.resolveCredential ?? environmentCredentialResolver,
+          options.providerClientFactories,
+          providerAuthModeConfiguration,
+          options.userSessionRunners,
+          options.userSessionTimeoutMs,
+        ),
+        { purpose: "opportunity-extraction", company: model.company, model: model.modelId },
+        options.providerClientFactories?.meter,
       );
       const response = await adapter.execute({
         contextSnapshotId: request.operationId,
@@ -122,15 +127,19 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({
     extract: async (request: CanonicalCandidateProfileExtractionRequest) => {
-      const adapter = await createProviderAdapter(
-        config,
-        model,
-        options.allowProviderData === true,
-        options.resolveCredential ?? environmentCredentialResolver,
-        options.providerClientFactories,
-        providerAuthModeConfiguration,
-        options.userSessionRunners,
-        options.userSessionTimeoutMs,
+      const adapter = meterAdapter(
+        await createProviderAdapter(
+          config,
+          model,
+          options.allowProviderData === true,
+          options.resolveCredential ?? environmentCredentialResolver,
+          options.providerClientFactories,
+          providerAuthModeConfiguration,
+          options.userSessionRunners,
+          options.userSessionTimeoutMs,
+        ),
+        { purpose: "profile-derivation", company: model.company, model: model.modelId },
+        options.providerClientFactories?.meter,
       );
       return executeCanonicalProfileExtractionWithFallback(adapter, request, {
         model,
