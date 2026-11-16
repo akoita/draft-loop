@@ -11377,8 +11377,20 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   gap: var(--space-2);
 }
 
+.display-setting h3,
 .display-setting .subtle {
   margin: 0;
+}
+
+.display-setting-options {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.display-choice-option-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .display-choice {
@@ -11415,6 +11427,15 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .display-choice-option span {
   color: var(--text-2);
   font-size: var(--text-sm);
+}
+
+.display-choice-option .display-choice-option-title {
+  color: var(--text-1);
+  font-size: inherit;
+}
+
+.display-choice-option .meta-chip {
+  font-size: var(--text-micro);
 }
 
 .display-choice-option:hover,
