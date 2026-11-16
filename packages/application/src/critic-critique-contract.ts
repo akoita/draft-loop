@@ -175,13 +175,46 @@ export function withResolvableFindingTargets<T extends Critique>(
   };
 }
 
-export function invalidCritiqueError(response: ModelResponse<JsonObject>): ProviderAdapterError {
+/**
+ * Why a critique was refused, as content-free codes (#2796): `findings_not_array` when the list is
+ * missing, `no_valid_finding` when every finding is malformed, `unexpected_shape` for any other
+ * failure. The counts say which required field the dropped findings lacked, never their text.
+ */
+export class CritiqueRejection extends CliUserError {
+  readonly diagnostic: "findings_not_array" | "no_valid_finding";
+  readonly fieldCounts: readonly { readonly code: string; readonly count: number }[];
+  constructor(
+    message: string,
+    diagnostic: CritiqueRejection["diagnostic"],
+    fieldCounts: CritiqueRejection["fieldCounts"] = [],
+  ) {
+    super(message);
+    this.name = "CritiqueRejection";
+    this.diagnostic = diagnostic;
+    this.fieldCounts = fieldCounts;
+  }
+}
+
+export function invalidCritiqueError(
+  response: ModelResponse<JsonObject>,
+  cause?: unknown,
+): ProviderAdapterError {
+  const rejection = cause instanceof CritiqueRejection ? cause : undefined;
   return new ProviderAdapterError(
     response.provider,
     "invalid-response",
     "The critic returned invalid structured findings.",
     {
       retryable: true,
+      failureStage: "response-schema-validation",
+      diagnostics: [
+        { code: rejection?.diagnostic ?? "unexpected_shape", path: "draft_critique.findings" },
+      ],
+      ...(rejection === undefined || rejection.fieldCounts.length === 0
+        ? {}
+        : { diagnosticCounts: rejection.fieldCounts }),
+      // The call reached the provider: the failure names the route it went to (#2796).
+      route: response.route,
       ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
       // The provider billed the response even though it is rejected here (#1967).
       billed: { usage: response.usage, cost: response.cost },
@@ -232,22 +265,46 @@ function targetField<Key extends (typeof findingTargetFields)[number]>(
 export function parseCritique(value: JsonObject, instructionsVersion?: string): CriticCritique {
   const findings = value.findings;
   if (!Array.isArray(findings))
-    throw new CliUserError("The critic returned an invalid findings list.");
+    throw new CritiqueRejection(
+      "The critic returned an invalid findings list.",
+      "findings_not_array",
+    );
   const coverageJudgements = parseCoverageJudgements(value.coverageJudgements);
   // One malformed finding is dropped and a long message is cut (#2234); a critique whose every
-  // finding is malformed is refused, so a broken answer never reads as a clean draft.
-  const parsed = findings.flatMap((finding) => {
-    if (!isRecord(finding)) return [];
-    if (
-      requiredFindingFields.some(
-        (key) => typeof finding[key] !== "string" || (finding[key] as string).trim() === "",
-      )
-    ) {
+  // finding is malformed is refused, so a broken answer never reads as a clean draft. A finding
+  // with a usable body but a blank or repeated id gets a stable one instead (#2796): the id only
+  // links the finding to later decisions, so losing the whole review over it costs a paid call.
+  const missingFields = new Map<string, number>();
+  const usedIds = new Set<string>(
+    findings.flatMap((finding) =>
+      isRecord(finding) && typeof finding.id === "string" && finding.id.trim() !== ""
+        ? [finding.id.trim()]
+        : [],
+    ),
+  );
+  const assignedIds = new Set<string>();
+  const parsed = findings.flatMap((finding, index) => {
+    if (!isRecord(finding)) {
+      missingFields.set("finding_not_object", (missingFields.get("finding_not_object") ?? 0) + 1);
       return [];
     }
+    const missing = requiredBodyFields.find(
+      (key) => typeof finding[key] !== "string" || (finding[key] as string).trim() === "",
+    );
+    if (missing !== undefined) {
+      const code = `missing_${missing}`;
+      missingFields.set(code, (missingFields.get(code) ?? 0) + 1);
+      return [];
+    }
+    const given = typeof finding.id === "string" ? finding.id.trim() : "";
+    const id =
+      given !== "" && !assignedIds.has(given)
+        ? given
+        : unusedFindingId(index, usedIds, assignedIds);
+    assignedIds.add(id);
     return [
       normalizeEmphasisSeverity({
-        id: finding.id as string,
+        id,
         code: finding.code as string,
         category: finding.category as Critique["findings"][number]["category"],
         severity: finding.severity as Critique["findings"][number]["severity"],
@@ -262,7 +319,11 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
     ];
   });
   if (findings.length > 0 && parsed.length === 0) {
-    throw new CliUserError("The critic returned no valid finding.");
+    throw new CritiqueRejection(
+      "The critic returned no valid finding.",
+      "no_valid_finding",
+      [...missingFields].map(([code, count]) => ({ code, count })),
+    );
   }
   return {
     findings: capBlockingOmissions(keepWithinFindingLimit(parsed, maximumCritiqueFindings)),
@@ -273,7 +334,20 @@ export function parseCritique(value: JsonObject, instructionsVersion?: string): 
   };
 }
 
-const requiredFindingFields = ["id", "code", "category", "severity", "message"] as const;
+/** `critic-finding-<n>` for the finding's position, skipping any id the critique already uses. */
+function unusedFindingId(
+  index: number,
+  used: ReadonlySet<string>,
+  assigned: ReadonlySet<string>,
+): string {
+  for (let suffix = 0; ; suffix += 1) {
+    const id = `critic-finding-${index + 1}${suffix === 0 ? "" : `-${suffix}`}`;
+    if (!used.has(id) && !assigned.has(id)) return id;
+  }
+}
+
+/** The fields a finding cannot do without; a blank id is replaced instead (#2796). */
+const requiredBodyFields = ["code", "category", "severity", "message"] as const;
 
 /** What coverage-judgement requests add to a critic call; none leaves every part untouched. */
 export interface CriticCoverageJudgementParts {
