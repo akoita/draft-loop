@@ -324,7 +324,10 @@ export function startConfirmationSummary(
   }
   const settings: StartConfirmationLine[] = [];
   if (state.setup.autopilot !== undefined) {
-    settings.push({ label: t`Autopilot`, value: state.setup.autopilot ? t`On` : t`Off` });
+    settings.push({
+      label: t`Autopilot`,
+      value: state.setup.autopilot ? t`On` : t`Off: pauses after a round with a blocking finding`,
+    });
   }
   settings.push({
     label: t`Round limit`,

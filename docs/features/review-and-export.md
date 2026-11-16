@@ -34,7 +34,7 @@ source-only CLI has its own review and export commands
 | ---------- | ------------------------------------------------------------------------------------------------------------------- |
 | Model pair | Author and critic model versions from two different companies, per workspace or per application                     |
 | Run budget | Round, cost and duration limits for new runs, under the deployment's ceiling; an estimate shows before a run starts |
-| Autopilot  | Keeps revising through blocking findings up to the round limit, pausing early only when needed                      |
+| Autopilot  | On: keeps revising through blocking findings up to the round limit, pausing early only when needed. Off: pauses after a round with a blocking finding. Either way, a round with only warnings revises on its own until the draft is ready or the round limit is reached |
 
 ### When a model call fails
 

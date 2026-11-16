@@ -303,6 +303,8 @@ export function registerReviewStateRoutes(
         selectedEvidenceSourceCount: 0,
       },
       reviewedOpportunity: reviewedOpportunity ?? undefined,
+      // A hosted run starts only from a reviewed brief, never from the raw job text.
+      reviewedBriefRequired: true,
       pendingWritingPolicyOverride: undefined,
       missingJobStep:
         source?.kind === "approved-url"

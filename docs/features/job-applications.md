@@ -24,7 +24,9 @@ web servers.
    dated, so the job stays readable after the page expires.
    The review's **Job** tab shows it with the page's address.
 3. Check the brief, edit it, and mark the version reviewed. A run pins one
-   reviewed version.
+   reviewed version. On the hosted service a run starts only from a reviewed
+   brief, so the start checklist keeps the requirements step open until one
+   exists.
    Before a start, **Advanced options** in the review step holds the two
    rarely needed choices: starting from the raw job description while the
    brief is still a draft, and a writing policy override for this job only.

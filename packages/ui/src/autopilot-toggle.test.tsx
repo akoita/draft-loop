@@ -19,7 +19,8 @@ describe("autopilot toggle", () => {
     );
 
     expect(html).toContain("Autopilot: run all 2 rounds without stopping");
-    expect(html).toContain("a claim is disputed");
+    // Off still revises a round with only warnings, and says so (#2812).
+    expect(html).toContain("A round with only warnings revises on its own");
     expect(autopilotInput(html)).not.toBe("");
     expect(autopilotInput(html)).not.toContain('checked=""');
   });
@@ -30,6 +31,7 @@ describe("autopilot toggle", () => {
     );
 
     expect(autopilotInput(html)).toContain('checked=""');
+    expect(html).toContain("a claim is disputed");
   });
 
   it("hides the setting when the host does not report it", () => {

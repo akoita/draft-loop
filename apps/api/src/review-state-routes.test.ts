@@ -325,6 +325,34 @@ describe("review state", () => {
     });
   });
 
+  it("asks for reviewed requirements before a job with no reviewed brief can start (#2813)", async () => {
+    for (const briefs of [
+      [],
+      [{ briefId: "brief-1", latestVersion: 1, status: "draft", createdAt: at }],
+    ]) {
+      const unreviewed = { ...application, briefs } as unknown as ApplicationView;
+      await build({ getApplication: async () => unreviewed });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `${url}?applicationId=app-ledger`,
+        headers: { authorization },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const step = "Extract and review this application's requirements before starting.";
+      expect(response.json().setup).toMatchObject({
+        jobDescriptionReady: true,
+        reviewedOpportunity: null,
+        jobRequirementProblem: step,
+        ready: false,
+        nextSteps: [step],
+      });
+      await app.close();
+    }
+    await build({});
+  });
+
   it("shows an application's newest run with the person's decisions and edits", async () => {
     const withRun = {
       ...application,

@@ -5918,11 +5918,14 @@ msgid "of {0} and {1}"
 msgstr "sur {0} et {1}"
 
 #: packages/ui/src/start-advanced-options.tsx
-#: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/workspace-setup.tsx
 msgid "Off"
 msgstr "Désactivé"
+
+#: packages/ui/src/start-confirmation.tsx
+msgid "Off: pauses after a round with a blocking finding"
+msgstr "Désactivé : pause après un tour avec un constat bloquant"
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Omission"
@@ -9388,6 +9391,10 @@ msgstr "La relecture est toujours en cours, rien ne vous attend ici pour l’ins
 #: apps/web/src/review-actions.ts
 msgid "The review is still running, so this change was not saved. Make it once the round finishes."
 msgstr "La relecture est toujours en cours : cette modification n’a pas été enregistrée. Refaites-la une fois le tour terminé."
+
+#: packages/ui/src/autopilot-toggle.tsx
+msgid "The review pauses for your decisions after a round with a blocking finding. A round with only warnings revises on its own until the draft is ready or the round limit is reached."
+msgstr "La revue attend vos décisions après un tour avec un constat bloquant. Un tour qui n’a que des avertissements est révisé automatiquement jusqu’à ce que le brouillon soit prêt ou que la limite de tours soit atteinte."
 
 #: packages/ui/src/review-run-status.ts
 msgid "The review pauses here when it needs your decision."

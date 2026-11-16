@@ -31,10 +31,19 @@ export interface WorkspaceReadinessFacts {
     readonly selectedEvidenceSourceCount: number;
   };
   readonly reviewedOpportunity: OpportunityBriefSelection | undefined;
+  /**
+   * Whether a run starts only from a reviewed brief, as on the hosted service, so a job
+   * description alone does not make the requirements ready (#2813).
+   */
+  readonly reviewedBriefRequired?: boolean;
   readonly pendingWritingPolicyOverride: PendingWritingPolicyOverride | undefined;
   /** The step to show while the job is missing, in the host's words for its kind of job. */
   readonly missingJobStep: string;
 }
+
+/** The step a host that needs a reviewed brief shows while the application has none. */
+export const reviewedBriefRequiredStep =
+  "Extract and review this application's requirements before starting.";
 
 /**
  * Whether a workspace can start a run, and the next steps when it cannot. Both hosts decide it here
@@ -53,6 +62,11 @@ export function workspaceReadinessFrom(facts: WorkspaceReadinessFacts): Workspac
       if (!(error instanceof JobRequirementUserError)) throw error;
       rawJobRequirementProblem = error.summary;
     }
+  }
+  // Without a reviewed brief, a host that never splits the raw text refuses the start; say so
+  // here, where the checklist offers the extraction, instead of after Start is clicked.
+  if (jobDescriptionReady && facts.reviewedBriefRequired === true) {
+    rawJobRequirementProblem = reviewedBriefRequiredStep;
   }
   // A reviewed brief supplies the requirements, so the raw refusal only blocks without one.
   const jobRequirementProblem =
