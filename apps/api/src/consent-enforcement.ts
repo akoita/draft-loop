@@ -31,6 +31,14 @@ const transmissionRoutes: ReadonlySet<string> = new Set([
   "POST /v1/workspaces/:workspaceId/runs",
   "POST /v1/workspaces/:workspaceId/runs/:runId/revision",
   "POST /v1/workspaces/:workspaceId/runs/:runId/resume",
+]);
+
+/**
+ * The routes that send material to the workspace's author company only. A profile derivation
+ * calls the author's model, never the critic's, so its consent need not name the critic's
+ * company (#2811): a new record on a pair from two companies could otherwise not get a profile.
+ */
+const authorTransmissionRoutes: ReadonlySet<string> = new Set([
   "POST /v1/workspaces/:workspaceId/profiles/:profileId/derivation",
 ]);
 
@@ -47,9 +55,10 @@ function routeKey(method: string, url: string): string {
  * Refuses, in sign-in mode, to store a candidate's material or to queue a provider call without
  * the candidate record's current consent (ADR 0011, D7). An upload needs a `material-storage`
  * grant on the record that owns the base; a base no record owns, reachable only by owners and
- * admins, carries no consent and is refused, while an unknown base keeps the route's 404. Starting a run, a revision, a resume or a profile derivation needs a
- * `provider-transmission` grant that names every company the workspace's author and critic models
- * call. A refusal is a 409 with a stable code. The checks are route-level preHandlers, so they run
+ * admins, carries no consent and is refused, while an unknown base keeps the route's 404. Starting
+ * a run, a revision or a resume needs a `provider-transmission` grant that names every company the
+ * workspace's author and critic models call; a profile derivation, which calls only the author's
+ * model, needs one that names the author's company. A refusal is a 409 with a stable code. The checks are route-level preHandlers, so they run
  * after record and knowledge access have answered 404 for a record the caller does not reach.
  * Owner-token mode does not register this module; there, `DRAFT_LOOP_ALLOW_PROVIDER_DATA` alone
  * decides, and it stays a ceiling above consent in both modes.
@@ -78,16 +87,22 @@ export function registerConsentEnforcement(
     if (!permitsMaterialStorage(state)) throw new ConsentRequiredError("storage_consent_required");
   };
 
-  const requireTransmissionConsent: preHandlerHookHandler = async (request) => {
-    const workspaceId = param(request, "workspaceId");
-    if (request.caller?.kind !== "member" || workspaceId === undefined) return;
-    // The descriptor's id is the record id the ledger keys by, as `consentRecordId` reads it.
-    const workspace = await service.readWorkspace(workspaceRoot(workspaceId));
-    const state = await consents.current(workspace.id);
-    if (!permitsTransmission(state, workspace)) {
-      throw new ConsentRequiredError("transmission_consent_required");
-    }
-  };
+  const transmissionCheck =
+    (scope: "pair" | "author"): preHandlerHookHandler =>
+    async (request) => {
+      const workspaceId = param(request, "workspaceId");
+      if (request.caller?.kind !== "member" || workspaceId === undefined) return;
+      // The descriptor's id is the record id the ledger keys by, as `consentRecordId` reads it.
+      const workspace = await service.readWorkspace(workspaceRoot(workspaceId));
+      const state = await consents.current(workspace.id);
+      const companies =
+        scope === "pair" ? workspace : { author: workspace.author, critic: workspace.author };
+      if (!permitsTransmission(state, companies)) {
+        throw new ConsentRequiredError("transmission_consent_required");
+      }
+    };
+  const requireTransmissionConsent = transmissionCheck("pair");
+  const requireAuthorTransmissionConsent = transmissionCheck("author");
 
   app.addHook("onRoute", (route) => {
     const methods = Array.isArray(route.method) ? route.method : [route.method];
@@ -96,7 +111,9 @@ export function registerConsentEnforcement(
       ? requireStorageConsent
       : keys.some((key) => transmissionRoutes.has(key))
         ? requireTransmissionConsent
-        : undefined;
+        : keys.some((key) => authorTransmissionRoutes.has(key))
+          ? requireAuthorTransmissionConsent
+          : undefined;
     if (check === undefined) return;
     const existing = route.preHandler;
     route.preHandler =

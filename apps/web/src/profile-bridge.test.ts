@@ -109,6 +109,66 @@ describe("career profile commands over HTTP", () => {
     expect(waits).toEqual([5, 5]);
   });
 
+  it("records the ticked approval as the author's grant and queues again once (#2811)", async () => {
+    let queued = 0;
+    const { answer, calls } = answersOver({
+      [`POST ${derivationPath}`]: () => {
+        queued += 1;
+        if (queued === 1) {
+          throw new ApiRequestError(409, "transmission_consent_required", "Consent needed.");
+        }
+        return { status: "pending", started: false };
+      },
+      "GET /v1/workspaces/{workspaceId}": () => ({
+        author: { company: "anthropic", model: "claude-sonnet-5-5" },
+        critic: { company: "openai", model: "gpt-6.1-terra" },
+      }),
+      "GET /v1/workspaces/{workspaceId}/consents": () => ({
+        current: { "provider-transmission": { action: "granted", providers: ["google"] } },
+      }),
+      "POST /v1/workspaces/{workspaceId}/consents": () => ({}),
+      [`GET ${derivationPath}`]: () => ({ status: "derived", version: 1 }),
+      "GET /v1/workspaces/{workspaceId}/profiles/{profileId}": () => profileView(1),
+    });
+
+    await expect(answer(derive)).resolves.toMatchObject({ version: 1 });
+
+    const grant = calls.find(
+      ({ operation }) => operation === "POST /v1/workspaces/{workspaceId}/consents",
+    );
+    expect(grant?.input).toMatchObject({
+      path: { workspaceId },
+      body: {
+        kind: "provider-transmission",
+        action: "granted",
+        basis: "candidate-consent",
+        providers: ["anthropic", "google"],
+      },
+    });
+    expect(queued).toBe(2);
+  });
+
+  it("records no grant without the person's tick, and keeps other refusals", async () => {
+    for (const [approved, error] of [
+      [false, new ApiRequestError(409, "transmission_consent_required", "Consent needed.")],
+      [true, new ApiRequestError(409, "derivation_running", "Already running.")],
+    ] as const) {
+      const { answer, calls } = answersOver({
+        [`POST ${derivationPath}`]: () => {
+          throw error;
+        },
+      });
+
+      await expect(
+        answer({
+          type: "profile.derive",
+          input: { workspaceId, profileId, providerTransmissionApproved: approved },
+        }),
+      ).rejects.toBe(error);
+      expect(calls.map(({ operation }) => operation)).toEqual([`POST ${derivationPath}`]);
+    }
+  });
+
   it("asks for every source again only when the person chose it", async () => {
     const { answer, calls } = answersOver({
       [`POST ${derivationPath}`]: () => ({ status: "pending", started: false }),

@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { firstInterviewBase } from "./career-interview-first-base.js";
-import { type ConsentProvider, isConsentProvider } from "./consent-model.js";
+import type { ConsentProvider } from "./consent-model.js";
 import {
   createBrowserPlayer,
   liveSocketOf,
@@ -26,6 +26,7 @@ import {
 } from "./live-voice.js";
 import { createMicrophoneRecorder, microphoneSupported } from "./microphone.js";
 import { useRecordId } from "./record-context.js";
+import { addTransmissionProviders } from "./transmission-grant.js";
 import { createWhisperSpeechToText, speechModelAvailable } from "./whisper-speech.js";
 
 /**
@@ -184,22 +185,7 @@ export async function allowInterviewProviders(
   note: string,
 ): Promise<string | undefined> {
   try {
-    const consents = await client.call("GET /v1/workspaces/{workspaceId}/consents", {
-      path: { workspaceId },
-    });
-    const current = consents.current["provider-transmission"];
-    const named = current?.action === "granted" ? current.providers : [];
-    const providers = [...new Set([...named, ...wanted])].filter(isConsentProvider).sort();
-    await client.call("POST /v1/workspaces/{workspaceId}/consents", {
-      path: { workspaceId },
-      body: {
-        kind: "provider-transmission",
-        action: "granted",
-        basis: "candidate-consent",
-        providers,
-        note,
-      },
-    });
+    await addTransmissionProviders(client, workspaceId, wanted, note);
     return undefined;
   } catch (error) {
     return describeError(error);

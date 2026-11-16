@@ -1878,6 +1878,10 @@ msgstr "Profil professionnel"
 msgid "Career profile version"
 msgstr "Version du profil professionnel"
 
+#: apps/web/src/profile-bridge.ts
+msgid "Career profile: send career evidence to build the profile"
+msgstr "Profil de carrière : envoyer les éléments de carrière pour construire le profil"
+
 #: apps/web/src/interview-guide-model.ts
 msgid "Case study"
 msgstr "Étude de cas"

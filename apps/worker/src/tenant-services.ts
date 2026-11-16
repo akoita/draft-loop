@@ -65,6 +65,22 @@ export function tenantRunConsent<Job extends WorkspaceJob>(
   };
 }
 
+/**
+ * Like `tenantRunConsent`, for a job that calls only the workspace's author model, such as a
+ * profile derivation (#2811): the record's grant must name the author's company.
+ */
+export function tenantAuthorConsent<Job extends WorkspaceJob>(
+  options: TenantConsentOptions<Job>,
+): (job: Job) => Promise<boolean> {
+  return async (job) => {
+    const workspace = await options
+      .serviceFor(job.tenantId)
+      .readWorkspace(options.workspaceRoot(job));
+    const state = await options.tenancy.forTenant(job.tenantId).consentLedger.current(workspace.id);
+    return permitsTransmission(state, { author: workspace.author, critic: workspace.author });
+  };
+}
+
 export interface TenantRecordErasureOptions<Job extends WorkspaceJob = WorkspaceJob> {
   readonly tenancy: Pick<PostgresTenancy, "forTenant">;
   readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;

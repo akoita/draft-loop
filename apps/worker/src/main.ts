@@ -32,6 +32,7 @@ import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import {
+  tenantAuthorConsent,
   tenantRecordErased,
   tenantRunConsent,
   tenantServices,
@@ -81,6 +82,10 @@ const workspaceRoot = (job: WorkspaceJob) =>
 // In a sign-in deployment, each job checks its record's consent again before any provider call.
 const consentFor = config.requireConsent
   ? tenantRunConsent({ tenancy, serviceFor, workspaceRoot })
+  : undefined;
+// A profile derivation calls only the author's model, so it needs the author's company (#2811).
+const authorConsentFor = config.requireConsent
+  ? tenantAuthorConsent({ tenancy, serviceFor, workspaceRoot })
   : undefined;
 // A job queued before its record was erased ends without touching the record.
 const recordErased = tenantRecordErased({ tenancy, serviceFor, workspaceRoot });
@@ -159,7 +164,7 @@ const worker = await startWorker({
     serviceFor: (job) => serviceFor(job.tenantId),
     workspaceRoot,
     allowProviderData: config.allowProviderData,
-    ...(consentFor === undefined ? {} : { consentFor }),
+    ...(authorConsentFor === undefined ? {} : { consentFor: authorConsentFor }),
     recordErased,
     // Ids, flags and the outcome's fixed words only: no candidate material.
     onOutcome: (job, outcome) =>

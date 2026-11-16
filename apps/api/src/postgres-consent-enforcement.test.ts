@@ -250,14 +250,17 @@ describe.runIf(connectionString !== undefined)("consent enforcement through the 
     await consent("provider-transmission", "granted", ["anthropic"]);
     expect(outcome(await beginRun())).toEqual(transmissionRequired);
     expect(queued).toEqual([]);
-    await consent("provider-transmission", "granted", ["anthropic", "openai"]);
-    const begun = await beginRun();
-    expect(begun.status).toBe(201);
+    // A derivation calls only the author's model, so the author's company is enough (#2811).
     // Past consent, a deployment without a derivation queue says so.
     expect(outcome(await deriveProfile())).toEqual({
       status: 503,
       code: "derivation_unavailable",
     });
+    await consent("provider-transmission", "granted", ["openai"]);
+    expect(outcome(await deriveProfile())).toEqual(transmissionRequired);
+    await consent("provider-transmission", "granted", ["anthropic", "openai"]);
+    const begun = await beginRun();
+    expect(begun.status).toBe(201);
     const runPath = `/v1/workspaces/r1/runs/${begun.body.runId as string}`;
     expect(queued).toEqual([begun.body.runId]);
 

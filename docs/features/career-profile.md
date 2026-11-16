@@ -56,8 +56,10 @@ sensitivity decides what may reach a model provider.
   waits applies to the next run.
 - One derivation runs per profile at a time; a second answers
   `409 derivation_running`.
-- Derivation calls a model, so in sign-in mode it needs the candidate record's
-  consent to send material.
+- Derivation calls the writer's model, so in sign-in mode it needs the
+  candidate record's consent to send material to the writer's company. On the
+  web, ticking the send approval records that consent when it is missing, and
+  keeps every provider the record already names.
 
 ## Related
 
