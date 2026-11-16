@@ -7,6 +7,10 @@
       "types": "./src/app.tsx",
       "import": "./src/app.tsx"
     },
+    "./display-preference": {
+      "types": "./src/display-preference.tsx",
+      "import": "./src/display-preference.tsx"
+    },
     "./host-panels": {
       "types": "./src/host-panels.tsx",
       "import": "./src/host-panels.tsx"

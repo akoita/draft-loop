@@ -1876,6 +1876,7 @@ msgstr ""
 msgid "central themes"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr ""
@@ -2881,6 +2882,10 @@ msgstr ""
 msgid "Dismiss"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "Display"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Document — the draft"
 msgstr ""
@@ -3334,6 +3339,10 @@ msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Estimated public API cost"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Every Advanced options section starts open, so nothing is a click away."
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -4057,8 +4066,20 @@ msgstr ""
 msgid "Guide contents"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "Guide me step by step"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Guide this draft (optional)"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Guided"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Guided shows one step at a time. Show everything opens every Advanced options section."
 msgstr ""
 
 #: apps/web/src/private-sections.tsx
@@ -4136,6 +4157,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "How to choose models"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "How would you like DraftLoop to look?"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -4472,6 +4497,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Keep accepting"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Keep as it is"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -7959,6 +7988,10 @@ msgstr ""
 msgid "Show archived ({0})"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "Show everything"
+msgstr ""
+
 #: packages/ui/src/review-panels.tsx
 msgid "Show only recent events"
 msgstr ""
@@ -8044,6 +8077,10 @@ msgstr ""
 
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Signing in"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Simple"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -10146,6 +10183,10 @@ msgstr ""
 msgid "Use the reviewed requirements instead"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "Use the simple view"
+msgstr ""
+
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"
 msgstr ""
@@ -10349,6 +10390,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "We show one thing to do at a time and explain each screen."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts

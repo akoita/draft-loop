@@ -1,3 +1,4 @@
+import { useShowEverything } from "@draft-loop/ui/display-preference";
 import {
   defaultExportTemplate,
   type ExportTemplate,
@@ -561,7 +562,8 @@ export function ApplicationMaterialSection({
   const [edits, setEdits] = useState<readonly string[] | undefined>(undefined);
   const [template, setTemplate] = useState<ExportTemplate>(defaultExportTemplate);
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
-  const [collapsed, setCollapsed] = useState(readPrepareCollapsed);
+  const everything = useShowEverything();
+  const [collapsed, setCollapsed] = useState(() => readPrepareCollapsed(everything));
 
   // The review's "Cover letter or interview" button opens the panel and brings it into view
   // (#2578); the panel stays where it is, under the draft.
@@ -908,14 +910,19 @@ export function ApplicationMaterialSection({
 /** How often the panel asks whether the critic's check has ended. */
 const reviewPollMs = 3_000;
 
-/** Whether the candidate opened the panel, remembered per browser; it starts folded. */
+/**
+ * Whether the candidate opened the panel, remembered per browser. It starts folded, or open with
+ * Show everything (#2789) until the candidate folds it.
+ */
 const prepareOpenKey = "draft-loop.prepare-panel.open";
 
-function readPrepareCollapsed(): boolean {
+export function readPrepareCollapsed(everything: boolean): boolean {
   try {
-    return globalThis.localStorage?.getItem(prepareOpenKey) !== "true";
+    const saved = globalThis.localStorage?.getItem(prepareOpenKey) ?? null;
+    if (saved === null) return !everything;
+    return saved !== "true";
   } catch {
-    return true;
+    return !everything;
   }
 }
 

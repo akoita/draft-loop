@@ -1870,6 +1870,7 @@ msgstr "Étude de cas"
 msgid "central themes"
 msgstr "thèmes centraux"
 
+#: packages/ui/src/display-preference.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Changer"
@@ -2875,6 +2876,10 @@ msgstr "La découverte a répondu {0}."
 msgid "Dismiss"
 msgstr "Ignorer"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Display"
+msgstr "Affichage"
+
 #: packages/ui/src/review.tsx
 msgid "Document — the draft"
 msgstr "Document — l’ébauche"
@@ -3329,6 +3334,10 @@ msgstr "Essentiel"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Estimated public API cost"
 msgstr "Coût estimé au tarif public de l’API"
+
+#: packages/ui/src/display-preference.tsx
+msgid "Every Advanced options section starts open, so nothing is a click away."
+msgstr "Chaque section Options avancées s’ouvre d’emblée : rien n’est caché derrière un clic."
 
 #: packages/ui/src/home.tsx
 msgid "Every application is archived. Start a new application, or restore one below."
@@ -4051,9 +4060,21 @@ msgstr "Ces consignes orientent seulement l'écriture. Chaque affirmation vient 
 msgid "Guide contents"
 msgstr "Sommaire du guide"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Guide me step by step"
+msgstr "Guidez-moi pas à pas"
+
 #: apps/web/src/application-material.tsx
 msgid "Guide this draft (optional)"
 msgstr "Orienter ce brouillon (facultatif)"
+
+#: packages/ui/src/display-preference.tsx
+msgid "Guided"
+msgstr "Guidé"
+
+#: packages/ui/src/display-preference.tsx
+msgid "Guided shows one step at a time. Show everything opens every Advanced options section."
+msgstr "Guidé montre une étape à la fois. Tout afficher ouvre chaque section Options avancées."
 
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
@@ -4131,6 +4152,10 @@ msgstr "Correspondance du titre"
 #: packages/ui/src/app.tsx
 msgid "How to choose models"
 msgstr "Comment choisir les modèles"
+
+#: packages/ui/src/display-preference.tsx
+msgid "How would you like DraftLoop to look?"
+msgstr "Comment voulez-vous que DraftLoop s’affiche ?"
 
 #: packages/ui/src/app.tsx
 msgid "http://127.0.0.1:11434/v1"
@@ -4468,6 +4493,10 @@ msgstr "Gardez un résumé du travail."
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Keep accepting"
 msgstr "Continuer d’accepter"
+
+#: packages/ui/src/display-preference.tsx
+msgid "Keep as it is"
+msgstr "Garder tel quel"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
@@ -7954,6 +7983,10 @@ msgstr "tout afficher"
 msgid "Show archived ({0})"
 msgstr "Afficher les archives ({0})"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Show everything"
+msgstr "Tout afficher"
+
 #: packages/ui/src/review-panels.tsx
 msgid "Show only recent events"
 msgstr "N’afficher que les événements récents"
@@ -8040,6 +8073,10 @@ msgstr "Connecté depuis l’assistant"
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Signing in"
 msgstr "Connexion"
+
+#: packages/ui/src/display-preference.tsx
+msgid "Simple"
+msgstr "Simple"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Skills and tools"
@@ -10141,6 +10178,10 @@ msgstr "Utiliser les exigences relues (brief v{0})"
 msgid "Use the reviewed requirements instead"
 msgstr "Utiliser plutôt les exigences relues"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Use the simple view"
+msgstr "Utiliser la vue simple"
+
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"
 msgstr "Utiliser cette base de connaissances"
@@ -10345,6 +10386,10 @@ msgstr "Avertissements"
 #: packages/ui/src/review.tsx
 msgid "was opened after the configured maximum of"
 msgstr "a été ouvert après le maximum configuré de"
+
+#: packages/ui/src/display-preference.tsx
+msgid "We show one thing to do at a time and explain each screen."
+msgstr "Nous montrons une seule chose à faire à la fois et expliquons chaque écran."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Weak points and how to answer"

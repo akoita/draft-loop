@@ -46,7 +46,9 @@ element of the card and folded by default.
 - Never put a step the basic path needs inside it.
 - Pass `note` when a choice inside is not the default, so the folded line says
   so.
-- Pass `open` when an error or a button elsewhere must unfold it.
+- Pass `open` when an error or a button elsewhere must unfold it. Leave it out
+  otherwise: an uncontrolled section starts open when the person chose **Show
+  everything** (`useShowEverything` in `display-preference.tsx`).
 - Show each choice as an `AdvancedOption`: name, state, one-sentence effect and
   one control. Do not use a bare checkbox.
 - Simple-view text uses the person's words, such as "documents", not

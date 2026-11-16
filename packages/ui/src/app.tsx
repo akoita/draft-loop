@@ -32,6 +32,7 @@ import {
 import { CareerEvidencePage, CareerProfilePage } from "./career-pages.js";
 import { CompactHistoryAction } from "./compact-history.js";
 import { countedNouns } from "./counted-nouns.js";
+import { DisplaySetting } from "./display-preference.js";
 import { HomeScreen, WorkspaceBackButton } from "./home.js";
 import {
   applicationRunToOpen,
@@ -2993,6 +2994,7 @@ export function App({
               </div>
               <HostWorkspaceSettings openEvidence={openEvidenceScreen} />
               <ScreenLanguageSetting />
+              <DisplaySetting />
               {providerAuthentication}
               {activePort.compactHistory === undefined ? null : (
                 <AdvancedOptions>
