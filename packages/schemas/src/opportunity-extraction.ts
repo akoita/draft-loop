@@ -59,6 +59,12 @@ export const opportunityExtractionProposalSchema = z.strictObject({
   schemaVersion: z.literal(opportunityExtractionSchemaVersion),
   role: opportunityExtractionSourcedTextSchema.nullable(),
   employer: opportunityExtractionSourcedTextSchema.nullable(),
+  // Where the job is (city, country or remote), as the posting states it (#2805). The provider
+  // schema requires it; an answer without it still parses as null.
+  location: opportunityExtractionSourcedTextSchema
+    .nullable()
+    .default(null)
+    .describe("Where the job is based (city and country, or remote), as stated, or null."),
   responsibilities: z
     .array(opportunityExtractionResponsibilitySchema)
     .max(opportunityBriefMaximumCollectionEntries),

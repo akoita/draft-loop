@@ -64,6 +64,19 @@ function request(
 }
 
 describe("opportunity extraction processor", () => {
+  it("keeps the job's location with its citation (#2805)", async () => {
+    const result = await processOpportunityExtraction(
+      {
+        extract: async () => ({
+          ...proposal(),
+          location: { value: "Lyon, France", sourceIds: ["job-source"] },
+        }),
+      },
+      request(),
+    );
+    expect(result.location).toEqual({ value: "Lyon, France", sourceIds: ["job-source"] });
+  });
+
   it("maps a proposal to deterministic safe ids, citations, and contradiction issues", async () => {
     const extract = vi.fn(async (input: OpportunityExtractionRequest) => {
       expect(input.sources).toEqual(sources);
@@ -78,6 +91,8 @@ describe("opportunity extraction processor", () => {
       value: "Example Systems",
       sourceIds: ["job-source", "company-source"],
     });
+    // A proposal from before the location field still maps, with no location.
+    expect(first.location).toBeNull();
     expect(first.responsibilities).toHaveLength(1);
     expect(first.responsibilities[0]).toMatchObject({
       id: expect.stringMatching(/^extraction-responsibility-[a-f0-9]{32}$/u),
@@ -195,6 +210,7 @@ describe("opportunity extraction processor", () => {
     ).resolves.toEqual({
       role: null,
       employer: null,
+      location: null,
       responsibilities: [],
       requirements: [],
       priorities: [],

@@ -280,9 +280,10 @@ flowchart LR
   M --> B[(Research brief)]
 ```
 
-A run reads the employer and role from the application's newest job brief,
-never the candidate's material. It searches the employer with the role, its
-news, and its culture and values. Sources older than the window (12 months by
+A run reads the employer, role and location from the application's newest job
+brief, never the candidate's material. It searches the employer with the role,
+its news, and its culture and values. When the job brief names where the job
+is, the role, field and salary searches name that place too. Sources older than the window (12 months by
 default) are dropped, and the rule screener drops any source that reads like an
 injection. The searches and the findings call share a US$0.20 cap.
 

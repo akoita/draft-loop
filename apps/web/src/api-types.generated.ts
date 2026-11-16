@@ -638,6 +638,10 @@ export interface ApiSchemas {
         readonly value: string;
         readonly sourceIds: readonly (string)[];
       } | null;
+      readonly location?: {
+        readonly value: string;
+        readonly sourceIds: readonly (string)[];
+      } | null;
       readonly responsibilities: readonly ({
         readonly id: string;
         readonly text: string;

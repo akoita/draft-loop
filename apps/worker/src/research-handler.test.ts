@@ -7,7 +7,7 @@ import { createResearchHandler, type ResearchHandlerOptions } from "./research-h
 const job = { tenantId: "tenant-a", workspaceId: "ws_fixture", applicationId: "app_fixture0001" };
 
 // An invented employer and invented pages only.
-const service = (employer: string | null = "Example Corp") =>
+const service = (employer: string | null = "Example Corp", location?: string) =>
   ({
     readWorkspace: async () => ({ fixtureMode: false, language: "en" }),
     getApplication: async ({ applicationId }: { applicationId: string }) =>
@@ -18,6 +18,7 @@ const service = (employer: string | null = "Example Corp") =>
       brief: {
         employer: employer === null ? null : { value: employer },
         role: { value: "Data Analyst" },
+        ...(location === undefined ? {} : { location: { value: location } }),
       },
     }),
   }) as never;
@@ -85,6 +86,17 @@ describe("research job", () => {
     const saved = await setup.store.get(job.workspaceId, "rbr_fixture0001");
     expect(saved?.from_date).toBe("2024-11-08");
     expect(saved?.sources[0]).toMatchObject({ topic: "company", reliability: "press" });
+  });
+
+  it("scopes the role and salary searches to where the job is (#2805)", async () => {
+    const setup = options({ serviceFor: () => service("Example Corp", "Lyon, France") });
+    await createResearchHandler(setup.options)({
+      ...job,
+      guide: { depth: "essential", salary: true },
+    });
+    const queries = setup.search.requests.map((request) => request.query);
+    expect(queries).toContain("Data Analyst salary Lyon, France 2026");
+    expect(queries).toContain("Example Corp Data Analyst Lyon, France");
   });
 
   it("saves the brief and logs ids and counts only", async () => {

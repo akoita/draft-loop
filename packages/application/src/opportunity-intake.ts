@@ -142,6 +142,7 @@ export type OpportunityDraftPatch = Partial<
     OpportunityBriefInput,
     | "role"
     | "employer"
+    | "location"
     | "responsibilities"
     | "requirements"
     | "priorities"
@@ -160,6 +161,7 @@ const editableOpportunityDraftFields = new Set([
   "candidateEmployer",
   "role",
   "employer",
+  "location",
   "responsibilities",
   "requirements",
   "priorities",

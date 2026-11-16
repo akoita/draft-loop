@@ -20,6 +20,7 @@ function proposal(
     schemaVersion: 1,
     role: sourced("Platform Engineer", ["job-source"]),
     employer: sourced("Example Systems", ["job-source"]),
+    location: sourced("Lyon, France", ["job-source"]),
     responsibilities: [
       {
         text: "Lead platform reliability",
@@ -60,6 +61,7 @@ describe("opportunity extraction proposal schema", () => {
         "schemaVersion",
         "role",
         "employer",
+        "location",
         "responsibilities",
         "requirements",
         "priorities",

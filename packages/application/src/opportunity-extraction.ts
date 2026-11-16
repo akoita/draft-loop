@@ -54,6 +54,7 @@ export interface OpportunityExtractionPort {
 export interface OpportunityExtractionResult {
   readonly role: OpportunityBriefSourcedText | null;
   readonly employer: OpportunityBriefSourcedText | null;
+  readonly location: OpportunityBriefSourcedText | null;
   readonly responsibilities: readonly OpportunityBriefResponsibility[];
   readonly requirements: readonly OpportunityBriefRequirement[];
   readonly priorities: readonly OpportunityBriefPriority[];
@@ -155,6 +156,7 @@ function extractionFailure(
   return cloneAndFreeze({
     role: null,
     employer: null,
+    location: null,
     responsibilities: [],
     requirements: [],
     priorities: [],
@@ -238,6 +240,7 @@ function assertCitations(
   };
   if (proposal.role !== null) assertSourceIds(proposal.role.sourceIds);
   if (proposal.employer !== null) assertSourceIds(proposal.employer.sourceIds);
+  if (proposal.location !== null) assertSourceIds(proposal.location.sourceIds);
   for (const responsibility of proposal.responsibilities) {
     assertSourceIds(responsibility.sourceIds);
   }
@@ -360,6 +363,7 @@ function mapProposal(
   return cloneAndFreeze({
     role: mapSourcedText(proposal.role),
     employer: mapSourcedText(proposal.employer),
+    location: mapSourcedText(proposal.location),
     responsibilities: mapResponsibilities(proposal.responsibilities, sourceText),
     requirements: mapRequirements(proposal.requirements, sourceText),
     priorities: mapPriorities(proposal.priorities),
