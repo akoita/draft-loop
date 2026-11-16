@@ -1890,7 +1890,6 @@ msgstr "Étude de cas"
 msgid "central themes"
 msgstr "thèmes centraux"
 
-#: packages/ui/src/display-preference.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Changer"
@@ -2607,6 +2606,10 @@ msgstr "Critique terminée"
 msgid "critique findings"
 msgstr "constats de la critique"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Current"
+msgstr "Actuel"
+
 #: packages/ui/src/review.tsx
 msgid "Current checksum"
 msgstr "Somme de contrôle actuelle"
@@ -3195,6 +3198,10 @@ msgstr "Chaque fichier est vérifié à la recherche d’instructions cachées a
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr "Chaque exécution compte pour la limite de coût par exécution de votre espace, et chaque brouillon pour son plafond de coût. De 0,01 à 500."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Each screen shows the basic path. Technical choices stay folded under Advanced options."
+msgstr "Chaque écran montre l’essentiel. Les choix techniques restent repliés sous Options avancées."
 
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
@@ -4117,10 +4124,6 @@ msgstr "Orienter ce brouillon (facultatif)"
 msgid "Guided"
 msgstr "Guidé"
 
-#: packages/ui/src/display-preference.tsx
-msgid "Guided shows one step at a time. Show everything opens every Advanced options section."
-msgstr "Guidé montre une étape à la fois. Tout afficher ouvre chaque section Options avancées."
-
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
 msgstr "Texte du titre"
@@ -4194,6 +4197,10 @@ msgstr "Comment voulez-vous commencer ?"
 msgid "How it works"
 msgstr "Comment ça marche"
 
+#: packages/ui/src/display-preference.tsx
+msgid "How much each screen shows at once. The change applies right away."
+msgstr "Ce que chaque écran montre d’un coup. Le changement s’applique tout de suite."
+
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
 msgstr "Correspondance du titre"
@@ -4201,10 +4208,6 @@ msgstr "Correspondance du titre"
 #: packages/ui/src/app.tsx
 msgid "How to choose models"
 msgstr "Comment choisir les modèles"
-
-#: packages/ui/src/display-preference.tsx
-msgid "How would you like DraftLoop to look?"
-msgstr "Comment voulez-vous que DraftLoop s’affiche ?"
 
 #: packages/ui/src/first-run-question.tsx
 msgid "How would you like to start?"
@@ -4550,10 +4553,6 @@ msgstr "Gardez un résumé du travail."
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Keep accepting"
 msgstr "Continuer d’accepter"
-
-#: packages/ui/src/display-preference.tsx
-msgid "Keep as it is"
-msgstr "Garder tel quel"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
@@ -10312,10 +10311,6 @@ msgstr "Utiliser les exigences relues (brief v{0})"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Use the reviewed requirements instead"
 msgstr "Utiliser plutôt les exigences relues"
-
-#: packages/ui/src/display-preference.tsx
-msgid "Use the simple view"
-msgstr "Utiliser la vue simple"
 
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"

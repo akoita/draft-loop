@@ -1896,7 +1896,6 @@ msgstr ""
 msgid "central themes"
 msgstr ""
 
-#: packages/ui/src/display-preference.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr ""
@@ -2613,6 +2612,10 @@ msgstr ""
 msgid "critique findings"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "Current"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Current checksum"
 msgstr ""
@@ -3200,6 +3203,10 @@ msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
+msgstr ""
+
+#: packages/ui/src/display-preference.tsx
+msgid "Each screen shows the basic path. Technical choices stay folded under Advanced options."
 msgstr ""
 
 #: packages/ui/src/run-comparison-export.ts
@@ -4123,10 +4130,6 @@ msgstr ""
 msgid "Guided"
 msgstr ""
 
-#: packages/ui/src/display-preference.tsx
-msgid "Guided shows one step at a time. Show everything opens every Advanced options section."
-msgstr ""
-
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
 msgstr ""
@@ -4200,16 +4203,16 @@ msgstr ""
 msgid "How it works"
 msgstr ""
 
+#: packages/ui/src/display-preference.tsx
+msgid "How much each screen shows at once. The change applies right away."
+msgstr ""
+
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
 msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "How to choose models"
-msgstr ""
-
-#: packages/ui/src/display-preference.tsx
-msgid "How would you like DraftLoop to look?"
 msgstr ""
 
 #: packages/ui/src/first-run-question.tsx
@@ -4554,10 +4557,6 @@ msgstr ""
 
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Keep accepting"
-msgstr ""
-
-#: packages/ui/src/display-preference.tsx
-msgid "Keep as it is"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -10316,10 +10315,6 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Use the reviewed requirements instead"
-msgstr ""
-
-#: packages/ui/src/display-preference.tsx
-msgid "Use the simple view"
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx

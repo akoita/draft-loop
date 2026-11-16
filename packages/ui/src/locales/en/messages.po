@@ -1896,7 +1896,6 @@ msgstr "Case study"
 msgid "central themes"
 msgstr "central themes"
 
-#: packages/ui/src/display-preference.tsx
 #: packages/ui/src/knowledge.tsx
 msgid "Change"
 msgstr "Change"
@@ -2613,6 +2612,10 @@ msgstr "Critique completed"
 msgid "critique findings"
 msgstr "critique findings"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Current"
+msgstr "Current"
+
 #: packages/ui/src/review.tsx
 msgid "Current checksum"
 msgstr "Current checksum"
@@ -3201,6 +3204,10 @@ msgstr "Each file is checked for hidden instructions before runs use it. Quarant
 #: packages/ui/src/agent-setup.tsx
 msgid "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
 msgstr "Each run counts at your workspace's cost limit per run, and each draft at its cost cap. From 0.01 to 500."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Each screen shows the basic path. Technical choices stay folded under Advanced options."
+msgstr "Each screen shows the basic path. Technical choices stay folded under Advanced options."
 
 #: packages/ui/src/run-comparison-export.ts
 #: packages/ui/src/run-comparison.tsx
@@ -4123,10 +4130,6 @@ msgstr "Guide this draft (optional)"
 msgid "Guided"
 msgstr "Guided"
 
-#: packages/ui/src/display-preference.tsx
-msgid "Guided shows one step at a time. Show everything opens every Advanced options section."
-msgstr "Guided shows one step at a time. Show everything opens every Advanced options section."
-
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
 msgstr "Heading text"
@@ -4200,6 +4203,10 @@ msgstr "How do you want to start?"
 msgid "How it works"
 msgstr "How it works"
 
+#: packages/ui/src/display-preference.tsx
+msgid "How much each screen shows at once. The change applies right away."
+msgstr "How much each screen shows at once. The change applies right away."
+
 #: apps/web/src/private-sections.tsx
 msgid "How the heading matches"
 msgstr "How the heading matches"
@@ -4207,10 +4214,6 @@ msgstr "How the heading matches"
 #: packages/ui/src/app.tsx
 msgid "How to choose models"
 msgstr "How to choose models"
-
-#: packages/ui/src/display-preference.tsx
-msgid "How would you like DraftLoop to look?"
-msgstr "How would you like DraftLoop to look?"
 
 #: packages/ui/src/first-run-question.tsx
 msgid "How would you like to start?"
@@ -4556,10 +4559,6 @@ msgstr "Keep a summary of the work."
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Keep accepting"
 msgstr "Keep accepting"
-
-#: packages/ui/src/display-preference.tsx
-msgid "Keep as it is"
-msgstr "Keep as it is"
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Keep at least one requirement."
@@ -10318,10 +10317,6 @@ msgstr "Use the reviewed requirements (brief v{0})"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Use the reviewed requirements instead"
 msgstr "Use the reviewed requirements instead"
-
-#: packages/ui/src/display-preference.tsx
-msgid "Use the simple view"
-msgstr "Use the simple view"
 
 #: packages/ui/src/knowledge.tsx
 msgid "Use this knowledge base"
