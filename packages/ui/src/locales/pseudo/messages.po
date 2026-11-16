@@ -1284,6 +1284,10 @@ msgstr ""
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "An idea"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
 msgstr ""
@@ -1776,6 +1780,7 @@ msgid "Can't start yet: {0}"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/feedback.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
@@ -2175,6 +2180,7 @@ msgstr ""
 msgid "close"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
@@ -4615,6 +4621,10 @@ msgstr ""
 msgid "Kind of interview"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Kind of note"
+msgstr ""
+
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Knowledge base"
@@ -5856,6 +5866,10 @@ msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Not set"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Not sure"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -7970,8 +7984,13 @@ msgstr ""
 msgid "Semantic search: ready"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Send"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Send feedback"
 msgstr ""
 
 #: packages/ui/src/profile-status.ts
@@ -8000,6 +8019,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Sending your answer soon…"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Sending…"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -8214,6 +8237,14 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Something else"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Something is broken"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -8603,6 +8634,10 @@ msgstr ""
 msgid "Tell it in a conversation"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
 msgstr ""
@@ -8627,6 +8662,10 @@ msgstr ""
 
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Thank you. The people who run DraftLoop read every note."
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
@@ -10202,6 +10241,10 @@ msgstr ""
 msgid "Unvalidated"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
+msgstr ""
+
 #: packages/ui/src/profile-freshness.ts
 msgid "Up to date with your career evidence"
 msgstr ""
@@ -10973,6 +11016,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide.tsx
 msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Your note"
 msgstr ""
 
 #: apps/web/src/records-model.ts
