@@ -2538,6 +2538,37 @@ describe("autopilot", () => {
     expect(author).toHaveBeenCalledOnce();
   });
 
+  // Autopilot only decides blocking findings: a round below the rubric with warnings alone
+  // revises on its own whatever the switch says (#2812).
+  it("revises a round with only warnings without pausing when autopilot is off", async () => {
+    const warning = {
+      id: "finding-warning",
+      code: "critic-tone",
+      category: "coverage" as const,
+      severity: "warning" as const,
+      message: "A non-blocking finding.",
+    };
+    // A summary sentence past 45 words keeps clarity below a rubric of 1, so no round is ready.
+    const wordy = (request: AuthorRequest): DraftArtifact => {
+      const draft = artifact(request.round);
+      const [summary, ...rest] = draft.sections;
+      const block = summary?.blocks[0];
+      if (summary === undefined || block === undefined) throw new Error("fixture changed");
+      const text = `${block.text} ${"Reliable delivery of typed services. ".repeat(10)}`;
+      return { ...draft, sections: [{ ...summary, blocks: [{ ...block, text }] }, ...rest] };
+    };
+    const { engine, author } = autopilotFixture(() => ({ findings: [warning] }), wordy, false);
+    const base = context();
+    const strict = { ...base, readinessRubric: { ...base.readinessRubric, clarity: 1 } };
+
+    const result = await engine.start(request({ context: strict, budget: { maxRounds: 2 } }));
+
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ state: "awaiting-approval", round: 2 });
+    const events = await engine.events("run-1");
+    expect(events.some((event) => event.details?.reason === "autopilot")).toBe(false);
+  });
+
   it("revises through blocking findings up to the round limit and passes them to the author", async () => {
     // A different finding each round is a near-miss, never a persisting finding.
     const { engine, author } = autopilotFixture((request) => ({

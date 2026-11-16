@@ -5924,11 +5924,14 @@ msgid "of {0} and {1}"
 msgstr "of {0} and {1}"
 
 #: packages/ui/src/start-advanced-options.tsx
-#: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/work-journal-intake.tsx
 #: packages/ui/src/workspace-setup.tsx
 msgid "Off"
 msgstr "Off"
+
+#: packages/ui/src/start-confirmation.tsx
+msgid "Off: pauses after a round with a blocking finding"
+msgstr "Off: pauses after a round with a blocking finding"
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Omission"
@@ -9394,6 +9397,10 @@ msgstr "The review is still running, so nothing here needs you yet. It pauses wh
 #: apps/web/src/review-actions.ts
 msgid "The review is still running, so this change was not saved. Make it once the round finishes."
 msgstr "The review is still running, so this change was not saved. Make it once the round finishes."
+
+#: packages/ui/src/autopilot-toggle.tsx
+msgid "The review pauses for your decisions after a round with a blocking finding. A round with only warnings revises on its own until the draft is ready or the round limit is reached."
+msgstr "The review pauses for your decisions after a round with a blocking finding. A round with only warnings revises on its own until the draft is ready or the round limit is reached."
 
 #: packages/ui/src/review-run-status.ts
 msgid "The review pauses here when it needs your decision."
