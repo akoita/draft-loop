@@ -854,9 +854,14 @@ a rejection still use the full proposal.
   edit names are copied with their claims and evidence. The result goes through
   the same citation completion, grounding and validation as any proposal, and a
   deleted covering block still raises `coverage-block-dropped`.
-- **Fallback.** Malformed JSON, an unknown block, section or finding id, two edits
-  to one block, a section left empty, an unmappable evidence reference, or a
-  result grounding would shorten rejects the patch. The agent then asks for a
+- **Dropped edits.** When the whole patch fails, each edit is tried on its own
+  (#2846). An edit fails when it names an unknown block, section or finding id,
+  leaves a section empty, or grounding would remove or shorten its block. The
+  edits that pass are applied together, and the content-free
+  `revision-edits-dropped` warning counts the rest.
+- **Fallback.** Malformed JSON, an unmappable evidence reference, no edit that
+  passes on its own, or passing edits that still fail together (for example two
+  edits to one block) reject the patch. The agent then asks for a
   full-proposal revision in the same attempt and sums both calls' tokens and
   cost.
 
