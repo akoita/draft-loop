@@ -1,6 +1,8 @@
-import type {
-  MemberScreenLanguage,
-  MemberSettingsStore,
+import {
+  defaultMemberDisplayPreference,
+  type MemberDisplayPreference,
+  type MemberScreenLanguage,
+  type MemberSettingsStore,
 } from "@draft-loop/storage/member-settings";
 import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
 import type { FastifyInstance } from "fastify";
@@ -15,10 +17,23 @@ const audience = "draft-loop-api";
 const members = ["member-north", "member-other"];
 
 /** Saved languages by organisation and member; only the listed members exist. */
-function memorySettings(): MemberSettingsStore & { saved: Map<string, MemberScreenLanguage> } {
+function memorySettings(): MemberSettingsStore & {
+  saved: Map<string, MemberScreenLanguage>;
+  displays: Map<string, MemberDisplayPreference>;
+} {
   const saved = new Map<string, MemberScreenLanguage>();
+  const displays = new Map<string, MemberDisplayPreference>();
   return {
     saved,
+    displays,
+    readDisplayPreference: async ({ organisationId, memberId }) =>
+      displays.get(`${organisationId}/${memberId}`) ?? defaultMemberDisplayPreference,
+    saveDisplayPreference: async ({ organisationId, memberId, preference }) => {
+      if (!members.includes(memberId)) {
+        throw new TenantDirectoryError("member_not_found", "No such member.");
+      }
+      displays.set(`${organisationId}/${memberId}`, preference);
+    },
     readScreenLanguage: async ({ organisationId, memberId }) =>
       saved.get(`${organisationId}/${memberId}`),
     saveScreenLanguage: async ({ organisationId, memberId, language }) => {
@@ -141,5 +156,72 @@ describe("/v1/me/screen-language", () => {
     });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toMatchObject({ error: { code: "not_found" } });
+  });
+});
+
+describe("/v1/me/display-preference", () => {
+  it("answers the default until the member saves one, then the saved one", async () => {
+    const settings = memorySettings();
+    const server = await api(settings);
+    const authorization = await signIn("member-north");
+
+    const before = await server.inject({
+      method: "GET",
+      url: "/v1/me/display-preference",
+      headers: { authorization },
+    });
+    expect(before.statusCode).toBe(200);
+    expect(before.json()).toEqual({ mode: null, guideHidden: false });
+
+    const saved = await server.inject({
+      method: "PUT",
+      url: "/v1/me/display-preference",
+      headers: { authorization },
+      payload: { mode: "everything", guideHidden: true },
+    });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.json()).toEqual({ mode: "everything", guideHidden: true });
+
+    const after = await server.inject({
+      method: "GET",
+      url: "/v1/me/display-preference",
+      headers: { authorization },
+    });
+    expect(after.json()).toEqual({ mode: "everything", guideHidden: true });
+  });
+
+  it("refuses an unknown mode, extra fields and a member the directory lost", async () => {
+    const server = await api(memorySettings());
+    const authorization = await signIn("member-north");
+    for (const payload of [
+      { mode: "expert", guideHidden: false },
+      { mode: "guided", guideHidden: false, extra: 1 },
+      { mode: "guided" },
+    ]) {
+      const refused = await server.inject({
+        method: "PUT",
+        url: "/v1/me/display-preference",
+        headers: { authorization },
+        payload,
+      });
+      expect(refused.statusCode).toBe(400);
+    }
+    const gone = await server.inject({
+      method: "PUT",
+      url: "/v1/me/display-preference",
+      headers: { authorization: await signIn("member-gone") },
+      payload: { mode: "guided", guideHidden: false },
+    });
+    expect(gone.statusCode).toBe(404);
+  });
+
+  it("answers 404 to the owner token, whose screen keeps the browser's choice", async () => {
+    const server = await api(memorySettings(), "owner");
+    const response = await server.inject({
+      method: "GET",
+      url: "/v1/me/display-preference",
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    expect(response.statusCode).toBe(404);
   });
 });

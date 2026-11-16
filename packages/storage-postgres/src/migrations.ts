@@ -17,6 +17,7 @@ import { creditPurchaseRefundsMigration } from "./credit-purchase-refunds-migrat
 import { creditPurchasesMigration } from "./credit-purchases-migration.js";
 import { interviewGuideMigration } from "./interview-guide-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
+import { memberDisplayPreferenceMigration } from "./member-display-preference-migration.js";
 import { memberSettingsMigration } from "./member-settings-migration.js";
 import { modelCallMeterMigration } from "./model-call-meter-migration.js";
 import { organisationActivityMigration } from "./organisation-activity-migration.js";
@@ -831,6 +832,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   creditPurchaseRefundsMigration,
   agentTokenMemberMigration,
   agentConnectionNotedMigration,
+  memberDisplayPreferenceMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

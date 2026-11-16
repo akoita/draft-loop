@@ -79,4 +79,48 @@ describe.runIf(connectionString !== undefined)("Postgres member settings", () =>
       await expect(settings.readScreenLanguage(coachKey)).resolves.toBeUndefined();
     });
   });
+
+  it("keeps each member's display preference beside the screen language", async () => {
+    await withDirectory(async (directory) => {
+      await directory.createOrganisation({
+        organisationId: "org-north",
+        name: "North Coaching",
+        firstOwnerEmail: "owner@north.example.test",
+      });
+      const coach = await directory.inviteMember({
+        organisationId: "org-north",
+        email: "coach@north.example.test",
+        role: "member",
+      });
+      const settings = directory.memberSettings;
+      const coachKey = { organisationId: "org-north", memberId: coach.memberId };
+
+      await expect(settings.readDisplayPreference(coachKey)).resolves.toEqual({
+        mode: null,
+        guideHidden: false,
+      });
+      await settings.saveScreenLanguage({ ...coachKey, language: "fr" });
+      await settings.saveDisplayPreference({
+        ...coachKey,
+        preference: { mode: "guided", guideHidden: true },
+      });
+      await expect(settings.readDisplayPreference(coachKey)).resolves.toEqual({
+        mode: "guided",
+        guideHidden: true,
+      });
+      await expect(settings.readScreenLanguage(coachKey)).resolves.toBe("fr");
+      await settings.saveScreenLanguage({ ...coachKey, language: "en" });
+      await expect(settings.readDisplayPreference(coachKey)).resolves.toEqual({
+        mode: "guided",
+        guideHidden: true,
+      });
+      await expect(
+        settings.saveDisplayPreference({
+          organisationId: "org-north",
+          memberId: "member-missing",
+          preference: { mode: "everything", guideHidden: false },
+        }),
+      ).rejects.toMatchObject({ name: "TenantDirectoryError", code: "member_not_found" });
+    });
+  });
 });

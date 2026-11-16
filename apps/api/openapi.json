@@ -5245,6 +5245,35 @@
           "createdAt"
         ]
       },
+      "MemberDisplayPreferenceInput": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "guided",
+                  "standard",
+                  "everything"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "guided walks through one step at a time; standard is the simple view; everything opens every Advanced options section. null: never chosen."
+          },
+          "guideHidden": {
+            "type": "boolean",
+            "description": "True once the member hid the Getting started guide."
+          }
+        },
+        "required": [
+          "mode",
+          "guideHidden"
+        ]
+      },
       "MemberScreenLanguageInput": {
         "type": "object",
         "properties": {
@@ -12834,6 +12863,36 @@
           "sizeBytes",
           "checksum",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "MemberDisplayPreference": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "guided",
+                  "standard",
+                  "everything"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "guided walks through one step at a time; standard is the simple view; everything opens every Advanced options section. null: never chosen."
+          },
+          "guideHidden": {
+            "type": "boolean",
+            "description": "True once the member hid the Getting started guide."
+          }
+        },
+        "required": [
+          "mode",
+          "guideHidden"
         ],
         "additionalProperties": false
       },
@@ -27204,6 +27263,127 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/display-preference": {
+      "get": {
+        "summary": "Read how the screens show themselves to the caller",
+        "description": "Owner-token mode has no members, so the screen keeps the browser's saved choice: the route answers 404 there.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDisplayPreference"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save how the screens show themselves to the caller, on every browser and device",
+        "description": "Owner-token mode has no members, so the screen keeps the browser's saved choice: the route answers 404 there.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "guided",
+                          "standard",
+                          "everything"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "guided walks through one step at a time; standard is the simple view; everything opens every Advanced options section. null: never chosen."
+                  },
+                  "guideHidden": {
+                    "type": "boolean",
+                    "description": "True once the member hid the Getting started guide."
+                  }
+                },
+                "required": [
+                  "mode",
+                  "guideHidden"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDisplayPreference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

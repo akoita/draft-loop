@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { registerDisplayPreferenceRoutes } from "./display-preference-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 
 export interface MemberSettingsRoutesOptions {
@@ -37,6 +38,7 @@ export function registerMemberSettingsRoutes(
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
   const { memberSettings } = options;
+  registerDisplayPreferenceRoutes(parent, memberSettings);
 
   app.get(
     "/v1/me/screen-language",
