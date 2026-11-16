@@ -35,6 +35,7 @@ import OpenAI from "openai";
 import { createAnthropicSdkClient } from "./anthropic-sdk-client.js";
 import { developmentProviderRetry } from "./development-provider-retry.js";
 import type { ProviderCredentialResolver } from "./glm-provider-routing.js";
+import type { ModelCallMeter } from "./model-call-meter.js";
 import { catalogModelPricing } from "./provider-model-pricing.js";
 
 export type { ProviderCredentialResolver } from "./glm-provider-routing.js";
@@ -65,6 +66,11 @@ export interface ProviderClientFactories {
    * or `undefined` when the workspace leaves the adapter default in place.
    */
   readonly local?: (endpoint: string | undefined) => LocalClient;
+  /**
+   * Not a factory: the host's meter for the extraction calls, such as the worker's usage log
+   * (#2806). The desktop and the CLI leave it unset.
+   */
+  readonly meter?: ModelCallMeter;
 }
 
 export interface ProviderUserSessionRunners {

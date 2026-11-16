@@ -13,6 +13,7 @@ import {
   createMaterialReviewHandler,
   type MaterialReviewHandlerOptions,
 } from "./material-review-handler.js";
+import { withJobIds } from "./model-call-log.js";
 import {
   createProfileDerivationHandler,
   type ProfileDerivationHandlerOptions,
@@ -70,10 +71,15 @@ export async function startWorker(
     options.queue,
     (job, control) => tracked(() => handle(job, control)),
     {
-      ...(extract === undefined ? {} : { briefExtraction: (job) => tracked(() => extract(job)) }),
+      ...(extract === undefined
+        ? {}
+        : { briefExtraction: (job) => tracked(() => withJobIds(job, () => extract(job))) }),
       ...(derive === undefined
         ? {}
-        : { profileDerivation: (job, control) => tracked(() => derive(job, control)) }),
+        : {
+            profileDerivation: (job, control) =>
+              tracked(() => withJobIds(job, () => derive(job, control))),
+          }),
       ...(review === undefined ? {} : { materialReview: (job) => tracked(() => review(job)) }),
       ...(research === undefined ? {} : { research: (job) => tracked(() => research(job)) }),
     },

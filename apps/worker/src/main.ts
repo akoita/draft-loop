@@ -27,6 +27,7 @@ import {
   runOutcomeFields,
 } from "./logging.js";
 import { readMailConfig } from "./mail.js";
+import { modelCallLog } from "./model-call-log.js";
 import { researchSearchFor } from "./research-search-wiring.js";
 import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
@@ -71,7 +72,12 @@ const blobs = openTenantBlobs(config.blobs);
 // Claude on Vertex AI and OpenAI's EU endpoint with keys from Secret Manager, the self-hosted
 // direct routes with keys from files, or none on the dev stack; local models go to the
 // deployment's own endpoint.
-const local = withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint);
+const routed = withLocalModels(routeProviderOptions(config.modelRoutes), config.localModelEndpoint);
+// Each brief extraction and profile derivation call logs its model, tokens and cost (#2806).
+const local = {
+  ...routed,
+  providerClientFactories: { ...routed.providerClientFactories, meter: modelCallLog() },
+};
 const serviceFor = tenantServices({ tenancy, blobsFor: blobs.storageFor, local });
 // The research brief's web search (#2560), from DRAFT_LOOP_RESEARCH_SEARCH; none searches nothing.
 const researchSearch = researchSearchFor(process.env, config.modelRoutes, local);
