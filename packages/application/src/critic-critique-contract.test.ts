@@ -10,10 +10,12 @@ import {
   maximumCritiqueMessageCharacters,
 } from "./critic-adjudication.js";
 import {
+  CritiqueRejection,
   coverageJudgementPromptRequests,
   criticCoverageJudgementParts,
   critiqueOutputSchema,
   critiqueOutputSchemaWithCoverageJudgements,
+  invalidCritiqueError,
   maximumCoverageJudgementCandidateBlocks,
   parseCritique,
 } from "./critic-critique-contract.js";
@@ -336,16 +338,57 @@ describe("critique parsing", () => {
       "invalid findings list",
     );
     expect(() =>
-      parseCritique({ findings: [1, { ...finding, id: " " }], ...withJudgements } as never),
+      parseCritique({ findings: [1, { ...finding, code: " " }], ...withJudgements } as never),
     ).toThrow("no valid finding");
   });
 
   it("drops a malformed finding and keeps the others (#2234)", () => {
     const critique = parseCritique({
-      findings: [1, null, { ...finding, id: " " }, { ...finding, message: 3 }, finding],
+      findings: [1, null, { ...finding, code: " " }, { ...finding, message: 3 }, finding],
     } as never);
 
     expect(critique.findings).toEqual([finding]);
+  });
+
+  it("gives a blank or repeated finding id a stable one instead of refusing the review (#2796)", () => {
+    const critique = parseCritique({
+      findings: [
+        { ...finding, id: "" },
+        { ...finding, id: "critic-finding-1" },
+        { ...finding, id: "critic-finding-1" },
+        { ...finding, id: " " },
+      ],
+    } as never);
+
+    expect(critique.findings.map(({ id }) => id)).toEqual([
+      "critic-finding-1-1",
+      "critic-finding-1",
+      "critic-finding-3",
+      "critic-finding-4",
+    ]);
+  });
+
+  it("says which required field the refused findings lacked, without their text (#2796)", () => {
+    const refused = (() => {
+      try {
+        parseCritique({
+          findings: [{ ...finding, message: "" }, { ...finding, code: 2 }, "x"],
+        } as never);
+      } catch (error) {
+        return error;
+      }
+      return undefined;
+    })();
+
+    expect(refused).toBeInstanceOf(CritiqueRejection);
+    expect(refused).toMatchObject({
+      diagnostic: "no_valid_finding",
+      fieldCounts: [
+        { code: "missing_message", count: 1 },
+        { code: "missing_code", count: 1 },
+        { code: "finding_not_object", count: 1 },
+      ],
+    });
   });
 
   it("cuts a message over the limit instead of refusing the critique (#2234)", () => {
@@ -369,5 +412,45 @@ describe("critique parsing", () => {
     expect(critique.findings).toHaveLength(maximumCritiqueFindings);
     expect(critique.findings[0]?.id).toBe("e1");
     expect(critique.findings.at(-1)?.id).toBe(`w${maximumCritiqueFindings - 2}`);
+  });
+});
+
+describe("critique rejection", () => {
+  const response = {
+    output: {},
+    contextSnapshotId: "context-1",
+    provider: "openai",
+    company: "openai",
+    route: "openai-api",
+    modelId: "gpt-6.1-terra",
+    providerRequestId: "req_1",
+    structuredOutputSha256: "0".repeat(64),
+    usage: { inputTokens: 21_000, outputTokens: 1_800, totalTokens: 22_800 },
+    cost: { estimatedUsd: 0.025 },
+  } as const;
+
+  it("names the route, the stage and why the findings were refused (#2796)", () => {
+    const error = invalidCritiqueError(
+      response as never,
+      new CritiqueRejection("x", "no_valid_finding", [{ code: "missing_message", count: 20 }]),
+    );
+
+    expect(error).toMatchObject({
+      code: "invalid-response",
+      retryable: true,
+      route: "openai-api",
+      failureStage: "response-schema-validation",
+      diagnostics: [{ code: "no_valid_finding", path: "draft_critique.findings" }],
+      diagnosticCounts: [{ code: "missing_message", count: 20 }],
+      billed: { cost: { estimatedUsd: 0.025 } },
+    });
+  });
+
+  it("reports an unexpected failure without guessing its cause", () => {
+    expect(invalidCritiqueError(response as never, new TypeError("x"))).toMatchObject({
+      route: "openai-api",
+      diagnostics: [{ code: "unexpected_shape", path: "draft_critique.findings" }],
+      diagnosticCounts: [],
+    });
   });
 });
