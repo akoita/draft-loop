@@ -8,6 +8,7 @@ import {
   coverLetterSentences,
 } from "./cover-letter-claims.js";
 import {
+  coverLetterClaimCheckSentencesPerCall,
   coverLetterClaimLinksOf,
   createModelCoverLetterClaimChecker,
 } from "./cover-letter-claims-model.js";
@@ -143,5 +144,47 @@ describe("the model adapter", () => {
       "p0.s0",
     ]);
     expect(coverLetterClaimLinksOf(null)).toEqual([]);
+  });
+
+  it("links a long text in batches that each fit one call's output limit (#2623)", async () => {
+    const requests: ModelRequest<JsonValue>[] = [];
+    const port = createModelCoverLetterClaimChecker({
+      executor: {
+        execute: async (request) => {
+          requests.push(request);
+          const sent = (request.input as { sentences: { id: string }[] }).sentences;
+          return {
+            output: {
+              links: sent.map((sentence) => ({
+                sentence_id: sentence.id,
+                kind: "courtesy",
+                fact_ids: [],
+                company_fact_ids: [],
+              })),
+            },
+          } as unknown as ModelResponse<JsonValue>;
+        },
+      },
+      model: { company: "anthropic", modelId: "scripted" } as never,
+      dataPolicy: {} as never,
+      applicationId: "app-1",
+    });
+    const count = 2 * coverLetterClaimCheckSentencesPerCall + 1;
+    const sentences = Array.from({ length: count }, (_, index) => ({
+      id: `s${index}`,
+      paragraph: 0,
+      text: `Sentence ${index}.`,
+    }));
+    const { links } = await port.link({ sentences, facts, companyFacts });
+    expect(requests).toHaveLength(3);
+    expect(requests.map((r) => (r.input as { sentences: unknown[] }).sentences.length)).toEqual([
+      coverLetterClaimCheckSentencesPerCall,
+      coverLetterClaimCheckSentencesPerCall,
+      1,
+    ]);
+    // Every batch carries the facts its sentences may rest on.
+    for (const request of requests)
+      expect(JSON.stringify(request.input)).toContain("Cut settlement breaks");
+    expect(links.map((l) => l.sentenceId)).toEqual(sentences.map((s) => s.id));
   });
 });
