@@ -40,6 +40,7 @@ import {
 } from "./career-flow.js";
 import { CareerPanel } from "./career-panel.js";
 import { FirstRunQuestion } from "./first-run-question.js";
+import { GettingStarted } from "./getting-started.js";
 import {
   type ApplicationListView,
   ApplicationsTable,
@@ -808,6 +809,10 @@ export function HomeView({
           )}
 
           <FirstRunQuestion />
+          <GettingStarted
+            inputs={{ evidence, legacyEvidenceSourceCount, profile, applications }}
+            actions={{ onManageEvidence, onManageProfile, onNewApplication, onOpenApplication }}
+          />
 
           {/* Evidence first, then the profile built from it: one pipeline, not two choices. */}
           <CareerPanel
