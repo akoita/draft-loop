@@ -204,7 +204,8 @@ The routes and storage are in
   signal codes: instruction override, role change, hidden text and exfiltration
   link. It makes no model call.
 - **Model screener.** With `DRAFT_LOOP_SCREENING=rules+model`, Claude Haiku 5.5
-  on the EU Vertex route also classifies the text. A job post always goes to it.
+  on the EU Vertex route also classifies the text, or on the direct Claude API
+  where the deployment turned its fallback on. A job post always goes to it.
   A candidate source goes only when the deployment allows provider data and the
   record's consent names Anthropic.
 - **Fail closed.** A screener that fails, or an upload with no readable text,

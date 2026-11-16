@@ -95,3 +95,87 @@ describe("model screening on the direct route", () => {
     expect(claude.create).not.toHaveBeenCalled();
   });
 });
+
+/** Vertex AI refusing every call, as it does where the billing account cannot use Claude yet. */
+function refusingVertex() {
+  const fetch = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ error: { code: 403, message: "Not allowed." } }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      }),
+  ) as unknown as typeof globalThis.fetch;
+  const auth = {
+    authClient: {
+      projectId: "synthetic-project",
+      getRequestHeaders: async () => new Headers({ authorization: "Bearer synthetic-token" }),
+    },
+  } as never;
+  return { fetch, auth };
+}
+
+function secrets(values: Record<string, string>) {
+  return {
+    accessSecretVersion: vi.fn(async ({ name }: { readonly name: string }) => [
+      { payload: { data: values[name] ?? null } },
+    ]) as never,
+  };
+}
+
+const keySecret = "projects/synthetic/secrets/anthropic-api-key/versions/latest";
+const vertexRoute = { vertexProjectId: "synthetic", vertexLocation: "eu", vertexPriceFactor: 1.1 };
+
+describe("model screening on the Vertex route with the Claude API fallback", () => {
+  it("falls back to the Claude API, its key read from Secret Manager, when Vertex refuses", async () => {
+    const vertex = refusingVertex();
+    const claude = scriptedClaude('{"verdict":"clear","signals":[]}');
+    const keys: string[] = [];
+    const setup = contentScreeningSetup(
+      {
+        mode: "rules+model",
+        allowProviderData: true,
+        model: { ...vertexRoute, anthropicKeySecret: keySecret },
+      },
+      {
+        vertex,
+        secrets: secrets({ [keySecret]: "synthetic-claude-key" }),
+        anthropicApiClient: (apiKey) => {
+          keys.push(apiKey);
+          return claude.client;
+        },
+      },
+    );
+    const onUsage = vi.fn();
+
+    const result = await setup.model?.({ dataPolicy, onUsage }).screen({
+      kind: "job-source",
+      text: "A fictional job post.",
+    });
+
+    expect(result).toMatchObject({ verdict: "clear" });
+    expect(vertex.fetch).toHaveBeenCalled();
+    expect(keys).toEqual(["synthetic-claude-key"]);
+    expect(claude.create).toHaveBeenCalledOnce();
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "anthropic", route: "anthropic-api" }),
+    );
+  });
+
+  it("never leaves Vertex AI when the deployment has no fallback", async () => {
+    const vertex = refusingVertex();
+    const claude = scriptedClaude('{"verdict":"clear","signals":[]}');
+    const setup = contentScreeningSetup(
+      { mode: "rules+model", allowProviderData: true, model: vertexRoute },
+      { vertex, anthropicApiClient: () => claude.client },
+    );
+
+    await expect(
+      setup.model?.({ dataPolicy, onUsage: () => undefined }).screen({
+        kind: "job-source",
+        text: "A fictional job post.",
+      }),
+    ).rejects.toThrow();
+    expect(vertex.fetch).toHaveBeenCalled();
+    expect(claude.create).not.toHaveBeenCalled();
+  });
+});

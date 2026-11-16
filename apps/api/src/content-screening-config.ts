@@ -17,12 +17,21 @@ import { ApiConfigError } from "./config.js";
 export const screeningModes = ["off", "rules", "rules+model"] as const;
 export type ScreeningMode = (typeof screeningModes)[number];
 
-/** The EU Vertex route the model screener calls; the API holds no provider key of its own. */
+/**
+ * The EU Vertex route the model screener and the career interviewer call. The API holds a Claude
+ * API key only when the deployment turns on the direct fallback, the same one the worker reads.
+ */
 export interface ScreeningModelRoute {
   readonly vertexProjectId: string;
   readonly vertexLocation: string;
   /** The location's price factor over first-party rates, from Google's price list. */
   readonly vertexPriceFactor: number;
+  /**
+   * The Secret Manager version of the Claude API key, present only when the deployment allows the
+   * direct Claude API as a recorded fallback (`DRAFT_LOOP_ANTHROPIC_FALLBACK`). It processes
+   * material outside the EU, so it is off unless turned on.
+   */
+  readonly anthropicKeySecret?: string;
 }
 
 export interface ScreeningConfig {
@@ -75,7 +84,30 @@ function readModelRoute(env: NodeJS.ProcessEnv): ScreeningModelRoute {
       { cause: error },
     );
   }
-  return { vertexProjectId, vertexLocation, vertexPriceFactor };
+  const anthropicKeySecret = readAnthropicFallback(env);
+  return {
+    vertexProjectId,
+    vertexLocation,
+    vertexPriceFactor,
+    ...(anthropicKeySecret === undefined ? {} : { anthropicKeySecret }),
+  };
+}
+
+/** The worker's fallback settings, checked the same way: a key exactly when the fallback is on. */
+function readAnthropicFallback(env: NodeJS.ProcessEnv): string | undefined {
+  const on = flag(env, "DRAFT_LOOP_ANTHROPIC_FALLBACK");
+  const keySecret = env.DRAFT_LOOP_ANTHROPIC_KEY_SECRET ?? "";
+  if (on && keySecret === "") {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_ANTHROPIC_KEY_SECRET is required when the Claude API fallback is on.",
+    );
+  }
+  if (!on && keySecret !== "") {
+    throw new ApiConfigError(
+      "DRAFT_LOOP_ANTHROPIC_KEY_SECRET is set but the Claude API fallback is off.",
+    );
+  }
+  return on ? keySecret : undefined;
 }
 
 function readDirectRoute(env: NodeJS.ProcessEnv): ScreeningDirectRoute {
@@ -94,8 +126,9 @@ function readDirectRoute(env: NodeJS.ProcessEnv): ScreeningDirectRoute {
 /**
  * Reads `DRAFT_LOOP_SCREENING` (default `rules`), the same in owner-token and sign-in mode. An
  * unknown value is a startup error, never a silent fallback to a weaker mode. `rules+model` needs
- * the Vertex project, location and price factor that the worker reads, or, with
- * `DRAFT_LOOP_MODEL_ROUTES=direct`, a Claude API key file in `DRAFT_LOOP_SECRETS_DIR`.
+ * the Vertex project, location and price factor that the worker reads, and optionally its direct
+ * Claude API fallback, or, with `DRAFT_LOOP_MODEL_ROUTES=direct`, a Claude API key file in
+ * `DRAFT_LOOP_SECRETS_DIR`.
  */
 export function readScreeningConfig(env: NodeJS.ProcessEnv): ScreeningConfig {
   const value = env.DRAFT_LOOP_SCREENING ?? "";

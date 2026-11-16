@@ -133,7 +133,9 @@ Screening stays at `rules` by default. With `rules+model` the API calls Claude
 Haiku on the EU Vertex route with its own identity. It then needs the Vertex
 settings, permission to call Vertex AI and egress to Google APIs, which the
 infrastructure repository grants. Without them every model screening fails
-closed to `unscreened`.
+closed to `unscreened`. Where Vertex AI cannot serve Claude yet, the worker's
+`DRAFT_LOOP_ANTHROPIC_FALLBACK` and `DRAFT_LOOP_ANTHROPIC_KEY_SECRET` give the
+API the direct Claude API as a recorded fallback, outside the EU.
 
 ## Smoke in sign-in mode
 
