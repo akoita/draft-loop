@@ -13,6 +13,16 @@ screen shows at once.
 Show everything adds nothing new to a screen. It only removes the click that
 opens each folded section.
 
+## The first question
+
+The first time you open Home, one card asks **How would you like to start?**
+
+- **Guide me step by step** sets Guided.
+- **I know apps like this** sets Show everything.
+- **Decide later** keeps the simple view.
+
+The card does not come back once you answer.
+
 ## Change it
 
 1. Open **Workspace settings** on Home.
