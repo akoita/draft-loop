@@ -47,14 +47,31 @@ describe("Show everything", () => {
   });
 });
 
-describe("the Display row in Workspace settings", () => {
-  it("names the current way of working and offers to change it, with no checkbox", () => {
+describe("the Display setting in Workspace settings", () => {
+  it("shows all three ways of working as choice cards, the current one marked, with no checkbox", () => {
     const html = withMode("everything", <DisplaySetting />);
-    expect(html).toContain("<strong>Display</strong>");
-    expect(html).toContain('<span class="meta-chip">Show everything</span>');
-    expect(html).toContain(">Change</button>");
-    expect(html).toContain("Show everything opens every Advanced options section.");
+    expect(html).toContain('<h3 id="display-setting-heading">Display</h3>');
+    expect(html).toContain(
+      'aria-pressed="false"><span class="display-choice-option-title"><strong>Guide me step by step</strong></span>',
+    );
+    expect(html).toContain(
+      'aria-pressed="false"><span class="display-choice-option-title"><strong>Simple</strong></span>',
+    );
+    expect(html).toContain(
+      'aria-pressed="true"><span class="display-choice-option-title"><strong>Show everything</strong><span class="meta-chip">Current</span>',
+    );
+    expect(html).toContain("Technical choices stay folded under Advanced options.");
+    expect(html).not.toContain(">Change</button>");
+    expect(html).not.toContain("Keep as it is");
     expect(html).not.toContain('type="checkbox"');
+  });
+
+  it("marks Simple as current for a person who never chose", () => {
+    const html = withMode(null, <DisplaySetting />);
+    expect(html).toContain(
+      'aria-pressed="true"><span class="display-choice-option-title"><strong>Simple</strong>',
+    );
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
   });
 
   it("is absent when the host keeps no preference", () => {

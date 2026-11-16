@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 
 /**
  * How the screens show themselves (#2789): `guided` walks a newcomer one step at a time,
@@ -128,43 +128,59 @@ export function DisplayChoiceCard({
   );
 }
 
+/** The three ways of working Workspace settings offers, from most help to most shown. */
+export function displaySettingChoices(): readonly {
+  readonly mode: DisplayMode;
+  readonly label: string;
+  readonly effect: string;
+}[] {
+  const [guided, everything] = displayChoices("settings");
+  return [
+    guided!,
+    {
+      mode: "standard",
+      label: t`Simple`,
+      effect: t`Each screen shows the basic path. Technical choices stay folded under Advanced options.`,
+    },
+    everything!,
+  ];
+}
+
 /**
- * The Display row in Workspace settings (#2789): visible, never inside Advanced options. It names
- * the current way of working and opens the two-choice card to change it. Renders nothing when the
- * host keeps no preference.
+ * The Display setting in Workspace settings (#2789): visible, never inside Advanced options. All
+ * three ways of working sit side by side as choice cards, the current one marked, and a click
+ * switches at once. Never a bare checkbox. Renders nothing when the host keeps no preference.
  */
 export function DisplaySetting() {
   const { preference, choose } = useDisplayPreference();
-  const [changing, setChanging] = useState(false);
   if (choose === undefined) return null;
+  const current: DisplayMode = preference.mode ?? "standard";
   return (
-    <div className="display-setting">
-      <div className="display-setting-row">
-        <strong>{t`Display`}</strong>
-        <span className="meta-chip">{displayModeName(preference.mode)}</span>
-        <button
-          type="button"
-          className="button button-outline"
-          onClick={() => setChanging((open) => !open)}
-          aria-expanded={changing}
-        >
-          {changing ? t`Keep as it is` : t`Change`}
-        </button>
+    <section className="display-setting" aria-labelledby="display-setting-heading">
+      <h3 id="display-setting-heading">{t`Display`}</h3>
+      <p className="subtle">{t`How much each screen shows at once. The change applies right away.`}</p>
+      <div className="display-choice-options display-setting-options">
+        {displaySettingChoices().map((choice) => {
+          const selected = current === choice.mode;
+          return (
+            <button
+              key={choice.mode}
+              type="button"
+              className="display-choice-option"
+              aria-pressed={selected}
+              onClick={() => {
+                if (!selected) choose({ ...preference, mode: choice.mode });
+              }}
+            >
+              <span className="display-choice-option-title">
+                <strong>{choice.label}</strong>
+                {selected ? <span className="meta-chip">{t`Current`}</span> : null}
+              </span>
+              <span>{choice.effect}</span>
+            </button>
+          );
+        })}
       </div>
-      <p className="subtle">
-        {t`Guided shows one step at a time. Show everything opens every Advanced options section.`}
-      </p>
-      {changing ? (
-        <DisplayChoiceCard
-          heading={t`How would you like DraftLoop to look?`}
-          current={preference.mode}
-          quietLabel={t`Use the simple view`}
-          onChoose={(mode) => {
-            choose({ ...preference, mode });
-            setChanging(false);
-          }}
-        />
-      ) : null}
-    </div>
+    </section>
   );
 }

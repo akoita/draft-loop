@@ -47,9 +47,8 @@ steps** turns Guided on, **No thanks** hides the offer.
 ## Change it
 
 1. Open **Workspace settings** on Home.
-2. Next to **Display**, select **Change**.
-3. Pick **Guide me step by step** or **Show everything**, or **Use the simple
-   view** to go back.
+2. Under **Display**, pick one of the three cards: **Guide me step by step**,
+   **Simple** or **Show everything**. The current one is marked **Current**.
 
 The screens change at once.
 
