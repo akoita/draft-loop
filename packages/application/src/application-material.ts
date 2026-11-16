@@ -480,13 +480,37 @@ for (const [word, value] of Object.entries(numberWords)) {
 interface StatedNumber {
   readonly written: string;
   readonly digits: string;
+  /** The whole amount, when thousands are written "55k" or "55,000", as "55000". */
+  readonly plain?: string;
+}
+
+const thousandsSuffix = /^\s?[kK](?!\p{L})/u;
+const groupedThousands = /^\d{1,3}(?:[.,]\d{3})+$/u;
+
+/** "55k" as 55000 and "45,000" as 45000, so either way of writing an amount matches the other. */
+function plainAmount(written: string, after: string): string | undefined {
+  if (thousandsSuffix.test(after)) {
+    return String(Math.round(Number(written.replace(",", ".")) * 1000));
+  }
+  return groupedThousands.test(written) ? written.replace(/[.,]/gu, "") : undefined;
+}
+
+/** A source with its amounts written out in plain digits: "45k" and "45 000" both as "45000". */
+function plainAmounts(source: string): string {
+  return source
+    .replace(/(?<![\d.,])(\d+(?:[.,]\d+)?)\s?[kK](?!\p{L})/gu, (_, amount: string) =>
+      String(Math.round(Number(amount.replace(",", ".")) * 1000)),
+    )
+    .replace(/(?<![\d.,])\d{1,3}(?:[ ,.\u00a0\u202f]\d{3})+(?![\d])/gu, (amount) =>
+      amount.replace(/[ ,.\u00a0\u202f]/gu, ""),
+    );
 }
 
 function numbersIn(text: string): StatedNumber[] {
-  const digits = [...text.matchAll(numberPattern)].map((match) => ({
-    written: match[0],
-    digits: match[0],
-  }));
+  const digits = [...text.matchAll(numberPattern)].map((match) => {
+    const plain = plainAmount(match[0], text.slice((match.index ?? 0) + match[0].length));
+    return { written: match[0], digits: match[0], ...(plain === undefined ? {} : { plain }) };
+  });
   const words = [...text.toLowerCase().matchAll(/\p{L}+/gu)].flatMap((match) => {
     const value = numberWords[match[0]];
     return value === undefined ? [] : [{ written: match[0], digits: String(value) }];
@@ -508,14 +532,17 @@ function wordIn(source: string, word: string): boolean {
 
 /**
  * Whether a number stated in the draft appears in one of the sources, as a whole number in
- * digits or in words: "five" is supported by "5" or "five", and "10" by "10" or "ten".
+ * digits or in words: "five" is supported by "5" or "five", and "10" by "10" or "ten". An amount
+ * in thousands matches however it is written: "55k" by "55,000" or "55 000", and back.
  */
 function supported(number: StatedNumber, sources: readonly string[]): boolean {
   const words = wordsForNumber.get(Number(number.digits)) ?? [];
   const written = /^\p{L}+$/u.test(number.written) ? number.written : undefined;
+  const plain = number.plain;
   return sources.some(
     (source) =>
       digitsIn(source, number.digits) ||
+      (plain !== undefined && digitsIn(plainAmounts(source), plain)) ||
       (written !== undefined && wordIn(source, written)) ||
       words.some((word) => wordIn(source, word)),
   );

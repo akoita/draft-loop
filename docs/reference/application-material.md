@@ -226,9 +226,12 @@ flowchart LR
 
 A sentence about the candidate must cite an allowed fact, or admit a gap the
 matrix found. A sentence about the employer or the field must cite a finding, a
-job requirement, or the interview details the candidate entered. Advice that
-states no fact, such as a time plan, passes, and may name durations. A sentence
-that says research found nothing on a topic passes too.
+job requirement, or the interview details the candidate entered, date and time
+included. Advice and sentences about the interview may give durations and
+counts, such as a time plan or "two examples"; a claim about the candidate may
+not. A gap may be admitted beside a fact or a requirement. A sentence that says
+research found nothing on a topic passes too. An amount in thousands matches
+however it is written: "55k" matches "55,000" or "55 000".
 Sentences that fail, or come close to a never-say entry, are left out and
 listed in `dropped_sentences`. Topics research found no source for are listed
 in `unsourced_topics`, and their sections state no fact.
