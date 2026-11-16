@@ -12,9 +12,12 @@ import {
   createFileCredentialResolver,
   createHostedAnthropicRoute,
   createHostedContentScreener,
+  createSecretManagerCredentialResolver,
   type DecisionScreeningShadow,
+  type HostedAnthropicRouteOptions,
   type HostedContentScreenerOptions,
   type ModelScreeningUsage,
+  type SecretVersionReader,
 } from "@draft-loop/model-gateway";
 import {
   type ContentScreeningStore,
@@ -83,18 +86,33 @@ function screeningRoute(
       projectId: model.vertexProjectId,
       location: model.vertexLocation,
       locationPriceFactor: model.vertexPriceFactor,
+      ...dependencies.vertex,
     },
-    // The direct Claude API processes material outside the EU, and the API holds no provider key.
-    anthropicFallback: false,
-    resolveCredential: async () => undefined,
+    // The direct Claude API processes material outside the EU, so it is used only where the
+    // deployment turned the fallback on; its key then comes from Secret Manager at each call.
+    anthropicFallback: model.anthropicKeySecret !== undefined,
+    resolveCredential:
+      model.anthropicKeySecret === undefined
+        ? async () => undefined
+        : createSecretManagerCredentialResolver({
+            secrets: { anthropic: model.anthropicKeySecret },
+            ...(dependencies.secrets === undefined ? {} : { client: dependencies.secrets }),
+          }),
+    ...(dependencies.anthropicApiClient === undefined
+      ? {}
+      : { anthropicApiClient: dependencies.anthropicApiClient }),
   });
 }
 
 export interface ScreeningRouteDependencies {
-  /** A scripted Claude API client for the direct route, for tests. */
+  /** A scripted Claude API client for the direct route and the Vertex fallback, for tests. */
   readonly anthropicApiClient?: Parameters<
     typeof createDirectAnthropicRoute
   >[0]["anthropicApiClient"];
+  /** A scripted Secret Manager for the fallback's key, for tests. */
+  readonly secrets?: SecretVersionReader;
+  /** Scripted Vertex authentication and transport, for tests. */
+  readonly vertex?: Pick<HostedAnthropicRouteOptions["vertex"], "auth" | "fetch">;
 }
 
 /**

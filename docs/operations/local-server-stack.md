@@ -403,7 +403,10 @@ The API calls a model only for `DRAFT_LOOP_SCREENING=rules+model`, using Claude
 Haiku:
 
 - **Vertex:** reads the three `DRAFT_LOOP_VERTEX_*` project, location and price
-  settings and uses its own service identity, with no direct fallback.
+  settings and uses its own service identity. With
+  `DRAFT_LOOP_ANTHROPIC_FALLBACK=true` and `DRAFT_LOOP_ANTHROPIC_KEY_SECRET`, as
+  for the worker, a call Vertex refuses or cannot serve goes to the direct
+  Claude API instead. That fallback processes material outside the EU.
 - **Direct:** calls the Claude API with `anthropic_api_key` from
   `DRAFT_LOOP_SECRETS_DIR`. A stack with no Claude key keeps `rules`, since a
   screener that cannot answer leaves material quarantined.

@@ -37,6 +37,42 @@ describe("readScreeningConfig", () => {
     });
   });
 
+  it("reads the direct Claude API fallback of the Vertex route, with its key's secret version", () => {
+    expect(
+      readScreeningConfig({
+        DRAFT_LOOP_SCREENING: "rules+model",
+        ...vertex,
+        DRAFT_LOOP_ANTHROPIC_FALLBACK: "true",
+        DRAFT_LOOP_ANTHROPIC_KEY_SECRET: "projects/p/secrets/anthropic-api-key/versions/latest",
+      }).model,
+    ).toEqual({
+      vertexProjectId: "example-proj",
+      vertexLocation: "europe-west1",
+      vertexPriceFactor: 1.1,
+      anthropicKeySecret: "projects/p/secrets/anthropic-api-key/versions/latest",
+    });
+    expect(
+      readScreeningConfig({
+        DRAFT_LOOP_SCREENING: "rules+model",
+        ...vertex,
+        DRAFT_LOOP_ANTHROPIC_FALLBACK: "false",
+      }).model?.anthropicKeySecret,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    ["an unclear fallback setting", { DRAFT_LOOP_ANTHROPIC_FALLBACK: "yes" }],
+    ["the fallback on without its key", { DRAFT_LOOP_ANTHROPIC_FALLBACK: "true" }],
+    [
+      "a Claude key with the fallback off",
+      { DRAFT_LOOP_ANTHROPIC_KEY_SECRET: "projects/p/secrets/anthropic-api-key/versions/latest" },
+    ],
+  ])("refuses the Vertex route with %s", (_label, env) => {
+    expect(() =>
+      readScreeningConfig({ DRAFT_LOOP_SCREENING: "rules+model", ...vertex, ...env }),
+    ).toThrow(ApiConfigError);
+  });
+
   it("defaults the Vertex location to the eu multi-region", () => {
     const { DRAFT_LOOP_VERTEX_LOCATION: _location, ...withoutLocation } = vertex;
     expect(
