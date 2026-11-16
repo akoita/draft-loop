@@ -163,6 +163,7 @@ interface ServerMessage {
   readonly media_type?: string;
   readonly kind?: string;
   readonly more?: boolean;
+  readonly ms?: number;
   readonly code?: string;
   readonly message?: string;
 }
@@ -275,6 +276,9 @@ export function startLiveVoiceCall(options: LiveVoiceCallOptions): CareerIntervi
         break;
       case "partial":
         events.onHeard(message.text ?? "");
+        break;
+      case "waiting":
+        events.onWaiting?.(typeof message.ms === "number" && message.ms > 0 ? message.ms : 0);
         break;
       case "answer":
         listening = false;

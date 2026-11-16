@@ -65,6 +65,7 @@ function call() {
     onLevel?: ((level: number) => void) | undefined;
   }[] = [];
   const levels: number[] = [];
+  const waits: number[] = [];
   let stops = 0;
   const live = startLiveVoiceCall({
     socket,
@@ -80,10 +81,22 @@ function call() {
       onHeard: (text) => heard.push(text),
       onRefusal: () => {},
       onLevel: (level) => levels.push(level),
+      onWaiting: (ms) => waits.push(ms),
     },
     onSession: (view) => sessions.push(view),
   });
-  return { socket, microphone, states, heard, sessions, played, levels, live, stops: () => stops };
+  return {
+    socket,
+    microphone,
+    states,
+    heard,
+    sessions,
+    played,
+    levels,
+    waits,
+    live,
+    stops: () => stops,
+  };
 }
 
 describe("web live voice", () => {
@@ -98,7 +111,7 @@ describe("web live voice", () => {
   });
 
   it("streams the voice while listening and mutes it while the question plays", async () => {
-    const { socket, microphone, states, heard, sessions, played, live } = call();
+    const { socket, microphone, states, heard, sessions, played, waits, live } = call();
     await Promise.resolve();
     microphone.speak(new Int16Array(160));
     expect(socket.sent).toEqual([]);
@@ -107,6 +120,9 @@ describe("web live voice", () => {
     microphone.speak(new Int16Array(160));
     expect(socket.sent).toHaveLength(1);
     socket.server({ type: "partial", text: "I rebuilt" });
+    socket.server({ type: "waiting", ms: 2_500 });
+    socket.server({ type: "waiting", ms: -1 });
+    expect(waits).toEqual([2_500, 0]);
     live.endTurn();
     expect(socket.sent.at(-1)).toBe(JSON.stringify({ type: "end_turn" }));
 

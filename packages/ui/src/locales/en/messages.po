@@ -4580,6 +4580,10 @@ msgstr "Keep my email address to invite me to the DraftLoop beta. It is deleted 
 msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 msgstr "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Keep talking to go on, or press Done speaking."
+msgstr "Keep talking to go on, or press Done speaking."
+
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr "Keep the heading text to 200 characters or fewer."
@@ -7994,6 +7998,10 @@ msgstr "Send the job description to the writing model?"
 #: apps/web/src/consent-model.ts
 msgid "Sending to providers"
 msgstr "Sending to providers"
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Sending your answer soon…"
+msgstr "Sending your answer soon…"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Sensitive"

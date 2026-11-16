@@ -116,7 +116,40 @@ describe("Google speech", () => {
     timers[1]?.callback();
     expect(stream.ended).toBe(true);
     stream.emit("end");
-    expect(await events).toContainEqual({ kind: "end_of_turn" });
+    expect(await events).toEqual([
+      { kind: "final", text: "I led the migration, but" },
+      { kind: "waiting", ms: 2_500 },
+      { kind: "end_of_turn" },
+    ]);
+  });
+
+  it("clears the wait when the candidate speaks again", async () => {
+    const stream = new FakeDuplex();
+    const timers: (() => void)[] = [];
+    const stt = createGoogleStreamingSpeechToText({
+      projectId: "fixture-project",
+      clients: clients({ recognize: stream }),
+      setTimer: (callback) => timers.push(callback),
+      clearTimer: () => undefined,
+    });
+    const recognition = stt.open({ language: "fr" });
+    const events = drain(recognition.events);
+    stream.emit("data", { results: [{ alternatives: [{ transcript: "J'ai géré" }] }] });
+    stream.emit("data", { speechEventType: "SPEECH_ACTIVITY_END" });
+    timers[0]?.();
+    stream.emit("data", { speechEventType: "SPEECH_ACTIVITY_BEGIN" });
+    stream.emit("data", {
+      results: [{ alternatives: [{ transcript: "J'ai géré l'équipe." }], isFinal: true }],
+    });
+    recognition.end();
+    stream.emit("end");
+    expect(await events).toEqual([
+      { kind: "partial", text: "J'ai géré" },
+      { kind: "waiting", ms: 2_500 },
+      { kind: "waiting", ms: 0 },
+      { kind: "final", text: "J'ai géré l'équipe." },
+      { kind: "end_of_turn" },
+    ]);
   });
 
   it("refuses a pause whose unfinished wait is shorter than the normal one", () => {

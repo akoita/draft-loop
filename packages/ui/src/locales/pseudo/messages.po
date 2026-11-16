@@ -4579,6 +4579,10 @@ msgstr ""
 msgid "Keep parts of your documents, such as Salary or Health, away from the models. Mark Markdown sections by their heading. Never-send sections never reach a model; only-if-allowed sections stay out unless the workspace allows sensitive material."
 msgstr ""
 
+#: packages/ui/src/career-interview-live.tsx
+msgid "Keep talking to go on, or press Done speaking."
+msgstr ""
+
 #: apps/web/src/sensitivity-model.ts
 msgid "Keep the heading text to 200 characters or fewer."
 msgstr ""
@@ -7992,6 +7996,10 @@ msgstr ""
 
 #: apps/web/src/consent-model.ts
 msgid "Sending to providers"
+msgstr ""
+
+#: packages/ui/src/career-interview-live.tsx
+msgid "Sending your answer soon…"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx

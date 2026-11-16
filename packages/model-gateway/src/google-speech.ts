@@ -20,6 +20,7 @@ export interface GoogleSpeechIdentity {
 export type GoogleLiveTranscriptEvent =
   | { readonly kind: "partial"; readonly text: string }
   | { readonly kind: "final"; readonly text: string }
+  | { readonly kind: "waiting"; readonly ms: number }
   | { readonly kind: "end_of_turn" };
 
 export interface GoogleLiveRecognition {
@@ -207,6 +208,7 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
       const stream = options.clients.streamingRecognize();
       let silence: unknown;
       let lastText = "";
+      let holding = false;
       let finished = false;
       // Once the audio is ended, Google may still send its last finals, but the stream refuses
       // more writes; microphone frames that arrive in between are dropped.
@@ -230,6 +232,8 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
         if (event === "SPEECH_ACTIVITY_BEGIN" || event === "2") {
           if (silence !== undefined) clearTimer(silence);
           silence = undefined;
+          if (holding) queue.push({ kind: "waiting", ms: 0 });
+          holding = false;
         } else if (event === "SPEECH_ACTIVITY_END" || event === "3") {
           // Ending the audio lets Google send its last finals; the stream's end closes the turn.
           // The words are judged when the normal pause runs out, so a late final still counts.
@@ -237,6 +241,8 @@ export function createGoogleStreamingSpeechToText(options: GoogleStreamingSpeech
           silence = setTimer(() => {
             const extraMs = pause.unfinishedMs - pause.normalMs;
             if (extraMs > 0 && looksUnfinished(lastText, request.language)) {
+              holding = true;
+              queue.push({ kind: "waiting", ms: extraMs });
               silence = setTimer(endAudio, extraMs);
             } else {
               endAudio();
