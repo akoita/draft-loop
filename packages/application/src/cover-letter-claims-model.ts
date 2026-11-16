@@ -21,6 +21,11 @@ export const coverLetterClaimCheckModelId = "claude-haiku-5-5";
 export const coverLetterClaimCheckPromptVersion = "cover-letter-claims-v2";
 /** One link per sentence; a live check used 2,690 of 4,096 tokens, too close to a cut-off (#2613). */
 const maxOutputTokens = applicationMaterialMaxOutputTokens;
+/**
+ * The most sentences one call links. A whole interview guide overflowed one call's output limit
+ * (#2623), so a long text is linked in batches; a cover letter fits in one.
+ */
+export const coverLetterClaimCheckSentencesPerCall = 24;
 
 const outputSchema = {
   type: "object",
@@ -93,35 +98,60 @@ export function coverLetterClaimLinksOf(output: unknown): CoverLetterClaimLink[]
   });
 }
 
+type ClaimCheckRequest = Parameters<CoverLetterClaimCheckPort["link"]>[0];
+
+/** Splits a text's sentences into batches no longer than one call may link. */
+export function coverLetterClaimCheckBatches<Sentence>(
+  sentences: readonly Sentence[],
+): Sentence[][] {
+  const batches: Sentence[][] = [];
+  for (let start = 0; start < sentences.length; start += coverLetterClaimCheckSentencesPerCall) {
+    batches.push(sentences.slice(start, start + coverLetterClaimCheckSentencesPerCall));
+  }
+  return batches.length === 0 ? [[]] : batches;
+}
+
+async function linkBatch(
+  options: CoverLetterClaimCheckModelOptions,
+  request: ClaimCheckRequest,
+  sentences: ClaimCheckRequest["sentences"],
+): Promise<CoverLetterClaimLink[]> {
+  const response = await options.executor.execute({
+    contextSnapshotId: options.applicationId,
+    model: options.model,
+    systemPrompt,
+    input: {
+      sentences: sentences.map((sentence) => ({ id: sentence.id, text: sentence.text })),
+      facts: request.facts.map((fact) => ({
+        id: fact.id,
+        text: fact.brief,
+        ...(fact.group === undefined ? {} : { group: fact.group }),
+      })),
+      company_facts: request.companyFacts.map((fact) => ({ id: fact.id, text: fact.text })),
+      job_requirements: (request.requirements ?? []).map(({ id, text }) => ({ id, text })),
+    },
+    outputSchema,
+    outputName: "cover_letter_claims",
+    maxOutputTokens,
+    dataPolicy: options.dataPolicy,
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+  });
+  return coverLetterClaimLinksOf(response.output);
+}
+
 export function createModelCoverLetterClaimChecker(
   options: CoverLetterClaimCheckModelOptions,
 ): CoverLetterClaimCheckPort {
   return {
-    link: async (request) => {
-      const response = await options.executor.execute({
-        contextSnapshotId: options.applicationId,
-        model: options.model,
-        systemPrompt,
-        input: {
-          sentences: request.sentences.map((sentence) => ({
-            id: sentence.id,
-            text: sentence.text,
-          })),
-          facts: request.facts.map((fact) => ({
-            id: fact.id,
-            text: fact.brief,
-            ...(fact.group === undefined ? {} : { group: fact.group }),
-          })),
-          company_facts: request.companyFacts.map((fact) => ({ id: fact.id, text: fact.text })),
-          job_requirements: (request.requirements ?? []).map(({ id, text }) => ({ id, text })),
-        },
-        outputSchema,
-        outputName: "cover_letter_claims",
-        maxOutputTokens,
-        dataPolicy: options.dataPolicy,
-        ...(options.signal === undefined ? {} : { signal: options.signal }),
-      });
-      return { links: coverLetterClaimLinksOf(response.output) };
-    },
+    // The cost guard holds a batch that does not fit yet until the batches before it settle.
+    link: async (request) => ({
+      links: (
+        await Promise.all(
+          coverLetterClaimCheckBatches(request.sentences).map((sentences) =>
+            linkBatch(options, request, sentences),
+          ),
+        )
+      ).flat(),
+    }),
   };
 }

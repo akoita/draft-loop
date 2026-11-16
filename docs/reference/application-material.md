@@ -230,6 +230,9 @@ Sentences that fail, or come close to a never-say entry, are left out and
 listed in `dropped_sentences`. Topics research found no source for are listed
 in `unsourced_topics`, and their sections state no fact.
 
+The claim check links at most 24 sentences per call, so a long guide is
+checked in several calls that each fit the model's output limit.
+
 Guide research makes one query per topic and one web search per query: three
 topics for an essential guide, five for an extensive one, and one more when
 the candidate picks salary. Its cap is US$0.08 for an essential guide and
