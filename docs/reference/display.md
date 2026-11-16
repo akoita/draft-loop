@@ -38,6 +38,9 @@ The current step has one button that opens the right screen. **Hide the
 guide** folds the list to one line, and **Show the guide** brings it back. The
 list goes away after your first download.
 
+Guided also puts one line at the top of Career evidence, Career profile, New
+application and the CV review. It says what to do on that screen.
+
 On the simple view, Home offers the guide once in one line: **Show me the
 steps** turns Guided on, **No thanks** hides the offer.
 

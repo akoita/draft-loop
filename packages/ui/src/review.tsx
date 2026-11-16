@@ -158,6 +158,7 @@ import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
 import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
+import { ScreenHint } from "./screen-hint.js";
 import { sendVerdict } from "./send-verdict.js";
 import { SidePanelHandle, SidePanelToggle, useSidePanelWidth } from "./side-panel-width.js";
 import { StartAdvancedOptions } from "./start-advanced-options.js";
@@ -3144,6 +3145,7 @@ export function ReviewWorkspace({
             tabIndex={-1}
             ref={reviewColumnRef}
           >
+            <ScreenHint screen="review" />
             <div className="doc-toolbar">
               <div className="section-heading">
                 <div>

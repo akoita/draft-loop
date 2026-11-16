@@ -6,6 +6,7 @@ import { CareerPageTabs } from "./career-page-tabs.js";
 import { EvidenceSignpost, ProfileSignpostArea } from "./career-signposts.js";
 import { type WorkspaceBack, WorkspaceLocation } from "./home.js";
 import { HostEvidenceAfter, HostEvidenceBefore } from "./host-panels.js";
+import { ScreenHint } from "./screen-hint.js";
 import { HeaderThemeToggle } from "./theme.js";
 
 interface CareerPageFrameProps {
@@ -53,6 +54,7 @@ function CareerPageFrame({
           )}
           <div className="home-profile-screen">
             <CareerPageTabs current={page} onOpen={onOpenStep} />
+            <ScreenHint screen={page} onOpenGuide={onOpenStep.applications} />
             <p className="career-page-intro">{intro}</p>
             {children}
           </div>

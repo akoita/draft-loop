@@ -40,7 +40,7 @@ function stepText(key: GettingStartedStepKey): { title: string; detail: string; 
     case "review":
       return {
         title: t`Review your CV`,
-        detail: t`Read the draft, keep or change each suggestion, then approve it.`,
+        detail: t`Read the draft, accept or reject each finding, then approve it.`,
         action: t`Open the application`,
       };
     case "download":
@@ -92,7 +92,11 @@ export function GettingStarted({
       <aside className="getting-started getting-started-offer" aria-label={t`Getting started`}>
         <p>{t`New here? A short step-by-step guide can show you what to do first.`}</p>
         <div className="getting-started-offer-actions">
-          <button type="button" onClick={() => choose({ mode: "guided", guideHidden: false })}>
+          <button
+            type="button"
+            className="button button-outline"
+            onClick={() => choose({ mode: "guided", guideHidden: false })}
+          >
             {t`Show me the steps`}
           </button>
           <button
