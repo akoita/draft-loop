@@ -1284,6 +1284,10 @@ msgstr "Always allow"
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 
+#: apps/web/src/feedback.tsx
+msgid "An idea"
+msgstr "An idea"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
 msgstr "and"
@@ -1776,6 +1780,7 @@ msgid "Can't start yet: {0}"
 msgstr "Can't start yet: {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/feedback.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
@@ -2175,6 +2180,7 @@ msgstr "Clear the filter to see all {total}, or choose “Other model…” to t
 msgid "close"
 msgstr "close"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
@@ -4616,6 +4622,10 @@ msgstr "Kind"
 msgid "Kind of interview"
 msgstr "Kind of interview"
 
+#: apps/web/src/feedback.tsx
+msgid "Kind of note"
+msgstr "Kind of note"
+
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Knowledge base"
@@ -5858,6 +5868,10 @@ msgstr "Not screened; an owner or admin released it."
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Not set"
 msgstr "Not set"
+
+#: apps/web/src/feedback.tsx
+msgid "Not sure"
+msgstr "Not sure"
 
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
@@ -7971,9 +7985,14 @@ msgstr "Semantic search: not supported on this computer"
 msgid "Semantic search: ready"
 msgstr "Semantic search: ready"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Send"
 msgstr "Send"
+
+#: apps/web/src/feedback.tsx
+msgid "Send feedback"
+msgstr "Send feedback"
 
 #: packages/ui/src/profile-status.ts
 msgid "Send my career evidence{sources} to {provider} to build the profile."
@@ -8002,6 +8021,10 @@ msgstr "Sending to providers"
 #: packages/ui/src/career-interview-live.tsx
 msgid "Sending your answer soon…"
 msgstr "Sending your answer soon…"
+
+#: apps/web/src/feedback.tsx
+msgid "Sending…"
+msgstr "Sending…"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Sensitive"
@@ -8216,6 +8239,14 @@ msgstr "Skipped this question."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
 msgstr "Social announcement"
+
+#: apps/web/src/feedback.tsx
+msgid "Something else"
+msgstr "Something else"
+
+#: apps/web/src/feedback.tsx
+msgid "Something is broken"
+msgstr "Something is broken"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Something you are proud of"
@@ -8604,6 +8635,10 @@ msgstr "Technologies, separated by commas"
 msgid "Tell it in a conversation"
 msgstr "Tell it in a conversation"
 
+#: apps/web/src/feedback.tsx
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+msgstr "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
 msgstr "Tell us about your career"
@@ -8629,6 +8664,10 @@ msgstr "Testing the key with the provider…"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
 msgstr "Text"
+
+#: apps/web/src/feedback.tsx
+msgid "Thank you. The people who run DraftLoop read every note."
+msgstr "Thank you. The people who run DraftLoop read every note."
 
 #: apps/web/src/waitlist-model.ts
 msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
@@ -10203,6 +10242,10 @@ msgstr "Unsupported with the configured route."
 msgid "Unvalidated"
 msgstr "Unvalidated"
 
+#: apps/web/src/feedback.tsx
+msgid "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
+msgstr "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
+
 #: packages/ui/src/profile-freshness.ts
 msgid "Up to date with your career evidence"
 msgstr "Up to date with your career evidence"
@@ -10975,6 +11018,10 @@ msgstr "Your knowledge base is created when you add your first evidence above."
 #: apps/web/src/interview-guide.tsx
 msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
 msgstr "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
+
+#: apps/web/src/feedback.tsx
+msgid "Your note"
+msgstr "Your note"
 
 #: apps/web/src/records-model.ts
 msgid "Your organisation has no candidate record yet. Create the first one."

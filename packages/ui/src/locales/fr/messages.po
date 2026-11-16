@@ -1278,6 +1278,10 @@ msgstr "Toujours autoriser"
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr "Une variable d’environnement impose ce mode. Supprimez la variable d’authentification du fournisseur et redémarrez DraftLoop avant de modifier la préférence enregistrée."
 
+#: apps/web/src/feedback.tsx
+msgid "An idea"
+msgstr "Une idée"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
 msgstr "et"
@@ -1770,6 +1774,7 @@ msgid "Can't start yet: {0}"
 msgstr "Impossible de commencer pour l’instant : {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/feedback.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
@@ -2169,6 +2174,7 @@ msgstr "Effacez le filtre pour voir les {total}, ou choisissez « Autre modèle�
 msgid "close"
 msgstr "fermer"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
@@ -4610,6 +4616,10 @@ msgstr "Type"
 msgid "Kind of interview"
 msgstr "Type d’entretien"
 
+#: apps/web/src/feedback.tsx
+msgid "Kind of note"
+msgstr "Type de message"
+
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Knowledge base"
@@ -5852,6 +5862,10 @@ msgstr "Non filtré ; un propriétaire ou un administrateur l’a libéré."
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Not set"
 msgstr "Non défini"
+
+#: apps/web/src/feedback.tsx
+msgid "Not sure"
+msgstr "Je ne sais pas"
 
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
@@ -7965,9 +7979,14 @@ msgstr "Recherche sémantique : non prise en charge sur cet ordinateur"
 msgid "Semantic search: ready"
 msgstr "Recherche sémantique : prête"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Send"
 msgstr "Envoyer"
+
+#: apps/web/src/feedback.tsx
+msgid "Send feedback"
+msgstr "Envoyer un avis"
 
 #: packages/ui/src/profile-status.ts
 msgid "Send my career evidence{sources} to {provider} to build the profile."
@@ -7996,6 +8015,10 @@ msgstr "Envoi aux fournisseurs"
 #: packages/ui/src/career-interview-live.tsx
 msgid "Sending your answer soon…"
 msgstr "Votre réponse part dans un instant…"
+
+#: apps/web/src/feedback.tsx
+msgid "Sending…"
+msgstr "Envoi…"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Sensitive"
@@ -8210,6 +8233,14 @@ msgstr "Question passée."
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Social announcement"
 msgstr "Annonce sur les réseaux sociaux"
+
+#: apps/web/src/feedback.tsx
+msgid "Something else"
+msgstr "Autre chose"
+
+#: apps/web/src/feedback.tsx
+msgid "Something is broken"
+msgstr "Quelque chose ne marche pas"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Something you are proud of"
@@ -8598,6 +8629,10 @@ msgstr "Technologies, séparées par des virgules"
 msgid "Tell it in a conversation"
 msgstr "Le raconter dans une conversation"
 
+#: apps/web/src/feedback.tsx
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+msgstr "Dites à l'équipe de DraftLoop ce qui marche, ce qui casse ou ce qui vous manque. L'écran où vous êtes est envoyé avec votre message."
+
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
 msgstr "Parlez-nous de votre parcours"
@@ -8623,6 +8658,10 @@ msgstr "Test de la clé auprès du fournisseur…"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
 msgstr "Texte"
+
+#: apps/web/src/feedback.tsx
+msgid "Thank you. The people who run DraftLoop read every note."
+msgstr "Merci. L'équipe de DraftLoop lit chaque message."
 
 #: apps/web/src/waitlist-model.ts
 msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
@@ -10197,6 +10236,10 @@ msgstr "Non pris en charge avec la route configurée."
 msgid "Unvalidated"
 msgstr "Non validé"
 
+#: apps/web/src/feedback.tsx
+msgid "Up to {maximumFeedbackLength} characters. Leave out passwords and other people's details."
+msgstr "Jusqu'à {maximumFeedbackLength} caractères. N'y mettez ni mot de passe ni informations sur d'autres personnes."
+
 #: packages/ui/src/profile-freshness.ts
 msgid "Up to date with your career evidence"
 msgstr "À jour par rapport à vos éléments de parcours"
@@ -10969,6 +11012,10 @@ msgstr "Votre base de connaissances est créée quand vous ajoutez votre premier
 #: apps/web/src/interview-guide.tsx
 msgid "Your never-say list stays on the server: it is listed back in the guide, and any sentence close to it is left out."
 msgstr "Votre liste « à ne jamais dire » reste sur le serveur : le guide la reprend, et toute phrase qui s’en approche est écartée."
+
+#: apps/web/src/feedback.tsx
+msgid "Your note"
+msgstr "Votre message"
 
 #: apps/web/src/records-model.ts
 msgid "Your organisation has no candidate record yet. Create the first one."
