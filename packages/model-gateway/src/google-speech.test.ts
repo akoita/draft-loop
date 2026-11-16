@@ -7,6 +7,7 @@ import {
   createGoogleTextToSpeech,
   type GoogleDuplex,
   type GoogleSpeechClients,
+  looksUnfinished,
 } from "./google-speech.js";
 
 class FakeDuplex extends EventEmitter {
@@ -88,6 +89,59 @@ describe("Google speech", () => {
       { kind: "final", text: "Et quarante événements." },
       { kind: "end_of_turn" },
     ]);
+  });
+
+  it("waits longer when the last words look unfinished", async () => {
+    const stream = new FakeDuplex();
+    const timers: { callback: () => void; ms: number }[] = [];
+    const stt = createGoogleStreamingSpeechToText({
+      projectId: "fixture-project",
+      clients: clients({ recognize: stream }),
+      endOfTurnPause: { normalMs: 2_500, unfinishedMs: 5_000 },
+      setTimer: (callback, ms) => timers.push({ callback, ms }),
+      clearTimer: () => undefined,
+    });
+    const recognition = stt.open({ language: "en" });
+    const events = drain(recognition.events);
+    stream.emit("data", { speechEventType: "SPEECH_ACTIVITY_BEGIN" });
+    stream.emit("data", { speechEventType: "SPEECH_ACTIVITY_END" });
+    // The final lands after the pause began; it is judged when the normal pause runs out.
+    stream.emit("data", {
+      results: [{ alternatives: [{ transcript: "I led the migration, but" }], isFinal: true }],
+    });
+    expect(timers.map((timer) => timer.ms)).toEqual([2_500]);
+    timers[0]?.callback();
+    expect(stream.ended).toBe(false);
+    expect(timers.map((timer) => timer.ms)).toEqual([2_500, 2_500]);
+    timers[1]?.callback();
+    expect(stream.ended).toBe(true);
+    stream.emit("end");
+    expect(await events).toContainEqual({ kind: "end_of_turn" });
+  });
+
+  it("refuses a pause whose unfinished wait is shorter than the normal one", () => {
+    expect(() =>
+      createGoogleStreamingSpeechToText({
+        projectId: "fixture-project",
+        clients: clients({}),
+        endOfTurnPause: { normalMs: 3_000, unfinishedMs: 2_000 },
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("tells a finished sentence from one cut off", () => {
+    expect(looksUnfinished("We shipped it in March.", "en")).toBe(false);
+    expect(looksUnfinished("Did it work?", "en")).toBe(false);
+    expect(looksUnfinished("", "en")).toBe(false);
+    expect(looksUnfinished("We shipped it in March", "en")).toBe(true);
+    expect(looksUnfinished("We shipped it and...", "en")).toBe(true);
+    expect(looksUnfinished("We shipped it because.", "en")).toBe(true);
+    expect(looksUnfinished("On a livré en mars parce que.", "fr")).toBe(true);
+    expect(looksUnfinished("J'ai géré l'équipe, mais", "fr")).toBe(true);
+    expect(looksUnfinished("On a livré en mars.", "fr")).toBe(false);
+    // An unknown language checks both lists.
+    expect(looksUnfinished("Nous avons livré et.")).toBe(true);
+    expect(looksUnfinished("We shipped and.")).toBe(true);
   });
 
   it("lets the language be detected and drops a cancelled turn", async () => {

@@ -391,11 +391,12 @@ passed the quality gate.
 The live voice interview streams through Google Cloud speech in the EU
 ([voice input](../reference/voice-input.md#live-conversation)).
 
-| Variable                       | Read by | Meaning                                                               |
-| ------------------------------ | ------- | --------------------------------------------------------------------- |
-| `DRAFT_LOOP_LIVE_SPEECH`       | API     | `off` (default) or `google`; any other value fails at start           |
-| `DRAFT_LOOP_SPEECH_PROJECT_ID` | API     | The Google Cloud project; required for `google`                       |
-| `DRAFT_LOOP_SPEECH_KEY_FILE`   | API     | A service account key for speech alone; unset, the API's own identity |
+| Variable                        | Read by | Meaning                                                                                           |
+| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `DRAFT_LOOP_LIVE_SPEECH`        | API     | `off` (default) or `google`; any other value fails at start                                       |
+| `DRAFT_LOOP_SPEECH_PROJECT_ID`  | API     | The Google Cloud project; required for `google`                                                   |
+| `DRAFT_LOOP_SPEECH_KEY_FILE`    | API     | A service account key for speech alone; unset, the API's own identity                             |
+| `DRAFT_LOOP_LIVE_TURN_PAUSE_MS` | API     | The silence that ends an answer, then the longer wait when it sounds cut off; default `2500,5000` |
 
 ### The screener's route
 
