@@ -53,6 +53,7 @@ describe("live career interview", () => {
       [
         { kind: "partial", text: "Hourly" },
         { kind: "final", text: "Hourly updates." },
+        { kind: "waiting", ms: 2_500 },
         { kind: "end_of_turn" },
       ],
       [{ kind: "final", text: "About forty events." }, { kind: "end_of_turn" }],
@@ -89,6 +90,7 @@ describe("live career interview", () => {
       "ready",
       "partial",
       "partial",
+      "waiting",
       "answer",
       "audio_start",
       "audio_end",
@@ -103,6 +105,10 @@ describe("live career interview", () => {
       "session",
     ]);
     const clips = socket.messages().filter((message) => message.type.startsWith("audio_"));
+    expect(socket.messages().find((message) => message.type === "waiting")).toEqual({
+      type: "waiting",
+      ms: 2_500,
+    });
     expect(clips[0]).toMatchObject({ kind: "acknowledgement" });
     expect(clips[1]).toEqual({ type: "audio_end", more: true });
     expect(clips[3]).toEqual({ type: "audio_end" });

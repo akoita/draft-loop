@@ -252,7 +252,12 @@ export async function runLiveInterview(options: LiveInterviewOptions): Promise<L
       waiting = undefined;
       const opened = speech.stt.open({ language: options.language, phrases: options.phrases });
       recognition = opened;
-      const ended = collectLiveTurn(opened.events, (text) => send({ type: "partial", text }));
+      const ended = collectLiveTurn(
+        opened.events,
+        (text) => send({ type: "partial", text }),
+        // The words sound unfinished: the screen shows how long until they are sent.
+        (ms) => send({ type: "waiting", ms }),
+      );
       for (const bytes of early) {
         turnBytes += bytes.byteLength;
         totalBytes += bytes.byteLength;

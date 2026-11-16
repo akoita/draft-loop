@@ -27,6 +27,11 @@ export type LiveTranscriptEvent =
   | { readonly kind: "partial"; readonly text: string }
   /** Words the recogniser will not revise. */
   | { readonly kind: "final"; readonly text: string }
+  /**
+   * The words sound unfinished, so the turn stays open this many more milliseconds before it
+   * ends; 0 means the candidate spoke again and the wait is over.
+   */
+  | { readonly kind: "waiting"; readonly ms: number }
   /** The candidate finished speaking this turn. */
   | { readonly kind: "end_of_turn" };
 
@@ -96,6 +101,7 @@ export function textToSpeechCostUsd(text: string, pricing: SpeechPricing): numbe
 export async function collectLiveTurn(
   events: AsyncIterable<LiveTranscriptEvent>,
   onPartial?: (text: string) => void,
+  onWaiting?: (ms: number) => void,
 ): Promise<string> {
   const finals: string[] = [];
   let pending = "";
@@ -107,6 +113,8 @@ export async function collectLiveTurn(
       finals.push(event.text.trim());
       pending = "";
       onPartial?.(finals.join(" ").trim());
+    } else if (event.kind === "waiting") {
+      onWaiting?.(event.ms);
     } else {
       break;
     }

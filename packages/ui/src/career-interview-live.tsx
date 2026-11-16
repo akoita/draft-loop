@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { careerInterviewRefusal } from "./career-interview-model.js";
 
@@ -27,6 +27,11 @@ export interface CareerInterviewLiveEvents {
    * while the interviewer speaks. A host that cannot measure it never calls this.
    */
   readonly onLevel?: ((level: number) => void) | undefined;
+  /**
+   * The answer sounds unfinished, so it is sent in this many milliseconds unless the candidate
+   * speaks again; 0 clears the wait. A host whose server never waits never calls this.
+   */
+  readonly onWaiting?: ((ms: number) => void) | undefined;
 }
 
 /** One running live conversation. */
@@ -109,6 +114,8 @@ export function CareerInterviewLiveStage({
 }: CareerInterviewLiveStageProps) {
   const [state, setState] = useState<CareerInterviewLiveState>("connecting");
   const [heard, setHeard] = useState("");
+  // The wait before an unfinished answer is sent; `round` restarts the ring's fill each time.
+  const [wait, setWait] = useState<{ ms: number; round: number } | undefined>();
   const [refusal, setRefusal] = useState<{ code: string; message: string } | undefined>();
   const [attempt, setAttempt] = useState(0);
   const [allowing, setAllowing] = useState(false);
@@ -120,6 +127,7 @@ export function CareerInterviewLiveStage({
     void attempt;
     setState("connecting");
     setHeard("");
+    setWait(undefined);
     setRefusal(undefined);
     // The level reaches the orb's style directly: dozens of updates a second, no re-render.
     const level = (value: number) =>
@@ -127,10 +135,16 @@ export function CareerInterviewLiveStage({
     const running = voice.start(topicKey, {
       onState: (next) => {
         setState(next);
+        setWait(undefined);
         level(0);
         if (next === "thinking" || next === "connecting") setHeard("");
       },
-      onHeard: setHeard,
+      onHeard: (text) => {
+        setHeard(text);
+        setWait(undefined);
+      },
+      onWaiting: (ms) =>
+        setWait((current) => (ms > 0 ? { ms, round: (current?.round ?? 0) + 1 } : undefined)),
       onRefusal: (code, message) => setRefusal({ code, message }),
       onLevel: level,
     });
@@ -142,7 +156,9 @@ export function CareerInterviewLiveStage({
   }, [voice, topicKey, attempt]);
 
   const live = state !== "ended" && refusal === undefined;
-  const label = careerInterviewLiveStateLabel(state);
+  const waiting = live && state === "listening" ? wait : undefined;
+  const label =
+    waiting === undefined ? careerInterviewLiveStateLabel(state) : t`Sending your answer soon…`;
   return (
     <section
       className={`interview-stage interview-stage-${state}`}
@@ -158,6 +174,17 @@ export function CareerInterviewLiveStage({
         <div ref={orb} className="interview-orb" aria-hidden="true">
           <span className="interview-orb-ring" />
           <span className="interview-orb-ring" />
+          {waiting === undefined ? null : (
+            <svg
+              key={waiting.round}
+              className="interview-orb-wait"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+              style={{ "--wait": `${waiting.ms}ms` } as CSSProperties}
+            >
+              <circle cx="50" cy="50" r="47" pathLength="100" />
+            </svg>
+          )}
           <span className="interview-orb-core">
             <span className="interview-orb-dots">
               <span />
@@ -172,6 +199,9 @@ export function CareerInterviewLiveStage({
         {state === "listening" && heard === "" && live ? (
           <p className="interview-stage-hint">{t`Pause when you are done, or press Done speaking.`}</p>
         ) : null}
+        {waiting === undefined ? null : (
+          <p className="interview-stage-hint">{t`Keep talking to go on, or press Done speaking.`}</p>
+        )}
         {heard === "" ? null : (
           <p className="interview-stage-heard">
             <span className="sr-only">{t`You`}: </span>

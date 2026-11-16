@@ -37,6 +37,23 @@ describe("live speech", () => {
     ]);
   });
 
+  it("reports the wait for an unfinished answer without adding words", async () => {
+    const waits: number[] = [];
+    const text = await collectLiveTurn(
+      stream([
+        { kind: "final", text: "I led it, but" },
+        { kind: "waiting", ms: 2_500 },
+        { kind: "waiting", ms: 0 },
+        { kind: "final", text: "only for a year." },
+        { kind: "end_of_turn" },
+      ]),
+      undefined,
+      (ms) => waits.push(ms),
+    );
+    expect(text).toBe("I led it, but only for a year.");
+    expect(waits).toEqual([2_500, 0]);
+  });
+
   it("keeps the last partial when the turn ends before a final", async () => {
     expect(await collectLiveTurn(stream([{ kind: "partial", text: "About forty" }]))).toBe(
       "About forty",
