@@ -284,6 +284,16 @@ describe("extracting a live hosted brief from its application's job text", () =>
     expect(latest?.brief).toMatchObject({ version: 2, role: { value: "Staff Engineer" } });
   });
 
+  it("reads a job text that ends with a newline as the same text (#2721)", async () => {
+    const { extract, transport } = await liveBrief({
+      kept: `${jobText}\n`,
+      pasted: `\n${jobText}\n\n`,
+    });
+
+    expect((await extract())?.outcome).toBe("extracted");
+    expect(transport).toHaveBeenCalledOnce();
+  });
+
   it("sends nothing when the kept job text no longer matches the brief's source", async () => {
     const { extract, transport } = await liveBrief({
       pasted: "Example Systems seeks a Data Engineer.",
