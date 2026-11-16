@@ -60,6 +60,7 @@ repeats a pattern that none covers.
 | [Change checklist](docs/engineering/change-checklist.md)  | Finish any change and fill in the PR template    |
 | [Add an API route](docs/engineering/api-route.md)         | Expose a capability to the web and to agents     |
 | [Add a shared screen](docs/engineering/shared-screen.md)  | Add or change a screen the web and desktop share |
+| [Change the database schema](docs/engineering/database-schema.md) | Add a Postgres migration |
 
 For browser UI work in `packages/ui` or `apps/web` (components, overlays,
 layout, animation, forms, media controls, performance, accessibility), read

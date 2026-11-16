@@ -36,11 +36,20 @@ import type { SqlClient } from "./sql-client.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 import { workJournalMigration } from "./work-journal-migration.js";
 
-/** One forward-only schema change. Versions are applied in order and never edited once released. */
+/**
+ * One forward-only schema change. Versions are applied in order and never edited once released.
+ * Each leaves the schema usable by the previous release (migration-compatibility.ts).
+ */
 export interface PostgresMigration {
   readonly version: number;
   readonly name: string;
   readonly sql: string;
+  /**
+   * Marks a contract step: what it removes and the release that stopped using it, at least one
+   * release earlier (docs/engineering/database-schema.md). Only a marked step may drop, rename or
+   * reshape.
+   */
+  readonly contract?: string;
 }
 
 /**
