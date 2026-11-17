@@ -5,8 +5,29 @@ const maxEmbeddedStateCharacters = 2_000_000;
 const maxSearchDepth = 12;
 const maxJobPostTextCharacters = 60_000;
 
-/** Every script element, as the JSON-LD reader finds them; bodies are checked as plain strings. */
-const scriptPattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+/**
+ * Every script element's attributes and body, found by plain string search rather than a regular
+ * expression, so no input can make the scan backtrack. A body ends at the first `</script`.
+ */
+function* scriptElements(html: string): Generator<{ attributes: string; body: string }> {
+  const lower = html.toLowerCase();
+  let from = 0;
+  for (;;) {
+    const open = lower.indexOf("<script", from);
+    if (open === -1) return;
+    const next = lower.charAt(open + 7);
+    const openEnd = lower.indexOf(">", open);
+    if (openEnd === -1) return;
+    if (next !== ">" && next !== " " && next !== "\t" && next !== "\n" && next !== "\r") {
+      from = open + 7;
+      continue;
+    }
+    const close = lower.indexOf("</script", openEnd);
+    if (close === -1) return;
+    yield { attributes: html.slice(open + 7, openEnd), body: html.slice(openEnd + 1, close) };
+    from = close + 8;
+  }
+}
 
 /**
  * The script assignments job boards render their route data into, such as Greenhouse's
@@ -80,10 +101,9 @@ function bodyMarkdown(value: unknown): string {
 
 function parsedStates(html: string): unknown[] {
   const states: unknown[] = [];
-  for (const match of html.matchAll(scriptPattern)) {
-    const body = match[2] ?? "";
+  for (const { attributes, body } of scriptElements(html)) {
     if (body.length === 0 || body.length > maxEmbeddedStateCharacters) continue;
-    const json = stateJson(match[1] ?? "", body);
+    const json = stateJson(attributes, body);
     if (json === undefined) continue;
     try {
       states.push(JSON.parse(json));
