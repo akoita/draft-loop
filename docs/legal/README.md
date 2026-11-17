@@ -33,10 +33,12 @@ flowchart LR
 ```
 
 - **Publisher details.** `DRAFT_LOOP_LEGAL_PUBLISHER` holds a JSON object
-  with `name`, `address`, `email` and `director`, and optionally
-  `registration` and `phone`. It is set at deploy time and never committed.
-  Unset, the pages show a visible placeholder; malformed, the API refuses to
-  start.
+  with `name` and `email`, and either `address` or `detailsUrl`: an https
+  page where the company already publishes its full details, which the
+  notice and privacy policy link instead of repeating them. `director`,
+  `registration` and `phone` are optional; a detail left out drops its line.
+  It is set at deploy time and never committed. Unset, the pages show a
+  visible placeholder; malformed, the API refuses to start.
 - **Accepted version.** `legalVersion` in `apps/api/src/legal-pages.ts` is
   the date the current terms and policy took effect. `POST /v1/sign-up`
   refuses an account without that exact version (400

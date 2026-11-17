@@ -97,7 +97,11 @@ export const legalTextsEn: LegalTexts = {
       sections: [
         {
           heading: "1. Who is responsible",
-          blocks: ["The controller is {publisher}, {address}. Contact: {email}."],
+          blocks: [
+            "The controller is {publisher}. Contact: {email}.",
+            "Address: {address}",
+            "Company details: [{detailsUrl}]({detailsUrl})",
+          ],
         },
         {
           heading: "2. What we process, and why",
@@ -192,6 +196,7 @@ export const legalTextsEn: LegalTexts = {
             {
               list: [
                 "Publisher: {publisher}",
+                "Company details: [{detailsUrl}]({detailsUrl})",
                 "Address: {address}",
                 "Registration: {registration}",
                 "Email: {email}",
