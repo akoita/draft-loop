@@ -94,7 +94,11 @@ export const legalTextsFr: LegalTexts = {
       sections: [
         {
           heading: "1. Qui est responsable",
-          blocks: ["Le responsable du traitement est {publisher}, {address}. Contact : {email}."],
+          blocks: [
+            "Le responsable du traitement est {publisher}. Contact : {email}.",
+            "Adresse : {address}",
+            "Informations sur la société : [{detailsUrl}]({detailsUrl})",
+          ],
         },
         {
           heading: "2. Ce que nous traitons, et pourquoi",
@@ -191,6 +195,7 @@ export const legalTextsFr: LegalTexts = {
             {
               list: [
                 "Éditeur : {publisher}",
+                "Informations sur la société : [{detailsUrl}]({detailsUrl})",
                 "Adresse : {address}",
                 "Immatriculation : {registration}",
                 "E-mail : {email}",

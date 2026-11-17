@@ -41,29 +41,43 @@ export interface LegalTexts {
  */
 export interface LegalPublisher {
   readonly name: string;
-  readonly address: string;
   readonly email: string;
-  readonly director: string;
+  /** The registered address; may be left out when `detailsUrl` gives it. */
+  readonly address?: string;
+  readonly director?: string;
   readonly registration?: string;
   readonly phone?: string;
+  /** An https page where the company already publishes its full details, linked instead. */
+  readonly detailsUrl?: string;
 }
 
 const texts: Readonly<Record<LegalLanguage, LegalTexts>> = { en: legalTextsEn, fr: legalTextsFr };
 const pageIds: readonly LegalPageId[] = ["terms", "privacy", "notice"];
-const requiredKeys = ["name", "address", "email", "director"] as const;
-const optionalKeys = ["registration", "phone"] as const;
+const requiredKeys = ["name", "email"] as const;
+const optionalKeys = ["address", "director", "registration", "phone", "detailsUrl"] as const;
+
+/** An https address with no characters that could end a link early or break out of it. */
+function isDetailsUrl(text: string): boolean {
+  if (!/^https:\/\/[^\s()<>"'\\]+$/u.test(text)) return false;
+  try {
+    return new URL(text).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 /**
- * Reads `DRAFT_LOOP_LEGAL_PUBLISHER`, a JSON object with `name`, `address`, `email` and
- * `director`, and optionally `registration` and `phone`. Unset gives undefined; malformed throws,
- * so a deployment never publishes half its details.
+ * Reads `DRAFT_LOOP_LEGAL_PUBLISHER`, a JSON object with `name` and `email`, and either `address`
+ * or `detailsUrl` (an https page with the company's full details), plus optionally `director`,
+ * `registration` and `phone`. Unset gives undefined; malformed throws, so a deployment never
+ * publishes half its details.
  */
 export function readLegalPublisher(env: NodeJS.ProcessEnv): LegalPublisher | undefined {
   const text = env.DRAFT_LOOP_LEGAL_PUBLISHER ?? "";
   if (text.trim() === "") return undefined;
   const fail = (): never => {
     throw new Error(
-      "DRAFT_LOOP_LEGAL_PUBLISHER must be a JSON object with name, address, email and director, and optionally registration and phone, each a short text.",
+      "DRAFT_LOOP_LEGAL_PUBLISHER must be a JSON object with name, email, and address or an https detailsUrl, and optionally director, registration and phone, each a short text.",
     );
   };
   let value: unknown;
@@ -82,25 +96,17 @@ export function readLegalPublisher(env: NodeJS.ProcessEnv): LegalPublisher | und
     if (typeof item !== "string" || item.trim() === "" || item.length > 300) return fail();
     return item.trim();
   };
-  const [name, address, email, director] = requiredKeys.map(field);
-  if (
-    name === undefined ||
-    address === undefined ||
-    email === undefined ||
-    director === undefined
-  ) {
-    return fail();
-  }
-  const registration = field("registration");
-  const phone = field("phone");
-  return {
-    name,
-    address,
-    email,
-    director,
-    ...(registration === undefined ? {} : { registration }),
-    ...(phone === undefined ? {} : { phone }),
-  };
+  const [name, email] = requiredKeys.map(field);
+  if (name === undefined || email === undefined) return fail();
+  const optional = Object.fromEntries(
+    optionalKeys.flatMap((key) => {
+      const item = field(key);
+      return item === undefined ? [] : [[key, item]];
+    }),
+  ) as Partial<Record<(typeof optionalKeys)[number], string>>;
+  if (optional.detailsUrl !== undefined && !isDetailsUrl(optional.detailsUrl)) return fail();
+  if (optional.address === undefined && optional.detailsUrl === undefined) return fail();
+  return { name, email, ...optional };
 }
 
 function escapeHtml(text: string): string {
@@ -187,6 +193,7 @@ export function renderLegalPage(
     director: publisher?.director,
     registration: publisher?.registration,
     phone: publisher?.phone,
+    detailsUrl: publisher?.detailsUrl,
     version: legalVersion,
   };
   const other: LegalLanguage = language === "en" ? "fr" : "en";

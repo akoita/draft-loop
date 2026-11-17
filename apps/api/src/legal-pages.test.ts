@@ -115,10 +115,36 @@ describe("legal pages", () => {
       JSON.stringify({ name: "Only a name" }),
       JSON.stringify({ ...publisher, extra: "x" }),
       JSON.stringify({ ...publisher, email: "" }),
+      JSON.stringify({ name: "Example Publisher", email: "contact@example.test" }),
+      JSON.stringify({ name: "N", email: "e@example.test", detailsUrl: "http://example.test" }),
+      JSON.stringify({ name: "N", email: "e@example.test", detailsUrl: "https://x.test/a)b" }),
     ]) {
       expect(() => readLegalPublisher({ DRAFT_LOOP_LEGAL_PUBLISHER: value })).toThrow(
         /DRAFT_LOOP_LEGAL_PUBLISHER/u,
       );
+    }
+  });
+
+  it("needs only a name, an email and a link to the company's own details page", () => {
+    const minimal = {
+      name: "Example Publisher",
+      email: "contact@example.test",
+      detailsUrl: "https://example.test/legal.html",
+    };
+    expect(readLegalPublisher({ DRAFT_LOOP_LEGAL_PUBLISHER: JSON.stringify(minimal) })).toEqual(
+      minimal,
+    );
+    for (const [language, page] of [
+      ["en", "notice"],
+      ["fr", "notice"],
+      ["en", "privacy"],
+      ["fr", "privacy"],
+    ] as const) {
+      const html = renderLegalPage(page, language, minimal);
+      expect(html).toContain('<a href="https://example.test/legal.html">');
+      expect(html).not.toContain("[to be completed]");
+      expect(html).not.toContain("[à compléter]");
+      expect(html).not.toMatch(/Address|Adresse|Publication director|Directeur/u);
     }
   });
 });
