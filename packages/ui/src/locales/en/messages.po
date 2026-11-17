@@ -207,6 +207,11 @@ msgstr "(you)"
 msgid ") bound to brief"
 msgstr ") bound to brief"
 
+#. placeholder {0}: usage.failedCalls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {(# failed)} other {(# failed)}}"
+msgstr "{0, plural, one {(# failed)} other {(# failed)}}"
+
 #. placeholder {0}: roles.length
 #: packages/ui/src/model-suggestions.tsx
 msgid "{0, plural, one {{roleLabel} profile} other {{roleLabel} profiles}}"
@@ -251,6 +256,11 @@ msgstr "{0, plural, one {# link} other {# links}}"
 #: packages/ui/src/help-panel.tsx
 msgid "{0, plural, one {# matching section} other {# matching sections}}"
 msgstr "{0, plural, one {# matching section} other {# matching sections}}"
+
+#. placeholder {0}: usage.calls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {# model call} other {# model calls}}"
+msgstr "{0, plural, one {# model call} other {# model calls}}"
 
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
@@ -436,6 +446,15 @@ msgstr "{attemptCount, plural, one {# model call} other {# model calls}}"
 #: packages/ui/src/app.tsx
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
+
+#. placeholder {0}: formatUsd(usage.estimatedUsd)
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens, about {0}."
+msgstr "{calls}{failed}, {tokens} tokens, about {0}."
+
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens; the cost is unknown for this model."
+msgstr "{calls}{failed}, {tokens} tokens; the cost is unknown for this model."
 
 #. placeholder {0}: countedNouns.source(sources)
 #: packages/ui/src/career-evidence-card.tsx

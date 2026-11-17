@@ -19,7 +19,9 @@ On every server: self-hosted, hosted and the desktop client over it.
 1. After the first document is ready, the Career evidence card shows
    **Next: build your career profile**. Choose **Continue to Career profile**.
 2. Derive the profile. A worker reads the selected evidence and saves a new
-   draft version; you can cancel it while it runs.
+   draft version; you can cancel it while it runs. When it ends, the page
+   says how many sources it reused and extracted, and what its model calls
+   used: calls, tokens and an estimated cost.
 3. Edit facts, then set each fact's or section's **usage**: on your CV, only
    in interview answers, or never. A fact with no level takes its section's,
    and otherwise may be used on a CV.
@@ -54,6 +56,10 @@ sensitivity decides what may reach a model provider.
   other text in that chunk is left out too.
 - A CV run keeps the usage levels it started with; a level changed while it
   waits applies to the next run.
+- The derivation's usage, failed calls included, is kept with the job's
+  outcome and read through `GET .../derivation`. The worker also logs one
+  content-free line per call. The page gives no estimate before a derivation
+  starts yet.
 - One derivation runs per profile at a time; a second answers
   `409 derivation_running`.
 - Derivation calls the writer's model, so in sign-in mode it needs the

@@ -35,6 +35,7 @@ import type {
   CanonicalCandidateProfileRecordResult,
 } from "./bridge.js";
 import type { ProjectionFailure } from "./opportunity-projection.js";
+import { normalizeProfileDerivationUsage } from "./profile-derivation-usage.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -55,6 +56,7 @@ const canonicalCandidateProfileRecordKeys = new Set([
   "checksum",
   "reusedSourceCount",
   "extractedSourceCount",
+  "derivationUsage",
   "sensitivityRulesApplied",
 ]);
 const canonicalCandidateProfileKeys = new Set([
@@ -390,7 +392,18 @@ function projectRecord(
     facts,
     issues,
     ...projectCanonicalCandidateProfileSourceCounts(value),
+    ...projectDerivationUsage(value.derivationUsage),
   };
+}
+
+/** A fresh derivation's metered usage (#2815), when the host gives one. */
+function projectDerivationUsage(
+  value: unknown,
+): Pick<CanonicalCandidateProfileRecordResult, "derivationUsage"> {
+  const derivationUsage = normalizeProfileDerivationUsage(value, () =>
+    canonicalCandidateProfileFailure(),
+  );
+  return derivationUsage === undefined ? {} : { derivationUsage };
 }
 
 /** Both counts of a fresh derivation, or neither; anything else is a malformed host answer. */

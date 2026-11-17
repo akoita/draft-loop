@@ -201,6 +201,11 @@ msgstr "(vous)"
 msgid ") bound to brief"
 msgstr ") lié au brief"
 
+#. placeholder {0}: usage.failedCalls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {(# failed)} other {(# failed)}}"
+msgstr "{0, plural, one {(# en échec)} other {(# en échec)}}"
+
 #. placeholder {0}: roles.length
 #: packages/ui/src/model-suggestions.tsx
 msgid "{0, plural, one {{roleLabel} profile} other {{roleLabel} profiles}}"
@@ -245,6 +250,11 @@ msgstr "{0, plural, one {# lien} other {# liens}}"
 #: packages/ui/src/help-panel.tsx
 msgid "{0, plural, one {# matching section} other {# matching sections}}"
 msgstr "{0, plural, one {# section correspondante} other {# sections correspondantes}}"
+
+#. placeholder {0}: usage.calls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {# model call} other {# model calls}}"
+msgstr "{0, plural, one {# appel au modèle} other {# appels au modèle}}"
 
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
@@ -430,6 +440,15 @@ msgstr "{attemptCount, plural, one {# appel de modèle} other {# appels de modè
 #: packages/ui/src/app.tsx
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
 msgstr "{base} Vérifiez l’adresse du serveur de modèles local : elle doit être sur cette machine, comme http://127.0.0.1:11434/v1, et ne contenir ni nom d’utilisateur ni mot de passe."
+
+#. placeholder {0}: formatUsd(usage.estimatedUsd)
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens, about {0}."
+msgstr "{calls}{failed}, {tokens} jetons, environ {0}."
+
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens; the cost is unknown for this model."
+msgstr "{calls}{failed}, {tokens} jetons ; le coût de ce modèle est inconnu."
 
 #. placeholder {0}: countedNouns.source(sources)
 #: packages/ui/src/career-evidence-card.tsx

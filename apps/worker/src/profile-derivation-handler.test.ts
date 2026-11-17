@@ -127,4 +127,40 @@ describe("profile derivation job handler", () => {
     await expect(handle(job, control)).rejects.toThrow("connection reset");
     expect(outcomes).toEqual([]);
   });
+
+  it("keeps what the derivation's model calls used and which sources it reused (#2815)", async () => {
+    const usage = {
+      calls: 3,
+      failedCalls: 1,
+      inputTokens: 40_000,
+      outputTokens: 6_000,
+      estimatedUsd: 0.07,
+    };
+    const derive = (async () => ({
+      profile: { version: 2 },
+      reusedSourceCount: 4,
+      extractedSourceCount: 1,
+    })) as unknown as Derive;
+    const { handle, control } = handler(derive, { usage: () => usage });
+
+    expect(await handle(job, control)).toEqual({
+      outcome: "derived",
+      version: 2,
+      reusedSourceCount: 4,
+      extractedSourceCount: 1,
+      usage,
+    });
+  });
+
+  it("keeps the usage of a failed derivation's calls", async () => {
+    const usage = { calls: 1, failedCalls: 1, inputTokens: 0, outputTokens: 0, estimatedUsd: 0 };
+    const { handle, control } = handler(
+      async () => {
+        throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
+      },
+      { usage: () => usage },
+    );
+
+    expect(await handle(job, control)).toMatchObject({ outcome: "failed", usage });
+  });
 });
