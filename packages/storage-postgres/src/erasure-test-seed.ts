@@ -36,6 +36,8 @@ export const tenantWideTables = new Set([
   "feedback_notes",
   // Deployment-wide daily digests of content-free counts (#2916): no tenant or record to erase.
   "quality_digests",
+  // The deployment-wide insight ledger keyed by failure mechanism (#2917): no tenant or record.
+  "quality_insights",
 ]);
 
 /**
