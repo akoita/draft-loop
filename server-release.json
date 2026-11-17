@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "A steadier server",
+  "releaseName": "Drafts that fix their own warnings",
   "stageIssue": 1359,
   "milestone": 103,
-  "summary": "Fixes the frequent \"The API answered 500\" and \"503\" errors on the hosted service. A broken connection to the database no longer stops the whole server: before, one such error failed every request in flight and the next request waited for a fresh start. The server also starts several times faster, so a request that arrives while it starts is no longer turned away.",
+  "summary": "New runs use writer version 19. In an automatic round the writer now fixes every warning the review raised, such as a line that speaks of you in the third person, instead of only the findings someone accepted. A role's opening line no longer carries a caveat such as \"staging, not production\", and the summary reads as full sentences rather than a list of phrases.",
   "knownLimitations": "Inviting people to a team still goes through the API or an operator; the account menu does not list the team's people yet. The operator reads feedback notes through the API only; there is no operator screen yet. Starting from a conversation needs the server's interviewer model. Signed-in users get the written interview only: live voice shows with the owner token (#2750). Agents cannot add text evidence yet (#2751). Credit packs sell only where the operator has set up Stripe; staging uses Stripe test mode. Self-service sign-up needs an invite code. The run dialog does not offer a preset choice yet; change it in Workspace settings (#2864). The interview guide's paid walk is partial (#2623). The dating of relative source ages is not yet checked against a live search (#2579). Claude runs on the direct Claude API, outside the EU, until Claude on Vertex AI is available (#1564). French is beta until the French quality gate (milestone 83) runs."
 }
