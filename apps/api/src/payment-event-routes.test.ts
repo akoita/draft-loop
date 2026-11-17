@@ -180,6 +180,16 @@ describe("payment events", () => {
     expect(stored).not.toHaveBeenCalled();
   });
 
+  it("refuses an event body over 256 KiB with 413, before the signature is checked (#2936)", async () => {
+    const { app: api, stored, purchasesFor } = await server();
+
+    const response = await send(api, paid({}, { padding: "x".repeat(262_144) }));
+
+    expect(response.statusCode).toBe(413);
+    expect(stored).not.toHaveBeenCalled();
+    expect(purchasesFor).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["a live event", paid({ livemode: true })],
     ["another event type", paid({ type: "customer.created" })],

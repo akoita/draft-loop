@@ -212,7 +212,7 @@ function spendPoolLimit(env: NodeJS.ProcessEnv): number | undefined {
 }
 
 /** Cloud Run refuses requests over 32 MiB, so a larger limit could never be reached. */
-const maximumSourceBytesLimit = 30 * 1024 * 1024;
+export const maximumSourceBytesLimit = 30 * 1024 * 1024;
 
 function optionalSourceLimit(env: NodeJS.ProcessEnv): number | undefined {
   const text = env.DRAFT_LOOP_MAX_SOURCE_BYTES ?? "";
