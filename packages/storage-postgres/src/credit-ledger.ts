@@ -58,7 +58,10 @@ export interface CreditReservation {
 export interface CreditRunCaps {
   /** Most runs in flight (open reservations) at once. */
   readonly maxConcurrent?: number | null | undefined;
-  /** Most runs started (reservations created) in the UTC day of `now`. */
+  /**
+   * Most runs started (reservations created) in the UTC day of `now`. A refunded run, one that
+   * left no draft, gives its day's slot back; the spend pool still counts what it cost.
+   */
   readonly maxPerDay?: number | null | undefined;
 }
 
@@ -158,7 +161,7 @@ export interface CreditLedger {
   }) => Promise<readonly CreditReservation[]>;
   /** Runs in flight: reservations neither settled nor refunded. */
   readonly openReservationCount: () => Promise<number>;
-  /** Reservations created at or after `since` (an ISO timestamp, a UTC day start), in any state. */
+  /** Reservations created at or after `since` (an ISO timestamp, a UTC day start), not refunded. */
   readonly reservationsSince: (since: CreditClock) => Promise<number>;
 }
 
@@ -557,8 +560,10 @@ async function listOpenBefore(
 
 async function countSince(executor: SqlExecutor, since: Date): Promise<number> {
   const [row] = await executor.query(
-    `SELECT count(DISTINCT run_id) AS runs FROM credit_ledger
-      WHERE kind = 'reserve' AND created_at >= $1`,
+    `SELECT count(DISTINCT r.run_id) AS runs FROM credit_ledger r
+      WHERE r.kind = 'reserve' AND r.created_at >= $1
+        AND NOT EXISTS (SELECT 1 FROM credit_ledger c
+                         WHERE c.run_id = r.run_id AND c.kind = 'refund')`,
     [since.toISOString()],
   );
   return Number(row?.runs ?? 0);

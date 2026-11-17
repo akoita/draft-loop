@@ -463,8 +463,18 @@ describe.runIf(connectionString !== undefined)("Postgres credit ledger", () => {
         }),
       ).resolves.toMatchObject({ refused: null, created: true });
 
-      // Runs per UTC day count every reservation made that day, whatever became of it.
+      // Runs per UTC day count the day's reservations, except a refunded run, which left no draft.
       await north.refund({ runId: "run-late", now });
+      await expect(north.reservationsSince("2026-10-10T00:00:00.000Z")).resolves.toBe(2);
+      await expect(
+        north.reserve({
+          runId: "run-after-refund",
+          credits: 1,
+          estimateVersion: 1,
+          now,
+          caps: { maxPerDay: 3 },
+        }),
+      ).resolves.toMatchObject({ refused: null, created: true });
       await expect(north.reservationsSince("2026-10-10T00:00:00.000Z")).resolves.toBe(3);
       await expect(north.reservationsSince("2026-10-10T10:00:01.000Z")).resolves.toBe(0);
       await expect(
