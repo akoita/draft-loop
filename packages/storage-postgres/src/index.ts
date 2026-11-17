@@ -120,6 +120,11 @@ export {
   type PrepareCallTake,
 } from "./prepare-call-meter.js";
 export {
+  createPostgresQualityDigests,
+  type QualityDigests,
+  type QualitySweepSpan,
+} from "./quality-digests.js";
+export {
   openPostgresRecordArchives,
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";
