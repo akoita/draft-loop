@@ -1987,6 +1987,8 @@ export function createOrchestrationEngine(
         : undefined;
       retrievalSpan?.setAttributes({
         "draftloop.retrieved_chunks": retrievedEvidence?.length ?? 0,
+        "draftloop.retrieved_sources": new Set(retrievedEvidence?.map((chunk) => chunk.sourceId))
+          .size,
       });
       retrievalSpan?.end("ok");
 
@@ -2231,6 +2233,10 @@ export function createOrchestrationEngine(
         ...(failure.failureStage === undefined
           ? {}
           : { "draftloop.failure_stage": failure.failureStage }),
+        // The first diagnostic code, such as max_tokens, says why an invalid response failed.
+        ...(failure.diagnostics?.[0] === undefined
+          ? {}
+          : { "draftloop.failure_reason": failure.diagnostics[0].code }),
       });
       agentSpan.end("error");
       return recordFailure(

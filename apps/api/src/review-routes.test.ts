@@ -90,13 +90,16 @@ const syntheticReview: RunReview = {
 };
 
 let app: FastifyInstance;
+let logs: string[] = [];
 
 async function build(
   service: Partial<ApplicationService>,
   enqueueRun: (workspaceId: string, runId: string) => Promise<void> = async () => undefined,
 ): Promise<void> {
+  logs = [];
   app = await buildApi({
     ownerToken,
+    logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
     application: {
       service: service as ApplicationService,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -207,6 +210,19 @@ describe("review decisions", () => {
       rationale: "The source dates it.",
     });
     expect(response.json().run.runId).toBe("run-1");
+    const decided = logs
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .find((entry) => entry.event === "finding_decided");
+    expect(decided).toMatchObject({
+      msg: "finding decided",
+      runId: "run-1",
+      findingCode: "unsupported-claim",
+      category: "grounding",
+      severity: "warning",
+      decision: "rejected",
+    });
+    expect(logs.join("\n")).not.toContain("The source dates it.");
+    expect(logs.join("\n")).not.toContain("The claim needs a dated source.");
   });
 
   it("records a block edit", async () => {

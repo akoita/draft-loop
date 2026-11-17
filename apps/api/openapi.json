@@ -7222,7 +7222,9 @@
                 "draftloop.attempt",
                 "draftloop.estimated_usd",
                 "draftloop.failure_stage",
+                "draftloop.failure_reason",
                 "draftloop.retrieved_chunks",
+                "draftloop.retrieved_sources",
                 "draftloop.revision.mode",
                 "draftloop.revision.patch_rejection",
                 "draftloop.revision.dropped_edits"
@@ -15233,7 +15235,9 @@
                 "draftloop.attempt",
                 "draftloop.estimated_usd",
                 "draftloop.failure_stage",
+                "draftloop.failure_reason",
                 "draftloop.retrieved_chunks",
+                "draftloop.retrieved_sources",
                 "draftloop.revision.mode",
                 "draftloop.revision.patch_rejection",
                 "draftloop.revision.dropped_edits"

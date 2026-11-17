@@ -399,12 +399,15 @@ The engine can emit content-free spans through a tracing port
 (`packages/orchestrator/src/run-tracing.ts`). Without a tracer it records
 nothing.
 
-| Span                | Opened for                              | Attributes                                                                |
-| ------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
-| `invoke_workflow`   | Each advance of a run                   | Run id, last round                                                        |
-| `invoke_agent`      | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type |
-| `retrieve_evidence` | Retrieval inside an attempt             | Chunk count                                                               |
+| Span                | Opened for                              | Attributes                                                                                          |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `invoke_workflow`   | Each advance of a run                   | Run id, last round                                                                                  |
+| `invoke_agent`      | Each author, critic or revision attempt | Step, round, attempt, provider, model, tokens, estimated cost, error type, failure stage and reason |
+| `retrieve_evidence` | Retrieval inside an attempt             | Chunk count, distinct source count                                                                  |
 
+- **Failure reason.** A failed attempt also carries the first diagnostic code
+  in `draftloop.failure_reason`, such as `max_tokens`, so an output-limit stop
+  is told apart from other invalid responses.
 - **Content-free.** Only listed attribute names are kept, and a string value
   must be a short identifier, so a prompt or a draft sentence is dropped.
 - **Names.** Attributes follow the OpenTelemetry GenAI conventions where one
@@ -426,7 +429,11 @@ nothing.
   section (`packages/ui/src/run-steps.tsx`). It lists each advance with its
   author, critic and revision attempts: duration, model, estimated cost and,
   for a failed attempt, the error type. A run with no trace shows no section.
-- **Plan.** Exporting spans locally (#1104) is planned.
+- **Finding decisions.** The API logs one `finding decided` line per decision
+  on a finding: run id, finding code, category, severity and decision. It never
+  logs the finding's message or the member's rationale.
+- **Plan.** Exporting spans locally (#1104) is planned. A daily quality sweep
+  over these signals is planned (#2914).
 
 ## Clients and adapters
 

@@ -265,7 +265,21 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
         decision: request.body.decision,
         ...(request.body.rationale === undefined ? {} : { rationale: request.body.rationale }),
       });
-      return reviewAfter(workspaceId, runId);
+      const review = await reviewAfter(workspaceId, runId);
+      const finding = review.findings.find((candidate) => candidate.id === findingId);
+      // A content-free signal for the quality sweep (#2915): codes and the decision, never text.
+      request.log.info(
+        {
+          event: "finding_decided",
+          runId,
+          findingCode: finding?.code,
+          category: finding?.category,
+          severity: finding?.severity,
+          decision: request.body.decision,
+        },
+        "finding decided",
+      );
+      return review;
     },
   );
 
