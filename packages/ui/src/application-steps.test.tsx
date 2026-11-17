@@ -209,7 +209,7 @@ describe("application steps view", () => {
     );
     expect(named.match(/application-step-subject/gu)?.length).toBe(1);
     expect(named).toMatch(
-      /id="application-step-profile"[^]*Application: Forward Deployed Engineer[^]*id="application-step-review"/u,
+      /id="application-step-profile"[\s\S]*Application: Forward Deployed Engineer[\s\S]*id="application-step-review"/u,
     );
     expect(html).not.toContain("application-step-subject");
   });
