@@ -15,3 +15,18 @@ Contributors must avoid committing secrets, personal source documents, provider
 responses containing sensitive data, or local database files. Security fixes
 should include a regression test where practical and document any changed
 retention or external-data behavior.
+
+## What blocks a merge
+
+Branch protection on `main` requires the `validate` check. These security
+checks feed it:
+
+| Check | Command | Fails when |
+| --- | --- | --- |
+| Secret scan | `pnpm security:secrets` | A tracked file holds a known key pattern or private key |
+| License check | `pnpm security:licenses` | A direct dependency has a license outside the allow list |
+| Dependency audit | `pnpm security:audit` | A production dependency has a high or critical advisory |
+
+GitHub secret scanning with push protection also refuses known provider keys
+before they reach the repository. Run `pnpm validate` to run every check
+locally.

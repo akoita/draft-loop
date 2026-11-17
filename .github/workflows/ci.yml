@@ -69,6 +69,16 @@ jobs:
       - name: Typecheck
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm typecheck
+      # Every change can carry a secret, docs included.
+      - name: Scan for secrets
+        run: pnpm security:secrets
+      - name: Check dependency licenses
+        if: needs.scope.outputs.docs_only != 'true'
+        run: pnpm security:licenses
+      # Fails on a high or critical advisory in a production dependency.
+      - name: Audit production dependencies
+        if: needs.scope.outputs.docs_only != 'true'
+        run: pnpm security:audit
 
   # A full run splits the suite across three runners; a scoped run uses one.
   tests:
