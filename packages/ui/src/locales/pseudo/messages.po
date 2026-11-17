@@ -9427,6 +9427,10 @@ msgstr ""
 msgid "The requirements could not be saved. Nothing was changed."
 msgstr ""
 
+#: packages/ui/src/start-requirements-model.ts
+msgid "The requirements have not been read from this job yet. Extract them to review them."
+msgstr ""
+
 #: apps/web/src/research-brief-model.ts
 msgid "The research failed and nothing was saved. Try again later."
 msgstr ""

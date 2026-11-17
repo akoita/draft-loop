@@ -11,6 +11,7 @@ import {
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
+  notExtractedNote,
   offersRequirementsExtraction,
   pendingExtractionNote,
   rawJobDescriptionLabel,
@@ -112,6 +113,21 @@ describe("setup card 01 latest brief", () => {
     // Nothing to extract again or review until the extracted version arrives.
     expect(offersRequirementsExtraction(pending)).toBe(false);
     expect(requirementRefusalAction(pending, null, true)).toBeNull();
+  });
+
+  it("says a first draft was not read yet instead of nothing found (#2857)", () => {
+    const fresh: OpportunityLatestBrief = { ...draft, version: 1, requirementCount: 0 };
+    const html = renderToStaticMarkup(
+      <LatestRequirementsBriefView
+        latest={fresh}
+        action={<button type="button">Review requirements</button>}
+      />,
+    );
+
+    expect(latestBriefNote(fresh)).toBe(notExtractedNote());
+    expect(html).not.toContain("No requirements were found");
+    expect(offersRequirementsExtraction(fresh)).toBe(true);
+    expect(requirementRefusalAction(fresh, null, true)).toBe("extract");
   });
 
   it("offers a fresh extraction when the service's extraction failed", () => {

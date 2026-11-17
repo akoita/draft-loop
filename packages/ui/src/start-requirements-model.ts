@@ -140,6 +140,19 @@ export function isEmptyDraftBrief(latest: OpportunityLatestBrief): boolean {
   return latest.status === "draft" && latest.requirementCount === 0;
 }
 
+/** What the setup card says about a first draft no extraction has filled yet (#2857). */
+export const notExtractedNote = () =>
+  t`The requirements have not been read from this job yet. Extract them to review them.`;
+
+/**
+ * Whether the empty draft is the job's first version with no extraction behind it. An extraction
+ * saves the next version, so an empty version 1 that the service is not extracting was never
+ * read: it is not "nothing found".
+ */
+export function notExtractedYet(latest: OpportunityLatestBrief): boolean {
+  return isEmptyDraftBrief(latest) && latest.version === 1 && latest.extraction === undefined;
+}
+
 /**
  * The React key for a brief's review action. It names the brief, not its version, so the
  * refresh after Save changes or Mark reviewed keeps the open dialog instead of remounting it.
@@ -178,7 +191,7 @@ export function requirementRefusalAction(
   const emptyDraft = latest !== null && latest !== undefined && isEmptyDraftBrief(latest);
   if (latest?.status === "draft" && !emptyDraft) return "review-draft";
   if (!canExtract) return null;
-  return emptyDraft ? "extract-again" : "extract";
+  return emptyDraft && !notExtractedYet(latest) ? "extract-again" : "extract";
 }
 
 /** "Requirements brief v2 (draft)" for the setup card. */
@@ -190,6 +203,7 @@ export function latestBriefTitle(latest: OpportunityLatestBrief): string {
 export function latestBriefNote(latest: OpportunityLatestBrief): string {
   if (extractionPending(latest)) return pendingExtractionNote();
   if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote();
+  if (notExtractedYet(latest)) return notExtractedNote();
   if (isEmptyDraftBrief(latest))
     return `${noRequirementsFoundTitle()}. ${noRequirementsFoundNote()}`;
   const counts = t`${countedNouns.requirement(latest.requirementCount)}, ${latest.criticalCount} critical.`;
