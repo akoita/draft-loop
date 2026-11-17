@@ -9490,6 +9490,16 @@ input[type="text"].application-card-name-input {
   text-transform: uppercase;
 }
 
+.application-step-subject {
+  flex-basis: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .application-step-current .application-step-status,
 .application-step-done .application-step-status {
   color: var(--teal);

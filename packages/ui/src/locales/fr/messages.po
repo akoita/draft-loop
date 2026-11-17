@@ -1364,6 +1364,10 @@ msgstr "Nom de la candidature"
 msgid "Application plan"
 msgstr "Plan de la candidature"
 
+#: packages/ui/src/application-steps.tsx
+msgid "Application: {applicationName}"
+msgstr "Candidature : {applicationName}"
+
 #: packages/ui/src/career-flow.tsx
 #: packages/ui/src/career-page-tabs.tsx
 #: packages/ui/src/home.tsx

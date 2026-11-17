@@ -283,6 +283,8 @@ interface ReviewWorkspaceProps {
   readonly afterReview?: ReactNode;
   /** The application a started run belongs to, told to the host's panel in the Start dialog. */
   readonly startApplicationId?: string | null;
+  /** The open application's name, repeated on its current setup step. */
+  readonly applicationName?: string;
 }
 
 const decisionLabels = (): Readonly<Record<FindingDecision, string>> => ({
@@ -1011,6 +1013,7 @@ export function ReviewWorkspace({
   modelPairChoice,
   documentLanguageChoice,
   startApplicationId = null,
+  applicationName,
   pageNavigation,
   headerNotice,
   afterReview,
@@ -2748,6 +2751,7 @@ export function ReviewWorkspace({
                   <p className="onboarding-copy">{t`Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages.`}</p>
                   <ApplicationStepsView
                     steps={applicationStepStates(startConditions)}
+                    {...(applicationName === undefined ? {} : { applicationName })}
                     content={{
                       job: (
                         <ApplicationJobStep id={startJobCardId} ready={jobReady} source={jobSource}>

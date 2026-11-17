@@ -199,6 +199,21 @@ describe("application steps view", () => {
     expect(html).toContain('<p class="application-step-status">Blocked: finish step 2 first.</p>');
   });
 
+  it("names the application on the current step only", () => {
+    const named = renderToStaticMarkup(
+      <ApplicationStepsView
+        steps={steps}
+        applicationName="Forward Deployed Engineer"
+        content={{ job: <p>JOB</p>, profile: <p>PROFILE</p>, review: <p>REVIEW</p> }}
+      />,
+    );
+    expect(named.match(/application-step-subject/gu)?.length).toBe(1);
+    expect(named).toMatch(
+      /id="application-step-profile"[^]*Application: Forward Deployed Engineer[^]*id="application-step-review"/u,
+    );
+    expect(html).not.toContain("application-step-subject");
+  });
+
   it("makes only the current step's heading focusable by script", () => {
     expect(html.match(/tabindex="-1"/gu)?.length).toBe(1);
     expect(html).toMatch(

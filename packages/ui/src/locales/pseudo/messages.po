@@ -1370,6 +1370,10 @@ msgstr ""
 msgid "Application plan"
 msgstr ""
 
+#: packages/ui/src/application-steps.tsx
+msgid "Application: {applicationName}"
+msgstr ""
+
 #: packages/ui/src/career-flow.tsx
 #: packages/ui/src/career-page-tabs.tsx
 #: packages/ui/src/home.tsx
