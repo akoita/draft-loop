@@ -104,6 +104,20 @@ const profileVersionsSchema = z
   .object({ versions: z.array(profileViewSchema) })
   .meta({ id: "CareerProfileVersions" });
 
+const derivationUsageSchema = z
+  .object({
+    calls: z.number().int(),
+    failedCalls: z.number().int(),
+    inputTokens: z.number().int(),
+    outputTokens: z.number().int(),
+    estimatedUsd: z
+      .number()
+      .nullable()
+      .describe("Estimated cost in US dollars; null when a model has no price."),
+  })
+  .describe("What the derivation's model calls used, failed calls included.")
+  .meta({ id: "CareerProfileDerivationUsage" });
+
 export const profileDerivationViewSchema = z
   .discriminatedUnion("status", [
     z.object({
@@ -114,8 +128,22 @@ export const profileDerivationViewSchema = z
       completedCalls: z.number().int().optional(),
       plannedCalls: z.number().int().optional(),
     }),
-    z.object({ status: z.literal("derived"), version: z.number().int() }),
-    z.object({ status: z.literal("cancelled") }),
+    z.object({
+      status: z.literal("derived"),
+      version: z.number().int(),
+      usage: derivationUsageSchema.optional(),
+      reusedSourceCount: z
+        .number()
+        .int()
+        .optional()
+        .describe("Selected sources whose facts came unchanged from the previous version."),
+      extractedSourceCount: z
+        .number()
+        .int()
+        .optional()
+        .describe("Selected sources sent to the model in this derivation."),
+    }),
+    z.object({ status: z.literal("cancelled"), usage: derivationUsageSchema.optional() }),
     z.object({
       status: z.literal("failed"),
       reason: z.enum(["failed", "consent-required", "record-erased"]),
@@ -123,10 +151,11 @@ export const profileDerivationViewSchema = z
         .string()
         .optional()
         .describe("A fixed sentence the person can act on; absent for any other failure."),
+      usage: derivationUsageSchema.optional(),
     }),
   ])
   .describe(
-    "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them.",
+    "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used.",
   )
   .meta({ id: "CareerProfileDerivation" });
 

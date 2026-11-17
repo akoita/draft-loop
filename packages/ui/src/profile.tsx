@@ -26,6 +26,10 @@ import {
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
+  type ProfileDerivationUsage,
+  profileDerivationUsageSummary,
+} from "./profile-derivation-usage.js";
+import {
   FactUsageSelect,
   factUsageExplanation,
   type ProfileFactUsageControls,
@@ -790,6 +794,7 @@ export function ProfileWorkspace({
     readonly version: number;
     readonly reused: number;
     readonly extracted: number;
+    readonly usage?: ProfileDerivationUsage;
   } | null>(null);
   const [busy, setBusyState] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -1271,6 +1276,7 @@ export function ProfileWorkspace({
             version: derived.version,
             reused: derived.reusedSourceCount,
             extracted: derived.extractedSourceCount,
+            ...(derived.derivationUsage === undefined ? {} : { usage: derived.derivationUsage }),
           });
         }
         const refreshed = await refresh(generatingProfileId, derived.version);
@@ -1390,6 +1396,9 @@ export function ProfileWorkspace({
       record.version === sourceReuse.version ? (
         <p className="profile-note">
           {profileSourceReuseSummary(sourceReuse.reused, sourceReuse.extracted)}
+          {sourceReuse.usage === undefined
+            ? null
+            : ` ${profileDerivationUsageSummary(sourceReuse.usage)}`}
         </p>
       ) : null}
       <div

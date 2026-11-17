@@ -36,13 +36,40 @@ export interface ProfileDerivationProgress {
 }
 
 /**
+ * What a derivation's provider calls used (#2815): content-free totals, failed calls included.
+ * `estimatedUsd` is null when a call's model has no price, so the total cannot be estimated.
+ */
+export interface ProfileDerivationUsage {
+  readonly calls: number;
+  readonly failedCalls: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly estimatedUsd: number | null;
+}
+
+/** Which selected sources a derivation reused from the previous version and which it extracted. */
+export interface ProfileDerivationSources {
+  readonly reusedSourceCount: number;
+  readonly extractedSourceCount: number;
+}
+
+/**
  * How one claimed derivation ended, kept as the job's output. A failure's message is one of the
- * application's fixed, path-free sentences; any other failure carries none.
+ * application's fixed, path-free sentences; any other failure carries none. A derivation that
+ * called a model keeps what those calls used.
  */
 export type ProfileDerivationOutcome =
-  | { readonly outcome: "derived"; readonly version: number }
-  | { readonly outcome: "cancelled" }
-  | { readonly outcome: "failed"; readonly message?: string }
+  | ({
+      readonly outcome: "derived";
+      readonly version: number;
+      readonly usage?: ProfileDerivationUsage;
+    } & Partial<ProfileDerivationSources>)
+  | { readonly outcome: "cancelled"; readonly usage?: ProfileDerivationUsage }
+  | {
+      readonly outcome: "failed";
+      readonly message?: string;
+      readonly usage?: ProfileDerivationUsage;
+    }
   /** The record's current consent does not cover the workspace's providers. */
   | { readonly outcome: "consent-required" }
   /** The workspace's candidate record is erased or being erased. */
@@ -55,20 +82,49 @@ export type ProfileDerivationState =
       /** False while the job waits for a worker to claim it. */
       readonly started: boolean;
     } & Partial<ProfileDerivationProgress>)
-  | { readonly status: "derived"; readonly version: number }
-  | { readonly status: "cancelled" }
+  | ({
+      readonly status: "derived";
+      readonly version: number;
+      readonly usage?: ProfileDerivationUsage;
+    } & Partial<ProfileDerivationSources>)
+  | { readonly status: "cancelled"; readonly usage?: ProfileDerivationUsage }
   | {
       readonly status: "failed";
       readonly reason: "failed" | "consent-required" | "record-erased";
       readonly message?: string;
+      readonly usage?: ProfileDerivationUsage;
     };
 
+const countSchema = z.number().int().nonnegative();
+
+const usageSchema = z.object({
+  calls: countSchema,
+  failedCalls: countSchema,
+  inputTokens: countSchema,
+  outputTokens: countSchema,
+  estimatedUsd: z.number().nonnegative().nullable(),
+});
+
 const outputSchema = z.union([
-  z.object({ outcome: z.literal("derived"), version: z.number().int().positive() }),
-  z.object({ outcome: z.literal("cancelled") }),
-  z.object({ outcome: z.literal("failed"), message: z.string().max(1_000).optional() }),
+  z.object({
+    outcome: z.literal("derived"),
+    version: z.number().int().positive(),
+    usage: usageSchema.optional(),
+    reusedSourceCount: countSchema.optional(),
+    extractedSourceCount: countSchema.optional(),
+  }),
+  z.object({ outcome: z.literal("cancelled"), usage: usageSchema.optional() }),
+  z.object({
+    outcome: z.literal("failed"),
+    message: z.string().max(1_000).optional(),
+    usage: usageSchema.optional(),
+  }),
   z.object({ outcome: z.enum(["consent-required", "record-erased"]) }),
 ]);
+
+function withUsage(usage: ProfileDerivationUsage | undefined) {
+  return usage === undefined ? {} : { usage };
+}
 
 /** Reads a finished job's output; anything unexpected reads as a failure without a message. */
 export function profileDerivationStateOf(output: unknown): ProfileDerivationState {
@@ -77,14 +133,25 @@ export function profileDerivationStateOf(output: unknown): ProfileDerivationStat
   const result = parsed.data;
   switch (result.outcome) {
     case "derived":
-      return { status: "derived", version: result.version };
+      return {
+        status: "derived",
+        version: result.version,
+        ...withUsage(result.usage),
+        ...(result.reusedSourceCount === undefined || result.extractedSourceCount === undefined
+          ? {}
+          : {
+              reusedSourceCount: result.reusedSourceCount,
+              extractedSourceCount: result.extractedSourceCount,
+            }),
+      };
     case "cancelled":
-      return { status: "cancelled" };
+      return { status: "cancelled", ...withUsage(result.usage) };
     case "failed":
       return {
         status: "failed",
         reason: "failed",
         ...(result.message === undefined ? {} : { message: result.message }),
+        ...withUsage(result.usage),
       };
     default:
       return { status: "failed", reason: result.outcome };

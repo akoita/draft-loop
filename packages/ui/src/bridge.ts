@@ -164,6 +164,10 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
 import {
+  normalizeProfileDerivationUsage,
+  type ProfileDerivationUsage,
+} from "./profile-derivation-usage.js";
+import {
   normalizeProfileFreshnessResult,
   type ProfileFreshnessInput,
   type ProfileFreshnessResult,
@@ -3040,6 +3044,8 @@ export interface CanonicalCandidateProfileRecordResult {
   readonly reusedSourceCount?: number;
   /** Present on a freshly derived version: source versions sent for extraction. */
   readonly extractedSourceCount?: number;
+  /** Present on a freshly derived version when the host metered its model calls (#2815). */
+  readonly derivationUsage?: ProfileDerivationUsage;
 }
 
 export interface CanonicalCandidateProfileListResult {
@@ -3091,6 +3097,7 @@ const canonicalCandidateProfileRecordResultKeys =
     "issues",
     "reusedSourceCount",
     "extractedSourceCount",
+    "derivationUsage",
   ]);
 const canonicalCandidateProfileListResultKeys = resultKeys<CanonicalCandidateProfileListResult>()([
   "workspaceId",
@@ -8481,6 +8488,7 @@ function normalizeCanonicalCandidateProfileRecordResult(
     if (issue.factIds.some((factId) => !factIds.has(factId))) return invalidInput();
   }
   const sourceCounts = normalizeCanonicalCandidateProfileSourceCounts(result);
+  const derivationUsage = normalizeProfileDerivationUsage(result.derivationUsage, invalidInput);
   return {
     workspaceId,
     profileId,
@@ -8494,6 +8502,7 @@ function normalizeCanonicalCandidateProfileRecordResult(
     facts,
     issues,
     ...sourceCounts,
+    ...(derivationUsage === undefined ? {} : { derivationUsage }),
   };
 }
 

@@ -109,6 +109,34 @@ describe("career profile commands over HTTP", () => {
     expect(waits).toEqual([5, 5]);
   });
 
+  it("carries the derivation's source counts and model usage to the screen (#2815)", async () => {
+    const usage = {
+      calls: 2,
+      failedCalls: 0,
+      inputTokens: 9_000,
+      outputTokens: 800,
+      estimatedUsd: 0.02,
+    };
+    const { answer } = answersOver({
+      [`POST ${derivationPath}`]: () => ({ status: "pending", started: false }),
+      [`GET ${derivationPath}`]: () => ({
+        status: "derived",
+        version: 2,
+        reusedSourceCount: 3,
+        extractedSourceCount: 1,
+        usage,
+      }),
+      "GET /v1/workspaces/{workspaceId}/profiles/{profileId}": () => profileView(2),
+    });
+
+    expect(await answer(derive)).toMatchObject({
+      version: 2,
+      reusedSourceCount: 3,
+      extractedSourceCount: 1,
+      derivationUsage: usage,
+    });
+  });
+
   it("records the ticked approval as the author's grant and queues again once (#2811)", async () => {
     let queued = 0;
     const { answer, calls } = answersOver({

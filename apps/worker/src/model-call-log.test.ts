@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { modelCallLog, withJobIds } from "./model-call-log.js";
+import { currentJobUsage, modelCallLog, totalUsage, withJobIds } from "./model-call-log.js";
 
 const call = {
   purpose: "profile-derivation",
@@ -35,5 +35,28 @@ describe("modelCallLog", () => {
     const lines: string[] = [];
     modelCallLog((line) => lines.push(line))({ ...call, failed: true });
     expect(JSON.parse(lines[0] ?? "")).toMatchObject({ severity: "WARNING", failed: true });
+  });
+
+  it("totals the running job's calls, failed ones included, and nothing outside a job", async () => {
+    const meter = modelCallLog(() => undefined);
+    meter(call);
+    expect(currentJobUsage()).toBeUndefined();
+    const usage = await withJobIds({ profileId: "p1" }, async () => {
+      expect(currentJobUsage()).toBeUndefined();
+      meter(call);
+      meter({ ...call, inputTokens: 100, outputTokens: 0, estimatedUsd: 0.001, failed: true });
+      return currentJobUsage();
+    });
+    expect(usage).toEqual({
+      calls: 2,
+      failedCalls: 1,
+      inputTokens: 5100,
+      outputTokens: 1200,
+      estimatedUsd: 0.012,
+    });
+  });
+
+  it("gives no cost when a model has no price", () => {
+    expect(totalUsage([call, { ...call, estimatedUsd: null }]).estimatedUsd).toBeNull();
   });
 });

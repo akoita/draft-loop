@@ -4357,6 +4357,46 @@
           "versions"
         ]
       },
+      "CareerProfileDerivationUsageInput": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "failedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "description": "Estimated cost in US dollars; null when a model has no price.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "calls",
+          "failedCalls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd"
+        ],
+        "description": "What the derivation's model calls used, failed calls included."
+      },
       "CareerProfileDerivationInput": {
         "oneOf": [
           {
@@ -4397,6 +4437,21 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
+              },
+              "reusedSourceCount": {
+                "description": "Selected sources whose facts came unchanged from the previous version.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "extractedSourceCount": {
+                "description": "Selected sources sent to the model in this derivation.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -4410,6 +4465,9 @@
               "status": {
                 "type": "string",
                 "const": "cancelled"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
               }
             },
             "required": [
@@ -4434,6 +4492,9 @@
               "message": {
                 "description": "A fixed sentence the person can act on; absent for any other failure.",
                 "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
               }
             },
             "required": [
@@ -4442,7 +4503,7 @@
             ]
           }
         ],
-        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them."
+        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
       "CareerProfileFreshnessInput": {
         "oneOf": [
@@ -12300,6 +12361,47 @@
         ],
         "additionalProperties": false
       },
+      "CareerProfileDerivationUsage": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "failedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "description": "Estimated cost in US dollars; null when a model has no price.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "calls",
+          "failedCalls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd"
+        ],
+        "additionalProperties": false,
+        "description": "What the derivation's model calls used, failed calls included."
+      },
       "CareerProfileDerivation": {
         "oneOf": [
           {
@@ -12341,6 +12443,21 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
+              },
+              "reusedSourceCount": {
+                "description": "Selected sources whose facts came unchanged from the previous version.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "extractedSourceCount": {
+                "description": "Selected sources sent to the model in this derivation.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -12355,6 +12472,9 @@
               "status": {
                 "type": "string",
                 "const": "cancelled"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
               }
             },
             "required": [
@@ -12380,6 +12500,9 @@
               "message": {
                 "description": "A fixed sentence the person can act on; absent for any other failure.",
                 "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
               }
             },
             "required": [
@@ -12389,7 +12512,7 @@
             "additionalProperties": false
           }
         ],
-        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them."
+        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
       "CareerProfileFreshness": {
         "oneOf": [
