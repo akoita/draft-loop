@@ -31,7 +31,8 @@ checks feed it:
 | Image scan | CI job `Image scan` (Trivy) | A server image has a high or critical vulnerability with a fix |
 
 The image scan runs when a change reaches the server images, and keeps an
-SPDX SBOM of each image as a workflow artifact.
+SPDX SBOM of each image as a workflow artifact. A finding it accepts for now is
+listed in `.trivyignore.yaml` with a reason and an expiry date.
 
 GitHub secret scanning with push protection also refuses known provider keys
 before they reach the repository. Run `pnpm validate` to run the commands

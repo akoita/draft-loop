@@ -208,7 +208,7 @@ jobs:
       - name: Scan for fixable high and critical vulnerabilities
         run: |
           ./trivy image --skip-version-check --scanners vuln --severity HIGH,CRITICAL \
-            --ignore-unfixed --exit-code 1 "$IMAGE"
+            --ignore-unfixed --ignorefile .trivyignore.yaml --exit-code 1 "$IMAGE"
       - name: Write the SBOM
         if: success() || failure()
         run: ./trivy image --skip-version-check --format spdx-json --output "sbom-$NAME.spdx.json" "$IMAGE"
