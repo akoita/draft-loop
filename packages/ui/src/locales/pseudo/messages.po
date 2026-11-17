@@ -9985,6 +9985,15 @@ msgid "This draft is approved; edits are closed."
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
+msgid "This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again."
+msgstr ""
+
+#. placeholder {0}: source.version
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your reviewed career profile, version {0}. A newer version waits for review on the Career profile page; it is used once you review it."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
 msgid "This draft would pass the server's cost cap for one request."
 msgstr ""
 
