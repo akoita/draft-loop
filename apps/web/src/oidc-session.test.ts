@@ -78,8 +78,10 @@ function setup(answers: Array<Response | (() => Response)> = []) {
       crypto: globalThis.crypto,
       storage: () => storage,
       now: () => clock.now,
+      wait: async (ms) => void waits.push(ms),
     });
-  return { storage, stub, clock, session: make(), make };
+  const waits: number[] = [];
+  return { storage, stub, clock, waits, session: make(), make };
 }
 
 const tokens = (access: string, refresh?: string, expiresIn = 300) =>
@@ -239,6 +241,56 @@ describe("refresh", () => {
 
     await expect(session.refresh()).rejects.toMatchObject({ notice: signInNotices().expired });
     expect(session.isSignedIn()).toBe(false);
+  });
+
+  it("retries while a sleeping provider wakes, and keeps the session", async () => {
+    const context = setup([
+      tokens("access-1", "refresh-1"),
+      new Response("", { status: 503 }),
+      () => {
+        throw new TypeError("Failed to fetch");
+      },
+      tokens("access-2", "refresh-2"),
+    ]);
+    const session = await signIn(context);
+
+    expect(await session.refresh()).toBe("access-2");
+    expect(context.waits).toEqual([1_000, 3_000]);
+    expect(session.isSignedIn()).toBe(true);
+  });
+
+  it("keeps the tokens when the provider stays unreachable", async () => {
+    const unavailable = () => new Response("", { status: 503 });
+    const context = setup([
+      tokens("access-1", "refresh-1"),
+      unavailable,
+      unavailable,
+      unavailable,
+      unavailable,
+    ]);
+    const session = await signIn(context);
+
+    const failure = await session.refresh().catch((error: unknown) => error);
+
+    expect(failure).not.toBeInstanceOf(SignInEndedError);
+    expect(failure).toMatchObject({ message: signInNotices().unreachable });
+    expect(session.isSignedIn()).toBe(true);
+  });
+
+  it("serves the current token while the provider cannot refresh it", async () => {
+    const unavailable = () => new Response("", { status: 502 });
+    const context = setup([
+      tokens("access-1", "refresh-1"),
+      unavailable,
+      unavailable,
+      unavailable,
+      unavailable,
+    ]);
+    const session = await signIn(context);
+    context.clock.now = start + 280_000;
+
+    expect(await session.accessToken()).toBe("access-1");
+    expect(session.isSignedIn()).toBe(true);
   });
 });
 

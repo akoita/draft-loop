@@ -5894,10 +5894,6 @@ msgstr ""
 msgid "No recent workspaces yet."
 msgstr ""
 
-#: apps/web/src/oidc-session.ts
-msgid "No refresh token is stored."
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "No required sections"
 msgstr ""
@@ -10003,6 +9999,10 @@ msgstr ""
 #. placeholder {0}: response.status
 #: apps/web/src/oidc-session.ts
 msgid "The token endpoint answered {0}."
+msgstr ""
+
+#: apps/web/src/oidc-session.ts
+msgid "The token endpoint cannot be reached."
 msgstr ""
 
 #: packages/ui/src/run-cost.ts

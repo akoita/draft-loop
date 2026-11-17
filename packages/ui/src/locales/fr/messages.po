@@ -5889,10 +5889,6 @@ msgstr "Aucun tarif public d’API n’est disponible pour ce rôle enregistré.
 msgid "No recent workspaces yet."
 msgstr "Aucun espace de travail récent pour l’instant."
 
-#: apps/web/src/oidc-session.ts
-msgid "No refresh token is stored."
-msgstr "Aucun jeton de rafraîchissement n’est enregistré."
-
 #: packages/ui/src/review.tsx
 msgid "No required sections"
 msgstr "Aucune section requise"
@@ -9999,6 +9995,10 @@ msgstr "Le jeton n'a pas pu être créé. {0}"
 #: apps/web/src/oidc-session.ts
 msgid "The token endpoint answered {0}."
 msgstr "Le point d’accès des jetons a répondu {0}."
+
+#: apps/web/src/oidc-session.ts
+msgid "The token endpoint cannot be reached."
+msgstr "Le point de terminaison des jetons est injoignable."
 
 #: packages/ui/src/run-cost.ts
 msgid "The total is a lower bound."
