@@ -46,10 +46,10 @@ describe("record picker", () => {
       />,
     );
 
-    expect(html).toContain('<label for="record-picker">Record</label>');
+    expect(html).toContain('<label for="record-picker">Job search</label>');
     expect(html).toContain('<option value="record-a">record-a</option>');
     expect(html).toContain('<option value="record-b" selected="">Fictional search</option>');
-    expect(html).toContain("New record");
+    expect(html).toContain("New job search");
     expect(html).not.toContain("new-record-name");
   });
 
@@ -66,8 +66,8 @@ describe("record picker", () => {
       />,
     );
 
-    expect(html).toContain('<label for="new-record-name">Name of the new record</label>');
-    expect(html).toContain("Create record");
+    expect(html).toContain('<label for="new-record-name">Name of the new job search</label>');
+    expect(html).toContain("Start job search");
     expect(html).toContain("Cancel");
   });
 
@@ -101,7 +101,7 @@ describe("record picker", () => {
     expect(html).toContain("No candidate record is assigned to you yet.");
     expect(html).not.toContain("record-picker");
     // Naming the first record is the only thing to do, so the field is not folded.
-    expect(html).toContain('<label for="new-record-name">Name of the new record</label>');
+    expect(html).toContain('<label for="new-record-name">Name of the new job search</label>');
     expect(html).not.toContain("Cancel");
   });
 });
@@ -113,11 +113,20 @@ describe("record members", () => {
     );
 
     expect(html).toContain("ada@alder.example.test · owner");
-    expect(html).toContain('aria-label="Remove ada@alder.example.test from this record"');
-    expect(html).toContain('<label for="assign-member">Assign a member</label>');
+    expect(html).toContain('aria-label="Remove access for ada@alder.example.test"');
+    expect(html).toContain('<label for="assign-member">Give access to</label>');
     expect(html).toContain(
       '<option value="member-cy" selected="">cy@alder.example.test · member · invited</option>',
     );
+  });
+
+  it("marks the caller's own line and offers no way to remove themselves", () => {
+    const html = renderToStaticMarkup(
+      <MemberList members={assigned} selfId="member-ada" assignable={[]} {...listProps} />,
+    );
+
+    expect(html).toContain("ada@alder.example.test · owner (you)");
+    expect(html).not.toContain("Remove");
   });
 
   it("shows a member the list read-only", () => {
@@ -128,7 +137,7 @@ describe("record members", () => {
     expect(html).toContain("ada@alder.example.test · owner");
     expect(html).not.toContain("Remove");
     expect(html).not.toContain("assign-member");
-    expect(html).toContain("Owners and admins of your organisation assign members.");
+    expect(html).toContain("Owners and admins of your team choose who can open it.");
   });
 
   it("says when everyone is assigned, and shows refusals", () => {
@@ -141,7 +150,7 @@ describe("record members", () => {
       />,
     );
 
-    expect(html).toContain("Every member of your organisation is assigned to this record.");
+    expect(html).toContain("Everyone in your team can already open it.");
     expect(html).toContain('role="alert">Only an organisation&#x27;s owners');
   });
 
@@ -150,8 +159,8 @@ describe("record members", () => {
       <MembersPanel client={unusedClient} recordId="record-new" exists={false} manage={true} />,
     );
 
-    expect(html).toContain("<summary>Members of this record</summary>");
-    expect(html).toContain("Members can be assigned once the record is set up.");
+    expect(html).toContain("<summary>Who can open this job search</summary>");
+    expect(html).toContain("You can share this job search once it is set up.");
   });
 
   it("reads the records before showing any step", () => {
@@ -161,7 +170,7 @@ describe("record members", () => {
       </Records>,
     );
 
-    expect(html).toContain('role="status">Reading your candidate records…</p>');
+    expect(html).toContain('role="status">Reading your job searches…</p>');
     expect(html).not.toContain("screens for");
   });
 });

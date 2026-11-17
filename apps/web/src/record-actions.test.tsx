@@ -5,6 +5,7 @@ import { RecordActionsPanel } from "./record-actions.js";
 
 const panelProps = {
   recordId: "candidate-ana",
+  title: "Download or delete this job search",
   busy: false,
   messages: [],
   onExport: () => {},
@@ -15,13 +16,13 @@ describe("record export and deletion panel", () => {
   it("offers the archive and a delete form that asks for the id and warns it is final", () => {
     const html = renderToStaticMarkup(<RecordActionsPanel {...panelProps} />);
 
-    expect(html).toContain("<summary>Export or delete this record</summary>");
-    expect(html).toContain('<button type="button">Export everything</button>');
+    expect(html).toContain("<summary>Download or delete this job search</summary>");
+    expect(html).toContain('<button type="button">Download everything</button>');
     expect(html).toContain("It cannot be undone.");
     expect(html).toContain(
-      '<label for="delete-record-confirm">Type the record id, candidate-ana, to confirm</label>',
+      '<label for="delete-record-confirm">Type its id, candidate-ana, to confirm</label>',
     );
-    expect(html).toContain('<button type="submit" class="danger">Delete record</button>');
+    expect(html).toContain('<button type="submit" class="danger">Delete job search</button>');
     expect(html).not.toContain('role="alert"');
   });
 
@@ -34,8 +35,8 @@ describe("record export and deletion panel", () => {
       />,
     );
 
-    expect(html).toContain('<button type="button" disabled="">Export everything</button>');
-    expect(html).toContain('class="danger" disabled="">Delete record</button>');
+    expect(html).toContain('<button type="button" disabled="">Download everything</button>');
+    expect(html).toContain('class="danger" disabled="">Delete job search</button>');
     expect(html).toContain('role="alert">Stop the run first.');
   });
 });

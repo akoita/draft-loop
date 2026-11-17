@@ -35,14 +35,14 @@ export function deleteRecordRequest(
   | { readonly request: ApiInput<"DELETE /v1/workspaces/{workspaceId}"> }
   | { readonly problem: string } {
   if (typed.trim() !== workspaceId)
-    return { problem: t`Type the record id, ${workspaceId}, exactly to delete it.` };
+    return { problem: t`Type its id, ${workspaceId}, exactly to delete it.` };
   return { request: { path: { workspaceId }, body: { confirm: workspaceId } } };
 }
 
 /** What to say when the API refuses a deletion; a running record needs its run stopped first. */
 export function deleteRefusal(error: unknown): string {
   if (error instanceof ApiRequestError && error.code === "run_active")
-    return t`Stop the run first. A run on this record is queued or running: pause it or stop it for good in its review, then delete the record.`;
+    return t`Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search.`;
   return describeError(error);
 }
 

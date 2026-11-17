@@ -101,7 +101,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Display](../reference/display.md)                        | `available` | server        | `none`       | Simple, Guided or Show everything, which opens every Advanced options section.   |
 | [Plans and credits](plans-and-credits.md)                 | `partial`   | hosted        | `none`       | Plan entitlements and run credits; prices and sign-up are not live yet.          |
 | [Record archive](../reference/record-archive.md)          | `available` | hosted        | `none`       | Owners download everything kept about one candidate record as a zip.             |
-| [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and assign members to candidate records.                |
+| [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and choose who opens each job search; one-person plans see no picker. |
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
 | [Feedback](feedback.md) | `partial` | web, server | `send_feedback` | A member sends the operator a note about DraftLoop from the header's Send feedback button, or through their agent. |
 
