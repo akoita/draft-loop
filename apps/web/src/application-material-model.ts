@@ -215,3 +215,26 @@ export function applicationMaterialMarkdown(draft: ApplicationMaterialDraft): st
   lines.push(`_Drafted by ${draft.model.model} (${draft.model.provider}). Check before use._`, "");
   return lines.join("\n");
 }
+
+/**
+ * Which career profile version a new draft used, when that needs saying (#2816): a newer profile
+ * draft waits for review, or no version is reviewed yet. Undefined otherwise.
+ */
+export function careerProfileSourceNotice(
+  source:
+    | {
+        readonly version: number;
+        readonly reviewed: boolean;
+        readonly newer_draft_waiting: boolean;
+      }
+    | undefined,
+): string | undefined {
+  if (source === undefined) return undefined;
+  if (!source.reviewed) {
+    return t`This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again.`;
+  }
+  if (source.newer_draft_waiting) {
+    return t`This draft uses your reviewed career profile, version ${source.version}. A newer version waits for review on the Career profile page; it is used once you review it.`;
+  }
+  return undefined;
+}
