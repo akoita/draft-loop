@@ -14,6 +14,8 @@ export interface ApplicationStepsViewProps {
   readonly steps: readonly ApplicationStepState[];
   /** Each step's content: the controls that finish it, with at most one primary action. */
   readonly content: Readonly<Record<ApplicationStepId, ReactNode>>;
+  /** The application's name, shown on the current step so a long page still says which one. */
+  readonly applicationName?: string;
 }
 
 /**
@@ -42,7 +44,11 @@ export function focusCurrentStep(list: Pick<ParentNode, "querySelector"> | null)
  * The application screen as three numbered steps, top to bottom. Each step states whether it is
  * done, the current step or blocked, and the current one carries `aria-current="step"`.
  */
-export function ApplicationStepsView({ steps, content }: ApplicationStepsViewProps) {
+export function ApplicationStepsView({
+  steps,
+  content,
+  applicationName,
+}: ApplicationStepsViewProps) {
   const listRef = useRef<HTMLOListElement | null>(null);
   useCurrentStepOnOpen(listRef);
   return (
@@ -64,6 +70,9 @@ export function ApplicationStepsView({ steps, content }: ApplicationStepsViewPro
                 <span className="application-step-number">{step.number}</span> {step.title}
               </h3>
               <p className="application-step-status">{applicationStepStatusText(step.status)}</p>
+              {current && applicationName !== undefined ? (
+                <p className="application-step-subject">{t`Application: ${applicationName}`}</p>
+              ) : null}
             </div>
             <div className="application-step-body">{content[step.id]}</div>
           </li>

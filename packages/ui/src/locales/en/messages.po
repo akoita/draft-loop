@@ -1370,6 +1370,10 @@ msgstr "Application name"
 msgid "Application plan"
 msgstr "Application plan"
 
+#: packages/ui/src/application-steps.tsx
+msgid "Application: {applicationName}"
+msgstr "Application: {applicationName}"
+
 #: packages/ui/src/career-flow.tsx
 #: packages/ui/src/career-page-tabs.tsx
 #: packages/ui/src/home.tsx
@@ -8690,6 +8694,10 @@ msgid "That invite has already been used. Each code opens one account; ask for a
 msgstr "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
 
 #: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address than {email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to."
+msgstr "That invite is for another email address than {email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to."
+
+#: apps/web/src/beta-sign-up-model.ts
 msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
 msgstr "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
 
@@ -9419,6 +9427,10 @@ msgstr "The requirements could not be extracted. Extract them again, or paste th
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "The requirements could not be saved. Nothing was changed."
 msgstr "The requirements could not be saved. Nothing was changed."
+
+#: packages/ui/src/start-requirements-model.ts
+msgid "The requirements have not been read from this job yet. Extract them to review them."
+msgstr "The requirements have not been read from this job yet. Extract them to review them."
 
 #: apps/web/src/research-brief-model.ts
 msgid "The research failed and nothing was saved. Try again later."

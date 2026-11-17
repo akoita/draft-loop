@@ -2828,6 +2828,7 @@ export function App({
             headerNotice: applicationNameNudge(application),
             afterReview: <HostApplicationPanel applicationId={application.applicationId} />,
             startApplicationId: application.applicationId,
+            applicationName: application.name,
             ...(activePort.setApplicationModels === undefined ||
             applicationSummaries[application.applicationId]?.isDefault !== false
               ? {}

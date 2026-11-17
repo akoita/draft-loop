@@ -104,7 +104,9 @@ export interface HttpBridgeOptions {
    * Hears every refusal the API answers, with its own code, so the shell can show its plan,
    * consent and screening panels; the screens only get the port's code and the API's message.
    */
-  readonly onRefusal?: (error: ApiRequestError) => void;
+  readonly onRefusal?: (error: ApiRequestError, command: string) => void;
+  /** Hears each command that succeeds, so the shell can drop a refusal a retry has resolved. */
+  readonly onSucceeded?: (command: string) => void;
   /** A fresh key for each run start, so a retried request never begins a second run. */
   readonly idempotencyKey?: () => string;
   /**
@@ -731,13 +733,15 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     capabilities: hostedBridgeCapabilities,
     invoke: async (command): Promise<BridgeResult<unknown>> => {
       try {
-        return { ok: true, value: await answer(command) };
+        const value = await answer(command);
+        options.onSucceeded?.(command.type);
+        return { ok: true, value };
       } catch (error) {
         if (error instanceof Refusal) {
           return { ok: false, error: { code: error.code, message: error.message } };
         }
         if (error instanceof ApiRequestError) {
-          options.onRefusal?.(error);
+          options.onRefusal?.(error, command.type);
           return { ok: false, error: { code: errorCode(error.status), message: error.message } };
         }
         return { ok: false, error: { code: "operation-failed", message: describeError(error) } };

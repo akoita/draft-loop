@@ -24,11 +24,16 @@ export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
       };
     case "invite_revoked":
       return { message: t`That invite was withdrawn. Ask for a new invite.`, retry: false };
-    case "invite_email_mismatch":
+    case "invite_email_mismatch": {
+      const email = error.params?.email;
       return {
-        message: t`That invite is for another email address. Sign out and sign in with the address the invite was sent to.`,
+        message:
+          typeof email === "string"
+            ? t`That invite is for another email address than ${email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to.`
+            : t`That invite is for another email address. Sign out and sign in with the address the invite was sent to.`,
         retry: false,
       };
+    }
     case "beta_full":
       return {
         message: t`The beta is full for now. Your code stays valid: try again when places open.`,
