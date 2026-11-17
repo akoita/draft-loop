@@ -25,4 +25,10 @@ describe("the review screen's guided hint", () => {
     const empty = { ...fixture, artifact: { ...fixture.artifact, version: 0 } };
     expect(guided(empty)).not.toContain(hint);
   });
+
+  it("waits while the review is still running", () => {
+    const fixture = createFixtureReviewState();
+    const running = { ...fixture, execution: { ...fixture.execution, status: "running" as const } };
+    expect(guided(running)).not.toContain(hint);
+  });
 });
