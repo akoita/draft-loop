@@ -763,6 +763,10 @@ msgstr ""
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "{own} of {total} commits ({share}%), {first} to {last}"
+msgstr ""
+
 #: packages/ui/src/export-preview.tsx
 msgid "{pageCount, plural, one {# page} other {# pages}}"
 msgstr ""
@@ -2275,6 +2279,11 @@ msgstr ""
 msgid "Close workspace is available again once your career profile is generated."
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Code project"
+msgstr ""
+
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Codex session"
 msgstr ""
@@ -2473,6 +2482,10 @@ msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Continue where you left off, or pick another workspace. "
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Contributor"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -3715,6 +3728,14 @@ msgstr ""
 msgid "File import complete. An existing career-evidence source was reused."
 msgstr ""
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "File project cards"
+msgstr ""
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "File project cards about your code repositories, which wait for your approval in the Work journal"
+msgstr ""
+
 #: packages/ui/src/work-journal-model.ts
 msgid "Filed by {filer}"
 msgstr ""
@@ -4214,6 +4235,14 @@ msgstr ""
 msgid "Guided"
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Has automated tests"
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Has continuous integration"
+msgstr ""
+
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
 msgstr ""
@@ -4254,6 +4283,10 @@ msgstr ""
 #: packages/ui/src/model-profile-presentation.ts
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "High"
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Highlights, each with where the agent read it:"
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
@@ -4787,6 +4820,10 @@ msgstr ""
 msgid "latest"
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Lead developer"
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
 msgstr ""
@@ -5116,6 +5153,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Merge the notes"
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Merged pull requests: {merged}"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -6302,6 +6343,10 @@ msgstr ""
 msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Other contributors: {others}"
+msgstr ""
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Other MCP agents (JSON)"
 msgstr ""
@@ -7061,6 +7106,10 @@ msgstr ""
 #: apps/web/src/screening-model.ts
 #: apps/web/src/screening.tsx
 msgid "Released"
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Releases: {releases}"
 msgstr ""
 
 #: apps/web/src/screening.tsx
@@ -8357,6 +8406,10 @@ msgstr ""
 msgid "Social announcement"
 msgstr ""
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Sole author"
+msgstr ""
+
 #: apps/web/src/feedback.tsx
 msgid "Something else"
 msgstr ""
@@ -8434,6 +8487,10 @@ msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Standard (311M parameters, recommended)"
+msgstr ""
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Stars: {stars}"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -9925,6 +9982,15 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "This draft is approved; edits are closed."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again."
+msgstr ""
+
+#. placeholder {0}: source.version
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your reviewed career profile, version {0}. A newer version waits for review on the Career profile page; it is used once you review it."
 msgstr ""
 
 #: apps/web/src/application-material-model.ts

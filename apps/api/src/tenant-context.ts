@@ -200,6 +200,7 @@ const unavailable = async (): Promise<never> => {
 /** Stands in for a tenant composed without a work journal. */
 const unavailableWorkJournal: WorkJournalService = {
   record: unavailable,
+  recordProject: unavailable,
   list: unavailable,
   listFull: unavailable,
   get: unavailable,

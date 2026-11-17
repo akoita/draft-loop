@@ -30,6 +30,7 @@ import {
 import { registerModelProfileSelectionCommands } from "./model-profile-selection-commands.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import { registerPreferenceCommands } from "./preference-commands.js";
+import { registerRepositoryFactsCommand } from "./repository-facts-command.js";
 import { registerRetrievalModeCommands } from "./retrieval-mode-commands.js";
 import { registerSensitivityCommands } from "./sensitivity-commands.js";
 import {
@@ -2883,6 +2884,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     dependencies.evidenceModeService ?? workspaceEvidenceModeService,
     io,
   );
+  registerRepositoryFactsCommand(command, io);
   registerRetrievalModeCommands(
     command,
     dependencies.retrievalModeService ?? workspaceRetrievalModeService,

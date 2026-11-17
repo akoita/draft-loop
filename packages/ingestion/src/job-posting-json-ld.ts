@@ -1,3 +1,4 @@
+import { extractEmbeddedJobPostText } from "./embedded-job-post.js";
 import { decodeHtmlEntities, htmlFragmentToMarkdown } from "./html-text.js";
 
 /** Largest JSON-LD block that is parsed; a larger block is skipped, not truncated. */
@@ -61,7 +62,8 @@ function descriptionMarkdown(value: unknown): string {
 }
 
 /**
- * The text of the page's schema.org `JobPosting` JSON-LD, or `null` when the page has none.
+ * The text of the page's schema.org `JobPosting` JSON-LD, else of the job post the page embeds
+ * in its route state, or `null` when the page has neither.
  *
  * Job boards that render with JavaScript still publish the full posting here for search engines.
  * This reads only the already fetched page: nothing is fetched or followed. The result is a
@@ -96,5 +98,6 @@ export function extractJobPostingText(html: string): string | null {
       ? text.slice(0, maxJobPostingTextCharacters).trimEnd()
       : text;
   }
-  return null;
+  // Some boards publish no JobPosting and render the post from embedded page state (#2857).
+  return extractEmbeddedJobPostText(html);
 }

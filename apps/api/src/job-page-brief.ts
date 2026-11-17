@@ -12,7 +12,11 @@ import {
 import { applicationPastedJobMaxLength } from "@draft-loop/schemas/application";
 import type { FastifyBaseLogger } from "fastify";
 
-import { jobPageFetchRefusal, jobPageHost } from "./job-page-fetch-issue.js";
+import {
+  jobPageFetchRefusal,
+  jobPageHost,
+  jobPageTooShortRefusal,
+} from "./job-page-fetch-issue.js";
 
 type IngestUrl = typeof ingestUrl;
 
@@ -132,7 +136,8 @@ export async function fetchApprovedJobPage(
     approved: true,
     approval: true,
   });
-  if (pageFetch.page() === undefined) {
+  const page = pageFetch.page();
+  if (page === undefined) {
     // The issue code, host and duration only: never the path, the query or the page (#1836).
     const issueCode = pageFetch.issueCode() ?? "empty-content";
     log?.warn(
@@ -141,6 +146,23 @@ export async function fetchApprovedJobPage(
     );
     throw new CliUserError(jobPageFetchRefusal(issueCode));
   }
+  // A page that rendered its posting with JavaScript can give little more than a title. It is
+  // refused before any brief is saved or model called, so no empty application is left (#2857).
+  const words = wordCount(page.text);
+  if (words < minimumJobPageWords) {
+    log?.warn(
+      { issueCode: "too-little-text", words, host: jobPageHost(source.url) },
+      "job page fetch failed",
+    );
+    throw new CliUserError(jobPageTooShortRefusal(words));
+  }
+}
+
+/** Fewer words than this on a fetched job page is a title or a cookie banner, not a posting. */
+export const minimumJobPageWords = 40;
+
+function wordCount(text: string): number {
+  return text.split(/\s+/u).filter((word) => /\p{L}/u.test(word)).length;
 }
 
 /** Keeps the fetched page's text with its application, for the worker's extraction. */

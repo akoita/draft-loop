@@ -35,11 +35,35 @@ Every source is screened for hidden instructions before a run may use it; see
 requests start `sensitive`, with one private-section rule per repository that
 you can lower to **Always allow**.
 
+## Code project cards
+
+A project card is a short, cited summary of one code repository, never its
+code. It holds the purpose, your role, the stack, your own commit counts and
+dates counted from git, scale signals such as releases and CI, and highlights
+that each cite a file or pull request.
+
+- A card waits as a pending note in the **Work journal** until you approve
+  it. Only then does it become a source of the `project` kind.
+- A `private` card carries no links and is approved as `sensitive` by default,
+  so no run sends it to a provider without your consent.
+- A card holding a key-like string or any email address is refused. Other
+  contributors appear only as a count.
+
+An agent with the `evidence:write` scope files a card with the MCP tool
+`add_project`, after showing it to you
+([agent channel](../reference/agent-channel.md#code-projects-as-evidence)).
+In Claude Code or Codex, the `/add-project` skill does this for the current
+repository. Without an agent, `draft-loop evidence add-repo <path> --email
+<email>` prints the counted fields as JSON.
+The Work journal shows the card's counts and each highlight's source, so you
+can check them before you approve.
+
 ## How to test it
 
 - Walk steps 2 and 3 of the [local server stack](../operations/local-server-stack.md)
   with fictional files; the stack calls no provider.
 - Focused tests: `apps/api/src/knowledge-routes.test.ts`,
+  `packages/application/src/project-card.test.ts`,
   `packages/ui/src/career-evidence-card.test.tsx` and
   `apps/web/src/evidence-panels.test.tsx`.
 
@@ -51,7 +75,8 @@ you can lower to **Always allow**.
 | API    | `GET`/`POST /v1/knowledge-bases/{id}/sources`                              |
 | API    | `GET /v1/knowledge-bases/{id}/sources/{sourceId}/file` (download)          |
 | API    | `PUT /v1/workspaces/{id}/knowledge-selection` (bases a run uses)           |
-| MCP    | none; the [work journal](../reference/agent-channel.md) adds notes instead |
+| API    | `POST /v1/workspaces/{id}/work-journal/projects` (a project card)          |
+| MCP    | `add_project`; the [work journal](../reference/agent-channel.md) adds notes |
 
 ## Limits
 

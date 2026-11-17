@@ -1,6 +1,7 @@
 import { sourceSensitivityTiers } from "@draft-loop/domain/source-sensitivity";
 import { z } from "zod";
 import { contentScreeningSignals, contentScreeningVerdicts } from "./content-screening.js";
+import { projectCardDetailsSchema } from "./project-card-details.js";
 
 /**
  * The work journal (ADR 0011 D17, #2018): an agent files a short note about notable work it
@@ -39,6 +40,10 @@ export const workJournalLinkKinds = [
   "issue",
   "release",
   "document",
+  /** A project card's public repository (#2894). */
+  "repository",
+  /** A project card's live site or demo (#2894). */
+  "website",
 ] as const;
 export type WorkJournalLinkKind = (typeof workJournalLinkKinds)[number];
 
@@ -238,6 +243,8 @@ export const workJournalStoredNoteSchema = z
     dedupe_key: line(1, 400),
     possible_duplicate_of: z.array(workJournalNoteIdSchema).max(20).default([]),
     merged_into: workJournalNoteIdSchema.optional(),
+    /** Set when the note is a project card about one code repository (#2894). */
+    project_card: projectCardDetailsSchema.optional(),
     approval: workJournalApprovalSchema.optional(),
     screening: workJournalScreeningSchema,
     edit_count: z.number().int().min(0),
@@ -262,6 +269,8 @@ export const workJournalNoteListItemSchema = z
     technologies: z.array(z.string()),
     category: z.enum(workJournalCategories),
     status: z.enum(workJournalNoteStatuses),
+    /** `project` for a project card about one code repository (#2894). */
+    kind: z.enum(["note", "project"]).optional(),
     created_at: z.string(),
   })
   .strict();
@@ -429,6 +438,7 @@ export function workJournalNoteListItem(note: WorkJournalStoredNote): WorkJourna
     technologies: [...note.content.technologies],
     category: note.content.category,
     status: note.status,
+    kind: note.project_card === undefined ? "note" : "project",
     created_at: note.created_at,
   };
 }

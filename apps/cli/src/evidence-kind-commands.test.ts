@@ -120,7 +120,7 @@ describe("knowledge source evidence kind commands", () => {
     await withStore(async ({ storeRoot, knowledgeBaseId, sourceId, run }) => {
       await expect(run("kind", storeRoot, knowledgeBaseId, sourceId, "resume")).rejects.toThrow(
         new CliUserError(
-          "Evidence kind must be one of: cv, linkedin-export, performance-review, notes, transcript, work-journal, other.",
+          "Evidence kind must be one of: cv, linkedin-export, performance-review, notes, transcript, work-journal, project, other.",
         ),
       );
       await expect(

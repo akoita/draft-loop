@@ -3,6 +3,13 @@ import { randomBytes } from "node:crypto";
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import { createRuleContentScreener } from "@draft-loop/ingestion/content-screening-rules";
 import {
+  checkProjectCardInput,
+  type ProjectCardDetails,
+  type ProjectCardRefusalCode,
+  projectCardDedupeKey,
+  projectCardNote,
+} from "@draft-loop/schemas/project-card";
+import {
   checkWorkJournalNoteContent,
   checkWorkJournalNoteInput,
   isLikelyWorkJournalDuplicate,
@@ -34,6 +41,8 @@ import { type ContentScreener, screenWith } from "./content-screening.js";
 
 export type WorkJournalErrorCode =
   | WorkJournalRefusalCode
+  | ProjectCardRefusalCode
+  | "kinds_differ"
   | "not_consented"
   | "rate_limited"
   | "note_not_found"
@@ -61,6 +70,17 @@ const refusalMessages: Readonly<Record<WorkJournalRefusalCode, string>> = {
   link_not_https: "Every link must be an https address.",
   metric_without_how_measured: "Every metric needs how_measured.",
   amend_not_pending: "Only a pending note can be amended.",
+};
+
+const projectCardRefusalMessages: Readonly<Record<ProjectCardRefusalCode, string>> = {
+  invalid_card: "The card does not match the project card's fields; fix the named fields.",
+  secret_like_content:
+    "The card looks like it holds a key, token or password; remove it and send the card again.",
+  link_not_https: "Every link must be an https address.",
+  contributor_identity:
+    "The card holds an email address; name no contributor, give other contributors as a count.",
+  private_card_with_links:
+    "A private repository's card carries no links; remove them or mark the card public.",
 };
 
 /** How a recorded note was filed. */
@@ -159,6 +179,15 @@ export interface WorkJournalService {
     input: unknown,
     context?: WorkJournalRecordContext,
   ): Promise<WorkJournalRecordResult>;
+  /**
+   * Files a project card about one code repository (#2894) as a pending note that carries the
+   * card's details; the candidate reviews it like any note.
+   */
+  recordProject(
+    workspaceId: string,
+    input: unknown,
+    context?: WorkJournalRecordContext,
+  ): Promise<WorkJournalRecordResult>;
   list(workspaceId: string, options?: WorkJournalListOptions): Promise<WorkJournalNoteListItem[]>;
   /** Full notes for the candidate's review; never for the agent. */
   listFull(workspaceId: string, options?: WorkJournalListOptions): Promise<WorkJournalStoredNote[]>;
@@ -180,8 +209,11 @@ function defaultNoteId(): string {
 }
 
 /** The text screened for injection: every field the agent wrote, one per line. */
-function screenedText(content: WorkJournalNoteContent): string {
+function screenedText(content: WorkJournalNoteContent, card?: ProjectCardDetails): string {
   return [
+    ...(card === undefined
+      ? []
+      : [card.purpose, ...card.highlights.flatMap((item) => [item.text, item.source])]),
     content.title,
     content.summary,
     content.project.name,
@@ -240,10 +272,13 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
   const newId = options.newId ?? defaultNoteId;
   const screener = options.screener ?? createRuleContentScreener(now);
 
-  const screen = async (content: WorkJournalNoteContent): Promise<WorkJournalScreening> => {
+  const screen = async (
+    content: WorkJournalNoteContent,
+    card?: ProjectCardDetails,
+  ): Promise<WorkJournalScreening> => {
     const result = await screenWith(
       [screener],
-      { text: screenedText(content), kind: "candidate-source" },
+      { text: screenedText(content, card), kind: "candidate-source" },
       now,
     );
     return { verdict: result.verdict, signals: result.signals, screened_at: result.screenedAt };
@@ -253,9 +288,15 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     workspaceId: string,
     content: WorkJournalNoteContent,
     exceptId?: string,
+    isCard = false,
   ): Promise<string[]> =>
     (await store.pending(workspaceId))
-      .filter((note) => note.id !== exceptId && isLikelyWorkJournalDuplicate(note.content, content))
+      .filter(
+        (note) =>
+          note.id !== exceptId &&
+          (note.project_card !== undefined) === isCard &&
+          isLikelyWorkJournalDuplicate(note.content, content),
+      )
       .map((note) => note.id)
       .slice(0, 20);
 
@@ -318,8 +359,13 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
     if (note.status !== "pending") {
       throw new WorkJournalError("amend_not_pending", refusalMessages.amend_not_pending);
     }
-    const screening = await screen(content);
-    const possible = await likelyDuplicates(workspaceId, content, id);
+    const screening = await screen(content, note.project_card);
+    const possible = await likelyDuplicates(
+      workspaceId,
+      content,
+      id,
+      note.project_card !== undefined,
+    );
     const amending =
       agentTokenId === undefined
         ? note.amended_by_agent_token_ids
@@ -341,6 +387,81 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
       possible_duplicate_of: possible,
       screening: screening.verdict,
       message: "The pending note was amended; the candidate reviews it in DraftLoop.",
+    };
+  };
+
+  const file = async (
+    workspaceId: string,
+    content: WorkJournalNoteContent,
+    key: string,
+    card: ProjectCardDetails | undefined,
+    context: WorkJournalRecordContext,
+  ): Promise<WorkJournalRecordResult> => {
+    await forgetOldDiscarded();
+    const holder = await store.holderOfKey(key);
+    if (holder?.kind === "forgotten" || holder?.note.status === "discarded") {
+      return {
+        status: "previously_discarded",
+        duplicate_of: holder.kind === "note" ? holder.note.id : holder.noteId,
+        possible_duplicate_of: [],
+        message: "The candidate discarded this work before; it was not recorded again.",
+      };
+    }
+    if (holder !== undefined) {
+      return {
+        note_id: holder.note.id,
+        status: "duplicate",
+        duplicate_of: holder.note.id,
+        possible_duplicate_of: [],
+        message: "This work is already in the journal; amend that note instead.",
+      };
+    }
+    await requireCapacity(workspaceId);
+    const screening = await screen(content, card);
+    const possible = await likelyDuplicates(workspaceId, content, undefined, card !== undefined);
+    const at = now();
+    const id = newId();
+    try {
+      await store.insert({
+        id,
+        tenant_id: tenantId,
+        workspace_id: workspaceId,
+        status: "pending",
+        content,
+        dedupe_key: key,
+        possible_duplicate_of: possible,
+        screening,
+        edit_count: 0,
+        ...(card === undefined ? {} : { project_card: card }),
+        ...(context.agentTokenId === undefined ? {} : { agent_token_id: context.agentTokenId }),
+        created_at: at,
+        updated_at: at,
+      });
+    } catch (error) {
+      // A concurrent call filed the same key first.
+      if (error instanceof WorkJournalStoreError && error.code === "duplicate_key") {
+        const raced = await store.holderOfKey(key);
+        if (raced?.kind === "note") {
+          return {
+            note_id: raced.note.id,
+            status: "duplicate",
+            duplicate_of: raced.note.id,
+            possible_duplicate_of: [],
+            message: "This work is already in the journal; amend that note instead.",
+          };
+        }
+      }
+      throw error;
+    }
+    return {
+      note_id: id,
+      status: "pending",
+      possible_duplicate_of: possible,
+      screening: screening.verdict,
+      message:
+        screening.verdict === "clear"
+          ? "Recorded; the candidate reviews it in DraftLoop before it becomes evidence."
+          : "Recorded but held by screening; the candidate decides in DraftLoop.",
     };
   };
 
@@ -370,72 +491,28 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
         };
       }
       if (amends !== undefined) return amend(workspaceId, amends, content, context.agentTokenId);
-      await forgetOldDiscarded();
-      const key = workJournalDedupeKey(checked.note);
-      const holder = await store.holderOfKey(key);
-      if (holder?.kind === "forgotten" || holder?.note.status === "discarded") {
+      return file(workspaceId, content, workJournalDedupeKey(checked.note), undefined, context);
+    },
+
+    recordProject: async (workspaceId, input, context = {}) => {
+      const checked = checkProjectCardInput(input);
+      if (!checked.ok) {
+        throw new WorkJournalError(
+          checked.code,
+          projectCardRefusalMessages[checked.code],
+          checked.fields,
+        );
+      }
+      await requireConsent(workspaceId);
+      if (checked.card.dry_run === true) {
         return {
-          status: "previously_discarded",
-          duplicate_of: holder.kind === "note" ? holder.note.id : holder.noteId,
+          status: "validated",
           possible_duplicate_of: [],
-          message: "The candidate discarded this work before; it was not recorded again.",
+          message: "The card is valid; nothing was stored.",
         };
       }
-      if (holder !== undefined) {
-        return {
-          note_id: holder.note.id,
-          status: "duplicate",
-          duplicate_of: holder.note.id,
-          possible_duplicate_of: [],
-          message: "This work is already in the journal; amend that note instead.",
-        };
-      }
-      await requireCapacity(workspaceId);
-      const screening = await screen(content);
-      const possible = await likelyDuplicates(workspaceId, content);
-      const at = now();
-      const id = newId();
-      try {
-        await store.insert({
-          id,
-          tenant_id: tenantId,
-          workspace_id: workspaceId,
-          status: "pending",
-          content,
-          dedupe_key: key,
-          possible_duplicate_of: possible,
-          screening,
-          edit_count: 0,
-          ...(context.agentTokenId === undefined ? {} : { agent_token_id: context.agentTokenId }),
-          created_at: at,
-          updated_at: at,
-        });
-      } catch (error) {
-        // A concurrent call filed the same key first.
-        if (error instanceof WorkJournalStoreError && error.code === "duplicate_key") {
-          const raced = await store.holderOfKey(key);
-          if (raced?.kind === "note") {
-            return {
-              note_id: raced.note.id,
-              status: "duplicate",
-              duplicate_of: raced.note.id,
-              possible_duplicate_of: [],
-              message: "This work is already in the journal; amend that note instead.",
-            };
-          }
-        }
-        throw error;
-      }
-      return {
-        note_id: id,
-        status: "pending",
-        possible_duplicate_of: possible,
-        screening: screening.verdict,
-        message:
-          screening.verdict === "clear"
-            ? "Recorded; the candidate reviews it in DraftLoop before it becomes evidence."
-            : "Recorded but held by screening; the candidate decides in DraftLoop.",
-      };
+      const { content, details } = projectCardNote(checked.card);
+      return file(workspaceId, content, projectCardDedupeKey(checked.card), details, context);
     },
 
     list: async (workspaceId, listOptions) =>
@@ -451,7 +528,11 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
         ...note,
         possible_duplicate_of: note.possible_duplicate_of.filter((id) => {
           const other = pending.get(id);
-          return other !== undefined && isLikelyWorkJournalDuplicate(other.content, note.content);
+          return (
+            other !== undefined &&
+            (other.project_card === undefined) === (note.project_card === undefined) &&
+            isLikelyWorkJournalDuplicate(other.content, note.content)
+          );
         }),
       }));
     },
@@ -476,8 +557,13 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
           const edited = {
             ...note,
             content: checked.note,
-            screening: await screen(checked.note),
-            possible_duplicate_of: await likelyDuplicates(workspaceId, checked.note, id),
+            screening: await screen(checked.note, note.project_card),
+            possible_duplicate_of: await likelyDuplicates(
+              workspaceId,
+              checked.note,
+              id,
+              note.project_card !== undefined,
+            ),
             edit_count: note.edit_count + 1,
             updated_at: at,
           };
@@ -490,6 +576,12 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
           }
           const target = await requireNote(workspaceId, action.into);
           requirePending(target);
+          if ((target.project_card === undefined) !== (note.project_card === undefined)) {
+            throw new WorkJournalError(
+              "kinds_differ",
+              "A project card and a work note cannot be merged into each other.",
+            );
+          }
           const content = mergeWorkJournalContent(
             target.content,
             note.content,
@@ -498,7 +590,7 @@ export function createWorkJournalService(options: WorkJournalServiceOptions): Wo
           const merged = {
             ...target,
             content,
-            screening: await screen(content),
+            screening: await screen(content, target.project_card),
             possible_duplicate_of: target.possible_duplicate_of.filter((other) => other !== id),
             edit_count: target.edit_count + 1,
             updated_at: at,

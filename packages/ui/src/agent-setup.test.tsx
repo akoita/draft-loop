@@ -154,12 +154,14 @@ describe("AgentSetup", () => {
     expect(html).toContain('id="coding-agents"');
     expect(html).toContain("<h3>Agents</h3>");
     expect(html).toContain('<details class="agent-setup" open="">');
-    expect(html.match(/type="checkbox"/gu)).toHaveLength(5);
+    expect(html.match(/type="checkbox"/gu)).toHaveLength(6);
     expect(html.match(/checked=""/gu)).toHaveLength(3);
     // Starting runs spends money: never ticked unasked, and its limit shows once it is ticked.
     expect(html).not.toMatch(/checked=""[^>]*\/> Start CV runs/u);
     expect(html).not.toContain("Monthly spend limit");
     expect(html).not.toMatch(/checked=""[^>]*\/> Read your exported CVs/u);
+    // Project cards are opt-in too (#2895).
+    expect(html).not.toMatch(/checked=""[^>]*\/> File project cards/u);
     expect(html).toMatch(/checked=""[^>]*\/> Record notable work/u);
     expect(html).toContain("See your job applications");
     expect(html).toContain("Add a job application from a pasted job description");

@@ -8,12 +8,23 @@ import type { ApplicationService } from "./index.js";
 import type { WritingSamplesService } from "./writing-samples.js";
 
 /**
- * What drafting or reviewing an application's material reads from the record (#2525): the newest
- * profile's facts, the newest brief's requirements, the candidate's voice and where each fact may
+ * What drafting or reviewing an application's material reads from the record (#2525): the last
+ * reviewed profile's facts (#2816), the newest brief's requirements, the candidate's voice and where each fact may
  * be used. The API's material route and the worker's critic pass read the same input.
  */
+/** Which career profile version the material drew its facts from (#2816). */
+export interface ApplicationMaterialProfileSource {
+  readonly version: number;
+  /** False only when no version has been reviewed yet, so the newest draft was used. */
+  readonly reviewed: boolean;
+  /** A newer draft waits for review; it is not used until it is reviewed. */
+  readonly newerDraftWaiting: boolean;
+}
+
 export interface ApplicationMaterialRecordInput {
   readonly facts: ApplicationMaterialFact[];
+  /** Absent when the record has no career profile yet. */
+  readonly profile?: ApplicationMaterialProfileSource;
   readonly requirements: ApplicationMaterialRequirement[];
   readonly voice?: ApplicationMaterialVoice;
   readonly usage?: FactUsageSettings;
@@ -46,33 +57,50 @@ export async function applicationMaterialRecordInput(
     text: requirement.text,
     priority: requirement.priority,
   }));
-  const facts = await careerFacts(service, root);
+  const { facts, profile } = await careerFacts(service, root);
   const voice = await candidateVoice(service, root, options.writingSamples);
   const usage = await options.factUsage?.read(root);
   return {
     facts,
+    ...(profile === undefined ? {} : { profile }),
     requirements,
     ...(voice === undefined ? {} : { voice }),
     ...(usage === undefined ? {} : { usage }),
   };
 }
 
-/** The newest canonical profile's facts, without identity or contact fields the profile omits. */
+/**
+ * The facts of the last reviewed career profile version, as the Career profile card promises: a
+ * newer draft is used only once it is reviewed (#2816). Before any version is reviewed, the newest
+ * draft is used and the source says so. Identity and contact fields the profile omits stay out.
+ */
 async function careerFacts(
   service: ApplicationMaterialRecordService,
   root: string,
-): Promise<ApplicationMaterialFact[]> {
+): Promise<{ facts: ApplicationMaterialFact[]; profile?: ApplicationMaterialProfileSource }> {
   const profiles = await service.listCanonicalCandidateProfileVersions({ root });
-  const newest = [...profiles].sort((left, right) =>
+  const newestFirst = [...profiles].sort((left, right) =>
     right.profile.updatedAt.localeCompare(left.profile.updatedAt),
-  )[0];
-  return (newest?.profile.facts ?? []).map((fact) => ({
+  );
+  const newest = newestFirst[0];
+  if (newest === undefined) return { facts: [] };
+  const reviewed = newestFirst.find(({ profile }) => profile.status === "reviewed");
+  const used = reviewed ?? newest;
+  const facts = used.profile.facts.map((fact) => ({
     id: fact.id,
     category: fact.category,
     ...(fact.subjectId === undefined ? {} : { subjectId: fact.subjectId }),
     field: fact.field,
     value: fact.value,
   }));
+  return {
+    facts,
+    profile: {
+      version: used.profile.version,
+      reviewed: reviewed !== undefined,
+      newerDraftWaiting: reviewed !== undefined && newest !== reviewed,
+    },
+  };
 }
 
 /**

@@ -10,7 +10,7 @@ export interface ApiSchemas {
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -115,6 +115,7 @@ export interface ApiSchemas {
     readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
+    readonly career_profile?: ApiSchemas["CareerProfileSource"];
     readonly interview_details?: ApiSchemas["InterviewDetails"];
     readonly items: readonly ({
       readonly question: string;
@@ -372,6 +373,11 @@ export interface ApiSchemas {
     readonly state: "unavailable";
     readonly version: number;
   };
+  "CareerProfileSource": {
+    readonly version: number;
+    readonly reviewed: boolean;
+    readonly newer_draft_waiting: boolean;
+  };
   "CareerProfileVersions": {
     readonly versions: readonly (ApiSchemas["CareerProfile"])[];
   };
@@ -543,7 +549,7 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -826,6 +832,15 @@ export interface ApiSchemas {
     readonly occurrences: number;
     readonly applications: number;
     readonly reason: string;
+  };
+  "ProjectCardResult": {
+    readonly card_id?: string;
+    readonly status: "pending" | "duplicate" | "previously_discarded" | "validated";
+    readonly duplicate_of?: string;
+    readonly possible_duplicate_of: readonly (string)[];
+    readonly screening?: "clear" | "flagged" | "unscreened";
+    readonly review_url?: string;
+    readonly message: string;
   };
   "QuarantinedMaterial": {
     readonly resultId: string;
@@ -1233,6 +1248,7 @@ export interface ApiSchemas {
       readonly technologies: readonly (string)[];
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly kind?: "note" | "project";
       readonly created_at: string;
     })[];
     readonly full?: readonly ({
@@ -1256,7 +1272,7 @@ export interface ApiSchemas {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -1267,6 +1283,28 @@ export interface ApiSchemas {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
@@ -1316,7 +1354,7 @@ export interface ApiSchemas {
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
       readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
         readonly url: string;
       })[];
       readonly metrics?: readonly ({
@@ -2342,7 +2380,7 @@ export interface ApiOperations {
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
       readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
         readonly url: string;
       })[];
       readonly metrics?: readonly ({
@@ -2368,6 +2406,46 @@ export interface ApiOperations {
       readonly fields?: "titles" | "summary";
     };
     readonly response: ApiSchemas["WorkJournalNoteList"];
+  };
+  "POST /v1/workspaces/{workspaceId}/work-journal/projects": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly header?: {
+      readonly "idempotency-key"?: string;
+    };
+    readonly body: {
+      readonly name: string;
+      readonly purpose: string;
+      readonly summary: string;
+      readonly role: "sole-author" | "lead" | "contributor";
+      readonly visibility: "public" | "private";
+      readonly stack: readonly (string)[];
+      readonly contribution: {
+        readonly own_commits: number;
+        readonly total_commits: number;
+        readonly first_commit: string;
+        readonly last_commit: string;
+        readonly merged_pull_requests?: number;
+        readonly other_contributors: number;
+      };
+      readonly scale?: {
+        readonly releases?: number;
+        readonly stars?: number;
+        readonly continuous_integration?: boolean;
+        readonly automated_tests?: boolean;
+      };
+      readonly highlights?: readonly ({
+        readonly text: string;
+        readonly source: string;
+      })[];
+      readonly repository_url?: string;
+      readonly live_url?: string;
+      readonly release_url?: string;
+      readonly dedupe_key?: string;
+      readonly dry_run?: boolean;
+    };
+    readonly response: ApiSchemas["ProjectCardResult"];
   };
   "GET /v1/workspaces/{workspaceId}/work-journal/notes/{noteId}": {
     readonly path: {
@@ -2395,7 +2473,7 @@ export interface ApiOperations {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -2406,6 +2484,28 @@ export interface ApiOperations {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
@@ -2451,7 +2551,7 @@ export interface ApiOperations {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -2462,6 +2562,28 @@ export interface ApiOperations {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
@@ -2643,7 +2765,7 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
       readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];

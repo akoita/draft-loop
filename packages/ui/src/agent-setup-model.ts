@@ -38,7 +38,8 @@ export type AgentScope =
   | "applications:read"
   | "jobs:write"
   | "drafts:read"
-  | "runs:start";
+  | "runs:start"
+  | "evidence:write";
 
 export const agentScopes: readonly AgentScope[] = [
   "journal",
@@ -46,6 +47,7 @@ export const agentScopes: readonly AgentScope[] = [
   "jobs:write",
   "drafts:read",
   "runs:start",
+  "evidence:write",
 ];
 
 /**
@@ -72,6 +74,8 @@ export function agentScopeLabel(scope: AgentScope): string {
       return t`Read your exported CVs and saved cover letters and interview questions`;
     case "runs:start":
       return t`Start CV runs on jobs whose requirements you reviewed, and draft cover letters and interview questions, within a monthly spend limit`;
+    case "evidence:write":
+      return t`File project cards about your code repositories, which wait for your approval in the Work journal`;
   }
 }
 
@@ -88,6 +92,8 @@ export function agentScopeName(scope: AgentScope): string {
       return t`Read CVs and drafts`;
     case "runs:start":
       return t`Start runs and drafts`;
+    case "evidence:write":
+      return t`File project cards`;
   }
 }
 

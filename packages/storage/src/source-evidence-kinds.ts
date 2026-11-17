@@ -105,10 +105,31 @@ export const sourceEvidenceKindWorkJournalMigration = {
   `.trim(),
 } as const;
 
+/** Widens the stored taxonomy with `project` (#2894), rebuilding the table as version 37 did. */
+export const sourceEvidenceKindProjectMigration = {
+  version: 39,
+  sql: `
+    CREATE TABLE ${table}_v39 (
+      knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases(id),
+      source_id TEXT NOT NULL,
+      sequence INTEGER NOT NULL CHECK (sequence >= 1),
+      kind TEXT CHECK (kind IS NULL OR kind IN ('cv', 'linkedin-export', 'performance-review', 'notes', 'transcript', 'work-journal', 'project', 'other')),
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (knowledge_base_id, source_id, sequence)
+    );
+    INSERT INTO ${table}_v39 (knowledge_base_id, source_id, sequence, kind, created_at)
+      SELECT knowledge_base_id, source_id, sequence, kind, created_at FROM ${table};
+    DROP TABLE ${table};
+    ALTER TABLE ${table}_v39 RENAME TO ${table};
+    ${immutableTriggers}
+  `.trim(),
+} as const;
+
 /** Every migration of the overrides table, in version order. */
 export const sourceEvidenceKindOverridesMigrations = [
   sourceEvidenceKindOverridesMigration,
   sourceEvidenceKindWorkJournalMigration,
+  sourceEvidenceKindProjectMigration,
 ] as const;
 
 /** Registered with the knowledge-base deletion trigger list, which lifts the delete guard while a base is erased. */
