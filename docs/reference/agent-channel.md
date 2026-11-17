@@ -189,6 +189,12 @@ Run `init` again to issue a new one. The
 - **`/log-work`** takes an optional date range, lists what was merged on the
   default branch from the local git history, and records each notable piece
   once, after `list_work` shows it is not already recorded.
+- **`/add-project`** turns the current repository into a
+  [project card](#code-projects-as-evidence). It asks for the candidate's
+  commit emails, role and visibility, counts with `draft-loop evidence
+  add-repo` or `git log`, reads only allowlisted files, shows the card, and
+  calls `add_project` after the candidate says yes. `init` writes it beside
+  `/log-work` for Claude Code and Codex.
 - **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
   when a turn merged work without calling `record_work`: `gh pr merge`, a push
   to `main` or `master`, or a `merge_pull_request` tool call. A push to a
@@ -277,6 +283,12 @@ returns a run's open draft, its findings or career evidence.
 | `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
 | `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
 | `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
+
+With the operator's credential, the server's owner token, the server also
+offers `list_feedback` and `triage_feedback`: list members' notes by status and
+link each to a GitHub issue ([Feedback](../features/feedback.md)). It never
+offers them with an agent token or a member's sign-in, and the API refuses any
+other credential.
 
 `search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
 the same user guide a member reads from the Help button, so an agent can

@@ -73,6 +73,7 @@ Most commands accept `--json` for machine-readable output.
 | `preferences`                                   | List, accept or dismiss writing preferences suggested from your review choices                                                     | [Suggested preferences](#suggested-preferences)                                      |
 | `knowledge`                                     | Manage stores, knowledge bases, sources and sensitivity                                                                            | [Candidate knowledge bases](#candidate-knowledge-bases)                              |
 | `evidence mode`, `retrieval mode`, `embeddings` | Choose what a run receives and how it searches                                                                                     | [Evidence mode](#evidence-mode), [Retrieval mode](#retrieval-mode)                   |
+| `evidence add-repo` | Print a project card's counted fields for a local git repository as JSON, with no model call | [Agent channel](agent-channel.md#code-projects-as-evidence) |
 
 ## CLI model profiles
 

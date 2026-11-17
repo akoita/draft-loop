@@ -13,6 +13,7 @@ import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
+import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
@@ -27,6 +28,7 @@ const config = readApiConfig(process.env);
 const supportSettings = readSupportSettings(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
+const legalPublisher = readLegalPublisher(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const coverLetterWriter = readCoverLetterWriter(process.env);
 const payments = paymentsFrom(readPaymentsConfig(process.env));
@@ -68,12 +70,17 @@ const auth: ApiAuthOptions =
   config.auth.mode === "oidc" && directory !== undefined
     ? { ...config.auth, resolveSignIn: directory.resolveSignIn }
     : { mode: "owner" };
+const serverRelease =
+  process.env.DRAFT_LOOP_SERVER_RELEASE?.trim() || process.env.K_REVISION?.trim() || undefined;
 const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
   logger: cloudLoggingOptions(),
   rateLimits: config.rateLimits,
   support: supportSettings,
+  // The release a feedback note records (#2875): the deploy's own name for it, else Cloud Run's
+  // revision.
+  ...(serverRelease === undefined ? {} : { serverRelease }),
   tenants: {
     ...hosted.tenants,
     // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself
@@ -94,6 +101,7 @@ const app = await buildApi({
         organisationActivity: directory.organisationActivity,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
+  ...(legalPublisher === undefined ? {} : { legalPublisher }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),

@@ -22,6 +22,8 @@ export interface BetaInvite {
   readonly organisationId?: string;
   readonly redeemedAt?: string;
   readonly revokedAt?: string;
+  /** The terms version accepted at redemption; absent for invites redeemed before #2462. */
+  readonly termsVersion?: string;
 }
 
 /** A new invite and its plain code, which is never stored and cannot be read again. */
@@ -48,6 +50,8 @@ export interface RedeemBetaInviteInput {
   /** The most redeemed invites the beta allows; 0 closes sign-up. */
   readonly cap: number;
   readonly organisationName: string;
+  /** The terms version the person accepted (YYYY-MM-DD), kept on the redeemed invite (#2462). */
+  readonly termsVersion?: string;
   readonly now: Date;
 }
 
@@ -106,7 +110,8 @@ function clock(now: Date): string {
   return now.toISOString();
 }
 
-const inviteColumns = "id, email, created_at, revoked_at, redeemed_at, organisation_id";
+const inviteColumns =
+  "id, email, created_at, revoked_at, redeemed_at, organisation_id, terms_version";
 
 function inviteRecord(row: SqlRow): BetaInvite {
   const state =
@@ -119,6 +124,9 @@ function inviteRecord(row: SqlRow): BetaInvite {
     ...(row.organisation_id === null ? {} : { organisationId: String(row.organisation_id) }),
     ...(row.redeemed_at === null ? {} : { redeemedAt: iso(row.redeemed_at) }),
     ...(row.revoked_at === null ? {} : { revokedAt: iso(row.revoked_at) }),
+    ...(row.terms_version === null || row.terms_version === undefined
+      ? {}
+      : { termsVersion: String(row.terms_version) }),
   };
 }
 
@@ -194,8 +202,9 @@ export function createBetaInvites(client: SqlSession): BetaInvites {
           [memberId, email],
         );
         await executor.query(
-          "UPDATE beta_invites SET redeemed_at = $2, organisation_id = $3 WHERE id = $1",
-          [invite.id, at, organisationId],
+          `UPDATE beta_invites SET redeemed_at = $2, organisation_id = $3, terms_version = $4
+            WHERE id = $1`,
+          [invite.id, at, organisationId, input.termsVersion ?? null],
         );
         return { redeemed: true, organisationId, memberId };
       });

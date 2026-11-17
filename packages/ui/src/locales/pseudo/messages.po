@@ -1405,6 +1405,10 @@ msgstr ""
 msgid "API key, billed per token"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Application"
+msgstr ""
+
 #: packages/ui/src/application-name.tsx
 #: packages/ui/src/home.tsx
 msgid "Application name"
@@ -1818,6 +1822,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Bring your career evidence into the loop"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Browser"
 msgstr ""
 
 #: packages/ui/src/profile-status.ts
@@ -2760,6 +2768,10 @@ msgstr ""
 
 #: packages/ui/src/theme.tsx
 msgid "Dark"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "dark theme"
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
@@ -4389,6 +4401,10 @@ msgstr ""
 msgid "Hybrid"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "I accept the terms of use and the privacy policy."
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 msgstr ""
@@ -4858,6 +4874,10 @@ msgstr ""
 msgid "Last activity unknown"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Last failed request"
+msgstr ""
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Last opened"
 msgstr ""
@@ -4892,6 +4912,10 @@ msgstr ""
 msgid "Legacy workspace evidence URLs"
 msgstr ""
 
+#: apps/web/src/landing.tsx
+msgid "Legal notice"
+msgstr ""
+
 #: apps/web/src/consent-model.ts
 msgid "Legitimate interest"
 msgstr ""
@@ -4923,6 +4947,10 @@ msgstr ""
 
 #: packages/ui/src/theme.tsx
 msgid "Light"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "light theme"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -5967,6 +5995,7 @@ msgstr ""
 msgid "Nobody is waiting."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "None"
 msgstr ""
@@ -6497,6 +6526,10 @@ msgstr ""
 msgid "Owners and admins of your team choose who can open it."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Page"
+msgstr ""
+
 #: packages/ui/src/export-preview.tsx
 msgid "Page {page} of {pageCount}"
 msgstr ""
@@ -6726,6 +6759,7 @@ msgstr ""
 msgid "Priority"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Privacy policy"
 msgstr ""
@@ -7094,6 +7128,10 @@ msgstr ""
 msgid "reasoning"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Recent errors"
+msgstr ""
+
 #: apps/web/src/interview-guide-model.ts
 msgid "recent news"
 msgstr ""
@@ -7112,6 +7150,10 @@ msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Recent workspaces could not be loaded."
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Record"
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -7900,6 +7942,7 @@ msgstr ""
 msgid "Rules apply once a knowledge base is chosen."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8546,6 +8589,7 @@ msgstr ""
 msgid "Sort"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8942,7 +8986,7 @@ msgid "Tell it in a conversation"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
-msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
@@ -8955,6 +8999,7 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Terms of use"
 msgstr ""
@@ -9870,6 +9915,10 @@ msgstr ""
 msgid "The selected knowledge base could not be read"
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "The server adds its version and your organisation's plan. Never included: screenshots, page text, your CV or job descriptions."
+msgstr ""
+
 #: packages/ui/src/work-journal-model.ts
 msgid "The server refused the edit. Check the title, summary and technologies."
 msgstr ""
@@ -9908,6 +9957,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
+msgstr ""
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The terms of use have changed. Reload the page, read the new version and accept it."
 msgstr ""
 
 #: packages/ui/src/pasted-evidence.ts
@@ -10113,6 +10166,15 @@ msgid "This draft is approved; edits are closed."
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
+msgid "This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again."
+msgstr ""
+
+#. placeholder {0}: source.version
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your reviewed career profile, version {0}. A newer version waits for review on the Career profile page; it is used once you review it."
+msgstr ""
+
+#: apps/web/src/application-material-model.ts
 msgid "This draft would pass the server's cost cap for one request."
 msgstr ""
 
@@ -10142,6 +10204,10 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
 msgstr ""
 
 #: packages/ui/src/earlier-run.ts
@@ -10924,6 +10990,14 @@ msgstr ""
 msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr ""
 
+#: apps/web/src/feedback.tsx
+msgid "Web screen"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "Web version"
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr ""
@@ -10990,6 +11064,10 @@ msgstr ""
 
 #: apps/web/src/application-material.tsx
 msgid "What to stress"
+msgstr ""
+
+#: apps/web/src/feedback.tsx
+msgid "What we include"
 msgstr ""
 
 #: packages/ui/src/connected-agents.tsx

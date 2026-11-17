@@ -808,6 +808,9 @@ unless the table says so.
 | Duplicate checks | A block or claim is duplicated, or a phrase of three or more words repeats back to back in one block, which usually means overlapping quotes were stitched |
 | `editorial-source-note` | A block calls the candidate "he", "she" or "the candidate", or says "labelled as such", so the warning does not depend on the critic |
 | `editorial-fragment` | A bullet opens with a lowercase letter (except a known name such as `iOS` or `npm`), ends on a dangling connector, or joins two statements of three or more words with a semicolon |
+| `editorial-negative-aside` | A role's context line, the paragraph under its header, adds a status caveat such as "staging", "prototype" or "not in production" (#2908) |
+| `editorial-fragment` (summary) | A summary paragraph is three or more short phrases joined by semicolons instead of sentences (#2908) |
+| `duplicate-content` (Core areas) | A Core areas line shares at least 70% of its content word pairs with an Experience or Projects bullet (#2908) |
 | `dense-bullet-series` | More than 4 bullets in a row, a section of 4 or more one-line bullets, or adjacent bullets where either has under about 30 words; one warning per run of bullets, asking to expand an item or move it into the context paragraph, never to join facts with semicolons (#1874) |
 | `repeated-fact` | The same fact is in more than one section: the shorter of two claims has at least four content words and the longer holds at least 80% of them, after dropping function words and endings (#1859) |
 | `missing-cv-header` | A CV with an experience section has no header or an empty one, or the header still shows placeholders (one finding per block, #1878). A warning during the loop, an **error at approval** (#1902): the candidate replaces the placeholders or overrides with a reason, and the export prints a `Header warning:` line |

@@ -20,6 +20,8 @@ import { buildApi } from "./app.js";
 
 // Invented: two roles, a measurable outcome, a skill, and contact data the model never sees.
 export const walkProfile = {
+  version: 1,
+  status: "reviewed",
   updatedAt: "2026-11-05T08:00:00.000Z",
   facts: [
     { id: "t1", category: "role", subjectId: "job1", field: "title", value: "Analyst" },

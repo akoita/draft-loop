@@ -120,6 +120,7 @@ sets them from its infrastructure and differs from the local stack here:
 | `DRAFT_LOOP_BETA_ACCOUNT_CAP`                           | `25` on the public beta's API, so invites create at most 25 accounts; unset (closed) elsewhere ([beta invites](../architecture/hosted-service.md#beta-invites))                                                                                                                                      |
 | `DRAFT_LOOP_SPEND_POOL_USD`                             | Set on the public beta's API to its monthly model budget; unset elsewhere ([spend pool](../architecture/hosted-service.md#monthly-spend-pool))                                                                                                                                                       |
 | `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models))                                                                                                                         |
+| `DRAFT_LOOP_SERVER_RELEASE`                             | Optional on the API: the release name a feedback note records; unset, it records Cloud Run's `K_REVISION` ([feedback](../features/feedback.md)) |
 
 A Cloud Scheduler sweep starts the worker job every 10 minutes for retries and
 resumed runs.
