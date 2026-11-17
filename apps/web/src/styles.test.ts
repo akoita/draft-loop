@@ -36,4 +36,16 @@ describe("the web stylesheet beside the shared screens", () => {
     expect(select).toContain("width: auto;");
     expect(select).toContain("min-height: 0;");
   });
+
+  it("lets the two-column screens grow under the shell's bars on a wide window", () => {
+    // The shell's `> .shell-screens > * { flex: none }` rule carries a :has() and outranked the
+    // screens' own `flex: 1 1 auto`; with size containment they shrank to nothing and every wide
+    // window showed only the top bar on prod 0.26.18. The grow rule repeats the same :has().
+    const shell = ".shell:has(> .shell-screens:not([hidden]) .app-frame)";
+    const flat = styles.replace(/\s+/gu, " ");
+    expect(flat).toContain(`${shell} > .shell-screens > * {`);
+    expect(flat).toContain(
+      `${shell} > .shell-screens > .shared-screens:has(.app-frame) { flex: 1 1 auto;`,
+    );
+  });
 });

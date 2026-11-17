@@ -222,7 +222,10 @@ label:where(:not(.shared-screens *)) {
       flex: none;
     }
 
-    .shell > .shell-screens > .shared-screens:has(.app-frame) {
+    /* Repeats the shell's :has() so it outranks the flex: none rule above. */
+    .shell:has(> .shell-screens:not([hidden]) .app-frame)
+      > .shell-screens
+      > .shared-screens:has(.app-frame) {
       flex: 1 1 auto;
       min-height: 0;
       container-type: size;
