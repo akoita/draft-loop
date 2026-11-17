@@ -26,6 +26,8 @@ checks feed it:
 | Secret scan | `pnpm security:secrets` | A tracked file holds a known key pattern or private key |
 | License check | `pnpm security:licenses` | A direct dependency has a license outside the allow list |
 | Dependency audit | `pnpm security:audit` | A production dependency has a high or critical advisory |
+| CodeQL | CI job `CodeQL` | An error-level or high-severity result in the code or the workflows |
+| Workflow audit | CI job `Workflow audit` (zizmor) | A workflow has a medium or worse finding, such as template injection |
 
 GitHub secret scanning with push protection also refuses known provider keys
 before they reach the repository. Run `pnpm validate` to run every check
