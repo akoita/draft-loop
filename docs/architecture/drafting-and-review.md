@@ -271,7 +271,7 @@ summary, experience, projects, skills, education, certifications and languages.
 It includes each section that retrieved evidence supports, and its section and
 entry order is kept through the artifact and every exporter.
 
-New runs use author template `cli-author-v18`. A resumed run keeps the exact
+New runs use author template `cli-author-v19`. A resumed run keeps the exact
 prompt and output ceiling it started with.
 
 ### Writing for the job
@@ -290,6 +290,8 @@ context, never candidate facts. The author:
 - sizes each role and project by how much the job values its evidence, up to
   six bullets, and gives each project inside a grouping role, such as
   independent work, its own line and bullets, written once (`cli-author-v18`);
+- writes the summary as full sentences and keeps caveats such as "staging" or
+  "not in production" out of a role's context line (`cli-author-v19`);
 - lists the skills and certifications the job asks for first.
 
 A writing policy's section order or emphasis overrides this guidance.
@@ -860,6 +862,8 @@ a rejection still use the full proposal.
 - **Finding ids.** An adjudicated revision's edits may name only accepted
   findings. An automatic round has no adjudication, so its edits' finding ids
   are ignored and recorded as empty instead of rejecting the edit (#2855).
+  From `cli-author-v19`, the author treats every finding of an automatic
+  round as accepted, quality warnings included (#2908).
 - **Dropped edits.** When the whole patch fails, each edit is tried on its own
   (#2846). An edit fails when it names an unknown block, section or finding id,
   leaves a section empty, or grounding would remove or shorten its block. The

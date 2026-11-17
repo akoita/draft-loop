@@ -201,6 +201,10 @@ export function JobRequirementsExtractionView({
     case "idle":
       return (
         <div className="job-extraction">
+          {/* An approved job page has no text until extraction fetches it: this is the next step. */}
+          {jobFromUrl && !fixtureMode ? (
+            <p className="job-extraction-title">{t`Next: extract the job's requirements`}</p>
+          ) : null}
           <p className="setup-note">
             {fixtureMode
               ? fixtureExtractionNote()

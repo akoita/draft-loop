@@ -3784,8 +3784,8 @@ msgid "Finds passages by meaning with the local model, even without shared keywo
 msgstr "Trouve des passages par leur sens avec le modèle local, même sans mots-clés communs."
 
 #: packages/ui/src/review.tsx
-msgid "Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages."
-msgstr "Terminez les trois étapes dans l’ordre. Éléments de parcours, modèles, politique de rédaction et connexion sont des réglages de l’espace de travail, chacun sur sa page."
+msgid "Finish the three steps in order."
+msgstr "Terminez les trois étapes dans l’ordre."
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Finish the workspace setup above."
@@ -4573,10 +4573,6 @@ msgstr "Adresse de la page de l’offre"
 #: packages/ui/src/application-steps-model.ts
 msgid "Job page approved when you created this application."
 msgstr "Page de l’offre approuvée à la création de cette candidature."
-
-#: packages/ui/src/application-steps-model.ts
-msgid "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them."
-msgstr "Page de l’offre approuvée à la création de cette candidature. DraftLoop la récupère quand vous extrayez les exigences, puis vous les relisez."
 
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -5472,6 +5468,10 @@ msgstr "Étape suivante : exporter"
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: export again to save a new copy"
 msgstr "Étape suivante : exporter de nouveau pour enregistrer une nouvelle copie"
+
+#: packages/ui/src/job-requirements-extraction.tsx
+msgid "Next: extract the job's requirements"
+msgstr "Étape suivante : extraire les exigences de l’offre"
 
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: nothing left · the CV is exported"

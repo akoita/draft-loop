@@ -141,7 +141,11 @@ export interface ApplicationJobStepProps {
   readonly children: readonly [ReactNode, ReactNode];
 }
 
-/** The job step: the job description inputs, then the requirements brief and its review. */
+/**
+ * The job step: the job description inputs, then the requirements brief and its review. Once the
+ * job description is set, the requirements come first and replacing the job folds below them, so
+ * the step's next action is the first thing in it.
+ */
 export function ApplicationJobStep({
   id,
   ready,
@@ -153,14 +157,19 @@ export function ApplicationJobStep({
     <div id={id} className="application-step-job">
       <p className="setup-note">{applicationJobStepNote(source, ready)}</p>
       {sourceSet ? (
-        <details className="setup-details">
-          <summary>{t`Replace the job description`}</summary>
-          {inputs}
-        </details>
+        <>
+          {requirements}
+          <details className="setup-details">
+            <summary>{t`Replace the job description`}</summary>
+            {inputs}
+          </details>
+        </>
       ) : (
-        <div className="application-job-inputs">{inputs}</div>
+        <>
+          <div className="application-job-inputs">{inputs}</div>
+          {requirements}
+        </>
       )}
-      {requirements}
     </div>
   );
 }
