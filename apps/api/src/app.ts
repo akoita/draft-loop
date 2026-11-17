@@ -78,6 +78,7 @@ import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
+import { type LegalPublisher, registerLegalPages } from "./legal-pages.js";
 import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
@@ -245,6 +246,8 @@ export interface ApiOptions {
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
+  /** The publisher details the legal pages show (#2462); without them they show placeholders. */
+  readonly legalPublisher?: LegalPublisher;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
@@ -946,6 +949,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     });
   }
   registerHelpRoutes(app);
+  registerLegalPages(
+    app,
+    options.legalPublisher === undefined ? {} : { publisher: options.legalPublisher },
+  );
   if (options.support !== undefined && application !== undefined) {
     // The assistant uses the career interview's Claude route, read per request.
     const interview = application.careerInterview;

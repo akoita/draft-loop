@@ -4372,6 +4372,10 @@ msgstr "Hugging Face,"
 msgid "Hybrid"
 msgstr "Hybride"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "I accept the terms of use and the privacy policy."
+msgstr "J'accepte les conditions d'utilisation et la politique de confidentialité."
+
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 msgstr "J’autorise DraftLoop à récupérer cette page. Elle n’est lue que lorsque vous extrayez les exigences à la première étape de la candidature, jamais avant."
@@ -4851,6 +4855,10 @@ msgstr "Les éléments hérités n’acceptent qu’une URL à la fois"
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy workspace evidence URLs"
 msgstr "URL d’éléments de l’ancien espace de travail"
+
+#: apps/web/src/landing.tsx
+msgid "Legal notice"
+msgstr "Mentions légales"
 
 #: apps/web/src/consent-model.ts
 msgid "Legitimate interest"
@@ -6665,6 +6673,7 @@ msgstr "Version précédente : {percent} % de la largeur"
 msgid "Priority"
 msgstr "Priorité"
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Privacy policy"
 msgstr "Politique de confidentialité"
@@ -8861,6 +8870,7 @@ msgstr "Parlez-nous de votre parcours"
 msgid "Template"
 msgstr "Modèle de mise en page"
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Terms of use"
 msgstr "Conditions d'utilisation"
@@ -9816,6 +9826,10 @@ msgstr "L’état du domaine"
 msgid "The summary says"
 msgstr "Le résumé indique"
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The terms of use have changed. Reload the page, read the new version and accept it."
+msgstr "Les conditions d'utilisation ont changé. Rechargez la page, lisez la nouvelle version et acceptez-la."
+
 #: packages/ui/src/pasted-evidence.ts
 msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
 msgstr "Le texte est trop long. Restez sous {limit} caractères, ou ajoutez-le comme fichier."
@@ -10058,6 +10072,10 @@ msgstr "Ceci est un brouillon : il n’a pas été relu et ne peut pas encore la
 #: apps/web/src/landing.tsx
 msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
 msgstr "Ceci est un test public gratuit, sur invitation. Il peut changer ou s'interrompre sans préavis. La rédaction envoie les documents que vous choisissez à des fournisseurs d'IA, dont certains hors de l'UE."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
+msgstr "Ceci est une version de test gratuite : elle peut s'arrêter à tout moment, et nous ferons notre possible pour vous laisser télécharger vos données avant. Pour rédiger et relire vos brouillons, DraftLoop envoie les extraits de vos éléments que vous choisissez à Anthropic et OpenAI, qui les traitent hors de l'Union européenne."
 
 #: packages/ui/src/earlier-run.ts
 msgid "This is an earlier run. Open the latest run to change it."

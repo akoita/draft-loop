@@ -221,8 +221,10 @@ describe("screen language and theme before any record (#2772)", () => {
       <BetaSignUpView
         key="beta"
         code=""
+        accepted={false}
         busy={false}
         onCodeChange={() => {}}
+        onAcceptedChange={() => {}}
         onSubmit={() => {}}
         onSignOut={() => {}}
       />,

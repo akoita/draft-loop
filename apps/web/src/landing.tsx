@@ -4,7 +4,11 @@ import { PreferencesBar } from "./shell-actions.js";
 import { joinWaitlist, type WaitlistOutcome, waitlistNotice } from "./waitlist-model.js";
 
 /** Where #2462 serves the legal pages. */
-export const legalLinks = { privacy: "/legal/privacy", terms: "/legal/terms" } as const;
+export const legalLinks = {
+  privacy: "/legal/privacy",
+  terms: "/legal/terms",
+  notice: "/legal/notice",
+} as const;
 
 export interface WaitlistFormViewProps {
   readonly email: string;
@@ -131,6 +135,8 @@ export function Landing({
           <a href={legalLinks.privacy}>{t`Privacy policy`}</a>
           {" · "}
           <a href={legalLinks.terms}>{t`Terms of use`}</a>
+          {" · "}
+          <a href={legalLinks.notice}>{t`Legal notice`}</a>
         </footer>
       </main>
     </>

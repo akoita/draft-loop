@@ -4,6 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { legalVersion } from "./legal-pages.js";
 import type { ResolveSignIn } from "./oidc-sign-in.js";
 import { signUpRoute } from "./request-auth.js";
 
@@ -60,6 +61,10 @@ const inviteSchema = z
     organisationId: z.string().optional(),
     redeemedAt: z.string().optional(),
     revokedAt: z.string().optional(),
+    termsVersion: z
+      .string()
+      .optional()
+      .describe("The terms version accepted at sign-up; absent before #2462."),
   })
   .meta({ id: "BetaInvite" });
 
@@ -183,8 +188,17 @@ export function registerBetaSignUpRoutes(
       schema: {
         summary: "Create your account from a beta invite code",
         description:
-          "Takes a verified sign-in that has no account yet. The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
-        body: z.strictObject({ code: z.string().min(1).max(64) }),
+          "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        body: z.strictObject({
+          code: z.string().min(1).max(64),
+          accepted_terms: z
+            .string()
+            .max(32)
+            .optional()
+            .describe(
+              "The version of the terms of use and privacy policy the person accepted, the date shown on /legal/terms; it is recorded with the account.",
+            ),
+        }),
         response: {
           201: signedUpSchema,
           400: apiErrorSchema,
@@ -212,6 +226,17 @@ export function registerBetaSignUpRoutes(
           .code(403)
           .send(apiError("email_unverified", "Verify your email address before signing up."));
       }
+      if (request.body.accepted_terms !== legalVersion) {
+        return reply
+          .code(400)
+          .send(
+            apiError(
+              "terms_not_accepted",
+              "Accept the current terms of use and privacy policy to create your account.",
+              { version: legalVersion },
+            ),
+          );
+      }
       const at = now();
       const key = `${identity.issuer}\n${identity.subject}`;
       const window = attemptsFor(key, at.getTime());
@@ -229,6 +254,7 @@ export function registerBetaSignUpRoutes(
         verifiedEmail: identity.email,
         cap: options.cap,
         organisationName: "My applications",
+        termsVersion: legalVersion,
         now: at,
       });
       if (!result.redeemed) {
@@ -252,6 +278,7 @@ export function registerBetaSignUpRoutes(
             action: "beta_invite_redeemed",
             organisationId: result.organisationId,
             memberId: result.memberId,
+            termsVersion: legalVersion,
           },
         },
         "audit",

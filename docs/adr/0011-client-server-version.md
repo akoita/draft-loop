@@ -307,6 +307,17 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
   or a reviewer. Sensitive sections need consent per run, as today.
 - **Hosting in the EU by default.** Encryption in transit and at rest, with
   per-tenant data keys.
+- **Beta exception to EU-only model processing (amended 2026-11-17, #2462).**
+  - *Why:* Claude on Vertex AI in the EU is not available to the deployment
+    yet, so the invite-only test calls Claude through Anthropic's own API,
+    and OpenAI through its global endpoint. Both process the request in the
+    United States.
+  - *Scope:* the free, invite-only test only. Storage stays in the EU. The
+    privacy policy names both transfers and their safeguards (the providers'
+    data processing terms with standard contractual clauses), and sign-up
+    states them and records the accepted terms version.
+  - *Ends:* before the first paid plan, the Claude route moves to an EU
+    location, and the OpenAI route to its EU endpoint.
 - **Data subject rights by design:** export everything, and delete
   everything, including objects and backups within a stated window.
 - **Built in phase 2c (sprint 1l, 2026-10-24):** owners and admins export

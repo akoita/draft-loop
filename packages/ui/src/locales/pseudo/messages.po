@@ -4377,6 +4377,10 @@ msgstr ""
 msgid "Hybrid"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "I accept the terms of use and the privacy policy."
+msgstr ""
+
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 msgstr ""
@@ -4855,6 +4859,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Legacy workspace evidence URLs"
+msgstr ""
+
+#: apps/web/src/landing.tsx
+msgid "Legal notice"
 msgstr ""
 
 #: apps/web/src/consent-model.ts
@@ -6670,6 +6678,7 @@ msgstr ""
 msgid "Priority"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Privacy policy"
 msgstr ""
@@ -8866,6 +8875,7 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Terms of use"
 msgstr ""
@@ -9821,6 +9831,10 @@ msgstr ""
 msgid "The summary says"
 msgstr ""
 
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The terms of use have changed. Reload the page, read the new version and accept it."
+msgstr ""
+
 #: packages/ui/src/pasted-evidence.ts
 msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
 msgstr ""
@@ -10062,6 +10076,10 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
+msgstr ""
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
 msgstr ""
 
 #: packages/ui/src/earlier-run.ts

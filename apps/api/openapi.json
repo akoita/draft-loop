@@ -3177,6 +3177,10 @@
           },
           "revokedAt": {
             "type": "string"
+          },
+          "termsVersion": {
+            "description": "The terms version accepted at sign-up; absent before #2462.",
+            "type": "string"
           }
         },
         "required": [
@@ -12338,6 +12342,10 @@
             "type": "string"
           },
           "revokedAt": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "description": "The terms version accepted at sign-up; absent before #2462.",
             "type": "string"
           }
         },
@@ -31063,7 +31071,7 @@
     "/v1/sign-up": {
       "post": {
         "summary": "Create your account from a beta invite code",
-        "description": "Takes a verified sign-in that has no account yet. The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31075,6 +31083,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "accepted_terms": {
+                    "description": "The version of the terms of use and privacy policy the person accepted, the date shown on /legal/terms; it is recorded with the account.",
+                    "type": "string",
+                    "maxLength": 32
                   }
                 },
                 "required": [

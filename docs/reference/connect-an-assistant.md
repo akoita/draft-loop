@@ -106,4 +106,4 @@ disconnect.
 ## Related
 
 - [Agent channel](agent-channel.md) for the tools, scopes and server settings
-- [Privacy policy (draft)](../legal/privacy-policy.md)
+- [Privacy policy](../legal/README.md), published at `/legal/privacy` on the service
