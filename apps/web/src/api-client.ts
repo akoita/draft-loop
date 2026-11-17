@@ -60,6 +60,20 @@ export interface ApiClientOptions {
   /** Where the API is; empty for the origin that served the screen. */
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
+  /**
+   * The waits before each new try of a read that met a bare 5xx: Cloud Run's own answer while
+   * an instance restarts or starts, never the API's JSON error. Defaults to one and three seconds.
+   */
+  readonly retryDelaysMs?: readonly number[];
+}
+
+/** Statuses Cloud Run answers itself while an instance restarts, starts or is overloaded. */
+const restartStatuses = new Set([500, 502, 503, 504]);
+
+/** True for an answer the API did not write: a 5xx without its JSON error body. */
+function bareServerError(response: Response): boolean {
+  const type = response.headers.get("content-type") ?? "";
+  return restartStatuses.has(response.status) && !type.startsWith("application/json");
 }
 
 export interface CallInput {
@@ -115,6 +129,7 @@ async function refusal(response: Response): Promise<ApiRequestError> {
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
   const baseUrl = options.baseUrl ?? "";
+  const retryDelaysMs = options.retryDelaysMs ?? [1_000, 3_000];
   return {
     async call(operation, input) {
       const [method, path] = operation.split(" ") as [string, string];
@@ -130,11 +145,17 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         body = JSON.stringify(request.body);
         headers["content-type"] = "application/json";
       }
-      const response = await fetchImpl(`${baseUrl}${operationUrl(path, request)}`, {
-        method,
-        headers,
-        ...(body === undefined ? {} : { body }),
-      });
+      const url = `${baseUrl}${operationUrl(path, request)}`;
+      const init = { method, headers, ...(body === undefined ? {} : { body }) };
+      let response = await fetchImpl(url, init);
+      // Only a read is tried again: it changes nothing, so a second try cannot act twice.
+      if (method === "GET") {
+        for (const delay of retryDelaysMs) {
+          if (!bareServerError(response)) break;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          response = await fetchImpl(url, init);
+        }
+      }
       if (!response.ok) throw await refusal(response);
       const type = response.headers.get("content-type") ?? "";
       if (type.startsWith("application/json")) return (await response.json()) as never;

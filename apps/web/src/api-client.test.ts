@@ -177,12 +177,52 @@ describe("API client", () => {
 
   it("still reports a refusal whose body is not the error shape", async () => {
     const stub = stubFetch(new Response("<html>", { status: 502 }));
-    const client = createApiClient({ token, fetch: stub.fetch });
+    const client = createApiClient({ token, fetch: stub.fetch, retryDelaysMs: [] });
 
     await expect(client.call("GET /v1/health", {})).rejects.toMatchObject({
       status: 502,
       code: "unreadable-error",
       message: "The API answered 502.",
     });
+  });
+
+  it("tries a read again after a bare 5xx from Cloud Run and returns the next answer", async () => {
+    const answers = [new Response("<html>", { status: 503 }), json(200, { status: "ok" })];
+    const calls: string[] = [];
+    const client = createApiClient({
+      token,
+      retryDelaysMs: [0, 0],
+      fetch: async (url) => {
+        calls.push(String(url));
+        return answers.shift() as Response;
+      },
+    });
+
+    await expect(client.call("GET /v1/health", {})).resolves.toEqual({ status: "ok" });
+    expect(calls).toHaveLength(2);
+  });
+
+  it("never tries a write again, and never retries the API's own JSON error", async () => {
+    for (const [operation, response] of [
+      ["POST /v1/knowledge-bases", () => new Response("<html>", { status: 503 })],
+      [
+        "GET /v1/health",
+        () => json(503, { error: { code: "identity_provider_unavailable", message: "x" } }),
+      ],
+    ] as const) {
+      let tries = 0;
+      const client = createApiClient({
+        token,
+        retryDelaysMs: [0, 0],
+        fetch: async () => {
+          tries += 1;
+          return response();
+        },
+      });
+      await expect(
+        client.call(operation as "GET /v1/health", { body: {} } as never),
+      ).rejects.toMatchObject({ status: 503 });
+      expect(tries).toBe(1);
+    }
   });
 });

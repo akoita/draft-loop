@@ -3175,6 +3175,10 @@ msgstr ""
 msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "DraftLoop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
+msgstr ""
+
 #: packages/ui/src/export-preview.tsx
 msgid "Drawing the preview…"
 msgstr ""

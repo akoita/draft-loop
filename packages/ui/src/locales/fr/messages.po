@@ -3169,6 +3169,10 @@ msgstr "DraftLoop téléchargera ce modèle une fois et le gardera sur cet ordin
 msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
 msgstr "Le budget de modèles de DraftLoop pour ce mois est épuisé : aucune nouvelle exécution ne peut démarrer. Elles reprennent le 1er du mois prochain."
 
+#: apps/web/src/refusal-text.ts
+msgid "DraftLoop's server did not answer (error {status}). It recovers on its own within a minute; try again then. Nothing you saved is lost."
+msgstr "Le serveur de DraftLoop n'a pas répondu (erreur {status}). Il se rétablit seul en moins d'une minute ; réessayez alors. Rien de ce que vous avez enregistré n'est perdu."
+
 #: packages/ui/src/export-preview.tsx
 msgid "Drawing the preview…"
 msgstr "Préparation de l’aperçu…"

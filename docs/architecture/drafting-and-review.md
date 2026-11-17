@@ -271,7 +271,7 @@ summary, experience, projects, skills, education, certifications and languages.
 It includes each section that retrieved evidence supports, and its section and
 entry order is kept through the artifact and every exporter.
 
-New runs use author template `cli-author-v17`. A resumed run keeps the exact
+New runs use author template `cli-author-v18`. A resumed run keeps the exact
 prompt and output ceiling it started with.
 
 ### Writing for the job
@@ -287,6 +287,9 @@ context, never candidate facts. The author:
   with words the cited evidence contains;
 - leads each role with its most relevant content and shortens unrelated detail,
   while keeping every role, its title, employer and dates, and the chronology;
+- sizes each role and project by how much the job values its evidence, up to
+  six bullets, and gives each project inside a grouping role, such as
+  independent work, its own line and bullets, written once (`cli-author-v18`);
 - lists the skills and certifications the job asks for first.
 
 A writing policy's section order or emphasis overrides this guidance.
@@ -387,7 +390,7 @@ before directions existed refuses one rather than ignoring it.
 
 ### Output ceiling
 
-`cli-author-v17` states and sends a 32,768-token ceiling for the structured
+`cli-author-v17` and later state and send a 32,768-token ceiling for the structured
 proposal, including repeated claim text and JSON overhead. It is a ceiling, not
 a target, so it allows more output and possibly higher cost, but it changes no
 reasoning effort, model choice, critique, grounding or approval.
