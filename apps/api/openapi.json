@@ -17190,7 +17190,7 @@
       },
       "put": {
         "summary": "Create a workspace",
-        "description": "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+        "description": "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog`, or in sign-in mode the first preset the plan's model tiers allow. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         "requestBody": {
           "required": true,
           "content": {

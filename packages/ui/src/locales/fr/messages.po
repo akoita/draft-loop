@@ -1431,6 +1431,10 @@ msgstr "Appliquer à tout"
 msgid "Applying for another role? Start a new application. It reuses your career profile and evidence, so you do not generate them again."
 msgstr "Vous postulez à un autre poste ? Commencez une nouvelle candidature. Elle réutilise votre profil et vos éléments de parcours, sans avoir à les générer de nouveau."
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Applying…"
+msgstr "Application…"
+
 #: packages/ui/src/review-footer.tsx
 msgid "approval actions"
 msgstr "actions d’approbation"
@@ -1956,6 +1960,10 @@ msgstr "Modifier la limite"
 msgid "Change models for new runs"
 msgstr "Changer les modèles"
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Change the models in Settings, then start again."
+msgstr "Changez les modèles dans Réglages, puis relancez."
+
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Changes are made on the latest run."
 msgstr "Les modifications se font sur la dernière exécution."
@@ -2062,6 +2070,10 @@ msgstr "Choisissez un nom"
 #: packages/ui/src/profile.tsx
 msgid "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval applies to this name only."
 msgstr "Choisissez un nom pour ce profil : lettres, chiffres, points, tirets ou tirets bas. L’approbation ne vaut que pour ce nom."
+
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Choose a preset your plan includes"
+msgstr "Choisissez un préréglage inclus dans votre offre"
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Choose a profile"
@@ -9461,6 +9473,10 @@ msgstr "La version de la politique n’a pas pu être chargée."
 msgid "The preference could not be saved. {0}"
 msgstr "La préférence n’a pas pu être enregistrée. {0}"
 
+#: apps/web/src/start-panels.tsx
+msgid "The preset could not be applied. Try again or use Settings."
+msgstr "Le préréglage n’a pas pu être appliqué. Réessayez ou passez par Réglages."
+
 #: packages/ui/src/export-preview.tsx
 msgid "The preview could not be drawn. Nothing was saved; you can still export."
 msgstr "L’aperçu n’a pas pu être affiché. Rien n’a été enregistré ; vous pouvez quand même exporter."
@@ -10493,6 +10509,10 @@ msgstr "Utiliser plutôt les exigences relues"
 msgid "Use this knowledge base"
 msgstr "Utiliser cette base de connaissances"
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Use this preset"
+msgstr "Utiliser ce préréglage"
+
 #: packages/ui/src/run-draft-choice.tsx
 msgid "Use this run's draft"
 msgstr "Utiliser cette ébauche"
@@ -11215,6 +11235,10 @@ msgstr "Votre offre permet {limit} échanges d’entretien, brouillons et mises 
 #: apps/web/src/credits-model.ts
 msgid "Your plan does not include {0}{who}. Choose another preset or model."
 msgstr "Votre offre n’inclut pas {0}{who}. Choisissez un autre préréglage ou modèle."
+
+#: apps/web/src/start-panels.tsx
+msgid "Your plan does not include these models. Choose one of its presets to start."
+msgstr "Votre offre n’inclut pas ces modèles. Choisissez l’un de ses préréglages pour lancer."
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan has unlimited credits."

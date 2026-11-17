@@ -388,6 +388,8 @@ export interface StartConfirmationProps {
   readonly changeModelsAction?: ReactNode;
   /** The application the run belongs to, passed to the host's panel in the dialog. */
   readonly applicationId?: string | null;
+  /** Applies a model preset without leaving the dialog, for the host's panel (#2864). */
+  readonly applyModelPreset?: (presetId: string) => Promise<boolean>;
 }
 
 function Lines({ lines }: { readonly lines: readonly StartConfirmationLine[] }) {
@@ -454,6 +456,7 @@ export function StartConfirmation({
   onCancel,
   changeModelsAction,
   applicationId = null,
+  applyModelPreset,
 }: StartConfirmationProps) {
   const [length, setLength] = useState<StartLengthChoice>("policy");
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
@@ -530,7 +533,11 @@ export function StartConfirmation({
             <p className="start-confirmation-note">{t`One page or two is saved as your writing policy's page target, and the draft is written to it.`}</p>
           </fieldset>
         </section>
-        <HostStartDialog applicationId={applicationId} setBlockedReason={setBlockedReason} />
+        <HostStartDialog
+          applicationId={applicationId}
+          setBlockedReason={setBlockedReason}
+          applyModelPreset={applyModelPreset}
+        />
         <StartActions
           blockedReason={blockedReason}
           onStart={() => onStart(length)}

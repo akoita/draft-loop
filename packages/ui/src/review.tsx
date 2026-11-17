@@ -245,6 +245,8 @@ interface ReviewWorkspaceProps {
   readonly startCandidateProfile?: StartCandidateProfile | null;
   /** The model profiles a new run applies, for the tier the start confirmation shows. */
   readonly startModelProfiles?: StartModelProfiles;
+  /** Applies a model preset from the start confirmation, as Settings would (#2864). */
+  readonly applyModelPreset?: (presetId: string) => Promise<boolean>;
   /** What evidence a new run would send, asked for when the start confirmation opens. */
   readonly previewStartEvidence?: () => Promise<RunEvidenceModeView | null>;
   /** Replaces the plain workspace heading, e.g. with one that can be renamed. */
@@ -1002,6 +1004,7 @@ export function ReviewWorkspace({
   modelSettingsAction,
   startCandidateProfile,
   startModelProfiles,
+  applyModelPreset,
   previewStartEvidence,
   workspaceNavigationAction,
   workspaceTitle,
@@ -2322,6 +2325,7 @@ export function ReviewWorkspace({
         onCancel={onCancel}
         changeModelsAction={modelSettingsAction}
         applicationId={startApplicationId}
+        {...(applyModelPreset === undefined ? {} : { applyModelPreset })}
       />
     );
   };
