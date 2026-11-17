@@ -74,6 +74,10 @@ export interface SupportLimits {
   readonly maxQuestionChars: number;
   /** Model calls per question, tool steps included. */
   readonly maxSteps: number;
+  /**
+   * The step's whole JSON, not only the answer. French answers ran past 600 tokens in the paid
+   * check (#2884) and stopped at max_tokens, so the bound leaves room for a 120-word answer.
+   */
   readonly maxOutputTokens: number;
 }
 
@@ -83,7 +87,7 @@ export const defaultSupportLimits: SupportLimits = Object.freeze({
   dailyCostCapUsd: 2,
   maxQuestionChars: 1000,
   maxSteps: 4,
-  maxOutputTokens: 600,
+  maxOutputTokens: 1200,
 });
 
 /** Earlier turns of the same conversation, oldest first; only the last few are sent. */

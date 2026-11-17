@@ -356,7 +356,7 @@ describe("the support assistant's limits (#2882)", () => {
     const reply = await assistant.answer(ask("credits"));
     expect(reply).toMatchObject({ mode: "guide_search", reason: "no_answer" });
     expect(requests).toHaveLength(4);
-    expect(requests.every((request) => request.maxOutputTokens === 600)).toBe(true);
+    expect(requests.every((request) => request.maxOutputTokens === 1200)).toBe(true);
   });
 });
 
