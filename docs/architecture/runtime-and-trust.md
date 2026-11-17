@@ -432,8 +432,13 @@ nothing.
 - **Finding decisions.** The API logs one `finding decided` line per decision
   on a finding: run id, finding code, category, severity and decision. It never
   logs the finding's message or the member's rationale.
-- **Plan.** Exporting spans locally (#1104) is planned. A daily quality sweep
-  over these signals is planned (#2914).
+- **Daily quality digest.** The first worker start of each UTC day reduces the
+  previous day's spans across active organisations to one content-free digest
+  (#2916): attempts by step and model, failures grouped by step, model, error
+  type, stage and reason with up to three run ids, revision modes, patch
+  rejections and retrieval counts. It is stored in `quality_digests` and
+  logged as one `quality digest` line, which the outer loop reads (#2914).
+- **Plan.** Exporting spans locally (#1104) is planned.
 
 ## Clients and adapters
 

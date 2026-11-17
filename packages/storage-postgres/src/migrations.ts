@@ -26,6 +26,7 @@ import { organisationClosingMigration } from "./organisation-closing-migration.j
 import { organisationErasureMigration } from "./organisation-erasure-migration.js";
 import { organisationPlansMigration } from "./organisation-plans-migration.js";
 import { prepareCallMeterMigration } from "./prepare-call-meter-migration.js";
+import { qualityDigestsMigration } from "./quality-digests-migration.js";
 import { recordErasureMigration } from "./record-erasure-migration.js";
 import { recordNamesMigration } from "./record-names-migration.js";
 import { researchBriefsMigration } from "./research-briefs-migration.js";
@@ -846,6 +847,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   memberDisplayPreferenceMigration,
   feedbackNotesMigration,
   supportTicketsMigration,
+  qualityDigestsMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

@@ -28,6 +28,7 @@ import {
 } from "./logging.js";
 import { readMailConfig } from "./mail.js";
 import { modelCallLog } from "./model-call-log.js";
+import { runQualityDigest } from "./quality-digest-sweep.js";
 import { researchSearchFor } from "./research-search-wiring.js";
 import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
@@ -244,6 +245,12 @@ void runWaitlistRetention({
 });
 // Support tickets and their shared conversations go after 90 days (#2883).
 void runSupportTicketRetention({
+  databaseUrl: config.databaseUrl,
+  databaseSchema: config.databaseSchema,
+});
+
+// Yesterday's content-free quality digest (#2916), built by the day's first worker start.
+void runQualityDigest({
   databaseUrl: config.databaseUrl,
   databaseSchema: config.databaseSchema,
 });
