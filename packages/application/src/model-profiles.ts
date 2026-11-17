@@ -339,4 +339,21 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     },
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
   },
+  // Haiku 5.5 hit the same wall on prod: its thinking used the 32,768-token budget and the
+  // writer call stopped at max_tokens on every attempt. Version 4 doubles the budget, as
+  // version 3 did for Sonnet 5.5.
+  {
+    id: "economy-anthropic-author",
+    version: 4,
+    provider: "anthropic",
+    modelId: "claude-haiku-5-5",
+    tier: "economy",
+    roles: ["author"],
+    runtime: {
+      effort: "medium",
+      maxOutputTokens: 64000,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
 ]);

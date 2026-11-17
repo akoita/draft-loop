@@ -75,7 +75,7 @@ describe("desktop model profile picker state", () => {
       "development-mistral",
     ]);
     expect(economy).toEqual({
-      author: { id: "economy-anthropic-author", version: 2 },
+      author: { id: "economy-anthropic-author", version: 4 },
       critic: { id: "economy-openai-critic", version: 1 },
     });
     expect(modelProfileEntryForReference(economy.author, "critic")).toBeUndefined();

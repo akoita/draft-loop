@@ -2,6 +2,7 @@ import type { JsonObject, ProviderValidationDiagnostic } from "@draft-loop/provi
 import {
   type ApplicationPlan,
   maximumApplicationPlanReviewPoints,
+  maximumApplicationPlanThemes,
 } from "@draft-loop/schemas/application-plan";
 
 /** The schema's limit on one review point; the provider's structured output does not enforce it. */
@@ -49,6 +50,28 @@ export function normalizeApplicationPlanReviewOutput(
     .filter((point) => !isRecord(point) || point.text !== "")
     .slice(0, maximumApplicationPlanReviewPoints);
   return { ...output, points } as JsonObject;
+}
+
+/**
+ * Keeps an author's plan within the theme limit the provider's structured output drops. Themes come
+ * most important first, so the extra ones are the least important; core areas that served only
+ * those themes go with them. A Haiku author listing six themes failed every plan attempt on prod.
+ * Anything else stays as returned, so the schema still rejects a malformed plan.
+ */
+export function normalizeApplicationPlanOutput(output: JsonObject): JsonObject {
+  if (!Array.isArray(output.themes) || output.themes.length <= maximumApplicationPlanThemes) {
+    return output;
+  }
+  const themes = output.themes.slice(0, maximumApplicationPlanThemes);
+  const leads = output.leads;
+  if (!isRecord(leads) || !Array.isArray(leads.coreAreas)) return { ...output, themes };
+  const coreAreas = leads.coreAreas.filter(
+    (area) =>
+      !isRecord(area) ||
+      typeof area.themeRank !== "number" ||
+      area.themeRank <= maximumApplicationPlanThemes,
+  );
+  return { ...output, themes, leads: { ...leads, coreAreas } } as JsonObject;
 }
 
 /** Content-free diagnostics of a rejected review: issue codes and paths, never the text. */

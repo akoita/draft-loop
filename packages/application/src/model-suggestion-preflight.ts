@@ -135,8 +135,11 @@ const optInProfileIds = new Set([
 /** Opt-in models: the preflight cohort stays the economy and standard presets. */
 function isOptInProfile(profile: ModelProfile): boolean {
   if (!optInProfileIds.has(profile.id)) return false;
-  // Sonnet 5.5 is the opt-in writer at versions 1 and 3; version 2 is the economy cohort's Haiku.
-  return profile.id === "economy-anthropic-author" ? profile.version !== 2 : profile.version === 1;
+  // Sonnet 5.5 is the opt-in writer at versions 1 and 3; versions 2 and 4 are the economy
+  // cohort's Haiku.
+  return profile.id === "economy-anthropic-author"
+    ? profile.version === 1 || profile.version === 3
+    : profile.version === 1;
 }
 
 function presetRequiredReferences(presets: readonly ModelProfilePreset[]): Set<string> {

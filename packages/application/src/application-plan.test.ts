@@ -318,6 +318,26 @@ describe("provider application planner", () => {
     });
   });
 
+  it("keeps the five most important themes of a longer plan, and their core areas", async () => {
+    const extra = [1, 2, 3].map((n) => theme(`Extra ${n}`, [otherChunkId]));
+    const long = aliased({
+      ...plan,
+      themes: [...plan.themes, ...extra],
+      leads: {
+        ...plan.leads,
+        coreAreas: [...plan.leads.coreAreas, { text: "Extra", themeRank: 6 }],
+      },
+    } as ApplicationPlan);
+    const { planner, context } = plannerWith([long]);
+    const execution = await planner.plan(request(context));
+    expect(execution.output.themes.map(({ title }) => title)).toEqual([
+      ...plan.themes.map(({ title }) => title),
+      "Extra 1",
+      "Extra 2",
+    ]);
+    expect(execution.output.leads.coreAreas).toEqual(plan.leads.coreAreas);
+  });
+
   it("caps the plan at its own budget, or at the selected profile's budget", async () => {
     const legacy = plannerWith([aliased(plan)]);
     await legacy.planner.plan(request(legacy.context));
