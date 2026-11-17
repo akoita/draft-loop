@@ -65,6 +65,11 @@ until an owner or admin releases it
 ## Limits
 
 - Only public job pages are fetched, one approved address per application.
+- A page is read from its schema.org `JobPosting` data first, then from the
+  job post a JavaScript board embeds in its page state (Greenhouse boards do),
+  then from its visible text. A page that gives fewer than 40 words is refused
+  before anything is saved, with **Paste the job text** or a job file as the
+  way on.
 - A page keeps at most two copies: the first one and the newest one. A later
   read never replaces the first copy, so a closed or expired page cannot erase
   the job.

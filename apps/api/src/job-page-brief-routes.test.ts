@@ -91,7 +91,11 @@ function scriptedScreening(): HostedContentScreening {
 }
 
 async function api(
-  options: { readonly addresses?: readonly string[]; readonly jobPageFetcher?: UrlFetcher } = {},
+  options: {
+    readonly addresses?: readonly string[];
+    readonly jobPageFetcher?: UrlFetcher;
+    readonly page?: string;
+  } = {},
 ) {
   let jobSource: ApplicationJobSource = { kind: "approved-url", url: pageUrl, approved: true };
   const briefs = new Map<string, OpportunityBriefVersionRecord>();
@@ -158,7 +162,7 @@ async function api(
     }),
     state: vi.fn<BriefExtractions["state"]>(async () => "pending"),
   };
-  const server = fixtureServer();
+  const server = fixtureServer(options.page);
   const resolveHostname = vi.fn(async () => options.addresses ?? [publicAddress]);
   app = await buildApi({
     ownerToken,
@@ -413,5 +417,19 @@ describe("an application from an approved job page", () => {
     expect(refused.status).toBe(422);
     expect(refused.body.error.message).toMatch(/only fetches public https pages/u);
     expect(recordApplicationJobPage).not.toHaveBeenCalled();
+  });
+
+  it("refuses a page with too little job text before saving a brief (#2857)", async () => {
+    const { extract, recordApplicationJobPage, extractions } = await api({
+      page: "<!doctype html><html><head><title>Jobs</title></head><body><h1>Platform Engineer</h1><p>Apply now</p></body></html>",
+    });
+
+    const refused = await extract();
+
+    expect(refused.status).toBe(422);
+    expect(refused.body.error.message).toMatch(/read only \d+ words of job text/u);
+    expect(refused.body.error.message).toMatch(/Paste the job text, or attach the job as a file/u);
+    expect(recordApplicationJobPage).not.toHaveBeenCalled();
+    expect(extractions.queue).not.toHaveBeenCalled();
   });
 });

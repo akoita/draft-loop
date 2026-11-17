@@ -29,6 +29,11 @@ export function jobPageFetchRefusal(code: IngestionIssueCode | undefined): strin
   }
 }
 
+/** The refusal for a page that gave too few words to be a job posting (#2857). */
+export function jobPageTooShortRefusal(words: number): string {
+  return `DraftLoop read only ${words} words of job text on this page, too few to find requirements. Paste the job text, or attach the job as a file, instead.`;
+}
+
 /** The host of an address for a log line, never its path or query; null when it does not parse. */
 export function jobPageHost(url: string): string | null {
   try {
