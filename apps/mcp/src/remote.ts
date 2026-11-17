@@ -17,7 +17,6 @@ import { createHelpApi } from "./help.js";
 import { createMaterialApi } from "./material.js";
 import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createProjectsApi } from "./projects.js";
-import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
