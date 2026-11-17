@@ -107,8 +107,31 @@ export type ProjectCardCheck =
       readonly fields: readonly string[];
     };
 
-/** An email address anywhere: a card names no contributor, the candidate included. */
-const emailPattern = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/u;
+const emailLocal = /^[A-Za-z0-9._%+-]+$/u;
+const emailLabel = /^[A-Za-z0-9-]+$/u;
+const emailTopLevel = /^[A-Za-z]{2,}$/u;
+
+/**
+ * Whether text holds an email address: a card names no contributor, the candidate included.
+ * Each word is checked by splitting on `@` and `.`, so the check stays linear on any input.
+ */
+export function containsEmailAddress(value: string): boolean {
+  for (const word of value.split(/[\s<>()[\]"',;:]/u)) {
+    const at = word.indexOf("@");
+    if (at <= 0 || at !== word.lastIndexOf("@")) continue;
+    const labels = word.slice(at + 1).split(".");
+    const top = labels.at(-1) ?? "";
+    if (
+      emailLocal.test(word.slice(0, at)) &&
+      labels.length >= 2 &&
+      labels.slice(0, -1).every((label) => emailLabel.test(label)) &&
+      emailTopLevel.test(top)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function stringsOf(value: unknown, into: string[] = []): string[] {
   if (typeof value === "string") into.push(value);
@@ -122,7 +145,7 @@ function stringsOf(value: unknown, into: string[] = []): string[] {
 export function checkProjectCardInput(input: unknown): ProjectCardCheck {
   if (containsSecretLikeContent(input))
     return { ok: false, code: "secret_like_content", fields: [] };
-  if (stringsOf(input).some((value) => emailPattern.test(value))) {
+  if (stringsOf(input).some(containsEmailAddress)) {
     return { ok: false, code: "contributor_identity", fields: [] };
   }
   const parsed = projectCardInputSchema.safeParse(input);

@@ -190,3 +190,15 @@ describe("project cards", () => {
     ).rejects.toMatchObject({ code: "kinds_differ" });
   });
 });
+
+describe("email detection", () => {
+  it("finds an address inside text and stays fast on long input", async () => {
+    const { containsEmailAddress } = await import("@draft-loop/schemas/project-card");
+    expect(containsEmailAddress("Paired with (ana@example.test) on caching")).toBe(true);
+    expect(containsEmailAddress("Wrote README.md and docs/setup.md")).toBe(false);
+    expect(containsEmailAddress("@scope/package and user@localhost")).toBe(false);
+    const started = Date.now();
+    expect(containsEmailAddress(`${"%".repeat(50_000)}@`)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+});
