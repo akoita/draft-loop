@@ -1,6 +1,7 @@
 import { plural, t } from "@lingui/core/macro";
 import { useId, useState } from "react";
 import { knowledgeBaseChoice } from "./knowledge-base-choice.js";
+import { ProjectCardFacts } from "./project-card-facts.js";
 import { workJournalPanelId } from "./shared-link.js";
 import {
   type WorkJournalAgentNames,
@@ -133,6 +134,7 @@ export function WorkJournalNoteDetails({
         </span>
       </p>
       <p>{content.summary}</p>
+      {note.project_card === undefined ? null : <ProjectCardFacts card={note.project_card} />}
       {provenance === null ? null : <p className="muted">{provenance}</p>}
       <p className="muted">
         {content.technologies.join(", ")} ·{" "}

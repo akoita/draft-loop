@@ -757,6 +757,10 @@ msgstr "{one} Voulez-vous en parler, ou parler d’autre chose ?"
 msgid "{open, plural, one {Acknowledge or resolve the open issue first.} other {Acknowledge or resolve the # open issues first.}}"
 msgstr "{open, plural, one {Prenez d’abord acte du problème ouvert ou résolvez-le.} other {Prenez d’abord acte des # problèmes ouverts ou résolvez-les.}}"
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "{own} of {total} commits ({share}%), {first} to {last}"
+msgstr "{own} commits sur {total} ({share} %), du {first} au {last}"
+
 #: packages/ui/src/export-preview.tsx
 msgid "{pageCount, plural, one {# page} other {# pages}}"
 msgstr "{pageCount, plural, one {# page} other {# pages}}"
@@ -2269,6 +2273,7 @@ msgstr "Fermer l’espace de travail"
 msgid "Close workspace is available again once your career profile is generated."
 msgstr "Fermer l’espace de travail sera de nouveau possible une fois votre profil professionnel généré."
 
+#: packages/ui/src/project-card-facts.tsx
 #: packages/ui/src/source-evidence-kind-contract.ts
 msgid "Code project"
 msgstr "Projet de code"
@@ -2472,6 +2477,10 @@ msgstr "Continuer vers le Profil professionnel"
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Continue where you left off, or pick another workspace. "
 msgstr "Reprenez là où vous en étiez, ou choisissez un autre espace de travail. "
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Contributor"
+msgstr "Contributeur ou contributrice"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Conversation"
@@ -3713,6 +3722,14 @@ msgstr "Import terminé. Une source d’éléments de parcours a été ajoutée.
 msgid "File import complete. An existing career-evidence source was reused."
 msgstr "Import terminé. Une source d’éléments de parcours existante a été réutilisée."
 
+#: packages/ui/src/agent-setup-model.ts
+msgid "File project cards"
+msgstr "Déposer des fiches projet"
+
+#: packages/ui/src/agent-setup-model.ts
+msgid "File project cards about your code repositories, which wait for your approval in the Work journal"
+msgstr "Déposer des fiches projet sur vos dépôts de code, qui attendent votre accord dans le Journal de travail"
+
 #: packages/ui/src/work-journal-model.ts
 msgid "Filed by {filer}"
 msgstr "Déposée par {filer}"
@@ -4212,6 +4229,14 @@ msgstr "Orienter ce brouillon (facultatif)"
 msgid "Guided"
 msgstr "Guidé"
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Has automated tests"
+msgstr "Tests automatisés"
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Has continuous integration"
+msgstr "Intégration continue"
+
 #: apps/web/src/private-sections.tsx
 msgid "Heading text"
 msgstr "Texte du titre"
@@ -4253,6 +4278,10 @@ msgstr "Masquer le guide"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "High"
 msgstr "Élevé"
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Highlights, each with where the agent read it:"
+msgstr "Points forts, chacun avec l'endroit où l'agent l'a lu :"
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Hiring manager"
@@ -4786,6 +4815,10 @@ msgstr "Dernière utilisation"
 msgid "latest"
 msgstr "dernière"
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Lead developer"
+msgstr "Développeur principal ou développeuse principale"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Leadership"
 msgstr "Leadership"
@@ -5116,6 +5149,10 @@ msgstr "Fusionner dans"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Merge the notes"
 msgstr "Fusionner les notes"
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Merged pull requests: {merged}"
+msgstr "Pull requests fusionnées : {merged}"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Metadata review"
@@ -6301,6 +6338,10 @@ msgstr "Autre"
 msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
 msgstr "Les autres candidatures gardent la paire de l’espace de travail. Une exécution enregistre la paire utilisée : la changer ensuite ne modifie pas les relectures passées."
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Other contributors: {others}"
+msgstr "Autres contributeurs : {others}"
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Other MCP agents (JSON)"
 msgstr "Autres agents MCP (JSON)"
@@ -7061,6 +7102,10 @@ msgstr "Libérer"
 #: apps/web/src/screening.tsx
 msgid "Released"
 msgstr "Libéré"
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Releases: {releases}"
+msgstr "Versions publiées : {releases}"
 
 #: apps/web/src/screening.tsx
 msgid "Releasing…"
@@ -8356,6 +8401,10 @@ msgstr "Question passée."
 msgid "Social announcement"
 msgstr "Annonce sur les réseaux sociaux"
 
+#: packages/ui/src/project-card-facts.tsx
+msgid "Sole author"
+msgstr "Seul auteur ou seule autrice"
+
 #: apps/web/src/feedback.tsx
 msgid "Something else"
 msgstr "Autre chose"
@@ -8434,6 +8483,10 @@ msgstr "Standard"
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Standard (311M parameters, recommended)"
 msgstr "Standard (311 M de paramètres, recommandé)"
+
+#: packages/ui/src/project-card-facts.tsx
+msgid "Stars: {stars}"
+msgstr "Étoiles : {stars}"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Start"

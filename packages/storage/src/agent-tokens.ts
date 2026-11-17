@@ -12,7 +12,8 @@
  * title listing; `applications:read` lists and reads job applications and run state;
  * `jobs:write` creates a job application from pasted job text; `drafts:read` (#2569) reads a
  * run's exports and the application's saved cover letters and interview questions;
- * `runs:start` (#2599) prices and starts CV runs within the token's monthly spend cap.
+ * `runs:start` (#2599) prices and starts CV runs within the token's monthly spend cap;
+ * `evidence:write` (#2895) files project cards that wait for the candidate's approval.
  */
 export const agentTokenScopes = [
   "journal",
@@ -20,6 +21,7 @@ export const agentTokenScopes = [
   "jobs:write",
   "drafts:read",
   "runs:start",
+  "evidence:write",
 ] as const;
 export type AgentTokenScope = (typeof agentTokenScopes)[number];
 

@@ -10,7 +10,7 @@ export interface ApiSchemas {
   "AgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -549,7 +549,7 @@ export interface ApiSchemas {
   "IssuedAgentToken": {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -832,6 +832,15 @@ export interface ApiSchemas {
     readonly occurrences: number;
     readonly applications: number;
     readonly reason: string;
+  };
+  "ProjectCardResult": {
+    readonly card_id?: string;
+    readonly status: "pending" | "duplicate" | "previously_discarded" | "validated";
+    readonly duplicate_of?: string;
+    readonly possible_duplicate_of: readonly (string)[];
+    readonly screening?: "clear" | "flagged" | "unscreened";
+    readonly review_url?: string;
+    readonly message: string;
   };
   "QuarantinedMaterial": {
     readonly resultId: string;
@@ -2398,6 +2407,46 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["WorkJournalNoteList"];
   };
+  "POST /v1/workspaces/{workspaceId}/work-journal/projects": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly header?: {
+      readonly "idempotency-key"?: string;
+    };
+    readonly body: {
+      readonly name: string;
+      readonly purpose: string;
+      readonly summary: string;
+      readonly role: "sole-author" | "lead" | "contributor";
+      readonly visibility: "public" | "private";
+      readonly stack: readonly (string)[];
+      readonly contribution: {
+        readonly own_commits: number;
+        readonly total_commits: number;
+        readonly first_commit: string;
+        readonly last_commit: string;
+        readonly merged_pull_requests?: number;
+        readonly other_contributors: number;
+      };
+      readonly scale?: {
+        readonly releases?: number;
+        readonly stars?: number;
+        readonly continuous_integration?: boolean;
+        readonly automated_tests?: boolean;
+      };
+      readonly highlights?: readonly ({
+        readonly text: string;
+        readonly source: string;
+      })[];
+      readonly repository_url?: string;
+      readonly live_url?: string;
+      readonly release_url?: string;
+      readonly dedupe_key?: string;
+      readonly dry_run?: boolean;
+    };
+    readonly response: ApiSchemas["ProjectCardResult"];
+  };
   "GET /v1/workspaces/{workspaceId}/work-journal/notes/{noteId}": {
     readonly path: {
       readonly workspaceId: string;
@@ -2716,7 +2765,7 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start")[];
+      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
       readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
