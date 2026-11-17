@@ -13,6 +13,7 @@ import { type DraftsApi, registerDraftTools } from "./drafts.js";
 import { type FeedbackApi, registerFeedbackTools } from "./feedback.js";
 import { type HelpApi, registerHelpTools } from "./help.js";
 import { type MaterialApi, registerMaterialTools } from "./material.js";
+import { type OperatorFeedbackApi, registerOperatorFeedbackTools } from "./operator-feedback.js";
 import { type ProjectsApi, registerProjectTools } from "./projects.js";
 import { registerApplicationPrompts } from "./prompts.js";
 import { type RunsApi, registerRunTools } from "./runs.js";
@@ -148,6 +149,8 @@ export function createWorkJournalMcpServer(
   feedback?: FeedbackApi,
   help?: HelpApi,
   projects?: ProjectsApi,
+  /** Only with the operator's credential (#2877). */
+  operatorFeedback?: OperatorFeedbackApi,
 ): McpServer {
   const server = new McpServer(
     { name: "draftloop", version: serverVersion },
@@ -214,6 +217,9 @@ export function createWorkJournalMcpServer(
   if (feedback !== undefined) registerFeedbackTools(server, feedback, failure);
   if (help !== undefined) registerHelpTools(server, help, failure);
   if (projects !== undefined) registerProjectTools(server, projects, failure);
+  if (operatorFeedback !== undefined) {
+    registerOperatorFeedbackTools(server, operatorFeedback, failure);
+  }
 
   server.registerResource(
     "work-journal-guide",

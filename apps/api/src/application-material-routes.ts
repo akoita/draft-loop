@@ -16,7 +16,10 @@ import {
   defaultApplicationMaterialTemplateId,
   renderApplicationMaterialDocument,
 } from "@draft-loop/application/application-material-document";
-import { applicationMaterialRecordInput } from "@draft-loop/application/application-material-input";
+import {
+  type ApplicationMaterialProfileSource,
+  applicationMaterialRecordInput,
+} from "@draft-loop/application/application-material-input";
 import {
   applicationMaterialDefaultModelId,
   applicationMaterialEconomyModelId,
@@ -159,6 +162,33 @@ const body = z
   })
   .meta({ id: "ApplicationMaterialRequest" });
 
+export const careerProfileSourceSchema = z
+  .object({
+    version: z.number().int(),
+    reviewed: z
+      .boolean()
+      .describe("False only when no version is reviewed yet, so the newest draft was used."),
+    newer_draft_waiting: z
+      .boolean()
+      .describe("A newer profile draft waits for review and was not used."),
+  })
+  .meta({ id: "CareerProfileSource" });
+
+/** The career profile source of a draft's answer, in the API's names (#2816). */
+export function careerProfileField(profile: ApplicationMaterialProfileSource | undefined): {
+  career_profile?: z.infer<typeof careerProfileSourceSchema>;
+} {
+  return profile === undefined
+    ? {}
+    : {
+        career_profile: {
+          version: profile.version,
+          reviewed: profile.reviewed,
+          newer_draft_waiting: profile.newerDraftWaiting,
+        },
+      };
+}
+
 export const draftView = z
   .object({
     id: savedApplicationMaterialIdSchema
@@ -173,6 +203,11 @@ export const draftView = z
     guidance: applicationMaterialGuidanceSchema
       .optional()
       .describe("The guidance the draft was written with, as the model received it."),
+    career_profile: careerProfileSourceSchema
+      .optional()
+      .describe(
+        "On a newly drafted answer only: the career profile version its facts came from. Drafting uses the last reviewed version; a newer draft is used once it is reviewed.",
+      ),
     interview_details: interviewDetailsSchema
       .optional()
       .describe("For an interview preparation guide: the interview it was written for."),
@@ -477,7 +512,7 @@ export function registerApplicationMaterialRoutes(
           opportunityBrief: { briefId: brief.briefId, version: brief.latestVersion },
         });
       }
-      const { facts, requirements, voice, usage } = await applicationMaterialRecordInput({
+      const { facts, requirements, voice, usage, profile } = await applicationMaterialRecordInput({
         service,
         root,
         briefId: brief?.briefId,
@@ -634,7 +669,9 @@ export function registerApplicationMaterialRoutes(
             : applicationMaterialPromptVersion,
           cost_usd: spentUsd,
         };
-        if (drafts === undefined) return reply.send(withTells(view));
+        if (drafts === undefined) {
+          return reply.send({ ...withTells(view), ...careerProfileField(profile) });
+        }
         const saved: SavedApplicationMaterial = {
           id: newMaterialId(),
           workspace_id: workspaceId,
@@ -648,9 +685,11 @@ export function registerApplicationMaterialRoutes(
           "application material saved",
         );
         const reviewed = await queueReview(saved, workspace, recordId);
-        return reply.send(
-          reviewed ? { ...viewOf(saved), review: { status: "pending" } } : viewOf(saved),
-        );
+        return reply.send({
+          ...viewOf(saved),
+          ...(reviewed ? { review: { status: "pending" as const } } : {}),
+          ...careerProfileField(profile),
+        });
       } catch (error) {
         if (error instanceof ApplicationMaterialError) {
           request.log.info(

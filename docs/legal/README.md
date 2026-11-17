@@ -1,40 +1,57 @@
-# Legal pack (drafts)
+# Legal pack
 
-**Status:** Drafts for lawyer review. Nothing here is published or in force.<br>
+**Status:** The terms of use, privacy policy and legal notice are published on
+the hosted service for the free, invite-only test. A lawyer reviews them
+before the first paid sale (#2682).<br>
 **Scope:** The hosted DraftLoop service ([ADR 0011](../adr/0011-client-server-version.md)).
 The desktop and the self-hosted stack process data on the user's own machine
 and need no privacy policy from the operator.
 
-The production readiness review of 2026-10-29 found no privacy policy, terms,
-legal notice, record of processing or data protection impact assessment in
-the repository. These drafts close that gap far enough for a lawyer to review
-them. They are written against the architecture as built, so every statement
-about data flows points at the code or ADR that implements it.
-
 ## Documents
 
-| Document | Purpose | Readers |
-| -------- | ------- | ------- |
-| [Privacy policy](privacy-policy.md) | GDPR Articles 13 and 14 information for candidates and coaches | Every user, before sign-up |
-| [Terms of service](terms-of-service.md) | The contract for the hosted plans, including what the AI output is and is not | Every user, at sign-up |
-| [Legal notice](legal-notice.md) | The publisher and host identification French law requires on every site | Every visitor |
-| [Record of processing activities](processing-register.md) | GDPR Article 30 register, one row per processing activity | The operator and the supervisory authority |
-| [Data protection impact assessment](dpia.md) | GDPR Article 35 assessment of the candidate-material processing | The operator and the lawyer |
+| Document                                                  | Where it lives                                                                                | Readers                                    |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Terms of use                                              | `/legal/terms` on the service; text in `apps/api/src/legal-text-en.ts` and `legal-text-fr.ts` | Every user, accepted at sign-up            |
+| Privacy policy                                            | `/legal/privacy`; same files                                                                  | Every user, accepted at sign-up            |
+| Legal notice                                              | `/legal/notice`; same files                                                                   | Every visitor                              |
+| [Record of processing activities](processing-register.md) | This folder                                                                                   | The operator and the supervisory authority |
+| [Data protection impact assessment](dpia.md)              | This folder                                                                                   | The operator and the lawyer                |
 
-## Conventions
+Each page exists in English and French at `/legal/en/<page>` and
+`/legal/fr/<page>`; `/legal/<page>` picks the browser's language. The French
+version prevails for consumers.
 
-- **Placeholders.** Square brackets mark what the operator fills in before
-  publication: `[Operator]`, `[Operator address]`, `[Contact email]`,
-  `[Registration number]`. No personal data of the operator enters this
-  repository; the published versions live on the service, not here.
-- **Facts come from the code.** Each document states only what the service
-  does today. A planned feature is named as planned. When the code changes a
-  data flow, the affected document changes in the same PR, like any other
-  documentation (`AGENTS.md`, Documentation synchronization).
-- **Language.** The drafts are in English, the repository's language. The
-  published terms and policy for consumers in France need a French version,
-  and the French version prevails for consumers (Consumer Code, L. 211-1 and
-  the Toubon law).
+## How the published pages work
+
+```mermaid
+flowchart LR
+  env["DRAFT_LOOP_LEGAL_PUBLISHER<br/>(set at deploy time)"] --> api["API renders /legal/*"]
+  text["legal-text-en.ts<br/>legal-text-fr.ts"] --> api
+  api --> visitor["Visitor reads the pages"]
+  visitor --> signup["Sign-up sends accepted_terms"]
+  signup --> record["beta_invites.terms_version"]
+```
+
+- **Publisher details.** `DRAFT_LOOP_LEGAL_PUBLISHER` holds a JSON object
+  with `name`, `address`, `email` and `director`, and optionally
+  `registration` and `phone`. It is set at deploy time and never committed.
+  Unset, the pages show a visible placeholder; malformed, the API refuses to
+  start.
+- **Accepted version.** `legalVersion` in `apps/api/src/legal-pages.ts` is
+  the date the current terms and policy took effect. `POST /v1/sign-up`
+  refuses an account without that exact version (400
+  `terms_not_accepted`) and records it on the redeemed invite. The web
+  screen sends `acceptedTermsVersion` from
+  `apps/web/src/beta-sign-up-model.ts`.
+- **Changing the text.** Change both languages in the same PR. For a change
+  that matters to users, set a new `legalVersion` and the same date in the
+  web screen, and announce it in the service before it applies.
+- **Facts come from the code.** Each page states only what the service does
+  today. When the code changes a data flow, the pages change in the same PR.
+
+The test service's terms say it can stop at any time, with an effort to let
+users download their data first. The model routes outside the EU are the
+dated beta exception in ADR 0011, D7.
 
 ## Open questions for the lawyer
 

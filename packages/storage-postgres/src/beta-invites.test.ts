@@ -49,6 +49,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta invites", () => {
       verifiedEmail,
       cap,
       organisationName: "My applications",
+      termsVersion: "2026-11-17",
       now,
     });
 
@@ -81,7 +82,11 @@ describe.runIf(connectionString !== undefined)("Postgres beta invites", () => {
         refusal: "invite_used",
       });
       const [listed] = await directory.betaInvites.list();
-      expect(listed).toMatchObject({ state: "redeemed", organisationId: result.organisationId });
+      expect(listed).toMatchObject({
+        state: "redeemed",
+        organisationId: result.organisationId,
+        termsVersion: "2026-11-17",
+      });
       await expect(directory.betaInvites.redeemedCount()).resolves.toBe(1);
     });
   });

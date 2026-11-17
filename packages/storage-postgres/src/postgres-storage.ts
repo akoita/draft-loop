@@ -106,8 +106,10 @@ export async function grantPostgresStorageAccess(
 }
 
 /**
- * Fails closed unless row-level security binds this connection and the schema is fully
- * migrated. A superuser or a BYPASSRLS role would see every tenant's rows.
+ * Fails closed unless row-level security binds this connection and the schema is at least this
+ * release's version. A newer schema is accepted: migrations stay readable by the previous release
+ * (#2831), so a rollback runs the previous image on it. A superuser or a BYPASSRLS role would see
+ * every tenant's rows.
  */
 async function requireTenantSafeConnection(client: SqlExecutor): Promise<void> {
   const [role] = await client.query(
@@ -118,7 +120,7 @@ async function requireTenantSafeConnection(client: SqlExecutor): Promise<void> {
   }
   const [migrated] = await client.query("SELECT max(version) AS version FROM schema_migrations");
   const latest = Math.max(...postgresMigrations.map((migration) => migration.version));
-  if (Number(migrated?.version) !== latest) {
+  if (!(Number(migrated?.version) >= latest)) {
     throw new Error("Postgres storage schema is not migrated to the current version");
   }
 }

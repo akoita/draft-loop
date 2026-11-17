@@ -9,6 +9,7 @@ import {
   saveAgentToken,
 } from "./agent-token.js";
 import { defaultServerUrl, defaultServerWorkspace } from "./client.js";
+import { addProjectSkill } from "./projects.js";
 
 /**
  * `draftloop-mcp init` (#2025): sets up the work journal in one project for one host. It writes the
@@ -194,6 +195,7 @@ export function planInit(
   });
   const skillFolder = options.host === "claude-code" ? ".claude/skills" : ".agents/skills";
   files.push({ path: `${skillFolder}/log-work/SKILL.md`, content: logWorkSkill });
+  files.push({ path: `${skillFolder}/add-project/SKILL.md`, content: addProjectSkill });
   if (options.host === "claude-code" && options.hook) {
     const path = ".claude/settings.json";
     files.push({ path, content: mergeClaudeSettings(read(path), options) });
@@ -346,6 +348,8 @@ export async function runInit(
     "AGENTS.md",
     ".claude/skills/log-work/SKILL.md",
     ".agents/skills/log-work/SKILL.md",
+    ".claude/skills/add-project/SKILL.md",
+    ".agents/skills/add-project/SKILL.md",
     ".claude/settings.json",
   ];
   for (const path of paths) {

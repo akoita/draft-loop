@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import type { ApiOperations, ApiSchemas } from "./api-types.generated.js";
+import { recordApiFailure, recordApiPath } from "./feedback-context.js";
 import { refusalText } from "./refusal-text.js";
 
 export type ApiOperation = keyof ApiOperations;
@@ -147,16 +148,32 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       }
       const url = `${baseUrl}${operationUrl(path, request)}`;
       const init = { method, headers, ...(body === undefined ? {} : { body }) };
-      let response = await fetchImpl(url, init);
-      // Only a read is tried again: it changes nothing, so a second try cannot act twice.
-      if (method === "GET") {
-        for (const delay of retryDelaysMs) {
-          if (!bareServerError(response)) break;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          response = await fetchImpl(url, init);
+      let response: Response;
+      try {
+        response = await fetchImpl(url, init);
+        // Only a read is tried again: it changes nothing, so a second try cannot act twice.
+        if (method === "GET") {
+          for (const delay of retryDelaysMs) {
+            if (!bareServerError(response)) break;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            response = await fetchImpl(url, init);
+          }
         }
+      } catch (error) {
+        recordApiFailure({ code: "network", message: "The service did not answer." });
+        throw error;
       }
-      if (!response.ok) throw await refusal(response);
+      recordApiPath(request.path);
+      if (!response.ok) {
+        const refused = await refusal(response);
+        // For a feedback note's context (#2875): the code, message and request id, no body.
+        recordApiFailure({
+          code: refused.code,
+          message: refused.message,
+          requestId: response.headers.get("x-request-id"),
+        });
+        throw refused;
+      }
       const type = response.headers.get("content-type") ?? "";
       if (type.startsWith("application/json")) return (await response.json()) as never;
       return (await response.blob()) as never;

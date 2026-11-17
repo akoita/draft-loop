@@ -22,6 +22,8 @@ const url = "/v1/workspaces/owner/applications/app_fixture0001/interview-guide";
 
 // An invented career record and job post; the contact fact must never reach the model.
 const profile = {
+  version: 1,
+  status: "reviewed",
   updatedAt: "2026-11-05T08:00:00.000Z",
   facts: [
     { id: "t", category: "role", subjectId: "job", field: "title", value: "Data Analyst" },

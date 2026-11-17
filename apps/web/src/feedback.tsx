@@ -2,6 +2,11 @@ import { t } from "@lingui/core/macro";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
+import {
+  currentFeedbackPage,
+  type FeedbackClientContext,
+  feedbackContextFor,
+} from "./feedback-context.js";
 
 /** The longest note the API takes (#2828). */
 export const maximumFeedbackLength = 2_000;
@@ -25,12 +30,85 @@ export interface FeedbackDialogProps {
   readonly problem?: string | undefined;
   /** True once the note is sent: the dialog thanks the member and offers only Close. */
   readonly sent: boolean;
+  /** The technical facts the note will carry (#2875), listed under What we include. */
+  readonly context?: FeedbackClientContext | undefined;
   readonly onSubmit: (note: { text: string; category: FeedbackCategory | undefined }) => void;
   readonly onClose: () => void;
 }
 
+/** One row of the fold: what is sent, under a plain name. */
+function Fact({ name, value }: { readonly name: string; readonly value: string }) {
+  return (
+    <>
+      <dt>{name}</dt>
+      <dd>{value}</dd>
+    </>
+  );
+}
+
+/**
+ * What we include (#2875): every value the note will carry, as it will be sent, and the two the
+ * server adds itself. The fold starts closed, so the note stays the dialog's focus.
+ */
+export function FeedbackContextFold({
+  context,
+}: {
+  readonly context: FeedbackClientContext | undefined;
+}) {
+  const none = t`None`;
+  const errors = context?.recentErrors ?? [];
+  const browser = context?.browser;
+  const theme = browser?.theme === "light" ? t`light theme` : t`dark theme`;
+  return (
+    <details className="feedback-context">
+      <summary>{t`What we include`}</summary>
+      <dl>
+        <Fact name={t`Source`} value={t`Web screen`} />
+        <Fact name={t`Page`} value={context?.route || none} />
+        <Fact name={t`Web version`} value={context?.webBuild ?? none} />
+        <Fact name={t`Record`} value={context?.ids?.recordId ?? none} />
+        <Fact name={t`Application`} value={context?.ids?.applicationId ?? none} />
+        <Fact name={t`Run`} value={context?.ids?.runId ?? none} />
+        <dt>{t`Recent errors`}</dt>
+        {errors.length === 0 ? (
+          <dd>{none}</dd>
+        ) : (
+          <dd>
+            <ul>
+              {errors.map((error) => (
+                <li key={`${error.at}-${error.code}-${error.message}`}>
+                  {error.code}: {error.message} ({error.at})
+                </li>
+              ))}
+            </ul>
+          </dd>
+        )}
+        <Fact name={t`Last failed request`} value={context?.lastFailedRequestId ?? none} />
+        <Fact
+          name={t`Browser`}
+          value={
+            browser === undefined
+              ? none
+              : `${browser.family}, ${browser.os}, ${browser.viewport}, ${browser.language}, ${theme}`
+          }
+        />
+      </dl>
+      <p className="muted">
+        {t`The server adds its version and your organisation's plan. Never included: screenshots, page text, your CV or job descriptions.`}
+      </p>
+    </details>
+  );
+}
+
 /** A short note about DraftLoop for the people who run it, with an optional category. */
-export function FeedbackDialog({ busy, problem, sent, onSubmit, onClose }: FeedbackDialogProps) {
+export function FeedbackDialog({
+  busy,
+  problem,
+  sent,
+  context,
+  onSubmit,
+  onClose,
+}: FeedbackDialogProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const [text, setText] = useState("");
@@ -73,7 +151,7 @@ export function FeedbackDialog({ busy, problem, sent, onSubmit, onClose }: Feedb
         ) : (
           <>
             <p>
-              {t`Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note.`}
+              {t`Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots.`}
             </p>
             <label htmlFor={`${id}-category`}>{t`Kind of note`}</label>
             <select
@@ -98,6 +176,7 @@ export function FeedbackDialog({ busy, problem, sent, onSubmit, onClose }: Feedb
             <p id={`${id}-hint`} className="muted">
               {t`Up to ${maximumFeedbackLength} characters. Leave out passwords and other people's details.`}
             </p>
+            <FeedbackContextFold context={context} />
             {problem === undefined ? null : (
               <p className="problem" role="alert">
                 {problem}
@@ -118,26 +197,39 @@ export function FeedbackDialog({ busy, problem, sent, onSubmit, onClose }: Feedb
   );
 }
 
-/** Sends one note as the signed-in member (#2828). */
+/** Sends one note as the signed-in member (#2828), with its context when there is one (#2875). */
 export async function sendFeedback(
   client: ApiClient,
-  note: { text: string; category: FeedbackCategory | undefined; screen: string },
+  note: {
+    text: string;
+    category: FeedbackCategory | undefined;
+    screen: string;
+    context?: FeedbackClientContext | undefined;
+  },
 ): Promise<void> {
   await client.call("POST /v1/feedback", {
     body: {
       text: note.text,
       screen: note.screen,
       ...(note.category === undefined ? {} : { category: note.category }),
+      ...(note.context === undefined ? {} : { context: note.context }),
     },
   });
 }
 
 /** The shell's Send feedback action: a toolbar button that opens the dialog. Sign-in mode only. */
 export function FeedbackButton({ client }: { readonly client: ApiClient }) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [problem, setProblem] = useState<string>();
+  // Taken when the dialog opens, so what it lists is exactly what is sent.
+  const [context, setContext] = useState<FeedbackClientContext>();
+
+  function open() {
+    setContext(feedbackContextFor(currentFeedbackPage()));
+    setOpen(true);
+  }
 
   function close() {
     setOpen(false);
@@ -149,7 +241,11 @@ export function FeedbackButton({ client }: { readonly client: ApiClient }) {
     setBusy(true);
     setProblem(undefined);
     try {
-      await sendFeedback(client, { ...note, screen: feedbackScreen(window.location.hash) });
+      await sendFeedback(client, {
+        ...note,
+        screen: feedbackScreen(window.location.hash),
+        context,
+      });
       setSent(true);
     } catch (error) {
       setProblem(describeError(error));
@@ -160,14 +256,15 @@ export function FeedbackButton({ client }: { readonly client: ApiClient }) {
 
   return (
     <>
-      <button type="button" className="button button-toolbar" onClick={() => setOpen(true)}>
+      <button type="button" className="button button-toolbar" onClick={open}>
         {t`Send feedback`}
       </button>
-      {open ? (
+      {isOpen ? (
         <FeedbackDialog
           busy={busy}
           problem={problem}
           sent={sent}
+          context={context}
           onSubmit={(note) => void submit(note)}
           onClose={close}
         />

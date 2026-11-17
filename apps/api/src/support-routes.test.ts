@@ -259,6 +259,10 @@ describe("handing a support conversation to a person (#2883)", () => {
           screen: "support",
           text: input.summary,
           transcript: input.transcript,
+          context: null,
+          status: "new",
+          issueUrl: null,
+          triagedAt: null,
           sentAt: input.now.toISOString(),
         };
       },

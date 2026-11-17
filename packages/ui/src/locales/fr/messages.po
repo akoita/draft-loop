@@ -1391,6 +1391,10 @@ msgstr "Clé d’API"
 msgid "API key, billed per token"
 msgstr "Clé d’API, facturée au jeton"
 
+#: apps/web/src/feedback.tsx
+msgid "Application"
+msgstr "Candidature"
+
 #: packages/ui/src/application-name.tsx
 #: packages/ui/src/home.tsx
 msgid "Application name"
@@ -1797,6 +1801,10 @@ msgstr "Brief"
 #: packages/ui/src/review.tsx
 msgid "Bring your career evidence into the loop"
 msgstr "Intégrez vos éléments de parcours à la boucle"
+
+#: apps/web/src/feedback.tsx
+msgid "Browser"
+msgstr "Navigateur"
 
 #: packages/ui/src/profile-status.ts
 msgid "Build the profile from my career evidence with local fixtures. Nothing is sent to a provider."
@@ -2735,6 +2743,10 @@ msgstr "Langue du CV"
 #: packages/ui/src/theme.tsx
 msgid "Dark"
 msgstr "Sombre"
+
+#: apps/web/src/feedback.tsx
+msgid "dark theme"
+msgstr "thème sombre"
 
 #: apps/web/src/application-material-model.ts
 msgid "Dashes are used often in this letter: try a full stop or a comma."
@@ -4360,6 +4372,10 @@ msgstr "Hugging Face,"
 msgid "Hybrid"
 msgstr "Hybride"
 
+#: apps/web/src/beta-sign-up.tsx
+msgid "I accept the terms of use and the privacy policy."
+msgstr "J'accepte les conditions d'utilisation et la politique de confidentialité."
+
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 msgstr "J’autorise DraftLoop à récupérer cette page. Elle n’est lue que lorsque vous extrayez les exigences à la première étape de la candidature, jamais avant."
@@ -4802,6 +4818,10 @@ msgstr "Dernière activité le {0}"
 msgid "Last activity unknown"
 msgstr "Dernière activité inconnue"
 
+#: apps/web/src/feedback.tsx
+msgid "Last failed request"
+msgstr "Dernière requête en échec"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Last opened"
 msgstr "Dernière ouverture"
@@ -4836,6 +4856,10 @@ msgstr "Les éléments hérités n’acceptent qu’une URL à la fois"
 msgid "Legacy workspace evidence URLs"
 msgstr "URL d’éléments de l’ancien espace de travail"
 
+#: apps/web/src/landing.tsx
+msgid "Legal notice"
+msgstr "Mentions légales"
+
 #: apps/web/src/consent-model.ts
 msgid "Legitimate interest"
 msgstr "Intérêt légitime"
@@ -4868,6 +4892,10 @@ msgstr "Licence"
 #: packages/ui/src/theme.tsx
 msgid "Light"
 msgstr "Clair"
+
+#: apps/web/src/feedback.tsx
+msgid "light theme"
+msgstr "thème clair"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Like section ("
@@ -5889,6 +5917,7 @@ msgstr "Aucune parole n’a été entendue. Réessayez plus près du microphone.
 msgid "Nobody can open this job search yet."
 msgstr "Personne ne peut encore ouvrir cette recherche d’emploi."
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "None"
 msgstr "Aucun"
@@ -6411,6 +6440,10 @@ msgstr "Jeton propriétaire"
 msgid "Owners and admins of your team choose who can open it."
 msgstr "Les propriétaires et administrateurs de votre équipe choisissent qui peut l’ouvrir."
 
+#: apps/web/src/feedback.tsx
+msgid "Page"
+msgstr "Page"
+
 #: packages/ui/src/export-preview.tsx
 msgid "Page {page} of {pageCount}"
 msgstr "Page {page} sur {pageCount}"
@@ -6640,6 +6673,7 @@ msgstr "Version précédente : {percent} % de la largeur"
 msgid "Priority"
 msgstr "Priorité"
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Privacy policy"
 msgstr "Politique de confidentialité"
@@ -7004,6 +7038,10 @@ msgstr "Motif de la libération"
 msgid "reasoning"
 msgstr "raisonnement"
 
+#: apps/web/src/feedback.tsx
+msgid "Recent errors"
+msgstr "Erreurs récentes"
+
 #: apps/web/src/interview-guide-model.ts
 msgid "recent news"
 msgstr "l’actualité récente"
@@ -7023,6 +7061,10 @@ msgstr "Espaces de travail récents"
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Recent workspaces could not be loaded."
 msgstr "Les espaces de travail récents n’ont pas pu être chargés."
+
+#: apps/web/src/feedback.tsx
+msgid "Record"
+msgstr "Dossier"
 
 #: apps/web/src/consent.tsx
 msgid "Record consent"
@@ -7792,6 +7834,7 @@ msgstr "Prise en charge par la route"
 msgid "Rules apply once a knowledge base is chosen."
 msgstr "Les règles s’appliquent une fois une base de connaissances choisie."
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8421,6 +8464,7 @@ msgstr "Une réalisation dont vous êtes fier"
 msgid "Sort"
 msgstr "Trier"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8813,8 +8857,8 @@ msgid "Tell it in a conversation"
 msgstr "Le raconter dans une conversation"
 
 #: apps/web/src/feedback.tsx
-msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
-msgstr "Dites à l'équipe de DraftLoop ce qui marche, ce qui casse ou ce qui vous manque. L'écran où vous êtes est envoyé avec votre message."
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
+msgstr "Dites à l’équipe de DraftLoop ce qui marche, ce qui casse ou ce qui vous manque. Votre message part avec les détails techniques listés sous Ce que nous joignons, jamais votre CV, vos offres d’emploi, le texte de la page ni des captures d’écran."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
@@ -8826,6 +8870,7 @@ msgstr "Parlez-nous de votre parcours"
 msgid "Template"
 msgstr "Modèle de mise en page"
 
+#: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/landing.tsx
 msgid "Terms of use"
 msgstr "Conditions d'utilisation"
@@ -9737,6 +9782,10 @@ msgstr "L’état du filtrage n’a pas pu être lu. {0}"
 msgid "The selected knowledge base could not be read"
 msgstr "La base de connaissances choisie n’a pas pu être lue"
 
+#: apps/web/src/feedback.tsx
+msgid "The server adds its version and your organisation's plan. Never included: screenshots, page text, your CV or job descriptions."
+msgstr "Le serveur ajoute sa version et l’offre de votre organisation. Jamais joints : captures d’écran, texte de la page, votre CV ou les offres d’emploi."
+
 #: packages/ui/src/work-journal-model.ts
 msgid "The server refused the edit. Check the title, summary and technologies."
 msgstr "Le serveur a refusé la modification. Vérifiez le titre, le résumé et les technologies."
@@ -9776,6 +9825,10 @@ msgstr "L’état du domaine"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
 msgstr "Le résumé indique"
+
+#: apps/web/src/beta-sign-up-model.ts
+msgid "The terms of use have changed. Reload the page, read the new version and accept it."
+msgstr "Les conditions d'utilisation ont changé. Rechargez la page, lisez la nouvelle version et acceptez-la."
 
 #: packages/ui/src/pasted-evidence.ts
 msgid "The text is too long. Keep it under {limit} characters, or add it as a file."
@@ -9980,6 +10033,15 @@ msgid "This draft is approved; edits are closed."
 msgstr "Cette ébauche est approuvée ; les modifications sont closes."
 
 #: apps/web/src/application-material-model.ts
+msgid "This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again."
+msgstr "Ce brouillon utilise votre profil professionnel avant sa relecture. Relisez-le sur la page Profil professionnel, puis relancez la rédaction."
+
+#. placeholder {0}: source.version
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your reviewed career profile, version {0}. A newer version waits for review on the Career profile page; it is used once you review it."
+msgstr "Ce brouillon utilise votre profil professionnel relu, version {0}. Une version plus récente attend votre relecture sur la page Profil professionnel ; elle sera utilisée une fois relue."
+
+#: apps/web/src/application-material-model.ts
 msgid "This draft would pass the server's cost cap for one request."
 msgstr "Cette ébauche dépasserait le plafond de coût du serveur pour une requête."
 
@@ -10010,6 +10072,10 @@ msgstr "Ceci est un brouillon : il n’a pas été relu et ne peut pas encore la
 #: apps/web/src/landing.tsx
 msgid "This is a free public test, open by invitation. It may change or pause without notice. Drafting sends the material you select to AI providers, some of them outside the EU."
 msgstr "Ceci est un test public gratuit, sur invitation. Il peut changer ou s'interrompre sans préavis. La rédaction envoie les documents que vous choisissez à des fournisseurs d'IA, dont certains hors de l'UE."
+
+#: apps/web/src/beta-sign-up.tsx
+msgid "This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union."
+msgstr "Ceci est une version de test gratuite : elle peut s'arrêter à tout moment, et nous ferons notre possible pour vous laisser télécharger vos données avant. Pour rédiger et relire vos brouillons, DraftLoop envoie les extraits de vos éléments que vous choisissez à Anthropic et OpenAI, qui les traitent hors de l'Union européenne."
 
 #: packages/ui/src/earlier-run.ts
 msgid "This is an earlier run. Open the latest run to change it."
@@ -10787,6 +10853,14 @@ msgstr "Points faibles et comment y répondre"
 msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr "Une page web peut être fausse ou périmée. Vérifiez un fait à sa source avant de vous y fier."
 
+#: apps/web/src/feedback.tsx
+msgid "Web screen"
+msgstr "Écran web"
+
+#: apps/web/src/feedback.tsx
+msgid "Web version"
+msgstr "Version web"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr "ce qui a changé grâce à votre travail"
@@ -10854,6 +10928,10 @@ msgstr "Que faire des sections correspondantes"
 #: apps/web/src/application-material.tsx
 msgid "What to stress"
 msgstr "Ce qu'il faut mettre en avant"
+
+#: apps/web/src/feedback.tsx
+msgid "What we include"
+msgstr "Ce que nous joignons"
 
 #: packages/ui/src/connected-agents.tsx
 msgid "What you allowed when it signed in"
