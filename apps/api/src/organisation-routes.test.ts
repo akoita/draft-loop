@@ -545,7 +545,11 @@ describe("the operator's organisation creation", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({
-      error: { code: "unauthorized", message: "The operator's token is required." },
+      error: {
+        code: "unauthorized",
+        message:
+          "The operator's token, or an operator's sign-in with a second factor, is required.",
+      },
     });
     await expect(directory.listMembers("org-east")).rejects.toThrow(TenantDirectoryError);
   });

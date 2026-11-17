@@ -412,6 +412,19 @@ describe("operator routes", () => {
       expect((await operatorCall({ ...operatorClaims, azp: undefined })).statusCode).toBe(401);
     });
 
+    it("marks a member's caller as an operator only with the role and a second factor", async () => {
+      const api = await signInApi(async () => member);
+
+      const operator = await callerOf(api, `Bearer ${await token(operatorClaims)}`);
+      const passwordOnly = await callerOf(
+        api,
+        `Bearer ${await token({ ...operatorClaims, amr: ["pwd"] })}`,
+      );
+
+      expect(operator.json().caller).toEqual({ kind: "member", ...member, operator: true });
+      expect(passwordOnly.json().caller).toEqual({ kind: "member", ...member });
+    });
+
     it("gives no operator reach outside operator routes", async () => {
       const api = await signInApi(async () => undefined);
 

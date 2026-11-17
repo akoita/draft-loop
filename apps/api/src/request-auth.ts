@@ -17,6 +17,7 @@ import {
   remoteSignInKeys,
   type SignedInMember,
   type SignInIdentity,
+  type SignInVerification,
   signInTokenVerifier,
   type VerifySignInToken,
 } from "./oidc-sign-in.js";
@@ -24,7 +25,13 @@ import { isOwnerAuthorization } from "./owner-access.js";
 import { isPublicRequest } from "./web-screen.js";
 
 /** Who made a request: the owner, by the owner token, or a signed-in organisation member. */
-export type Caller = { readonly kind: "owner" } | ({ readonly kind: "member" } & SignedInMember);
+export type Caller =
+  | { readonly kind: "owner" }
+  | ({
+      readonly kind: "member";
+      /** Whether this sign-in would also pass on operator routes (#2953), for the screen. */
+      readonly operator?: true;
+    } & SignedInMember);
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -166,6 +173,9 @@ function signInAuthenticator(
         tenantId: member.tenantId,
         memberId: member.memberId,
         role: member.role,
+        ...(operatorRefusal(verification, webClientId) === undefined
+          ? { operator: true as const }
+          : {}),
       },
     };
   };
@@ -210,22 +220,30 @@ function operatorAuthenticator(
     if (verification.status === "refused") {
       return { outcome: "unauthenticated", reason: verification.reason };
     }
-    // Neither an assistant's grant nor a deployment's smoke client acts as the operator.
-    if (verification.clientId !== webClientId) {
-      return { outcome: "unauthenticated", reason: "operator sign-in from another client" };
-    }
-    if (!verification.roles.includes(operatorRole)) {
-      return { outcome: "unauthenticated", reason: "sign-in without the operator role" };
-    }
-    if (!verification.methods.some((method) => secondFactorMethods.has(method))) {
-      return { outcome: "unauthenticated", reason: "operator sign-in without a second factor" };
-    }
+    const refusal = operatorRefusal(verification, webClientId);
+    if (refusal !== undefined) return { outcome: "unauthenticated", reason: refusal };
     return {
       outcome: "authenticated",
       caller: { kind: "owner" },
       operator: { subject: verification.identity.subject, methods: verification.methods },
     };
   };
+}
+
+/** Why a verified sign-in may not act as the operator, or undefined when it may. */
+function operatorRefusal(
+  verification: SignInVerification & { readonly status: "verified" },
+  webClientId: string | undefined,
+): string | undefined {
+  // Neither an assistant's grant nor a deployment's smoke client acts as the operator.
+  if (verification.clientId === undefined || verification.clientId !== webClientId) {
+    return "operator sign-in from another client";
+  }
+  if (!verification.roles.includes(operatorRole)) return "sign-in without the operator role";
+  if (!verification.methods.some((method) => secondFactorMethods.has(method))) {
+    return "operator sign-in without a second factor";
+  }
+  return undefined;
 }
 
 function signInVerifierFor(auth: ApiAuthOptions): VerifySignInToken | undefined {
