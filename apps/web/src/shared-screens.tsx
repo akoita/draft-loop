@@ -25,13 +25,24 @@ export interface SharedScreensProps {
  * or quarantined material, is explained above them in the shell's words.
  */
 export function SharedScreens({ client, workspaceId, hostActions }: SharedScreensProps) {
-  const [refusal, setRefusal] = useState<ApiRequestError | undefined>(undefined);
+  const [shown, setShown] = useState<ShownRefusal | undefined>(undefined);
+  const refusal = shown?.error;
   // A shared link names its page in the fragment, read once when the screens open (#2149).
   const [startView] = useState(() => startViewForFragment(window.location.hash));
   const port = useMemo(
     () =>
       createBridgeReviewPort(
-        createCapabilityPort(createHttpBridge({ client, workspaceId, onRefusal: setRefusal })),
+        createCapabilityPort(
+          createHttpBridge({
+            client,
+            workspaceId,
+            onRefusal: (error, command) => setShown({ error, command }),
+            // A retry of the refused command that now succeeds, such as an upload once the
+            // storage consent is recorded, resolves the refusal, so its notice goes away.
+            onSucceeded: (command) =>
+              setShown((current) => (current?.command === command ? undefined : current)),
+          }),
+        ),
       ),
     [client, workspaceId],
   );
@@ -39,7 +50,7 @@ export function SharedScreens({ client, workspaceId, hostActions }: SharedScreen
   return (
     <>
       {refusal === undefined ? null : (
-        <RefusalNotice client={client} refusal={refusal} onDismiss={() => setRefusal(undefined)} />
+        <RefusalNotice client={client} refusal={refusal} onDismiss={() => setShown(undefined)} />
       )}
       <div className="shared-screens">
         <App
@@ -50,6 +61,12 @@ export function SharedScreens({ client, workspaceId, hostActions }: SharedScreen
       </div>
     </>
   );
+}
+
+/** The refusal on show and the command it refused. */
+interface ShownRefusal {
+  readonly error: ApiRequestError;
+  readonly command: string;
 }
 
 export interface RefusalNoticeProps {

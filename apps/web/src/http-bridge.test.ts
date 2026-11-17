@@ -123,12 +123,16 @@ function scriptedClient(handlers: Readonly<Record<string, Handler>>) {
   return { client, calls };
 }
 
-function portOver(handlers: Readonly<Record<string, Handler>>, onRefusal = vi.fn()) {
+function portOver(
+  handlers: Readonly<Record<string, Handler>>,
+  onRefusal = vi.fn(),
+  onSucceeded = vi.fn(),
+) {
   const { client, calls } = scriptedClient(handlers);
   const port = createCapabilityPort(
-    createHttpBridge({ client, onRefusal, idempotencyKey: () => "run-key-0001" }),
+    createHttpBridge({ client, onRefusal, onSucceeded, idempotencyKey: () => "run-key-0001" }),
   );
-  return { port, calls, onRefusal };
+  return { port, calls, onRefusal, onSucceeded };
 }
 
 const listed = () => ({ applications: [defaultApplication, ledgerApplication] });
@@ -664,11 +668,24 @@ describe("the shared screens' commands over HTTP", () => {
         capability: "run.start",
       },
     });
-    expect(onRefusal).toHaveBeenCalledWith(credits);
+    expect(onRefusal).toHaveBeenCalledWith(credits, "run.start");
     expect(missing).toMatchObject({
       ok: false,
       error: { code: "not-found", message: "No such application." },
     });
+  });
+
+  it("tells the shell which command succeeded, so a resolved refusal can go", async () => {
+    const { port, onSucceeded } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}": () => defaultApplication,
+    });
+
+    await port.execute({
+      type: "application.get",
+      input: { workspaceId, applicationId: defaultApplication.id },
+    });
+
+    expect(onSucceeded).toHaveBeenCalledWith("application.get");
   });
 
   it("loads the review the server projects, for the workspace on screen or the one named", async () => {
