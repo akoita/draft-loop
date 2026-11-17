@@ -149,8 +149,10 @@ person's choices only.
   `POST /v1/workspaces/:id/opportunities` queues its extraction. The brief's
   view says `extraction: pending` until the worker saves the next version, or
   `failed`. Flagged or unscreened text is never queued, and a fixture
-  workspace's brief is extracted as it is saved. The shared setup card polls
-  the brief every few seconds.
+  workspace's brief is extracted as it is saved. In sign-in mode the job needs
+  the record's transmission consent for the author's company only, since
+  extraction calls only the writing model. The shared setup card polls the
+  brief every few seconds.
 - **Profile derivation.** The worker derives the profile from the selected
   evidence, with the same extractor, sensitivity exclusions and provider
   approval as the CLI. A fixture workspace calls no model. The worker records
@@ -679,11 +681,11 @@ sign-in. It says what DraftLoop does, that it is a test that sends material
 outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads
 no analytics or third-party script, so it needs no cookie banner.
 
-| Route                                         | Who      | What it does                                                         |
-| --------------------------------------------- | -------- | -------------------------------------------------------------------- |
-| `POST /v1/waitlist`                           | Anyone   | Lists an email with consent; answers 202 whether new or listed       |
-| `GET /v1/operator/waitlist`                   | Operator | Lists entries, oldest first                                          |
-| `POST /v1/operator/waitlist/:entryId/invite`  | Operator | Creates an invite for the entry's email and deletes the entry        |
+| Route                                        | Who      | What it does                                                   |
+| -------------------------------------------- | -------- | -------------------------------------------------------------- |
+| `POST /v1/waitlist`                          | Anyone   | Lists an email with consent; answers 202 whether new or listed |
+| `GET /v1/operator/waitlist`                  | Operator | Lists entries, oldest first                                    |
+| `POST /v1/operator/waitlist/:entryId/invite` | Operator | Creates an invite for the entry's email and deletes the entry  |
 
 - **Consent.** Each row records `betaWaitlistConsentVersion`, the version of
   the text beside the checkbox, and the day. Change the version with the text.
@@ -728,7 +730,7 @@ flowchart LR
 - **Erasure.** It uses `@draft-loop/storage/organisation-erasure-flow`, as
   the API does. An active run postpones it to a later sweep.
 - **Logs.** `inactive beta organisation warned` and `inactive beta
-  organisation erased` carry the organisation id, a date and counts only.
+organisation erased` carry the organisation id, a date and counts only.
 
 ### Plan limits
 
@@ -833,13 +835,13 @@ sequenceDiagram
   `payment_provider_failed` when the provider refuses or cannot be reached,
   and 404 with the owner token.
 
-| Setting                                                            | Value                                                    |
-| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| Setting                                                            | Value                                                      |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- |
 | `DRAFT_LOOP_PAYMENTS`                                              | `off` (default) or `stripe`; another value stops the start |
-| `DRAFT_LOOP_STRIPE_SECRET_KEY`                                     | A test-mode secret or restricted key, from a secret      |
-| `DRAFT_LOOP_STRIPE_WEBHOOK_SECRET`                                 | The webhook endpoint's signing secret, from a secret     |
-| `DRAFT_LOOP_STRIPE_PRICE_PACK_1`, `DRAFT_LOOP_STRIPE_PRICE_PACK_5` | The Stripe price id of each pack                         |
-| `DRAFT_LOOP_PAYMENTS_RETURN_URL`                                   | The web screen's HTTPS address, where the buyer returns  |
+| `DRAFT_LOOP_STRIPE_SECRET_KEY`                                     | A test-mode secret or restricted key, from a secret        |
+| `DRAFT_LOOP_STRIPE_WEBHOOK_SECRET`                                 | The webhook endpoint's signing secret, from a secret       |
+| `DRAFT_LOOP_STRIPE_PRICE_PACK_1`, `DRAFT_LOOP_STRIPE_PRICE_PACK_5` | The Stripe price id of each pack                           |
+| `DRAFT_LOOP_PAYMENTS_RETURN_URL`                                   | The web screen's HTTPS address, where the buyer returns    |
 
 ### Operator routes
 
