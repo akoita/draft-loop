@@ -207,6 +207,11 @@ msgstr ""
 msgid ") bound to brief"
 msgstr ""
 
+#. placeholder {0}: usage.failedCalls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {(# failed)} other {(# failed)}}"
+msgstr ""
+
 #. placeholder {0}: roles.length
 #: packages/ui/src/model-suggestions.tsx
 msgid "{0, plural, one {{roleLabel} profile} other {{roleLabel} profiles}}"
@@ -250,6 +255,11 @@ msgstr ""
 #. placeholder {0}: sections.length
 #: packages/ui/src/help-panel.tsx
 msgid "{0, plural, one {# matching section} other {# matching sections}}"
+msgstr ""
+
+#. placeholder {0}: usage.calls
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{0, plural, one {# model call} other {# model calls}}"
 msgstr ""
 
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
@@ -435,6 +445,15 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "{base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password."
+msgstr ""
+
+#. placeholder {0}: formatUsd(usage.estimatedUsd)
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens, about {0}."
+msgstr ""
+
+#: packages/ui/src/profile-derivation-usage.ts
+msgid "{calls}{failed}, {tokens} tokens; the cost is unknown for this model."
 msgstr ""
 
 #. placeholder {0}: countedNouns.source(sources)
@@ -1418,6 +1437,10 @@ msgstr ""
 msgid "Applying for another role? Start a new application. It reuses your career profile and evidence, so you do not generate them again."
 msgstr ""
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Applying…"
+msgstr ""
+
 #: packages/ui/src/review-footer.tsx
 msgid "approval actions"
 msgstr ""
@@ -1943,6 +1966,10 @@ msgstr ""
 msgid "Change models for new runs"
 msgstr ""
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Change the models in Settings, then start again."
+msgstr ""
+
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Changes are made on the latest run."
 msgstr ""
@@ -2048,6 +2075,10 @@ msgstr ""
 
 #: packages/ui/src/profile.tsx
 msgid "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval applies to this name only."
+msgstr ""
+
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Choose a preset your plan includes"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
@@ -9451,6 +9482,10 @@ msgstr ""
 msgid "The preference could not be saved. {0}"
 msgstr ""
 
+#: apps/web/src/start-panels.tsx
+msgid "The preset could not be applied. Try again or use Settings."
+msgstr ""
+
 #: packages/ui/src/export-preview.tsx
 msgid "The preview could not be drawn. Nothing was saved; you can still export."
 msgstr ""
@@ -10483,6 +10518,10 @@ msgstr ""
 msgid "Use this knowledge base"
 msgstr ""
 
+#: apps/web/src/plan-preset-choice.tsx
+msgid "Use this preset"
+msgstr ""
+
 #: packages/ui/src/run-draft-choice.tsx
 msgid "Use this run's draft"
 msgstr ""
@@ -11204,6 +11243,10 @@ msgstr ""
 #. placeholder {0}: models.toLowerCase()
 #: apps/web/src/credits-model.ts
 msgid "Your plan does not include {0}{who}. Choose another preset or model."
+msgstr ""
+
+#: apps/web/src/start-panels.tsx
+msgid "Your plan does not include these models. Choose one of its presets to start."
 msgstr ""
 
 #: apps/web/src/credits-model.ts

@@ -334,12 +334,24 @@ export interface ApiSchemas {
   } | {
     readonly status: "derived";
     readonly version: number;
+    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
+    readonly reusedSourceCount?: number;
+    readonly extractedSourceCount?: number;
   } | {
     readonly status: "cancelled";
+    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
   } | {
     readonly status: "failed";
     readonly reason: "failed" | "consent-required" | "record-erased";
     readonly message?: string;
+    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
+  };
+  "CareerProfileDerivationUsage": {
+    readonly calls: number;
+    readonly failedCalls: number;
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+    readonly estimatedUsd: number | null;
   };
   "CareerProfileFreshness": {
     readonly state: "not-generated";

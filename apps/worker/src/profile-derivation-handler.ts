@@ -6,7 +6,10 @@ import type {
   ProfileDerivationJob,
   ProfileDerivationJobHandler,
   ProfileDerivationOutcome,
+  ProfileDerivationUsage,
 } from "@draft-loop/run-queue";
+
+import { currentJobUsage } from "./model-call-log.js";
 
 export interface ProfileDerivationHandlerOptions {
   /** The application over the job's tenant: each job names its own (ADR 0011, D3). */
@@ -22,6 +25,8 @@ export interface ProfileDerivationHandlerOptions {
   /** Whether the workspace's candidate record is erased or being erased, checked first. */
   readonly recordErased?: (job: ProfileDerivationJob) => Promise<boolean>;
   readonly onOutcome?: (job: ProfileDerivationJob, outcome: ProfileDerivationOutcome) => void;
+  /** What the job's model calls used so far; the worker's meter by default (#2815). */
+  readonly usage?: () => ProfileDerivationUsage | undefined;
 }
 
 /**
@@ -35,6 +40,12 @@ export interface ProfileDerivationHandlerOptions {
 export function createProfileDerivationHandler(
   options: ProfileDerivationHandlerOptions,
 ): ProfileDerivationJobHandler {
+  const usage = options.usage ?? currentJobUsage;
+  // What the derivation's calls used, failed ones included, rides on its outcome.
+  const used = () => {
+    const total = usage();
+    return total === undefined ? {} : { usage: total };
+  };
   const derive: ProfileDerivationJobHandler = async (job, control) => {
     if (options.recordErased !== undefined && (await options.recordErased(job))) {
       return { outcome: "record-erased" };
@@ -51,13 +62,23 @@ export function createProfileDerivationHandler(
         signal: control.signal,
         onProgress: control.reportProgress,
       });
-      return { outcome: "derived", version: record.profile.version };
+      return {
+        outcome: "derived",
+        version: record.profile.version,
+        ...(record.reusedSourceCount === undefined || record.extractedSourceCount === undefined
+          ? {}
+          : {
+              reusedSourceCount: record.reusedSourceCount,
+              extractedSourceCount: record.extractedSourceCount,
+            }),
+        ...used(),
+      };
     } catch (error) {
       // A cancelled derivation saves nothing, whatever shape the abort took on its way up.
-      if (control.signal.aborted) return { outcome: "cancelled" };
+      if (control.signal.aborted) return { outcome: "cancelled", ...used() };
       const message = userFixableProfileDerivationMessage(error);
       if (message === undefined) throw error;
-      return { outcome: "failed", message };
+      return { outcome: "failed", message, ...used() };
     }
   };
   return async (job, control) => {

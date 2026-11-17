@@ -131,7 +131,22 @@ export function createProfileAnswers(client: ApiClient, options: ProfileAnswerOp
               "GET /v1/workspaces/{workspaceId}/profiles/{profileId}",
               { ...profilePath(workspaceId, profileId), query: { version: state.version } },
             );
-            return project(workspaceId, record, profileId);
+            // The worker's totals for this derivation ride on the version it saved (#2815).
+            return project(
+              workspaceId,
+              {
+                ...record,
+                ...(state.reusedSourceCount === undefined ||
+                state.extractedSourceCount === undefined
+                  ? {}
+                  : {
+                      reusedSourceCount: state.reusedSourceCount,
+                      extractedSourceCount: state.extractedSourceCount,
+                    }),
+                ...(state.usage === undefined ? {} : { derivationUsage: state.usage }),
+              },
+              profileId,
+            );
           }
           if (state === undefined || state.status !== "pending") {
             return derivationFailure(state ?? { status: "failed", reason: "failed" });

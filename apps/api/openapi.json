@@ -4358,6 +4358,46 @@
           "versions"
         ]
       },
+      "CareerProfileDerivationUsageInput": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "failedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "description": "Estimated cost in US dollars; null when a model has no price.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "calls",
+          "failedCalls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd"
+        ],
+        "description": "What the derivation's model calls used, failed calls included."
+      },
       "CareerProfileDerivationInput": {
         "oneOf": [
           {
@@ -4398,6 +4438,21 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
+              },
+              "reusedSourceCount": {
+                "description": "Selected sources whose facts came unchanged from the previous version.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "extractedSourceCount": {
+                "description": "Selected sources sent to the model in this derivation.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -4411,6 +4466,9 @@
               "status": {
                 "type": "string",
                 "const": "cancelled"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
               }
             },
             "required": [
@@ -4435,6 +4493,9 @@
               "message": {
                 "description": "A fixed sentence the person can act on; absent for any other failure.",
                 "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsageInput"
               }
             },
             "required": [
@@ -4443,7 +4504,7 @@
             ]
           }
         ],
-        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them."
+        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
       "CareerProfileFreshnessInput": {
         "oneOf": [
@@ -12425,6 +12486,47 @@
         ],
         "additionalProperties": false
       },
+      "CareerProfileDerivationUsage": {
+        "type": "object",
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "failedCalls": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "inputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "outputTokens": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "estimatedUsd": {
+            "description": "Estimated cost in US dollars; null when a model has no price.",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "calls",
+          "failedCalls",
+          "inputTokens",
+          "outputTokens",
+          "estimatedUsd"
+        ],
+        "additionalProperties": false,
+        "description": "What the derivation's model calls used, failed calls included."
+      },
       "CareerProfileDerivation": {
         "oneOf": [
           {
@@ -12466,6 +12568,21 @@
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
+              },
+              "reusedSourceCount": {
+                "description": "Selected sources whose facts came unchanged from the previous version.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "extractedSourceCount": {
+                "description": "Selected sources sent to the model in this derivation.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -12480,6 +12597,9 @@
               "status": {
                 "type": "string",
                 "const": "cancelled"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
               }
             },
             "required": [
@@ -12505,6 +12625,9 @@
               "message": {
                 "description": "A fixed sentence the person can act on; absent for any other failure.",
                 "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/CareerProfileDerivationUsage"
               }
             },
             "required": [
@@ -12514,7 +12637,7 @@
             "additionalProperties": false
           }
         ],
-        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them."
+        "description": "Where the profile's newest derivation stands. Progress counts provider calls and is present once the worker planned them. A derivation that called a model gives what its calls used."
       },
       "CareerProfileFreshness": {
         "oneOf": [
@@ -17318,7 +17441,7 @@
       },
       "put": {
         "summary": "Create a workspace",
-        "description": "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+        "description": "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog`, or in sign-in mode the first preset the plan's model tiers allow. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         "requestBody": {
           "required": true,
           "content": {

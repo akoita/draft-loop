@@ -68,6 +68,7 @@ import {
   modelProfileCatalog,
   modelProfileEntryForReference,
   modelProfileNotSupportedMessage,
+  modelProfilePresets,
   modelProfileRouteIsSupported,
   modelProfileStartDisabledReason,
   modelProfileSupportForContext,
@@ -2024,6 +2025,13 @@ export function App({
     }
   };
 
+  /** A preset chosen in the start confirmation, such as one the plan allows (#2864). */
+  const applyModelPresetById = async (presetId: string): Promise<boolean> => {
+    const preset = modelProfilePresets.find(({ id }) => id === presetId);
+    if (preset === undefined) return false;
+    return applyModelProfiles({ author: preset.author, critic: preset.critic });
+  };
+
   const applyModelProfiles = async (references: ModelProfileReferences): Promise<boolean> => {
     if (
       state === null ||
@@ -2879,6 +2887,9 @@ export function App({
       {...(modelSettingsButton === undefined ? {} : { modelSettingsAction: modelSettingsButton })}
       startCandidateProfile={selectedCandidateProfile}
       {...(runModelProfiles === null ? {} : { startModelProfiles: runModelProfiles.refs })}
+      {...(modelSettingsButton === undefined || activePort.getModelProfileSupport === undefined
+        ? {}
+        : { applyModelPreset: applyModelPresetById })}
       {...(activePort.previewStartEvidence === undefined
         ? {}
         : {

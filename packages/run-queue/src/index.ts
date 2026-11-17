@@ -46,7 +46,9 @@ export {
   type ProfileDerivationKey,
   type ProfileDerivationOutcome,
   type ProfileDerivationProgress,
+  type ProfileDerivationSources,
   type ProfileDerivationState,
+  type ProfileDerivationUsage,
   profileDerivationJobKey,
   profileDerivationJobSchema,
 } from "./profile-derivation-job.js";

@@ -45,7 +45,7 @@ A plan sets these entitlements:
 | Entitlement           | Meaning                                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
 | Credits per period    | Credits granted each period (one month, three for a pass or Beta)                                  |
-| Model tiers           | The model tiers a run may use; a new job search offers only presets in them                        |
+| Model tiers           | Tiers a run may use; a new job search starts on a preset in them, and Start offers them inline     |
 | Seats                 | Active members plus pending invitations                                                            |
 | Candidate records     | Records the organisation may hold                                                                  |
 | Runs per day, at once | Daily and concurrent run limits; a run refunded for leaving no draft does not count toward the day |
