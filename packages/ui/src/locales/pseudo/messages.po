@@ -2182,6 +2182,7 @@ msgstr ""
 
 #: apps/web/src/feedback.tsx
 #: packages/ui/src/export-preview.tsx
+#: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -4154,6 +4155,10 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 msgid "Health > Notes"
+msgstr ""
+
+#: packages/ui/src/help-panel.tsx
+msgid "Help"
 msgstr ""
 
 #: packages/ui/src/provider-authentication.tsx

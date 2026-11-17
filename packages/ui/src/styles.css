@@ -11606,3 +11606,64 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   background: var(--teal-wash);
   font-size: var(--text-sm);
 }
+
+/* The Help button's guide (#2830): a modal side sheet on the right, full width on a phone. */
+.help-dialog {
+  box-sizing: border-box;
+  width: min(30rem, 100%);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  border: 0;
+  border-left: 1px solid var(--border-strong);
+  padding: var(--space-5);
+  overflow-y: auto;
+  color: var(--text-1);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.help-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+.help-dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: var(--scrim);
+}
+
+.help-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.help-dialog-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.help-intro {
+  margin: 0 0 var(--space-4);
+  color: var(--text-2);
+}
+
+.help-section {
+  border-top: 1px solid var(--border);
+  padding: var(--space-3) 0;
+}
+
+.help-section summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.help-section p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-2);
+  line-height: 1.5;
+}
