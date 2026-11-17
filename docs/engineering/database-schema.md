@@ -74,4 +74,6 @@ Expected: all tests pass. If `passes every released migration` fails, split the
 statement it names into expand and contract steps as above.
 
 Rollback itself is the operator's runbook in the private infrastructure
-repository. The previous images run against your newer schema there.
+repository. The previous images run against your newer schema there: the
+storage opens on a schema at or past its own newest migration and refuses only
+an older one (`src/schema-version-check.test.ts`).
