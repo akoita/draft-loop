@@ -284,6 +284,12 @@ returns a run's open draft, its findings or career evidence.
 | `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
 | `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
 
+With the operator's credential, the server's owner token, the server also
+offers `list_feedback` and `triage_feedback`: list members' notes by status and
+link each to a GitHub issue ([Feedback](../features/feedback.md)). It never
+offers them with an agent token or a member's sign-in, and the API refuses any
+other credential.
+
 `search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
 the same user guide a member reads from the Help button, so an agent can
 answer how DraftLoop works without guessing.

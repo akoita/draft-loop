@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   type ApplicationService,
   defaultHostedKnowledgeSourceMaxBytes,
@@ -236,6 +237,8 @@ export interface ApiOptions {
   readonly support?: SupportSettings;
   /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
   readonly feedback?: FeedbackRoutesOptions["feedback"];
+  /** The release this server runs, which a feedback note records (#2875). */
+  readonly serverRelease?: string;
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
@@ -284,7 +287,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     bodyLimit: apiBodyLimitBytes,
     // Cloud Run's front end terminates TLS; the API is never reached directly.
     trustProxy: true,
+    // A random id per request, unique across instances, so a member's feedback can name the
+    // request that failed and the operator can find its log line (#2875).
+    genReqId: () => randomUUID(),
   }).withTypeProvider<ZodTypeProvider>();
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler(sendError);
@@ -929,7 +938,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (options.betaWaitlist !== undefined) {
     registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
-  if (options.feedback !== undefined) registerFeedbackRoutes(app, { feedback: options.feedback });
+  if (options.feedback !== undefined) {
+    registerFeedbackRoutes(app, {
+      feedback: options.feedback,
+      serverRelease: options.serverRelease ?? null,
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+    });
+  }
   registerHelpRoutes(app);
   if (options.support !== undefined && application !== undefined) {
     // The assistant uses the career interview's Claude route, read per request.

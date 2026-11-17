@@ -86,6 +86,10 @@
     "./help-guide": {
       "types": "./src/help-guide.ts",
       "import": "./src/help-guide.ts"
+    },
+    "./feedback": {
+      "types": "./src/feedback.ts",
+      "import": "./src/feedback.ts"
     }
   },
   "files": [

@@ -68,12 +68,17 @@ const auth: ApiAuthOptions =
   config.auth.mode === "oidc" && directory !== undefined
     ? { ...config.auth, resolveSignIn: directory.resolveSignIn }
     : { mode: "owner" };
+const serverRelease =
+  process.env.DRAFT_LOOP_SERVER_RELEASE?.trim() || process.env.K_REVISION?.trim() || undefined;
 const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
   logger: cloudLoggingOptions(),
   rateLimits: config.rateLimits,
   support: supportSettings,
+  // The release a feedback note records (#2875): the deploy's own name for it, else Cloud Run's
+  // revision.
+  ...(serverRelease === undefined ? {} : { serverRelease }),
   tenants: {
     ...hosted.tenants,
     // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself

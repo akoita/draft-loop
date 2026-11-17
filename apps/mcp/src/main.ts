@@ -7,6 +7,7 @@ import { runStopHook } from "./hook.js";
 import { parseInitArguments, runInit } from "./init.js";
 import {
   createDraftLoopMcpServer,
+  mayBeOperatorToken,
   remoteMcpPath,
   remoteOptionsFromEnvironment,
   serveRemoteMcp,
@@ -47,8 +48,12 @@ if (command === "init") {
   const port = typeof address === "object" && address !== null ? address.port : options.port;
   process.stderr.write(`DraftLoop MCP tools on http://${options.host}:${port}${remoteMcpPath}\n`);
 } else if (command === undefined) {
-  // Stdout carries the protocol; nothing else may write to it.
-  const server = createDraftLoopMcpServer(configFromEnvironment());
+  // Stdout carries the protocol; nothing else may write to it. The operator's feedback tools are
+  // offered when the token at start is not an agent token: the owner token is the operator's.
+  const config = configFromEnvironment();
+  const server = createDraftLoopMcpServer(config, {
+    operator: mayBeOperatorToken(await config.token()),
+  });
   await server.connect(new StdioServerTransport());
 } else {
   process.stderr.write(

@@ -470,6 +470,47 @@ export interface ApiSchemas {
     readonly sections: Record<string, never>;
     readonly facts: Record<string, never>;
   };
+  "FeedbackBrowser": {
+    readonly family: string;
+    readonly os: string;
+    readonly viewport: string;
+    readonly language: string;
+    readonly theme: "light" | "dark";
+  };
+  "FeedbackBrowserInput": {
+    readonly family: string;
+    readonly os: string;
+    readonly viewport: string;
+    readonly language: string;
+    readonly theme: "light" | "dark";
+  };
+  "FeedbackClientContextInput": {
+    readonly route?: string;
+    readonly webBuild?: string;
+    readonly ids?: {
+      readonly recordId?: string;
+      readonly applicationId?: string;
+      readonly runId?: string;
+    };
+    readonly recentErrors?: readonly (ApiSchemas["FeedbackRecentErrorInput"])[];
+    readonly lastFailedRequestId?: string;
+    readonly browser?: ApiSchemas["FeedbackBrowserInput"];
+  };
+  "FeedbackContext": {
+    readonly route?: string;
+    readonly webBuild?: string;
+    readonly ids?: {
+      readonly recordId?: string;
+      readonly applicationId?: string;
+      readonly runId?: string;
+    };
+    readonly recentErrors?: readonly (ApiSchemas["FeedbackRecentError"])[];
+    readonly lastFailedRequestId?: string;
+    readonly browser?: ApiSchemas["FeedbackBrowser"];
+    readonly source: "web" | "agent";
+    readonly serverRelease: string | null;
+    readonly plan: string | null;
+  };
   "FeedbackNote": {
     readonly noteId: string;
     readonly kind: "note" | "support";
@@ -482,7 +523,25 @@ export interface ApiSchemas {
       readonly role: "member" | "assistant";
       readonly text: string;
     })[] | null;
+    readonly context: ApiSchemas["FeedbackContext"] | null;
+    readonly status: "new" | "triaged" | "issue" | "closed";
+    readonly issueUrl: string | null;
+    readonly triagedAt: string | null;
     readonly sentAt: string;
+  };
+  "FeedbackRecentError": {
+    readonly code: string;
+    readonly message: string;
+    readonly at: string;
+  };
+  "FeedbackRecentErrorInput": {
+    readonly code: string;
+    readonly message: string;
+    readonly at: string;
+  };
+  "FeedbackTriageInput": {
+    readonly status: "new" | "triaged" | "issue" | "closed";
+    readonly issueUrl?: string | null;
   };
   "GrantedCredits": {
     readonly grant: {
@@ -3011,6 +3070,7 @@ export interface ApiOperations {
       readonly text: string;
       readonly category?: "bug" | "idea" | "other";
       readonly screen: string;
+      readonly context?: ApiSchemas["FeedbackClientContextInput"];
     };
     readonly response: ApiSchemas["FeedbackNote"];
   };
@@ -3022,16 +3082,25 @@ export interface ApiOperations {
       readonly text: string;
       readonly category?: "bug" | "idea" | "other";
       readonly screen: string;
+      readonly context?: ApiSchemas["FeedbackClientContextInput"];
     };
     readonly response: ApiSchemas["FeedbackNote"];
   };
   "GET /v1/operator/feedback": {
     readonly query?: {
       readonly limit?: number;
+      readonly status?: "new" | "triaged" | "issue" | "closed";
     };
     readonly response: {
       readonly notes: readonly (ApiSchemas["FeedbackNote"])[];
     };
+  };
+  "PATCH /v1/operator/feedback/{noteId}": {
+    readonly path: {
+      readonly noteId: string;
+    };
+    readonly body: ApiSchemas["FeedbackTriageInput"];
+    readonly response: ApiSchemas["FeedbackNote"];
   };
   "GET /v1/help": {
     readonly query?: {

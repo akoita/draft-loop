@@ -162,6 +162,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/writing-policy/versions",
   "GET /v1/workspaces/:workspaceId/writing-policy/versions/:checksum",
   "GET /v1/writing-policy-template",
+  "PATCH /v1/operator/feedback/:noteId",
   "PATCH /v1/organisation/members/:memberId",
   "PATCH /v1/workspaces/:workspaceId/application-folders/:folderId",
   "PATCH /v1/workspaces/:workspaceId/applications/:applicationId",

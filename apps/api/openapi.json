@@ -5207,6 +5207,271 @@
           "facts"
         ]
       },
+      "FeedbackRecentErrorInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "description": "The API's content-free error code, or `network` when it did not answer."
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The API's content-free message, cut to 200 characters."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackBrowserInput": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Browser family, such as Firefox; never the user agent."
+          },
+          "os": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Operating system family, such as macOS."
+          },
+          "viewport": {
+            "type": "string",
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "description": "Window size in CSS pixels, such as 1280x800."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "os",
+          "viewport",
+          "language",
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackClientContextInput": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentErrorInput"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowserInput"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackContextInput": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentErrorInput"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowserInput"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "agent"
+            ],
+            "description": "Set by the server from the route: `web` from the screen, `agent` from a token."
+          },
+          "serverRelease": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The server release that took the note."
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The organisation's plan when the note was sent."
+          }
+        },
+        "required": [
+          "source",
+          "serverRelease",
+          "plan"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackTriageInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to; null clears it, leaving it out keeps it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https:\\/\\/github\\.com\\/[A-Za-z0-9-]{1,39}\\/[A-Za-z0-9._-]{1,100}\\/issues\\/[1-9]\\d{0,9}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "FeedbackNoteInput": {
         "type": "object",
         "properties": {
@@ -5279,6 +5544,39 @@
             ],
             "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackContextInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The technical facts sent with a note; null for a ticket or an older note."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "triagedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sentAt": {
             "type": "string"
           }
@@ -5292,6 +5590,10 @@
           "screen",
           "text",
           "transcript",
+          "context",
+          "status",
+          "issueUrl",
+          "triagedAt",
           "sentAt"
         ]
       },
@@ -13435,6 +13737,271 @@
         ],
         "additionalProperties": false
       },
+      "FeedbackRecentError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "description": "The API's content-free error code, or `network` when it did not answer."
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The API's content-free message, cut to 200 characters."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackBrowser": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Browser family, such as Firefox; never the user agent."
+          },
+          "os": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Operating system family, such as macOS."
+          },
+          "viewport": {
+            "type": "string",
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "description": "Window size in CSS pixels, such as 1280x800."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "os",
+          "viewport",
+          "language",
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackClientContext": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentError"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowser"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackContext": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentError"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowser"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "agent"
+            ],
+            "description": "Set by the server from the route: `web` from the screen, `agent` from a token."
+          },
+          "serverRelease": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The server release that took the note."
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The organisation's plan when the note was sent."
+          }
+        },
+        "required": [
+          "source",
+          "serverRelease",
+          "plan"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackTriage": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to; null clears it, leaving it out keeps it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https:\\/\\/github\\.com\\/[A-Za-z0-9-]{1,39}\\/[A-Za-z0-9._-]{1,100}\\/issues\\/[1-9]\\d{0,9}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "FeedbackNote": {
         "type": "object",
         "properties": {
@@ -13508,6 +14075,39 @@
             ],
             "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The technical facts sent with a note; null for a ticket or an older note."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "triagedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sentAt": {
             "type": "string"
           }
@@ -13521,6 +14121,10 @@
           "screen",
           "text",
           "transcript",
+          "context",
+          "status",
+          "issueUrl",
+          "triagedAt",
           "sentAt"
         ],
         "additionalProperties": false
@@ -30755,7 +31359,7 @@
     "/v1/feedback": {
       "post": {
         "summary": "Send feedback about DraftLoop to the operator",
-        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read. 400 invalid_input for an empty note or one over 2000 characters.",
+        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source `web`, the server release and the plan. 400 invalid_input for an empty note, one over 2000 characters or a context over its bounds.",
         "requestBody": {
           "required": true,
           "content": {
@@ -30783,6 +31387,9 @@
                     "maxLength": 80,
                     "pattern": "^[A-Za-z0-9._:/-]+$",
                     "description": "Where the note was written: the screen's name, or `agent`."
+                  },
+                  "context": {
+                    "$ref": "#/components/schemas/FeedbackClientContextInput"
                   }
                 },
                 "required": [
@@ -30851,7 +31458,7 @@
     "/v1/workspaces/{workspaceId}/feedback": {
       "post": {
         "summary": "Send feedback about DraftLoop to the operator, from an agent",
-        "description": "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation.",
+        "description": "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation. Its context's source is `agent`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -30879,6 +31486,9 @@
                     "maxLength": 80,
                     "pattern": "^[A-Za-z0-9._:/-]+$",
                     "description": "Where the note was written: the screen's name, or `agent`."
+                  },
+                  "context": {
+                    "$ref": "#/components/schemas/FeedbackClientContextInput"
                   }
                 },
                 "required": [
@@ -30959,7 +31569,7 @@
     "/v1/operator/feedback": {
       "get": {
         "summary": "List members' feedback notes, newest first",
-        "description": "Operator only. At most `limit` notes and support tickets, 100 by default. Support tickets are deleted 90 days after they were sent.",
+        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, of one `status` when it is given. Support tickets are deleted 90 days after they were sent.",
         "parameters": [
           {
             "schema": {
@@ -30971,6 +31581,21 @@
             "in": "query",
             "name": "limit",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "triaged",
+                "issue",
+                "closed"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Only notes with this status."
           }
         ],
         "responses": {
@@ -31007,6 +31632,86 @@
             }
           },
           "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/feedback/{noteId}": {
+      "patch": {
+        "summary": "Triage a feedback note",
+        "description": "Operator only. Sets the note's status (`new`, `triaged`, `issue`, `closed`) and its GitHub issue link: a link replaces the stored one, null clears it, leaving it out keeps it. 400 invalid_input for status `issue` without a link or a link that is not an https GitHub issue address; 404 for an unknown note.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackTriageInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "noteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
