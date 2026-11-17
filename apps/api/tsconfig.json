@@ -42,6 +42,9 @@
     },
     {
       "path": "../../packages/user-guide"
+    },
+    {
+      "path": "../../packages/support"
     }
   ]
 }

@@ -7369,6 +7369,116 @@
           "files"
         ]
       },
+      "SupportReplyInput": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "guide_search"
+            ],
+            "description": "`assistant` when the model answered; `guide_search` when it could not, with `reason`."
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "answered",
+                  "refused",
+                  "needs_person"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "disabled",
+                  "member_limit",
+                  "cost_cap",
+                  "question_too_long",
+                  "model_failed",
+                  "no_answer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "description": "The answer, as plain text; null for guide search.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "enum": [
+                    "evidence",
+                    "job",
+                    "draft",
+                    "review",
+                    "prepare",
+                    "display",
+                    "agents",
+                    "credits",
+                    "privacy",
+                    "problems"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Empty for an answer; the section's text for guide search."
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "paragraphs"
+              ]
+            },
+            "description": "The guide sections the answer used, or that match the question, best first."
+          },
+          "ticket_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "conversation_id",
+          "mode",
+          "outcome",
+          "reason",
+          "text",
+          "sections",
+          "ticket_id"
+        ]
+      },
       "UsageLineInput": {
         "type": "object",
         "properties": {
@@ -15230,6 +15340,118 @@
           "license",
           "base",
           "files"
+        ],
+        "additionalProperties": false
+      },
+      "SupportReply": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "guide_search"
+            ],
+            "description": "`assistant` when the model answered; `guide_search` when it could not, with `reason`."
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "answered",
+                  "refused",
+                  "needs_person"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "disabled",
+                  "member_limit",
+                  "cost_cap",
+                  "question_too_long",
+                  "model_failed",
+                  "no_answer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "description": "The answer, as plain text; null for guide search.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "enum": [
+                    "evidence",
+                    "job",
+                    "draft",
+                    "review",
+                    "prepare",
+                    "display",
+                    "agents",
+                    "credits",
+                    "privacy",
+                    "problems"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Empty for an answer; the section's text for guide search."
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "paragraphs"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The guide sections the answer used, or that match the question, best first."
+          },
+          "ticket_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "conversation_id",
+          "mode",
+          "outcome",
+          "reason",
+          "text",
+          "sections",
+          "ticket_id"
         ],
         "additionalProperties": false
       },
@@ -29777,6 +29999,216 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HelpGuide"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/support/conversations": {
+      "post": {
+        "summary": "Start a support conversation",
+        "description": "Returns a new conversation id for the screen to send questions with. The server stores nothing until the member hands the conversation to a person. `assistant_available` is false when the server answers with guide search only.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation_id": {
+                      "type": "string"
+                    },
+                    "assistant_available": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "conversation_id",
+                    "assistant_available"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/support/conversations/{conversationId}/messages": {
+      "post": {
+        "summary": "Ask the support assistant a question",
+        "description": "Answers from the user guide and the caller's own plan, credits and runs in this record, in `language`. Falls back to the matching guide sections, with `reason`, when the assistant is off, the member's daily questions or the server's daily cost cap are spent, or the model fails. Questions do not count against the plan's model calls.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000,
+                    "description": "The member's question, 1000 characters at most."
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "fr"
+                    ],
+                    "description": "The screen's language; the answer is in it."
+                  },
+                  "history": {
+                    "default": [],
+                    "description": "Earlier turns, oldest first, as the screen shows them; the server keeps none and sends the last six.",
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "member",
+                            "assistant"
+                          ]
+                        },
+                        "text": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "question",
+                  "language"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^sup_[A-Za-z0-9-]{8,64}$"
+            },
+            "in": "path",
+            "name": "conversationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportReply"
                 }
               }
             }

@@ -20,9 +20,11 @@ import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
+import { readSupportSettings } from "./support-config.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
+const supportSettings = readSupportSettings(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
@@ -71,6 +73,7 @@ const app = await buildApi({
   auth,
   logger: cloudLoggingOptions(),
   rateLimits: config.rateLimits,
+  support: supportSettings,
   tenants: {
     ...hosted.tenants,
     // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself

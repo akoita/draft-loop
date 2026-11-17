@@ -120,6 +120,9 @@ importers:
       '@draft-loop/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@draft-loop/support':
+        specifier: workspace:*
+        version: link:../../packages/support
       '@draft-loop/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -622,6 +625,15 @@ importers:
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
+
+  packages/support:
+    dependencies:
+      '@draft-loop/user-guide':
+        specifier: workspace:*
+        version: link:../user-guide
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/ui:
     dependencies:

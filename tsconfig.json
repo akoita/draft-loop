@@ -38,6 +38,7 @@
     { "path": "./packages/run-queue" },
     { "path": "./packages/security" },
     { "path": "./packages/user-guide" },
+    { "path": "./packages/support" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
     { "path": "./packages/ui" },
