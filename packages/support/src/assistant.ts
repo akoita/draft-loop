@@ -211,10 +211,20 @@ interface ToolResult {
 
 class FallbackSignal extends Error {
   readonly reason: SupportFallbackReason;
-  constructor(reason: SupportFallbackReason) {
+  readonly failure: string | undefined;
+  constructor(reason: SupportFallbackReason, failure?: string) {
     super(reason);
     this.reason = reason;
+    this.failure = failure;
   }
+}
+
+/** A content-free code for a failed model call: the error's class, never its message. */
+function callFailure(error: unknown): string {
+  if (error instanceof Error) {
+    return `call_failed:${error.name === "Error" ? error.constructor.name : error.name}`;
+  }
+  return "call_failed:unknown";
 }
 
 export function createSupportAssistant(options: SupportAssistantOptions): SupportAssistant {
@@ -234,12 +244,13 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
       const guide = helpGuide(question.language);
       let modelCalls = 0;
       let spentUsd: number | null = null;
-      const fallback = (reason: SupportFallbackReason): SupportReply => {
+      const fallback = (reason: SupportFallbackReason, failure?: string): SupportReply => {
         audit({
           kind: "reply",
           conversationId: question.conversationId,
           mode: "guide_search",
           result: reason,
+          ...(failure === undefined ? {} : { failure }),
           modelCalls,
           estimatedUsd: spentUsd,
           at: now(),
@@ -294,9 +305,9 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
             maxOutputTokens: limits.maxOutputTokens,
             signal: AbortSignal.timeout(timeoutMs),
           });
-        } catch {
+        } catch (error) {
           modelCalls += 1;
-          throw new FallbackSignal("model_failed");
+          throw new FallbackSignal("model_failed", callFailure(error));
         }
         modelCalls += 1;
         if (response.estimatedUsd !== null) {
@@ -316,7 +327,11 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
             // A usage record lost here is visible in the audit line's cost; the reply goes on.
           });
         const step = stepSchema.safeParse(response.output);
-        if (!step.success) throw new FallbackSignal("model_failed");
+        if (!step.success) {
+          // Which field broke the step, by path only: the model's words stay out of the audit.
+          const path = step.error.issues[0]?.path.join(".") || "step";
+          throw new FallbackSignal("model_failed", `invalid_step:${path}`);
+        }
         return step.data;
       };
 
@@ -414,7 +429,7 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
         }
         return fallback("no_answer");
       } catch (error) {
-        if (error instanceof FallbackSignal) return fallback(error.reason);
+        if (error instanceof FallbackSignal) return fallback(error.reason, error.failure);
         throw error;
       }
     },

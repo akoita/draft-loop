@@ -344,6 +344,9 @@ describe("the support assistant's limits (#2882)", () => {
     const reply = await invalid.assistant.answer(ask("How do I add a job?"));
     expect(reply).toMatchObject({ mode: "guide_search", reason: "model_failed" });
     expect(reply.sections[0]?.id).toBe("job");
+    // The audit names why, by error class or field path, never with the model's words.
+    expect(failing.audit.at(-1)).toMatchObject({ failure: "call_failed:Error" });
+    expect(invalid.audit.at(-1)).toMatchObject({ failure: "invalid_step:answer" });
   });
 
   it("falls back when the model keeps calling tools past the step limit", async () => {
