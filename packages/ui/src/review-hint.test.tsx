@@ -26,6 +26,11 @@ describe("the review screen's guided hint", () => {
     expect(guided(empty)).not.toContain(hint);
   });
 
+  it("ends once the draft is approved", () => {
+    const fixture = createFixtureReviewState();
+    expect(guided({ ...fixture, approval: "approved" as const })).not.toContain(hint);
+  });
+
   it("waits while the review is still running", () => {
     const fixture = createFixtureReviewState();
     const running = { ...fixture, execution: { ...fixture.execution, status: "running" as const } };
