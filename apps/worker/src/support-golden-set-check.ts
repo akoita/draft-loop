@@ -1,5 +1,6 @@
 import process from "node:process";
 import { catalogModelPricing } from "@draft-loop/application";
+import { ProviderAdapterError } from "@draft-loop/providers";
 import {
   createSupportAssistant,
   gradeSupportGoldenReply,
@@ -61,28 +62,39 @@ const supportModel: SupportModel = async (request) => {
     capReached = true;
     throw new Error(`The next call could pass the US$${capUsd} cap.`);
   }
-  const response = await route.execute({
-    contextSnapshotId: "support-golden-set-check",
-    model,
-    systemPrompt: request.systemPrompt,
-    input: request.input as never,
-    promptCache: {
+  const response = await route
+    .execute({
+      contextSnapshotId: "support-golden-set-check",
+      model,
       systemPrompt: request.systemPrompt,
-      callInstructions: "",
-      stableInputMembers: 1,
-      lifetime: "1h",
-    },
-    outputSchema: request.outputSchema as never,
-    outputName: request.outputName,
-    maxOutputTokens: request.maxOutputTokens,
-    dataPolicy: {
-      allowTransmission: true,
-      allowedCompanies: ["anthropic"],
-      sensitiveData: false,
-      sensitiveDataAcknowledged: false,
-    },
-    ...(request.signal === undefined ? {} : { signal: request.signal }),
-  });
+      input: request.input as never,
+      promptCache: {
+        systemPrompt: request.systemPrompt,
+        callInstructions: "",
+        stableInputMembers: 1,
+        lifetime: "1h",
+      },
+      outputSchema: request.outputSchema as never,
+      outputName: request.outputName,
+      maxOutputTokens: request.maxOutputTokens,
+      dataPolicy: {
+        allowTransmission: true,
+        allowedCompanies: ["anthropic"],
+        sensitiveData: false,
+        sensitiveDataAcknowledged: false,
+      },
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    })
+    .catch((error: unknown) => {
+      // Content-free fields only: code, status, stage, route and the provider's own error type.
+      const fields =
+        error instanceof ProviderAdapterError
+          ? ` code=${error.code} status=${error.status ?? "-"} stage=${error.failureStage ?? "-"} route=${error.route ?? "-"} type=${error.providerErrorType ?? "-"} diagnostics=${error.diagnostics.length}`
+          : "";
+      const message = `${error instanceof Error ? error.name : "unknown"}${fields}`;
+      console.error(`call failed: ${message.slice(0, 300)}`);
+      throw error;
+    });
   const cost = response.cost.estimatedUsd;
   if (cost === undefined || cost === null) {
     // Without a price the cap cannot hold, so the check stops here.
@@ -139,7 +151,11 @@ const usage: SupportUsageLedger = {
   record: async () => undefined,
 };
 
+let failure: string | undefined;
 const assistant = createSupportAssistant({
+  onAudit: (event) => {
+    if (event.kind === "reply") failure = event.failure;
+  },
   model: supportModel,
   account,
   usage,
@@ -150,6 +166,7 @@ const assistant = createSupportAssistant({
 const results: SupportGoldenResult[] = [];
 for (const question of supportGoldenSet) {
   questionUsd = 0;
+  failure = undefined;
   const reply = await assistant.answer({
     memberId: "check-member",
     conversationId: `sup_check_${question.id}`,
@@ -159,7 +176,9 @@ for (const question of supportGoldenSet) {
   const result = gradeSupportGoldenReply(question, reply, questionUsd);
   results.push(result);
   const detail =
-    reply.mode === "assistant" ? `outcome=${reply.outcome}` : `fallback=${reply.reason}`;
+    reply.mode === "assistant"
+      ? `outcome=${reply.outcome}`
+      : `fallback=${reply.reason}${failure === undefined ? "" : ` (${failure})`}`;
   console.info(
     `${result.verdict.padEnd(19)} ${question.id} ${detail} cited=${result.cited.join(",") || "-"} cost=${questionUsd.toFixed(4)}`,
   );

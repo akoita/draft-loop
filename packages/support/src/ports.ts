@@ -119,6 +119,11 @@ export type SupportAuditEvent =
       readonly mode: "assistant" | "guide_search";
       /** The outcome for an assistant reply, the fallback reason for a guide search. */
       readonly result: string;
+      /**
+       * Why a model call failed, without its words: `call_failed:<error class>` or
+       * `invalid_step:<field path>`.
+       */
+      readonly failure?: string;
       readonly modelCalls: number;
       readonly estimatedUsd: number | null;
       readonly at: string;
