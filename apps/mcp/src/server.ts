@@ -17,6 +17,7 @@ import { type OperatorFeedbackApi, registerOperatorFeedbackTools } from "./opera
 import { type ProjectsApi, registerProjectTools } from "./projects.js";
 import { registerApplicationPrompts } from "./prompts.js";
 import { type RunsApi, registerRunTools } from "./runs.js";
+import { registerServiceNoticeTools, type ServiceNoticeApi } from "./service-notice.js";
 
 /**
  * The DraftLoop MCP server (ADR 0011 D17, #2023, #2440). A host agent records notable work it
@@ -36,6 +37,7 @@ export const serverInstructions = [
   "add_project files a project card about one code repository you read on the candidate's machine, counted from git and shown to the candidate first; it never takes code (draftloop://projects/guide).",
   "send_feedback passes the candidate's own note about DraftLoop to the people who run it, only when they ask.",
   "search_help and draftloop://help/guide/en (or /fr) hold DraftLoop's user guide: answer the candidate's questions about using DraftLoop from it.",
+  "A refusal coded service_maintenance means DraftLoop paused changes for planned maintenance: service_notice says until when; tell the candidate and wait instead of retrying.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
   "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
 ].join(" ");
@@ -151,6 +153,8 @@ export function createWorkJournalMcpServer(
   projects?: ProjectsApi,
   /** Only with the operator's credential (#2877). */
   operatorFeedback?: OperatorFeedbackApi,
+  /** Planned maintenance (#2967), read from the public route. */
+  serviceNotice?: ServiceNoticeApi,
 ): McpServer {
   const server = new McpServer(
     { name: "draftloop", version: serverVersion },
@@ -220,6 +224,7 @@ export function createWorkJournalMcpServer(
   if (operatorFeedback !== undefined) {
     registerOperatorFeedbackTools(server, operatorFeedback, failure);
   }
+  if (serviceNotice !== undefined) registerServiceNoticeTools(server, serviceNotice, failure);
 
   server.registerResource(
     "work-journal-guide",
