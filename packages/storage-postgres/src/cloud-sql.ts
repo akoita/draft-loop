@@ -1,5 +1,7 @@
 import { mkdir } from "node:fs/promises";
+import { createServer, type Server, type Socket } from "node:net";
 import path from "node:path";
+import type { Duplex } from "node:stream";
 
 import { AuthTypes, Connector, IpAddressTypes } from "@google-cloud/cloud-sql-connector";
 
@@ -19,12 +21,12 @@ export interface CloudSqlProxyConfig {
 
 /** The part of the connector this module uses, so tests can stand in for it. */
 export interface CloudSqlConnector {
-  readonly startLocalProxy: (options: {
+  /** Resolves a function that opens one TLS tunnel to the instance, signed in as configured. */
+  readonly getOptions: (options: {
     readonly instanceConnectionName: string;
     readonly ipType: IpAddressTypes;
     readonly authType: AuthTypes;
-    readonly listenOptions: { readonly path: string };
-  }) => Promise<void>;
+  }) => Promise<{ readonly stream: () => Duplex }>;
   readonly close: () => void;
 }
 
@@ -67,22 +69,68 @@ export function readCloudSqlProxyConfig(env: NodeJS.ProcessEnv): CloudSqlProxyCo
   return { instanceConnectionName, socketDirectory };
 }
 
-/** Starts the connector's local socket on the instance's private IP. */
+/**
+ * Joins one local connection to one tunnel. The connector's own `startLocalProxy` pipes the two
+ * sockets with no error listener, so a write to a side the other end has closed (EPIPE) was an
+ * unhandled error that stopped the whole process, failing every request in flight. Here an error
+ * on either side ends both, and only that one database connection fails.
+ */
+export function joinTunnel(local: Socket, tunnel: Duplex): void {
+  const end = () => {
+    local.destroy();
+    tunnel.destroy();
+  };
+  local.on("error", end);
+  tunnel.on("error", end);
+  local.on("close", end);
+  tunnel.on("close", end);
+  local.pipe(tunnel);
+  tunnel.pipe(local);
+}
+
+/** Starts the local socket on the instance's private IP. */
 export async function startCloudSqlProxy(options: CloudSqlProxyOptions): Promise<CloudSqlProxy> {
   const connector = options.connector ?? new Connector();
+  let server: Server | undefined;
   try {
     await mkdir(options.socketDirectory, { recursive: true, mode: 0o700 });
-    await connector.startLocalProxy({
+    const { stream } = await connector.getOptions({
       instanceConnectionName: options.instanceConnectionName,
       ipType: IpAddressTypes.PRIVATE,
       authType: options.login === "iam" ? AuthTypes.IAM : AuthTypes.PASSWORD,
-      listenOptions: { path: path.join(options.socketDirectory, ".s.PGSQL.5432") },
+    });
+    const listening = createServer((local) => {
+      let tunnel: Duplex;
+      try {
+        tunnel = stream();
+      } catch {
+        local.destroy();
+        return;
+      }
+      joinTunnel(local, tunnel);
+    });
+    server = listening;
+    // A failure after the socket listens must not stop the process either.
+    listening.on("error", () => undefined);
+    await new Promise<void>((resolve, reject) => {
+      listening.once("error", reject);
+      listening.listen({ path: path.join(options.socketDirectory, ".s.PGSQL.5432") }, () => {
+        listening.off("error", reject);
+        resolve();
+      });
     });
   } catch (error) {
+    server?.close();
     connector.close();
     throw error;
   }
-  return { close: () => connector.close() };
+  const listening = server;
+  return {
+    close: () => {
+      listening.close();
+      connector.close();
+    },
+  };
 }
 
 /** Starts the connector when the environment configures it; otherwise does nothing. */
