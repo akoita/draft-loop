@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { activateScreenLocale, ScreensI18nProvider } from "./i18n.js";
 import {
+  presetsWithinTiers,
   proposedCvLanguage,
   WorkspaceSetupScreen,
   workspaceSetupAdvancedNote,
@@ -81,5 +82,28 @@ describe("first-run workspace setup", () => {
     expect(workspaceSetupAdvancedNote({ maxRounds: 3, preset: economy, fixtureMode: true })).toBe(
       "Economy · 3 rounds · Demo mode on",
     );
+  });
+});
+
+describe("presets a plan allows (#2864)", () => {
+  const presets = workspaceSetupPresets();
+
+  it("keeps only presets whose two models are in the plan's tiers", () => {
+    const economy = presetsWithinTiers(presets, ["economy"]);
+    expect(economy.length).toBeGreaterThan(0);
+    expect(economy.every(({ tiers }) => tiers?.every((tier) => tier === "economy"))).toBe(true);
+    expect(economy.some(({ id }) => id === "balanced")).toBe(false);
+  });
+
+  it("keeps every preset when the plan's tiers are unknown", () => {
+    expect(presetsWithinTiers(presets, undefined)).toEqual(presets);
+  });
+
+  it("selects the first allowed preset when the default is not offered", () => {
+    const economy = presetsWithinTiers(presets, ["economy"]);
+    const html = renderToStaticMarkup(
+      <WorkspaceSetupScreen presets={economy} busy={false} problem={null} onCreate={() => {}} />,
+    );
+    expect(html).toContain(`checked="" value="${economy[0]?.id}"`);
   });
 });

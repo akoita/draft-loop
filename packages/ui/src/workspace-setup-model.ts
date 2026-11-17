@@ -16,6 +16,8 @@ export interface WorkspaceSetupPreset {
   readonly label: string;
   readonly author: WorkspaceSetupModel;
   readonly critic: WorkspaceSetupModel;
+  /** The price tiers of the two models, which a plan's model tiers must both include. */
+  readonly tiers?: readonly string[];
 }
 
 /** What the person chose on the first-run setup screen. */
@@ -58,7 +60,27 @@ export function workspaceSetupPresets(): readonly WorkspaceSetupPreset[] {
         label: presetDisplayName(preset.label),
         author: { company: author.provider, model: author.modelId },
         critic: { company: critic.provider, model: critic.modelId },
+        tiers: [author.tier, critic.tier],
       },
     ];
   });
+}
+
+/**
+ * The presets a plan's model tiers allow, so a new workspace never starts on a pair its first run
+ * refuses (#2864). Without known tiers, every preset stays.
+ */
+export function presetsWithinTiers(
+  presets: readonly WorkspaceSetupPreset[],
+  allowed: readonly string[] | undefined,
+): readonly WorkspaceSetupPreset[] {
+  if (allowed === undefined) return presets;
+  return presets.filter(({ tiers }) => (tiers ?? []).every((tier) => allowed.includes(tier)));
+}
+
+/** The preset a setup screen selects first: the default when offered, else the first one. */
+export function initialSetupPresetId(presets: readonly WorkspaceSetupPreset[]): string {
+  return presets.some(({ id }) => id === defaultWorkspaceSetupPresetId)
+    ? defaultWorkspaceSetupPresetId
+    : (presets[0]?.id ?? "");
 }

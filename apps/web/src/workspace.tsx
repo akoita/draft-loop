@@ -1,4 +1,5 @@
 import {
+  presetsWithinTiers,
   type WorkspaceSetupChoice,
   type WorkspaceSetupPreset,
   WorkspaceSetupScreen,
@@ -53,15 +54,22 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
     };
   }, [client, onWorkspace, workspaceId]);
 
-  // Only the presets whose two models the service routes; all of them when it cannot say.
+  // Only the presets whose two models the service routes and the plan's model tiers allow (#2864);
+  // all of them when the service cannot say. Owner-token mode has no plan, so its read fails.
   useEffect(() => {
     if (state.kind !== "missing") return;
     let current = true;
-    client.call("GET /v1/model-catalog", {}).then(
-      (catalog) => {
+    const planTiers = client.call("GET /v1/organisation/credits", {}).then(
+      (credits): readonly string[] | undefined => credits.entitlements.modelTiers,
+      () => undefined,
+    );
+    Promise.all([client.call("GET /v1/model-catalog", {}), planTiers]).then(
+      ([catalog, tiers]) => {
         if (!current) return;
         const routable = routablePresets(workspaceSetupPresets(), catalog.models);
-        if (routable.length > 0) setPresets(routable);
+        const allowed = presetsWithinTiers(routable, tiers);
+        if (allowed.length > 0) setPresets(allowed);
+        else if (routable.length > 0) setPresets(routable);
       },
       () => undefined,
     );

@@ -7,6 +7,7 @@ import { modelDisplayName, providerDisplayName } from "./model-profile-presentat
 import {
   defaultWorkspaceSetupPresetId,
   defaultWorkspaceSetupRounds,
+  initialSetupPresetId,
   type WorkspaceSetupChoice,
   type WorkspaceSetupModel,
   type WorkspaceSetupPreset,
@@ -68,13 +69,13 @@ export function WorkspaceSetupScreen({
   const { locale } = useScreenLocale();
   const [language, setLanguage] = useState(() => proposedCvLanguage(locale));
   const [maxRounds, setMaxRounds] = useState<number>(defaultWorkspaceSetupRounds);
-  const [presetId, setPresetId] = useState(
-    presets.some(({ id }) => id === defaultWorkspaceSetupPresetId)
-      ? defaultWorkspaceSetupPresetId
-      : (presets[0]?.id ?? ""),
-  );
+  const [presetId, setPresetId] = useState(() => initialSetupPresetId(presets));
   const [fixtureMode, setFixtureMode] = useState(false);
-  const preset = presets.find(({ id }) => id === presetId);
+  // The host may narrow the presets after the first render, such as to the plan's tiers: a chosen
+  // preset that is no longer offered falls back to the first one that is.
+  const preset =
+    presets.find(({ id }) => id === presetId) ??
+    presets.find(({ id }) => id === initialSetupPresetId(presets));
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -120,7 +121,7 @@ export function WorkspaceSetupScreen({
                   type="radio"
                   name="workspace-setup-preset"
                   value={option.id}
-                  checked={option.id === presetId}
+                  checked={option.id === preset?.id}
                   onChange={() => setPresetId(option.id)}
                 />
                 <span>
