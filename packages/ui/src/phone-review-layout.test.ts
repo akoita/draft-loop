@@ -38,3 +38,37 @@ describe("the review on a phone (#1833)", () => {
     expect(ruleIn(phone, ".gate-action-bar")).toContain("left: 0;");
   });
 });
+
+describe("the docked export footer on a phone-narrow screen", () => {
+  function containerRules(query: string): string {
+    const start = styles.indexOf(`@container gate-bar (${query}) {`);
+    expect(start).toBeGreaterThan(-1);
+    return styles.slice(start, styles.indexOf("\n}\n", start));
+  }
+
+  it("measures its own width once docked", () => {
+    const docked = styles.slice(styles.indexOf("@media (max-width: 1024px) {"));
+    expect(ruleIn(docked, ".gate-action-bar")).toContain("container: gate-bar / inline-size;");
+  });
+
+  it("puts the three templates in one row and keeps their descriptions for screen readers", () => {
+    const compact = containerRules("inline-size < 36rem");
+    expect(ruleIn(compact, ".gate-action-bar .export-templates")).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr));",
+    );
+    const description = ruleIn(compact, ".gate-action-bar .export-template-text span");
+    expect(description).toContain("clip: rect(0, 0, 0, 0);");
+    expect(description).not.toContain("display: none");
+  });
+
+  it("keeps the export controls on one line with touch-size targets", () => {
+    const compact = containerRules("inline-size < 36rem");
+    expect(ruleIn(compact, ".gate-action-bar .export-action")).toContain("flex-direction: row;");
+    expect(ruleIn(compact, ".gate-action-bar .export-action .button")).toContain(
+      "min-height: 44px;",
+    );
+    expect(ruleIn(compact, ".gate-action-bar .export-template-option")).toContain(
+      "min-height: 44px;",
+    );
+  });
+});
