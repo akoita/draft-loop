@@ -43,6 +43,10 @@ const note: FeedbackNote = {
   screen: "review",
   text: "The export button\ndoes nothing.",
   transcript: null,
+  context: null,
+  status: "new",
+  issueUrl: null,
+  triagedAt: null,
   sentAt: "2026-11-15T10:30:00.000Z",
 };
 
