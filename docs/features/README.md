@@ -33,7 +33,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Desktop client](../reference/cli-and-desktop.md)   | `available` | server        | `none`       | An Electron window over a DraftLoop server's web screen; alpha.              |
 | [Source-only CLI](../reference/cli-and-desktop.md)  | `available` | CLI           | `none`       | Runs a local workspace from a source checkout; in maintenance mode.          |
 | [Hosted service](../architecture/hosted-service.md) | `partial`   | hosted        | `none`       | The same server on Google Cloud in the EU; on staging only, production held. |
-| [Planned-maintenance notice](../architecture/hosted-service.md#planned-maintenance) | `available` | server | `none` | Shows the operator's planned maintenance on every screen and pauses changes during a read-only window. |
+| [Planned-maintenance notice](../architecture/hosted-service.md#planned-maintenance) | `available` | server | `service_notice` | Shows the operator's planned maintenance on every screen and pauses changes during a read-only window. |
 
 ## Career evidence
 

@@ -283,12 +283,17 @@ returns a run's open draft, its findings or career evidence.
 | `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
 | `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
 | `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
+| `service_notice`       | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused         |
 
 With the operator's credential, the server's owner token, the server also
 offers `list_feedback` and `triage_feedback`: list members' notes by status and
 link each to a GitHub issue ([Feedback](../features/feedback.md)). It never
 offers them with an agent token or a member's sign-in, and the API refuses any
 other credential.
+
+During a read-only planned maintenance, DraftLoop refuses changes with
+`service_maintenance`, a refusal marked retryable. `service_notice` says
+until when, so the agent tells the candidate instead of retrying.
 
 `search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
 the same user guide a member reads from the Help button, so an agent can
