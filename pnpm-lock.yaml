@@ -291,6 +291,9 @@ importers:
       '@draft-loop/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@draft-loop/support':
+        specifier: workspace:*
+        version: link:../../packages/support
       '@google-cloud/storage':
         specifier: 8.3.0
         version: 8.3.0

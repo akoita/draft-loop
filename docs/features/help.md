@@ -48,6 +48,17 @@ return the guide to a signed-in member or an agent token. The support tests
 play a fake model: each tool, each limit, the switch, refusals, and the
 40-question golden set reaching the right section.
 
+The paid check (#2884) asks the real model the same 40 questions, with an
+invented account. It never runs in CI: an operator starts it as a job that
+has the worker's Claude route. It stops before any call that could pass its
+cap, `DRAFT_LOOP_SUPPORT_CHECK_CAP_USD` (default 0.50, at most 1). It prints
+one line per question, then answered and refused correctly, wrong-source
+answers and cost per answer.
+
+```sh
+pnpm test:support:live
+```
+
 ## Surfaces
 
 | Surface | What it does |
