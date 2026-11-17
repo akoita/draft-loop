@@ -20,6 +20,11 @@ export const candidateEvidenceKinds = [
    * by the writer that renders the note, never detected.
    */
   "work-journal",
+  /**
+   * A project card about one code repository the candidate approved (#2894). Always set by the
+   * writer that renders the card, never detected.
+   */
+  "project",
   /** Anything else, including material that cannot be named with confidence. */
   "other",
 ] as const;

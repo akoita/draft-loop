@@ -9,6 +9,7 @@ import { openSqliteStorage, openSqliteStorageReadOnly, StorageValidationError } 
 import { initializeCandidateKnowledgeStore } from "./knowledge-store.js";
 import {
   sourceEvidenceKindOverridesMigration,
+  sourceEvidenceKindProjectMigration,
   sourceEvidenceKindWorkJournalMigration,
 } from "./source-evidence-kinds.js";
 
@@ -79,7 +80,7 @@ describe("candidate knowledge source evidence kind override storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(38);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(39);
     expect(await upgraded.get("note")).toBe("kept");
     expect(
       await upgraded.listCandidateKnowledgeSourceEvidenceKindOverrides(knowledgeBase.id),
@@ -105,7 +106,7 @@ describe("candidate knowledge source evidence kind override storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(38);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(39);
     expect(
       await upgraded.listCandidateKnowledgeSourceEvidenceKindOverrides(knowledgeBase.id),
     ).toEqual([kept]);
@@ -274,9 +275,13 @@ describe("source evidence kind override migration", () => {
       .map((kind) => kind.trim().replace(/'/gu, ""));
 
   it("accepts exactly the current taxonomy in the latest CHECK list", () => {
-    expect(new Set(listed(sourceEvidenceKindWorkJournalMigration.sql))).toEqual(
+    expect(new Set(listed(sourceEvidenceKindProjectMigration.sql))).toEqual(
       new Set(candidateEvidenceKinds),
     );
+  });
+
+  it("keeps the work-journal migration's list fixed, without the project kind", () => {
+    expect(listed(sourceEvidenceKindWorkJournalMigration.sql)).not.toContain("project");
   });
 
   it("keeps the released migration's list fixed, without the work-journal kind", () => {

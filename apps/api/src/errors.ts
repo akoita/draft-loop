@@ -214,6 +214,10 @@ const workJournalStatus: Readonly<Record<WorkJournalErrorCode, number>> = {
   note_not_pending: 409,
   note_quarantined: 409,
   approval_unavailable: 503,
+  kinds_differ: 409,
+  invalid_card: 422,
+  contributor_identity: 422,
+  private_card_with_links: 422,
 };
 
 export function sendNotFound(_request: FastifyRequest, reply: FastifyReply): void {

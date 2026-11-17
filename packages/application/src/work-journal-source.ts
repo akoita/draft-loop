@@ -1,11 +1,11 @@
 import type { SourceSensitivityTier } from "@draft-loop/domain/source-sensitivity";
 import type { WorkJournalStoredNote } from "@draft-loop/schemas/work-journal";
-
 import type {
   AddedHostedKnowledgeSource,
   HostedKnowledgeIntake,
 } from "./hosted-knowledge-intake.js";
 import type { HostedSensitivityRules } from "./hosted-sensitivity-rules.js";
+import { renderProjectCardSections } from "./project-card-source.js";
 import type { SourceSensitivityRuleInput } from "./source-sensitivity-service.js";
 import type { WorkJournalPublish } from "./work-journal.js";
 
@@ -33,7 +33,7 @@ export function workJournalSourceHeading(note: WorkJournalStoredNote): string {
     .replace(/[\\`*_[\]<>#|]/gu, "")
     .replace(/\s+/gu, " ")
     .trim();
-  return `Work journal: ${title} (${note.id})`;
+  return `${note.project_card === undefined ? "Work journal" : "Project"}: ${title} (${note.id})`;
 }
 
 /** Text placed in Markdown stays text: no heading, list or link syntax from the agent. */
@@ -58,6 +58,15 @@ export function renderWorkJournalMarkdown(note: WorkJournalStoredNote): string {
       : [bullet(`Repository: ${content.project.repository}`)]),
     ...content.links.map((link) => `- ${link.kind}: <${link.url}>`),
   ];
+  if (note.project_card !== undefined) {
+    const sections = renderProjectCardSections(note, note.project_card, {
+      heading: workJournalSourceHeading(note),
+      plain,
+      bullet,
+      project: project.join("\n"),
+    });
+    return `${sections.join("\n\n")}\n`;
+  }
   const sections = [
     `# ${workJournalSourceHeading(note)}`,
     "Candidate-provided evidence: a note recorded from an agent session and approved by the candidate.",
@@ -88,7 +97,7 @@ export function renderWorkJournalSource(note: WorkJournalStoredNote): {
   readonly bytes: Uint8Array;
 } {
   return {
-    displayName: `work-journal-${note.id}.md`,
+    displayName: `${note.project_card === undefined ? "work-journal" : "project"}-${note.id}.md`,
     bytes: new TextEncoder().encode(renderWorkJournalMarkdown(note)),
   };
 }
@@ -128,7 +137,7 @@ export interface WorkJournalPublisherOptions {
   readonly setEvidenceKind: (
     knowledgeBaseId: string,
     sourceId: string,
-    kind: "work-journal",
+    kind: "work-journal" | "project",
   ) => Promise<void>;
   /** Screens the stored source like an upload; the route passes the request's screening. */
   readonly screen?: (added: AddedHostedKnowledgeSource, bytes: Uint8Array) => Promise<void>;
@@ -153,7 +162,11 @@ export function createWorkJournalPublisher(
       bytes,
     });
     if (added.created) {
-      await options.setEvidenceKind(knowledgeBaseId, added.source.id, "work-journal");
+      await options.setEvidenceKind(
+        knowledgeBaseId,
+        added.source.id,
+        note.project_card === undefined ? "work-journal" : "project",
+      );
       await options.screen?.(added, bytes);
     }
     return { sourceId: added.source.id, status: added.created ? "created" : "already-present" };

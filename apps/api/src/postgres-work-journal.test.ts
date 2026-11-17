@@ -133,5 +133,44 @@ describe.runIf(connectionString !== undefined)("work journal approval on Postgre
       [`wj-${approved.id}`, "sensitive"],
       [`wj-${approved.id}-links`, "never-share"],
     ]);
+
+    // A project card (#2894) keeps its details through Postgres and lands as a `project` source.
+    const card = await journal.recordProject("owner", {
+      name: "Tidewater",
+      purpose: "A command-line tool that plans tide-safe kayak trips",
+      summary:
+        "Tidewater reads public tide tables and proposes launch windows for a kayak route, with offline caching.",
+      role: "sole-author",
+      visibility: "public",
+      stack: ["TypeScript"],
+      contribution: {
+        own_commits: 40,
+        total_commits: 41,
+        first_commit: "2026-01-02",
+        last_commit: "2026-10-30",
+        other_contributors: 1,
+      },
+      repository_url: "https://git.example.test/tidewater/tidewater",
+    });
+    expect((await journal.get("owner", card.note_id ?? "")).project_card?.role).toBe("sole-author");
+    const cardApproved = await journal.review("owner", card.note_id ?? "", {
+      action: "approve",
+      knowledge_base_id: base.id,
+    });
+    expect(cardApproved.approval?.tier).toBe("normal");
+    const kinds = await openPostgresCandidateKnowledgeStore({
+      storage,
+      blobs: createFilesystemBlobStorage(),
+      storeId: "knowledge",
+    });
+    try {
+      expect(await kinds.listCandidateKnowledgeSourceEvidenceKindOverrides(base.id)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ sourceId: cardApproved.approval?.source_id, kind: "project" }),
+        ]),
+      );
+    } finally {
+      await kinds.close();
+    }
   });
 });

@@ -212,6 +212,8 @@ export function evidenceKindLabel(kind: CandidateEvidenceKind): string {
       return t`Transcript`;
     case "work-journal":
       return t`Work journal`;
+    case "project":
+      return t`Code project`;
     case "other":
       return t`Other`;
   }
