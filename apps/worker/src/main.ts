@@ -89,7 +89,8 @@ const workspaceRoot = (job: WorkspaceJob) =>
 const consentFor = config.requireConsent
   ? tenantRunConsent({ tenancy, serviceFor, workspaceRoot })
   : undefined;
-// A profile derivation calls only the author's model, so it needs the author's company (#2811).
+// A profile derivation and a brief extraction call only the author's model, so they need the
+// author's company (#2811).
 const authorConsentFor = config.requireConsent
   ? tenantAuthorConsent({ tenancy, serviceFor, workspaceRoot })
   : undefined;
@@ -159,7 +160,9 @@ const worker = await startWorker({
     serviceFor: (job) => serviceFor(job.tenantId),
     workspaceRoot,
     allowProviderData: config.allowProviderData,
-    ...(consentFor === undefined ? {} : { consentFor }),
+    // Extraction calls only the author's model, so it needs the author's company, as a profile
+    // derivation does: a record consented to its writing model alone must still get requirements.
+    ...(authorConsentFor === undefined ? {} : { consentFor: authorConsentFor }),
     recordErased,
     // The job is ids only, so its line carries no candidate material.
     onOutcome: (job, outcome) =>
