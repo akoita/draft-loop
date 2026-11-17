@@ -103,6 +103,7 @@ import type { ProfileGenerationActivity } from "./profile-generation-progress.js
 import { ProviderAuthentication } from "./provider-authentication.js";
 import {
   credentialProvidersForRoute,
+  serverHeldProviderSignIn,
   useProviderSignInReadiness,
 } from "./provider-sign-in-readiness.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
@@ -2904,7 +2905,12 @@ export function App({
         : { onSaveJobCopy: activePort.saveApplicationJobCopy })}
       {...(loadRunTrace === undefined ? {} : { onLoadRunTrace: loadRunTrace })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
-      providerSignInReadiness={providerSignInReadiness}
+      providerSignInReadiness={
+        // A host without credential reads holds the provider keys itself (#2866).
+        activePort.getCredentialStatus === undefined
+          ? serverHeldProviderSignIn()
+          : providerSignInReadiness
+      }
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")
         ? {
             setupSummary: (

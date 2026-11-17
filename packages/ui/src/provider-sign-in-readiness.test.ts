@@ -7,7 +7,9 @@ import {
   type ProviderSignInReadinessInput,
   providerSignInReadiness,
   type ReadOutcome,
+  serverHeldProviderSignIn,
 } from "./provider-sign-in-readiness.js";
+import { type StartChecklistInput, startChecklist } from "./start-checklist-model.js";
 
 function statuses(
   overrides: Partial<Record<CredentialProvider, Partial<CredentialStatus>>> = {},
@@ -112,5 +114,34 @@ describe("provider sign-in readiness", () => {
     expect(credentialProvidersForRoute("anthropic", "openai")).toEqual(["anthropic", "openai"]);
     expect(credentialProvidersForRoute("zai", "local")).toEqual(["deepinfra"]);
     expect(credentialProvidersForRoute(undefined, "openai")).toEqual(["anthropic", "openai"]);
+  });
+});
+
+describe("server-held provider keys", () => {
+  const input: StartChecklistInput = {
+    setup: {
+      ready: true,
+      nextSteps: [],
+      jobDescriptionReady: true,
+      jobRequirementProblem: null,
+      fixtureMode: false,
+      reviewedOpportunity: { briefId: "target-role", version: 3 },
+    },
+    startFromJobDescription: false,
+    requirementAction: null,
+    candidateProfile: { version: 2 },
+    transmission: { required: true, acknowledged: true },
+    startDisabledReason: null,
+    canOpenProviderSignIn: true,
+    providerSignIn: serverHeldProviderSignIn(),
+  };
+
+  it("reads the sign-in row as done with nothing to open (#2866)", () => {
+    const row = startChecklist(input).find((condition) => condition.id === "provider-sign-in");
+    expect(row).toMatchObject({
+      done: true,
+      detail: "The service provides the models.",
+      action: null,
+    });
   });
 });

@@ -9567,6 +9567,10 @@ msgstr ""
 msgid "The service could not be reached. Check your connection and try again."
 msgstr ""
 
+#: packages/ui/src/provider-sign-in-readiness.ts
+msgid "The service provides the models"
+msgstr ""
+
 #: apps/web/src/oidc-sign-in.tsx
 msgid "The sign-in service is waking up. After a quiet spell this can take up to a minute."
 msgstr ""
