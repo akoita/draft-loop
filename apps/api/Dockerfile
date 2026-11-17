@@ -1,6 +1,7 @@
 # The hosted api image, built from the repository root: `docker build -f apps/api/Dockerfile .`.
-# It runs the workspace's TypeScript sources with tsx, and serves the web screen (`apps/web`),
-# which a separate stage builds so its build tools stay out of the image.
+# It runs the server bundled into one JavaScript module (`dist/server.mjs`): compiling the
+# TypeScript sources with tsx at start took seconds of each cold start. It serves the web screen
+# (`apps/web`), which a separate stage builds so its build tools stay out of the image.
 # Cloud project identifiers, credentials and bucket names come from the runtime, never from here.
 
 # Install stage: pnpm and its store stay here, out of the image.
@@ -24,6 +25,8 @@ RUN pnpm install --frozen-lockfile --prod --filter "@draft-loop/api..." \
 # The pinned speech model the web screen runs in the browser (#2199), fetched once at build and
 # checked file by file against its SHA-256; the api serves it from its own origin.
 RUN /app/node_modules/.bin/tsx packages/application/src/speech-model-install-command.ts /app/speech-models
+# The server and its workspace packages, bundled once here instead of compiled at every start.
+RUN cd apps/api && node scripts/bundle-server.mjs
 
 # Web stage: the screen's static files, built with its development dependencies.
 FROM node:24.22.1-bookworm-slim AS web
@@ -54,4 +57,4 @@ RUN apt-get update \
 USER node
 WORKDIR /app/apps/api
 EXPOSE 8080
-CMD ["/app/node_modules/.bin/tsx", "src/server.ts"]
+CMD ["node", "--enable-source-maps", "dist/server.mjs"]

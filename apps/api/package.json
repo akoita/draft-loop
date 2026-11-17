@@ -16,7 +16,8 @@
   "scripts": {
     "start": "tsx src/server.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "openapi": "tsx src/write-openapi.ts"
+    "openapi": "tsx src/write-openapi.ts",
+    "bundle": "node scripts/bundle-server.mjs"
   },
   "dependencies": {
     "@draft-loop/application": "workspace:*",
@@ -36,6 +37,7 @@
     "@fastify/swagger": "9.9.0",
     "@fastify/websocket": "11.3.4",
     "@google-cloud/storage": "8.3.0",
+    "esbuild": "0.28.2",
     "fastify": "5.12.7",
     "fastify-type-provider-zod": "7.0.0",
     "jose": "6.2.12",
