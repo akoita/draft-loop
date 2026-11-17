@@ -25,6 +25,13 @@ click outside where the browser supports it.
 
 The guide follows the screen language: English or French.
 
+When the server runs the support assistant, **Ask a question** sits above the
+search. Type a question in your own words and select **Ask**. The answer names
+the guide sections it used; select one to open it below. Answer **Did this
+solve it?** with **No**, or get an answer that needs a person, and **Talk to a
+person** appears. It shows what is sent before **Send the conversation**
+(sign-in mode only).
+
 An agent calls `search_help` with a question's words, or reads the whole
 guide from `draftloop://help/guide/en` or `/fr` as Markdown.
 
@@ -58,7 +65,8 @@ play a fake model: each tool, each limit, the switch, refusals, and the
 ## Limits
 
 - Sections name the screens to open but do not link to them yet.
-- Search matches words, not meaning. The support assistant answers in your own words, but has no screen yet (#2883) and is off unless the server sets `DRAFT_LOOP_SUPPORT_ASSISTANT=on`.
+- Search matches words, not meaning. **Ask a question** answers in your own words, but only where the server sets `DRAFT_LOOP_SUPPORT_ASSISTANT=on`; elsewhere the panel shows the guide alone.
+- Answers to **Did this solve it?** are not recorded.
 - The assistant's daily limits are counted in each API instance's memory, like the request rate limits.
 - Not on the sign-in and sign-up screens, which come before any record.
 

@@ -11735,3 +11735,114 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   color: var(--text-3);
   font-size: var(--text-sm);
 }
+
+/* Ask a question in the Help panel (#2883). */
+.help-ask {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+}
+
+.help-ask h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+}
+
+.help-ask-notice {
+  margin: 0 0 var(--space-3);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.help-ask-turns {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.help-ask-turn p {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.help-ask-turn-member {
+  justify-self: end;
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--teal-wash);
+}
+
+.help-ask-turn-assistant {
+  color: var(--text-1);
+}
+
+.help-ask-turn .help-ask-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.help-ask-source {
+  border: 0;
+  padding: 0;
+  color: var(--teal);
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.help-ask-solved,
+.help-ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.help-ask-thanks,
+.help-ask-handoff p {
+  margin: 0 0 var(--space-2);
+  color: var(--text-2);
+}
+
+.help-ask-form {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.help-ask-form .help-search {
+  width: 100%;
+  margin: 0;
+}
+
+.help-ask-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-1);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.help-ask-form textarea:focus-visible,
+.help-ask-source:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
