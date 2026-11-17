@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(22);
+    expect(profiles).toHaveLength(23);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
@@ -263,6 +263,11 @@ describe("model profile registry", () => {
       version: 3,
       modelId: "claude-sonnet-5-5",
       runtime: { effort: "medium", maxOutputTokens: 64000 },
+    });
+    expect(profiles[22]).toEqual({
+      ...profiles[8],
+      version: 4,
+      runtime: { ...profiles[8]?.runtime, maxOutputTokens: 64000 },
     });
     expect(defaultModelProfileRegistry.resolve("dev-mistral-author", 1, "author")).toEqual(
       profiles[14],

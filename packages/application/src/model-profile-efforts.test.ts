@@ -17,7 +17,7 @@ describe("model profile reasoning levels", () => {
     );
     const all = ["low", "medium", "high", "xhigh", "max"];
     expect(levels).toEqual({
-      "economy-anthropic-author@2": all,
+      "economy-anthropic-author@4": all,
       "economy-openai-critic@1": all,
       "economy-anthropic-author@3": all,
       "balanced-openai-critic@1": all,

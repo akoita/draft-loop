@@ -143,7 +143,7 @@ describe("desktop model profile picker rendering", () => {
     expect(html).not.toMatch(/checked="" value="economy"/);
     expect(html).toContain('aria-label="Author profile"');
     expect(html).toContain('aria-label="Critic profile"');
-    expect(html).toContain("economy-anthropic-author@2");
+    expect(html).toContain("economy-anthropic-author@4");
     expect(html).toContain("economy-openai-critic@1");
     const mixed: ModelProfileReferences = {
       author: economy.author,

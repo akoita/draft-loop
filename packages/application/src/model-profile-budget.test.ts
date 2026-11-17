@@ -12,7 +12,7 @@ const standard: ModelProfileReferences = {
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy: ModelProfileReferences = {
-  author: { id: "economy-anthropic-author", version: 2 },
+  author: { id: "economy-anthropic-author", version: 4 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 const balanced: ModelProfileReferences = {

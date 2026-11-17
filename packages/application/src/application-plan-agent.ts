@@ -26,6 +26,7 @@ import {
   applicationPlanSystemPrompt,
 } from "./application-plan-prompts.js";
 import {
+  normalizeApplicationPlanOutput,
   normalizeApplicationPlanReviewOutput,
   planReviewDiagnostics,
 } from "./application-plan-review-output.js";
@@ -187,7 +188,7 @@ export function createProviderApplicationPlanner(
   ):
     | { readonly plan: ApplicationPlan }
     | { readonly message: string; readonly diagnostics: ProviderValidationDiagnostic[] } => {
-    const parsed = applicationPlanSchema.safeParse(output);
+    const parsed = applicationPlanSchema.safeParse(normalizeApplicationPlanOutput(output));
     if (!parsed.success) {
       return {
         message: "The author returned an invalid plan.",

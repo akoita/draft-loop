@@ -60,7 +60,7 @@ describe("economy defaults for new workspaces", () => {
     const selection = await readWorkspaceModelProfileSelection(root);
     expect(selection?.modelProfiles).toEqual({ author: preset.author, critic: preset.critic });
     expect(selection?.modelProfiles).toEqual({
-      author: { id: "economy-anthropic-author", version: 2 },
+      author: { id: "economy-anthropic-author", version: 4 },
       critic: { id: "economy-openai-critic", version: 1 },
     });
   });

@@ -55,7 +55,7 @@ describe("draft-loop init model defaults", () => {
     });
     expect(await stored(root, "model-profile-selection.json")).toMatchObject({
       modelProfiles: {
-        author: { id: "economy-anthropic-author", version: 2 },
+        author: { id: "economy-anthropic-author", version: 4 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
     });

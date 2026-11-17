@@ -140,7 +140,7 @@ and account or provider availability is unchecked.
 
 A workspace can keep an **applied pair**, so new runs still have profiles after
 a restart. A workspace created by `init` without an explicit model choice gets
-the economy pair already applied (`economy-anthropic-author@2` and
+the economy pair already applied (`economy-anthropic-author@4` and
 `economy-openai-critic@1`). An explicit model or pair wins, and existing
 workspaces keep their stored models.
 

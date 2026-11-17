@@ -100,7 +100,7 @@ describe("model profile selection parsing", () => {
   it.each([
     {
       modelPreset: "economy",
-      author: { id: "economy-anthropic-author", version: 2 },
+      author: { id: "economy-anthropic-author", version: 4 },
       critic: { id: "economy-openai-critic", version: 1 },
     },
     {
