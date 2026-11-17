@@ -104,8 +104,8 @@ and account or provider availability is unchecked.
 | `standard`            | Claude Opus 5.5                                | GPT-6.1 Sol                                                   | Anthropic, OpenAI          |
 | `balanced-anthropic`  | Claude Sonnet 5.5                              | Claude Opus 5.5 (`standard-anthropic-critic@1`), low effort   | Anthropic                  |
 | `standard-anthropic`  | Claude Opus 5.5                                | Claude Sonnet 5.5 (`balanced-anthropic-critic@1`), low effort | Anthropic                  |
-| `balanced-google` | Gemini 4 Hydrogen | GPT-6.1 Terra | Gemini (paid tier), OpenAI |
-| `standard-google` | Gemini 4 Carbon | GPT-6.1 Sol | Gemini (paid tier), OpenAI |
+| `balanced-google`     | Gemini 4 Hydrogen                              | GPT-6.1 Terra                                                 | Gemini (paid tier), OpenAI |
+| `standard-google`     | Gemini 4 Carbon                                | GPT-6.1 Sol                                                   | Gemini (paid tier), OpenAI |
 | `development-glm`     | Z.ai `zai-org/GLM-5.3-Flash` through DeepInfra | GPT-6 Luna                                                    | DeepInfra, OpenAI          |
 | `development-gemini`  | Gemini 3.8 Flash                               | GPT-6 Luna                                                    | Gemini (paid tier), OpenAI |
 | `development-mistral` | Mistral Large 4 (public preview)               | GPT-6 Luna                                                    | Mistral, OpenAI            |
@@ -172,11 +172,11 @@ and versions, with the time it was applied. Each role may also store an
 Three Gemini 4 authors are opt-in, and their quality is unvalidated. All use
 `GEMINI_API_KEY` from a paid-tier Gemini API project.
 
-| Author | Select it with | Thinking level |
-| --- | --- | --- |
-| Gemini 4 Hydrogen | `--model-preset balanced-google`, or `--author-profile balanced-google-author@1` | `high`, the model default |
-| Gemini 4 Carbon | `--model-preset standard-google`, or `--author-profile standard-google-author@1` | `medium`, the model default |
-| Gemini 4 Argon | `--author-profile standard-google-argon-author@1` with an exact critic profile | `medium`, the model default |
+| Author            | Select it with                                                                   | Thinking level              |
+| ----------------- | -------------------------------------------------------------------------------- | --------------------------- |
+| Gemini 4 Hydrogen | `--model-preset balanced-google`, or `--author-profile balanced-google-author@1` | `high`, the model default   |
+| Gemini 4 Carbon   | `--model-preset standard-google`, or `--author-profile standard-google-author@1` | `medium`, the model default |
+| Gemini 4 Argon    | `--author-profile standard-google-argon-author@1` with an exact critic profile   | `medium`, the model default |
 
 Argon has no preset: it costs the same as Carbon and scores below Hydrogen on
 Google's published benchmarks. Each profile keeps one fixed thinking level.
@@ -292,13 +292,13 @@ The estimate leaves out:
 
 User-session routes show public rates only.
 
-| Model                     | Input / output per million tokens | Notes                                                              |
-| ------------------------- | --------------------------------- | ------------------------------------------------------------------ |
-| GLM-5.3-Flash (DeepInfra) | $0.15 / $0.50                     | Reviewed 2026-10-02                                                |
-| Gemini 3.8 Flash          | $0.75 / $3.75                     | Reviewed 2026-10-04                                                |
-| Mistral Large 4           | $1.36 / $4.18                     | Reviewed 2026-10-08, without the launch discount; 1M-token context |
-| Gemini 4 Hydrogen | $1.50 / $7.50 | Reviewed 2026-11-12; flat across the 1M-token context |
-| Gemini 4 Carbon and Argon | $4 / $20 | Reviewed 2026-11-12; the list rate from 2026-12-01, so an upper bound during the $2 / $10 introductory rate |
+| Model                     | Input / output per million tokens | Notes                                                                                                       |
+| ------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| GLM-5.3-Flash (DeepInfra) | $0.15 / $0.50                     | Reviewed 2026-10-02                                                                                         |
+| Gemini 3.8 Flash          | $0.75 / $3.75                     | Reviewed 2026-10-04                                                                                         |
+| Mistral Large 4           | $1.36 / $4.18                     | Reviewed 2026-10-08, without the launch discount; 1M-token context                                          |
+| Gemini 4 Hydrogen         | $1.50 / $7.50                     | Reviewed 2026-11-12; flat across the 1M-token context                                                       |
+| Gemini 4 Carbon and Argon | $4 / $20                          | Reviewed 2026-11-12; the list rate from 2026-12-01, so an upper bound during the $2 / $10 introductory rate |
 
 Claude and OpenAI rates are in the catalog (`model-profiles`).
 
@@ -349,13 +349,13 @@ the DeepInfra [GLM-5.3-Flash API page] and [model announcement],
 The CLI reads provider keys from the environment. Each key is sent only to its
 own provider.
 
-| Variable            | Provider  | Needed for                                              |
-| ------------------- | --------- | ------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Anthropic | Claude authors and critics                              |
-| `OPENAI_API_KEY`    | OpenAI    | GPT critics                                             |
-| `DEEPINFRA_API_KEY` | DeepInfra | The GLM development author                              |
+| Variable            | Provider  | Needed for                                                            |
+| ------------------- | --------- | --------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | Anthropic | Claude authors and critics                                            |
+| `OPENAI_API_KEY`    | OpenAI    | GPT critics                                                           |
+| `DEEPINFRA_API_KEY` | DeepInfra | The GLM development author                                            |
 | `GEMINI_API_KEY`    | Google    | The Gemini 4 and Gemini development authors, from a paid-tier project |
-| `MISTRAL_API_KEY`   | Mistral   | The Mistral development author                          |
+| `MISTRAL_API_KEY`   | Mistral   | The Mistral development author                                        |
 
 ## Autopilot
 
@@ -405,13 +405,13 @@ it ([ADR 0010](../adr/0010-workspace-as-candidate-home.md)). An application has
 a name, a job source, and its own briefs, runs and exports. Its status is
 derived from them, never stored:
 
-| Status      | Meaning                                                             |
-| ----------- | ------------------------------------------------------------------- |
+| Status       | Meaning                                                            |
+| ------------ | ------------------------------------------------------------------ |
 | `collecting` | No run yet: the job and profile inputs are still being collected   |
-| `drafting`  | Every run is still collecting, ingesting or drafting                |
-| `in-review` | A run is past drafting, including paused, stopped or out of budget  |
-| `approved`  | A run was approved                                                  |
-| `exported`  | An export completed                                                 |
+| `drafting`   | Every run is still collecting, ingesting or drafting               |
+| `in-review`  | A run is past drafting, including paused, stopped or out of budget |
+| `approved`   | A run was approved                                                 |
+| `exported`   | An export completed                                                |
 
 ```sh
 pnpm --filter @draft-loop/cli start application list ./workspace
@@ -523,7 +523,7 @@ With more than six applications, Home shows a toolbar above the list:
 | Control      | What it does                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------ |
 | Search       | Keeps applications whose name holds every word typed, ignoring case and accents            |
-| Status chips | All, Collecting inputs, Drafting, In review, Approved or Exported, each with its count      |
+| Status chips | All, Collecting inputs, Drafting, In review, Approved or Exported, each with its count     |
 | Sort         | Last activity (the default), Name (A to Z), Date created or Status                         |
 | View         | Cards, or List with one row per application and a "⋯" menu for Archive, Restore and Delete |
 
@@ -629,7 +629,7 @@ For a job page address or a saved job page, extraction reads only that page:
 | The page has schema.org `JobPosting` data | DraftLoop reads the job from it: title and company as a heading, then the description with its headings and lists. This makes pages rendered by JavaScript readable. No other address is fetched, and the review says "Read from the page's job posting data."                                                                       |
 | Under 400 characters of job text          | Fails before any provider call, and no brief is saved: "DraftLoop could not read enough job text from this page. It may show the job only with JavaScript. Paste the job text instead."                                                                                                                                              |
 | Garbled text                              | Ligatures such as "ﬁ" are expanded first. Text with at least 30 Latin-script words, a quarter or more of them implausible (such as "FsaocG" from a broken PDF), fails before any provider call: "The job text looks garbled, so DraftLoop did not extract requirements from it. …" Camel-case names and acronyms count as plausible. |
-| No requirements found                     | The step says "No requirements were found in this job text" and offers **Extract again**. The start checklist offers **Extract requirements again**.                                                                                                                                                                                 |
+| No requirements found                     | The step says "No requirements were found in this job text" and offers **Extract again**. The start checklist offers **Extract requirements again**. A first draft no extraction has read says the requirements have not been read yet and offers **Extract requirements**.                                                          |
 | A job document over 64 KiB                | Fails with a message.                                                                                                                                                                                                                                                                                                                |
 
 A draft brief cannot start a run until it is reviewed. The step shows the
@@ -1018,7 +1018,7 @@ extracts every source again.
 | Claude Haiku 5.5, Sonnet 5.5, Opus 5.5 (API key) | 32,768 tokens                                                                         | Profile default                                                                                       |
 | GLM through DeepInfra                            | 32,768 tokens                                                                         | `reasoning_effort: "none"` ([DeepInfra reasoning control](https://docs.deepinfra.com/chat/reasoning)) |
 | Gemini 3.8 Flash                                 | 32,768 tokens                                                                         | `thinkingBudget: 0`                                                                                   |
-| Gemini 4 | 65,536 tokens, shared by thinking and the answer | `thinkingLevel: "LOW"`, because Gemini 4 thinking cannot be disabled here |
+| Gemini 4                                         | 65,536 tokens, shared by thinking and the answer                                      | `thinkingLevel: "LOW"`, because Gemini 4 thinking cannot be disabled here                             |
 | Mistral Large 4                                  | 32,768-token answer budget, sent as the 65,536-token model limit when reasoning is on | `reasoningEffort: "none"`                                                                             |
 | User-session, local and other routes             | 8,192 tokens                                                                          | Route default                                                                                         |
 
@@ -1376,15 +1376,15 @@ Each source has an **evidence kind** that says what the material is. Extraction
 sends the kind with the text, with short guidance per kind. The never-invent
 and exact-quote rules are the same for every kind.
 
-| Kind                 | Extraction guidance                                                                                                                                |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cv`                 | Standard extraction                                                                                                                                |
-| `linkedin-export`    | Sections map to roles, dates and skills                                                                                                            |
-| `performance-review` | Judgements stay attributed to the reviewer                                                                                                         |
-| `notes`              | Only explicit statements                                                                                                                           |
-| `transcript`         | Only the candidate's own turns                                                                                                                     |
+| Kind                 | Extraction guidance                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cv`                 | Standard extraction                                                                                                                          |
+| `linkedin-export`    | Sections map to roles, dates and skills                                                                                                      |
+| `performance-review` | Judgements stay attributed to the reviewer                                                                                                   |
+| `notes`              | Only explicit statements                                                                                                                     |
+| `transcript`         | Only the candidate's own turns                                                                                                               |
 | `work-journal`       | Credits only the role the note states. It is an approved note from an agent (#2018): its writer sets the kind, and detection never picks it. |
-| `other`              | Standard extraction                                                                                                                                |
+| `other`              | Standard extraction                                                                                                                          |
 
 - **Detection.** Other kinds are detected locally from the latest version's
   text, from English and French section headings alike. Nothing is sent to a
