@@ -28,7 +28,11 @@ checks feed it:
 | Dependency audit | `pnpm security:audit` | A production dependency has a high or critical advisory |
 | CodeQL | CI job `CodeQL` | An error-level or high-severity result in the code or the workflows |
 | Workflow audit | CI job `Workflow audit` (zizmor) | A workflow has a medium or worse finding, such as template injection |
+| Image scan | CI job `Image scan` (Trivy) | A server image has a high or critical vulnerability with a fix |
+
+The image scan runs when a change reaches the server images, and keeps an
+SPDX SBOM of each image as a workflow artifact.
 
 GitHub secret scanning with push protection also refuses known provider keys
-before they reach the repository. Run `pnpm validate` to run every check
-locally.
+before they reach the repository. Run `pnpm validate` to run the commands
+locally; the CI jobs run only in CI.
