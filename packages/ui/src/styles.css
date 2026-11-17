@@ -7643,7 +7643,15 @@ input[type="text"].workspace-title-input {
     left: var(--rail-width);
     z-index: 3;
     max-height: 70vh;
-    box-shadow: 0 -12px 20px -18px rgba(15, 23, 33, 0.45);
+    /* Docked like a toolbar: the page fades into the bar's own colour just above its edge, where a
+       dark shadow made the page look sunk under it. */
+    box-shadow: 0 -1.5rem 1.25rem -0.5rem var(--surface);
+  }
+
+  /* On the review page the footer already says the review is running and offers its controls, so
+     the floating activity bar, which has no action here, would only cover the footer. */
+  body:has(.gate-action-bar) .workspace-activity:not(:has(.button)) {
+    display: none;
   }
 
   .side-column:has(> .gate-action-bar) {
