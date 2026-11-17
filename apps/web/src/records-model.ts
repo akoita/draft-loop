@@ -57,10 +57,10 @@ export function newRecordNameProblem(
   name: string,
   names: ReadonlyMap<string, string>,
 ): string | undefined {
-  if (name.length === 0) return t`Give the new record a name.`;
+  if (name.length === 0) return t`Give the new job search a name.`;
   if (name.length > recordNameMaxLength) return t`Use up to ${recordNameMaxLength} characters.`;
   const taken = [...names.values()].some((other) => other.toLowerCase() === name.toLowerCase());
-  if (taken) return t`A record has that name already. Choose it in the list.`;
+  if (taken) return t`A job search has that name already. Choose it in the list.`;
   return undefined;
 }
 
@@ -94,8 +94,8 @@ export function canManageMembers(me: Me): boolean {
 /** What the screen says when the caller reaches no record yet. */
 export function noRecordNotice(me: Me): string {
   return canManageMembers(me)
-    ? t`Your organisation has no candidate record yet. Create the first one.`
-    : t`No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you.`;
+    ? t`Your team has no job search yet. Start the first one.`
+    : t`No job search is shared with you yet. Start one, or ask an owner or admin of your team to share one with you.`;
 }
 
 /** The organisation's members not yet assigned to the record, by email. */
@@ -169,3 +169,31 @@ export function createRecordMemory(storage: () => Storage | undefined): RecordMe
 
 /** The record memory in a browser tab. */
 export const recordMemory = createRecordMemory(() => globalThis.sessionStorage);
+
+/**
+ * Whether the caller's plan holds one person and one job search, such as Free or Individual: the
+ * screen then shows no job search picker and no access list. An organisation that already holds
+ * more than one job search keeps them, so nobody loses one after a change of plan.
+ */
+export function isOnePersonPlan(me: Me, ids: readonly string[]): boolean {
+  if (me.kind !== "member" || me.plan === undefined) return false;
+  return me.plan.candidateRecords === 1 && me.plan.seats === 1 && ids.length <= 1;
+}
+
+/** Whether the plan lets more than one person sign in, so access to a job search can be shared. */
+export function sharesAccess(me: Me): boolean {
+  return me.kind === "owner" || me.plan === undefined || me.plan.seats !== 1;
+}
+
+/** How the account menu names the caller: the email, then the team on plans for several people. */
+export function accountLabel(me: Me, onePerson: boolean): string {
+  if (me.kind === "owner") return t`Owner`;
+  const who = me.email ?? t`Signed in`;
+  if (onePerson || me.organisationName === undefined) return who;
+  return `${who} · ${me.organisationName}`;
+}
+
+/** The name a one-person plan's job search gets when the app sets it up on its own. */
+export function firstJobSearchName(): string {
+  return t`My job search`;
+}

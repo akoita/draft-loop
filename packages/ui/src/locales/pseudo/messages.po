@@ -195,6 +195,10 @@ msgstr ""
 msgid "(writer) and"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "(you)"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid ") bound to brief"
 msgstr ""
@@ -873,6 +877,10 @@ msgstr ""
 msgid "A heading path has at most 12 headings."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "A job search has that name already. Choose it in the list."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
 msgstr ""
@@ -916,10 +924,6 @@ msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
-msgstr ""
-
-#: apps/web/src/records-model.ts
-msgid "A record has that name already. Choose it in the list."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -1510,14 +1514,6 @@ msgstr ""
 msgid "Assessed by"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Assign"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Assign a member"
-msgstr ""
-
 #: apps/web/src/http-bridge.ts
 #: packages/ui/src/new-application-model.ts
 msgid "Attach a PDF, DOCX, Markdown or plain text file."
@@ -1824,10 +1820,6 @@ msgstr ""
 #: packages/ui/src/profile-generation-progress.tsx
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Cancelling…"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Candidate record"
 msgstr ""
 
 #: packages/ui/src/connected-agents.tsx
@@ -2530,10 +2522,6 @@ msgstr ""
 msgid "Create or open a review workspace"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Create record"
-msgstr ""
-
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
 #: packages/ui/src/workspace-setup.tsx
@@ -2772,7 +2760,7 @@ msgid "Delete folder {0}"
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
-msgid "Delete record"
+msgid "Delete job search"
 msgstr ""
 
 #. placeholder {0}: folder.name
@@ -2801,7 +2789,7 @@ msgid "Deleted \"{name}\"."
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
-msgid "Deleting removes this record and everything stored for it, for good. It cannot be undone. Export everything first if you need a copy."
+msgid "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
 msgstr ""
 
 #: packages/ui/src/workspace-setup.tsx
@@ -2960,12 +2948,20 @@ msgstr ""
 msgid "Download cancelled. Nothing was installed."
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "Download everything"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Download it"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
 msgid "Download Markdown"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Download or delete this job search"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -3403,7 +3399,7 @@ msgid "Every fact was removed from this draft. Restore at least one before savin
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Every member of your organisation is assigned to this record."
+msgid "Everyone in your team can already open it."
 msgstr ""
 
 #: apps/web/src/screening.tsx
@@ -3479,10 +3475,6 @@ msgstr ""
 msgid "Export comparison"
 msgstr ""
 
-#: apps/web/src/record-actions.tsx
-msgid "Export everything"
-msgstr ""
-
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/review-footer.tsx
 msgid "Export format"
@@ -3494,10 +3486,6 @@ msgstr ""
 
 #: packages/ui/src/review-footer.tsx
 msgid "Export locally"
-msgstr ""
-
-#: apps/web/src/record-actions.tsx
-msgid "Export or delete this record"
 msgstr ""
 
 #: packages/ui/src/export-preview.tsx
@@ -3803,12 +3791,12 @@ msgstr ""
 msgid "For an interview of an hour or more: adds the market, a requirement matrix, stories, twelve questions and a checklist. About US$0.30 to 0.40, at most US$0.40."
 msgstr ""
 
-#: apps/web/src/application-material.tsx
-msgid "For example: my move into team leadership"
+#: apps/web/src/records.tsx
+msgid "For example: Ada Martin, or Product roles 2026"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "For example: Product roles 2026"
+#: apps/web/src/application-material.tsx
+msgid "For example: my move into team leadership"
 msgstr ""
 
 #: apps/web/src/interview-guide.tsx
@@ -4011,6 +3999,14 @@ msgstr ""
 msgid "Getting voice input ready ({0}%)…"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Give access"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Give access to"
+msgstr ""
+
 #. placeholder {0}: application.suggestedName
 #: packages/ui/src/home.tsx
 msgid "Give it a name you will recognise, such as “{0}”."
@@ -4029,7 +4025,7 @@ msgid "Give the job a name, paste its description or link, then select Create ap
 msgstr ""
 
 #: apps/web/src/records-model.ts
-msgid "Give the new record a name."
+msgid "Give the new job search a name."
 msgstr ""
 
 #: packages/ui/src/work-journal-model.ts
@@ -4537,6 +4533,10 @@ msgstr ""
 msgid "Job requirements reviewed"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Job search"
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Jobs you held: employer, title, dates and what you did."
 msgstr ""
@@ -5004,14 +5004,6 @@ msgstr ""
 msgid "Medium"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Members can be assigned once the record is set up."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Members of this record"
-msgstr ""
-
 #: packages/ui/src/career-interview-model.ts
 msgid "Mentoring"
 msgstr ""
@@ -5193,6 +5185,10 @@ msgstr ""
 msgid "Moved \"{0}\" to {1}."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "My job search"
+msgstr ""
+
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/new-application-form.tsx
 msgid "Name"
@@ -5223,7 +5219,7 @@ msgid "Name it"
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Name of the new record"
+msgid "Name of the new job search"
 msgstr ""
 
 #: packages/ui/src/new-application-model.ts
@@ -5337,6 +5333,10 @@ msgstr ""
 msgid "New here? A short step-by-step guide can show you what to do first."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "New job search"
+msgstr ""
+
 #: packages/ui/src/knowledge.tsx
 msgid "New knowledge base"
 msgstr ""
@@ -5352,10 +5352,6 @@ msgstr ""
 
 #: packages/ui/src/work-journal-intake.tsx
 msgid "New notes from your agents will be refused until you turn this back on."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "New record"
 msgstr ""
 
 #: packages/ui/src/model-profile-picker.tsx
@@ -5476,10 +5472,6 @@ msgstr ""
 msgid "No blocking findings need action."
 msgstr ""
 
-#: apps/web/src/records-model.ts
-msgid "No candidate record is assigned to you yet. Create one, or ask an owner or admin of your organisation to assign you."
-msgstr ""
-
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5590,6 +5582,10 @@ msgstr ""
 msgid "No issues are recorded in this version."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "No job search is shared with you yet. Start one, or ask an owner or admin of your team to share one with you."
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 msgid "No knowledge base selected — runs will use legacy workspace evidence"
 msgstr ""
@@ -5604,10 +5600,6 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "No linked claim for this finding."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "No member is assigned to this record."
 msgstr ""
 
 #: packages/ui/src/speech-button.tsx
@@ -5749,6 +5741,10 @@ msgstr ""
 
 #: packages/ui/src/speech-button.tsx
 msgid "No words were heard. Try again closer to the microphone."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Nobody can open this job search yet."
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
@@ -6257,12 +6253,16 @@ msgstr ""
 msgid "Override rationale for {0}"
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "Owner"
+msgstr ""
+
 #: apps/web/src/sign-in.tsx
 msgid "Owner token"
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Owners and admins of your organisation assign members."
+msgid "Owners and admins of your team choose who can open it."
 msgstr ""
 
 #: packages/ui/src/export-preview.tsx
@@ -6769,10 +6769,6 @@ msgstr ""
 msgid "Reading the job page…"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Reading the record's members…"
-msgstr ""
-
 #: apps/web/src/private-sections.tsx
 msgid "Reading the rules…"
 msgstr ""
@@ -6794,11 +6790,15 @@ msgid "Reading what each source is…"
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Reading your candidate records…"
+msgid "Reading who can open it…"
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
 msgid "Reading your files…"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Reading your job searches…"
 msgstr ""
 
 #: apps/web/src/private-sections.tsx
@@ -6876,10 +6876,6 @@ msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Recent workspaces could not be loaded."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Record"
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -6987,17 +6983,17 @@ msgstr ""
 msgid "Remove {0} from recent workspaces"
 msgstr ""
 
-#. placeholder {0}: member.email
-#: apps/web/src/records.tsx
-msgid "Remove {0} from this record"
-msgstr ""
-
 #: packages/ui/src/connected-agents.tsx
 msgid "Remove {name} from this list? It shows again if it asks to spend."
 msgstr ""
 
 #: apps/web/src/credits-model.ts
 msgid "Remove a member, or ask the owner for a bigger plan, before inviting someone."
+msgstr ""
+
+#. placeholder {0}: member.email
+#: apps/web/src/records.tsx
+msgid "Remove access for {0}"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -8211,6 +8207,10 @@ msgstr ""
 msgid "Sign-in is on Home, under Workspace settings."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "Signed in"
+msgstr ""
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Signed in from the assistant"
 msgstr ""
@@ -8352,6 +8352,10 @@ msgstr ""
 msgid "Start here"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Start job search"
+msgstr ""
+
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
@@ -8478,7 +8482,7 @@ msgid "Stop the review before closing the workspace."
 msgstr ""
 
 #: apps/web/src/record-actions-model.ts
-msgid "Stop the run first. A run on this record is queued or running: pause it or stop it for good in its review, then delete the record."
+msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search."
 msgstr ""
 
 #: packages/ui/src/stop-reason.ts
@@ -8753,10 +8757,6 @@ msgstr ""
 msgid "The applied profiles no longer match the configured workspace models. Apply them again before starting a new run."
 msgstr ""
 
-#: apps/web/src/record-actions.tsx
-msgid "The archive holds everything stored for this record: its material, runs, drafts, exports, consent history and audit trail."
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "The artifact has not been approved."
 msgstr ""
@@ -8963,6 +8963,10 @@ msgstr ""
 msgid "The desktop operation could not be completed."
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "The download holds everything stored for this job search: its material, runs, drafts, exports, consent history and audit trail."
+msgstr ""
+
 #: apps/web/src/application-material-model.ts
 msgid "The draft cited something your record does not support, so it was refused. Try again, or add the missing facts to your record."
 msgstr ""
@@ -9158,6 +9162,10 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "The job post was quarantined by injection screening. Release or replace it before drafting."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "The job search"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9385,10 +9393,6 @@ msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "The provider does not accept this key. Check it for a typo or replace it."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "The record"
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
@@ -10164,11 +10168,11 @@ msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
-msgid "Type the record id,"
+msgid "Type its id,"
 msgstr ""
 
 #: apps/web/src/record-actions-model.ts
-msgid "Type the record id, {workspaceId}, exactly to delete it."
+msgid "Type its id, {workspaceId}, exactly to delete it."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -10677,6 +10681,10 @@ msgstr ""
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Who can open this job search"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Who may read it"
 msgstr ""
@@ -10717,6 +10725,10 @@ msgstr ""
 #: packages/ui/src/source-evidence-kind-contract.ts
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Work journal"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Working on"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -10891,6 +10903,10 @@ msgstr ""
 msgid "You can edit the draft once this round finishes."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "You can share this job search once it is set up."
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "You chose to talk about: {title}"
 msgstr ""
@@ -10969,6 +10985,10 @@ msgstr ""
 msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Your data"
+msgstr ""
+
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Your directions for this round"
@@ -11010,6 +11030,10 @@ msgstr ""
 msgid "Your interview"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Your job search and everything stored for it were deleted."
+msgstr ""
+
 #: packages/ui/src/knowledge-current.ts
 msgid "Your knowledge base is created when you add your first evidence above."
 msgstr ""
@@ -11020,10 +11044,6 @@ msgstr ""
 
 #: apps/web/src/feedback.tsx
 msgid "Your note"
-msgstr ""
-
-#: apps/web/src/records-model.ts
-msgid "Your organisation has no candidate record yet. Create the first one."
 msgstr ""
 
 #: apps/web/src/credits-model.ts
@@ -11089,6 +11109,10 @@ msgstr ""
 
 #: apps/web/src/oidc-session.ts
 msgid "Your sign-in has expired. Sign in again."
+msgstr ""
+
+#: apps/web/src/records-model.ts
+msgid "Your team has no job search yet. Start the first one."
 msgstr ""
 
 #. placeholder {0}: voice.listener

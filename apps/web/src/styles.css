@@ -188,6 +188,78 @@ label:where(:not(.shared-screens *)) {
   margin: 1rem 0;
 }
 
+/* Sign-in mode's top bar: who is signed in, and their team, at the start; the shell's actions
+   at the end. */
+/* The account menu opens over the page, so its rail never clips it. */
+.record-rail.account-rail {
+  overflow: visible;
+}
+
+.account-bar > .account-menu {
+  margin-right: auto;
+}
+
+.account-menu {
+  position: relative;
+}
+
+.account-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: min(28rem, 80vw);
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.account-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-menu > summary::after {
+  content: "▾";
+  color: var(--text-2);
+}
+
+.account-menu .account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-body {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  display: grid;
+  gap: 0.75rem;
+  width: min(26rem, calc(100vw - 2rem));
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(15, 20, 26, 0.16);
+}
+
+.account-menu-body > .record-actions {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.account-menu-body > .button-toolbar {
+  justify-self: start;
+}
+
 /* The theme and language above sign-in and sign-up (#2772). */
 .preferences-bar {
   padding-inline: 1rem;

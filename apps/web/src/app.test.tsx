@@ -106,7 +106,7 @@ describe("web screen", () => {
       <Shell mode="sign-in" client={unusedClient} onSignOut={() => {}} />,
     );
 
-    expect(html).toContain("Reading your candidate records…");
+    expect(html).toContain("Reading your job searches…");
     expect(html).not.toContain("Reading your workspace…");
   });
 

@@ -113,12 +113,18 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
     };
   }, [client]);
 
-  const actions = (
+  const common = (
     <>
       <ServiceStatus health={health} />
       <ScreenLanguageMenu />
       {/* Owner-token mode has no members, so only sign-in mode sends feedback (#2828). */}
       {mode === "sign-in" ? <FeedbackButton client={client} /> : null}
+    </>
+  );
+  // Sign-in mode signs out from the account menu, which also says who is signed in.
+  const actions = (
+    <>
+      {common}
       <SignOutButton onSignOut={onSignOut} />
     </>
   );
@@ -130,12 +136,7 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
         {health === "unreachable" ? <ServiceDown /> : null}
         {mode === "sign-in" ? (
           <>
-            <ShellActionsContext.Provider value={actions}>
-              <div className="record-rail">
-                <PageActions />
-              </div>
-            </ShellActionsContext.Provider>
-            <Records client={client} memory={memory}>
+            <Records client={client} memory={memory} shellActions={common} onSignOut={onSignOut}>
               {(recordId, onSaved) => (
                 <RecordScreens
                   key={recordId}

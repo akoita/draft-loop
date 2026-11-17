@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-
+import { AccountMenu } from "./account-menu.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { RecordActions } from "./record-actions.js";
@@ -10,6 +10,8 @@ import {
   assignMemberRequest,
   canManageMembers,
   currentRecordId,
+  firstJobSearchName,
+  isOnePersonPlan,
   memberLabel,
   newRecordNameProblem,
   noRecordNotice,
@@ -19,12 +21,14 @@ import {
   recordLabel,
   recordNameMaxLength,
   recordNames,
+  sharesAccess,
   tidyRecordName,
   unassignMemberRequest,
   withRecord,
 } from "./records-model.js";
 import { ReleaseAccess } from "./screening-access.js";
 import { canReleaseScreening } from "./screening-model.js";
+import { SignOutButton } from "./shell-actions.js";
 
 type Me = ApiSchemas["Me"];
 type OrganisationMember = ApiSchemas["OrganisationMember"];
@@ -44,6 +48,9 @@ type RecordsState =
 export interface RecordsProps {
   readonly client: ApiClient;
   readonly memory: RecordMemory;
+  /** The service status, language and feedback, drawn after the account menu in the top bar. */
+  readonly shellActions?: ReactNode;
+  readonly onSignOut?: () => void;
   /** The screens for the chosen record; they call `onSaved` once they create or read the record. */
   readonly children: (recordId: string, onSaved: (recordId: string) => void) => ReactNode;
 }
@@ -53,7 +60,7 @@ export interface RecordsProps {
  * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under an id made
  * from the name the person typed; the name is saved once the record exists.
  */
-export function Records({ client, memory, children }: RecordsProps) {
+export function Records({ client, memory, shellActions, onSignOut, children }: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
@@ -66,8 +73,19 @@ export function Records({ client, memory, children }: RecordsProps) {
       ([me, list]) => {
         if (!current) return;
         const ids = recordIds(list);
-        setState({ kind: "ready", me, ids, names: recordNames(list) });
-        setChosen(currentRecordId(ids, memory.read()));
+        const names = recordNames(list);
+        const found = currentRecordId(ids, memory.read());
+        if (found === undefined && isOnePersonPlan(me, ids)) {
+          // One person, one job search: set it up without asking for a name.
+          const name = firstJobSearchName();
+          const recordId = recordIdFromName(name, ids);
+          unsavedNames.current.set(recordId, name);
+          setState({ kind: "ready", me, ids, names: new Map(names).set(recordId, name) });
+          setChosen(recordId);
+          return;
+        }
+        setState({ kind: "ready", me, ids, names });
+        setChosen(found);
       },
       (error: unknown) => {
         if (current) setState({ kind: "failed", message: describeError(error) });
@@ -106,12 +124,32 @@ export function Records({ client, memory, children }: RecordsProps) {
     [client],
   );
 
-  if (state.kind === "loading") return <p role="status">{t`Reading your candidate records…`}</p>;
+  const topBar = (account: ReactNode) => (
+    <div className="record-rail account-rail">
+      <div className="page-actions account-bar">
+        {account}
+        {shellActions}
+        {account === null && onSignOut !== undefined ? (
+          <SignOutButton onSignOut={onSignOut} />
+        ) : null}
+      </div>
+    </div>
+  );
+  if (state.kind === "loading")
+    return (
+      <>
+        {topBar(null)}
+        <p role="status">{t`Reading your job searches…`}</p>
+      </>
+    );
   if (state.kind === "failed")
     return (
-      <p className="problem" role="alert">
-        {state.message}
-      </p>
+      <>
+        {topBar(null)}
+        <p className="problem" role="alert">
+          {state.message}
+        </p>
+      </>
     );
 
   const choose = (recordId: string) => {
@@ -138,38 +176,76 @@ export function Records({ client, memory, children }: RecordsProps) {
     setChosen(next);
   };
   const exists = chosen !== undefined && state.ids.includes(chosen);
+  const onePerson = isOnePersonPlan(state.me, state.ids);
+  const yourData =
+    onePerson && exists && canExportAndDelete(state.me) ? (
+      <RecordActions
+        key={chosen}
+        client={client}
+        recordId={chosen}
+        title={t`Your data`}
+        onDeleted={onDeleted}
+      />
+    ) : undefined;
 
   return (
     <>
-      <div className="record-rail">
-        <div className="record-area">
-          <RecordPicker
-            ids={state.ids}
-            names={state.names}
-            chosen={chosen}
-            notice={noRecordNotice(state.me)}
-            onChoose={choose}
-            onCreate={create}
+      {topBar(
+        onSignOut === undefined ? null : (
+          <AccountMenu
+            me={state.me}
+            onePerson={onePerson}
+            yourData={yourData}
+            onSignOut={onSignOut}
           />
-          {deleted === undefined ? null : (
+        ),
+      )}
+      {onePerson ? (
+        deleted === undefined ? null : (
+          <div className="record-rail">
             <p className="notice" role="status">
-              {t`The record`} {deleted} {t`and everything stored for it were deleted.`}
+              {t`Your job search and everything stored for it were deleted.`}
             </p>
-          )}
-          {chosen === undefined ? null : (
-            <MembersPanel
-              key={`${chosen}:${exists}`}
-              client={client}
-              recordId={chosen}
-              exists={exists}
-              manage={canManageMembers(state.me)}
+          </div>
+        )
+      ) : (
+        <div className="record-rail">
+          <div className="record-area">
+            <RecordPicker
+              ids={state.ids}
+              names={state.names}
+              chosen={chosen}
+              notice={noRecordNotice(state.me)}
+              onChoose={choose}
+              onCreate={create}
             />
-          )}
-          {exists && canExportAndDelete(state.me) ? (
-            <RecordActions key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
-          ) : null}
+            {deleted === undefined ? null : (
+              <p className="notice" role="status">
+                {t`The job search`} {deleted} {t`and everything stored for it were deleted.`}
+              </p>
+            )}
+            {chosen === undefined || !sharesAccess(state.me) ? null : (
+              <MembersPanel
+                key={`${chosen}:${exists}`}
+                client={client}
+                recordId={chosen}
+                exists={exists}
+                manage={canManageMembers(state.me)}
+                selfId={state.me.kind === "member" ? state.me.memberId : undefined}
+              />
+            )}
+            {exists && canExportAndDelete(state.me) ? (
+              <RecordActions
+                key={chosen}
+                client={client}
+                recordId={chosen}
+                title={t`Download or delete this job search`}
+                onDeleted={onDeleted}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
       {chosen === undefined ? null : (
         <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
           {children(chosen, onSaved)}
@@ -242,12 +318,12 @@ export function RecordPicker({
 
   return (
     <section className="panel records">
-      <h2>{t`Candidate record`}</h2>
+      <h2>{t`Working on`}</h2>
       {options.length === 0 ? (
         <p className="muted">{notice}</p>
       ) : (
         <div className="record-field">
-          <label htmlFor="record-picker">{t`Record`}</label>
+          <label htmlFor="record-picker">{t`Job search`}</label>
           <select
             id="record-picker"
             value={chosen}
@@ -266,14 +342,14 @@ export function RecordPicker({
       )}
       {showForm ? (
         <form className="inline-form" onSubmit={create}>
-          <label htmlFor="new-record-name">{t`Name of the new record`}</label>
+          <label htmlFor="new-record-name">{t`Name of the new job search`}</label>
           <input
             id="new-record-name"
             ref={field}
             value={newName}
             autoComplete="off"
             maxLength={recordNameMaxLength}
-            placeholder={t`For example: Product roles 2026`}
+            placeholder={t`For example: Ada Martin, or Product roles 2026`}
             onChange={(event) => setNewName(event.target.value)}
           />
           {problem === undefined ? null : (
@@ -281,7 +357,7 @@ export function RecordPicker({
               {problem}
             </p>
           )}
-          <button type="submit">{t`Create record`}</button>
+          <button type="submit">{t`Start job search`}</button>
           {options.length === 0 ? null : (
             <button type="button" className="secondary" onClick={cancel}>{t`Cancel`}</button>
           )}
@@ -296,7 +372,7 @@ export function RecordPicker({
           }}
         >
           <span aria-hidden="true">+ </span>
-          {t`New record`}
+          {t`New job search`}
         </button>
       )}
     </section>
@@ -320,10 +396,12 @@ export interface MembersPanelProps {
   readonly exists: boolean;
   /** Owners and admins assign and remove members; members read the list. */
   readonly manage: boolean;
+  /** The caller's own member id, whose line has no Remove button. */
+  readonly selfId?: string | undefined;
 }
 
 /** Who works on the record; owners and admins assign organisation members to it. */
-export function MembersPanel({ client, recordId, exists, manage }: MembersPanelProps) {
+export function MembersPanel({ client, recordId, exists, manage, selfId }: MembersPanelProps) {
   const [state, setState] = useState<MembersState>(
     exists ? { kind: "loading" } : { kind: "missing" },
   );
@@ -366,11 +444,11 @@ export function MembersPanel({ client, recordId, exists, manage }: MembersPanelP
 
   return (
     <details className="panel members">
-      <summary>{t`Members of this record`}</summary>
+      <summary>{t`Who can open this job search`}</summary>
       {state.kind === "loading" ? (
-        <p role="status">{t`Reading the record's members…`}</p>
+        <p role="status">{t`Reading who can open it…`}</p>
       ) : state.kind === "missing" ? (
-        <p className="muted">{t`Members can be assigned once the record is set up.`}</p>
+        <p className="muted">{t`You can share this job search once it is set up.`}</p>
       ) : state.kind === "failed" ? (
         <p className="problem" role="alert">
           {state.message}
@@ -378,6 +456,7 @@ export function MembersPanel({ client, recordId, exists, manage }: MembersPanelP
       ) : (
         <MemberList
           members={state.members}
+          selfId={selfId}
           assignable={manage ? assignableMembers(state.organisation, state.members) : undefined}
           busy={busy}
           messages={messages}
@@ -405,6 +484,8 @@ export function MembersPanel({ client, recordId, exists, manage }: MembersPanelP
 
 export interface MemberListProps {
   readonly members: readonly RecordMember[];
+  /** The caller's own member id: they cannot remove themselves here. */
+  readonly selfId?: string | undefined;
   /** The organisation members a manager may assign; undefined for a member, who only reads. */
   readonly assignable: readonly OrganisationMember[] | undefined;
   readonly busy: boolean;
@@ -416,6 +497,7 @@ export interface MemberListProps {
 /** The assigned members, with assign and remove controls for owners and admins. */
 export function MemberList({
   members,
+  selfId,
   assignable,
   busy,
   messages,
@@ -436,18 +518,19 @@ export function MemberList({
   return (
     <>
       {members.length === 0 ? (
-        <p className="muted">{t`No member is assigned to this record.`}</p>
+        <p className="muted">{t`Nobody can open this job search yet.`}</p>
       ) : (
         <ul className="sources">
           {members.map((member) => (
             <li key={member.memberId}>
-              {memberLabel(member)}{" "}
-              {manage ? (
+              {memberLabel(member)}
+              {member.memberId === selfId ? ` ${t`(you)`}` : null}{" "}
+              {manage && member.memberId !== selfId ? (
                 <button
                   type="button"
                   className="secondary small"
                   disabled={busy}
-                  aria-label={t`Remove ${member.email} from this record`}
+                  aria-label={t`Remove access for ${member.email}`}
                   onClick={() => onRemove(member.memberId)}
                 >{t`Remove`}</button>
               ) : null}
@@ -456,12 +539,12 @@ export function MemberList({
         </ul>
       )}
       {!manage ? (
-        <p className="muted">{t`Owners and admins of your organisation assign members.`}</p>
+        <p className="muted">{t`Owners and admins of your team choose who can open it.`}</p>
       ) : assignable.length === 0 ? (
-        <p className="muted">{t`Every member of your organisation is assigned to this record.`}</p>
+        <p className="muted">{t`Everyone in your team can already open it.`}</p>
       ) : (
         <form className="inline-form" onSubmit={assign}>
-          <label htmlFor="assign-member">{t`Assign a member`}</label>
+          <label htmlFor="assign-member">{t`Give access to`}</label>
           <select
             id="assign-member"
             value={choice}
@@ -473,7 +556,7 @@ export function MemberList({
               </option>
             ))}
           </select>
-          <button type="submit" disabled={busy}>{t`Assign`}</button>
+          <button type="submit" disabled={busy}>{t`Give access`}</button>
         </form>
       )}
       {messages.map((message) => (

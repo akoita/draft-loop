@@ -36,7 +36,7 @@ describe("record export and deletion", () => {
     });
     for (const typed of ["", "candidate-ben", "Candidate-Ana"]) {
       expect(deleteRecordRequest("candidate-ana", typed)).toEqual({
-        problem: "Type the record id, candidate-ana, exactly to delete it.",
+        problem: "Type its id, candidate-ana, exactly to delete it.",
       });
     }
   });

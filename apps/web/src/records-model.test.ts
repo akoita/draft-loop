@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { ApiSchemas } from "./api-client.js";
 import {
+  accountLabel,
   assignableMembers,
   assignMemberRequest,
   canManageMembers,
   createRecordMemory,
   currentRecordId,
+  isOnePersonPlan,
   memberLabel,
   newRecordNameProblem,
   noRecordNotice,
@@ -14,6 +16,7 @@ import {
   recordIds,
   recordLabel,
   recordNames,
+  sharesAccess,
   tidyRecordName,
   unassignMemberRequest,
   withRecord,
@@ -106,7 +109,7 @@ describe("candidate records", () => {
     expect(tidyRecordName("  Product   roles\t2026 ")).toBe("Product roles 2026");
     expect(newRecordNameProblem("Product roles 2026", names)).toBeUndefined();
     expect(newRecordNameProblem("a".repeat(80), names)).toBeUndefined();
-    expect(newRecordNameProblem("", names)).toBe("Give the new record a name.");
+    expect(newRecordNameProblem("", names)).toBe("Give the new job search a name.");
     expect(newRecordNameProblem("a".repeat(81), names)).toBe("Use up to 80 characters.");
     expect(newRecordNameProblem("fictional SEARCH", names)).toContain("has that name already");
   });
@@ -126,8 +129,8 @@ describe("candidate records", () => {
     expect(canManageMembers(member("owner"))).toBe(true);
     expect(canManageMembers(member("admin"))).toBe(true);
     expect(canManageMembers(member("member"))).toBe(false);
-    expect(noRecordNotice(member("admin"))).toContain("Create the first one");
-    expect(noRecordNotice(member("member"))).toContain("No candidate record is assigned to you");
+    expect(noRecordNotice(member("admin"))).toContain("Start the first one");
+    expect(noRecordNotice(member("member"))).toContain("No job search is shared with you");
   });
 
   it("offers the organisation's members not yet assigned, by email", () => {
@@ -170,5 +173,52 @@ describe("candidate records", () => {
     const storage = fakeStorage();
     storage.setItem("draft-loop.record", "../not an id");
     expect(createRecordMemory(() => storage).read()).toBeUndefined();
+  });
+});
+
+describe("who the screen is for (#2861)", () => {
+  const onPlan = (
+    candidateRecords: number | null,
+    seats: number | null,
+    extra: Partial<Extract<ApiSchemas["Me"], { kind: "member" }>> = {},
+  ): ApiSchemas["Me"] => ({
+    kind: "member",
+    organisationId: "org-alder",
+    memberId: "member-ada",
+    role: "owner",
+    email: "ada@alder.example.test",
+    plan: { candidateRecords, seats },
+    ...extra,
+  });
+
+  it("treats a plan for one person and one job search as solo, until it holds more", () => {
+    expect(isOnePersonPlan(onPlan(1, 1), [])).toBe(true);
+    expect(isOnePersonPlan(onPlan(1, 1), ["my-job-search"])).toBe(true);
+    // A plan changed after two job searches were made keeps the picker, so none is lost.
+    expect(isOnePersonPlan(onPlan(1, 1), ["a", "b"])).toBe(false);
+    expect(isOnePersonPlan(onPlan(3, 1), ["a"])).toBe(false);
+    expect(isOnePersonPlan(onPlan(25, null), ["a"])).toBe(false);
+    const { plan: _plan, ...noPlan } = onPlan(1, 1) as Extract<
+      ApiSchemas["Me"],
+      { kind: "member" }
+    >;
+    expect(isOnePersonPlan(noPlan, [])).toBe(false);
+    expect(isOnePersonPlan({ kind: "owner" }, [])).toBe(false);
+  });
+
+  it("shares access only on plans for more than one person", () => {
+    expect(sharesAccess(onPlan(3, 1))).toBe(false);
+    expect(sharesAccess(onPlan(25, null))).toBe(true);
+    expect(sharesAccess(onPlan(25, 5))).toBe(true);
+    expect(sharesAccess({ kind: "owner" })).toBe(true);
+  });
+
+  it("names the team in the account menu only on plans for several people", () => {
+    const coach = onPlan(25, null, { organisationName: "Alder coaching" });
+    expect(accountLabel(coach, false)).toBe("ada@alder.example.test · Alder coaching");
+    expect(accountLabel(onPlan(1, 1, { organisationName: "ada" }), true)).toBe(
+      "ada@alder.example.test",
+    );
+    expect(accountLabel(onPlan(25, null), false)).toBe("ada@alder.example.test");
   });
 });
