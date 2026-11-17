@@ -264,6 +264,7 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
         if ((await options.usage.costTodayUsd()) >= limits.dailyCostCapUsd) {
           return fallback("cost_cap");
         }
+        await options.usage.countQuestion(question.memberId);
       } catch {
         return fallback("model_failed");
       }

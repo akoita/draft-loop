@@ -178,6 +178,9 @@ export const humanOnlyRoutes: readonly string[] = [
   "POST /v1/workspaces/:workspaceId/agent-tokens",
   "POST /v1/workspaces/:workspaceId/application-folders",
   "POST /v1/workspaces/:workspaceId/application-imports",
+  // A person asks the support assistant; an agent reads the guide through search_help (#2882).
+  "POST /v1/workspaces/:workspaceId/support/conversations",
+  "POST /v1/workspaces/:workspaceId/support/conversations/:conversationId/messages",
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/material/:materialId/document",
   // Research briefs reach agents only with the drafts' read tool, if ever.
   "GET /v1/workspaces/:workspaceId/applications/:applicationId/research-briefs",

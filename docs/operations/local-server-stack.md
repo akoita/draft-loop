@@ -306,6 +306,10 @@ check off.
 | `DRAFT_LOOP_PAGE_FETCHER_URL`        | API               | The page fetcher's origin, called with a Google identity token over https. Unset, the API fetches pages itself                         |
 | `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited`          |
 | `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset                 |
+| `DRAFT_LOOP_SUPPORT_ASSISTANT` | API | `on` lets the support assistant answer with Claude Haiku on the Claude route; `off` (default) answers every question with guide search |
+| `DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS` | API | Questions one member may ask the assistant per UTC day before guide search takes over; 20 when unset |
+| `DRAFT_LOOP_SUPPORT_DAILY_COST_USD` | API | The assistant's estimated model cost per UTC day across all members, per API instance, before guide search takes over; 2 when unset |
+| `DRAFT_LOOP_SUPPORT_SERVICE_STATE`, `DRAFT_LOOP_SUPPORT_SERVICE_CODES` | API | What the assistant tells members about the service: `operational` (default), `degraded` or `down`, and comma-separated incident codes |
 | `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                               |
 | `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                                        |
 | `DRAFT_LOOP_WORKER_IDLE_MS`          | worker            | In drain mode, how long the queue stays empty before exit, default 60000                                                               |

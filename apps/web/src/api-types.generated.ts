@@ -1166,6 +1166,19 @@ export interface ApiSchemas {
       readonly sha256: string;
     })[];
   };
+  "SupportReply": {
+    readonly conversation_id: string;
+    readonly mode: "assistant" | "guide_search";
+    readonly outcome: "answered" | "refused" | "needs_person" | null;
+    readonly reason: "disabled" | "member_limit" | "cost_cap" | "question_too_long" | "model_failed" | "no_answer" | null;
+    readonly text: string | null;
+    readonly sections: readonly ({
+      readonly id: "evidence" | "job" | "draft" | "review" | "prepare" | "display" | "agents" | "credits" | "privacy" | "problems";
+      readonly title: string;
+      readonly paragraphs: readonly (string)[];
+    })[];
+    readonly ticket_id: string | null;
+  };
   "UnscreenedMaterial": {
     readonly kind: "job-source";
     readonly briefId: string;
@@ -2897,6 +2910,30 @@ export interface ApiOperations {
       readonly q?: string;
     };
     readonly response: ApiSchemas["HelpGuide"];
+  };
+  "POST /v1/workspaces/{workspaceId}/support/conversations": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: {
+      readonly conversation_id: string;
+      readonly assistant_available: boolean;
+    };
+  };
+  "POST /v1/workspaces/{workspaceId}/support/conversations/{conversationId}/messages": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly conversationId: string;
+    };
+    readonly body: {
+      readonly question: string;
+      readonly language: "en" | "fr";
+      readonly history?: readonly ({
+        readonly role: "member" | "assistant";
+        readonly text: string;
+      })[];
+    };
+    readonly response: ApiSchemas["SupportReply"];
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

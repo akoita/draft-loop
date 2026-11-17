@@ -120,6 +120,9 @@ importers:
       '@draft-loop/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@draft-loop/support':
+        specifier: workspace:*
+        version: link:../../packages/support
       '@draft-loop/ui':
         specifier: workspace:*
         version: link:../../packages/ui

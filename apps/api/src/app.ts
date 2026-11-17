@@ -115,6 +115,8 @@ import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
+import type { SupportSettings } from "./support-config.js";
+import { registerSupportRoutes } from "./support-routes.js";
 import {
   registerTenantApplications,
   type TenantApplications,
@@ -230,6 +232,8 @@ export interface ApiOptions {
    * With it, the auth config tells the signed-out screen to show the landing page (#2567).
    */
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
+  /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
+  readonly support?: SupportSettings;
   /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
   readonly feedback?: FeedbackRoutesOptions["feedback"];
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
@@ -927,6 +931,17 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (options.feedback !== undefined) registerFeedbackRoutes(app, { feedback: options.feedback });
   registerHelpRoutes(app);
+  if (options.support !== undefined && application !== undefined) {
+    // The assistant uses the career interview's Claude route, read per request.
+    const interview = application.careerInterview;
+    registerSupportRoutes(app, {
+      settings: options.support,
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+      route: () => (interview?.allowProviderData === false ? undefined : interview?.route),
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+    });
+  }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 

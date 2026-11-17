@@ -23,6 +23,7 @@ import type { TenantEntitlements } from "./entitlement-gate.js";
 import type { OperatorTenant } from "./operator-plan-routes.js";
 import type { PaymentEventsPort } from "./payment-checkout.js";
 import type { TenantErasure } from "./record-erasure-routes.js";
+import { readSupportSettings } from "./support-config.js";
 
 /** The committed OpenAPI document, which the drift test keeps equal to the generated one. */
 export const openApiDocumentPath = new URL("../openapi.json", import.meta.url);
@@ -63,6 +64,7 @@ export async function generateOpenApiDocument(): Promise<string> {
     betaInvites: { invites: {} as BetaInvites, cap: 0 },
     betaWaitlist: {} as BetaWaitlist,
     feedback: {} as FeedbackStore,
+    support: readSupportSettings({}),
     paymentEvents: {} as PaymentEventsPort,
   });
   try {

@@ -10,7 +10,8 @@ export type SupportLanguage = (typeof supportLanguages)[number];
 /** One countable allowance, such as drafts used on an application this month. */
 export interface SupportCounter {
   readonly name: string;
-  readonly used: number;
+  /** `null` when the host counts the allowance but cannot read its use. */
+  readonly used: number | null;
   /** `null` when the plan sets no limit. */
   readonly limit: number | null;
 }
@@ -87,6 +88,9 @@ export type SupportModel = (request: SupportModelRequest) => Promise<SupportMode
 export interface SupportUsageLedger {
   questionsToday(memberId: string): Promise<number>;
   costTodayUsd(): Promise<number>;
+  /** Counts one question against the member's day, once it passed the limits. */
+  countQuestion(memberId: string): Promise<void>;
+  /** Adds one model call's cost to the day. */
   record(entry: SupportUsageEntry): Promise<void>;
 }
 

@@ -69,6 +69,7 @@ function harness(
   const requests: SupportModelRequest[] = [];
   const recorded: SupportUsageEntry[] = [];
   const audit: SupportAuditEvent[] = [];
+  const counted: string[] = [];
   let index = 0;
   const assistant = createSupportAssistant({
     model: async (request) => {
@@ -88,6 +89,9 @@ function harness(
     usage: {
       questionsToday: async () => overrides.today ?? 0,
       costTodayUsd: async () => overrides.costToday ?? 0,
+      countQuestion: async (memberId) => {
+        counted.push(memberId);
+      },
       record: async (entry) => {
         recorded.push(entry);
       },
@@ -96,7 +100,7 @@ function harness(
     now: () => "2026-11-17T12:00:00Z",
     ...overrides,
   });
-  return { assistant, requests, recorded, audit };
+  return { assistant, requests, recorded, audit, counted };
 }
 
 function ask(question: string, language: "en" | "fr" = "en"): SupportQuestion {
@@ -105,7 +109,7 @@ function ask(question: string, language: "en" | "fr" = "en"): SupportQuestion {
 
 describe("the support assistant (#2882)", () => {
   it("answers from the guide with the sections it used", async () => {
-    const { assistant, requests, recorded, audit } = harness([
+    const { assistant, requests, recorded, audit, counted } = harness([
       toolStep("search_guide", { query: "export pdf" }),
       answerStep("Approve the draft, then select Export and pick PDF.", ["review", "review"]),
     ]);
@@ -126,6 +130,7 @@ describe("the support assistant (#2882)", () => {
     expect(second.tool_results[0]?.tool).toBe("search_guide");
     expect(second.tool_results[0]?.result[0]?.id).toBe("review");
     expect(recorded).toHaveLength(2);
+    expect(counted).toEqual(["member_1"]);
     expect(audit).toEqual([
       {
         kind: "tool",
