@@ -26,6 +26,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 2
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -44,6 +45,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
@@ -93,6 +96,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
@@ -106,7 +111,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Test every package, one shard
         if: needs.scope.outputs.run_all == 'true'
-        run: pnpm exec vitest run --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        env:
+          SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+        run: pnpm exec vitest run --shard="$SHARD"
       - name: Test the affected packages
         if: needs.scope.outputs.run_all != 'true' && needs.scope.outputs.packages != ''
         env:
@@ -117,10 +124,57 @@ jobs:
         if: matrix.shard == 1
         run: pnpm test:release
 
+  # Static analysis of the code and the workflows. Fails on any CodeQL error-level result, and
+  # uploads the results to code scanning so they show on the pull request.
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+      - name: Analyze
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}
+          output: codeql-results
+      - name: Fail on error-level results
+        run: node scripts/codeql-gate.mjs codeql-results
+
+  # Audits the workflows for unsafe patterns: template injection, credential persistence,
+  # over-broad permissions and unpinned actions.
+  workflow-audit:
+    name: Workflow audit
+    needs: scope
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run zizmor
+        run: pipx run zizmor==1.31.1 --offline --min-severity medium --format github .github/workflows
+
   # The required check. It always reports, so a job skipped by scope never blocks a merge.
   validate:
     name: validate
-    needs: [scope, static-checks, tests, server-storage]
+    needs: [scope, static-checks, tests, server-storage, codeql, workflow-audit]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -132,6 +186,9 @@ jobs:
           TESTS_NEEDED: ${{ needs.scope.outputs.tests }}
           STORAGE: ${{ needs.server-storage.result }}
           STORAGE_NEEDED: ${{ needs.scope.outputs.server_storage }}
+          CODEQL: ${{ needs.codeql.result }}
+          CODEQL_NEEDED: ${{ needs.scope.outputs.docs_only != 'true' }}
+          WORKFLOWS: ${{ needs.workflow-audit.result }}
         run: |
           check() {
             if [ "$2" = true ]; then want=success; else want=skipped; fi
@@ -145,6 +202,8 @@ jobs:
           check "Static checks" true "$STATIC"
           check "Tests" "$TESTS_NEEDED" "$TESTS"
           check "Server storage" "$STORAGE_NEEDED" "$STORAGE"
+          check "CodeQL" "$CODEQL_NEEDED" "$CODEQL"
+          check "Workflow audit" true "$WORKFLOWS"
 
   server-storage:
     name: Server storage
@@ -169,6 +228,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
@@ -205,6 +266,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
