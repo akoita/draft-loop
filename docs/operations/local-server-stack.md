@@ -45,7 +45,7 @@ flowchart LR
 | `gcs`          | `fsouza/fake-gcs-server:1.56.1`                                          | `http://127.0.0.1:4443`                                 |
 | `api`          | `apps/api/Dockerfile`: the `/v1` API and the web screen at `/`           | `http://127.0.0.1:58080`                                |
 | `api-oidc`     | The same image in `oidc` mode, signing members in through Keycloak       | `http://127.0.0.1:58082`                                |
-| `keycloak`     | `keycloak/keycloak:26.7.5` in development mode, with the fictional realm | `http://127.0.0.1:58081`                                |
+| `keycloak`     | `keycloak/keycloak:26.8.2` in development mode, with the fictional realm | `http://127.0.0.1:58081`                                |
 | `page-fetcher` | `apps/page-fetcher/Dockerfile`: fetches approved job pages for the API   | none                                                    |
 | `worker`       | `apps/worker/Dockerfile`: executes queued runs                           | none                                                    |
 

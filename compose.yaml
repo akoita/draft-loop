@@ -49,7 +49,7 @@ services:
   keycloak:
     # The identity provider for sign-in on the local stack, in development mode, with a realm of
     # fictional users imported at start (compose/keycloak). A deployment uses a hosted Keycloak.
-    image: keycloak/keycloak:26.7.5
+    image: keycloak/keycloak:26.8.2
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
