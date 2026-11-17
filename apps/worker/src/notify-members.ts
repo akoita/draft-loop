@@ -20,8 +20,13 @@ import {
 // text; `DRAFT_LOOP_NOTICE_SEND=yes` sends. Logs never carry an address.
 const config = readWorkerConfig(process.env);
 const mail = readMailConfig(process.env);
-if (mail === undefined) throw new Error("Mail is off in this deployment: nothing can be sent.");
 const { window, dryRun } = readNoticeRequest(process.env);
+// Without mail (staging), a dry run still counts the members and prints the text, so the operator
+// can check the workflow; only a real send needs mail.
+if (mail === undefined && !dryRun) {
+  throw new Error("Mail is off in this deployment: nothing can be sent.");
+}
+const serviceUrl = mail?.serviceUrl ?? publicOrigin(process.env.DRAFT_LOOP_PUBLIC_URL);
 
 const cloudSql = await startConfiguredCloudSqlProxy(process.env, "iam");
 const directory = await createPostgresTenantDirectory({
@@ -29,19 +34,23 @@ const directory = await createPostgresTenantDirectory({
   schema: config.databaseSchema,
   maxConnections: 1,
 });
-const resolveKey = createSecretManagerCredentialResolver({ secrets: { brevo: mail.keySecret } });
-const send = createBrevoMailSender({
-  from: mail.from,
-  apiKey: async () => {
-    const key = await resolveKey("brevo");
-    if (key === undefined) throw new Error("The mail key is missing.");
-    return key;
-  },
-});
+const send =
+  mail === undefined
+    ? undefined
+    : createBrevoMailSender({
+        from: mail.from,
+        apiKey: async () => {
+          const key = await createSecretManagerCredentialResolver({
+            secrets: { brevo: mail.keySecret },
+          })("brevo");
+          if (key === undefined) throw new Error("The mail key is missing.");
+          return key;
+        },
+      });
 
 try {
   for (const locale of ["en", "fr"] as const) {
-    const message = maintenanceNotice(window, locale, mail.serviceUrl);
+    const message = maintenanceNotice(window, locale, serviceUrl);
     console.info(logLine("INFO", "maintenance notice text", { locale, ...message }));
   }
   const summary = await notifyMembers(
@@ -64,6 +73,7 @@ try {
         return recipients;
       },
       send: async (message) => {
+        if (send === undefined) return false;
         try {
           await send(message);
           return true;
@@ -73,7 +83,7 @@ try {
       },
     },
     window,
-    mail.serviceUrl,
+    serviceUrl,
     dryRun,
   );
   console.info(
@@ -85,4 +95,15 @@ try {
 } finally {
   await directory.close();
   await cloudSql.close();
+}
+
+/** The service's address for the text; a placeholder when the deployment names none. */
+function publicOrigin(value: string | undefined): string {
+  try {
+    const url = new URL(value?.trim() ?? "");
+    if (url.protocol === "https:") return url.origin;
+  } catch {
+    // Falls through to the placeholder.
+  }
+  return "https://draftloop.example";
 }
