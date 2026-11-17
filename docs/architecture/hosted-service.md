@@ -910,8 +910,9 @@ Before a window, the operator can email every active member once (#2968):
 `tsx src/notify-members.ts` on the worker's image, with
 `DRAFT_LOOP_NOTICE_STARTS_AT`, `DRAFT_LOOP_NOTICE_ENDS_AT` and
 `DRAFT_LOOP_NOTICE_READ_ONLY`. It is a dry run that prints the count and the
-text unless `DRAFT_LOOP_NOTICE_SEND=yes`. The message goes out in each
-member's screen language, once per address, and logs never carry one.
+text unless `DRAFT_LOOP_NOTICE_SEND=yes`. A deployment without mail, such as
+staging, can run only the dry run. The message goes out in each member's screen
+language, once per address, and logs never carry one.
 
 ### Consent
 
