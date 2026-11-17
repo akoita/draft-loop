@@ -211,7 +211,9 @@ post-logout address.
 
 All images build from the repository root on `node:24.22.1-bookworm-slim`. Each
 installs only its app's production dependencies from the lockfile, in a
-separate stage, and runs the TypeScript sources with `tsx`.
+separate stage. The worker and the page fetcher run their TypeScript sources
+with `tsx`. The API bundles its server with esbuild at build time and starts
+`dist/server.mjs` with `node`, so a cold start compiles nothing.
 
 | Image          | Contents beyond its app                                                                                     |
 | -------------- | ----------------------------------------------------------------------------------------------------------- |
