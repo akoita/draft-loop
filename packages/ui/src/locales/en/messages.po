@@ -5895,10 +5895,6 @@ msgstr "No public API rate is available for this registered role."
 msgid "No recent workspaces yet."
 msgstr "No recent workspaces yet."
 
-#: apps/web/src/oidc-session.ts
-msgid "No refresh token is stored."
-msgstr "No refresh token is stored."
-
 #: packages/ui/src/review.tsx
 msgid "No required sections"
 msgstr "No required sections"
@@ -10005,6 +10001,10 @@ msgstr "The token could not be created. {0}"
 #: apps/web/src/oidc-session.ts
 msgid "The token endpoint answered {0}."
 msgstr "The token endpoint answered {0}."
+
+#: apps/web/src/oidc-session.ts
+msgid "The token endpoint cannot be reached."
+msgstr "The token endpoint cannot be reached."
 
 #: packages/ui/src/run-cost.ts
 msgid "The total is a lower bound."

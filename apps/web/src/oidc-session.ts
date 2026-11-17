@@ -52,6 +52,8 @@ export interface OidcSessionOptions {
   /** The tab's session storage; never local storage, so tokens end with the tab. */
   readonly storage: () => Storage | undefined;
   readonly now: () => number;
+  /** Waits between refresh attempts while the provider wakes; defaults to a timer. */
+  readonly wait?: (ms: number) => Promise<void>;
 }
 
 /** One tab's sign-in through the identity provider. */
@@ -72,7 +74,10 @@ export interface OidcSession {
   complete(search: string): Promise<boolean>;
   /** A current access token, refreshed when it is about to expire. */
   accessToken(): Promise<string>;
-  /** Refreshes the access token once; on failure the session ends. */
+  /**
+   * Refreshes the access token. A refused grant ends the session; a provider that cannot answer is
+   * retried a few times, then the call fails and the tokens stay.
+   */
   refresh(): Promise<string>;
   /**
    * Ends the session in this tab and returns the provider's sign-out page, if it has one. A notice
@@ -88,6 +93,21 @@ export interface OidcSession {
 const tokensKey = "draft-loop.sign-in";
 const attemptKey = "draft-loop.sign-in-attempt";
 const noticeKey = "draft-loop.sign-in-notice";
+
+/**
+ * Waits before each retry of a refresh the provider could not answer. The provider scales to zero
+ * when idle, so the first refresh after a break can meet a cold start or a brief 5xx answer.
+ */
+const refreshRetryDelaysMs = [1_000, 3_000, 8_000] as const;
+
+/** The token endpoint refused the grant: the session is over at the provider. */
+class TokenRefusedError extends Error {}
+
+/** The token endpoint could not be reached or failed on its side; the tokens may still be good. */
+class TokenUnavailableError extends Error {}
+
+/** Only an answer that refuses the grant itself ends a session; others may pass. */
+const refusesGrant = (status: number) => status === 400 || status === 401;
 
 interface Attempt {
   readonly state: string;
@@ -132,17 +152,30 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
     return endpoints;
   }
 
+  const wait =
+    options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+
   async function requestTokens(body: URLSearchParams, previousRefreshToken?: string) {
-    const { tokenEndpoint } = await providerEndpoints();
-    const response = await options.fetch(tokenEndpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
-    });
-    if (!response.ok) throw new Error(t`The token endpoint answered ${response.status}.`);
+    let response: Response;
+    try {
+      const { tokenEndpoint } = await providerEndpoints();
+      response = await options.fetch(tokenEndpoint, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+      });
+    } catch (error) {
+      throw new TokenUnavailableError(t`The token endpoint cannot be reached.`, { cause: error });
+    }
+    if (!response.ok) {
+      const message = t`The token endpoint answered ${response.status}.`;
+      throw refusesGrant(response.status)
+        ? new TokenRefusedError(message)
+        : new TokenUnavailableError(message);
+    }
     const tokens = parseTokenResponse(await response.json(), options.now(), previousRefreshToken);
     tokenStore.write(JSON.stringify(tokens));
     return tokens;
@@ -210,7 +243,17 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       const tokens = storedTokens();
       if (tokens === undefined) throw new SignInEndedError(signInNotices().expired);
       if (!needsRefresh(tokens, options.now())) return tokens.accessToken;
-      if (tokens.refreshToken !== undefined) return session.refresh();
+      if (tokens.refreshToken !== undefined) {
+        try {
+          return await session.refresh();
+        } catch (error) {
+          // A provider that cannot answer yet leaves the session as it was: the current token
+          // serves until it expires, and the next call refreshes again.
+          if (!(error instanceof SignInEndedError) && options.now() < tokens.expiresAt)
+            return tokens.accessToken;
+          throw error;
+        }
+      }
       if (options.now() < tokens.expiresAt) return tokens.accessToken;
       session.clear();
       throw new SignInEndedError(signInNotices().expired);
@@ -220,16 +263,30 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       if (refreshing === undefined) {
         const pending = (async () => {
           const refreshToken = storedTokens()?.refreshToken;
-          try {
-            if (refreshToken === undefined) throw new Error(t`No refresh token is stored.`);
-            const tokens = await requestTokens(
-              refreshBody({ clientId: options.clientId, refreshToken }),
-              refreshToken,
-            );
-            return tokens.accessToken;
-          } catch (error) {
+          if (refreshToken === undefined) {
             session.clear();
-            throw new SignInEndedError(signInNotices().expired, { cause: error });
+            throw new SignInEndedError(signInNotices().expired);
+          }
+          for (let attempt = 0; ; attempt += 1) {
+            try {
+              const tokens = await requestTokens(
+                refreshBody({ clientId: options.clientId, refreshToken }),
+                refreshToken,
+              );
+              return tokens.accessToken;
+            } catch (error) {
+              const delay = refreshRetryDelaysMs[attempt];
+              if (error instanceof TokenUnavailableError && delay !== undefined) {
+                await wait(delay);
+                continue;
+              }
+              // Only a refused grant ends the session. A provider still unreachable after the
+              // retries keeps the tokens, so the person is not signed out by an outage.
+              if (error instanceof TokenUnavailableError)
+                throw new Error(signInNotices().unreachable, { cause: error });
+              session.clear();
+              throw new SignInEndedError(signInNotices().expired, { cause: error });
+            }
           }
         })();
         refreshing = pending;
