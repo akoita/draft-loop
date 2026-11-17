@@ -14,6 +14,7 @@ import {
 import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
+import { automaticRoundAndVoiceInstructions } from "./author-voice-prompts.js";
 
 const authorVersion = promptTemplateVersion("author");
 const authorOutputBudget = { maxOutputTokens: 32_768 };
@@ -292,7 +293,7 @@ const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
   it("records v18 for new author runs and v11 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v18");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v19");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v11");
   });
 
@@ -707,5 +708,17 @@ describe("author prompt cli-author-v18", () => {
     expect(v18).toContain("give each job-relevant project its own project line");
     expect(v17).not.toContain(relevanceWeightedRoomInstructions);
     expect(v18.replace(relevanceWeightedRoomInstructions, "")).toBe(v17);
+  });
+});
+
+describe("author prompt cli-author-v19", () => {
+  it("is v18 with automatic-round findings accepted and caveats and semicolon summaries ruled out", () => {
+    const v18 = createAuthorAdjudicationPrompt("cli-author-v18", undefined).systemPrompt;
+    const v19 = createAuthorAdjudicationPrompt("cli-author-v19", undefined).systemPrompt;
+
+    expect(v19).toContain(automaticRoundAndVoiceInstructions);
+    expect(v19).toContain("every finding in findings counts as accepted");
+    expect(v18).not.toContain(automaticRoundAndVoiceInstructions);
+    expect(v19.replace(automaticRoundAndVoiceInstructions, "")).toBe(v18);
   });
 });
