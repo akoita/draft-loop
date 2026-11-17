@@ -51,9 +51,39 @@ export interface HostedModelPair {
   readonly critic: { readonly company: HostedCompany; readonly model: string };
 }
 
-/** The company and model of each side of the hosted default preset. */
-export function hostedDefaultModelPair(): HostedModelPair {
-  const preset = getModelProfilePreset(hostedDefaultPresetId);
+/**
+ * The preset a new workspace starts on: the hosted default, or, when a plan's model tiers leave it
+ * out, the first served preset with an Anthropic author and an OpenAI critic both inside them
+ * (#2864). Without tiers, or when none fits, the hosted default.
+ */
+export function hostedDefaultPresetFor(tiers: readonly string[] | undefined): ModelProfilePresetId {
+  if (tiers === undefined) return hostedDefaultPresetId;
+  const catalog = hostedModelCatalog();
+  const byReference = new Map(
+    catalog.models.map(({ profile }) => [`${profile.id}@${profile.version}`, profile]),
+  );
+  const fits = (preset: ModelProfilePreset) => {
+    const author = byReference.get(`${preset.author.id}@${preset.author.version}`);
+    const critic = byReference.get(`${preset.critic.id}@${preset.critic.version}`);
+    return (
+      author?.provider === "anthropic" &&
+      critic?.provider === "openai" &&
+      tiers.includes(author.tier) &&
+      tiers.includes(critic.tier)
+    );
+  };
+  const ordered = [
+    ...catalog.presets.filter(({ id }) => id === hostedDefaultPresetId),
+    ...catalog.presets.filter(({ id }) => id !== hostedDefaultPresetId),
+  ];
+  return ordered.find(fits)?.id ?? hostedDefaultPresetId;
+}
+
+/** The company and model of each side of a hosted preset, the hosted default unless named. */
+export function hostedDefaultModelPair(
+  presetId: ModelProfilePresetId = hostedDefaultPresetId,
+): HostedModelPair {
+  const preset = getModelProfilePreset(presetId);
   const byReference = new Map(
     hostedModelCatalog().models.map(({ profile }) => [`${profile.id}@${profile.version}`, profile]),
   );

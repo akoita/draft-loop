@@ -78,6 +78,11 @@ export interface HomeEvidenceContext {
 export interface StartDialogContext {
   readonly applicationId: string | null;
   readonly setBlockedReason: (reason: string | null) => void;
+  /**
+   * Applies a model preset to the workspace from inside the dialog, as Settings would (#2864), so
+   * the dialog's model lines follow. Absent when the screens cannot change models here.
+   */
+  readonly applyModelPreset?: ((presetId: string) => Promise<boolean>) | undefined;
 }
 
 /** The host's panels; none until a host provides them. */

@@ -11,7 +11,11 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
-import { hostedDefaultModelPair } from "./hosted-model-catalog.js";
+import {
+  type HostedModelPair,
+  hostedDefaultModelPair,
+  hostedDefaultPresetFor,
+} from "./hosted-model-catalog.js";
 import type { PlanLimits } from "./plan-limits.js";
 import { workspaceView, workspaceViewSchema } from "./views.js";
 
@@ -123,8 +127,11 @@ const defaultMaxRounds = 2;
  * API. The driver still records the two settings, so they are fixed names that address nothing.
  * A side the request leaves out gets the hosted default preset's model, not the desktop's.
  */
-function initializeCommand(root: string, body: CreateWorkspaceBody): InitializeWorkspaceCommand {
-  const defaults = hostedDefaultModelPair();
+function initializeCommand(
+  root: string,
+  body: CreateWorkspaceBody,
+  defaults: HostedModelPair = hostedDefaultModelPair(),
+): InitializeWorkspaceCommand {
   const { author = defaults.author, critic = defaults.critic, ...settings } = body;
   return {
     root,
@@ -183,7 +190,7 @@ export function registerWorkspaceRoutes(
       schema: {
         summary: "Create a workspace",
         description:
-          "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog` (Claude Sonnet as the author). An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
+          "Creates the workspace with its language, models, run limits and execution mode. Anthropic and OpenAI models are routed, and local models only where the deployment lists them in `GET /v1/model-catalog` (else 422 model_not_offered); a side left out gets the default preset of `GET /v1/model-catalog`, or in sign-in mode the first preset the plan's model tiers allow. An existing workspace is never overwritten: creating it again answers 409. In sign-in mode each workspace is a candidate record and takes one of the plan's record slots: 409 plan_limit_reached (limit candidateRecords) when none is left, 403 plan_required when the organisation has no plan.",
         params: workspaceParams,
         body: createWorkspaceBody,
         response: {
@@ -220,8 +227,16 @@ export function registerWorkspaceRoutes(
           .send(apiError("workspace_exists", "A workspace with this id already exists."));
       }
       const { caller } = request;
-      if (caller?.kind === "member") await options.planLimits?.requireRecordRoom(caller.tenantId);
-      const descriptor = await service.initialize(initializeCommand(root, body), silent);
+      let defaults: HostedModelPair | undefined;
+      if (caller?.kind === "member") {
+        await options.planLimits?.requireRecordRoom(caller.tenantId);
+        // A side left out starts within the plan's model tiers (#2864).
+        if (body.author === undefined || body.critic === undefined) {
+          const tiers = await options.planLimits?.modelTiers?.(caller.tenantId);
+          defaults = hostedDefaultModelPair(hostedDefaultPresetFor(tiers));
+        }
+      }
+      const descriptor = await service.initialize(initializeCommand(root, body, defaults), silent);
       return reply.code(201).send(workspaceView(request.params.workspaceId, descriptor));
     },
   );

@@ -26,6 +26,11 @@ export interface PlanLimits {
    * listing counts them: a record being erased is already gone, so it takes no slot.
    */
   readonly requireRecordRoom: (tenantId: string) => Promise<void>;
+  /**
+   * The model tiers the plan allows, so a new workspace starts on a pair its first run accepts
+   * (#2864); undefined when the plan names none. Optional for test doubles.
+   */
+  readonly modelTiers?: (tenantId: string) => Promise<readonly string[] | undefined>;
 }
 
 export interface PlanLimitsOptions {
@@ -42,6 +47,7 @@ export function createPlanLimits(options: PlanLimitsOptions): PlanLimits {
   };
   return {
     seatLimit: async (tenantId) => (await entitlementsOf(tenantId)).seats ?? undefined,
+    modelTiers: async (tenantId) => (await entitlementsOf(tenantId)).modelTiers,
     requireRecordRoom: async (tenantId) => {
       const { candidateRecords } = await entitlementsOf(tenantId);
       if (candidateRecords === null) return;

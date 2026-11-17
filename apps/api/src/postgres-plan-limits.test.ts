@@ -110,10 +110,10 @@ describe.runIf(connectionString !== undefined)(
           .setExpirationTime("5m")
           .sign(signingKey.privateKey);
       }
-      // Three seats and two records; the owner already takes one seat.
+      // Three seats, two records and economy models; the owner already takes one seat.
       await tenancy.forTenant("org-small").organisationPlans.assignPlan({
         planId: "pro",
-        overrides: { seats: 3, candidateRecords: 2 },
+        overrides: { seats: 3, candidateRecords: 2, modelTiers: ["economy"] },
         periodStart: "2026-01-01",
         assignedAt: "2026-01-01T00:00:00.000Z",
       });
@@ -212,7 +212,13 @@ describe.runIf(connectionString !== undefined)(
     });
 
     it("holds candidate records to the plan, and an erased record frees its slot", async () => {
-      expect((await createRecord("org-small", "r1")).status).toBe(201);
+      const first = await createRecord("org-small", "r1");
+      expect(first.status).toBe(201);
+      // A record created without models starts on a pair the plan's tiers allow (#2864).
+      expect(first.body).toMatchObject({
+        author: { company: "anthropic", model: "claude-haiku-5-5" },
+        critic: { company: "openai", model: "gpt-6-luna" },
+      });
       expect((await createRecord("org-small", "r2")).status).toBe(201);
 
       const full = await createRecord("org-small", "r3");
