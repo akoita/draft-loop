@@ -55,6 +55,10 @@
       "types": "./src/content-screening.ts",
       "import": "./src/content-screening.ts"
     },
+    "./project-card": {
+      "types": "./src/project-card.ts",
+      "import": "./src/project-card.ts"
+    },
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
