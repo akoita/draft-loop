@@ -8,6 +8,7 @@ import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.j
 import { useDisplayPreference } from "./display-preference.js";
 import { FeedbackButton } from "./feedback.js";
 import { WebHelpButton } from "./help-support.js";
+import { OperatorButton, OperatorPage } from "./operator.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -101,6 +102,9 @@ export interface ShellProps {
 export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
   const display = useDisplayPreference({ client, mode });
+  // The operator page (#2829) covers the screens without closing them, so work in progress stays.
+  const [operating, setOperating] = useState(false);
+  const openOperator = useCallback(() => setOperating(true), []);
 
   useEffect(() => {
     let current = true;
@@ -122,10 +126,12 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
       {mode === "sign-in" ? <FeedbackButton client={client} /> : null}
     </>
   );
-  // Sign-in mode signs out from the account menu, which also says who is signed in.
+  // Sign-in mode signs out from the account menu, which also says who is signed in. The owner
+  // token reaches the operator routes, so owner-token mode offers the operator page here.
   const actions = (
     <>
       {common}
+      <OperatorButton onOpen={openOperator} />
       <SignOutButton onSignOut={onSignOut} />
     </>
   );
@@ -135,25 +141,34 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
     <DisplayPreferenceProvider value={display}>
       <div className="shell">
         {health === "unreachable" ? <ServiceDown /> : null}
-        {mode === "sign-in" ? (
-          <>
-            <Records client={client} memory={memory} shellActions={common} onSignOut={onSignOut}>
-              {(recordId, onSaved) => (
-                <RecordScreens
-                  key={recordId}
-                  client={client}
-                  recordId={recordId}
-                  mode="sign-in"
-                  onSaved={onSaved}
-                />
-              )}
-            </Records>
-          </>
-        ) : (
-          <ShellActionsContext.Provider value={actions}>
-            <RecordScreens client={client} recordId={ownerWorkspaceId} />
-          </ShellActionsContext.Provider>
-        )}
+        {operating ? <OperatorPage client={client} onClose={() => setOperating(false)} /> : null}
+        <div className="shell-screens" hidden={operating}>
+          {mode === "sign-in" ? (
+            <>
+              <Records
+                client={client}
+                memory={memory}
+                shellActions={common}
+                onSignOut={onSignOut}
+                onOperator={openOperator}
+              >
+                {(recordId, onSaved) => (
+                  <RecordScreens
+                    key={recordId}
+                    client={client}
+                    recordId={recordId}
+                    mode="sign-in"
+                    onSaved={onSaved}
+                  />
+                )}
+              </Records>
+            </>
+          ) : (
+            <ShellActionsContext.Provider value={actions}>
+              <RecordScreens client={client} recordId={ownerWorkspaceId} />
+            </ShellActionsContext.Provider>
+          )}
+        </div>
       </div>
     </DisplayPreferenceProvider>
   );

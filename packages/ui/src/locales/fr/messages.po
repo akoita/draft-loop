@@ -381,6 +381,13 @@ msgstr "{0} ms"
 msgid "{0} of {1}"
 msgstr "{0} sur {1}"
 
+#. placeholder {0}: state.value.redeemed
+#. placeholder {1}: state.value.cap
+#. placeholder {2}: seatsLeft(state.value)
+#: apps/web/src/operator.tsx
+msgid "{0} of {1} beta accounts used, {2} left."
+msgstr "{0} comptes bêta utilisés sur {1}, {2} restants."
+
 #. placeholder {0}: requirements.covered
 #. placeholder {1}: responsibilities.covered
 #: packages/ui/src/coverage-kinds.ts
@@ -1319,6 +1326,7 @@ msgid "An environment override controls this mode. Unset the provider auth overr
 msgstr "Une variable d’environnement impose ce mode. Supprimez la variable d’authentification du fournisseur et redémarrez DraftLoop avant de modifier la préférence enregistrée."
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-model.ts
 msgid "An idea"
 msgstr "Une idée"
 
@@ -1572,6 +1580,10 @@ msgstr "Interrogation de {0} sur les modèles disponibles…"
 msgid "Assessed by"
 msgstr "Évalué par"
 
+#: apps/web/src/operator.tsx
+msgid "Assistant"
+msgstr "Assistant"
+
 #: apps/web/src/http-bridge.ts
 #: packages/ui/src/new-application-model.ts
 msgid "Attach a PDF, DOCX, Markdown or plain text file."
@@ -1720,6 +1732,10 @@ msgstr "Prix et distinctions"
 #: packages/ui/src/home.tsx
 msgid "Back to {0}"
 msgstr "Retour à {0}"
+
+#: apps/web/src/operator.tsx
+msgid "Back to DraftLoop"
+msgstr "Retour à DraftLoop"
 
 #: packages/ui/src/screen-hint.tsx
 msgid "Back to Getting started"
@@ -2497,6 +2513,10 @@ msgstr "Contributeur ou contributrice"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Conversation"
 msgstr "Conversation"
+
+#: apps/web/src/operator.tsx
+msgid "Conversation with the assistant"
+msgstr "Conversation avec l'assistant"
 
 #: packages/ui/src/agent-setup.tsx
 msgid "Copied"
@@ -3722,6 +3742,10 @@ msgstr "Impossible d’enregistrer le mode d’authentification du fournisseur."
 msgid "Failed: {0}"
 msgstr "Échec : {0}"
 
+#: apps/web/src/operator.tsx
+msgid "Feedback"
+msgstr "Avis"
+
 #: packages/ui/src/profile.tsx
 msgid "Field"
 msgstr "Champ"
@@ -4586,9 +4610,31 @@ msgstr "Horodatage non valide."
 msgid "Invalid workspace name."
 msgstr "Nom d’espace de travail non valide."
 
+#: apps/web/src/operator.tsx
+msgid "Invite"
+msgstr "Inviter"
+
+#. placeholder {0}: entry.email
+#: apps/web/src/operator.tsx
+msgid "Invite {0}"
+msgstr "Inviter {0}"
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "Invite code"
 msgstr "Code d’invitation"
+
+#. placeholder {0}: outcome.email
+#: apps/web/src/operator.tsx
+msgid "Invite created for {0}. Send them this code now: it is shown only once."
+msgstr "Invitation créée pour {0}. Envoyez-lui ce code maintenant : il ne s'affiche qu'une fois."
+
+#: apps/web/src/operator.tsx
+msgid "Invites"
+msgstr "Invitations"
+
+#: apps/web/src/operator.tsx
+msgid "Inviting…"
+msgstr "Invitation…"
 
 #: packages/ui/src/run-comparison.tsx
 msgid "is marked against"
@@ -4686,6 +4732,11 @@ msgstr "Rejoindre la bêta de DraftLoop"
 #: apps/web/src/landing.tsx
 msgid "Join the waitlist"
 msgstr "Rejoindre la liste d'attente"
+
+#. placeholder {0}: operatorTime(entry.joinedAt)
+#: apps/web/src/operator.tsx
+msgid "Joined {0}"
+msgstr "Inscrit le {0}"
 
 #: apps/web/src/landing.tsx
 msgid "Joining"
@@ -5165,6 +5216,10 @@ msgstr "score moyen"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Medium"
 msgstr "Moyen"
+
+#: apps/web/src/operator.tsx
+msgid "Member"
+msgstr "Membre"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Mentoring"
@@ -5719,6 +5774,10 @@ msgstr "Aucun fait trouvé"
 msgid "No facts match this filter."
 msgstr "Aucun fait ne correspond à ce filtre."
 
+#: apps/web/src/operator.tsx
+msgid "No feedback yet."
+msgstr "Aucun avis pour l'instant."
+
 #: apps/web/src/evidence-panels.tsx
 msgid "No files in the selected knowledge bases yet."
 msgstr "Aucun fichier dans les bases de connaissances choisies pour l’instant."
@@ -5744,9 +5803,19 @@ msgstr "Pas encore de constats : la critique n’a pas eu lieu"
 msgid "No folder"
 msgstr "Sans dossier"
 
+#. placeholder {0}: outcome.email
+#. placeholder {1}: outcome.message
+#: apps/web/src/operator.tsx
+msgid "No invite for {0}: {1}"
+msgstr "Pas d'invitation pour {0} : {1}"
+
 #: apps/web/src/beta-sign-up-model.ts
 msgid "No invite has that code. Check it for typos, or ask for a new invite."
 msgstr "Aucune invitation ne correspond à ce code. Vérifiez qu’il n’y a pas de faute de frappe, ou demandez une nouvelle invitation."
+
+#: apps/web/src/operator.tsx
+msgid "No invite sent yet."
+msgstr "Aucune invitation envoyée pour l'instant."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "No invite? The beta is invite-only for now."
@@ -5925,6 +5994,10 @@ msgstr "Aucune parole n’a été entendue. Réessayez plus près du microphone.
 msgid "Nobody can open this job search yet."
 msgstr "Personne ne peut encore ouvrir cette recherche d’emploi."
 
+#: apps/web/src/operator.tsx
+msgid "Nobody is waiting."
+msgstr "Personne n'attend."
+
 #: apps/web/src/feedback.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "None"
@@ -6050,6 +6123,10 @@ msgstr "Je ne sais pas"
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
 msgstr "Pas encore généré"
+
+#: apps/web/src/operator-model.ts
+msgid "Note"
+msgstr "Note"
 
 #: apps/web/src/consent.tsx
 msgid "Note (optional)"
@@ -6332,6 +6409,10 @@ msgstr "L’ouverture d’un espace de travail est indisponible dans cet hôte."
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Opening workspace…"
 msgstr "Ouverture de l’espace de travail…"
+
+#: apps/web/src/operator.tsx
+msgid "Operator"
+msgstr "Opérateur"
 
 #: apps/web/src/evidence-panels.tsx
 #: packages/ui/src/review.tsx
@@ -7017,6 +7098,10 @@ msgstr "Lecture de vos profils professionnels relus…"
 msgid "Reading your workspace…"
 msgstr "Lecture de votre espace de travail…"
 
+#: apps/web/src/operator.tsx
+msgid "Reading…"
+msgstr "Lecture…"
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/career-evidence.ts
 #: packages/ui/src/home-model.ts
@@ -7134,6 +7219,15 @@ msgstr "Cause enregistrée"
 #: packages/ui/src/speech-button.tsx
 msgid "Recording… speak your answer."
 msgstr "Enregistrement… dites votre réponse."
+
+#: apps/web/src/operator-model.ts
+msgid "Redeemed"
+msgstr "Utilisée"
+
+#. placeholder {0}: operatorTime(invite.redeemedAt)
+#: apps/web/src/operator.tsx
+msgid "Redeemed {0}"
+msgstr "Utilisée le {0}"
 
 #: packages/ui/src/profile.tsx
 msgid "Refresh"
@@ -7786,6 +7880,15 @@ msgstr "Réviser"
 msgid "Revision"
 msgstr "Révision"
 
+#: apps/web/src/operator-model.ts
+msgid "Revoked"
+msgstr "Révoquée"
+
+#. placeholder {0}: operatorTime(invite.revokedAt)
+#: apps/web/src/operator.tsx
+msgid "Revoked {0}"
+msgstr "Révoquée le {0}"
+
 #: packages/ui/src/app.tsx
 msgid "Rewrites this workspace's saved run history so it takes less space. It asks first and keeps a backup."
 msgstr "Réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Une confirmation est demandée et une sauvegarde est conservée."
@@ -8258,6 +8361,21 @@ msgstr "Sensible : seulement avec votre consentement"
 msgid "Sensitivity"
 msgstr "Sensibilité"
 
+#. placeholder {0}: operatorTime(invite.createdAt)
+#: apps/web/src/operator.tsx
+msgid "Sent {0}"
+msgstr "Envoyée le {0}"
+
+#. placeholder {0}: operatorTime(note.sentAt)
+#. placeholder {1}: note.screen
+#: apps/web/src/operator.tsx
+msgid "Sent {0} from {1}"
+msgstr "Envoyé le {0} depuis {1}"
+
+#: apps/web/src/operator-model.ts
+msgid "Sent, not used yet"
+msgstr "Envoyée, pas encore utilisée"
+
 #: packages/ui/src/help-ask.tsx
 msgid "Sent. The people who run DraftLoop will read it and get back to you."
 msgstr "Envoyé. L’équipe de DraftLoop la lira et reviendra vers vous."
@@ -8473,10 +8591,12 @@ msgid "Sole author"
 msgstr "Seul auteur ou seule autrice"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-model.ts
 msgid "Something else"
 msgstr "Autre chose"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator-model.ts
 msgid "Something is broken"
 msgstr "Quelque chose ne marche pas"
 
@@ -8807,6 +8927,10 @@ msgstr "Résumé à confirmer"
 msgid "Summary to keep"
 msgstr "Résumé à conserver"
 
+#: apps/web/src/operator-model.ts
+msgid "Support ticket"
+msgstr "Demande d'assistance"
+
 #: packages/ui/src/model-profile-details.tsx
 msgid "Supported with the configured authentication route"
 msgstr "Pris en charge avec la route d’authentification configurée"
@@ -9029,6 +9153,10 @@ msgstr "Le rédacteur révise seul à partir de chaque constat du relecteur. La 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "The beta is full for now. Your code stays valid: try again when places open."
 msgstr "La bêta est complète pour le moment. Votre code reste valable : réessayez quand des places se libèrent."
+
+#: apps/web/src/operator.tsx
+msgid "The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log."
+msgstr "La liste d'attente de la bêta, ses invitations et ce que les membres vous disent. Chaque invitation est inscrite au journal d'audit."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -10838,6 +10966,10 @@ msgstr "En attente du démarrage d’un exécutant…"
 #: packages/ui/src/provider-recovery.tsx
 msgid "Waiting for you"
 msgstr "En attente de votre action"
+
+#: apps/web/src/operator.tsx
+msgid "Waitlist"
+msgstr "Liste d'attente"
 
 #: apps/web/src/application-material-model.ts
 msgid "Warm"

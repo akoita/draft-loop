@@ -6818,6 +6818,11 @@
               "email": {
                 "type": "string"
               },
+              "operator": {
+                "description": "Present when this sign-in also reaches the operator routes: the operator role with a second factor.",
+                "type": "boolean",
+                "const": true
+              },
               "organisationName": {
                 "description": "The organisation's display name, which the screen calls the team.",
                 "type": "string"
@@ -15431,6 +15436,11 @@
               },
               "email": {
                 "type": "string"
+              },
+              "operator": {
+                "description": "Present when this sign-in also reaches the operator routes: the operator role with a second factor.",
+                "type": "boolean",
+                "const": true
               },
               "organisationName": {
                 "description": "The organisation's display name, which the screen calls the team.",

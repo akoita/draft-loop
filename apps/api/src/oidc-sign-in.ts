@@ -141,6 +141,10 @@ export type SignInVerification =
       readonly clientId?: string;
       /** The token's `scope` claim, split; what an agent grant's scopes are read from. */
       readonly grantedScopes: readonly string[];
+      /** The provider's realm roles (`realm_access.roles`), such as the operator role (#2953). */
+      readonly roles: readonly string[];
+      /** How the person signed in (`amr`), such as `pwd` and `otp`. */
+      readonly methods: readonly string[];
     }
   /** `reason` is `jose`'s error code, safe to log: it never quotes the token. */
   | { readonly status: "refused"; readonly reason: string };
@@ -188,6 +192,14 @@ export function signInTokenVerifier(
       ...(client === undefined ? {} : { clientId: client }),
       grantedScopes:
         typeof payload.scope === "string" ? payload.scope.split(" ").filter(Boolean) : [],
+      roles: strings((payload.realm_access as { roles?: unknown } | undefined)?.roles),
+      methods: strings(payload.amr),
     };
   };
+}
+
+function strings(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }

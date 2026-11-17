@@ -646,6 +646,7 @@ export interface ApiSchemas {
     readonly memberId: string;
     readonly role: "owner" | "admin" | "member";
     readonly email?: string;
+    readonly operator?: true;
     readonly organisationName?: string;
     readonly plan?: {
       readonly candidateRecords: number | null;

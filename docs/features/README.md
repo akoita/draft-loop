@@ -107,6 +107,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
 | [Help](help.md) | `partial` | web, server | `search_help` | A Help button on every screen opens a searchable user guide in English or French, and an AI assistant that answers questions and hands them to a person where the server turns it on; agents search and read the same guide. |
 | [Feedback](feedback.md) | `partial` | web, server | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about DraftLoop, with its technical context, from the header's Send feedback button or through their agent. The operator triages notes and links GitHub issues. |
+| [Operator screen](organisations-and-consent.md#operator-screen) | `available` | server | `none` | The operator invites people from the beta waitlist, follows invites and the account cap, and reads members' feedback. |
 
 ## Planned
 

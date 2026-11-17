@@ -205,10 +205,11 @@ label:where(:not(.shared-screens *)) {
 
 /* With a two-column screen, the shell is exactly one window tall: its bars take their height and
    the screens get the rest, so the columns scroll inside it and the page never scrolls beside
-   them. Stacked (1024px and narrower), the page scrolls as a whole instead. */
+   them. Stacked (1024px and narrower), or with the operator page over hidden screens, the page
+   scrolls as a whole instead. */
 @media (min-width: 1025px) {
   @supports (height: 100cqh) {
-    .shell:has(.app-frame) {
+    .shell:has(> .shell-screens:not([hidden]) .app-frame) {
       display: flex;
       flex-direction: column;
       height: 100dvh;
@@ -216,17 +217,28 @@ label:where(:not(.shared-screens *)) {
       overflow: hidden;
     }
 
-    .shell:has(.app-frame) > * {
+    .shell:has(> .shell-screens:not([hidden]) .app-frame) > *,
+    .shell:has(> .shell-screens:not([hidden]) .app-frame) > .shell-screens > * {
       flex: none;
     }
 
-    .shell > .shared-screens:has(.app-frame) {
+    .shell > .shell-screens > .shared-screens:has(.app-frame) {
       flex: 1 1 auto;
       min-height: 0;
       container-type: size;
       --frame-height: 100cqh;
     }
   }
+}
+
+/* The screens under the shell's bars: no box of their own, so the layout above sees their
+   children. The operator page hides them without closing them (#2829). */
+.shell-screens {
+  display: contents;
+}
+
+.shell-screens[hidden] {
+  display: none;
 }
 
 /* The shell's actions (#1933): in the shared screens' header, or right-aligned above a screen
@@ -1407,4 +1419,105 @@ button.small:where(:not(.shared-screens *)) {
     right: auto;
     left: 0;
   }
+}
+
+/* The operator page (#2829): the waitlist, the invites and members' feedback as stacked cards,
+   so a phone never scrolls sideways. */
+.operator-page {
+  max-width: 48rem;
+  margin: 1rem auto;
+}
+
+.operator-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.operator-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.operator-header h1:focus {
+  outline: none;
+}
+
+.operator-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operator-item {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.operator-item > h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.operator-item > p,
+.operator-item > details {
+  margin: 0;
+}
+
+.operator-item > footer {
+  margin-top: 0.25rem;
+}
+
+.operator-note {
+  white-space: pre-wrap;
+}
+
+.operator-transcript {
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 1.25rem;
+}
+
+.operator-state {
+  font-weight: 600;
+}
+
+.operator-state-redeemed {
+  color: var(--teal);
+}
+
+.operator-state-revoked {
+  color: var(--text-2);
+}
+
+.operator-seats {
+  font-weight: 600;
+}
+
+.operator-code {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--amber-wash);
+  overflow-wrap: anywhere;
+}
+
+.operator-code > p {
+  margin: 0 0 0.25rem;
+}
+
+.operator-code > code {
+  font-size: 1.1rem;
+  font-weight: 600;
+  user-select: all;
 }
