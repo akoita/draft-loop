@@ -7,7 +7,10 @@ import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import { createMistralAuthorProfile } from "./mistral-development-profile.js";
 
 export type ModelProfileRegistryErrorCode =
-  "invalid-profile" | "duplicate-profile" | "not-found" | "unsupported-role";
+  | "invalid-profile"
+  | "duplicate-profile"
+  | "not-found"
+  | "unsupported-role";
 
 export class ModelProfileRegistryError extends Error {
   constructor(readonly code: ModelProfileRegistryErrorCode) {
