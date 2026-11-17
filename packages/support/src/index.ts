@@ -17,6 +17,13 @@ export {
   supportSystemPrompt,
   supportToolNames,
 } from "./assistant.js";
+export {
+  gradeSupportGoldenReply,
+  type SupportGoldenResult,
+  type SupportGoldenSummary,
+  type SupportGoldenVerdict,
+  summarizeSupportGoldenRun,
+} from "./golden-score.js";
 export { type SupportGoldenQuestion, supportGoldenSet } from "./golden-set.js";
 export { questionWords, rankGuideSections } from "./guide-search.js";
 export type {

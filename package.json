@@ -57,6 +57,7 @@
     "test:profile-windows:live": "tsx packages/application/src/profile-window-live-check-command.ts",
     "test:decision-shadow:live": "tsx packages/evaluations/src/decision-screening-shadow-command.ts",
     "test:gateway:live": "tsx apps/worker/src/gateway-live-check.ts",
+    "test:support:live": "tsx apps/worker/src/support-golden-set-check.ts",
     "speech-model:install": "tsx packages/application/src/speech-model-install-command.ts",
     "test:career-interview:live": "tsx apps/api/src/career-interview-walk.ts",
     "test:application-material:live": "tsx apps/api/src/application-material-walk.ts",
