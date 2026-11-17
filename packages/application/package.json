@@ -35,6 +35,10 @@
       "types": "./src/quality-digest.ts",
       "import": "./src/quality-digest.ts"
     },
+    "./quality-insights": {
+      "types": "./src/quality-insights.ts",
+      "import": "./src/quality-insights.ts"
+    },
     "./run-span-recorder": {
       "types": "./src/run-span-recorder.ts",
       "import": "./src/run-span-recorder.ts"
