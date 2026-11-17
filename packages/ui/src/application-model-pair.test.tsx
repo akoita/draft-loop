@@ -18,7 +18,7 @@ const standard = {
   critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy = {
-  author: { id: "economy-anthropic-author", version: 4 },
+  author: { id: "economy-anthropic-author", version: 5 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 const fixture = createFixtureReviewState();

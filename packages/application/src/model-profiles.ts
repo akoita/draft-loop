@@ -356,4 +356,22 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     },
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
   },
+  // Version 4 still stopped at max_tokens on prod after the longer-CV writer (cli-author-v19):
+  // at medium effort Haiku 5.5's adaptive thinking used most of the 64,000 tokens on every
+  // attempt. Haiku 5.5 rejects a fixed thinking budget, so version 5 lowers the default effort to
+  // low; a person can still raise it per role.
+  {
+    id: "economy-anthropic-author",
+    version: 5,
+    provider: "anthropic",
+    modelId: "claude-haiku-5-5",
+    tier: "economy",
+    roles: ["author"],
+    runtime: {
+      effort: "low",
+      maxOutputTokens: 64000,
+      thinking: { mode: "provider-default" },
+    },
+    knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+  },
 ]);

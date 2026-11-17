@@ -71,7 +71,7 @@ describe("desktop model profile API budget scenario", () => {
   it("shows Haiku 5.5's long-prompt rates and the critic's input cap for the economy pair", () => {
     const html = renderBudget(
       {
-        author: { id: "economy-anthropic-author", version: 4 },
+        author: { id: "economy-anthropic-author", version: 5 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
       apiKeyModes,

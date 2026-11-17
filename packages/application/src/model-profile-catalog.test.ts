@@ -16,7 +16,7 @@ describe("model profile catalog", () => {
     );
 
     expect(catalog.map(({ profile }) => `${profile.id}@${profile.version}`)).toEqual([
-      "economy-anthropic-author@4",
+      "economy-anthropic-author@5",
       "economy-openai-critic@1",
       "economy-anthropic-author@3",
       "balanced-openai-critic@1",
@@ -35,7 +35,7 @@ describe("model profile catalog", () => {
       "balanced-google-author@1": 1000000,
       "standard-anthropic-author@2": 1000000,
       "economy-anthropic-author@3": 1000000,
-      "economy-anthropic-author@4": 1000000,
+      "economy-anthropic-author@5": 1000000,
       "economy-openai-critic@1": 272000,
       "standard-openai-critic@2": 272000,
       "balanced-openai-critic@1": 272000,
@@ -61,7 +61,7 @@ describe("model profile catalog", () => {
         "dev-google-gemini-author@2": "2026-10-04",
         "dev-mistral-author@1": "2026-10-08",
         "economy-anthropic-author@3": "2026-11-01",
-        "economy-anthropic-author@4": "2026-11-01",
+        "economy-anthropic-author@5": "2026-11-01",
         "economy-openai-critic@1": "2026-10-23",
         "standard-anthropic-author@1": "2026-11-01",
         "standard-anthropic-author@2": "2026-11-01",
@@ -83,7 +83,7 @@ describe("model profile catalog", () => {
         ]),
       ),
     ).toEqual({
-      "economy-anthropic-author@4": [0.5, 2.5],
+      "economy-anthropic-author@5": [0.5, 2.5],
       "economy-openai-critic@1": [0.1, 0.5],
       "economy-anthropic-author@3": [2, 10],
       "balanced-openai-critic@1": [1, 5],
@@ -106,7 +106,7 @@ describe("model profile catalog", () => {
         ]),
       ),
     ).toMatchObject({
-      "economy-anthropic-author@4": [0.05, 0.625],
+      "economy-anthropic-author@5": [0.05, 0.625],
       "economy-anthropic-author@3": [0.1, 2.5],
       "standard-anthropic-author@2": [0.2, 5],
       "standard-anthropic-critic@1": [0.2, 8],
@@ -115,7 +115,7 @@ describe("model profile catalog", () => {
       "standard-openai-critic@2": [0.1, 2.5],
       "balanced-openai-critic@1": [0.05, 1.25],
     });
-    expect(byId.get("economy-anthropic-author@4")?.sources).toEqual([
+    expect(byId.get("economy-anthropic-author@5")?.sources).toEqual([
       "https://platform.claude.com/docs/en/about-claude/models/overview",
       "https://platform.claude.com/docs/en/about-claude/pricing",
       "https://platform.claude.com/docs/en/build-with-claude/effort",
@@ -204,7 +204,7 @@ describe("model profile catalog", () => {
       profile: {
         id: "economy-anthropic-author",
         roles: ["author"],
-        version: 4,
+        version: 5,
         modelId: "claude-haiku-5-5",
         runtime: { thinking: { mode: "provider-default" } },
       },
@@ -228,7 +228,7 @@ describe("model profile catalog", () => {
         id: "economy",
         label: "Economy — unvalidated",
         tier: "economy",
-        author: { id: "economy-anthropic-author", version: 4 },
+        author: { id: "economy-anthropic-author", version: 5 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
       {
