@@ -83,6 +83,10 @@ msgstr " ; sortie"
 msgid "; runs then use it instead, and these files are not copied into it."
 msgstr " ; les exécutions l’utilisent alors à la place, et ces fichiers n’y sont pas copiés."
 
+#: apps/web/src/consent.tsx
+msgid "; the new consent replaces the old one, and nothing needs to be withdrawn."
+msgstr " ; le nouveau consentement remplace l'ancien, et rien n'a besoin d'être retiré."
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "; your record says"
 msgstr " ; votre dossier indique"
@@ -119,6 +123,10 @@ msgstr ". Rien n’est perdu : Reprendre relance"
 msgid ". Other applications use the workspace's pair."
 msgstr ". Les autres candidatures utilisent la paire de l’espace de travail."
 
+#: apps/web/src/consent.tsx
+msgid ". Record it again below for"
+msgstr ". Enregistrez-le à nouveau ci-dessous pour"
+
 #: apps/web/src/screening.tsx
 msgid ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
 msgstr ". La libération permet aux exécutions de l’utiliser. Elle ne couvre que ce résultat de filtrage et est enregistrée avec votre nom et votre motif."
@@ -130,10 +138,6 @@ msgstr ". Préférence enregistrée :"
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
 msgstr ". Il s’agit d’un exemple explicite, pas d’une prévision mesurée, d’un plafond strict ni d’une facture réelle. Le quota et les frais d’abonnement ne sont pas estimés."
-
-#: apps/web/src/consent.tsx
-msgid ". Withdraw it and record it again for"
-msgstr ". Retirez-le et enregistrez-le à nouveau pour"
 
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
@@ -8822,8 +8826,8 @@ msgstr "Le consentement du candidat ne couvre pas l’envoi de ces éléments au
 #. placeholder {0}: providerList(missing)
 #. placeholder {1}: providerList(providers)
 #: apps/web/src/consent-model.ts
-msgid "The candidate's consent does not name {0}. Withdraw it and record it again for {1}."
-msgstr "Le consentement du candidat ne mentionne pas {0}. Retirez-le et enregistrez-le à nouveau pour {1}."
+msgid "The candidate's consent does not name {0}. Record it again for {1} in the permission box above."
+msgstr "Le consentement du candidat ne mentionne pas {0}. Enregistrez-le à nouveau pour {1} dans l'encadré d'autorisation ci-dessus."
 
 #: apps/web/src/consent-model.ts
 msgid "The candidate's material cannot be stored yet. Record the permission to store it on the Career evidence page, then upload again."

@@ -144,7 +144,7 @@ export function transmissionBlockedReason(
     return t`Record the candidate's consent to send material to ${providerList(providers)} first.`;
   const missing = unconsentedProviders(consents, providers);
   if (missing.length === 0) return null;
-  return t`The candidate's consent does not name ${providerList(missing)}. Withdraw it and record it again for ${providerList(providers)}.`;
+  return t`The candidate's consent does not name ${providerList(missing)}. Record it again for ${providerList(providers)} in the permission box above.`;
 }
 
 /** A recording time as people read it, in UTC. */

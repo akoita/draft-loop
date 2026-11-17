@@ -89,6 +89,10 @@ msgstr "; output"
 msgid "; runs then use it instead, and these files are not copied into it."
 msgstr "; runs then use it instead, and these files are not copied into it."
 
+#: apps/web/src/consent.tsx
+msgid "; the new consent replaces the old one, and nothing needs to be withdrawn."
+msgstr "; the new consent replaces the old one, and nothing needs to be withdrawn."
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "; your record says"
 msgstr "; your record says"
@@ -125,6 +129,10 @@ msgstr ". Nothing is lost: Resume retries the"
 msgid ". Other applications use the workspace's pair."
 msgstr ". Other applications use the workspace's pair."
 
+#: apps/web/src/consent.tsx
+msgid ". Record it again below for"
+msgstr ". Record it again below for"
+
 #: apps/web/src/screening.tsx
 msgid ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
 msgstr ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
@@ -136,10 +144,6 @@ msgstr ". Saved preference:"
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
 msgstr ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
-
-#: apps/web/src/consent.tsx
-msgid ". Withdraw it and record it again for"
-msgstr ". Withdraw it and record it again for"
 
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
@@ -8828,8 +8832,8 @@ msgstr "The candidate's consent does not cover sending this evidence to the work
 #. placeholder {0}: providerList(missing)
 #. placeholder {1}: providerList(providers)
 #: apps/web/src/consent-model.ts
-msgid "The candidate's consent does not name {0}. Withdraw it and record it again for {1}."
-msgstr "The candidate's consent does not name {0}. Withdraw it and record it again for {1}."
+msgid "The candidate's consent does not name {0}. Record it again for {1} in the permission box above."
+msgstr "The candidate's consent does not name {0}. Record it again for {1} in the permission box above."
 
 #: apps/web/src/consent-model.ts
 msgid "The candidate's material cannot be stored yet. Record the permission to store it on the Career evidence page, then upload again."
