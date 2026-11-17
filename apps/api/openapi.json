@@ -4115,6 +4115,7 @@
                             "notes",
                             "transcript",
                             "work-journal",
+                            "project",
                             "other"
                           ]
                         }
@@ -7877,6 +7878,13 @@
                     "discarded"
                   ]
                 },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "note",
+                    "project"
+                  ]
+                },
                 "created_at": {
                   "type": "string"
                 }
@@ -8034,7 +8042,9 @@
                               "commit",
                               "issue",
                               "release",
-                              "document"
+                              "document",
+                              "repository",
+                              "website"
                             ]
                           },
                           "url": {
@@ -8102,6 +8112,119 @@
                 "merged_into": {
                   "type": "string",
                   "pattern": "^wjn_[A-Za-z0-9_-]{8,64}$"
+                },
+                "project_card": {
+                  "type": "object",
+                  "properties": {
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 8,
+                      "maxLength": 160
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "sole-author",
+                        "lead",
+                        "contributor"
+                      ]
+                    },
+                    "contribution": {
+                      "type": "object",
+                      "properties": {
+                        "own_commits": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000000
+                        },
+                        "total_commits": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000000
+                        },
+                        "first_commit": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                        },
+                        "last_commit": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                        },
+                        "merged_pull_requests": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "other_contributors": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        }
+                      },
+                      "required": [
+                        "own_commits",
+                        "total_commits",
+                        "first_commit",
+                        "last_commit",
+                        "other_contributors"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "scale": {
+                      "default": {},
+                      "type": "object",
+                      "properties": {
+                        "releases": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "stars": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "continuous_integration": {
+                          "type": "boolean"
+                        },
+                        "automated_tests": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "highlights": {
+                      "default": [],
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 300
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "purpose",
+                    "role",
+                    "contribution"
+                  ],
+                  "additionalProperties": false
                 },
                 "approval": {
                   "type": "object",
@@ -8368,7 +8491,9 @@
                             "commit",
                             "issue",
                             "release",
-                            "document"
+                            "document",
+                            "repository",
+                            "website"
                           ]
                         },
                         "url": {
@@ -15991,6 +16116,13 @@
                     "discarded"
                   ]
                 },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "note",
+                    "project"
+                  ]
+                },
                 "created_at": {
                   "type": "string"
                 }
@@ -16148,7 +16280,9 @@
                               "commit",
                               "issue",
                               "release",
-                              "document"
+                              "document",
+                              "repository",
+                              "website"
                             ]
                           },
                           "url": {
@@ -16218,6 +16352,121 @@
                 "merged_into": {
                   "type": "string",
                   "pattern": "^wjn_[A-Za-z0-9_-]{8,64}$"
+                },
+                "project_card": {
+                  "type": "object",
+                  "properties": {
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 8,
+                      "maxLength": 160
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "sole-author",
+                        "lead",
+                        "contributor"
+                      ]
+                    },
+                    "contribution": {
+                      "type": "object",
+                      "properties": {
+                        "own_commits": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000000
+                        },
+                        "total_commits": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000000
+                        },
+                        "first_commit": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                        },
+                        "last_commit": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                        },
+                        "merged_pull_requests": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "other_contributors": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        }
+                      },
+                      "required": [
+                        "own_commits",
+                        "total_commits",
+                        "first_commit",
+                        "last_commit",
+                        "other_contributors"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "scale": {
+                      "default": {},
+                      "type": "object",
+                      "properties": {
+                        "releases": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "stars": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000000
+                        },
+                        "continuous_integration": {
+                          "type": "boolean"
+                        },
+                        "automated_tests": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "highlights": {
+                      "default": [],
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string",
+                            "minLength": 8,
+                            "maxLength": 300
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "purpose",
+                    "role",
+                    "contribution",
+                    "scale",
+                    "highlights"
+                  ],
+                  "additionalProperties": false
                 },
                 "approval": {
                   "type": "object",
@@ -16486,7 +16735,9 @@
                             "commit",
                             "issue",
                             "release",
-                            "document"
+                            "document",
+                            "repository",
+                            "website"
                           ]
                         },
                         "url": {
@@ -24762,7 +25013,9 @@
                             "commit",
                             "issue",
                             "release",
-                            "document"
+                            "document",
+                            "repository",
+                            "website"
                           ]
                         },
                         "url": {
@@ -25272,7 +25525,9 @@
                                   "commit",
                                   "issue",
                                   "release",
-                                  "document"
+                                  "document",
+                                  "repository",
+                                  "website"
                                 ]
                               },
                               "url": {
@@ -25342,6 +25597,121 @@
                     "merged_into": {
                       "type": "string",
                       "pattern": "^wjn_[A-Za-z0-9_-]{8,64}$"
+                    },
+                    "project_card": {
+                      "type": "object",
+                      "properties": {
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 8,
+                          "maxLength": 160
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "sole-author",
+                            "lead",
+                            "contributor"
+                          ]
+                        },
+                        "contribution": {
+                          "type": "object",
+                          "properties": {
+                            "own_commits": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10000000
+                            },
+                            "total_commits": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10000000
+                            },
+                            "first_commit": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                            },
+                            "last_commit": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                            },
+                            "merged_pull_requests": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "other_contributors": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            }
+                          },
+                          "required": [
+                            "own_commits",
+                            "total_commits",
+                            "first_commit",
+                            "last_commit",
+                            "other_contributors"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "scale": {
+                          "default": {},
+                          "type": "object",
+                          "properties": {
+                            "releases": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "stars": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "continuous_integration": {
+                              "type": "boolean"
+                            },
+                            "automated_tests": {
+                              "type": "boolean"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "highlights": {
+                          "default": [],
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 8,
+                                "maxLength": 300
+                              },
+                              "source": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "purpose",
+                        "role",
+                        "contribution",
+                        "scale",
+                        "highlights"
+                      ],
+                      "additionalProperties": false
                     },
                     "approval": {
                       "type": "object",
@@ -25711,7 +26081,9 @@
                                   "commit",
                                   "issue",
                                   "release",
-                                  "document"
+                                  "document",
+                                  "repository",
+                                  "website"
                                 ]
                               },
                               "url": {
@@ -25781,6 +26153,121 @@
                     "merged_into": {
                       "type": "string",
                       "pattern": "^wjn_[A-Za-z0-9_-]{8,64}$"
+                    },
+                    "project_card": {
+                      "type": "object",
+                      "properties": {
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 8,
+                          "maxLength": 160
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "sole-author",
+                            "lead",
+                            "contributor"
+                          ]
+                        },
+                        "contribution": {
+                          "type": "object",
+                          "properties": {
+                            "own_commits": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10000000
+                            },
+                            "total_commits": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10000000
+                            },
+                            "first_commit": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                            },
+                            "last_commit": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                            },
+                            "merged_pull_requests": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "other_contributors": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            }
+                          },
+                          "required": [
+                            "own_commits",
+                            "total_commits",
+                            "first_commit",
+                            "last_commit",
+                            "other_contributors"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "scale": {
+                          "default": {},
+                          "type": "object",
+                          "properties": {
+                            "releases": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "stars": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000000
+                            },
+                            "continuous_integration": {
+                              "type": "boolean"
+                            },
+                            "automated_tests": {
+                              "type": "boolean"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "highlights": {
+                          "default": [],
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 8,
+                                "maxLength": 300
+                              },
+                              "source": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "purpose",
+                        "role",
+                        "contribution",
+                        "scale",
+                        "highlights"
+                      ],
+                      "additionalProperties": false
                     },
                     "approval": {
                       "type": "object",

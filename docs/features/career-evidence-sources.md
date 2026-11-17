@@ -35,11 +35,28 @@ Every source is screened for hidden instructions before a run may use it; see
 requests start `sensitive`, with one private-section rule per repository that
 you can lower to **Always allow**.
 
+## Code project cards
+
+A project card is a short, cited summary of one code repository, never its
+code. It holds the purpose, your role, the stack, your own commit counts and
+dates counted from git, scale signals such as releases and CI, and highlights
+that each cite a file or pull request.
+
+- A card waits as a pending note in the **Work journal** until you approve
+  it. Only then does it become a source of the `project` kind.
+- A `private` card carries no links and is approved as `sensitive` by default,
+  so no run sends it to a provider without your consent.
+- A card holding a key-like string or any email address is refused. Other
+  contributors appear only as a count.
+
+Agents file cards through the agent channel once #2895 ships.
+
 ## How to test it
 
 - Walk steps 2 and 3 of the [local server stack](../operations/local-server-stack.md)
   with fictional files; the stack calls no provider.
 - Focused tests: `apps/api/src/knowledge-routes.test.ts`,
+  `packages/application/src/project-card.test.ts`,
   `packages/ui/src/career-evidence-card.test.tsx` and
   `apps/web/src/evidence-panels.test.tsx`.
 

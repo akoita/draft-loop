@@ -2275,6 +2275,10 @@ msgstr "Close workspace"
 msgid "Close workspace is available again once your career profile is generated."
 msgstr "Close workspace is available again once your career profile is generated."
 
+#: packages/ui/src/source-evidence-kind-contract.ts
+msgid "Code project"
+msgstr "Code project"
+
 #: packages/ui/src/provider-authentication-summary.ts
 msgid "Codex session"
 msgstr "Codex session"

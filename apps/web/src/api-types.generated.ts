@@ -1239,6 +1239,7 @@ export interface ApiSchemas {
       readonly technologies: readonly (string)[];
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly status: "pending" | "approved" | "merged" | "discarded";
+      readonly kind?: "note" | "project";
       readonly created_at: string;
     })[];
     readonly full?: readonly ({
@@ -1262,7 +1263,7 @@ export interface ApiSchemas {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -1273,6 +1274,28 @@ export interface ApiSchemas {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
@@ -1322,7 +1345,7 @@ export interface ApiSchemas {
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
       readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
         readonly url: string;
       })[];
       readonly metrics?: readonly ({
@@ -2348,7 +2371,7 @@ export interface ApiOperations {
       readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
       readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
       readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
         readonly url: string;
       })[];
       readonly metrics?: readonly ({
@@ -2401,7 +2424,7 @@ export interface ApiOperations {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -2412,6 +2435,28 @@ export interface ApiOperations {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
@@ -2457,7 +2502,7 @@ export interface ApiOperations {
         readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
         readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document";
+          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
         })[];
         readonly metrics: readonly ({
@@ -2468,6 +2513,28 @@ export interface ApiOperations {
       readonly dedupe_key: string;
       readonly possible_duplicate_of: readonly (string)[];
       readonly merged_into?: string;
+      readonly project_card?: {
+        readonly purpose: string;
+        readonly role: "sole-author" | "lead" | "contributor";
+        readonly contribution: {
+          readonly own_commits: number;
+          readonly total_commits: number;
+          readonly first_commit: string;
+          readonly last_commit: string;
+          readonly merged_pull_requests?: number;
+          readonly other_contributors: number;
+        };
+        readonly scale: {
+          readonly releases?: number;
+          readonly stars?: number;
+          readonly continuous_integration?: boolean;
+          readonly automated_tests?: boolean;
+        };
+        readonly highlights: readonly ({
+          readonly text: string;
+          readonly source: string;
+        })[];
+      };
       readonly approval?: {
         readonly knowledge_base_id: string;
         readonly tier: "normal" | "sensitive" | "never-share";
