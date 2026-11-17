@@ -2182,6 +2182,7 @@ msgstr "close"
 
 #: apps/web/src/feedback.tsx
 #: packages/ui/src/export-preview.tsx
+#: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
@@ -4151,6 +4152,10 @@ msgstr "Headings, top level first, separated by >"
 #: apps/web/src/private-sections.tsx
 msgid "Health > Notes"
 msgstr "Health > Notes"
+
+#: packages/ui/src/help-panel.tsx
+msgid "Help"
+msgstr "Help"
 
 #: packages/ui/src/provider-authentication.tsx
 msgid "Hide"

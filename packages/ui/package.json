@@ -15,6 +15,10 @@
       "types": "./src/host-panels.tsx",
       "import": "./src/host-panels.tsx"
     },
+    "./help-panel": {
+      "types": "./src/help-panel.tsx",
+      "import": "./src/help-panel.tsx"
+    },
     "./job-requirements-extraction": {
       "types": "./src/job-requirements-extraction.tsx",
       "import": "./src/job-requirements-extraction.tsx"
