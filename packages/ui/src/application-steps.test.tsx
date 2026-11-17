@@ -146,9 +146,7 @@ describe("application step states", () => {
 describe("job step source", () => {
   it("names an approved job page without showing its address", () => {
     const note = applicationJobStepNote("approved-page", false);
-    expect(note).toBe(
-      "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.",
-    );
+    expect(note).toBe("Job page approved when you created this application.");
     expect(note).not.toMatch(/https?:/u);
     expect(applicationJobStepNote("approved-page", true)).toBe(
       "Job page approved when you created this application.",
@@ -403,14 +401,17 @@ describe("ReviewWorkspace as three steps", () => {
     it("names the approved page as the source and offers extraction as the one primary action", () => {
       const job = renderJob(true);
       expect(job).toContain('aria-current="step"');
-      expect(job).toContain(
-        "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.",
-      );
+      expect(job).toContain("Job page approved when you created this application.");
       expect(job).not.toContain("Add the job description from a file or a public URL");
       // No address is shown or invented: the URL never crosses the bridge.
       expect(job.replace(/placeholder="[^"]*"/gu, "")).not.toMatch(/https?:/u);
       expect(job.match(/button-primary/gu)?.length).toBe(1);
       expect(job).toMatch(/class="button button-primary"[^>]*>Extract requirements</u);
+      // The next step is said plainly and comes before the fold that replaces the job.
+      expect(job).toContain("Next: extract the job&#x27;s requirements");
+      expect(job.indexOf("Extract requirements<")).toBeLessThan(
+        job.indexOf("<summary>Replace the job description</summary>"),
+      );
     });
 
     it("keeps replacing the source under the disclosure", () => {
@@ -420,8 +421,9 @@ describe("ReviewWorkspace as three steps", () => {
       expect(job).toContain('<details class="setup-details"><summary>Replace the job description');
       expect(disclosure).toContain("Replace job description");
       expect(disclosure).toContain('aria-label="Target job description URL"');
-      expect(job.indexOf("<summary>Replace the job description</summary>")).toBeLessThan(
-        job.indexOf("Extract requirements"),
+      // The fold sits below the next action, extracting the requirements.
+      expect(job.indexOf("Extract requirements<")).toBeLessThan(
+        job.indexOf("<summary>Replace the job description</summary>"),
       );
     });
 
