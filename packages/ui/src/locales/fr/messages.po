@@ -10783,6 +10783,18 @@ msgstr "quand cela s’est passé"
 msgid "Where the agreement is kept"
 msgstr "Où l’accord est conservé"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
+msgstr "Où le voir : chaque section Options avancées est repliée, et l’accueil propose le guide pas à pas tant que vous ne l’avez pas refusé."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
+msgstr "Où le voir : chaque section Options avancées est ouverte, sur cet écran aussi, comme le panneau Préparer sous chaque brouillon."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgstr "Où le voir : la liste Premiers pas sur l’accueil, et une indication d’une ligne en haut des écrans Éléments de parcours, Profil professionnel, Nouvelle candidature et de la relecture."
+
 #: packages/ui/src/knowledge.tsx
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
 msgstr "Où vos éléments sont conservés. Une seule suffit le plus souvent ; choisir une autre base remplace celle qu’utilise cet espace de travail."
@@ -11028,6 +11040,10 @@ msgstr "Vous avez choisi de parler de : {title}"
 #: packages/ui/src/career-flow.tsx
 msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
 msgstr "Vous fournissez les documents, DraftLoop en tire les faits, et chaque candidature les réutilise."
+
+#: packages/ui/src/getting-started.tsx
+msgid "You have done every step. For your next job, start again at Add the job you want."
+msgstr "Vous avez fait toutes les étapes. Pour votre prochain poste, reprenez à Ajoutez le poste visé."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/writing-policy-editor.tsx

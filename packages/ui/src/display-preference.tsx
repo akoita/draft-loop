@@ -146,6 +146,18 @@ export function displaySettingChoices(): readonly {
   ];
 }
 
+/** Where the current way of working shows, so a switch never looks like it did nothing. */
+export function displayModeWhere(mode: DisplayMode): string {
+  switch (mode) {
+    case "guided":
+      return t`Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review.`;
+    case "standard":
+      return t`Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it.`;
+    case "everything":
+      return t`Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft.`;
+  }
+}
+
 /**
  * The Display setting in Workspace settings (#2789): visible, never inside Advanced options. All
  * three ways of working sit side by side as choice cards, the current one marked, and a click
@@ -181,6 +193,9 @@ export function DisplaySetting() {
           );
         })}
       </div>
+      <p className="subtle display-setting-where" aria-live="polite">
+        {displayModeWhere(current)}
+      </p>
     </section>
   );
 }

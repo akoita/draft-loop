@@ -10789,6 +10789,18 @@ msgstr "when it happened"
 msgid "Where the agreement is kept"
 msgstr "Where the agreement is kept"
 
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
+msgstr "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
+msgstr "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgstr "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+
 #: packages/ui/src/knowledge.tsx
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
 msgstr "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."
@@ -11034,6 +11046,10 @@ msgstr "You chose to talk about: {title}"
 #: packages/ui/src/career-flow.tsx
 msgid "You give the documents, DraftLoop builds the facts, and every application reuses them."
 msgstr "You give the documents, DraftLoop builds the facts, and every application reuses them."
+
+#: packages/ui/src/getting-started.tsx
+msgid "You have done every step. For your next job, start again at Add the job you want."
+msgstr "You have done every step. For your next job, start again at Add the job you want."
 
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/writing-policy-editor.tsx

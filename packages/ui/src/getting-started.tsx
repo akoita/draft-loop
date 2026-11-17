@@ -110,6 +110,34 @@ export function GettingStarted({
       </aside>
     );
   }
+  if (view.kind === "complete") {
+    return (
+      <aside className="getting-started getting-started-folded" aria-label={t`Getting started`}>
+        <p>
+          <strong>{t`Getting started`}</strong> ·{" "}
+          {t`You have done every step. For your next job, start again at Add the job you want.`}
+        </p>
+        <div className="getting-started-offer-actions">
+          {actions.onNewApplication === undefined ? null : (
+            <button
+              type="button"
+              className="button button-outline"
+              onClick={actions.onNewApplication}
+            >
+              {t`New application`}
+            </button>
+          )}
+          <button
+            type="button"
+            className="link-action"
+            onClick={() => choose({ ...preference, guideHidden: true })}
+          >
+            {t`Hide the guide`}
+          </button>
+        </div>
+      </aside>
+    );
+  }
   const total = view.steps.length;
   const progress = t`Step ${view.position} of ${total}`;
   if (view.folded) {

@@ -7,7 +7,7 @@ import {
 } from "@draft-loop/ui/export-template";
 import { openApplicationPanelEvent } from "@draft-loop/ui/host-panels";
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
@@ -564,6 +564,14 @@ export function ApplicationMaterialSection({
   const [modelId, setModelId] = useState<ApplicationMaterialModel["model_id"] | undefined>();
   const everything = useShowEverything();
   const [collapsed, setCollapsed] = useState(() => readPrepareCollapsed(everything));
+  // Switching the Display setting applies at once: Show everything opens the panel, the other
+  // modes fold it again.
+  const shownMode = useRef(everything);
+  useEffect(() => {
+    if (shownMode.current === everything) return;
+    shownMode.current = everything;
+    setCollapsed(!everything);
+  }, [everything]);
 
   // The review's "Cover letter or interview" button opens the panel and brings it into view
   // (#2578); the panel stays where it is, under the draft.
@@ -917,6 +925,8 @@ const reviewPollMs = 3_000;
 const prepareOpenKey = "draft-loop.prepare-panel.open";
 
 export function readPrepareCollapsed(everything: boolean): boolean {
+  // Show everything starts the panel open, whatever was folded before.
+  if (everything) return false;
   try {
     const saved = globalThis.localStorage?.getItem(prepareOpenKey) ?? null;
     if (saved === null) return !everything;

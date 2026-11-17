@@ -25,6 +25,8 @@ export interface GettingStartedInputs {
 export type GettingStartedView =
   | { readonly kind: "hidden" }
   | { readonly kind: "offer" }
+  /** Guided, with every step done: one line that says so, so Guided never looks like Simple. */
+  | { readonly kind: "complete"; readonly steps: readonly GettingStartedStep[] }
   | {
       readonly kind: "guide";
       readonly folded: boolean;
@@ -91,8 +93,9 @@ export function gettingStartedSteps(inputs: GettingStartedInputs): readonly Gett
 
 /**
  * Who sees what: Guided people see the list (folded to one line once hidden), people on the
- * simple view see a one-line offer until they decline it, and Show everything sees nothing. The
- * guide goes away once every step is done, and waits while the record is still loading.
+ * simple view see a one-line offer until they decline it, and Show everything sees nothing. Once
+ * every step is done, Guided people see one line that says so until they hide it, and everyone
+ * else sees nothing. The guide waits while the record is still loading.
  */
 export function gettingStartedView(
   preference: DisplayPreference,
@@ -105,7 +108,11 @@ export function gettingStartedView(
   const steps = gettingStartedSteps(inputs);
   const index = steps.findIndex((step) => !step.done);
   const current = index === -1 ? undefined : steps.at(index);
-  if (current === undefined) return { kind: "hidden" };
+  if (current === undefined) {
+    return preference.mode === "guided" && !preference.guideHidden
+      ? { kind: "complete", steps }
+      : { kind: "hidden" };
+  }
   if (preference.mode === "standard") {
     return preference.guideHidden ? { kind: "hidden" } : { kind: "offer" };
   }

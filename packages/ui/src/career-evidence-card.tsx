@@ -22,6 +22,7 @@ import {
   supportsAutomaticKnowledgeBase,
 } from "./career-evidence-setup.js";
 import { countedNouns } from "./counted-nouns.js";
+import { useShowEverything } from "./display-preference.js";
 import { useHostEvidenceAdvanced } from "./host-panels.js";
 import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
@@ -223,6 +224,8 @@ export function CareerEvidenceCardView({
   const showAdvanced = showFolder || showKinds || hasKnowledgeBase || hasExtra;
   // The next step is inside the section when the base cannot be opened or none can be made here.
   const advancedNeeded = status.kind === "unavailable" || mode === "legacy";
+  // Show everything (#2789) opens the section too, until the person folds it.
+  const everything = useShowEverything();
   // A base the person named themselves is a choice away from the default, so the fold says so.
   const baseNote =
     status.kind === "selected" && status.displayName !== defaultCareerEvidenceName
@@ -367,7 +370,7 @@ https://www.linkedin.com/in/…`}
       ) : null}
       {showAdvanced ? (
         <AdvancedOptions
-          open={advancedOpen ?? advancedNeeded}
+          open={advancedOpen ?? (advancedNeeded || everything)}
           note={advancedNote}
           {...(onAdvancedToggle === undefined ? {} : { onToggle: onAdvancedToggle })}
         >
@@ -443,6 +446,14 @@ export function CareerEvidenceCard({
   const operationGeneration = useRef(0);
   const pendingLatch = useRef(false);
   const [advancedOpen, setAdvancedOpen] = useState<boolean | null>(null);
+  // A new Display choice replaces the person's last fold, so the switch shows at once.
+  const everything = useShowEverything();
+  const shownMode = useRef(everything);
+  useEffect(() => {
+    if (shownMode.current === everything) return;
+    shownMode.current = everything;
+    setAdvancedOpen(null);
+  }, [everything]);
   const [chooseRequest, setChooseRequest] = useState(0);
   const loadedWorkspace = useRef<string | undefined>(undefined);
 
