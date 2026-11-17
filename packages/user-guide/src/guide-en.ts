@@ -110,6 +110,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "If a step fails, read the message on the screen first: it says whether the step will recover by itself or what to do. A refused upload often means consent is not recorded yet.",
         "If this guide does not answer your question, select Send feedback in the header and describe what happened. The people who run DraftLoop read every note.",
+        "A note goes with technical details: the page, the version, the last error codes and your browser family. Open What we include in the dialog to see each value. Your CV, job descriptions, page text and screenshots are never sent.",
       ],
       keywords: ["error", "bug", "failed", "stuck", "broken", "support", "contact", "feedback"],
     },

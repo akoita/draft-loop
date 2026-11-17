@@ -14,7 +14,8 @@ The channel is `draftloop-mcp`, a stdio MCP server that calls the
 [self-hosted server](../operations/self-hosted.md)'s API with an agent token.
 An agent token reaches one workspace, and only the scopes ticked when it was
 created: `journal` (file notes and list their titles), `applications:read`,
-`jobs:write`, `drafts:read` and `runs:start`. Every other route refuses it.
+`jobs:write`, `drafts:read`, `runs:start` and `evidence:write`. Every other
+route refuses it.
 Candidate data stays on your machine. Without the self-hosted stack, there is
 nothing for it to call: the CLI-only path is not served.
 
@@ -188,6 +189,12 @@ Run `init` again to issue a new one. The
 - **`/log-work`** takes an optional date range, lists what was merged on the
   default branch from the local git history, and records each notable piece
   once, after `list_work` shows it is not already recorded.
+- **`/add-project`** turns the current repository into a
+  [project card](#code-projects-as-evidence). It asks for the candidate's
+  commit emails, role and visibility, counts with `draft-loop evidence
+  add-repo` or `git log`, reads only allowlisted files, shows the card, and
+  calls `add_project` after the candidate says yes. `init` writes it beside
+  `/log-work` for Claude Code and Codex.
 - **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
   when a turn merged work without calling `record_work`: `gh pr merge`, a push
   to `main` or `master`, or a `merge_pull_request` tool call. A push to a
@@ -215,6 +222,31 @@ rule travels with the server, in the tool description, the
   looks like it holds a secret.
 - **The role is stated as it was:** designed, implemented, directed or
   reviewed.
+
+## Code projects as evidence
+
+With `evidence:write`, the agent files a **project card** about one repository
+it read on the candidate's machine, with `add_project`. The card is a short,
+cited summary, never code. It waits in the Work journal like a note, and
+becomes a `project` source only once the candidate approves it
+([Career evidence sources](../features/career-evidence-sources.md#code-project-cards)).
+
+The rule travels in the tool description and `draftloop://projects/guide`:
+
+- **Ask first:** the candidate's commit emails, role (`sole-author`, `lead`
+  or `contributor`) and whether the repository is public or private. Show the
+  card and get a yes before sending it.
+- **Count, never estimate:** own commits with `git log --author`, the total
+  with `git rev-list --count HEAD`, dates from the candidate's own commits,
+  other contributors as a count.
+- **Read only** the README, docs Markdown, manifests, Dockerfiles, Terraform,
+  release notes and the candidate's own commit and pull request titles.
+- **Never send** code, file contents, keys or any email address. A private
+  repository's card carries no links.
+
+The server refuses a card with a content-free code: `invalid_card`,
+`secret_like_content`, `contributor_identity`, `private_card_with_links` or
+`link_not_https`, and a body over 32 KB.
 
 ### When a tool call fails
 
@@ -249,7 +281,19 @@ returns a run's open draft, its findings or career evidence.
 | `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |
 | `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
 | `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
+| `add_project`          | `evidence:write`    | Files a project card about one repository, pending the candidate's approval                        |
 | `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
+| `service_notice`       | none (public)       | Says whether planned maintenance is coming or under way, and until when changes are paused         |
+
+With the operator's credential, the server's owner token, the server also
+offers `list_feedback` and `triage_feedback`: list members' notes by status and
+link each to a GitHub issue ([Feedback](../features/feedback.md)). It never
+offers them with an agent token or a member's sign-in, and the API refuses any
+other credential.
+
+During a read-only planned maintenance, DraftLoop refuses changes with
+`service_maintenance`, a refusal marked retryable. `service_notice` says
+until when, so the agent tells the candidate instead of retrying.
 
 `search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
 the same user guide a member reads from the Help button, so an agent can
@@ -374,8 +418,8 @@ sequenceDiagram
 ```
 
 - **Default scopes.** The server asks for `journal`, `applications:read` and
-  `jobs:write`. `drafts:read` and `runs:start` are granted only when the
-  person adds them.
+  `jobs:write`. `drafts:read`, `runs:start` and `evidence:write` are granted
+  only when the person adds them.
 - **Runs and drafts.** With `runs:start`, the assistant starts them within
   [the connection's spend cap](#the-connections-spend-cap). Without a cap, the
   tool tells the person to set one in Workspace settings > Agents.

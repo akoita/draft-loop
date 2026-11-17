@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   type ApplicationService,
   defaultHostedKnowledgeSourceMaxBytes,
@@ -58,7 +59,7 @@ import {
   type CareerInterviewParts,
   registerCareerInterviewRoutes,
 } from "./career-interview-routes.js";
-import { registerClientErrorRoutes } from "./client-error-routes.js";
+import { clientErrorsPath, registerClientErrorRoutes } from "./client-error-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -77,6 +78,7 @@ import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
+import { type LegalPublisher, registerLegalPages } from "./legal-pages.js";
 import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
@@ -114,6 +116,7 @@ import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
+import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import type { SupportSettings } from "./support-config.js";
 import { registerSupportRoutes } from "./support-routes.js";
@@ -236,12 +239,18 @@ export interface ApiOptions {
   readonly support?: SupportSettings;
   /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
   readonly feedback?: FeedbackRoutesOptions["feedback"];
+  /** The release this server runs, which a feedback note records (#2875). */
+  readonly serverRelease?: string;
   /** When each organisation was last active (#2538); unset, activity is not recorded. */
   readonly organisationActivity?: OrganisationActivityRecorder;
   /** Each member's own settings, such as the screen language; without it those routes are not served. */
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
+  /** The publisher details the legal pages show (#2462); without them they show placeholders. */
+  readonly legalPublisher?: LegalPublisher;
+  /** The planned-maintenance notice (#2965); without it there is never a notice. */
+  readonly serviceNotice?: ServiceNoticeSource;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
@@ -284,7 +293,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     bodyLimit: apiBodyLimitBytes,
     // Cloud Run's front end terminates TLS; the API is never reached directly.
     trustProxy: true,
+    // A random id per request, unique across instances, so a member's feedback can name the
+    // request that failed and the operator can find its log line (#2875).
+    genReqId: () => randomUUID(),
   }).withTypeProvider<ZodTypeProvider>();
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler(sendError);
@@ -381,6 +396,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => ({ status: "ok" as const }),
   );
   registerAuthConfigRoutes(app, auth, options.betaWaitlist !== undefined);
+  registerServiceNotice(app, {
+    source: options.serviceNotice ?? (async () => undefined),
+    openWrites: new Set([clientErrorsPath]),
+  });
   registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 
@@ -929,8 +948,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   if (options.betaWaitlist !== undefined) {
     registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
-  if (options.feedback !== undefined) registerFeedbackRoutes(app, { feedback: options.feedback });
+  if (options.feedback !== undefined) {
+    registerFeedbackRoutes(app, {
+      feedback: options.feedback,
+      serverRelease: options.serverRelease ?? null,
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+    });
+  }
   registerHelpRoutes(app);
+  registerLegalPages(
+    app,
+    options.legalPublisher === undefined ? {} : { publisher: options.legalPublisher },
+  );
   if (options.support !== undefined && application !== undefined) {
     // The assistant uses the career interview's Claude route, read per request.
     const interview = application.careerInterview;

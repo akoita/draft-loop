@@ -1007,6 +1007,29 @@
         ],
         "additionalProperties": false
       },
+      "CareerProfileSourceInput": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reviewed": {
+            "type": "boolean",
+            "description": "False only when no version is reviewed yet, so the newest draft was used."
+          },
+          "newer_draft_waiting": {
+            "type": "boolean",
+            "description": "A newer profile draft waits for review and was not used."
+          }
+        },
+        "required": [
+          "version",
+          "reviewed",
+          "newer_draft_waiting"
+        ]
+      },
       "ApplicationMaterialDraftInput": {
         "type": "object",
         "properties": {
@@ -1031,6 +1054,10 @@
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidanceInput"
+          },
+          "career_profile": {
+            "description": "On a newly drafted answer only: the career profile version its facts came from. Drafting uses the last reviewed version; a newer draft is used once it is reviewed.",
+            "$ref": "#/components/schemas/CareerProfileSourceInput"
           },
           "interview_details": {
             "description": "For an interview preparation guide: the interview it was written for.",
@@ -1392,9 +1419,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -1448,9 +1476,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -3120,6 +3149,61 @@
           "proof"
         ]
       },
+      "ServiceNoticeInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "maintenance"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "When the maintenance starts, ISO 8601."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "When the maintenance is announced to end, ISO 8601."
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "True when changes are paused once it has started."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "ongoing",
+              "overrunning"
+            ],
+            "description": "upcoming before it starts; ongoing until its announced end; overrunning when changes are still paused after it."
+          }
+        },
+        "required": [
+          "kind",
+          "startsAt",
+          "endsAt",
+          "readOnly",
+          "state"
+        ]
+      },
+      "ServiceNoticeResponseInput": {
+        "type": "object",
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceNoticeInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "notice"
+        ]
+      },
       "BetaInviteInput": {
         "type": "object",
         "properties": {
@@ -3147,6 +3231,10 @@
             "type": "string"
           },
           "revokedAt": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "description": "The terms version accepted at sign-up; absent before #2462.",
             "type": "string"
           }
         },
@@ -5178,6 +5266,271 @@
           "facts"
         ]
       },
+      "FeedbackRecentErrorInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "description": "The API's content-free error code, or `network` when it did not answer."
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The API's content-free message, cut to 200 characters."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackBrowserInput": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Browser family, such as Firefox; never the user agent."
+          },
+          "os": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Operating system family, such as macOS."
+          },
+          "viewport": {
+            "type": "string",
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "description": "Window size in CSS pixels, such as 1280x800."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "os",
+          "viewport",
+          "language",
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackClientContextInput": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentErrorInput"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowserInput"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackContextInput": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentErrorInput"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowserInput"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "agent"
+            ],
+            "description": "Set by the server from the route: `web` from the screen, `agent` from a token."
+          },
+          "serverRelease": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The server release that took the note."
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The organisation's plan when the note was sent."
+          }
+        },
+        "required": [
+          "source",
+          "serverRelease",
+          "plan"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackTriageInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to; null clears it, leaving it out keeps it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https:\\/\\/github\\.com\\/[A-Za-z0-9-]{1,39}\\/[A-Za-z0-9._-]{1,100}\\/issues\\/[1-9]\\d{0,9}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "FeedbackNoteInput": {
         "type": "object",
         "properties": {
@@ -5250,6 +5603,39 @@
             ],
             "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackContextInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The technical facts sent with a note; null for a ticket or an older note."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "triagedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sentAt": {
             "type": "string"
           }
@@ -5263,6 +5649,10 @@
           "screen",
           "text",
           "transcript",
+          "context",
+          "status",
+          "issueUrl",
+          "triagedAt",
           "sentAt"
         ]
       },
@@ -7737,6 +8127,53 @@
           "month"
         ]
       },
+      "ProjectCardResultInput": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "description": "The pending card's id, a work journal note id.",
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_discarded",
+              "validated"
+            ]
+          },
+          "duplicate_of": {
+            "type": "string"
+          },
+          "possible_duplicate_of": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screening": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ]
+          },
+          "review_url": {
+            "description": "Where the candidate reviews the card.",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "possible_duplicate_of",
+          "message"
+        ]
+      },
       "WorkJournalRecordResultInput": {
         "type": "object",
         "properties": {
@@ -9760,6 +10197,30 @@
         ],
         "additionalProperties": false
       },
+      "CareerProfileSource": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reviewed": {
+            "type": "boolean",
+            "description": "False only when no version is reviewed yet, so the newest draft was used."
+          },
+          "newer_draft_waiting": {
+            "type": "boolean",
+            "description": "A newer profile draft waits for review and was not used."
+          }
+        },
+        "required": [
+          "version",
+          "reviewed",
+          "newer_draft_waiting"
+        ],
+        "additionalProperties": false
+      },
       "ApplicationMaterialDraft": {
         "type": "object",
         "properties": {
@@ -9784,6 +10245,10 @@
           "guidance": {
             "description": "The guidance the draft was written with, as the model received it.",
             "$ref": "#/components/schemas/ApplicationMaterialGuidance"
+          },
+          "career_profile": {
+            "description": "On a newly drafted answer only: the career profile version its facts came from. Drafting uses the last reviewed version; a newer draft is used once it is reviewed.",
+            "$ref": "#/components/schemas/CareerProfileSource"
           },
           "interview_details": {
             "description": "For an interview preparation guide: the interview it was written for.",
@@ -10155,9 +10620,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -10212,9 +10678,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -11903,6 +12370,63 @@
         ],
         "additionalProperties": false
       },
+      "ServiceNotice": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "maintenance"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "When the maintenance starts, ISO 8601."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "When the maintenance is announced to end, ISO 8601."
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "True when changes are paused once it has started."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "ongoing",
+              "overrunning"
+            ],
+            "description": "upcoming before it starts; ongoing until its announced end; overrunning when changes are still paused after it."
+          }
+        },
+        "required": [
+          "kind",
+          "startsAt",
+          "endsAt",
+          "readOnly",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceNoticeResponse": {
+        "type": "object",
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceNotice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "notice"
+        ],
+        "additionalProperties": false
+      },
       "BetaInvite": {
         "type": "object",
         "properties": {
@@ -11930,6 +12454,10 @@
             "type": "string"
           },
           "revokedAt": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "description": "The terms version accepted at sign-up; absent before #2462.",
             "type": "string"
           }
         },
@@ -13329,6 +13857,271 @@
         ],
         "additionalProperties": false
       },
+      "FeedbackRecentError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "description": "The API's content-free error code, or `network` when it did not answer."
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "The API's content-free message, cut to 200 characters."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackBrowser": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Browser family, such as Firefox; never the user agent."
+          },
+          "os": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$",
+            "description": "Operating system family, such as macOS."
+          },
+          "viewport": {
+            "type": "string",
+            "pattern": "^\\d{1,5}x\\d{1,5}$",
+            "description": "Window size in CSS pixels, such as 1280x800."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "family",
+          "os",
+          "viewport",
+          "language",
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackClientContext": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentError"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowser"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeedbackContext": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "description": "The page's path and fragment, never its query.",
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9._:/#-]*$"
+          },
+          "webBuild": {
+            "description": "The web screen's build id.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 ._:/+-]+$"
+          },
+          "ids": {
+            "description": "The candidate record, application and run last opened.",
+            "type": "object",
+            "properties": {
+              "recordId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "applicationId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              },
+              "runId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "recentErrors": {
+            "description": "The last API errors the screen met, newest last; never a request or answer body.",
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackRecentError"
+            }
+          },
+          "lastFailedRequestId": {
+            "description": "The id of the last request that failed.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "browser": {
+            "$ref": "#/components/schemas/FeedbackBrowser"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "web",
+              "agent"
+            ],
+            "description": "Set by the server from the route: `web` from the screen, `agent` from a token."
+          },
+          "serverRelease": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The server release that took the note."
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The organisation's plan when the note was sent."
+          }
+        },
+        "required": [
+          "source",
+          "serverRelease",
+          "plan"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackTriage": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to; null clears it, leaving it out keeps it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https:\\/\\/github\\.com\\/[A-Za-z0-9-]{1,39}\\/[A-Za-z0-9._-]{1,100}\\/issues\\/[1-9]\\d{0,9}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
       "FeedbackNote": {
         "type": "object",
         "properties": {
@@ -13402,6 +14195,39 @@
             ],
             "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackContext"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The technical facts sent with a note; null for a ticket or an older note."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "issue",
+              "closed"
+            ]
+          },
+          "issueUrl": {
+            "description": "The GitHub issue the note led to.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "triagedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sentAt": {
             "type": "string"
           }
@@ -13415,6 +14241,10 @@
           "screen",
           "text",
           "transcript",
+          "context",
+          "status",
+          "issueUrl",
+          "triagedAt",
           "sentAt"
         ],
         "additionalProperties": false
@@ -15946,6 +16776,54 @@
         ],
         "additionalProperties": false
       },
+      "ProjectCardResult": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "description": "The pending card's id, a work journal note id.",
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_discarded",
+              "validated"
+            ]
+          },
+          "duplicate_of": {
+            "type": "string"
+          },
+          "possible_duplicate_of": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screening": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ]
+          },
+          "review_url": {
+            "description": "Where the candidate reviews the card.",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "possible_duplicate_of",
+          "message"
+        ],
+        "additionalProperties": false
+      },
       "WorkJournalRecordResult": {
         "type": "object",
         "properties": {
@@ -17001,6 +17879,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/service-notice": {
+      "get": {
+        "summary": "The current planned-maintenance notice, if any",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceNoticeResponse"
                 }
               }
             }
@@ -25304,6 +26200,305 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/work-journal/projects": {
+      "post": {
+        "summary": "File a project card about one code repository, pending the candidate's review",
+        "description": "What the MCP tool add_project sends: a short, cited summary of one repository the agent read on the candidate's machine, never its code. Every number is counted from git. The card waits in the candidate's Work journal and becomes a project source only once they approve it. Refusals are content-free codes: invalid_card, secret_like_content, contributor_identity (an email address anywhere), private_card_with_links, link_not_https (422), not_consented (403), rate_limited (429) and a body over 32 KB (413); in sign-in mode, storage_consent_required (409). A repeat answers duplicate; a card the candidate discarded answers previously_discarded. dry_run validates without storing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 160
+                  },
+                  "summary": {
+                    "type": "string",
+                    "minLength": 40,
+                    "maxLength": 1500
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "sole-author",
+                      "lead",
+                      "contributor"
+                    ]
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ]
+                  },
+                  "stack": {
+                    "minItems": 1,
+                    "maxItems": 15,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
+                  },
+                  "contribution": {
+                    "type": "object",
+                    "properties": {
+                      "own_commits": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      "total_commits": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      "first_commit": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                      },
+                      "last_commit": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                      },
+                      "merged_pull_requests": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "other_contributors": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      }
+                    },
+                    "required": [
+                      "own_commits",
+                      "total_commits",
+                      "first_commit",
+                      "last_commit",
+                      "other_contributors"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "scale": {
+                    "default": {},
+                    "type": "object",
+                    "properties": {
+                      "releases": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "stars": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "continuous_integration": {
+                        "type": "boolean"
+                      },
+                      "automated_tests": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "highlights": {
+                    "default": [],
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 8,
+                          "maxLength": 300
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "repository_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "live_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "release_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "dedupe_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "dry_run": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "purpose",
+                  "summary",
+                  "role",
+                  "visibility",
+                  "stack",
+                  "contribution"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCardResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCardResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/work-journal/notes/{noteId}": {
       "get": {
         "summary": "Read one work journal note for review",
@@ -28020,7 +29215,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions), runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires) and evidence:write (add_project: project cards that wait for the candidate's approval). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -28043,7 +29238,7 @@
                   "scopes": {
                     "description": "What the token may do; [\"journal\"] by default.",
                     "minItems": 1,
-                    "maxItems": 5,
+                    "maxItems": 6,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -28052,9 +29247,10 @@
                         "applications:read",
                         "jobs:write",
                         "drafts:read",
-                        "runs:start"
+                        "runs:start",
+                        "evidence:write"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
                     }
                   },
                   "monthly_cap_usd": {
@@ -30005,7 +31201,7 @@
     "/v1/sign-up": {
       "post": {
         "summary": "Create your account from a beta invite code",
-        "description": "Takes a verified sign-in that has no account yet. The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
+        "description": "Takes a verified sign-in that has no account yet and the current terms version it accepts (`accepted_terms`; 400 terms_not_accepted, with the current `version`, when absent or outdated). The code must be open and name the sign-in's verified email, and the beta must have room: 404 invite_unknown, 403 invite_revoked or invite_email_mismatch, 409 invite_used, beta_full or already_member, 429 rate_limited after repeated refusals. The new organisation gets the Beta plan, and the caller is its owner.",
         "requestBody": {
           "required": true,
           "content": {
@@ -30017,6 +31213,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "accepted_terms": {
+                    "description": "The version of the terms of use and privacy policy the person accepted, the date shown on /legal/terms; it is recorded with the account.",
+                    "type": "string",
+                    "maxLength": 32
                   }
                 },
                 "required": [
@@ -30301,7 +31502,7 @@
     "/v1/feedback": {
       "post": {
         "summary": "Send feedback about DraftLoop to the operator",
-        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read. 400 invalid_input for an empty note or one over 2000 characters.",
+        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source `web`, the server release and the plan. 400 invalid_input for an empty note, one over 2000 characters or a context over its bounds.",
         "requestBody": {
           "required": true,
           "content": {
@@ -30329,6 +31530,9 @@
                     "maxLength": 80,
                     "pattern": "^[A-Za-z0-9._:/-]+$",
                     "description": "Where the note was written: the screen's name, or `agent`."
+                  },
+                  "context": {
+                    "$ref": "#/components/schemas/FeedbackClientContextInput"
                   }
                 },
                 "required": [
@@ -30397,7 +31601,7 @@
     "/v1/workspaces/{workspaceId}/feedback": {
       "post": {
         "summary": "Send feedback about DraftLoop to the operator, from an agent",
-        "description": "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation.",
+        "description": "As `POST /v1/feedback`, for an agent token of a member with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token; the note belongs to the organisation. Its context's source is `agent`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -30425,6 +31629,9 @@
                     "maxLength": 80,
                     "pattern": "^[A-Za-z0-9._:/-]+$",
                     "description": "Where the note was written: the screen's name, or `agent`."
+                  },
+                  "context": {
+                    "$ref": "#/components/schemas/FeedbackClientContextInput"
                   }
                 },
                 "required": [
@@ -30505,7 +31712,7 @@
     "/v1/operator/feedback": {
       "get": {
         "summary": "List members' feedback notes, newest first",
-        "description": "Operator only. At most `limit` notes and support tickets, 100 by default. Support tickets are deleted 90 days after they were sent.",
+        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, of one `status` when it is given. Support tickets are deleted 90 days after they were sent.",
         "parameters": [
           {
             "schema": {
@@ -30517,6 +31724,21 @@
             "in": "query",
             "name": "limit",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "triaged",
+                "issue",
+                "closed"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Only notes with this status."
           }
         ],
         "responses": {
@@ -30553,6 +31775,86 @@
             }
           },
           "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/feedback/{noteId}": {
+      "patch": {
+        "summary": "Triage a feedback note",
+        "description": "Operator only. Sets the note's status (`new`, `triaged`, `issue`, `closed`) and its GitHub issue link: a link replaces the stored one, null clears it, leaving it out keeps it. 400 invalid_input for status `issue` without a link or a link that is not an https GitHub issue address; 404 for an unknown note.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackTriageInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "noteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

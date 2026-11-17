@@ -131,6 +131,15 @@ label:where(:not(.shared-screens *)) {
   border-radius: 0;
 }
 
+/* Planned maintenance (#2966): one line above every screen while the API serves a notice. */
+.service-notice {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  border-radius: 0;
+}
+
 .sign-in {
   max-width: 28rem;
   margin: 10vh auto;
@@ -139,6 +148,23 @@ label:where(:not(.shared-screens *)) {
 
 .sign-in button {
   margin-top: 1rem;
+}
+
+/* Sign-up's acceptance of the terms (#2462): the box beside its sentence, which holds links. */
+.terms-acceptance {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.terms-acceptance input {
+  width: auto;
+  margin-top: 0.3rem;
+}
+
+.terms-acceptance label {
+  margin: 0;
+  font-weight: normal;
 }
 
 /* The public beta's landing page (#2567): the sign-in column, a little wider, with sections. */
@@ -770,6 +796,24 @@ form button[type="submit"]:where(:not(.button)) {
 
 .release-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* Send feedback's What we include fold (#2875): name and value on one row, wrapping long ids. */
+.feedback-context dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0;
+}
+
+.feedback-context dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.feedback-context ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
 }
 
 button.small:where(:not(.shared-screens *)) {

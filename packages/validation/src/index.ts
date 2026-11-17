@@ -12,6 +12,7 @@ import { bulletFragmentMessages, findBulletFragment } from "./bullet-fragment.js
 import { findBulletSeries } from "./bullet-series.js";
 import { findCandidateNarration } from "./candidate-narration.js";
 import { findCvShapeIssues } from "./cv-shape.js";
+import { findCvWritingIssues } from "./cv-writing-checks.js";
 import { checkDocumentLanguage, wrongLanguageMessage } from "./document-language.js";
 import { findRepeatedFacts } from "./repeated-fact.js";
 import { findRepeatedPhrase } from "./repeated-phrase.js";
@@ -634,6 +635,11 @@ export function validateDraftArtifact(
   const approvalGate =
     !Array.isArray(optionsOrGapIds) &&
     (optionsOrGapIds as DeterministicValidationOptions).approvalGate === true;
+  // Context-line caveats, phrase-list summaries and Core areas that repeat Experience (#2908).
+  for (const issue of findCvWritingIssues(artifact)) {
+    addIssue(issues, { ...issue, category: "quality", severity: "warning" });
+  }
+
   for (const { blocksApproval, ...issue } of findCvShapeIssues(artifact)) {
     const severity = approvalGate && blocksApproval === true ? "error" : "warning";
     addIssue(issues, { ...issue, category: "format", severity });

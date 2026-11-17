@@ -13,8 +13,11 @@ import { type DraftsApi, registerDraftTools } from "./drafts.js";
 import { type FeedbackApi, registerFeedbackTools } from "./feedback.js";
 import { type HelpApi, registerHelpTools } from "./help.js";
 import { type MaterialApi, registerMaterialTools } from "./material.js";
+import { type OperatorFeedbackApi, registerOperatorFeedbackTools } from "./operator-feedback.js";
+import { type ProjectsApi, registerProjectTools } from "./projects.js";
 import { registerApplicationPrompts } from "./prompts.js";
 import { type RunsApi, registerRunTools } from "./runs.js";
+import { registerServiceNoticeTools, type ServiceNoticeApi } from "./service-notice.js";
 
 /**
  * The DraftLoop MCP server (ADR 0011 D17, #2023, #2440). A host agent records notable work it
@@ -31,8 +34,10 @@ export const serverInstructions = [
   "Call it after a merge or release that a hiring manager would care about, never for routine fixes, and never include secrets, customer data or anything the candidate asked you to keep private.",
   "Read draftloop://work-journal/guide when unsure, and use list_work to avoid recording the same work twice.",
   "list_applications, get_application and get_run_status show the candidate's job applications and where their CV runs stand; get_job_text reads the job description one keeps; get_cv, list_materials and get_material read the CV the candidate exported and the cover letters, interview preparation guides and interview questions they saved; add_job adds an application from a job description the candidate pasted; estimate_run prices a CV run and start_cv_run starts one, and draft_cover_letter and draft_interview_prep write and save a draft, within the token's monthly spend cap and only when the candidate asked.",
+  "add_project files a project card about one code repository you read on the candidate's machine, counted from git and shown to the candidate first; it never takes code (draftloop://projects/guide).",
   "send_feedback passes the candidate's own note about DraftLoop to the people who run it, only when they ask.",
   "search_help and draftloop://help/guide/en (or /fr) hold DraftLoop's user guide: answer the candidate's questions about using DraftLoop from it.",
+  "A refusal coded service_maintenance means DraftLoop paused changes for planned maintenance: service_notice says until when; tell the candidate and wait instead of retrying.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
   "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
 ].join(" ");
@@ -145,6 +150,11 @@ export function createWorkJournalMcpServer(
   material?: MaterialApi,
   feedback?: FeedbackApi,
   help?: HelpApi,
+  projects?: ProjectsApi,
+  /** Only with the operator's credential (#2877). */
+  operatorFeedback?: OperatorFeedbackApi,
+  /** Planned maintenance (#2967), read from the public route. */
+  serviceNotice?: ServiceNoticeApi,
 ): McpServer {
   const server = new McpServer(
     { name: "draftloop", version: serverVersion },
@@ -210,6 +220,11 @@ export function createWorkJournalMcpServer(
   if (material !== undefined) registerMaterialTools(server, material, failure);
   if (feedback !== undefined) registerFeedbackTools(server, feedback, failure);
   if (help !== undefined) registerHelpTools(server, help, failure);
+  if (projects !== undefined) registerProjectTools(server, projects, failure);
+  if (operatorFeedback !== undefined) {
+    registerOperatorFeedbackTools(server, operatorFeedback, failure);
+  }
+  if (serviceNotice !== undefined) registerServiceNoticeTools(server, serviceNotice, failure);
 
   server.registerResource(
     "work-journal-guide",

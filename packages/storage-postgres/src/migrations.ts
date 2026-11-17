@@ -7,6 +7,7 @@ import { agentTokenSpendMigration } from "./agent-token-spend-migration.js";
 import { agentTokensMigration } from "./agent-tokens-migration.js";
 import { applicationFoldersMigration } from "./application-folders-migration.js";
 import { betaInvitesMigration } from "./beta-invites-migration.js";
+import { betaTermsAcceptanceMigration } from "./beta-terms-acceptance-migration.js";
 import { betaWaitlistMigration } from "./beta-waitlist-migration.js";
 import { candidateRecordsMigration } from "./candidate-records-migration.js";
 import { careerInterviewMigration } from "./career-interview-migration.js";
@@ -16,6 +17,7 @@ import { creditLedgerMigration } from "./credit-ledger-migration.js";
 import { creditPurchaseRefundsMigration } from "./credit-purchase-refunds-migration.js";
 import { creditPurchasesMigration } from "./credit-purchases-migration.js";
 import { feedbackNotesMigration } from "./feedback-notes-migration.js";
+import { feedbackTriageMigration } from "./feedback-triage-migration.js";
 import { interviewGuideMigration } from "./interview-guide-migration.js";
 import { knowledgeBaseOwnersMigration } from "./knowledge-base-owners-migration.js";
 import { memberDisplayPreferenceMigration } from "./member-display-preference-migration.js";
@@ -852,6 +854,8 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   qualityDigestsMigration,
   qualityInsightsMigration,
   projectEvidenceKindMigration,
+  feedbackTriageMigration,
+  betaTermsAcceptanceMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

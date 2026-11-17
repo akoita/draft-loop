@@ -863,6 +863,43 @@ plan without seats, or an impossible date answers 422
 ids, the plan id, numbers and the reason code, since a plan belongs to no
 workspace's audit trail.
 
+### Planned maintenance
+
+The API serves one planned-maintenance notice, and pauses changes while a
+read-only notice is under way (#2965). The operator sets it in a Secret
+Manager version, so it changes within a minute and needs no deploy.
+
+- **Setting.** `DRAFT_LOOP_SERVICE_NOTICE_SECRET` names the version. Its value
+  is `{"kind":"maintenance","startsAt":"…","endsAt":"…","readOnly":true}`;
+  empty or `{}` means no notice. Unset, unreadable or invalid also means no
+  notice, so a bad value never refuses a request.
+- **Reading.** `GET /v1/service-notice` is public, so the sign-in screen shows
+  it too. It answers the notice and its state, or `null`.
+- **Pausing changes.** Once a read-only notice has started, every `/v1` write
+  answers 503 `service_maintenance` with `Retry-After`. Reads and the screen's
+  crash reports stay open.
+
+```mermaid
+stateDiagram-v2
+  [*] --> upcoming: notice set
+  upcoming --> ongoing: startsAt
+  ongoing --> overrunning: endsAt, read-only
+  ongoing --> [*]: endsAt, not read-only
+  overrunning --> [*]: notice cleared
+  upcoming --> [*]: notice cleared
+  ongoing --> [*]: notice cleared
+```
+
+Read-only lasts until the operator clears the notice, not until `endsAt`, so
+a maintenance that runs late never reopens writes halfway through.
+
+Before a window, the operator can email every active member once (#2968):
+`tsx src/notify-members.ts` on the worker's image, with
+`DRAFT_LOOP_NOTICE_STARTS_AT`, `DRAFT_LOOP_NOTICE_ENDS_AT` and
+`DRAFT_LOOP_NOTICE_READ_ONLY`. It is a dry run that prints the count and the
+text unless `DRAFT_LOOP_NOTICE_SEND=yes`. The message goes out in each
+member's screen language, once per address, and logs never carry one.
+
 ### Consent
 
 Each candidate record keeps an append-only consent ledger (ADR 0011, D7). It is

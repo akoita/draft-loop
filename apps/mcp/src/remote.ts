@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
+import { isAgentToken } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
 import {
   createWorkJournalApi,
@@ -14,8 +15,11 @@ import { createDraftsApi } from "./drafts.js";
 import { createFeedbackApi } from "./feedback.js";
 import { createHelpApi } from "./help.js";
 import { createMaterialApi } from "./material.js";
+import { createOperatorFeedbackApi } from "./operator-feedback.js";
+import { createProjectsApi } from "./projects.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
+import { createServiceNoticeApi } from "./service-notice.js";
 
 /**
  * The remote transport (ADR 0011 D17, #2647): the same tools over Streamable HTTP on one URL,
@@ -37,11 +41,16 @@ export const remoteScopes = [
   "draftloop:jobs:write",
   "draftloop:drafts:read",
   "draftloop:runs:start",
+  "draftloop:evidence:write",
 ] as const;
-/** Granted only when the person adds them: reading drafts, and spending within a cap (#2658). */
+/**
+ * Granted only when the person adds them: reading drafts, spending within a cap (#2658), and
+ * filing project cards (#2895).
+ */
 const remoteOptInScopes: ReadonlySet<string> = new Set([
   "draftloop:drafts:read",
   "draftloop:runs:start",
+  "draftloop:evidence:write",
 ]);
 /** What a connection asks for unless the client names scopes. */
 export const remoteDefaultScopes = remoteScopes.filter((scope) => !remoteOptInScopes.has(scope));
@@ -97,8 +106,23 @@ export function remoteOptionsFromEnvironment(
   };
 }
 
-/** Every tool, calling the API with one configuration. */
-export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServer {
+/**
+ * Whether a credential may be the operator's: the server's owner token, never an agent token.
+ * A member's sign-in through OAuth is never the operator's, so the caller rules that out first.
+ */
+export function mayBeOperatorToken(token: string | undefined): boolean {
+  return token !== undefined && token !== "" && !isAgentToken(token);
+}
+
+/**
+ * Every tool, calling the API with one configuration. The operator's feedback tools (#2877) are
+ * offered only when `operator` says the credential may be the operator's; the API still refuses
+ * any other credential.
+ */
+export function createDraftLoopMcpServer(
+  config: WorkJournalApiConfig,
+  options: { readonly operator?: boolean } = {},
+): McpServer {
   const call = createWorkspaceApiCall(config);
   return createWorkJournalMcpServer(
     createWorkJournalApi(config),
@@ -108,6 +132,9 @@ export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServe
     createMaterialApi(call),
     createFeedbackApi(call),
     createHelpApi(call),
+    createProjectsApi(call),
+    options.operator === true ? createOperatorFeedbackApi(config) : undefined,
+    createServiceNoticeApi(config),
   );
 }
 
@@ -262,12 +289,15 @@ export function createRemoteMcpHandler(
         ? answer(response, 413, "The request is too large.")
         : answer(response, 400, "The request is not JSON.");
     }
-    const server = createDraftLoopMcpServer({
-      baseUrl: options.baseUrl,
-      workspaceId,
-      token: async () => token,
-      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-    });
+    const server = createDraftLoopMcpServer(
+      {
+        baseUrl: options.baseUrl,
+        workspaceId,
+        token: async () => token,
+        ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+      },
+      { operator: oauth === undefined && mayBeOperatorToken(token) },
+    );
     // No session id generator: each request is its own exchange.
     const transport = new StreamableHTTPServerTransport({
       enableJsonResponse: true,

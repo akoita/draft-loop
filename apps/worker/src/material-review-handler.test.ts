@@ -59,6 +59,8 @@ const service = (criticCompany = "openai") =>
     listCanonicalCandidateProfileVersions: async () => [
       {
         profile: {
+          version: 1,
+          status: "reviewed",
           updatedAt: "2026-11-08T04:00:00.000Z",
           facts: [
             { id: "t", category: "role", field: "title", value: "Data Analyst" },

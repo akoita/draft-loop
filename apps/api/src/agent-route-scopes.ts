@@ -25,11 +25,14 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   "jobs:write": "Add jobs",
   "drafts:read": "Read CVs and drafts",
   "runs:start": "Start runs and drafts",
+  "evidence:write": "File project cards",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
 export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`POST ${workspace}/work-journal/notes`]: { scope: "journal" },
+  // A project card waits for the candidate's approval like a note; its own scope (#2895).
+  [`POST ${workspace}/work-journal/projects`]: { scope: "evidence:write" },
   // Feedback goes with the journal scope, the one a token holds by default (#2843).
   [`POST ${workspace}/feedback`]: { scope: "journal" },
   // The user guide holds no candidate material; it goes with the default scope too (#2881).
@@ -126,6 +129,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/operator/organisations/:organisationId/credits",
   "GET /v1/organisation/credits",
   "GET /v1/organisation/members",
+  "GET /v1/service-notice",
   "GET /v1/usage",
   "GET /v1/workspaces",
   "GET /v1/workspaces/:workspaceId",
@@ -159,6 +163,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/writing-policy/versions",
   "GET /v1/workspaces/:workspaceId/writing-policy/versions/:checksum",
   "GET /v1/writing-policy-template",
+  "PATCH /v1/operator/feedback/:noteId",
   "PATCH /v1/organisation/members/:memberId",
   "PATCH /v1/workspaces/:workspaceId/application-folders/:folderId",
   "PATCH /v1/workspaces/:workspaceId/applications/:applicationId",

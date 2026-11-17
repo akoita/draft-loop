@@ -34,7 +34,7 @@ quality. Say what the tools do.
 | Name         | DraftLoop                                                                              |
 | Summary      | Track your job applications and tailor your CV from evidence you approved.             |
 | Categories   | Productivity, Career                                                                   |
-| Developer    | The legal name in the [legal notice](../legal/legal-notice.md)                         |
+| Developer    | The legal name in the legal notice (`/legal/notice`, [legal pack](../legal/README.md))                         |
 
 **Description:**
 

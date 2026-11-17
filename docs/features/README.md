@@ -33,6 +33,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Desktop client](../reference/cli-and-desktop.md)   | `available` | server        | `none`       | An Electron window over a DraftLoop server's web screen; alpha.              |
 | [Source-only CLI](../reference/cli-and-desktop.md)  | `available` | CLI           | `none`       | Runs a local workspace from a source checkout; in maintenance mode.          |
 | [Hosted service](../architecture/hosted-service.md) | `partial`   | hosted        | `none`       | The same server on Google Cloud in the EU; on staging only, production held. |
+| [Planned-maintenance notice](../architecture/hosted-service.md#planned-maintenance) | `available` | server | `service_notice` | Shows the operator's planned maintenance on every screen and pauses changes during a read-only window. |
 
 ## Career evidence
 
@@ -41,6 +42,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Evidence files](career-evidence-sources.md)                           | `available` | server        | `none`       | Upload files as career evidence, then download them and see their dates.        |
 | [Pasted text evidence](career-evidence-sources.md)                     | `available` | server        | `none`       | Paste text as a career evidence source instead of uploading a file.             |
 | [Pull request import](career-evidence-sources.md)                      | `available` | server        | `none`       | Imports your merged pull requests as career evidence, screened for sensitivity. |
+| [Code project cards](career-evidence-sources.md#code-project-cards) | `available` | server | `add_project` | An agent files a cited card about one code repository, counted from git; it becomes evidence once you approve it. |
 | [Career profile](career-profile.md)                                    | `available` | server        | `none`       | Reviewed facts about your career that every draft starts from.                  |
 | [Evidence next step](career-profile.md)                                | `available` | server        | `none`       | The Career evidence page shows the one next step that improves your evidence.   |
 | [Content screening](sensitivity-and-screening.md)                      | `available` | server        | `none`       | Holds material with hidden instructions until an owner or admin releases it.    |
@@ -101,10 +103,10 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Display](../reference/display.md)                        | `available` | server        | `none`       | Simple, Guided or Show everything, which opens every Advanced options section.   |
 | [Plans and credits](plans-and-credits.md)                 | `partial`   | hosted        | `none`       | Plan entitlements and run credits; prices and sign-up are not live yet.          |
 | [Record archive](../reference/record-archive.md)          | `available` | hosted        | `none`       | Owners download everything kept about one candidate record as a zip.             |
-| [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and choose who opens each job search; one-person plans see no picker. |
+| [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and choose who opens each job search; sign-up accepts the published terms. |
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
 | [Help](help.md) | `partial` | web, server | `search_help` | A Help button on every screen opens a searchable user guide in English or French, and an AI assistant that answers questions and hands them to a person where the server turns it on; agents search and read the same guide. |
-| [Feedback](feedback.md) | `partial` | web, server | `send_feedback` | A member sends the operator a note about DraftLoop from the header's Send feedback button, or through their agent. |
+| [Feedback](feedback.md) | `partial` | web, server | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about DraftLoop, with its technical context, from the header's Send feedback button or through their agent. The operator triages notes and links GitHub issues. |
 
 ## Planned
 
