@@ -1986,6 +1986,10 @@ msgstr "Change the models in Settings, then start again."
 msgid "Changes are made on the latest run."
 msgstr "Changes are made on the latest run."
 
+#: apps/web/src/refusal-text.ts
+msgid "Changes are paused for planned maintenance. They come back on their own; reading and downloading still work."
+msgstr "Changes are paused for planned maintenance. They come back on their own; reading and downloading still work."
+
 #: packages/ui/src/review.tsx
 msgid "Changes only"
 msgstr "Changes only"
@@ -5078,6 +5082,10 @@ msgstr "Low"
 msgid "Low resource (97M parameters)"
 msgstr "Low resource (97M parameters)"
 
+#: apps/web/src/service-notice-model.ts
+msgid "Maintenance is taking longer than planned. Changes are still paused and come back on their own; reading and downloading stay available."
+msgstr "Maintenance is taking longer than planned. Changes are still paused and come back on their own; reading and downloading stay available."
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Manage"
 msgstr "Manage"
@@ -6595,6 +6603,22 @@ msgstr "Pick the writer and reviewer yourself."
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Planned calls"
 msgstr "Planned calls"
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance until {end}: changes are paused and come back on their own. Reading and downloading stay available."
+msgstr "Planned maintenance until {end}: changes are paused and come back on their own. Reading and downloading stay available."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance until {end}. The service may be briefly unavailable."
+msgstr "Planned maintenance until {end}. The service may be briefly unavailable."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance: {when}. Changes will be paused during it; reading and downloading stay available."
+msgstr "Planned maintenance: {when}. Changes will be paused during it; reading and downloading stay available."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance: {when}. The service may be briefly unavailable."
+msgstr "Planned maintenance: {when}. The service may be briefly unavailable."
 
 #: packages/ui/src/run-details.tsx
 msgid "policy active"
