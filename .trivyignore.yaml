@@ -1,24 +1,6 @@
 # Findings the image scan accepts for now. Each entry names why and expires, so the scan fails
-# again if nobody fixes it. Keycloak 26.7.5's base image: upgrade tracked in #2892.
+# again if nobody fixes it.
 vulnerabilities:
-  - id: CVE-2026-114406
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
-  - id: CVE-2026-91415
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
-  - id: CVE-2026-103111
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
-  - id: CVE-2026-86145
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
-  - id: CVE-2026-89161
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
   - id: CVE-2026-102554
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
-    expired_at: 2026-12-17
-  - id: CVE-2025-59250
-    statement: Keycloak 26.7.5 image, upgrade tracked in #2892
+    statement: guava in Keycloak 26.8.2, no Keycloak release ships the fix yet (#2892)
     expired_at: 2026-12-17
