@@ -89,7 +89,7 @@ const supportModel: SupportModel = async (request) => {
       // Content-free fields only: code, status, stage, route and the provider's own error type.
       const fields =
         error instanceof ProviderAdapterError
-          ? ` code=${error.code} status=${error.status ?? "-"} stage=${error.failureStage ?? "-"} route=${error.route ?? "-"} type=${error.providerErrorType ?? "-"} diagnostics=${error.diagnostics.length}`
+          ? ` code=${error.code} status=${error.status ?? "-"} stage=${error.failureStage ?? "-"} route=${error.route ?? "-"} type=${error.providerErrorType ?? "-"} diagnostics=${error.diagnostics.map((item) => `${item.code}@${item.path}`).join(",") || "-"}`
           : "";
       const message = `${error instanceof Error ? error.name : "unknown"}${fields}`;
       console.error(`call failed: ${message.slice(0, 300)}`);
