@@ -34,6 +34,7 @@ import { savedApplicationMaterialMigration } from "./saved-application-material-
 import { sourceEvidenceKindsMigration } from "./source-evidence-kinds-migration.js";
 import { spendPoolMigration } from "./spend-pool-migration.js";
 import type { SqlClient } from "./sql-client.js";
+import { supportTicketsMigration } from "./support-tickets-migration.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 import { workJournalMigration } from "./work-journal-migration.js";
 
@@ -844,6 +845,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   agentConnectionNotedMigration,
   memberDisplayPreferenceMigration,
   feedbackNotesMigration,
+  supportTicketsMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

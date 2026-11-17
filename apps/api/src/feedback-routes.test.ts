@@ -21,17 +21,35 @@ function memoryFeedback() {
       }
       const note: FeedbackNote = {
         noteId: `note-${notes.length + 1}`,
+        kind: "note",
         organisationId: input.organisationId,
         memberId: input.memberId,
         category: input.category,
         screen: input.screen,
         text,
+        transcript: null,
+        sentAt: input.now.toISOString(),
+      };
+      notes.push(note);
+      return note;
+    },
+    openSupportTicket: async (input) => {
+      const note: FeedbackNote = {
+        noteId: `note-${notes.length + 1}`,
+        kind: "support",
+        organisationId: input.organisationId,
+        memberId: input.memberId,
+        category: null,
+        screen: "support",
+        text: input.summary.trim(),
+        transcript: [...input.transcript],
         sentAt: input.now.toISOString(),
       };
       notes.push(note);
       return note;
     },
     listNewest: async (limit) => [...notes].reverse().slice(0, limit),
+    deleteSupportTicketsBefore: async () => 0,
   };
   return { store, notes };
 }

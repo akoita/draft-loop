@@ -31,6 +31,7 @@ import { modelCallLog } from "./model-call-log.js";
 import { researchSearchFor } from "./research-search-wiring.js";
 import { routeFields, routeProviderOptions } from "./route-config.js";
 import { tenantRunCredits } from "./run-credit-settlement.js";
+import { runSupportTicketRetention } from "./support-ticket-retention.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import {
   tenantAuthorConsent,
@@ -238,6 +239,11 @@ const worker = await startWorker({
 if (config.readyFile !== undefined) await writeFile(config.readyFile, `${process.pid}\n`);
 // Waitlist entries nobody invited go after six months (#2568); this needs no mail sender.
 void runWaitlistRetention({
+  databaseUrl: config.databaseUrl,
+  databaseSchema: config.databaseSchema,
+});
+// Support tickets and their shared conversations go after 90 days (#2883).
+void runSupportTicketRetention({
   databaseUrl: config.databaseUrl,
   databaseSchema: config.databaseSchema,
 });

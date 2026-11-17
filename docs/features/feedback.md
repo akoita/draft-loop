@@ -50,9 +50,12 @@ src/feedback.test.tsx` covers the dialog. The Postgres store and its erasure are
 | `POST /v1/feedback` | A member sends a note: text up to 2,000 characters, an optional category (`bug`, `idea`, `other`) and the screen it came from |
 | `POST /v1/workspaces/:workspaceId/feedback` | The same, for a member's agent token with the `journal` scope |
 | `send_feedback` (MCP) | An agent passes on the candidate's note; its screen is `agent` |
-| `GET /v1/operator/feedback` | The operator lists notes, newest first, 100 by default and at most 500 |
+| `GET /v1/operator/feedback` | The operator lists notes and support tickets, newest first, 100 by default and at most 500. A ticket has kind `support` and its shared `transcript` |
+| `POST /v1/workspaces/:workspaceId/support/conversations/:conversationId/handoff` | A member hands a support conversation to a person, with consent: it becomes a support ticket |
 
 ## Limits
+
+- Support tickets are deleted 90 days after they were sent, by the worker's sweep at each start. Notes stay until their organisation is erased.
 
 - No operator screen yet: the operator reads notes through the API.
 - Notes are shown to the operator only and no model reads them, so they are

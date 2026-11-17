@@ -22,11 +22,22 @@ const categorySchema = z.enum(feedbackCategories as unknown as [FeedbackCategory
 const noteSchema = z
   .object({
     noteId: z.string(),
+    kind: z
+      .enum(["note", "support"])
+      .describe(
+        "`note` from Send feedback; `support` when a member handed a support conversation to a person.",
+      ),
     organisationId: z.string(),
     memberId: z.string(),
     category: categorySchema.nullable(),
     screen: z.string(),
-    text: z.string(),
+    text: z.string().describe("The note, or a support ticket's summary."),
+    transcript: z
+      .array(z.object({ role: z.enum(["member", "assistant"]), text: z.string() }))
+      .nullable()
+      .describe(
+        "The conversation the member agreed to share with a support ticket; null for a note.",
+      ),
     sentAt: z.string(),
   })
   .meta({ id: "FeedbackNote" });
@@ -136,7 +147,8 @@ export function registerFeedbackRoutes(
     {
       schema: {
         summary: "List members' feedback notes, newest first",
-        description: "Operator only. At most `limit` notes, 100 by default.",
+        description:
+          "Operator only. At most `limit` notes and support tickets, 100 by default. Support tickets are deleted 90 days after they were sent.",
         querystring: listQuery,
         response: {
           200: z.object({ notes: z.array(noteSchema) }),
@@ -145,6 +157,11 @@ export function registerFeedbackRoutes(
         },
       },
     },
-    async (request) => ({ notes: [...(await feedback.listNewest(request.query.limit))] }),
+    async (request) => ({
+      notes: (await feedback.listNewest(request.query.limit)).map((note) => ({
+        ...note,
+        transcript: note.transcript === null ? null : [...note.transcript],
+      })),
+    }),
   );
 }

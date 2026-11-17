@@ -1,11 +1,13 @@
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
-import type { FastifyInstance } from "fastify";
+import type { FeedbackStore, OpenSupportTicketInput } from "@draft-loop/storage/feedback";
+import Fastify, { type FastifyInstance } from "fastify";
+import { validatorCompiler } from "fastify-type-provider-zod";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import { readSupportSettings, type SupportSettings } from "./support-config.js";
-import { createMemorySupportLedger } from "./support-routes.js";
+import { createMemorySupportLedger, registerSupportRoutes } from "./support-routes.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const owner = { authorization: `Bearer ${ownerToken}` };
@@ -222,6 +224,108 @@ describe("the support routes (#2882)", () => {
     const api = await start({});
     const response = await api.inject({ method: "POST", url: conversations });
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("handing a support conversation to a person (#2883)", () => {
+  const transcript = [
+    { role: "member", text: "I was charged twice for a credit pack." },
+    { role: "assistant", text: "I cannot see payments. Select Talk to a person." },
+  ];
+
+  /** The routes alone, with a signed-in member as the caller. */
+  async function memberApp(opened: OpenSupportTicketInput[]) {
+    const server = Fastify({ logger: false });
+    server.setValidatorCompiler(validatorCompiler);
+    server.setSerializerCompiler(() => (data) => JSON.stringify(data));
+    server.decorateRequest("caller", undefined);
+    server.addHook("onRequest", async (request) => {
+      (request as { caller?: unknown }).caller = {
+        kind: "member",
+        tenantId: "org-north",
+        memberId: "member-1",
+        role: "member",
+      };
+    });
+    const feedback: Pick<FeedbackStore, "openSupportTicket"> = {
+      openSupportTicket: async (input) => {
+        opened.push(input);
+        return {
+          noteId: "ticket-1",
+          kind: "support",
+          organisationId: input.organisationId,
+          memberId: input.memberId,
+          category: null,
+          screen: "support",
+          text: input.summary,
+          transcript: input.transcript,
+          sentAt: input.now.toISOString(),
+        };
+      },
+    };
+    registerSupportRoutes(server, {
+      settings: readSupportSettings({}),
+      service,
+      workspaceRoot: (workspaceId) => `/tenants/org-north/workspaces/${workspaceId}`,
+      route: () => undefined,
+      feedback,
+      now: () => new Date("2026-11-17T12:00:00Z"),
+    });
+    app = server;
+    return server;
+  }
+
+  it("stores the conversation as a ticket in the member's organisation, with consent", async () => {
+    const opened: OpenSupportTicketInput[] = [];
+    const server = await memberApp(opened);
+
+    const response = await server.inject({
+      method: "POST",
+      url: `${conversations}/sup_0123456789/handoff`,
+      payload: { consent: true, transcript },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({ ticket_id: "ticket-1" });
+    expect(opened).toEqual([
+      {
+        organisationId: "org-north",
+        memberId: "member-1",
+        summary:
+          "Support conversation of 2 turns, handed to a person. First question: I was charged twice for a credit pack.",
+        transcript,
+        now: new Date("2026-11-17T12:00:00Z"),
+      },
+    ]);
+  });
+
+  it("refuses without consent or with an empty conversation", async () => {
+    const opened: OpenSupportTicketInput[] = [];
+    const server = await memberApp(opened);
+    for (const payload of [
+      { consent: false, transcript },
+      { consent: true, transcript: [] },
+      { transcript },
+    ]) {
+      const response = await server.inject({
+        method: "POST",
+        url: `${conversations}/sup_0123456789/handoff`,
+        payload,
+      });
+      expect(response.statusCode).toBe(400);
+    }
+    expect(opened).toEqual([]);
+  });
+
+  it("answers 404 to the owner token, which has no organisation", async () => {
+    const api = await start({});
+    const response = await api.inject({
+      method: "POST",
+      url: `${conversations}/sup_0123456789/handoff`,
+      headers: owner,
+      payload: { consent: true, transcript },
+    });
+    expect(response.statusCode).toBe(404);
   });
 });
 
