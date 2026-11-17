@@ -178,11 +178,40 @@ consent. Otherwise use synthetic material.
 ## Assigning plans and granting credits
 
 Until a payment provider lands, the operator assigns plans and grants credits
-with the owner token, the only credential `/v1/operator/*` accepts. Plans and
+with the owner token, or signed in as a named operator (below). Plans and
 credits apply in sign-in mode only: an owner-token deployment has one tenant
 with no organisation row, so it is not metered.
 [Hosted service](../architecture/hosted-service.md#run-queue) describes how a
 run reserves and settles credits.
+
+### Sign in as a named operator
+
+In sign-in mode a person can reach `/v1/operator/*` with their own sign-in
+instead of the owner token, so each operator action names them. The API
+accepts the web screen's token when it carries the realm role
+`draft-loop-operator` and a second factor in `amr`
+([Hosted service](../architecture/hosted-service.md#operator-routes)).
+
+Keycloak imports a realm only once, so set this up in the realm's admin
+console:
+
+1. **Role:** Realm roles, Create role, name `draft-loop-operator`.
+2. **Second factor:** Users, the operator's account, Required user actions,
+   Configure OTP. Their next sign-in asks them to scan the code.
+3. **References:** Authentication, the `browser` flow. On the Username
+   Password Form step, open its settings and set Authenticator Reference to
+   `pwd`. On the OTP Form step, set it to `otp`.
+4. **AMR claim:** Clients, `draft-loop-web`, Client scopes, the dedicated
+   scope, Add mapper, By configuration, Authentication Method Reference (AMR).
+   Turn on "Add to access token".
+5. **Grant:** Users, the operator's account, Role mapping, Assign role,
+   `draft-loop-operator`.
+
+To check, sign out, sign in with the code, and call an operator route with
+the web screen's token: it answers 200. Without step 3 or 4 the token has no
+`amr`, and the API answers 401 and logs `operator sign-in without a second
+factor`. Remove the role to take the reach away; tokens already issued expire
+within five minutes.
 
 ### Operator routes
 

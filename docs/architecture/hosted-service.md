@@ -845,8 +845,21 @@ sequenceDiagram
 
 ### Operator routes
 
-Operator routes take only the deployment's owner token, in both auth modes,
-never a member's sign-in.
+Operator routes take the deployment's owner token, in both auth modes. In
+sign-in mode they also take a named operator's sign-in (#2953), and never a
+plain member's:
+
+- **Client:** the token was issued to the web screen's own client, not an
+  assistant's or the smoke's.
+- **Role:** it carries the realm role `draft-loop-operator`
+  (`realm_access.roles`).
+- **Second factor:** its `amr` claim holds `otp`, `mfa`, `hwk` or `swk`. A
+  password alone (`pwd`) is refused.
+
+Such a sign-in acts as the owner on operator routes only, and needs no
+membership. Every log line of the request carries `operatorSubject`, and an
+`operator sign-in accepted` line names the route. Elsewhere the same token is
+an ordinary sign-in.
 
 | Route                                                           | What it does                                                                                                                              |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |

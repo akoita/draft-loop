@@ -171,10 +171,77 @@ function signInAuthenticator(
   };
 }
 
-function authenticatorFor(ownerToken: string, auth: ApiAuthOptions): Authenticator {
-  if (auth.mode === "owner") return ownerAuthenticator(ownerToken);
+/** The realm role that lets a person act as the operator (#2953). */
+export const operatorRole = "draft-loop-operator";
+
+/**
+ * `amr` values that mean a second factor: a one-time code, a hardware or software key, or the
+ * provider's own multi-factor marker. A password alone (`pwd`) never counts.
+ */
+export const secondFactorMethods: ReadonlySet<string> = new Set(["otp", "mfa", "hwk", "swk"]);
+
+/** The person a sign-in names as the operator, for the request's log lines. */
+export interface OperatorSignIn {
+  readonly subject: string;
+  readonly methods: readonly string[];
+}
+
+type OperatorAuthentication = Authentication & { readonly operator?: OperatorSignIn };
+
+type OperatorAuthenticator = (authorization: string | undefined) => Promise<OperatorAuthentication>;
+
+/**
+ * Operator routes: the owner token, in both modes, or in sign-in mode a named person (#2953). That
+ * person signed in through the web screen's own client, holds the realm's operator role, and used
+ * a second factor. They act as the owner on operator routes only; a membership is not needed.
+ */
+function operatorAuthenticator(
+  ownerToken: string,
+  verify: VerifySignInToken | undefined,
+  webClientId: string | undefined,
+): OperatorAuthenticator {
+  return async (authorization) => {
+    if (isOwnerAuthorization(authorization, ownerToken)) {
+      return { outcome: "authenticated", caller: { kind: "owner" } };
+    }
+    const token = bearerToken(authorization);
+    if (verify === undefined || token === undefined) return { outcome: "unauthenticated" };
+    const verification = await verify(token);
+    if (verification.status === "refused") {
+      return { outcome: "unauthenticated", reason: verification.reason };
+    }
+    // Neither an assistant's grant nor a deployment's smoke client acts as the operator.
+    if (verification.clientId !== webClientId) {
+      return { outcome: "unauthenticated", reason: "operator sign-in from another client" };
+    }
+    if (!verification.roles.includes(operatorRole)) {
+      return { outcome: "unauthenticated", reason: "sign-in without the operator role" };
+    }
+    if (!verification.methods.some((method) => secondFactorMethods.has(method))) {
+      return { outcome: "unauthenticated", reason: "operator sign-in without a second factor" };
+    }
+    return {
+      outcome: "authenticated",
+      caller: { kind: "owner" },
+      operator: { subject: verification.identity.subject, methods: verification.methods },
+    };
+  };
+}
+
+function signInVerifierFor(auth: ApiAuthOptions): VerifySignInToken | undefined {
+  return auth.mode === "oidc"
+    ? signInTokenVerifier(auth, auth.keys ?? remoteSignInKeys(auth))
+    : undefined;
+}
+
+function authenticatorFor(
+  ownerToken: string,
+  auth: ApiAuthOptions,
+  verify: VerifySignInToken | undefined,
+): Authenticator {
+  if (auth.mode === "owner" || verify === undefined) return ownerAuthenticator(ownerToken);
   return signInAuthenticator(
-    signInTokenVerifier(auth, auth.keys ?? remoteSignInKeys(auth)),
+    verify,
     auth.resolveSignIn,
     auth.webClientId,
     auth.memberClientIds ?? [],
@@ -184,7 +251,7 @@ function authenticatorFor(ownerToken: string, auth: ApiAuthOptions): Authenticat
 const unauthorizedMessage: Readonly<Record<ApiAuthOptions["mode"] | "operator", string>> = {
   owner: "A valid owner token is required.",
   oidc: "A valid sign-in token is required.",
-  operator: "The operator's token is required.",
+  operator: "The operator's token, or an operator's sign-in with a second factor, is required.",
 };
 
 async function refuse(
@@ -222,8 +289,13 @@ export function registerRequestAuthentication(
   /** Sign-in mode's members' agent tokens (#2784); without them sign-in mode refuses tokens. */
   memberTokens?: MemberAgentTokens,
 ): void {
-  const authenticate = authenticatorFor(ownerToken, auth);
-  const authenticateOperator = ownerAuthenticator(ownerToken);
+  const verify = signInVerifierFor(auth);
+  const authenticate = authenticatorFor(ownerToken, auth, verify);
+  const authenticateOperator = operatorAuthenticator(
+    ownerToken,
+    verify,
+    auth.mode === "oidc" ? auth.webClientId : undefined,
+  );
   const agents = auth.mode === "owner" ? agentTokens : undefined;
   const members = auth.mode === "oidc" ? memberTokens : undefined;
   app.decorateRequest("caller", undefined);
@@ -232,7 +304,7 @@ export function registerRequestAuthentication(
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     if (isPublicRequest(request.routeOptions.url, request.url)) return;
     const operator = isOperatorRequest(request.routeOptions.url, request.url);
-    let authentication: Authentication;
+    let authentication: OperatorAuthentication;
     try {
       authentication = await (operator ? authenticateOperator : authenticate)(
         requestAuthorization(request.headers),
@@ -301,6 +373,20 @@ export function registerRequestAuthentication(
             clientId: grant.clientId,
           };
         }
+      }
+      const { operator: signedInOperator } = authentication;
+      if (signedInOperator !== undefined) {
+        // Every line of the request names the person acting as the operator, so each operator
+        // read or change can be traced to them (#2953).
+        request.log = request.log.child({ operatorSubject: signedInOperator.subject });
+        request.log.info(
+          {
+            method: request.method,
+            route: request.routeOptions.url,
+            methods: signedInOperator.methods,
+          },
+          "operator sign-in accepted",
+        );
       }
       request.caller = authentication.caller;
       return;

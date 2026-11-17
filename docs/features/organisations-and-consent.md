@@ -85,8 +85,9 @@ access from the screen.
 
 ## Limits
 
-- Sign-in uses Keycloak, which is not hosted yet, so staging signs in with the
-  owner token.
+- Operator routes take the owner token, or a named operator's sign-in that
+  holds the `draft-loop-operator` role and used a second factor
+  ([setup](../operations/server-deploy.md#sign-in-as-a-named-operator)).
 - Consent covers one candidate record; each record records its own.
 
 ## Related

@@ -12,7 +12,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import type { ResolveSignIn, SignInIdentity } from "./oidc-sign-in.js";
-import { isOperatorRequest } from "./request-auth.js";
+import { isOperatorRequest, operatorRole } from "./request-auth.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const issuer = "https://id.example.test/realms/draft-loop";
@@ -339,6 +339,86 @@ describe("operator routes", () => {
 
     expect(operator.json()).toEqual({ caller: { kind: "owner" } });
     expect(signedIn.statusCode).toBe(401);
-    expect(signedIn.json().error.message).toBe("The operator's token is required.");
+    expect(signedIn.json().error.message).toBe(
+      "The operator's token, or an operator's sign-in with a second factor, is required.",
+    );
+  });
+
+  describe("an operator's sign-in (#2953)", () => {
+    const operatorClaims = {
+      azp: "draft-loop-web",
+      realm_access: { roles: ["default-roles-draft-loop", operatorRole] },
+      amr: ["pwd", "otp"],
+    };
+
+    const logs: string[] = [];
+
+    async function operatorCall(claims: Record<string, unknown>) {
+      logs.length = 0;
+      // No membership: the operator need not belong to an organisation.
+      app = await buildApi({
+        ownerToken,
+        logger: { level: "info", stream: { write: (line: string) => logs.push(line) } },
+        auth: {
+          mode: "oidc",
+          issuer,
+          audience,
+          webClientId: "draft-loop-web",
+          allowHttp: false,
+          resolveSignIn: async () => undefined,
+          keys: createLocalJWKSet({ keys: [publicJwk] }),
+        },
+      });
+      app.get("/v1/operator/test-caller", async (request) => {
+        request.log.info("operator read");
+        return { caller: request.caller ?? null };
+      });
+      return app.inject({
+        method: "GET",
+        url: "/v1/operator/test-caller",
+        headers: { authorization: `Bearer ${await token(claims)}` },
+      });
+    }
+
+    it("acts as the owner, with the person named on the request's log lines", async () => {
+      const response = await operatorCall(operatorClaims);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ caller: { kind: "owner" } });
+      const lines = logs.map((line) => JSON.parse(line) as Record<string, unknown>);
+      expect(lines.find((line) => line.msg === "operator sign-in accepted")).toMatchObject({
+        operatorSubject: "person-1",
+        route: "/v1/operator/test-caller",
+        methods: ["pwd", "otp"],
+      });
+      expect(lines.find((line) => line.msg === "operator read")).toMatchObject({
+        operatorSubject: "person-1",
+      });
+    });
+
+    it("is refused without a second factor", async () => {
+      expect((await operatorCall({ ...operatorClaims, amr: ["pwd"] })).statusCode).toBe(401);
+      expect((await operatorCall({ ...operatorClaims, amr: undefined })).statusCode).toBe(401);
+    });
+
+    it("is refused without the operator role", async () => {
+      const response = await operatorCall({ ...operatorClaims, realm_access: { roles: [] } });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    it("is refused from any client but the web screen's", async () => {
+      expect((await operatorCall({ ...operatorClaims, azp: "an-assistant" })).statusCode).toBe(401);
+      expect((await operatorCall({ ...operatorClaims, azp: undefined })).statusCode).toBe(401);
+    });
+
+    it("gives no operator reach outside operator routes", async () => {
+      const api = await signInApi(async () => undefined);
+
+      const response = await callerOf(api, `Bearer ${await token(operatorClaims)}`);
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("no_account");
+    });
   });
 });
