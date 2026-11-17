@@ -60,7 +60,7 @@ describe("the Help button and its guide (#2830)", () => {
     expect(html).toContain('closedby="any"');
     expect(html.match(/<details/gu)).toHaveLength(helpSectionIds.length);
     expect(html).toMatch(
-      /<details class="help-section" open="">\s*<summary>Add your career evidence/u,
+      /<details [^>]*class="help-section" open="">\s*<summary>Add your career evidence/u,
     );
     expect(html).toContain("Close");
   });

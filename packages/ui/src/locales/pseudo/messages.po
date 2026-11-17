@@ -1293,6 +1293,10 @@ msgstr ""
 msgid "Always allow"
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "An AI assistant answers from this guide and your account. It can make mistakes."
+msgstr ""
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr ""
@@ -1327,6 +1331,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-live.tsx
 msgid "Answer now"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Answer:"
 msgstr ""
 
 #: apps/web/src/consent-model.ts
@@ -1510,8 +1518,20 @@ msgstr ""
 msgid "artifact review"
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Ask"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Ask a question"
+msgstr ""
+
 #: apps/web/src/evidence-panels.tsx
 msgid "Ask an owner or admin to release this file before downloading it."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Ask another question"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -1796,6 +1816,7 @@ msgstr ""
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 #: packages/ui/src/connected-agents.tsx
+#: packages/ui/src/help-ask.tsx
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -2854,6 +2875,10 @@ msgstr ""
 msgid "Did not remember."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Did this solve it?"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Differences from your record"
 msgstr ""
@@ -3862,6 +3887,10 @@ msgstr ""
 msgid "From the file chosen for this application, as it reads now."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "From the guide:"
+msgstr ""
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
 msgstr ""
@@ -4048,6 +4077,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Glad it helped."
 msgstr ""
 
 #: packages/ui/src/model-profile-presentation.ts
@@ -4270,6 +4303,14 @@ msgstr ""
 
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "I can't answer that myself right now, and no guide section matches."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "I can't answer that myself right now. These guide sections match your question:"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -4915,6 +4956,10 @@ msgstr ""
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Looking for an answer…"
+msgstr ""
+
 #: packages/ui/src/career-signposts.tsx
 msgid "Looking for your facts?"
 msgstr ""
@@ -5468,6 +5513,10 @@ msgstr ""
 
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: wait for the review"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "No"
 msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
@@ -8035,6 +8084,10 @@ msgstr ""
 msgid "Send only if the workspace allows:"
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Send the conversation"
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Send the job description to the writing model?"
 msgstr ""
@@ -8061,6 +8114,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Sensitivity"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Sent. The people who run DraftLoop will read it and get back to you."
 msgstr ""
 
 #: apps/web/src/shell-actions.tsx
@@ -8632,6 +8689,10 @@ msgstr ""
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Talk to a person"
+msgstr ""
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "Talking live sends your voice to {listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers."
 msgstr ""
@@ -8910,6 +8971,10 @@ msgstr ""
 
 #: apps/web/src/consent.tsx
 msgid "The consent does not name"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "The conversation could not be sent. Try again, or use Send feedback."
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -9999,6 +10064,10 @@ msgstr ""
 msgid "This screening result was not found on this record. Reload the page and try again."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "This sends the conversation above to the people who run DraftLoop, who will read it and get back to you. It is kept for 90 days."
+msgstr ""
+
 #: packages/ui/src/work-journal-model.ts
 msgid "This server cannot turn notes into career evidence yet."
 msgstr ""
@@ -10939,6 +11008,10 @@ msgstr ""
 msgid "Writing sample {0}"
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Yes"
+msgstr ""
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -10947,6 +11020,10 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "You asked:"
 msgstr ""
 
 #: packages/ui/src/first-run-question.tsx
@@ -11143,6 +11220,14 @@ msgstr ""
 
 #: apps/web/src/credits-model.ts
 msgid "Your plan's runs for today are used. Try again later."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Your question"
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "Your question could not be sent. Try again in a moment."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts

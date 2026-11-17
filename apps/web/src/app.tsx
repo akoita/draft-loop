@@ -1,14 +1,13 @@
 import { DisplayPreferenceProvider } from "@draft-loop/ui/display-preference";
-import { HelpButton } from "@draft-loop/ui/help-panel";
 import { type HostPanels, HostPanelsContext } from "@draft-loop/ui/host-panels";
 import { ScreenLanguageMenu } from "@draft-loop/ui/screen-language";
 import { HeaderThemeToggle } from "@draft-loop/ui/theme";
 import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { useDisplayPreference } from "./display-preference.js";
 import { FeedbackButton } from "./feedback.js";
+import { WebHelpButton } from "./help-support.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -118,7 +117,7 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
     <>
       <ServiceStatus health={health} />
       <ScreenLanguageMenu />
-      <HelpButton />
+      <WebHelpButton client={client} mode={mode} />
       {/* Owner-token mode has no members, so only sign-in mode sends feedback (#2828). */}
       {mode === "sign-in" ? <FeedbackButton client={client} /> : null}
     </>

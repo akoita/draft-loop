@@ -1287,6 +1287,10 @@ msgstr "Déjà invité ?"
 msgid "Always allow"
 msgstr "Toujours autoriser"
 
+#: packages/ui/src/help-ask.tsx
+msgid "An AI assistant answers from this guide and your account. It can make mistakes."
+msgstr "Un assistant IA répond à partir de ce guide et de votre compte. Il peut se tromper."
+
 #: packages/ui/src/provider-authentication.tsx
 msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
 msgstr "Une variable d’environnement impose ce mode. Supprimez la variable d’authentification du fournisseur et redémarrez DraftLoop avant de modifier la préférence enregistrée."
@@ -1322,6 +1326,10 @@ msgstr "Répondre à voix haute"
 #: packages/ui/src/career-interview-live.tsx
 msgid "Answer now"
 msgstr "Répondre maintenant"
+
+#: packages/ui/src/help-ask.tsx
+msgid "Answer:"
+msgstr "Réponse :"
 
 #: apps/web/src/consent-model.ts
 #: packages/ui/src/app.tsx
@@ -1504,9 +1512,21 @@ msgstr "Candidatures archivées"
 msgid "artifact review"
 msgstr "relecture du document"
 
+#: packages/ui/src/help-ask.tsx
+msgid "Ask"
+msgstr "Demander"
+
+#: packages/ui/src/help-ask.tsx
+msgid "Ask a question"
+msgstr "Poser une question"
+
 #: apps/web/src/evidence-panels.tsx
 msgid "Ask an owner or admin to release this file before downloading it."
 msgstr "Demandez à un propriétaire ou à un administrateur de libérer ce fichier avant de le télécharger."
+
+#: packages/ui/src/help-ask.tsx
+msgid "Ask another question"
+msgstr "Poser une autre question"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Asked in a job post: {title}"
@@ -1790,6 +1810,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: packages/ui/src/app.tsx
 #: packages/ui/src/compact-history.tsx
 #: packages/ui/src/connected-agents.tsx
+#: packages/ui/src/help-ask.tsx
 #: packages/ui/src/home-applications-view.tsx
 #: packages/ui/src/home-folders.tsx
 #: packages/ui/src/home.tsx
@@ -2848,6 +2869,10 @@ msgstr "Développement"
 msgid "Did not remember."
 msgstr "Non mémorisé."
 
+#: packages/ui/src/help-ask.tsx
+msgid "Did this solve it?"
+msgstr "Cela a-t-il résolu votre problème ?"
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Differences from your record"
 msgstr "Différences avec votre dossier"
@@ -3856,6 +3881,10 @@ msgstr "Issu de la recherche :"
 msgid "From the file chosen for this application, as it reads now."
 msgstr "Depuis le fichier choisi pour cette candidature, dans son état actuel."
 
+#: packages/ui/src/help-ask.tsx
+msgid "From the guide:"
+msgstr "Dans le guide :"
+
 #: packages/ui/src/job-description-panel.tsx
 msgid "From the job page approved for this application. No copy of the page was saved; the Coverage tab lists the requirements extracted from it."
 msgstr "Depuis la page de l’offre approuvée pour cette candidature. Aucune copie de la page n’a été enregistrée ; l’onglet Couverture liste les exigences qui en ont été extraites."
@@ -4043,6 +4072,10 @@ msgstr "Donnez un nom à la nouvelle recherche d’emploi."
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
 msgstr "Donnez un titre à la note."
+
+#: packages/ui/src/help-ask.tsx
+msgid "Glad it helped."
+msgstr "Ravi d’avoir pu aider."
 
 #: packages/ui/src/model-profile-presentation.ts
 msgid "GLM-5.3 Flash"
@@ -4266,6 +4299,14 @@ msgstr "Hybride"
 #: packages/ui/src/new-application-form.tsx
 msgid "I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before."
 msgstr "J’autorise DraftLoop à récupérer cette page. Elle n’est lue que lorsque vous extrayez les exigences à la première étape de la candidature, jamais avant."
+
+#: packages/ui/src/help-ask.tsx
+msgid "I can't answer that myself right now, and no guide section matches."
+msgstr "Je ne peux pas répondre moi-même pour l’instant, et aucune section du guide ne correspond."
+
+#: packages/ui/src/help-ask.tsx
+msgid "I can't answer that myself right now. These guide sections match your question:"
+msgstr "Je ne peux pas répondre moi-même pour l’instant. Ces sections du guide correspondent à votre question :"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "I don't remember"
@@ -4910,6 +4951,10 @@ msgstr "Long"
 msgid "Long or pasted job pages can be split into reviewable requirements with your writing model."
 msgstr "Les pages d’offre longues ou collées peuvent être découpées en exigences à relire avec votre modèle de rédaction."
 
+#: packages/ui/src/help-ask.tsx
+msgid "Looking for an answer…"
+msgstr "Recherche d’une réponse…"
+
 #: packages/ui/src/career-signposts.tsx
 msgid "Looking for your facts?"
 msgstr "Vous cherchez vos faits ?"
@@ -5464,6 +5509,10 @@ msgstr "Étape suivante : lancer une nouvelle relecture"
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: wait for the review"
 msgstr "Étape suivante : attendre la relecture"
+
+#: packages/ui/src/help-ask.tsx
+msgid "No"
+msgstr "Non"
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "No access to the model"
@@ -8030,6 +8079,10 @@ msgstr "Envoyer seulement si autorisé"
 msgid "Send only if the workspace allows:"
 msgstr "Envoyer seulement si l’espace de travail autorise :"
 
+#: packages/ui/src/help-ask.tsx
+msgid "Send the conversation"
+msgstr "Envoyer la conversation"
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "Send the job description to the writing model?"
 msgstr "Envoyer l’offre d’emploi au modèle de rédaction ?"
@@ -8057,6 +8110,10 @@ msgstr "Sensible : seulement avec votre consentement"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Sensitivity"
 msgstr "Sensibilité"
+
+#: packages/ui/src/help-ask.tsx
+msgid "Sent. The people who run DraftLoop will read it and get back to you."
+msgstr "Envoyé. L’équipe de DraftLoop la lira et reviendra vers vous."
 
 #: apps/web/src/shell-actions.tsx
 msgid "Service is down"
@@ -8627,6 +8684,10 @@ msgstr "Reprendre en direct"
 msgid "Talk through parts of your career your record does not tell yet. You confirm every summary before it becomes evidence, and you can stop at any time."
 msgstr "Racontez les parties de votre parcours que votre dossier ne dit pas encore. Vous confirmez chaque résumé avant qu’il ne devienne un élément de parcours, et vous pouvez arrêter à tout moment."
 
+#: packages/ui/src/help-ask.tsx
+msgid "Talk to a person"
+msgstr "Parler à une personne"
+
 #: packages/ui/src/career-interview-live.tsx
 msgid "Talking live sends your voice to {listener} to turn it into words and to speak the questions. Allow it below, or keep writing your answers."
 msgstr "Parler en direct envoie votre voix à {listener} pour la transcrire et pour lire les questions à voix haute. Autorisez-le ci-dessous, ou continuez à écrire vos réponses."
@@ -8906,6 +8967,10 @@ msgstr "le fournisseur configuré"
 #: apps/web/src/consent.tsx
 msgid "The consent does not name"
 msgstr "Le consentement ne mentionne pas"
+
+#: packages/ui/src/help-ask.tsx
+msgid "The conversation could not be sent. Try again, or use Send feedback."
+msgstr "La conversation n’a pas pu être envoyée. Réessayez, ou utilisez Envoyer un avis."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The conversation is paused. Your answers so far are saved; resume when you are ready."
@@ -9994,6 +10059,10 @@ msgstr "Ce scénario dépasse les limites d’entrée, de sortie ou de contexte 
 msgid "This screening result was not found on this record. Reload the page and try again."
 msgstr "Ce résultat de filtrage est introuvable pour ce dossier. Rechargez la page et réessayez."
 
+#: packages/ui/src/help-ask.tsx
+msgid "This sends the conversation above to the people who run DraftLoop, who will read it and get back to you. It is kept for 90 days."
+msgstr "La conversation ci-dessus sera envoyée à l’équipe de DraftLoop, qui la lira et reviendra vers vous. Elle est conservée 90 jours."
+
 #: packages/ui/src/work-journal-model.ts
 msgid "This server cannot turn notes into career evidence yet."
 msgstr "Ce serveur ne peut pas encore transformer des notes en éléments de parcours."
@@ -10934,6 +11003,10 @@ msgstr "Versions de la politique de rédaction"
 msgid "Writing sample {0}"
 msgstr "Texte {0}"
 
+#: packages/ui/src/help-ask.tsx
+msgid "Yes"
+msgstr "Oui"
+
 #: packages/ui/src/career-interview-live.tsx
 #: packages/ui/src/career-interview-model.ts
 #: packages/ui/src/career-interview-panel.tsx
@@ -10943,6 +11016,10 @@ msgstr "Vous"
 #: apps/web/src/beta-sign-up.tsx
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
+
+#: packages/ui/src/help-ask.tsx
+msgid "You asked:"
+msgstr "Votre question :"
 
 #: packages/ui/src/first-run-question.tsx
 msgid "You can change this any time in Workspace settings."
@@ -11139,6 +11216,14 @@ msgstr "La limite d’exécutions simultanées de votre offre est atteinte. Atte
 #: apps/web/src/credits-model.ts
 msgid "Your plan's runs for today are used. Try again later."
 msgstr "Les exécutions du jour de votre offre sont utilisées. Réessayez plus tard."
+
+#: packages/ui/src/help-ask.tsx
+msgid "Your question"
+msgstr "Votre question"
+
+#: packages/ui/src/help-ask.tsx
+msgid "Your question could not be sent. Try again in a moment."
+msgstr "Votre question n’a pas pu être envoyée. Réessayez dans un instant."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Your record is empty, so let's begin with the basics. Which would you like to start with?"

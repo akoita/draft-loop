@@ -1,10 +1,14 @@
 import { helpGuide, searchHelpGuide } from "@draft-loop/user-guide";
 import { plural, t } from "@lingui/core/macro";
 import { useEffect, useId, useRef, useState } from "react";
+import { HelpAsk } from "./help-ask.js";
+import type { HelpSupport } from "./help-ask-model.js";
 import { useScreenLocale } from "./i18n.js";
 
 export interface HelpDialogProps {
   readonly onClose: () => void;
+  /** The host's support assistant (#2883); without it the panel is the guide alone. */
+  readonly support?: HelpSupport | undefined;
 }
 
 /**
@@ -13,7 +17,7 @@ export interface HelpDialogProps {
  * the sections that match, open and best first. Escape, a click outside where the browser supports
  * `closedby`, and the Close button all close it.
  */
-export function HelpDialog({ onClose }: HelpDialogProps) {
+export function HelpDialog({ onClose, support }: HelpDialogProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const { locale } = useScreenLocale();
@@ -21,6 +25,13 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
   const [query, setQuery] = useState("");
   const searching = query.trim() !== "";
   const sections = searching ? searchHelpGuide(guide, query) : guide.sections;
+  // A source link from an answer opens its section and scrolls to it.
+  const [shown, setShown] = useState<{ readonly id: string; readonly at: number } | null>(null);
+
+  useEffect(() => {
+    if (shown === null) return;
+    document.getElementById(`${id}-section-${shown.id}`)?.scrollIntoView({ block: "start" });
+  }, [id, shown]);
 
   useEffect(() => {
     const element = dialog.current;
@@ -49,6 +60,16 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
         </button>
       </div>
       <p className="help-intro">{guide.intro}</p>
+      {support === undefined ? null : (
+        <HelpAsk
+          support={support}
+          language={locale === "fr" ? "fr" : "en"}
+          onShowSection={(sectionId) => {
+            setQuery("");
+            setShown({ id: sectionId, at: Date.now() });
+          }}
+        />
+      )}
       <label className="help-search" htmlFor={`${id}-search`}>
         <span>{t`Search the guide`}</span>
         <input
@@ -69,9 +90,10 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
       {sections.map((section, index) => (
         // A new key when search starts or ends resets each disclosure to the default for that view.
         <details
-          key={`${searching ? "found" : "all"}-${section.id}`}
+          key={`${searching ? "found" : "all"}-${section.id}-${shown?.id === section.id ? shown.at : ""}`}
+          id={`${id}-section-${section.id}`}
           className="help-section"
-          open={searching || index === 0}
+          open={searching || index === 0 || shown?.id === section.id}
         >
           <summary>{section.title}</summary>
           {section.paragraphs.map((paragraph) => (
@@ -84,7 +106,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
 }
 
 /** The header's Help button (#2830): opens the guide on every screen. */
-export function HelpButton() {
+export function HelpButton({ support }: { readonly support?: HelpSupport | undefined } = {}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -106,7 +128,8 @@ export function HelpButton() {
         </svg>
         {t`Help`}
       </button>
-      {open ? <HelpDialog onClose={() => setOpen(false)} /> : null}
+      {open ? <HelpDialog onClose={() => setOpen(false)} support={support} /> : null}
     </>
   );
 }
+export type { HelpAskReply, HelpSupport, HelpTranscriptTurn } from "./help-ask-model.js";
