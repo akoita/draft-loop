@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-
 import type { AuthorRequest } from "@draft-loop/orchestrator";
 import {
   authorAdjudicationPlanSchema,
@@ -7,7 +6,6 @@ import {
   readinessDimensions,
 } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
-
 import {
   authorRevisionInstructions,
   createAuthorAdjudicationPrompt,
@@ -15,6 +13,7 @@ import {
 } from "./author-adjudication.js";
 import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
+import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
 
 const authorVersion = promptTemplateVersion("author");
 const authorOutputBudget = { maxOutputTokens: 32_768 };
@@ -292,8 +291,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v17 for new author runs and v5 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v17");
+  it("records v18 for new author runs and v11 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v18");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v11");
   });
 
@@ -696,5 +695,17 @@ describe("author prompt cli-author-v17 (#1971)", () => {
         "",
       ),
     );
+  });
+});
+
+describe("author prompt cli-author-v18", () => {
+  it("is v17 with room sized by job relevance and grouped projects written once", () => {
+    const v17 = createAuthorAdjudicationPrompt("cli-author-v17", undefined).systemPrompt;
+    const v18 = createAuthorAdjudicationPrompt("cli-author-v18", undefined).systemPrompt;
+
+    expect(v18).toContain(relevanceWeightedRoomInstructions);
+    expect(v18).toContain("give each job-relevant project its own project line");
+    expect(v17).not.toContain(relevanceWeightedRoomInstructions);
+    expect(v18.replace(relevanceWeightedRoomInstructions, "")).toBe(v17);
   });
 });

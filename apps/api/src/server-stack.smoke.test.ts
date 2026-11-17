@@ -340,12 +340,20 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
       const drafted = await awaitReview(begun.body.runId);
       expect(drafted.state).toBe("awaiting-approval");
 
-      const revision = await send(
-        "POST",
-        `${workspacePath}/runs/${begun.body.runId}/revision`,
-        { candidateDirection: "Lead with the TypeScript services." },
-        { "idempotency-key": `revision-${suffix}` },
-      );
+      const revise = () =>
+        send(
+          "POST",
+          `${workspacePath}/runs/${begun.body.runId}/revision`,
+          { candidateDirection: "Lead with the TypeScript services." },
+          { "idempotency-key": `revision-${suffix}` },
+        );
+      // Like a decision, a revision asked while the draft history is still being saved
+      // answers a retryable 409 not_ready (#2210); a failure is not replayed for its key.
+      let revision = await revise();
+      if (revision.status === 409 && revision.body.error?.code === "not_ready") {
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        revision = await revise();
+      }
       expect(revision).toMatchObject({ status: 200, body: { state: "revising" } });
       expect(await awaitReview(begun.body.runId)).toMatchObject({
         state: "awaiting-approval",
