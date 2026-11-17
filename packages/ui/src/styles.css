@@ -11667,3 +11667,36 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   color: var(--text-2);
   line-height: 1.5;
 }
+
+.help-search {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.help-search input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-3);
+  color: var(--text-1);
+  background: var(--surface-inset);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.help-search input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.help-search-status {
+  min-height: 1.25rem;
+  margin: 0 0 var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}

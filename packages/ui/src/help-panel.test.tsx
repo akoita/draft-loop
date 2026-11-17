@@ -66,6 +66,14 @@ describe("the Help button and its guide (#2830)", () => {
     expect(html).toContain("Close");
   });
 
+  it("offers a search field above the sections, with an empty status until the member types", () => {
+    const html = render(<HelpDialog onClose={() => {}} />);
+
+    expect(html).toContain('type="search"');
+    expect(html).toContain("Search the guide");
+    expect(html).toMatch(/<p class="help-search-status" role="status"><\/p>/u);
+  });
+
   it("speaks French when the screen does", () => {
     const html = render(<HelpDialog onClose={() => {}} />, "fr");
 

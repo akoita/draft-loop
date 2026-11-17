@@ -247,6 +247,11 @@ msgstr ""
 msgid "{0, plural, one {# link} other {# links}}"
 msgstr ""
 
+#. placeholder {0}: sections.length
+#: packages/ui/src/help-panel.tsx
+msgid "{0, plural, one {# matching section} other {# matching sections}}"
+msgstr ""
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -5711,6 +5716,10 @@ msgstr ""
 msgid "No saved profile version exists for this name yet."
 msgstr ""
 
+#: packages/ui/src/help-panel.tsx
+msgid "No section matches. Try another word, or use Send feedback to ask the team."
+msgstr ""
+
 #. placeholder {0}: countedNouns.requirement(unmatchedRequirements.length)
 #: packages/ui/src/run-author-input-display.ts
 msgid "No sent evidence for {0}"
@@ -7930,6 +7939,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Search commands…"
+msgstr ""
+
+#: packages/ui/src/help-panel.tsx
+msgid "Search the guide"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx

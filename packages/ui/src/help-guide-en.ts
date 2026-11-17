@@ -2,7 +2,7 @@ import type { HelpGuide } from "./help-guide.js";
 
 export const englishHelpGuide: HelpGuide = {
   intro:
-    "DraftLoop turns your career evidence into a CV for one job. Follow these steps in order the first time.",
+    "DraftLoop turns your career evidence into a CV for one job. Follow the first five steps in order the first time, or search for what you need.",
   sections: [
     {
       id: "evidence",
@@ -10,6 +10,17 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "From Home, open Career evidence. Add a CV or other documents, paste text, or start a conversation and tell your story if you have no CV.",
         "DraftLoop reads what you add and lists the facts it found. Then open Career profile and confirm or fix each fact. Your CVs use only the facts you keep.",
+      ],
+      keywords: [
+        "CV",
+        "resume",
+        "upload",
+        "file",
+        "document",
+        "paste",
+        "interview",
+        "facts",
+        "profile",
       ],
     },
     {
@@ -19,6 +30,7 @@ export const englishHelpGuide: HelpGuide = {
         "On Home, select New application. Give the job a name, paste its description or its link, then select Create application.",
         "DraftLoop lists the job's requirements. Read them and fix any that look wrong, since the draft is written against them.",
       ],
+      keywords: ["application", "job offer", "posting", "link", "URL", "requirements"],
     },
     {
       id: "draft",
@@ -27,6 +39,7 @@ export const englishHelpGuide: HelpGuide = {
         "On the application, start a run. One model writes the CV and a second model checks each claim against your evidence.",
         "A run takes a few minutes, and you can leave the page while it works. If a run stops, the screen says whether it will recover by itself and how long to wait.",
       ],
+      keywords: ["run", "start", "generate", "write", "model", "author", "critic"],
     },
     {
       id: "review",
@@ -35,6 +48,7 @@ export const englishHelpGuide: HelpGuide = {
         "When the run is ready, read the draft and each finding. Accept or reject each finding, then select Approve artifact.",
         "Once it is approved, pick a template and select Export to save the file. You can export again later in another template.",
       ],
+      keywords: ["finding", "approve", "download", "PDF", "Word", "template", "save"],
     },
     {
       id: "prepare",
@@ -43,6 +57,7 @@ export const englishHelpGuide: HelpGuide = {
         "On an application, open Prepare to draft a cover letter or an interview preparation guide from the same evidence. It is folded by default.",
         "Each paid application includes 20 Prepare drafts, guides and research runs.",
       ],
+      keywords: ["cover letter", "letter", "interview", "questions", "preparation"],
     },
     {
       id: "display",
@@ -51,6 +66,52 @@ export const englishHelpGuide: HelpGuide = {
         "In Workspace settings, Display offers three choices. Guided shows one thing to do at a time, Simple shows the basic path, and Show everything opens every option.",
         "Technical choices, such as models, sit under Advanced options at the bottom of a card. You never need them for the basic path.",
       ],
+      keywords: ["settings", "guided", "simple", "advanced", "options", "language", "theme"],
+    },
+    {
+      id: "agents",
+      title: "Work with an agent",
+      paragraphs: [
+        "An AI agent such as Claude Code or Codex can use DraftLoop for you through MCP. In Workspace settings, open Agents, create a token for the agent and follow the setup steps shown there.",
+        "A connected agent can list your applications, add a job, start a CV run and draft cover letters. It can also note work you shipped in your Work journal; a note becomes career evidence only after you approve it.",
+      ],
+      keywords: ["MCP", "Claude", "Codex", "token", "work journal", "assistant", "automation"],
+    },
+    {
+      id: "credits",
+      title: "Plans and credits",
+      paragraphs: [
+        "Your plan sets what you can use. Credits and consent shows your plan, its limits and your credit balance.",
+        "Before a run starts, DraftLoop shows the credits it will reserve; a started run counts at once. A run that leaves no draft is refunded. Where the service sells them, Buy credits lists the credit packs.",
+      ],
+      keywords: ["price", "cost", "pay", "buy", "billing", "plan", "limit", "free", "refund"],
+    },
+    {
+      id: "privacy",
+      title: "Privacy and your data",
+      paragraphs: [
+        "DraftLoop stores your material only after you give consent, and keeps it in the EU. It sends model providers only the material a step needs.",
+        "Mark a section as private to keep it out of drafts and away from model providers. An owner can download everything kept about a record, and erase a record or the whole organisation.",
+      ],
+      keywords: [
+        "consent",
+        "GDPR",
+        "delete",
+        "erase",
+        "export",
+        "private",
+        "sensitive",
+        "security",
+      ],
+    },
+    {
+      id: "problems",
+      title: "When something goes wrong",
+      paragraphs: [
+        "If a step fails, read the message on the screen first: it says whether the step will recover by itself or what to do. A refused upload often means consent is not recorded yet.",
+        "If this guide does not answer your question, select Send feedback in the header and describe what happened. The people who run DraftLoop read every note.",
+      ],
+      keywords: ["error", "bug", "failed", "stuck", "broken", "support", "contact", "feedback"],
     },
   ],
 };

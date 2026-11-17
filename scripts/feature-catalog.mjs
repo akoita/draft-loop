@@ -5,6 +5,8 @@ import { pathToFileURL } from "node:url";
 
 export const catalogPath = "docs/features/README.md";
 export const mcpServerPath = "apps/mcp/src/server.ts";
+/** The user guide names the feature pages each of its sections explains (#2880). */
+export const helpGuidePath = "packages/ui/src/help-guide.ts";
 export const statuses = Object.freeze(["available", "partial", "planned", "retired"]);
 
 const featureHeader = /^\|\s*Feature\s*\|/u;
@@ -46,6 +48,11 @@ export function parseCatalog(markdown) {
     });
   }
   return rows;
+}
+
+/** The feature pages a guide source names, such as `"career-profile.md"`. */
+export function helpGuidePages(source) {
+  return new Set([...source.matchAll(/"([a-z0-9-]+\.md)"/gu)].map((match) => match[1]));
 }
 
 export function mcpToolNames(source) {
@@ -90,6 +97,11 @@ export async function checkFeatureCatalog(root) {
     linked.set(target, row);
   }
 
+  const guideFile = resolve(root, helpGuidePath);
+  const guidePages = (await exists(guideFile))
+    ? helpGuidePages(await readFile(guideFile, "utf8"))
+    : undefined;
+
   const featuresDirectory = dirname(catalogFile);
   for (const name of (await readdir(featuresDirectory)).sort()) {
     if (!name.endsWith(".md") || name === "README.md") continue;
@@ -104,6 +116,14 @@ export async function checkFeatureCatalog(root) {
       violations.push(
         `docs/features/${name}: front matter status ${status ?? "(missing)"} differs from its row (${row.status})`,
       );
+    }
+    // A member can reach every available or partial feature, so the user guide must explain it.
+    if (guidePages !== undefined && ["available", "partial"].includes(status ?? "")) {
+      if (!guidePages.has(name)) {
+        violations.push(
+          `docs/features/${name}: no user guide section names it in ${helpGuidePath}`,
+        );
+      }
     }
   }
 

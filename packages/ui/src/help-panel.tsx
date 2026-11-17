@@ -1,7 +1,8 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { helpGuide } from "./help-guide.js";
+import { searchHelpGuide } from "./help-search.js";
 import { useScreenLocale } from "./i18n.js";
 
 export interface HelpDialogProps {
@@ -10,14 +11,18 @@ export interface HelpDialogProps {
 
 /**
  * The user guide in a modal side sheet (#2830). Each section is a native disclosure, so a phone
- * shows the titles first; the first one starts open. Escape, a click outside where the browser
- * supports `closedby`, and the Close button all close it.
+ * shows the titles first; the first one starts open. A search field above them (#2880) lists only
+ * the sections that match, open and best first. Escape, a click outside where the browser supports
+ * `closedby`, and the Close button all close it.
  */
 export function HelpDialog({ onClose }: HelpDialogProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const { locale } = useScreenLocale();
   const guide = helpGuide(locale);
+  const [query, setQuery] = useState("");
+  const searching = query.trim() !== "";
+  const sections = searching ? searchHelpGuide(guide, query) : guide.sections;
 
   useEffect(() => {
     const element = dialog.current;
@@ -46,8 +51,30 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
         </button>
       </div>
       <p className="help-intro">{guide.intro}</p>
-      {guide.sections.map((section, index) => (
-        <details key={section.id} className="help-section" open={index === 0}>
+      <label className="help-search" htmlFor={`${id}-search`}>
+        <span>{t`Search the guide`}</span>
+        <input
+          id={`${id}-search`}
+          type="search"
+          value={query}
+          autoComplete="off"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      <p className="help-search-status" role="status">
+        {searching
+          ? sections.length === 0
+            ? t`No section matches. Try another word, or use Send feedback to ask the team.`
+            : plural(sections.length, { one: "# matching section", other: "# matching sections" })
+          : null}
+      </p>
+      {sections.map((section, index) => (
+        // A new key when search starts or ends resets each disclosure to the default for that view.
+        <details
+          key={`${searching ? "found" : "all"}-${section.id}`}
+          className="help-section"
+          open={searching || index === 0}
+        >
           <summary>{section.title}</summary>
           {section.paragraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
