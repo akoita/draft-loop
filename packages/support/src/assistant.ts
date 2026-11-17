@@ -159,7 +159,7 @@ export function supportSystemPrompt(language: SupportLanguage, handoff: boolean)
     "Before you answer about the member's plan, credits, limits or a run, call the tool that reads it. Tools return codes and counts, not reasons; explain a code only from the guide.",
     handoff
       ? "When the member asks for a person, or you cannot help after reading the guide and the tools, call open_handoff with a short summary of what they need, then answer with outcome needs_person and say a person will reply by email."
-      : "When the member asks for a person, or you cannot help, answer with outcome needs_person and tell them to use Send feedback in the header.",
+      : "When the member asks for a person, or you cannot help, answer with outcome needs_person and tell them to select Talk to a person, which shares this conversation with the team if they agree.",
     "List in section_ids every guide section your answer relies on, best first.",
     "Each step is JSON: either a tool call (step tool, with tool and its arguments) or the answer (step answer, with answer, section_ids and outcome). Set the fields a step does not use to null.",
     "",

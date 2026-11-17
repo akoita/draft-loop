@@ -235,12 +235,12 @@ describe("the support assistant (#2882)", () => {
 
     const without = harness([
       toolStep("open_handoff", { summary: "x" }),
-      answerStep("Use Send feedback in the header.", ["problems"], "needs_person"),
+      answerStep("Select Talk to a person.", ["problems"], "needs_person"),
     ]);
     const plain = await without.assistant.answer(ask("I want a person."));
     expect(plain).toMatchObject({ outcome: "needs_person", ticketId: null });
     expect(without.audit[0]).toMatchObject({ tool: "open_handoff", status: "not-offered" });
-    expect(without.requests[0]?.systemPrompt).toContain("Send feedback");
+    expect(without.requests[0]?.systemPrompt).toContain("Talk to a person");
   });
 
   it("passes a refusal through without calling a tool", async () => {

@@ -454,11 +454,16 @@ export interface ApiSchemas {
   };
   "FeedbackNote": {
     readonly noteId: string;
+    readonly kind: "note" | "support";
     readonly organisationId: string;
     readonly memberId: string;
     readonly category: "bug" | "idea" | "other" | null;
     readonly screen: string;
     readonly text: string;
+    readonly transcript: readonly ({
+      readonly role: "member" | "assistant";
+      readonly text: string;
+    })[] | null;
     readonly sentAt: string;
   };
   "GrantedCredits": {
@@ -2934,6 +2939,22 @@ export interface ApiOperations {
       })[];
     };
     readonly response: ApiSchemas["SupportReply"];
+  };
+  "POST /v1/workspaces/{workspaceId}/support/conversations/{conversationId}/handoff": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly conversationId: string;
+    };
+    readonly body: {
+      readonly consent: true;
+      readonly transcript: readonly ({
+        readonly role: "member" | "assistant";
+        readonly text: string;
+      })[];
+    };
+    readonly response: {
+      readonly ticket_id: string;
+    };
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

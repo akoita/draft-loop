@@ -3,6 +3,13 @@ import { type ApplicationService, catalogModelPricing } from "@draft-loop/applic
 import type { AnthropicRouteBuilder } from "@draft-loop/model-gateway";
 import { prepareCallsPerCreditedApplication } from "@draft-loop/schemas/entitlements";
 import {
+  type FeedbackStore,
+  maximumSupportTranscriptTurnCharacters,
+  maximumSupportTranscriptTurns,
+  supportTicketKeepDays,
+} from "@draft-loop/storage/feedback";
+import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
+import {
   createSupportAssistant,
   type SupportAccountPort,
   type SupportAccountSummary,
@@ -32,6 +39,8 @@ export interface SupportRoutesOptions {
   /** Sign-in mode's plans and credits; owner-token mode has none. */
   readonly entitlementsFor?: TenantEntitlementsFor;
   readonly usage?: SupportUsageLedger;
+  /** Where a handed-off conversation goes; without it the hand-off route answers 404. */
+  readonly feedback?: Pick<FeedbackStore, "openSupportTicket">;
   readonly now?: () => Date;
 }
 
@@ -61,6 +70,31 @@ const messageBody = z.strictObject({
       "Earlier turns, oldest first, as the screen shows them; the server keeps none and sends the last six.",
     ),
 });
+
+const handoffBody = z.strictObject({
+  consent: z
+    .literal(true)
+    .describe("The member agreed to share this conversation with the people who run DraftLoop."),
+  transcript: z
+    .array(
+      z.strictObject({
+        role: z.enum(["member", "assistant"]),
+        text: z.string().min(1).max(maximumSupportTranscriptTurnCharacters),
+      }),
+    )
+    .min(1)
+    .max(maximumSupportTranscriptTurns)
+    .describe("The conversation as the screen shows it, oldest first."),
+});
+
+/** The ticket's one-paragraph summary: its size and the member's first question. */
+function handoffSummary(transcript: readonly { role: string; text: string }[]): string {
+  const first = transcript.find((turn) => turn.role === "member")?.text ?? "";
+  const head = `Support conversation of ${transcript.length} turns, handed to a person. First question: `;
+  const room = 800 - head.length;
+  const question = first.length > room ? `${first.slice(0, room - 1)}…` : first;
+  return `${head}${question}`;
+}
 
 const sectionIdSchema = z.enum(helpSectionIds);
 
@@ -385,6 +419,58 @@ export function registerSupportRoutes(
         })),
         ticket_id: null,
       };
+    },
+  );
+
+  app.post(
+    "/v1/workspaces/:workspaceId/support/conversations/:conversationId/handoff",
+    {
+      bodyLimit: 64 * 1024,
+      schema: {
+        summary: "Hand a support conversation to a person",
+        description: `Members only, with \`consent\` true: stores the conversation as a support ticket the operator reads with feedback notes, kept ${supportTicketKeepDays} days and erased with the organisation. Owner-token mode has no organisation and answers 404.`,
+        params: conversationParams,
+        body: handoffBody,
+        response: {
+          201: z.object({ ticket_id: z.string() }),
+          400: apiErrorSchema,
+          401: apiErrorSchema,
+          403: apiErrorSchema,
+          404: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { caller } = request;
+      if (caller === undefined) {
+        return reply.code(401).send(apiError("unauthorized", "A credential is required."));
+      }
+      if (caller.kind !== "member" || options.feedback === undefined) {
+        return reply.code(404).send(apiError("not_found", "No such route."));
+      }
+      try {
+        const ticket = await options.feedback.openSupportTicket({
+          organisationId: caller.tenantId,
+          memberId: caller.memberId,
+          summary: handoffSummary(request.body.transcript),
+          transcript: request.body.transcript,
+          now: now(),
+        });
+        // The log names the ticket and its conversation, never their words.
+        request.log.info(
+          {
+            event: "support_handoff",
+            conversationId: request.params.conversationId,
+            ticketId: ticket.noteId,
+            turns: request.body.transcript.length,
+          },
+          "support conversation handed to a person",
+        );
+        return reply.code(201).send({ ticket_id: ticket.noteId });
+      } catch (error) {
+        if (!(error instanceof TenantDirectoryError)) throw error;
+        return reply.code(400).send(apiError("invalid_input", error.message));
+      }
     },
   );
 }
