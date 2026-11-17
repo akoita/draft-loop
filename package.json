@@ -14,6 +14,8 @@
       "fast-uri@3": "3.1.9",
       "glob@10": "14.0.3",
       "glob@13": "14.0.3",
+      "hono": "4.13.16",
+      "@hono/node-server": "2.1.6",
       "js-yaml@5": "5.4.1",
       "katex": "0.18.2",
       "markdown-it": "14.3.3",
@@ -58,12 +60,13 @@
     "speech-model:install": "tsx packages/application/src/speech-model-install-command.ts",
     "test:career-interview:live": "tsx apps/api/src/career-interview-walk.ts",
     "test:application-material:live": "tsx apps/api/src/application-material-walk.ts",
+    "security:audit": "pnpm audit --prod --audit-level=high",
     "security:licenses": "node scripts/licenses.mjs",
     "security:secrets": "node scripts/secrets.mjs",
     "i18n:extract": "lingui extract --clean",
     "i18n:compile": "lingui compile --strict --typescript",
     "i18n:check": "node scripts/i18n-check.mjs",
-    "validate": "pnpm format:check && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm security:licenses && pnpm security:secrets && pnpm test",
+    "validate": "pnpm format:check && pnpm lint && pnpm i18n:check && pnpm typecheck && pnpm security:licenses && pnpm security:secrets && pnpm security:audit && pnpm test",
     "start": "pnpm --filter @draft-loop/cli start"
   },
   "devDependencies": {
