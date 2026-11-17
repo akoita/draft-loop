@@ -189,6 +189,12 @@ Run `init` again to issue a new one. The
 - **`/log-work`** takes an optional date range, lists what was merged on the
   default branch from the local git history, and records each notable piece
   once, after `list_work` shows it is not already recorded.
+- **`/add-project`** turns the current repository into a
+  [project card](#code-projects-as-evidence). It asks for the candidate's
+  commit emails, role and visibility, counts with `draft-loop evidence
+  add-repo` or `git log`, reads only allowlisted files, shows the card, and
+  calls `add_project` after the candidate says yes. `init` writes it beside
+  `/log-work` for Claude Code and Codex.
 - **The Stop hook** (Claude Code only, with `--hook`) adds one advisory line
   when a turn merged work without calling `record_work`: `gh pr merge`, a push
   to `main` or `master`, or a `merge_pull_request` tool call. A push to a

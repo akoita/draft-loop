@@ -9,6 +9,7 @@ import { createWorkJournalApi, createWorkspaceApiCall } from "./client.js";
 import { createDraftsApi } from "./drafts.js";
 import { logWorkSkill } from "./init.js";
 import { createMaterialApi } from "./material.js";
+import { addProjectSkill, createProjectsApi } from "./projects.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
@@ -63,6 +64,9 @@ async function toolNames(): Promise<readonly string[]> {
     createDraftsApi(createWorkspaceApiCall(config)),
     createRunsApi(createWorkspaceApiCall(config)),
     createMaterialApi(createWorkspaceApiCall(config)),
+    undefined,
+    undefined,
+    createProjectsApi(createWorkspaceApiCall(config)),
   );
   const client = new Client({ name: "test-host", version: "0.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -104,14 +108,25 @@ describe("the DraftLoop Claude Code plugin", () => {
       logWorkSkill,
     );
     const offered = new Set(await toolNames());
+    expect(await readFile(join(plugin, "skills", "add-project", "SKILL.md"), "utf8")).toBe(
+      addProjectSkill,
+    );
     expect((await readdir(join(plugin, "skills"))).sort()).toEqual([
+      "add-project",
       "applications",
       "log-work",
       "start-run",
       "status",
       "tailor-cv",
     ]);
-    for (const skill of ["log-work", "tailor-cv", "applications", "status", "start-run"]) {
+    for (const skill of [
+      "log-work",
+      "add-project",
+      "tailor-cv",
+      "applications",
+      "status",
+      "start-run",
+    ]) {
       const text = await readFile(join(plugin, "skills", skill, "SKILL.md"), "utf8");
       expect(text, skill).toMatch(
         new RegExp(`^---\\nname: ${skill}\\ndescription: .+\\n---\\n`, "u"),

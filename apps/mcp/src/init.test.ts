@@ -42,6 +42,7 @@ describe("draftloop-mcp init", () => {
       "updated: .mcp.json",
       "updated: CLAUDE.md",
       "created: .claude/skills/log-work/SKILL.md",
+      "created: .claude/skills/add-project/SKILL.md",
       "created: .claude/settings.json",
       expect.stringContaining("Accept notes from agents"),
     ]);
@@ -63,7 +64,7 @@ describe("draftloop-mcp init", () => {
 
     // A second run changes nothing and adds no second snippet or hook.
     const again = await runInit(root, claude);
-    expect(again.slice(0, 4).every((line) => line.startsWith("unchanged:"))).toBe(true);
+    expect(again.slice(0, 5).every((line) => line.startsWith("unchanged:"))).toBe(true);
   });
 
   it("sets up Codex with a marked config block and the skill under .agents", () => {
@@ -74,6 +75,7 @@ describe("draftloop-mcp init", () => {
       ".codex/config.toml",
       "AGENTS.md",
       ".agents/skills/log-work/SKILL.md",
+      ".agents/skills/add-project/SKILL.md",
     ]);
     expect(files[0]?.content).toBe(
       [

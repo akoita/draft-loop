@@ -43,6 +43,10 @@
       "types": "./src/run-span-recorder.ts",
       "import": "./src/run-span-recorder.ts"
     },
+    "./repository-facts": {
+      "types": "./src/repository-facts.ts",
+      "import": "./src/repository-facts.ts"
+    },
     "./work-journal": {
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
