@@ -62,6 +62,10 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
           screen: "agent",
           text: "A later note.",
           transcript: null,
+          context: null,
+          status: "new",
+          issueUrl: null,
+          triagedAt: null,
           sentAt: "2026-11-16T10:01:00.000Z",
         },
         {
@@ -73,6 +77,10 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
           screen: "review",
           text: "The export button does nothing.",
           transcript: null,
+          context: null,
+          status: "new",
+          issueUrl: null,
+          triagedAt: null,
           sentAt: now.toISOString(),
         },
       ]);
@@ -154,6 +162,10 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
           { role: "member", text: "I was charged twice." },
           { role: "assistant", text: "I can hand this to a person." },
         ],
+        context: null,
+        status: "new",
+        issueUrl: null,
+        triagedAt: null,
         sentAt: now.toISOString(),
       });
       await expect(feedback.listNewest(10)).resolves.toEqual([ticket]);
@@ -223,6 +235,122 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
         "support:Recent ticket",
         "note:An old note stays.",
       ]);
+    });
+  });
+
+  const context = {
+    source: "web" as const,
+    route: "/#review",
+    webBuild: "index-a1b2c3",
+    ids: { recordId: "record-1", runId: "run-7" },
+    recentErrors: [{ code: "not_found", message: "No such run.", at: now.toISOString() }],
+    browser: {
+      family: "Firefox",
+      os: "Linux",
+      viewport: "1280x800",
+      language: "fr-FR",
+      theme: "dark" as const,
+    },
+    serverRelease: "server-v0.40.0",
+    plan: "free",
+  };
+
+  it("keeps a note's technical context and returns it to the operator (#2875)", async () => {
+    await withDirectory(async ({ feedback }) => {
+      const note = await feedback.send({
+        organisationId: "org-north",
+        memberId: "member-1",
+        category: "bug",
+        screen: "review",
+        text: "The run page is blank.",
+        context,
+        now,
+      });
+
+      expect(note.context).toEqual(context);
+      await expect(feedback.listNewest(10)).resolves.toEqual([note]);
+    });
+  });
+
+  it("refuses a context over its size bound (#2875)", async () => {
+    await withDirectory(async (_directory, schema) => {
+      const pool = createSqlPool({ connectionString: runtimeRoleUrl(url), schema: schema.schema });
+      try {
+        await expect(
+          pool.forTenant("org-north").query(
+            `INSERT INTO feedback_notes (id, member_id, screen, body, context, sent_at)
+             VALUES ('note-x', 'member-1', 'home', 'Big.', $1::jsonb, now())`,
+            [JSON.stringify({ source: "web", route: "x".repeat(9_000) })],
+          ),
+        ).rejects.toThrow(/check constraint/u);
+      } finally {
+        await pool.close();
+      }
+    });
+  });
+
+  it("lets the operator triage a note, link an issue and filter by status (#2877)", async () => {
+    await withDirectory(async ({ feedback }) => {
+      const first = await feedback.send({
+        organisationId: "org-north",
+        memberId: "member-1",
+        category: "bug",
+        screen: "review",
+        text: "The export button does nothing.",
+        now,
+      });
+      await feedback.send({
+        organisationId: "org-south",
+        memberId: "member-2",
+        category: null,
+        screen: "home",
+        text: "Still new.",
+        now,
+      });
+      const later = new Date(now.getTime() + 3_600_000);
+      const issueUrl = "https://github.com/example-org/example-repo/issues/12";
+
+      await expect(
+        feedback.triage({ noteId: first.noteId, status: "issue", now: later }),
+      ).rejects.toThrow(/issue link/u);
+      await expect(
+        feedback.triage({ noteId: first.noteId, status: "issue", issueUrl, now: later }),
+      ).resolves.toMatchObject({ status: "issue", issueUrl, triagedAt: later.toISOString() });
+      // Leaving the link out keeps it.
+      await expect(
+        feedback.triage({ noteId: first.noteId, status: "closed", now: later }),
+      ).resolves.toMatchObject({ status: "closed", issueUrl });
+      await expect(
+        feedback.triage({ noteId: "no-such-note", status: "triaged", now: later }),
+      ).resolves.toBeUndefined();
+
+      const closed = await feedback.listNewest(10, "closed");
+      expect(closed.map(({ noteId }) => noteId)).toEqual([first.noteId]);
+      const fresh = await feedback.listNewest(10, "new");
+      expect(fresh.map(({ text }) => text)).toEqual(["Still new."]);
+    });
+  });
+
+  it("refuses an update outside the operator's triage (#2877)", async () => {
+    await withDirectory(async ({ feedback }, schema) => {
+      const note = await feedback.send({
+        organisationId: "org-north",
+        memberId: "member-1",
+        category: null,
+        screen: "home",
+        text: "A note a member cannot change.",
+        now,
+      });
+      const pool = createSqlPool({ connectionString: runtimeRoleUrl(url), schema: schema.schema });
+      try {
+        const changed = await pool
+          .forTenant("org-north")
+          .query("UPDATE feedback_notes SET body = 'Changed.', status = 'closed' RETURNING id");
+        expect(changed).toEqual([]);
+      } finally {
+        await pool.close();
+      }
+      await expect(feedback.listNewest(10)).resolves.toEqual([note]);
     });
   });
 });

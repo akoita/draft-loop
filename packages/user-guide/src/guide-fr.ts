@@ -145,6 +145,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Si une étape échoue, lisez d’abord le message à l’écran : il indique si l’étape reprendra seule ou ce qu’il faut faire. Un envoi de fichier refusé signifie souvent que le consentement n’est pas encore enregistré.",
         "Si ce guide ne répond pas à votre question, choisissez Envoyer un avis dans l’en-tête et décrivez ce qui s’est passé. Les personnes qui gèrent DraftLoop lisent chaque note.",
+        "Une note part avec des détails techniques : la page, la version, les derniers codes d’erreur et la famille de votre navigateur. Ouvrez Ce que nous joignons dans la fenêtre pour voir chaque valeur. Votre CV, vos offres d’emploi, le texte de la page et les captures d’écran ne sont jamais envoyés.",
       ],
       keywords: [
         "erreur",

@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
+import { isAgentToken } from "./agent-token.js";
 import { createApplicationsApi } from "./applications.js";
 import {
   createWorkJournalApi,
@@ -15,6 +16,7 @@ import { createFeedbackApi } from "./feedback.js";
 import { createHelpApi } from "./help.js";
 import { createMaterialApi } from "./material.js";
 import { createProjectsApi } from "./projects.js";
+import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
@@ -103,8 +105,23 @@ export function remoteOptionsFromEnvironment(
   };
 }
 
-/** Every tool, calling the API with one configuration. */
-export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServer {
+/**
+ * Whether a credential may be the operator's: the server's owner token, never an agent token.
+ * A member's sign-in through OAuth is never the operator's, so the caller rules that out first.
+ */
+export function mayBeOperatorToken(token: string | undefined): boolean {
+  return token !== undefined && token !== "" && !isAgentToken(token);
+}
+
+/**
+ * Every tool, calling the API with one configuration. The operator's feedback tools (#2877) are
+ * offered only when `operator` says the credential may be the operator's; the API still refuses
+ * any other credential.
+ */
+export function createDraftLoopMcpServer(
+  config: WorkJournalApiConfig,
+  options: { readonly operator?: boolean } = {},
+): McpServer {
   const call = createWorkspaceApiCall(config);
   return createWorkJournalMcpServer(
     createWorkJournalApi(config),
@@ -115,6 +132,7 @@ export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServe
     createFeedbackApi(call),
     createHelpApi(call),
     createProjectsApi(call),
+    options.operator === true ? createOperatorFeedbackApi(config) : undefined,
   );
 }
 
@@ -269,12 +287,15 @@ export function createRemoteMcpHandler(
         ? answer(response, 413, "The request is too large.")
         : answer(response, 400, "The request is not JSON.");
     }
-    const server = createDraftLoopMcpServer({
-      baseUrl: options.baseUrl,
-      workspaceId,
-      token: async () => token,
-      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-    });
+    const server = createDraftLoopMcpServer(
+      {
+        baseUrl: options.baseUrl,
+        workspaceId,
+        token: async () => token,
+        ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+      },
+      { operator: oauth === undefined && mayBeOperatorToken(token) },
+    );
     // No session id generator: each request is its own exchange.
     const transport = new StreamableHTTPServerTransport({
       enableJsonResponse: true,

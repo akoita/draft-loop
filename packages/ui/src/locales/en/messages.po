@@ -1397,6 +1397,10 @@ msgstr "API key"
 msgid "API key, billed per token"
 msgstr "API key, billed per token"
 
+#: apps/web/src/feedback.tsx
+msgid "Application"
+msgstr "Application"
+
 #: packages/ui/src/application-name.tsx
 #: packages/ui/src/home.tsx
 msgid "Application name"
@@ -1803,6 +1807,10 @@ msgstr "Brief"
 #: packages/ui/src/review.tsx
 msgid "Bring your career evidence into the loop"
 msgstr "Bring your career evidence into the loop"
+
+#: apps/web/src/feedback.tsx
+msgid "Browser"
+msgstr "Browser"
 
 #: packages/ui/src/profile-status.ts
 msgid "Build the profile from my career evidence with local fixtures. Nothing is sent to a provider."
@@ -2741,6 +2749,10 @@ msgstr "CV language"
 #: packages/ui/src/theme.tsx
 msgid "Dark"
 msgstr "Dark"
+
+#: apps/web/src/feedback.tsx
+msgid "dark theme"
+msgstr "dark theme"
 
 #: apps/web/src/application-material-model.ts
 msgid "Dashes are used often in this letter: try a full stop or a comma."
@@ -4808,6 +4820,10 @@ msgstr "Last activity on {0}"
 msgid "Last activity unknown"
 msgstr "Last activity unknown"
 
+#: apps/web/src/feedback.tsx
+msgid "Last failed request"
+msgstr "Last failed request"
+
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Last opened"
 msgstr "Last opened"
@@ -4874,6 +4890,10 @@ msgstr "License"
 #: packages/ui/src/theme.tsx
 msgid "Light"
 msgstr "Light"
+
+#: apps/web/src/feedback.tsx
+msgid "light theme"
+msgstr "light theme"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Like section ("
@@ -5895,6 +5915,7 @@ msgstr "No words were heard. Try again closer to the microphone."
 msgid "Nobody can open this job search yet."
 msgstr "Nobody can open this job search yet."
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "None"
 msgstr "None"
@@ -6416,6 +6437,10 @@ msgstr "Owner token"
 #: apps/web/src/records.tsx
 msgid "Owners and admins of your team choose who can open it."
 msgstr "Owners and admins of your team choose who can open it."
+
+#: apps/web/src/feedback.tsx
+msgid "Page"
+msgstr "Page"
 
 #: packages/ui/src/export-preview.tsx
 msgid "Page {page} of {pageCount}"
@@ -7010,6 +7035,10 @@ msgstr "Reason for releasing"
 msgid "reasoning"
 msgstr "reasoning"
 
+#: apps/web/src/feedback.tsx
+msgid "Recent errors"
+msgstr "Recent errors"
+
 #: apps/web/src/interview-guide-model.ts
 msgid "recent news"
 msgstr "recent news"
@@ -7029,6 +7058,10 @@ msgstr "Recent workspaces"
 #: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Recent workspaces could not be loaded."
 msgstr "Recent workspaces could not be loaded."
+
+#: apps/web/src/feedback.tsx
+msgid "Record"
+msgstr "Record"
 
 #: apps/web/src/consent.tsx
 msgid "Record consent"
@@ -7798,6 +7831,7 @@ msgstr "Route support"
 msgid "Rules apply once a knowledge base is chosen."
 msgstr "Rules apply once a knowledge base is chosen."
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8427,6 +8461,7 @@ msgstr "Something you are proud of"
 msgid "Sort"
 msgstr "Sort"
 
+#: apps/web/src/feedback.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8819,8 +8854,8 @@ msgid "Tell it in a conversation"
 msgstr "Tell it in a conversation"
 
 #: apps/web/src/feedback.tsx
-msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
-msgstr "Tell the people who run DraftLoop what works, what breaks or what you miss. The screen you are on is sent with your note."
+msgid "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
+msgstr "Tell the people who run DraftLoop what works, what breaks or what you miss. Your note goes with the technical details listed under What we include, never your CV, job descriptions, page text or screenshots."
 
 #: packages/ui/src/getting-started.tsx
 msgid "Tell us about your career"
@@ -9742,6 +9777,10 @@ msgstr "The screening status could not be read. {0}"
 #: packages/ui/src/home-model.ts
 msgid "The selected knowledge base could not be read"
 msgstr "The selected knowledge base could not be read"
+
+#: apps/web/src/feedback.tsx
+msgid "The server adds its version and your organisation's plan. Never included: screenshots, page text, your CV or job descriptions."
+msgstr "The server adds its version and your organisation's plan. Never included: screenshots, page text, your CV or job descriptions."
 
 #: packages/ui/src/work-journal-model.ts
 msgid "The server refused the edit. Check the title, summary and technologies."
@@ -10793,6 +10832,14 @@ msgstr "Weak points and how to answer"
 msgid "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 msgstr "Web pages can be wrong or out of date. Check a fact at its source before you rely on it."
 
+#: apps/web/src/feedback.tsx
+msgid "Web screen"
+msgstr "Web screen"
+
+#: apps/web/src/feedback.tsx
+msgid "Web version"
+msgstr "Web version"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "what changed thanks to your work"
 msgstr "what changed thanks to your work"
@@ -10860,6 +10907,10 @@ msgstr "What to do with matching sections"
 #: apps/web/src/application-material.tsx
 msgid "What to stress"
 msgstr "What to stress"
+
+#: apps/web/src/feedback.tsx
+msgid "What we include"
+msgstr "What we include"
 
 #: packages/ui/src/connected-agents.tsx
 msgid "What you allowed when it signed in"

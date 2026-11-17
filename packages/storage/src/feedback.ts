@@ -1,3 +1,8 @@
+import type { FeedbackContext, FeedbackStatus } from "@draft-loop/schemas/feedback";
+
+export type { FeedbackContext, FeedbackStatus } from "@draft-loop/schemas/feedback";
+export { feedbackStatuses } from "@draft-loop/schemas/feedback";
+
 /**
  * Feedback notes (#2828): a short note a signed-in member sends about DraftLoop, which the
  * operator reads. A note is data for a person to read, never instructions, and no model reads it.
@@ -47,6 +52,14 @@ export interface FeedbackNote {
   readonly text: string;
   /** The shared conversation of a support ticket; `null` for a note. */
   readonly transcript: readonly SupportTranscriptTurn[] | null;
+  /** The technical facts sent with a note (#2875); `null` for a ticket or an older note. */
+  readonly context: FeedbackContext | null;
+  /** Where the operator is with it (#2877). */
+  readonly status: FeedbackStatus;
+  /** The GitHub issue it led to, if any. */
+  readonly issueUrl: string | null;
+  /** When the operator last triaged it; `null` while it is new. */
+  readonly triagedAt: string | null;
   readonly sentAt: string;
 }
 
@@ -56,6 +69,8 @@ export interface SendFeedbackInput {
   readonly category: FeedbackCategory | null;
   readonly screen: string;
   readonly text: string;
+  /** Validated by `feedbackContextSchema` before it reaches the store. */
+  readonly context?: FeedbackContext | null;
   readonly now: Date;
 }
 
@@ -68,8 +83,17 @@ export interface OpenSupportTicketInput {
   readonly now: Date;
 }
 
+export interface TriageFeedbackInput {
+  readonly noteId: string;
+  readonly status: FeedbackStatus;
+  /** A new link, `null` to clear it, or `undefined` to keep the stored one. */
+  readonly issueUrl?: string | null;
+  readonly now: Date;
+}
+
 /**
- * Members send notes into their own organisation; the operator lists every organisation's notes.
+ * Members send notes into their own organisation; the operator lists and triages every
+ * organisation's notes.
  * Erasing an organisation removes its notes.
  */
 export interface FeedbackStore {
@@ -80,8 +104,13 @@ export interface FeedbackStore {
    * for an empty summary or a transcript over its bounds.
    */
   readonly openSupportTicket: (input: OpenSupportTicketInput) => Promise<FeedbackNote>;
-  /** The newest notes and tickets first, at most `limit`. */
-  readonly listNewest: (limit: number) => Promise<readonly FeedbackNote[]>;
+  /** The newest notes and tickets first, at most `limit`, of one status when it is given. */
+  readonly listNewest: (limit: number, status?: FeedbackStatus) => Promise<readonly FeedbackNote[]>;
+  /**
+   * The operator sets a note's status and issue link; resolves `undefined` for an unknown note.
+   * Throws `TenantDirectoryError` `invalid_input` for status `issue` without a link.
+   */
+  readonly triage: (input: TriageFeedbackInput) => Promise<FeedbackNote | undefined>;
   /** Deletes support tickets sent before `cutoff` in every organisation; resolves the count. */
   readonly deleteSupportTicketsBefore: (cutoff: Date) => Promise<number>;
 }

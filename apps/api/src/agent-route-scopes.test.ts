@@ -45,6 +45,7 @@ beforeEach(async () => {
       },
       deleteSupportTicketsBefore: async () => 0,
       listNewest: async () => [],
+      triage: async () => undefined,
     },
     application: {
       service,
