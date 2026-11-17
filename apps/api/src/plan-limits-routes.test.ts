@@ -78,6 +78,7 @@ const directory: TenantDirectory = {
     throw new Error("not used");
   },
   listMembers: async () => [...members],
+  organisationName: async () => "North coaching",
   inviteMember: async (input) => {
     inviteMember(input);
     if (members.some((existing) => existing.email === input.email)) {
@@ -310,6 +311,50 @@ describe("candidate records", () => {
     expect(refused.status).toBe(403);
     expect(refused.body.error.code).toBe("plan_required");
     expect(initialize).not.toHaveBeenCalled();
+  });
+});
+
+async function readMe(server: FastifyInstance) {
+  const token = await new SignJWT({ email_verified: true })
+    .setProtectedHeader({ alg: "ES256", kid: "key-1" })
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setSubject("owner-1")
+    .setExpirationTime("5m")
+    .sign(signingKey.privateKey);
+  const response = await server.inject({
+    method: "GET",
+    url: "/v1/me",
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return response.json();
+}
+
+describe("who the caller is", () => {
+  it("names the organisation and the plan's record and seat limits", async () => {
+    const server = await api();
+
+    expect(await readMe(server)).toMatchObject({
+      kind: "member",
+      organisationName: "North coaching",
+      plan: { candidateRecords: 2, seats: 2 },
+    });
+  });
+
+  it("reads unlimited as null", async () => {
+    entitlements = { ...small, candidateRecords: null, seats: null };
+    const server = await api();
+
+    expect((await readMe(server)).plan).toEqual({ candidateRecords: null, seats: null });
+  });
+
+  it("leaves the plan out when the organisation has none", async () => {
+    entitlements = undefined;
+    const server = await api();
+
+    const me = await readMe(server);
+    expect(me.organisationName).toBe("North coaching");
+    expect(me).not.toHaveProperty("plan");
   });
 });
 

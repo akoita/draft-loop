@@ -855,6 +855,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerOrganisationRoutes(app, {
       directory: options.directory,
       ...(planLimits === undefined ? {} : { planLimits }),
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined
+        ? {
+            planShapeOf: async (organisationId: string) => {
+              const entitlements = await entitlementsFor(organisationId).entitlements();
+              return entitlements === undefined
+                ? undefined
+                : { candidateRecords: entitlements.candidateRecords, seats: entitlements.seats };
+            },
+          }
+        : {}),
       ...(operatorFor === undefined
         ? {}
         : {

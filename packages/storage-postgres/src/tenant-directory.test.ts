@@ -50,6 +50,8 @@ describe.runIf(connectionString !== undefined)("Postgres tenant directory", () =
         status: "invited",
       });
       expect(created.firstOwner.activatedAt).toBeUndefined();
+      expect(await directory.organisationName("org-north")).toBe("North Coaching");
+      expect(await directory.organisationName("org-missing")).toBeUndefined();
 
       const invited = await directory.inviteMember({
         organisationId: "org-north",

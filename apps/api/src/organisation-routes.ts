@@ -18,6 +18,17 @@ export interface OrganisationRoutesOptions {
   readonly planLimits?: PlanLimits;
   /** Puts a new organisation on its first plan (#2781); absent where plans are not kept. */
   readonly assignInitialPlan?: (organisationId: string, at: Date) => Promise<void>;
+  /**
+   * How many candidate records and seats the organisation's plan allows, so the screen can leave
+   * out record and member controls a one-person plan never needs; absent where plans are not kept.
+   */
+  readonly planShapeOf?: (organisationId: string) => Promise<PlanShape | undefined>;
+}
+
+/** The two plan limits the screen reads: null means unlimited. */
+export interface PlanShape {
+  readonly candidateRecords: number | null;
+  readonly seats: number | null;
 }
 
 const identifierSchema = z
@@ -50,6 +61,25 @@ const meSchema = z
       memberId: z.string(),
       role: roleSchema,
       email: z.string().optional(),
+      organisationName: z
+        .string()
+        .optional()
+        .describe("The organisation's display name, which the screen calls the team."),
+      plan: z
+        .object({
+          candidateRecords: z
+            .number()
+            .int()
+            .nullable()
+            .describe("How many candidate records the plan allows; null when unlimited."),
+          seats: z
+            .number()
+            .int()
+            .nullable()
+            .describe("How many members the plan allows; null when unlimited."),
+        })
+        .optional()
+        .describe("The plan's record and seat limits; absent when the organisation has no plan."),
     }),
   ])
   .describe("The owner token's caller has no organisation; a member acts in exactly one.")
@@ -170,13 +200,21 @@ export function registerOrganisationRoutes(
         return reply.code(401).send(apiError("unauthorized", "A credential is required."));
       }
       if (caller.kind === "owner") return { kind: "owner" as const };
-      const record = await targetMember(directory, caller.tenantId, caller.memberId);
+      const [record, organisationName, plan] = await Promise.all([
+        targetMember(directory, caller.tenantId, caller.memberId),
+        directory.organisationName?.(caller.tenantId),
+        options.planShapeOf?.(caller.tenantId),
+      ]);
       return {
         kind: "member" as const,
         organisationId: caller.tenantId,
         memberId: caller.memberId,
         role: caller.role,
         ...(record === undefined ? {} : { email: record.email }),
+        ...(organisationName === undefined ? {} : { organisationName }),
+        ...(plan === undefined
+          ? {}
+          : { plan: { candidateRecords: plan.candidateRecords, seats: plan.seats } }),
       };
     },
   );

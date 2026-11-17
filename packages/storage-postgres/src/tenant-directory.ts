@@ -28,6 +28,7 @@ import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 
 /** The tenant directory on Postgres, with the pool it opened and its members' settings. */
 export interface PostgresTenantDirectory extends TenantDirectory {
+  organisationName(organisationId: string): Promise<string | undefined>;
   readonly memberSettings: MemberSettingsStore;
   /** The public beta's invite codes (#2501). */
   readonly betaInvites: BetaInvites;
@@ -235,6 +236,15 @@ export async function createPostgresTenantDirectory(
         };
         return { organisation, firstOwner: await insertMember(executor, email, "owner") };
       });
+    },
+
+    organisationName: async (organisationId) => {
+      const tenantId = requireOrganisationId(organisationId);
+      const [row] = await client.transaction(async (executor) => {
+        await executor.query("SELECT set_config('draft_loop.tenant_id', $1, true)", [tenantId]);
+        return executor.query("SELECT name FROM organisations WHERE id = $1", [tenantId]);
+      });
+      return row === undefined ? undefined : String(row.name);
     },
 
     listMembers: (organisationId) =>
