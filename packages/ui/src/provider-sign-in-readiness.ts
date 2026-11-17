@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   CredentialProvider,
@@ -64,6 +65,14 @@ export interface ProviderSignInReadiness {
 }
 
 export const unknownProviderSignIn: ProviderSignInReadiness = { state: "unknown", summary: null };
+
+/**
+ * A host with no credential status reads, such as the hosted service, holds the provider keys
+ * itself: there is nothing for the person to sign in to, so the start checklist reads it as ready.
+ */
+export function serverHeldProviderSignIn(): ProviderSignInReadiness {
+  return { state: "ready", summary: t`The service provides the models` };
+}
 
 function credentialProviderForCompany(company: ModelCompany): CredentialProvider | null {
   switch (company) {
