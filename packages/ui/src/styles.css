@@ -9379,6 +9379,41 @@ input[type="text"].application-card-name-input {
   margin: 0;
 }
 
+/* The three job options share one grid cell over a hidden copy of the pasted-text field, so the
+   area keeps the tallest option's height whichever option is chosen. */
+.new-application-job {
+  display: grid;
+  min-width: 0;
+}
+
+.new-application-job > * {
+  grid-area: 1 / 1;
+  align-self: start;
+  min-width: 0;
+}
+
+.new-application-job-option {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.new-application-job-sizer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.new-application-form .new-application-problem {
+  min-height: 1.55em;
+  margin: 0;
+}
+
+/* On a phone the longest problem wraps, so the line keeps room for two. */
+@media (max-width: 520px) {
+  .new-application-form .new-application-problem {
+    min-height: 3.1em;
+  }
+}
+
 .new-application-approval {
   display: flex;
   align-items: flex-start;
