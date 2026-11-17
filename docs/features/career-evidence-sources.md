@@ -52,6 +52,9 @@ that each cite a file or pull request.
 An agent with the `evidence:write` scope files a card with the MCP tool
 `add_project`, after showing it to you
 ([agent channel](../reference/agent-channel.md#code-projects-as-evidence)).
+In Claude Code or Codex, the `/add-project` skill does this for the current
+repository. Without an agent, `draft-loop evidence add-repo <path> --email
+<email>` prints the counted fields as JSON.
 The Work journal shows the card's counts and each highlight's source, so you
 can check them before you approve.
 
