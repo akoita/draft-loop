@@ -1447,11 +1447,12 @@ current one. It never starts a run.
   it, and `no-eligible-chunks`. The preflight prints an `Evidence mode:` line with the chunk
   count and budget, or the reason. A `run.evidence-mode` audit event records the
   decision.
-- **Above the cost cap.** A `cost-cap-exceeded` run sends retrieval's excerpts,
-  then fills the room left under the cap with the eligible chunks that best
-  match each job requirement, at most eight per requirement. The choice is
-  local word matching with no model call. The other fallbacks send retrieval's
-  excerpts only.
+- **Requirement picks.** A `cost-cap-exceeded` or `budget-exceeded` run sends
+  retrieval's excerpts, then fills the room left under the cap or budget with
+  the eligible chunks that best match each job requirement, at most eight per
+  requirement. The choice is local word matching with no model call, so every
+  role or project the job asks about can reach the draft. A
+  `no-eligible-chunks` run sends retrieval's excerpts only.
 - **Errors.** A missing setting means `full-source`, and an unreadable one stops
   the run before anything is sent.
 - **Unchanged rules.** Sensitivity, evidence ids, citation rules and validation

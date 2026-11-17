@@ -104,16 +104,17 @@ describe("requirement-picked evidence", () => {
     requirements: [{ id: "r1", text: "Kubernetes operations", priority: "must" }],
   } as never;
 
-  it("adds picks to retrieval's selection when the cost cap caused the fallback", async () => {
-    const base = runtime({ fallbackReason: "cost-cap-exceeded" }, [
-      eligible[0] as ScoredEvidenceChunk,
-    ]);
-    const wrapped = withRequirementPickedEvidence(base, context);
-    expect(wrapped.marker).toBe("kept");
-    const evidence = await wrapped.port.queryEvidence("job text", { workspaceId: "w" });
-    expect(evidence.map(({ id }) => id)).toEqual(["contact", "kube", "kube-2"]);
-    expect(base.port.queryEvidence).toHaveBeenCalledWith("job text", { workspaceId: "w" });
-  });
+  it.each(["cost-cap-exceeded", "budget-exceeded"] as const)(
+    "adds picks to retrieval's selection after a %s fallback",
+    async (fallbackReason) => {
+      const base = runtime({ fallbackReason }, [eligible[0] as ScoredEvidenceChunk]);
+      const wrapped = withRequirementPickedEvidence(base, context);
+      expect(wrapped.marker).toBe("kept");
+      const evidence = await wrapped.port.queryEvidence("job text", { workspaceId: "w" });
+      expect(evidence.map(({ id }) => id)).toEqual(["contact", "kube", "kube-2"]);
+      expect(base.port.queryEvidence).toHaveBeenCalledWith("job text", { workspaceId: "w" });
+    },
+  );
 
   it("uses the query when the run has no requirements", async () => {
     const wrapped = withRequirementPickedEvidence(
@@ -126,7 +127,6 @@ describe("requirement-picked evidence", () => {
 
   it.each([
     [{ effectiveMode: "full-source" as const }],
-    [{ fallbackReason: "budget-exceeded" as const }],
     [{ fallbackReason: "no-eligible-chunks" as const }],
     [{ requestedMode: "retrieval" as const }],
   ])("leaves %o unchanged", async (decision) => {

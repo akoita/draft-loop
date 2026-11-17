@@ -3,11 +3,12 @@ import type { ContextSnapshot, RetrievalPort, ScoredEvidenceChunk } from "@draft
 import type { EvidenceModeDecision } from "./full-source-evidence.js";
 
 /**
- * Requirement-picked evidence (#2667): what a run sends when its full source passes the workspace
- * cost cap. Retrieval's composed excerpts stay as they are, reserved contact, chronology and
- * priority evidence included. The room left under the cap is then filled with the eligible chunks
- * that best match each job requirement, so a large collection is cut to what the job asks for
- * instead of to a fixed twenty excerpts. Selection is local and deterministic: no model call.
+ * Requirement-picked evidence (#2667, #2907): what a run sends when its full source passes the
+ * workspace cost cap or the models' context budget. Retrieval's composed excerpts stay as they
+ * are, reserved contact, chronology and priority evidence included. The room left under the cap or
+ * budget is then filled with the eligible chunks that best match each job requirement, so a large
+ * collection is cut to what the job asks for instead of to a fixed twenty excerpts. Selection is
+ * local and deterministic: no model call.
  */
 
 /** Most chunks one requirement may add; the cap in characters is the other bound. */
@@ -102,8 +103,9 @@ export interface RequirementPickedRuntime {
 }
 
 /**
- * Wrap a run's retrieval so a cost-cap fallback sends requirement-picked evidence. Every other
- * decision, full source and the other fallbacks included, passes through unchanged.
+ * Wrap a run's retrieval so a cost-cap or budget fallback sends requirement-picked evidence, and
+ * no role or project the job asks about is left with nothing. Full source, a run that asked for
+ * retrieval, and a source with no eligible chunks pass through unchanged.
  */
 export function withRequirementPickedEvidence<Runtime extends RequirementPickedRuntime>(
   runtime: Runtime,
@@ -113,7 +115,12 @@ export function withRequirementPickedEvidence<Runtime extends RequirementPickedR
     queryEvidence: async (text, options) => {
       const selected = await runtime.port.queryEvidence(text, options);
       const decision = await runtime.evidenceModeDecision();
-      if (decision.fallbackReason !== "cost-cap-exceeded") return selected;
+      if (
+        decision.fallbackReason !== "cost-cap-exceeded" &&
+        decision.fallbackReason !== "budget-exceeded"
+      ) {
+        return selected;
+      }
       const requirements = (context.requirements ?? []).map((requirement) => requirement.text);
       const picks = pickRequirementEvidence({
         eligible: await runtime.fullSourceEvidence(),
