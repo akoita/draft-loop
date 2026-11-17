@@ -91,6 +91,7 @@ Postgres store, its triage policy and its erasure are tested in
 | `POST /v1/feedback` | A member sends a note: text up to 2,000 characters, an optional category (`bug`, `idea`, `other`), the screen it came from and an optional `context` |
 | `POST /v1/workspaces/:workspaceId/feedback` | The same, for a member's agent token with the `journal` scope; its source is `agent` |
 | `send_feedback` (MCP) | An agent passes on the candidate's note; its screen is `agent` |
+| Web: **Operator**, Feedback | The operator reads notes and tickets, newest first ([operator screen](organisations-and-consent.md#operator-screen)) |
 | `GET /v1/operator/feedback` | The operator lists notes and support tickets with their context and triage, newest first, 100 by default and at most 500, of one `status` when given. A ticket has kind `support` and its shared `transcript` |
 | `PATCH /v1/operator/feedback/:noteId` | The operator sets a note's `status` (`new`, `triaged`, `issue`, `closed`) and its `issueUrl`, an https GitHub issue address |
 | `list_feedback`, `triage_feedback` (MCP) | The same two operator routes, offered only when the MCP server runs with the owner token |
@@ -101,8 +102,10 @@ Postgres store, its triage policy and its erasure are tested in
 
 - Support tickets are deleted 90 days after they were sent, by the worker's
   sweep at each start. Notes stay until their organisation is erased.
-- No operator screen yet: the operator reads and triages notes through the API
-  or the MCP tools.
+- The operator reads notes on the
+  [operator screen](organisations-and-consent.md#operator-screen), and
+  triages them through the API or the MCP tools. They cannot answer them from
+  DraftLoop.
 - Only the operator's triage updates a note. The database refuses any other
   update.
 - Status `issue` needs an issue link. Leaving `issueUrl` out keeps the stored

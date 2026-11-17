@@ -76,7 +76,19 @@ describe("signInTokenVerifier", () => {
       status: "verified",
       identity: { issuer, subject: "person-1", email: "ada@example.test", emailVerified: true },
       grantedScopes: [],
+      roles: [],
+      methods: [],
     });
+  });
+
+  it("reads the realm roles and how the person signed in", async () => {
+    const verified = await verifier()(
+      await token({
+        claims: { realm_access: { roles: ["draft-loop-operator", 7] }, amr: ["pwd", "otp"] },
+      }),
+    );
+
+    expect(verified).toMatchObject({ roles: ["draft-loop-operator"], methods: ["pwd", "otp"] });
   });
 
   it("reads the client the token was issued to and its scopes", async () => {

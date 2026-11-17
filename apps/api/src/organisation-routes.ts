@@ -61,6 +61,12 @@ const meSchema = z
       memberId: z.string(),
       role: roleSchema,
       email: z.string().optional(),
+      operator: z
+        .literal(true)
+        .optional()
+        .describe(
+          "Present when this sign-in also reaches the operator routes: the operator role with a second factor.",
+        ),
       organisationName: z
         .string()
         .optional()
@@ -210,6 +216,7 @@ export function registerOrganisationRoutes(
         organisationId: caller.tenantId,
         memberId: caller.memberId,
         role: caller.role,
+        ...(caller.operator === true ? { operator: true as const } : {}),
         ...(record === undefined ? {} : { email: record.email }),
         ...(organisationName === undefined ? {} : { organisationName }),
         ...(plan === undefined
