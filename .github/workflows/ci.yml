@@ -171,10 +171,59 @@ jobs:
       - name: Run zizmor
         run: pipx run zizmor==1.31.1 --offline --min-severity medium --format github .github/workflows
 
+  # Builds each server image as the deploy does and scans it with Trivy. Fails on a high or
+  # critical vulnerability that has a fix, and keeps an SPDX SBOM of each image for 30 days.
+  image-scan:
+    name: Image scan (${{ matrix.image.name }})
+    needs: scope
+    if: needs.scope.outputs.self_hosted == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { name: api, dockerfile: apps/api/Dockerfile }
+          - { name: worker, dockerfile: apps/worker/Dockerfile }
+          - { name: page-fetcher, dockerfile: apps/page-fetcher/Dockerfile }
+          - { name: keycloak, dockerfile: deploy/keycloak/Dockerfile }
+    env:
+      TRIVY_VERSION: 0.76.1
+      TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+      IMAGE: draft-loop-${{ matrix.image.name }}:scan
+      DOCKERFILE: ${{ matrix.image.dockerfile }}
+      NAME: ${{ matrix.image.name }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: docker build --file "$DOCKERFILE" --tag "$IMAGE" .
+      - name: Install Trivy
+        run: |
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfLO "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archive}"
+          echo "${TRIVY_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" trivy
+      - name: Scan for fixable high and critical vulnerabilities
+        run: |
+          ./trivy image --skip-version-check --scanners vuln --severity HIGH,CRITICAL \
+            --ignore-unfixed --ignorefile .trivyignore.yaml --exit-code 1 "$IMAGE"
+      - name: Write the SBOM
+        if: success() || failure()
+        run: ./trivy image --skip-version-check --format spdx-json --output "sbom-$NAME.spdx.json" "$IMAGE"
+      - name: Keep the SBOM
+        if: success() || failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ matrix.image.name }}
+          path: sbom-${{ matrix.image.name }}.spdx.json
+          retention-days: 30
+
   # The required check. It always reports, so a job skipped by scope never blocks a merge.
   validate:
     name: validate
-    needs: [scope, static-checks, tests, server-storage, codeql, workflow-audit]
+    needs: [scope, static-checks, tests, server-storage, codeql, workflow-audit, image-scan]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -189,6 +238,8 @@ jobs:
           CODEQL: ${{ needs.codeql.result }}
           CODEQL_NEEDED: ${{ needs.scope.outputs.docs_only != 'true' }}
           WORKFLOWS: ${{ needs.workflow-audit.result }}
+          IMAGES: ${{ needs.image-scan.result }}
+          IMAGES_NEEDED: ${{ needs.scope.outputs.self_hosted }}
         run: |
           check() {
             if [ "$2" = true ]; then want=success; else want=skipped; fi
@@ -204,6 +255,7 @@ jobs:
           check "Server storage" "$STORAGE_NEEDED" "$STORAGE"
           check "CodeQL" "$CODEQL_NEEDED" "$CODEQL"
           check "Workflow audit" true "$WORKFLOWS"
+          check "Image scan" "$IMAGES_NEEDED" "$IMAGES"
 
   server-storage:
     name: Server storage

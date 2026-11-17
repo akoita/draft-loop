@@ -24,6 +24,12 @@ FROM node:24.22.1-bookworm-slim
 ENV NODE_ENV=production
 COPY --from=dependencies /app /app
 
+# Take the base image's security updates, and drop npm: nothing runs it at run time, and its
+# bundled packages are where most of the base image's scan findings live.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 USER node
 WORKDIR /app/apps/page-fetcher
 EXPOSE 8080
