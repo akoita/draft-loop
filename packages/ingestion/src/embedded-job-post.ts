@@ -5,14 +5,30 @@ const maxEmbeddedStateCharacters = 2_000_000;
 const maxSearchDepth = 12;
 const maxJobPostTextCharacters = 60_000;
 
+/** Every script element, as the JSON-LD reader finds them; bodies are checked as plain strings. */
+const scriptPattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+
 /**
  * The script assignments job boards render their route data into, such as Greenhouse's
  * `window.__remixContext = {...};`. Only the already fetched page is read.
  */
-const embeddedStatePattern =
-  /<script\b[^>]*>\s*window\.__(?:remixContext|NEXT_DATA__|INITIAL_STATE__)\s*=\s*([\s\S]*?);?\s*<\/script\s*>/giu;
-const nextDataPattern =
-  /<script\b[^>]*\bid\s*=\s*["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script\s*>/giu;
+const stateAssignments = [
+  "window.__remixContext",
+  "window.__NEXT_DATA__",
+  "window.__INITIAL_STATE__",
+];
+
+/** The JSON a script holds as page state, or undefined when it holds none. */
+function stateJson(attributes: string, body: string): string | undefined {
+  const trimmed = body.trim();
+  if (attributes.includes("__NEXT_DATA__")) return trimmed;
+  const assignment = stateAssignments.find((name) => trimmed.startsWith(name));
+  if (assignment === undefined) return undefined;
+  const value = trimmed.slice(assignment.length).trimStart();
+  if (!value.startsWith("=")) return undefined;
+  const json = value.slice(1).trim();
+  return json.endsWith(";") ? json.slice(0, -1).trimEnd() : json;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -64,15 +80,15 @@ function bodyMarkdown(value: unknown): string {
 
 function parsedStates(html: string): unknown[] {
   const states: unknown[] = [];
-  for (const pattern of [embeddedStatePattern, nextDataPattern]) {
-    for (const match of html.matchAll(pattern)) {
-      const body = (match[1] ?? "").trim();
-      if (body.length === 0 || body.length > maxEmbeddedStateCharacters) continue;
-      try {
-        states.push(JSON.parse(body));
-      } catch {
-        // Not plain JSON (a function call or a template); the visible text stays the fallback.
-      }
+  for (const match of html.matchAll(scriptPattern)) {
+    const body = match[2] ?? "";
+    if (body.length === 0 || body.length > maxEmbeddedStateCharacters) continue;
+    const json = stateJson(match[1] ?? "", body);
+    if (json === undefined) continue;
+    try {
+      states.push(JSON.parse(json));
+    } catch {
+      // Not plain JSON (a function call or a template); the visible text stays the fallback.
     }
   }
   return states;
