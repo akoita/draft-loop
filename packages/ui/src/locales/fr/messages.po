@@ -9923,6 +9923,15 @@ msgid "This draft is approved; edits are closed."
 msgstr "Cette ébauche est approuvée ; les modifications sont closes."
 
 #: apps/web/src/application-material-model.ts
+msgid "This draft uses your career profile before it was reviewed. Review it on the Career profile page, then draft again."
+msgstr "Ce brouillon utilise votre profil professionnel avant sa relecture. Relisez-le sur la page Profil professionnel, puis relancez la rédaction."
+
+#. placeholder {0}: source.version
+#: apps/web/src/application-material-model.ts
+msgid "This draft uses your reviewed career profile, version {0}. A newer version waits for review on the Career profile page; it is used once you review it."
+msgstr "Ce brouillon utilise votre profil professionnel relu, version {0}. Une version plus récente attend votre relecture sur la page Profil professionnel ; elle sera utilisée une fois relue."
+
+#: apps/web/src/application-material-model.ts
 msgid "This draft would pass the server's cost cap for one request."
 msgstr "Cette ébauche dépasserait le plafond de coût du serveur pour une requête."
 

@@ -54,6 +54,7 @@ import { z } from "zod";
 import {
   type ApplicationMaterialParts,
   applicationMaterialModelIds,
+  careerProfileField,
   draftView,
   errors,
   newMaterialId,
@@ -367,7 +368,8 @@ export function registerInterviewGuideRoutes(
           },
           "interview guide drafted",
         );
-        if (drafts === undefined) return reply.send(view);
+        if (drafts === undefined)
+          return reply.send({ ...view, ...careerProfileField(record.profile) });
         const saved: SavedApplicationMaterial = {
           id: newMaterialId(),
           workspace_id: workspaceId,
@@ -381,7 +383,7 @@ export function registerInterviewGuideRoutes(
           { workspaceId, applicationId, materialId: saved.id, kind: saved.kind },
           "application material saved",
         );
-        return reply.send(viewOf(saved));
+        return reply.send({ ...viewOf(saved), ...careerProfileField(record.profile) });
       } catch (error) {
         if (error instanceof ApplicationMaterialError) {
           request.log.info(

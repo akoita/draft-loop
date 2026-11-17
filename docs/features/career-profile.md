@@ -28,6 +28,11 @@ On every server: self-hosted, hosted and the desktop client over it.
 4. Resolve or acknowledge open issues, then mark the draft reviewed. The page
    says when the profile is behind the evidence.
 
+Cover letters and interview guides draw on the last reviewed version. A newer
+draft is used once you review it, and a new draft says when one waits. Before
+any version is reviewed, they use the newest draft and say so. CV runs pin a
+reviewed profile.
+
 Usage is separate from sensitivity: usage decides where a fact may appear,
 sensitivity decides what may reach a model provider.
 

@@ -28,6 +28,7 @@ import {
   applicationMaterialTellReason,
   applicationMaterialToneLabels,
   applicationMaterialVersionLabel,
+  careerProfileSourceNotice,
   recordGapsNotice,
 } from "./application-material-model.js";
 import {
@@ -400,6 +401,11 @@ export function ApplicationMaterialView(props: ApplicationMaterialViewProps) {
                   </li>
                 ))}
               </ol>
+            )}
+            {careerProfileSourceNotice(draft.career_profile) === undefined ? null : (
+              <p className="application-material-note" role="note">
+                {careerProfileSourceNotice(draft.career_profile)}
+              </p>
             )}
             {draft.record_gaps === undefined || draft.record_gaps.length === 0 ? null : (
               <p className="application-material-note" role="note">
