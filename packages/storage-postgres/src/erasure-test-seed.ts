@@ -34,6 +34,8 @@ export const tenantWideTables = new Set([
   "beta_waitlist",
   // A member's feedback for the operator (#2828): it belongs to the organisation, not a record.
   "feedback_notes",
+  // Deployment-wide daily digests of content-free counts (#2916): no tenant or record to erase.
+  "quality_digests",
 ]);
 
 /**
