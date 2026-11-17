@@ -552,6 +552,11 @@ export interface ApiSchemas {
     readonly memberId: string;
     readonly role: "owner" | "admin" | "member";
     readonly email?: string;
+    readonly organisationName?: string;
+    readonly plan?: {
+      readonly candidateRecords: number | null;
+      readonly seats: number | null;
+    };
   };
   "MemberCredits": {
     readonly organisationId: string;

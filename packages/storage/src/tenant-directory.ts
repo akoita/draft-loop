@@ -65,6 +65,8 @@ export interface TenantDirectory {
     firstOwnerEmail: string;
   }): Promise<CreatedOrganisation>;
   listMembers(organisationId: string): Promise<readonly MemberRecord[]>;
+  /** The organisation's display name, or undefined when there is no such organisation. */
+  organisationName?(organisationId: string): Promise<string | undefined>;
   /**
    * Invites an email. With `maxMembers`, the invitation is refused with `member_limit_reached`
    * when the organisation already has that many members, active or invited. The count is taken

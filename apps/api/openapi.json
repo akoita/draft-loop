@@ -6253,6 +6253,46 @@
               },
               "email": {
                 "type": "string"
+              },
+              "organisationName": {
+                "description": "The organisation's display name, which the screen calls the team.",
+                "type": "string"
+              },
+              "plan": {
+                "description": "The plan's record and seat limits; absent when the organisation has no plan.",
+                "type": "object",
+                "properties": {
+                  "candidateRecords": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "How many candidate records the plan allows; null when unlimited."
+                  },
+                  "seats": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "How many members the plan allows; null when unlimited."
+                  }
+                },
+                "required": [
+                  "candidateRecords",
+                  "seats"
+                ]
               }
             },
             "required": [
@@ -13974,6 +14014,47 @@
               },
               "email": {
                 "type": "string"
+              },
+              "organisationName": {
+                "description": "The organisation's display name, which the screen calls the team.",
+                "type": "string"
+              },
+              "plan": {
+                "description": "The plan's record and seat limits; absent when the organisation has no plan.",
+                "type": "object",
+                "properties": {
+                  "candidateRecords": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "How many candidate records the plan allows; null when unlimited."
+                  },
+                  "seats": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "How many members the plan allows; null when unlimited."
+                  }
+                },
+                "required": [
+                  "candidateRecords",
+                  "seats"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
