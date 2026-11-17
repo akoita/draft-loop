@@ -113,3 +113,21 @@ test("rejects broken links, unknown statuses, unlisted pages, drift and unlisted
     "MCP tool list_work: not named in any Agent access cell",
   ]);
 });
+
+test("requires a user guide section for every available or partial feature page (#2880)", async () => {
+  const files = (guide) => ({
+    "docs/features/README.md": catalog([
+      "| [Journal](journal.md) | `available` | server | `record_work`, `list_work` | Notes |",
+      "| [Later](later.md) | `planned` | server | `none` | Soon |",
+    ]),
+    "docs/features/journal.md": page("available"),
+    "docs/features/later.md": page("planned"),
+    "apps/mcp/src/server.ts": server,
+    "packages/ui/src/help-guide.ts": guide,
+  });
+
+  assert.deepEqual(await check(files('export const pages = { agents: ["journal.md"] };\n')), []);
+  assert.deepEqual(await check(files("export const pages = { agents: [] };\n")), [
+    "docs/features/journal.md: no user guide section names it in packages/ui/src/help-guide.ts",
+  ]);
+});

@@ -241,6 +241,11 @@ msgstr "{0, plural, one {# export} other {# exports}}"
 msgid "{0, plural, one {# link} other {# links}}"
 msgstr "{0, plural, one {# lien} other {# liens}}"
 
+#. placeholder {0}: sections.length
+#: packages/ui/src/help-panel.tsx
+msgid "{0, plural, one {# matching section} other {# matching sections}}"
+msgstr "{0, plural, one {# section correspondante} other {# sections correspondantes}}"
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -5706,6 +5711,10 @@ msgstr "Aucune exécution"
 msgid "No saved profile version exists for this name yet."
 msgstr "Aucune version de profil enregistrée n’existe encore pour ce nom."
 
+#: packages/ui/src/help-panel.tsx
+msgid "No section matches. Try another word, or use Send feedback to ask the team."
+msgstr "Aucune section ne correspond. Essayez un autre mot, ou utilisez Envoyer un avis pour poser la question à l’équipe."
+
 #. placeholder {0}: countedNouns.requirement(unmatchedRequirements.length)
 #: packages/ui/src/run-author-input-display.ts
 msgid "No sent evidence for {0}"
@@ -7926,6 +7935,10 @@ msgstr "Rechercher par nom, employeur ou poste"
 #: packages/ui/src/review.tsx
 msgid "Search commands…"
 msgstr "Rechercher une commande…"
+
+#: packages/ui/src/help-panel.tsx
+msgid "Search the guide"
+msgstr "Chercher dans le guide"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Section usage"

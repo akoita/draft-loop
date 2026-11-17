@@ -247,6 +247,11 @@ msgstr "{0, plural, one {# export} other {# exports}}"
 msgid "{0, plural, one {# link} other {# links}}"
 msgstr "{0, plural, one {# link} other {# links}}"
 
+#. placeholder {0}: sections.length
+#: packages/ui/src/help-panel.tsx
+msgid "{0, plural, one {# matching section} other {# matching sections}}"
+msgstr "{0, plural, one {# matching section} other {# matching sections}}"
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -5712,6 +5717,10 @@ msgstr "No runs yet"
 msgid "No saved profile version exists for this name yet."
 msgstr "No saved profile version exists for this name yet."
 
+#: packages/ui/src/help-panel.tsx
+msgid "No section matches. Try another word, or use Send feedback to ask the team."
+msgstr "No section matches. Try another word, or use Send feedback to ask the team."
+
 #. placeholder {0}: countedNouns.requirement(unmatchedRequirements.length)
 #: packages/ui/src/run-author-input-display.ts
 msgid "No sent evidence for {0}"
@@ -7932,6 +7941,10 @@ msgstr "Search by name, employer or role"
 #: packages/ui/src/review.tsx
 msgid "Search commands…"
 msgstr "Search commands…"
+
+#: packages/ui/src/help-panel.tsx
+msgid "Search the guide"
+msgstr "Search the guide"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Section usage"

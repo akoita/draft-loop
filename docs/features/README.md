@@ -103,7 +103,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Record archive](../reference/record-archive.md)          | `available` | hosted        | `none`       | Owners download everything kept about one candidate record as a zip.             |
 | [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and choose who opens each job search; one-person plans see no picker. |
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
-| [Help](help.md) | `partial` | server | `none` | A Help button on every screen opens a short guide to the first journey, in English or French; no search yet (#2880). |
+| [Help](help.md) | `partial` | server | `none` | A Help button on every screen opens a searchable user guide in English or French; agents cannot read it yet (#2881). |
 | [Feedback](feedback.md) | `partial` | web, server | `send_feedback` | A member sends the operator a note about DraftLoop from the header's Send feedback button, or through their agent. |
 
 ## Planned
@@ -125,7 +125,9 @@ must appear in an **Agent access** cell.
 - a page in `docs/features/` is missing from the tables;
 - a feature page's `status` front matter differs from its row;
 - a row that is not `planned` links no page;
-- an MCP tool in `apps/mcp/src/server.ts` is not named in an Agent access cell.
+- an MCP tool in `apps/mcp/src/server.ts` is not named in an Agent access cell;
+- an available or partial feature page is named in no section of the
+  [user guide](help.md#keeping-it-current).
 
 A feature page lives at `docs/features/<feature>.md`, stays under about 150
 lines, and starts with front matter holding its status:

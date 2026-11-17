@@ -49,6 +49,9 @@ and what you deferred, under the template's impact sections.
 
 - [ ] The [feature catalog](../features/README.md) row and its page are
       updated; `pnpm lint:docs` checks them.
+- [ ] A capability a member can reach has a section in the in-app
+      [user guide](../features/help.md#keeping-it-current), in English and
+      French.
 - [ ] Reference pages, architecture pages and the roadmap say what is true now.
 - [ ] A milestone's last PR updates `server-release.json`.
 
