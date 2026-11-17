@@ -466,6 +466,8 @@ export function ReviewFooter({
         className={`gate-blocker gate-blocker-${blocker.tone}`}
         tabIndex={-1}
         role="status"
+        // While a round runs, its strip says what runs; the page's status already says the rest.
+        hidden={!readOnly && runningRound != null && runningRound.activity !== null}
       >
         {blocker.text}
       </p>

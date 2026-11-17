@@ -110,11 +110,14 @@ describe("the review footer while a round runs", () => {
     expect(footer).toContain(">Stop review</button>");
     expect(footer).toContain(">Show run progress</button>");
     expect(footer).toContain('aria-label="approval actions" hidden="">');
+    // The page's status already says a review is running, so the footer does not repeat it.
+    expect(footer).toMatch(/class="gate-blocker [^"]*"[^>]*hidden=""/u);
   });
 
   it("keeps the gate's buttons once the round has been reviewed", () => {
     const html = renderToStaticMarkup(<ReviewWorkspace state={reviewed} onAction={noop} />);
     expect(html).not.toContain('aria-label="current round"');
     expect(html).toContain('aria-label="approval actions">');
+    expect(html).not.toMatch(/class="gate-blocker [^"]*"[^>]*hidden=""/u);
   });
 });
