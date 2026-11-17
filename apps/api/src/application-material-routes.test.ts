@@ -24,6 +24,8 @@ const url = "/v1/workspaces/owner/applications/app_fixture0001/material";
 
 // An invented career record and job post; the contact fact must never reach the model.
 const profile = {
+  version: 1,
+  status: "reviewed",
   updatedAt: "2026-11-05T08:00:00.000Z",
   facts: [
     { id: "t", category: "role", subjectId: "job", field: "title", value: "Data Analyst" },
@@ -212,6 +214,7 @@ describe("application material route", () => {
       model: { provider: "anthropic", model: "claude-sonnet-5-5" },
       prompt_version: "application-material-v11",
       cost_usd: 0.002,
+      career_profile: { version: 1, reviewed: true, newer_draft_waiting: false },
     });
     expect(JSON.stringify(seen)).not.toContain("candidate@example.test");
     expect(JSON.stringify(seen)).toContain("Reporting with SQL");

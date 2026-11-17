@@ -115,6 +115,7 @@ export interface ApiSchemas {
     readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
+    readonly career_profile?: ApiSchemas["CareerProfileSource"];
     readonly interview_details?: ApiSchemas["InterviewDetails"];
     readonly items: readonly ({
       readonly question: string;
@@ -372,6 +373,11 @@ export interface ApiSchemas {
   } | {
     readonly state: "unavailable";
     readonly version: number;
+  };
+  "CareerProfileSource": {
+    readonly version: number;
+    readonly reviewed: boolean;
+    readonly newer_draft_waiting: boolean;
   };
   "CareerProfileVersions": {
     readonly versions: readonly (ApiSchemas["CareerProfile"])[];

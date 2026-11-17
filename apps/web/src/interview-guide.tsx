@@ -2,7 +2,10 @@ import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
-import type { ApplicationMaterialDraft } from "./application-material-model.js";
+import {
+  type ApplicationMaterialDraft,
+  careerProfileSourceNotice,
+} from "./application-material-model.js";
 import {
   type InterviewDetailsForm,
   type InterviewGuidePart,
@@ -313,6 +316,11 @@ export function InterviewGuideReader(props: InterviewGuideReaderProps) {
           </details>
         );
       })}
+      {careerProfileSourceNotice(draft.career_profile) === undefined ? null : (
+        <p className="application-material-note" role="note">
+          {careerProfileSourceNotice(draft.career_profile)}
+        </p>
+      )}
       {draft.dropped_sentences === undefined ? null : (
         <section className="application-material-tells" aria-labelledby="guide-dropped">
           <h3 id="guide-dropped">{t`Left out`}</h3>
