@@ -12,7 +12,10 @@ describe("refusal text", () => {
       "That name is taken.",
     );
     expect(refusalText({ code: "unreadable-error", message: "x", params: { status: 502 } })).toBe(
-      "The API answered 502.",
+      "DraftLoop's server did not answer (error 502). It recovers on its own within a minute; try again then. Nothing you saved is lost.",
+    );
+    expect(refusalText({ code: "unreadable-error", message: "x", params: { status: 418 } })).toBe(
+      "The API answered 418.",
     );
   });
 
