@@ -59,7 +59,7 @@ import {
   type CareerInterviewParts,
   registerCareerInterviewRoutes,
 } from "./career-interview-routes.js";
-import { registerClientErrorRoutes } from "./client-error-routes.js";
+import { clientErrorsPath, registerClientErrorRoutes } from "./client-error-routes.js";
 import { registerConsentEnforcement } from "./consent-enforcement.js";
 import { registerConsentRoutes } from "./consent-routes.js";
 import { registerContentScreening } from "./content-screening-routes.js";
@@ -116,6 +116,7 @@ import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
+import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import type { SupportSettings } from "./support-config.js";
 import { registerSupportRoutes } from "./support-routes.js";
@@ -248,6 +249,8 @@ export interface ApiOptions {
   readonly webRoot?: string;
   /** The publisher details the legal pages show (#2462); without them they show placeholders. */
   readonly legalPublisher?: LegalPublisher;
+  /** The planned-maintenance notice (#2965); without it there is never a notice. */
+  readonly serviceNotice?: ServiceNoticeSource;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
@@ -393,6 +396,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     async () => ({ status: "ok" as const }),
   );
   registerAuthConfigRoutes(app, auth, options.betaWaitlist !== undefined);
+  registerServiceNotice(app, {
+    source: options.serviceNotice ?? (async () => undefined),
+    openWrites: new Set([clientErrorsPath]),
+  });
   registerClientErrorRoutes(app);
   registerOwnerTokenProofRoutes(app, options.ownerToken);
 

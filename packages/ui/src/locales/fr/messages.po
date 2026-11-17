@@ -1996,6 +1996,10 @@ msgstr "Changez les modèles dans Réglages, puis relancez."
 msgid "Changes are made on the latest run."
 msgstr "Les modifications se font sur la dernière exécution."
 
+#: apps/web/src/refusal-text.ts
+msgid "Changes are paused for planned maintenance. They come back on their own; reading and downloading still work."
+msgstr "Les modifications sont suspendues pour une maintenance planifiée. Elles reviennent d’elles-mêmes ; la lecture et les téléchargements fonctionnent toujours."
+
 #: packages/ui/src/review.tsx
 msgid "Changes only"
 msgstr "Modifications uniquement"
@@ -5123,6 +5127,10 @@ msgstr "Faible"
 msgid "Low resource (97M parameters)"
 msgstr "Ressources réduites (97 M de paramètres)"
 
+#: apps/web/src/service-notice-model.ts
+msgid "Maintenance is taking longer than planned. Changes are still paused and come back on their own; reading and downloading stay available."
+msgstr "La maintenance dure plus longtemps que prévu. Les modifications sont toujours suspendues et reviennent d’elles-mêmes ; la lecture et les téléchargements restent disponibles."
+
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Manage"
 msgstr "Gérer"
@@ -6670,6 +6678,22 @@ msgstr "Choisissez vous-même le rédacteur et le relecteur."
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Planned calls"
 msgstr "Appels prévus"
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance until {end}: changes are paused and come back on their own. Reading and downloading stay available."
+msgstr "Maintenance planifiée jusqu’au {end} : les modifications sont suspendues et reviennent d’elles-mêmes. La lecture et les téléchargements restent disponibles."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance until {end}. The service may be briefly unavailable."
+msgstr "Maintenance planifiée jusqu’au {end}. Le service peut être brièvement indisponible."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance: {when}. Changes will be paused during it; reading and downloading stay available."
+msgstr "Maintenance planifiée : {when}. Les modifications seront suspendues pendant ce temps ; la lecture et les téléchargements restent disponibles."
+
+#: apps/web/src/service-notice-model.ts
+msgid "Planned maintenance: {when}. The service may be briefly unavailable."
+msgstr "Maintenance planifiée : {when}. Le service peut être brièvement indisponible."
 
 #: packages/ui/src/run-details.tsx
 msgid "policy active"

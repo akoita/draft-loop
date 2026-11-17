@@ -14,6 +14,7 @@ import {
   initialScreenLocale,
   saveScreenLanguage,
 } from "./screen-language-choice.js";
+import { ServiceNoticeWatch } from "./service-notice.js";
 import { createTokenStore } from "./session.js";
 import { ServiceUnreachable } from "./sign-in.js";
 import "./styles.css";
@@ -107,6 +108,7 @@ createApiClient({})
     root.render(
       <StrictMode>
         <Screens>
+          <ServiceNoticeWatch />
           <NewReleaseWatch />
           {screen}
         </Screens>

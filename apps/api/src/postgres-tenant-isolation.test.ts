@@ -55,6 +55,8 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
   let blobRoot: string;
   let blobs: ReturnType<typeof createFilesystemBlobStorage>;
   let app: FastifyInstance;
+  /** Organisation A's ids, kept by the first test for the route sweep (#2935). */
+  const ofA: Record<string, string> = {};
 
   const call = async (
     person: "person-a" | "person-b",
@@ -198,6 +200,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
       workspaceId: "shared",
     });
     expect(base.status).toBe(201);
+    ofA.knowledgeBaseId = base.body.id as string;
     const upload = await app.inject({
       method: "POST",
       url: `/v1/knowledge-bases/${base.body.id}/sources?name=career.md`,
@@ -311,6 +314,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     });
     expect(created.status).toBe(201);
     const briefId = created.body.brief.id as string;
+    ofA.briefId = briefId;
     const briefPath = `/v1/workspaces/shared/opportunities/${briefId}`;
     const edited = await asA("PATCH", briefPath, {
       expectedVersion: created.body.brief.version,
@@ -347,6 +351,7 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     });
     expect(run.status).toBe(201);
     const runId = run.body.runId as string;
+    ofA.runId = runId;
     expect(queued).toEqual([{ tenantId: "org-a", workspaceId: "shared", runId }]);
     expect((await asA("GET", `/v1/workspaces/shared/runs/${runId}`)).status).toBe(200);
 
@@ -378,12 +383,110 @@ describe.runIf(connectionString !== undefined)("tenant isolation through the API
     expect(listedByA.body.applications[0].runs.map((item: { id: string }) => item.id)).toEqual([
       runId,
     ]);
+    ofA.applicationId = listedByA.body.applications[0].id as string;
     const listedByB = await asB("GET", "/v1/workspaces/shared/applications");
     expect(listedByB.status).toBe(200);
     for (const application of listedByB.body.applications) {
       expect(application.briefs).toEqual([]);
       expect(application.runs).toEqual([]);
     }
+  });
+
+  it("refuses every route organisation A's ids reach when B calls it (#2935)", async () => {
+    // A named application of A's own, since every workspace has a "default" one.
+    const named = await asA("POST", "/v1/workspaces/shared/applications", {
+      name: "Sweep target at Example Ledger",
+      jobText: "Platform Engineer at Example Ledger: build TypeScript services.",
+    });
+    expect(named.status).toBe(201);
+    const applicationId = named.body.id as string;
+
+    // The routes come from the API's own route table, so a new route is swept without an edit.
+    const document = app.swagger() as { paths: Record<string, Record<string, unknown>> };
+    const markers = [
+      "Example Ledger",
+      "Keep each bullet",
+      "person-a@example.test",
+      "org-a",
+      ofA.knowledgeBaseId,
+      ofA.briefId,
+      ofA.runId,
+      applicationId,
+    ].filter((marker): marker is string => typeof marker === "string" && marker !== "");
+    expect(markers).toHaveLength(8);
+    const ids: Readonly<Record<string, string>> = {
+      ...ofA,
+      applicationId,
+      opportunityId: ofA.briefId ?? "",
+    };
+    /**
+     * Routes not called, each with its reason. Every other route is called by B with A's ids.
+     */
+    const notCalled: Readonly<Record<string, string>> = {
+      "PUT /v1/workspaces/{workspaceId}":
+        "Workspace ids are names within an organisation: B's PUT creates B's own workspace of that name, and the sweep would then reach that empty workspace instead of refusals.",
+    };
+    const problems: string[] = [];
+    let swept = 0;
+    for (const [template, operations] of Object.entries(document.paths)) {
+      if (!template.startsWith("/v1/")) continue;
+      const params = [...template.matchAll(/\{(\w+)\}/gu)].map((match) => match[1] ?? "");
+      // Workspace and profile ids are names each organisation chooses for itself, so B may hold
+      // its own of the same name. A path naming one of A's generated ids must refuse B outright.
+      const namesAResource = params.some((name) => name !== "workspaceId" && name !== "profileId");
+      for (const verb of Object.keys(operations)) {
+        const method = verb.toUpperCase() as Parameters<typeof call>[1];
+        if (notCalled[`${method} ${template}`] !== undefined) continue;
+        // "a-only" is A's alone; "shared" exists in both, so A's ids below it must still refuse.
+        for (const workspaceId of ["a-only", "shared"]) {
+          if (workspaceId === "shared" && !namesAResource) continue;
+          const path = template.replaceAll(/\{(\w+)\}/gu, (_, name: string) =>
+            encodeURIComponent(
+              name === "workspaceId"
+                ? workspaceId
+                : name === "profileId"
+                  ? "career"
+                  : (ids[name] ?? `${name}-of-org-a`),
+            ),
+          );
+          const response = await app.inject({
+            method,
+            url: path,
+            headers: {
+              authorization: `Bearer ${tokens["person-b"]}`,
+              "idempotency-key": `sweep-${String(swept).padStart(6, "0")}`,
+            },
+            ...(method === "GET" || method === "DELETE" ? {} : { payload: {} }),
+          });
+          swept += 1;
+          const label = `${method} ${template} (${workspaceId})`;
+          for (const marker of markers) {
+            if (response.body.includes(marker)) problems.push(`${label} shows ${marker}`);
+          }
+          // A refusal of any kind shows nothing; a success or a crash on A's resource is a leak
+          // or an unchecked path. Ids the sweep does not hold are refused by their schema (400).
+          const status = response.statusCode;
+          if (status >= 500 || (namesAResource && status < 400) || status === 401) {
+            problems.push(`${label} answered ${status}: ${response.body.slice(0, 160)}`);
+          }
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+    expect(swept).toBeGreaterThan(100);
+
+    // Nothing B sent changed A's data.
+    expect((await asA("GET", `/v1/workspaces/shared/runs/${ofA.runId}`)).status).toBe(200);
+    expect(
+      (await asA("GET", `/v1/workspaces/shared/opportunities/${ofA.briefId}`)).body.brief.id,
+    ).toBe(ofA.briefId);
+    expect((await asA("GET", `/v1/workspaces/shared/applications/${applicationId}`)).status).toBe(
+      200,
+    );
+    expect(
+      (await asA("GET", `/v1/knowledge-bases/${ofA.knowledgeBaseId}/sources`)).body.sources,
+    ).toHaveLength(1);
+    expect((await asA("GET", "/v1/workspaces/a-only")).status).toBe(200);
   });
 
   it("reaches no tenant with the owner token in sign-in mode", async () => {

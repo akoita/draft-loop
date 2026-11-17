@@ -19,6 +19,7 @@ import { createOperatorFeedbackApi } from "./operator-feedback.js";
 import { createProjectsApi } from "./projects.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
+import { createServiceNoticeApi } from "./service-notice.js";
 
 /**
  * The remote transport (ADR 0011 D17, #2647): the same tools over Streamable HTTP on one URL,
@@ -133,6 +134,7 @@ export function createDraftLoopMcpServer(
     createHelpApi(call),
     createProjectsApi(call),
     options.operator === true ? createOperatorFeedbackApi(config) : undefined,
+    createServiceNoticeApi(config),
   );
 }
 
