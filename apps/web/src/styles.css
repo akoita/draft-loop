@@ -131,6 +131,15 @@ label:where(:not(.shared-screens *)) {
   border-radius: 0;
 }
 
+/* Planned maintenance (#2966): one line above every screen while the API serves a notice. */
+.service-notice {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  border-radius: 0;
+}
+
 .sign-in {
   max-width: 28rem;
   margin: 10vh auto;

@@ -46,6 +46,8 @@ function knownText(refusal: Refusal): string | undefined {
         ? t`This application has used the ${limit} drafts, guides and research runs its credit covers.`
         : t`This application has used the drafts, guides and research runs its credit covers.`;
     }
+    case "service_maintenance":
+      return t`Changes are paused for planned maintenance. They come back on their own; reading and downloading still work.`;
     case "not_ready":
       return t`The run is still being saved; retry in a moment.`;
     case "brief_version_stale":
