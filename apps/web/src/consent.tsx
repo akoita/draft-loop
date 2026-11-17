@@ -226,10 +226,14 @@ export function ConsentPanel(props: ConsentPanelProps) {
       {missing.length === 0 ? null : (
         <p className="consent-status notice">
           {t`The consent does not name`} {providerList(missing)}
-          {t`. Withdraw it and record it again for`} {providerList(providers)}.
+          {t`. Record it again below for`} {providerList(providers)}
+          {t`; the new consent replaces the old one, and nothing needs to be withdrawn.`}
         </p>
       )}
       <Alerts messages={props.messages} />
+      {granted && missing.length === 0 ? null : (
+        <GrantForm kind={kind} providers={providers} busy={busy} onGrant={props.onGrant} />
+      )}
       {granted ? (
         <div className="consent-actions">
           <button
@@ -239,9 +243,7 @@ export function ConsentPanel(props: ConsentPanelProps) {
             onClick={props.onWithdraw}
           >{t`Withdraw consent`}</button>
         </div>
-      ) : (
-        <GrantForm kind={kind} providers={providers} busy={busy} onGrant={props.onGrant} />
-      )}
+      ) : null}
       {history.length === 0 ? null : (
         <details className="consent-history">
           <summary>

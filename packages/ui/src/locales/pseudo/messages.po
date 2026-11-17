@@ -89,6 +89,10 @@ msgstr ""
 msgid "; runs then use it instead, and these files are not copied into it."
 msgstr ""
 
+#: apps/web/src/consent.tsx
+msgid "; the new consent replaces the old one, and nothing needs to be withdrawn."
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "; your record says"
 msgstr ""
@@ -125,6 +129,10 @@ msgstr ""
 msgid ". Other applications use the workspace's pair."
 msgstr ""
 
+#: apps/web/src/consent.tsx
+msgid ". Record it again below for"
+msgstr ""
+
 #: apps/web/src/screening.tsx
 msgid ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
 msgstr ""
@@ -135,10 +143,6 @@ msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
-msgstr ""
-
-#: apps/web/src/consent.tsx
-msgid ". Withdraw it and record it again for"
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -8827,7 +8831,7 @@ msgstr ""
 #. placeholder {0}: providerList(missing)
 #. placeholder {1}: providerList(providers)
 #: apps/web/src/consent-model.ts
-msgid "The candidate's consent does not name {0}. Withdraw it and record it again for {1}."
+msgid "The candidate's consent does not name {0}. Record it again for {1} in the permission box above."
 msgstr ""
 
 #: apps/web/src/consent-model.ts

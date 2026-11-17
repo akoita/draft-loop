@@ -37,9 +37,12 @@ organisation; it erases everything with `draft-loop-server`
 4. Record the candidate's two consents under **Credits and consent**: to store
    their material, and to send it to model providers. Uploads need the first.
    Runs need the second, naming both the writer's and the reviewer's
-   companies. A profile derivation calls only the writer's model, so it needs
-   the writer's company; on the web, the profile's send approval records it.
-   A withdrawal is recorded too, and the history is kept.
+   companies. A profile derivation and a requirements extraction call only the
+   writer's model, so they need the writer's company; on the web, the
+   profile's send approval records it. When a run needs a company the consent
+   does not name, the permission box offers the consent form again; the new
+   grant replaces the old one without a withdrawal. A withdrawal is recorded
+   too, and the history is kept.
 5. Owners download a record's [archive](../reference/record-archive.md), erase
    one record, or delete the whole organisation.
 
@@ -47,11 +50,11 @@ organisation; it erases everything with `draft-loop-server`
 
 The screen reads the plan's limits from `GET /v1/me`, never its name.
 
-| Plan allows                         | Account menu                         | Above Home                                     |
-| ----------------------------------- | ------------------------------------ | ---------------------------------------------- |
-| One job search and one seat         | Email; Your data (download, delete)  | Nothing: the job search opens or is created as **My job search** |
-| Several job searches, one seat      | Email                                | **Working on** picker and **New job search**   |
-| Several seats                       | Email and team name                  | Picker, plus **Who can open this job search**  |
+| Plan allows                    | Account menu                        | Above Home                                                       |
+| ------------------------------ | ----------------------------------- | ---------------------------------------------------------------- |
+| One job search and one seat    | Email; Your data (download, delete) | Nothing: the job search opens or is created as **My job search** |
+| Several job searches, one seat | Email                               | **Working on** picker and **New job search**                     |
+| Several seats                  | Email and team name                 | Picker, plus **Who can open this job search**                    |
 
 An organisation that already holds two job searches keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own
@@ -71,14 +74,14 @@ access from the screen.
 
 ## Surfaces
 
-| Kind   | Surface                                                        |
-| ------ | -------------------------------------------------------------- |
-| Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up |
-| API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`       |
+| Kind   | Surface                                                                                       |
+| ------ | --------------------------------------------------------------------------------------------- |
+| Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up           |
+| API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
 | API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `/v1/operator/waitlist` |
-| API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`  |
-| API    | `/v1/workspaces/{id}/archive`, record and organisation erasure |
-| MCP    | none                                                           |
+| API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
+| API    | `/v1/workspaces/{id}/archive`, record and organisation erasure                                |
+| MCP    | none                                                                                          |
 
 ## Limits
 

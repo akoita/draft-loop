@@ -94,6 +94,25 @@ describe("consent panel", () => {
     );
 
     expect(html).toContain("The consent does not name OpenAI.");
+    expect(html).toContain("nothing needs to be withdrawn");
+    // The grant form is offered in place, so the missing provider is one consent away (#2865).
+    expect(html).toContain("Record consent");
+    expect(html).toContain("Withdraw consent");
+  });
+
+  it("offers no grant form while the grant names every provider", () => {
+    const html = renderToStaticMarkup(
+      <ConsentPanel
+        {...props}
+        kind="provider-transmission"
+        consents={{
+          ...none,
+          current: { ...none.current, "provider-transmission": syntheticTransmissionGrant },
+        }}
+      />,
+    );
+
+    expect(html).not.toContain("Record consent");
     expect(html).toContain("Withdraw consent");
   });
 });
