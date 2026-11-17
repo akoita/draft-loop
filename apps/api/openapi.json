@@ -3149,6 +3149,61 @@
           "proof"
         ]
       },
+      "ServiceNoticeInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "maintenance"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "When the maintenance starts, ISO 8601."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "When the maintenance is announced to end, ISO 8601."
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "True when changes are paused once it has started."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "ongoing",
+              "overrunning"
+            ],
+            "description": "upcoming before it starts; ongoing until its announced end; overrunning when changes are still paused after it."
+          }
+        },
+        "required": [
+          "kind",
+          "startsAt",
+          "endsAt",
+          "readOnly",
+          "state"
+        ]
+      },
+      "ServiceNoticeResponseInput": {
+        "type": "object",
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceNoticeInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "notice"
+        ]
+      },
       "BetaInviteInput": {
         "type": "object",
         "properties": {
@@ -12315,6 +12370,63 @@
         ],
         "additionalProperties": false
       },
+      "ServiceNotice": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "maintenance"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "When the maintenance starts, ISO 8601."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "When the maintenance is announced to end, ISO 8601."
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "True when changes are paused once it has started."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "ongoing",
+              "overrunning"
+            ],
+            "description": "upcoming before it starts; ongoing until its announced end; overrunning when changes are still paused after it."
+          }
+        },
+        "required": [
+          "kind",
+          "startsAt",
+          "endsAt",
+          "readOnly",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "ServiceNoticeResponse": {
+        "type": "object",
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceNotice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "notice"
+        ],
+        "additionalProperties": false
+      },
       "BetaInvite": {
         "type": "object",
         "properties": {
@@ -17767,6 +17879,24 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/service-notice": {
+      "get": {
+        "summary": "The current planned-maintenance notice, if any",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceNoticeResponse"
                 }
               }
             }

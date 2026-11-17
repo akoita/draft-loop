@@ -7,6 +7,7 @@ import { clientErrorsPath } from "./client-error-routes.js";
 import { ownerTokenProofPath } from "./owner-token-proof-routes.js";
 import { paymentEventsPath } from "./payment-checkout.js";
 import type { ApiAuthOptions } from "./request-auth.js";
+import { serviceNoticePath } from "./service-notice.js";
 
 /**
  * The content security policy for every response. The web screen loads only its own scripts and
@@ -45,6 +46,7 @@ const publicApiRoutes: ReadonlySet<string> = new Set([
   "/v1/health",
   authConfigPath,
   clientErrorsPath,
+  serviceNoticePath,
   ownerTokenProofPath,
   waitlistPath,
   // The payment provider's events carry no credential; their signature is checked by the route.

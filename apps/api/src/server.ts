@@ -21,6 +21,7 @@ import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
+import { readServiceNoticeSecret, secretServiceNotice } from "./service-notice.js";
 import { readSupportSettings } from "./support-config.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
@@ -29,6 +30,7 @@ const supportSettings = readSupportSettings(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const legalPublisher = readLegalPublisher(process.env);
+const serviceNoticeSecret = readServiceNoticeSecret(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const coverLetterWriter = readCoverLetterWriter(process.env);
 const payments = paymentsFrom(readPaymentsConfig(process.env));
@@ -102,6 +104,21 @@ const app = await buildApi({
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),
+  ...(serviceNoticeSecret === undefined
+    ? {}
+    : {
+        serviceNotice: secretServiceNotice({
+          secret: serviceNoticeSecret,
+          onReadError: (error) =>
+            console.error(
+              JSON.stringify({
+                severity: "WARNING",
+                message: "service notice read failed",
+                err: errorFields(error),
+              }),
+            ),
+        }),
+      }),
   ...(config.speechModelRoot === undefined ? {} : { speechModelRoot: config.speechModelRoot }),
   ...(localModels.length === 0 ? {} : { localModels }),
   ...(liveSpeech === undefined ? {} : { liveSpeech }),
