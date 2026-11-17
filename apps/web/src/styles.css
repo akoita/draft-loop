@@ -177,6 +177,32 @@ label:where(:not(.shared-screens *)) {
   padding: 0 1rem 3rem;
 }
 
+/* With a two-column screen, the shell is exactly one window tall: its bars take their height and
+   the screens get the rest, so the columns scroll inside it and the page never scrolls beside
+   them. Stacked (1024px and narrower), the page scrolls as a whole instead. */
+@media (min-width: 1025px) {
+  @supports (height: 100cqh) {
+    .shell:has(.app-frame) {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      padding-bottom: 0;
+      overflow: hidden;
+    }
+
+    .shell:has(.app-frame) > * {
+      flex: none;
+    }
+
+    .shell > .shared-screens:has(.app-frame) {
+      flex: 1 1 auto;
+      min-height: 0;
+      container-type: size;
+      --frame-height: 100cqh;
+    }
+  }
+}
+
 /* The shell's actions (#1933): in the shared screens' header, or right-aligned above a screen
    that has none. */
 .page-actions {

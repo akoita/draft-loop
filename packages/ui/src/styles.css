@@ -638,10 +638,12 @@ input[type="checkbox"] {
   display: contents;
 }
 
+/* `--frame-height` is the window's height unless a host puts its own bar above the screens; it
+   then sets the frame to the room left, so the page itself never scrolls next to the columns. */
 .app-frame {
   display: flex;
   align-items: stretch;
-  height: 100vh;
+  height: var(--frame-height, 100vh);
   overflow: hidden;
 }
 
@@ -655,7 +657,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: var(--space-2);
   width: var(--rail-width);
-  height: 100vh;
+  height: var(--frame-height, 100vh);
   border-right: 1px solid var(--border);
   padding: var(--space-4) 0;
   background: var(--surface);
@@ -802,7 +804,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: var(--space-4);
   min-width: 0;
-  max-height: 100vh;
+  max-height: var(--frame-height, 100vh);
   overflow-y: auto;
   padding: var(--space-5) var(--space-5) var(--space-8);
 }
@@ -2818,8 +2820,8 @@ input[type="text"].workspace-title-input {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100vh;
-  max-height: 100vh;
+  height: var(--frame-height, 100vh);
+  max-height: var(--frame-height, 100vh);
   overflow: hidden;
   border-left: 1px solid var(--border);
   background: var(--surface);
