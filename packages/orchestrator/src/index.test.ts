@@ -852,7 +852,20 @@ describe("durable orchestration", () => {
     let attempts = 0;
     const { engine } = engineFixture({
       tracer,
-      retrieval: { queryEvidence: async () => [] },
+      retrieval: {
+        queryEvidence: async () =>
+          ["source-a", "source-a", "source-b"].map((sourceId, ordinal) => ({
+            id: `chunk-${ordinal}`,
+            workspaceId: "workspace-1",
+            sourceId,
+            ordinal,
+            lineStart: 1,
+            lineEnd: 2,
+            checksum: `sha256:${ordinal}`,
+            text: "candidate secret text",
+            rank: ordinal + 1,
+          })),
+      },
       author: async () => {
         attempts += 1;
         if (attempts === 1) {
@@ -860,6 +873,7 @@ describe("durable orchestration", () => {
             code: "invalid-response",
             retryable: false,
             failureStage: "output-token-budget-exceeded",
+            diagnostics: [{ code: "max_tokens", path: "stop_reason" }],
           });
         }
         return execution(artifact(attempts), "anthropic", "author-test");
@@ -899,7 +913,17 @@ describe("durable orchestration", () => {
     expect(failed?.attributes).toMatchObject({
       "error.type": "invalid-response",
       "draftloop.failure_stage": "output-token-budget-exceeded",
+      "draftloop.failure_reason": "max_tokens",
     });
+    expect(
+      tracer
+        .spans()
+        .filter((span) => span.name === "retrieve_evidence")
+        .map((span) => [
+          span.attributes["draftloop.retrieved_chunks"],
+          span.attributes["draftloop.retrieved_sources"],
+        ]),
+    ).toContainEqual([3, 2]);
     const completed = tracer
       .spans()
       .find((span) => span.attributes["draftloop.step"] === "author" && span.status === "ok");
