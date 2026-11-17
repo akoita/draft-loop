@@ -351,7 +351,7 @@ describe("model profile tier and career profile", () => {
   });
 
   it.each([
-    ["economy-anthropic-author", 4, "economy-openai-critic", 1, "Economy"],
+    ["economy-anthropic-author", 5, "economy-openai-critic", 1, "Economy"],
     ["economy-anthropic-author", 3, "balanced-openai-critic", 1, "Balanced"],
     ["standard-anthropic-author", 2, "standard-openai-critic", 2, "Standard"],
   ])(

@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(23);
+    expect(profiles).toHaveLength(24);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",

@@ -39,6 +39,10 @@ const effortMetadata: Readonly<Record<string, EffortMetadata>> = {
     levels: allLevels,
     source: claudeEffortPage,
   },
+  "economy-anthropic-author@5": {
+    levels: allLevels,
+    source: claudeEffortPage,
+  },
   "standard-anthropic-author@1": {
     levels: allLevels,
     source: claudeEffortPage,

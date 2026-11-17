@@ -190,6 +190,18 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     maxInputTokens: 1000000,
     reviewedAt: "2026-11-01",
   },
+  // Version 5 is version 4's model at low effort: the same rate card.
+  "economy-anthropic-author@5": {
+    sources: [anthropicModelsOverview, anthropicPricing],
+    apiPricing: {
+      inputUsdPerMillion: 0.5,
+      outputUsdPerMillion: 2.5,
+      cacheReadUsdPerMillion: 0.05,
+      cacheWriteUsdPerMillion: 0.625,
+    },
+    maxInputTokens: 1000000,
+    reviewedAt: "2026-11-01",
+  },
   "standard-openai-critic@2": {
     sources: [openAIModelPage("gpt-6.1-sol")],
     apiPricing: {
@@ -287,7 +299,7 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     id: "economy",
     label: "Economy — unvalidated",
     tier: "economy",
-    author: { id: "economy-anthropic-author", version: 4 },
+    author: { id: "economy-anthropic-author", version: 5 },
     critic: { id: "economy-openai-critic", version: 1 },
   },
   {

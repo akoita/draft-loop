@@ -56,7 +56,7 @@ describe("model editor summary", () => {
     expect(details).toContain("openai/gpt-6.1-sol");
     expect(details).toContain(`${economy.author.id}@${economy.author.version}`);
     expect(details).toContain(`${economy.critic.id}@${economy.critic.version}`);
-    expect(details).toContain("effort medium; output 64000 tokens; thinking provider-default");
+    expect(details).toContain("effort low; output 64000 tokens; thinking provider-default");
     expect(details).toContain("Quality unvalidated; account availability unchecked");
     expect(details).toContain("Supported with the configured authentication route");
   });

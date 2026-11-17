@@ -73,7 +73,7 @@ Most commands accept `--json` for machine-readable output.
 | `preferences`                                   | List, accept or dismiss writing preferences suggested from your review choices                                                     | [Suggested preferences](#suggested-preferences)                                      |
 | `knowledge`                                     | Manage stores, knowledge bases, sources and sensitivity                                                                            | [Candidate knowledge bases](#candidate-knowledge-bases)                              |
 | `evidence mode`, `retrieval mode`, `embeddings` | Choose what a run receives and how it searches                                                                                     | [Evidence mode](#evidence-mode), [Retrieval mode](#retrieval-mode)                   |
-| `evidence add-repo` | Print a project card's counted fields for a local git repository as JSON, with no model call | [Agent channel](agent-channel.md#code-projects-as-evidence) |
+| `evidence add-repo`                             | Print a project card's counted fields for a local git repository as JSON, with no model call                                       | [Agent channel](agent-channel.md#code-projects-as-evidence)                          |
 
 ## CLI model profiles
 
@@ -141,7 +141,7 @@ and account or provider availability is unchecked.
 
 A workspace can keep an **applied pair**, so new runs still have profiles after
 a restart. A workspace created by `init` without an explicit model choice gets
-the economy pair already applied (`economy-anthropic-author@4` and
+the economy pair already applied (`economy-anthropic-author@5` and
 `economy-openai-critic@1`). An explicit model or pair wins, and existing
 workspaces keep their stored models.
 
