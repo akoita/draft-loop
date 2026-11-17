@@ -3149,8 +3149,8 @@ export function ReviewWorkspace({
             tabIndex={-1}
             ref={reviewColumnRef}
           >
-            {/* With no draft there is nothing to read or approve yet: the status says why. */}
-            {hasArtifact ? <ScreenHint screen="review" /> : null}
+            {/* The hint asks for decisions, so it waits for a draft and for the review to pause. */}
+            {hasArtifact && !reviewWorking ? <ScreenHint screen="review" /> : null}
             <div className="doc-toolbar">
               <div className="section-heading">
                 <div>
