@@ -7648,6 +7648,8 @@ input[type="text"].workspace-title-input {
     /* Docked like a toolbar: the page fades into the bar's own colour just above its edge, where a
        dark shadow made the page look sunk under it. */
     box-shadow: 0 -1.5rem 1.25rem -0.5rem var(--surface);
+    /* Docked, the bar measures its own width so a phone-narrow bar can pack its export controls. */
+    container: gate-bar / inline-size;
   }
 
   /* On the review page the footer already says the review is running and offers its controls, so
@@ -7680,6 +7682,91 @@ input[type="text"].workspace-title-input {
   /* The versions stack here, so a vertical divider has nothing left to divide. */
   .compare-split-handle {
     display: none;
+  }
+}
+
+/* A phone-narrow docked footer keeps the export controls in three short rows, so the application
+   above keeps most of the screen: the templates as one row of named thumbnails, then the format,
+   Preview and Export side by side. Each description stays in the template's accessible name, and
+   Preview shows the real look. */
+@container gate-bar (inline-size < 36rem) {
+  .gate-action-bar .export-templates {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .gate-action-bar .export-template-option {
+    position: relative;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 44px;
+    padding: var(--space-1) 6px;
+  }
+
+  /* The highlighted card already marks the choice; the radio stays focusable for the keyboard. */
+  .gate-action-bar .export-template-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .gate-action-bar .export-template-option:has(input:focus-visible) {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  .gate-action-bar .export-template-preview {
+    width: 22px;
+    height: 30px;
+    padding: 3px;
+  }
+
+  .gate-action-bar .export-template-text {
+    min-width: 0;
+  }
+
+  .gate-action-bar .export-template-text span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .gate-action-bar .export-action {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  /* Wide enough for the longest format name; Export moves to its own line before it squeezes. */
+  .gate-action-bar .export-format {
+    flex: 1 0 6.5rem;
+  }
+
+  .gate-action-bar .export-format select {
+    min-height: 44px;
+    padding-inline: var(--space-2);
+  }
+
+  .gate-action-bar .export-action .button {
+    min-height: 44px;
+  }
+
+  /* Shortcut hints mean nothing on a touch screen and would push Export onto a second line. */
+  .gate-action-bar kbd {
+    display: none;
+  }
+}
+
+/* Narrower still, each template's name goes under its thumbnail so a whole word fits. */
+@container gate-bar (inline-size < 24rem) {
+  .gate-action-bar .export-template-option {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
   }
 }
 
