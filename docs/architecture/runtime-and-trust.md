@@ -432,19 +432,8 @@ nothing.
 - **Finding decisions.** The API logs one `finding decided` line per decision
   on a finding: run id, finding code, category, severity and decision. It never
   logs the finding's message or the member's rationale.
-- **Daily quality digest.** The first worker start of each UTC day reduces the
-  previous day's spans across active organisations to one content-free digest
-  (#2916): attempts by step and model, failures grouped by step, model, error
-  type, stage and reason with up to three run ids, revision modes, patch
-  rejections and retrieval counts. It is stored in `quality_digests` and
-  logged as one `quality digest` line, which the outer loop reads (#2914).
-- **Insight ledger.** The same sweep keys each failure pattern by its
-  mechanism, such as `failure:author:<model>:invalid-response:max_tokens`, and
-  keeps it in `quality_insights` (#2917). A pattern is `new`, then `recurring`;
-  14 days unseen makes it `resolved`. A pattern listed in
-  `qualityInsightDismissals` (`packages/application/src/quality-insights.ts`)
-  stays `dismissed`, with its issue linked. The sweep logs the changes and the
-  open patterns as one `quality insights` line.
+- **Outer loop.** A daily sweep reduces these spans to a digest and a ledger
+  of recurring failure patterns: see [Outer loop](outer-loop.md).
 - **Plan.** Exporting spans locally (#1104) is planned.
 
 ## Clients and adapters
