@@ -14,6 +14,7 @@ import { createDraftsApi } from "./drafts.js";
 import { createFeedbackApi } from "./feedback.js";
 import { createHelpApi } from "./help.js";
 import { createMaterialApi } from "./material.js";
+import { createProjectsApi } from "./projects.js";
 import { createRunsApi } from "./runs.js";
 import { createWorkJournalMcpServer } from "./server.js";
 
@@ -37,11 +38,16 @@ export const remoteScopes = [
   "draftloop:jobs:write",
   "draftloop:drafts:read",
   "draftloop:runs:start",
+  "draftloop:evidence:write",
 ] as const;
-/** Granted only when the person adds them: reading drafts, and spending within a cap (#2658). */
+/**
+ * Granted only when the person adds them: reading drafts, spending within a cap (#2658), and
+ * filing project cards (#2895).
+ */
 const remoteOptInScopes: ReadonlySet<string> = new Set([
   "draftloop:drafts:read",
   "draftloop:runs:start",
+  "draftloop:evidence:write",
 ]);
 /** What a connection asks for unless the client names scopes. */
 export const remoteDefaultScopes = remoteScopes.filter((scope) => !remoteOptInScopes.has(scope));
@@ -108,6 +114,7 @@ export function createDraftLoopMcpServer(config: WorkJournalApiConfig): McpServe
     createMaterialApi(call),
     createFeedbackApi(call),
     createHelpApi(call),
+    createProjectsApi(call),
   );
 }
 

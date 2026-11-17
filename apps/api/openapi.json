@@ -1392,9 +1392,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -1448,9 +1449,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -7737,6 +7739,53 @@
           "month"
         ]
       },
+      "ProjectCardResultInput": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "description": "The pending card's id, a work journal note id.",
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_discarded",
+              "validated"
+            ]
+          },
+          "duplicate_of": {
+            "type": "string"
+          },
+          "possible_duplicate_of": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screening": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ]
+          },
+          "review_url": {
+            "description": "Where the candidate reviews the card.",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "possible_duplicate_of",
+          "message"
+        ]
+      },
       "WorkJournalRecordResultInput": {
         "type": "object",
         "properties": {
@@ -10155,9 +10204,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -10212,9 +10262,10 @@
                 "applications:read",
                 "jobs:write",
                 "drafts:read",
-                "runs:start"
+                "runs:start",
+                "evidence:write"
               ],
-              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+              "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
             },
             "description": "What the token may do."
           },
@@ -15943,6 +15994,54 @@
           "unpricedCalls",
           "lines",
           "month"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectCardResult": {
+        "type": "object",
+        "properties": {
+          "card_id": {
+            "description": "The pending card's id, a work journal note id.",
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "duplicate",
+              "previously_discarded",
+              "validated"
+            ]
+          },
+          "duplicate_of": {
+            "type": "string"
+          },
+          "possible_duplicate_of": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screening": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "flagged",
+              "unscreened"
+            ]
+          },
+          "review_url": {
+            "description": "Where the candidate reviews the card.",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "possible_duplicate_of",
+          "message"
         ],
         "additionalProperties": false
       },
@@ -25304,6 +25403,305 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/work-journal/projects": {
+      "post": {
+        "summary": "File a project card about one code repository, pending the candidate's review",
+        "description": "What the MCP tool add_project sends: a short, cited summary of one repository the agent read on the candidate's machine, never its code. Every number is counted from git. The card waits in the candidate's Work journal and becomes a project source only once they approve it. Refusals are content-free codes: invalid_card, secret_like_content, contributor_identity (an email address anywhere), private_card_with_links, link_not_https (422), not_consented (403), rate_limited (429) and a body over 32 KB (413); in sign-in mode, storage_consent_required (409). A repeat answers duplicate; a card the candidate discarded answers previously_discarded. dry_run validates without storing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 160
+                  },
+                  "summary": {
+                    "type": "string",
+                    "minLength": 40,
+                    "maxLength": 1500
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "sole-author",
+                      "lead",
+                      "contributor"
+                    ]
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ]
+                  },
+                  "stack": {
+                    "minItems": 1,
+                    "maxItems": 15,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    }
+                  },
+                  "contribution": {
+                    "type": "object",
+                    "properties": {
+                      "own_commits": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      "total_commits": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      "first_commit": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                      },
+                      "last_commit": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$"
+                      },
+                      "merged_pull_requests": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "other_contributors": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      }
+                    },
+                    "required": [
+                      "own_commits",
+                      "total_commits",
+                      "first_commit",
+                      "last_commit",
+                      "other_contributors"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "scale": {
+                    "default": {},
+                    "type": "object",
+                    "properties": {
+                      "releases": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "stars": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000
+                      },
+                      "continuous_integration": {
+                        "type": "boolean"
+                      },
+                      "automated_tests": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "highlights": {
+                    "default": [],
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 8,
+                          "maxLength": 300
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "repository_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "live_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "release_url": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "dedupe_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "dry_run": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "purpose",
+                  "summary",
+                  "role",
+                  "visibility",
+                  "stack",
+                  "contribution"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCardResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCardResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/work-journal/notes/{noteId}": {
       "get": {
         "summary": "Read one work journal note for review",
@@ -28020,7 +28418,7 @@
     "/v1/workspaces/{workspaceId}/agent-tokens": {
       "post": {
         "summary": "Issue an agent token",
-        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions) and runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
+        "description": "A token for an agent that reaches only the routes its scopes admit in this workspace: journal (record_work, list_work), applications:read (applications and run state), jobs:write (a job application from pasted text) drafts:read (a run's exports and the saved cover letters and interview questions), runs:start (price and start CV runs, and draft cover letters and interview questions, within monthly_cap_usd, which it requires) and evidence:write (add_project: project cards that wait for the candidate's approval). Approvals, decisions, consent and settings stay with the person. It expires after expires_in_days (90 by default, at most 365). A workspace holds at most 20 active tokens (409 agent_token_limit); revoke one first. The secret is in this answer only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -28043,7 +28441,7 @@
                   "scopes": {
                     "description": "What the token may do; [\"journal\"] by default.",
                     "minItems": 1,
-                    "maxItems": 5,
+                    "maxItems": 6,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -28052,9 +28450,10 @@
                         "applications:read",
                         "jobs:write",
                         "drafts:read",
-                        "runs:start"
+                        "runs:start",
+                        "evidence:write"
                       ],
-                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap."
+                      "description": "journal: record work and list note titles. applications:read: list and read job applications and run state. jobs:write: add a job application from pasted job text. drafts:read: read a run's exports and the saved cover letters and interview questions. runs:start: price and start CV runs on a reviewed brief, and draft cover letters and interview questions, within the token's monthly spend cap. evidence:write: file project cards about code repositories, which wait for the candidate's approval."
                     }
                   },
                   "monthly_cap_usd": {

@@ -1,4 +1,6 @@
 import { t } from "@lingui/core/macro";
+
+import type { ProjectCardView } from "./project-card-facts.js";
 /**
  * The Work journal review's view model (#2024): the notes an agent recorded, as the candidate
  * reviews them on the Career evidence page. It only arranges what the API returns; the server
@@ -34,6 +36,8 @@ export interface WorkJournalReviewNote {
   readonly possible_duplicate_of: readonly string[];
   readonly screening: { readonly verdict: "clear" | "flagged" | "unscreened" };
   readonly created_at: string;
+  /** Set when the note is a project card about one code repository (#2895). */
+  readonly project_card?: ProjectCardView | undefined;
   /** The agent token that filed the note, when one did. */
   readonly agent_token_id?: string | undefined;
   /** The agent tokens that amended it since. */

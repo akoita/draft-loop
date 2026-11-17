@@ -49,7 +49,11 @@ that each cite a file or pull request.
 - A card holding a key-like string or any email address is refused. Other
   contributors appear only as a count.
 
-Agents file cards through the agent channel once #2895 ships.
+An agent with the `evidence:write` scope files a card with the MCP tool
+`add_project`, after showing it to you
+([agent channel](../reference/agent-channel.md#code-projects-as-evidence)).
+The Work journal shows the card's counts and each highlight's source, so you
+can check them before you approve.
 
 ## How to test it
 
@@ -68,7 +72,8 @@ Agents file cards through the agent channel once #2895 ships.
 | API    | `GET`/`POST /v1/knowledge-bases/{id}/sources`                              |
 | API    | `GET /v1/knowledge-bases/{id}/sources/{sourceId}/file` (download)          |
 | API    | `PUT /v1/workspaces/{id}/knowledge-selection` (bases a run uses)           |
-| MCP    | none; the [work journal](../reference/agent-channel.md) adds notes instead |
+| API    | `POST /v1/workspaces/{id}/work-journal/projects` (a project card)          |
+| MCP    | `add_project`; the [work journal](../reference/agent-channel.md) adds notes |
 
 ## Limits
 
