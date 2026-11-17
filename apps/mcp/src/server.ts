@@ -13,8 +13,8 @@ import { type DraftsApi, registerDraftTools } from "./drafts.js";
 import { type FeedbackApi, registerFeedbackTools } from "./feedback.js";
 import { type HelpApi, registerHelpTools } from "./help.js";
 import { type MaterialApi, registerMaterialTools } from "./material.js";
-import { type ProjectsApi, registerProjectTools } from "./projects.js";
 import { type OperatorFeedbackApi, registerOperatorFeedbackTools } from "./operator-feedback.js";
+import { type ProjectsApi, registerProjectTools } from "./projects.js";
 import { registerApplicationPrompts } from "./prompts.js";
 import { type RunsApi, registerRunTools } from "./runs.js";
 
