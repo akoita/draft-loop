@@ -51,6 +51,22 @@ describe.runIf(connectionString !== undefined)("Postgres quality digests (#2916)
         "SELECT digest FROM quality_digests WHERE day = '2026-11-16'",
       );
       expect(row?.digest).toEqual({ runs: 1 });
+
+      const insight = {
+        key: "failure:author:economy-author:invalid-response:max_tokens",
+        firstSeen: "2026-11-16",
+        lastSeen: "2026-11-16",
+        daysSeen: 1,
+        occurrences: 4,
+        runIds: ["run-1"],
+        status: "new" as const,
+        issue: null,
+      };
+      await digests.saveInsights([insight]);
+      await digests.saveInsights([{ ...insight, status: "dismissed", issue: 2873 }]);
+      await expect(digests.listInsights()).resolves.toEqual([
+        { ...insight, status: "dismissed", issue: 2873 },
+      ]);
     } finally {
       await digests.close();
       await schema.drop();

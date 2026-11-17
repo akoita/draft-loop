@@ -27,7 +27,23 @@ export interface QualityDigests {
     from: Date,
     to: Date,
   ) => Promise<readonly QualitySweepSpan[]>;
+  /** Every insight in the ledger (#2917), at most 1,000. */
+  readonly listInsights: () => Promise<readonly QualityInsightRow[]>;
+  /** Inserts or replaces each insight, in one transaction. */
+  readonly saveInsights: (insights: readonly QualityInsightRow[]) => Promise<void>;
   readonly close: () => Promise<void>;
+}
+
+/** One ledger row; the same shape as the application's `QualityInsight`. */
+export interface QualityInsightRow {
+  readonly key: string;
+  readonly firstSeen: string;
+  readonly lastSeen: string;
+  readonly daysSeen: number;
+  readonly occurrences: number;
+  readonly runIds: readonly string[];
+  readonly status: "new" | "recurring" | "resolved" | "dismissed";
+  readonly issue: number | null;
 }
 
 const dayPattern = /^\d{4}-\d{2}-\d{2}$/u;
@@ -80,6 +96,49 @@ export function createPostgresQualityDigests(options: PostgresSchemaOptions): Qu
           ? JSON.parse(row.attributes)
           : row.attributes) as RunSpanAttributes,
       }));
+    },
+    listInsights: async () => {
+      const rows = await pool.query(
+        `SELECT key, first_seen, last_seen, days_seen, occurrences, run_ids, status, issue
+           FROM quality_insights ORDER BY key LIMIT 1000`,
+      );
+      return rows.map((row) => ({
+        key: String(row.key),
+        firstSeen: String(row.first_seen),
+        lastSeen: String(row.last_seen),
+        daysSeen: Number(row.days_seen),
+        occurrences: Number(row.occurrences),
+        runIds: (typeof row.run_ids === "string"
+          ? JSON.parse(row.run_ids)
+          : row.run_ids) as string[],
+        status: String(row.status) as QualityInsightRow["status"],
+        issue: row.issue === null ? null : Number(row.issue),
+      }));
+    },
+    saveInsights: async (insights) => {
+      await pool.transaction(async (executor) => {
+        for (const insight of insights) {
+          await executor.query(
+            `INSERT INTO quality_insights
+               (key, first_seen, last_seen, days_seen, occurrences, run_ids, status, issue)
+             VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
+             ON CONFLICT (key) DO UPDATE SET
+               first_seen = EXCLUDED.first_seen, last_seen = EXCLUDED.last_seen,
+               days_seen = EXCLUDED.days_seen, occurrences = EXCLUDED.occurrences,
+               run_ids = EXCLUDED.run_ids, status = EXCLUDED.status, issue = EXCLUDED.issue`,
+            [
+              insight.key,
+              requireDay(insight.firstSeen),
+              requireDay(insight.lastSeen),
+              insight.daysSeen,
+              insight.occurrences,
+              JSON.stringify(insight.runIds.slice(0, 3)),
+              insight.status,
+              insight.issue,
+            ],
+          );
+        }
+      });
     },
     close: () => pool.close(),
   };

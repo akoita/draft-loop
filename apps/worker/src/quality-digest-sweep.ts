@@ -1,11 +1,13 @@
 /**
  * The daily quality digest (#2916): once per UTC day, the first worker start reduces the previous
  * day's run spans across every active organisation to a content-free digest, stores it and logs it
- * as one `quality digest` line for the outer loop's diagnosis (#2914). A failure is logged, never
+ * as one `quality digest` line for the outer loop's diagnosis (#2914), then updates the insight
+ * ledger (#2917) and logs its changes and open patterns as one `quality insights` line. A failure is logged, never
  * thrown, and never touches a run.
  */
 
 import { buildQualityDigest, type QualityDigest } from "@draft-loop/application/quality-digest";
+import { insightObservations, nextQualityInsights } from "@draft-loop/application/quality-insights";
 import { createPostgresQualityDigests, type QualityDigests } from "@draft-loop/storage-postgres";
 
 import { errorFields, logLine } from "./logging.js";
@@ -17,7 +19,12 @@ export const maximumDigestOrganisations = 500;
 
 export type QualityDigestPorts = Pick<
   QualityDigests,
-  "claimDay" | "save" | "organisationsActiveSince" | "spansBetween"
+  | "claimDay"
+  | "save"
+  | "organisationsActiveSince"
+  | "spansBetween"
+  | "listInsights"
+  | "saveInsights"
 > & {
   readonly log: (message: string, fields: Record<string, unknown>) => void;
 };
@@ -40,6 +47,18 @@ export async function sweepQualityDigest(
   const digest = buildQualityDigest({ day, organisations: organisations.length, spans });
   await ports.save(day, digest as unknown as Record<string, unknown>);
   ports.log("quality digest", { ...digest });
+
+  // The insight ledger (#2917): new, recurring, resolved and dismissed patterns.
+  const { insights, changes } = nextQualityInsights({
+    day,
+    existing: await ports.listInsights(),
+    observations: insightObservations(digest),
+  });
+  await ports.saveInsights(insights);
+  const open = (await ports.listInsights()).filter(
+    (insight) => insight.status === "new" || insight.status === "recurring",
+  );
+  ports.log("quality insights", { day, changes, open });
   return digest;
 }
 
@@ -60,6 +79,8 @@ export async function runQualityDigest(wiring: {
         save: digests.save,
         organisationsActiveSince: digests.organisationsActiveSince,
         spansBetween: digests.spansBetween,
+        listInsights: digests.listInsights,
+        saveInsights: digests.saveInsights,
         log: (message, fields) => console.info(logLine("INFO", message, fields)),
       },
       { now: (wiring.now ?? (() => new Date()))() },

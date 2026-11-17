@@ -122,6 +122,7 @@ export {
 export {
   createPostgresQualityDigests,
   type QualityDigests,
+  type QualityInsightRow,
   type QualitySweepSpan,
 } from "./quality-digests.js";
 export {

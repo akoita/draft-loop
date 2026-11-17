@@ -1,3 +1,4 @@
+import type { QualityInsightRow } from "@draft-loop/storage-postgres";
 import { describe, expect, it, vi } from "vitest";
 
 import { sweepQualityDigest } from "./quality-digest-sweep.js";
@@ -16,6 +17,7 @@ describe("the daily quality digest sweep (#2916)", () => {
       },
     ]);
     const lines: { message: string; fields: Record<string, unknown> }[] = [];
+    const saved: QualityInsightRow[] = [];
 
     const digest = await sweepQualityDigest(
       {
@@ -23,6 +25,10 @@ describe("the daily quality digest sweep (#2916)", () => {
         save,
         organisationsActiveSince: async () => ["org-a", "org-b"],
         spansBetween,
+        listInsights: async () => saved,
+        saveInsights: async (insights) => {
+          saved.push(...insights);
+        },
         log: (message, fields) => lines.push({ message, fields }),
       },
       { now },
@@ -35,7 +41,18 @@ describe("the daily quality digest sweep (#2916)", () => {
     expect(digest).toMatchObject({ day: "2026-11-16", organisations: 2, runs: 2 });
     expect(digest?.failures[0]).toMatchObject({ errorType: "provider-error", count: 2 });
     expect(save).toHaveBeenCalledWith("2026-11-16", digest);
-    expect(lines).toEqual([{ message: "quality digest", fields: { ...digest } }]);
+    const insightKey = "failure:author:unknown:provider-error:none";
+    expect(lines).toEqual([
+      { message: "quality digest", fields: { ...digest } },
+      {
+        message: "quality insights",
+        fields: {
+          day: "2026-11-16",
+          changes: [{ key: insightKey, from: null, to: "new" }],
+          open: [expect.objectContaining({ key: insightKey, status: "new", occurrences: 2 })],
+        },
+      },
+    ]);
   });
 
   it("does nothing when another start already claimed the day", async () => {
@@ -48,6 +65,8 @@ describe("the daily quality digest sweep (#2916)", () => {
           save: async () => undefined,
           organisationsActiveSince,
           spansBetween: async () => [],
+          listInsights: async () => [],
+          saveInsights: async () => undefined,
           log,
         },
         { now },
