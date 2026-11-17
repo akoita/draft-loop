@@ -96,6 +96,14 @@ export const PUBLIC_TEXT_RULES = [
 export const STRICT_RULES = [
   { name: "Quoted passage (blockquote)", regex: /^\s*>\s*\S.{40,}$/gmu },
   { name: "Quoted passage", regex: /["“«][^"”»\n]{40,}["”»]/gu },
+  // A pasted log line can carry whatever a request or run held; describe it, never copy it.
+  { name: "Pasted log line (JSON)", regex: /\{\s*"[^"]+"\s*:[^}]*"[^"]+"\s*:/gu },
+  {
+    name: "Pasted log line (log fields)",
+    regex:
+      /\b(?:jsonPayload|textPayload|protoPayload|httpRequest|insertId|logName|trace_sampled)\b/gu,
+  },
+  { name: "Pasted log line (timestamp)", regex: /\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/gu },
 ];
 
 export function parseDenylist(raw = "") {

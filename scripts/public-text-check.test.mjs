@@ -58,6 +58,18 @@ describe("public text check", () => {
     assert.deepEqual(rules('code "short"', { strict: true }), []);
   });
 
+  test("strict mode refuses pasted log lines but keeps dates", () => {
+    const strict = (text) => rules(text, { strict: true });
+    assert.deepEqual(strict('{"level":30,"msg":"run failed","detail":"x"}'), [
+      "Pasted log line (JSON)",
+    ]);
+    assert.deepEqual(strict("filter on jsonPayload.message"), ["Pasted log line (log fields)"]);
+    assert.deepEqual(strict("at 2026-11-17T05:47:12Z the worker stopped"), [
+      "Pasted log line (timestamp)",
+    ]);
+    assert.deepEqual(strict("Seen on 2026-11-17 in server-v0.26.11, 4 of 31 runs"), []);
+  });
+
   test("matches the private deny-list without case", () => {
     const denylist = parseDenylist("Acme-Prod-4821, internal-host\nab");
     assert.deepEqual(denylist, ["Acme-Prod-4821", "internal-host"]);
