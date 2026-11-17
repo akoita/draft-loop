@@ -1240,6 +1240,16 @@ export interface ApiSchemas {
     readonly createdAt: string | null;
     readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
   };
+  "ServiceNotice": {
+    readonly kind: "maintenance";
+    readonly startsAt: string;
+    readonly endsAt: string;
+    readonly readOnly: boolean;
+    readonly state: "upcoming" | "ongoing" | "overrunning";
+  };
+  "ServiceNoticeResponse": {
+    readonly notice: ApiSchemas["ServiceNotice"] | null;
+  };
   "SignedUp": {
     readonly organisationId: string;
     readonly memberId: string;
@@ -1481,6 +1491,9 @@ export interface ApiOperations {
   };
   "GET /v1/auth/config": {
     readonly response: ApiSchemas["AuthConfig"];
+  };
+  "GET /v1/service-notice": {
+    readonly response: ApiSchemas["ServiceNoticeResponse"];
   };
   "POST /v1/client-errors": {
     readonly body: {
