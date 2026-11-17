@@ -132,9 +132,7 @@ export function applicationStepStatusText(status: ApplicationStepStatus): string
 /** The job step's opening note for its source and whether the job description is ready. */
 export function applicationJobStepNote(source: ApplicationJobSource, ready: boolean): string {
   if (source === "approved-page") {
-    return ready
-      ? t`Job page approved when you created this application.`
-      : t`Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them.`;
+    return t`Job page approved when you created this application.`;
   }
   return ready
     ? t`Job description added.`

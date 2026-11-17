@@ -2748,7 +2748,7 @@ export function ReviewWorkspace({
                 <>
                   <p className="eyebrow">{t`Before the review`}</p>
                   <h2 id="onboarding-title">{t`Start the review`}</h2>
-                  <p className="onboarding-copy">{t`Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages.`}</p>
+                  <p className="onboarding-copy">{t`Finish the three steps in order.`}</p>
                   <ApplicationStepsView
                     steps={applicationStepStates(startConditions)}
                     {...(applicationName === undefined ? {} : { applicationName })}

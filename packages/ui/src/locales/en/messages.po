@@ -3765,8 +3765,8 @@ msgid "Finds passages by meaning with the local model, even without shared keywo
 msgstr "Finds passages by meaning with the local model, even without shared keywords."
 
 #: packages/ui/src/review.tsx
-msgid "Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages."
-msgstr "Finish the three steps in order. Career evidence, models, writing policy and sign-in are workspace settings with their own pages."
+msgid "Finish the three steps in order."
+msgstr "Finish the three steps in order."
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Finish the workspace setup above."
@@ -4538,10 +4538,6 @@ msgstr "Job page address"
 #: packages/ui/src/application-steps-model.ts
 msgid "Job page approved when you created this application."
 msgstr "Job page approved when you created this application."
-
-#: packages/ui/src/application-steps-model.ts
-msgid "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them."
-msgstr "Job page approved when you created this application. DraftLoop fetches it when you extract requirements, then you review them."
 
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -5433,6 +5429,10 @@ msgstr "Next: export"
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: export again to save a new copy"
 msgstr "Next: export again to save a new copy"
+
+#: packages/ui/src/job-requirements-extraction.tsx
+msgid "Next: extract the job's requirements"
+msgstr "Next: extract the job's requirements"
 
 #: packages/ui/src/review-work-tabs.tsx
 msgid "Next: nothing left · the CV is exported"
