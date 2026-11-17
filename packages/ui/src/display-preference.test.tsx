@@ -66,6 +66,18 @@ describe("the Display setting in Workspace settings", () => {
     expect(html).not.toContain('type="checkbox"');
   });
 
+  it("says where the current way of working shows", () => {
+    expect(withMode("guided", <DisplaySetting />)).toContain(
+      "the Getting started list on Home, and a one-line hint",
+    );
+    expect(withMode(null, <DisplaySetting />)).toContain(
+      "every Advanced options section is folded",
+    );
+    expect(withMode("everything", <DisplaySetting />)).toContain(
+      "every Advanced options section is open, on this screen too",
+    );
+  });
+
   it("marks Simple as current for a person who never chose", () => {
     const html = withMode(null, <DisplaySetting />);
     expect(html).toContain(

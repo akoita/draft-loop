@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { useShowEverything } from "./display-preference.js";
 
@@ -27,6 +27,13 @@ export function AdvancedOptions({ open, onToggle, note = null, children }: Advan
   // Show everything (#2789) starts every uncontrolled section open; the person can still fold it.
   const everything = useShowEverything();
   const [freeOpen, setFreeOpen] = useState(everything);
+  // Switching the Display setting applies at once, also to sections already on screen.
+  const shownMode = useRef(everything);
+  useEffect(() => {
+    if (shownMode.current === everything) return;
+    shownMode.current = everything;
+    setFreeOpen(everything);
+  }, [everything]);
   const shownOpen = open ?? freeOpen;
   return (
     <details

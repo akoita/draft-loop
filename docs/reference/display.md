@@ -35,8 +35,9 @@ the work is done:
 5. Download it.
 
 The current step has one button that opens the right screen. **Hide the
-guide** folds the list to one line, and **Show the guide** brings it back. The
-list goes away after your first download.
+guide** folds the list to one line, and **Show the guide** brings it back.
+After your first download, the list becomes one line that says every step is
+done, with a **New application** button for the next job.
 
 Guided also puts one line at the top of Career evidence, Career profile, New
 application and the CV review. It says what to do on that screen.
@@ -50,7 +51,8 @@ steps** turns Guided on, **No thanks** hides the offer.
 2. Under **Display**, pick one of the three cards: **Guide me step by step**,
    **Simple** or **Show everything**. The current one is marked **Current**.
 
-The screens change at once.
+The screens change at once, including sections already open on the screen. A
+line under the cards says where the current choice shows.
 
 ## Where the choice is kept
 

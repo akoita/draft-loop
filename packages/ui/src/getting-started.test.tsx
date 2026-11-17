@@ -122,7 +122,7 @@ describe("who sees the guide", () => {
     expect(gettingStartedView({ mode: null, guideHidden: false }, empty).kind).toBe("hidden");
   });
 
-  it("waits while the record loads and goes away after the first download", () => {
+  it("waits while the record loads and says every step is done after the first download", () => {
     expect(gettingStartedView(guided, { ...empty, applications: { status: "loading" } }).kind).toBe(
       "hidden",
     );
@@ -135,7 +135,19 @@ describe("who sees the guide", () => {
         applications: [application({ status: "exported", exportCount: 1 })],
       },
     };
-    expect(gettingStartedView(guided, finished).kind).toBe("hidden");
+    expect(gettingStartedView(guided, finished).kind).toBe("complete");
+    expect(gettingStartedView({ mode: "guided", guideHidden: true }, finished).kind).toBe("hidden");
+    expect(gettingStartedView({ mode: "standard", guideHidden: false }, finished).kind).toBe(
+      "hidden",
+    );
+    const html = renderToStaticMarkup(
+      <DisplayPreferenceProvider value={{ preference: guided, choose: () => undefined }}>
+        <GettingStarted inputs={finished} actions={noActions} />
+      </DisplayPreferenceProvider>,
+    );
+    expect(html).toContain("You have done every step");
+    expect(html).toContain("New application");
+    expect(html).toContain("Hide the guide");
   });
 });
 
