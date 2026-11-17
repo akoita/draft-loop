@@ -213,6 +213,10 @@ the web screen's token: it answers 200. Without step 3 or 4 the token has no
 factor`. Remove the role to take the reach away; tokens already issued expire
 within five minutes.
 
+Signed in this way, the operator opens **Operator** from the account menu to
+work the waitlist, invites and feedback
+([Operator screen](../features/organisations-and-consent.md#operator-screen)).
+
 ### Operator routes
 
 | Route                                                            | Body and headers                                                                                             | Answer                                     |

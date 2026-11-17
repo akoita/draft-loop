@@ -1,6 +1,8 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
 import type { ApiSchemas } from "./api-client.js";
+import { OperatorButton } from "./operator.js";
+import { canOperate } from "./operator-model.js";
 import { accountLabel } from "./records-model.js";
 import { SignOutButton } from "./shell-actions.js";
 
@@ -13,13 +15,15 @@ export interface AccountMenuProps {
   /** The person's own data, such as download and delete, or nothing when they may not. */
   readonly yourData?: ReactNode;
   readonly onSignOut: () => void;
+  /** Opens the operator page; offered only when `/v1/me` says the caller may operate (#2829). */
+  readonly onOperator?: (() => void) | undefined;
 }
 
 /**
  * Who is signed in and, on a team plan, which team they act for: a small menu at the start of the
  * top bar with the person's data and sign-out.
  */
-export function AccountMenu({ me, onePerson, yourData, onSignOut }: AccountMenuProps) {
+export function AccountMenu({ me, onePerson, yourData, onSignOut, onOperator }: AccountMenuProps) {
   const menu = useRef<HTMLDetailsElement>(null);
   // A click outside the open menu, or Escape, folds it, as menus elsewhere do.
   useEffect(() => {
@@ -47,6 +51,14 @@ export function AccountMenu({ me, onePerson, yourData, onSignOut }: AccountMenuP
       </summary>
       <div className="account-menu-body">
         {yourData}
+        {onOperator !== undefined && canOperate(me) ? (
+          <OperatorButton
+            onOpen={() => {
+              if (menu.current !== null) menu.current.open = false;
+              onOperator();
+            }}
+          />
+        ) : null}
         <SignOutButton onSignOut={onSignOut} />
       </div>
     </details>

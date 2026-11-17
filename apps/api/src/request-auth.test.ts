@@ -407,6 +407,26 @@ describe("operator routes", () => {
       expect(response.statusCode).toBe(401);
     });
 
+    it("refuses a member without the role on every route the operator page uses (#2829)", async () => {
+      const api = await signInApi(async () => member);
+      const memberToken = await token({ ...operatorClaims, realm_access: { roles: [] } });
+      const routes = [
+        ["GET", "/v1/operator/waitlist"],
+        ["POST", "/v1/operator/waitlist/entry-1/invite"],
+        ["GET", "/v1/operator/beta-invites"],
+        ["GET", "/v1/operator/feedback"],
+      ] as const;
+
+      for (const [method, url] of routes) {
+        const response = await api.inject({
+          method,
+          url,
+          headers: { authorization: `Bearer ${memberToken}` },
+        });
+        expect({ url, status: response.statusCode }).toEqual({ url, status: 401 });
+      }
+    });
+
     it("is refused from any client but the web screen's", async () => {
       expect((await operatorCall({ ...operatorClaims, azp: "an-assistant" })).statusCode).toBe(401);
       expect((await operatorCall({ ...operatorClaims, azp: undefined })).statusCode).toBe(401);

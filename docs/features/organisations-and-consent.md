@@ -60,6 +60,22 @@ An organisation that already holds two job searches keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own
 access from the screen.
 
+## Operator screen
+
+The operator runs the beta from **Operator** in the web screen. A named
+operator finds it in the account menu; owner-token mode shows it in the top
+bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
+`kind: owner` or `operator: true`.
+
+| Section  | What it shows                                                                  |
+| -------- | ------------------------------------------------------------------------------ |
+| Waitlist | Entries newest first. **Invite** turns one into an invite and shows its code once |
+| Invites  | Each invite, sent, redeemed or revoked, and the beta accounts used and left    |
+| Feedback | Members' [notes and support tickets](feedback.md), newest first, read only     |
+
+Send the code to the person yourself: DraftLoop sends no email. Each invite is
+written to the audit log under the operator's sign-in.
+
 ## How to test it
 
 - Focused tests: `apps/api/src/organisation-routes.test.ts`,
@@ -69,6 +85,8 @@ access from the screen.
   `apps/api/src/consent-routes.test.ts`,
   `apps/api/src/record-erasure-routes.test.ts` and
   `apps/web/src/consent.test.tsx`.
+- The operator screen: `apps/web/src/operator.test.tsx`, and
+  `apps/api/src/request-auth.test.ts` for refusing a member without the role.
 - `pnpm test:postgres` adds the tenant isolation, consent enforcement and
   erasure suites.
 
@@ -77,6 +95,7 @@ access from the screen.
 | Kind   | Surface                                                                                       |
 | ------ | --------------------------------------------------------------------------------------------- |
 | Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up           |
+| Screen | Operator: waitlist, invites and feedback                                                      |
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
 | API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `/v1/operator/waitlist` |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
@@ -88,6 +107,8 @@ access from the screen.
 - Operator routes take the owner token, or a named operator's sign-in that
   holds the `draft-loop-operator` role and used a second factor
   ([setup](../operations/server-deploy.md#sign-in-as-a-named-operator)).
+- The operator screen revokes no invite; use
+  `DELETE /v1/operator/beta-invites/{inviteId}`. Invites do not expire.
 - Consent covers one candidate record; each record records its own.
 
 ## Related

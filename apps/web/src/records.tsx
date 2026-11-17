@@ -51,6 +51,8 @@ export interface RecordsProps {
   /** The service status, language and feedback, drawn after the account menu in the top bar. */
   readonly shellActions?: ReactNode;
   readonly onSignOut?: () => void;
+  /** Opens the operator page from the account menu, for a caller who may operate (#2829). */
+  readonly onOperator?: () => void;
   /** The screens for the chosen record; they call `onSaved` once they create or read the record. */
   readonly children: (recordId: string, onSaved: (recordId: string) => void) => ReactNode;
 }
@@ -60,7 +62,14 @@ export interface RecordsProps {
  * assigned to it (ADR 0011, D6). A new record is set up on the first-run screen under an id made
  * from the name the person typed; the name is saved once the record exists.
  */
-export function Records({ client, memory, shellActions, onSignOut, children }: RecordsProps) {
+export function Records({
+  client,
+  memory,
+  shellActions,
+  onSignOut,
+  onOperator,
+  children,
+}: RecordsProps) {
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
@@ -197,6 +206,7 @@ export function Records({ client, memory, shellActions, onSignOut, children }: R
             onePerson={onePerson}
             yourData={yourData}
             onSignOut={onSignOut}
+            onOperator={onOperator}
           />
         ),
       )}
