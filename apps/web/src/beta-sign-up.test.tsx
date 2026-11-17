@@ -22,6 +22,22 @@ describe("beta sign-up refusals", () => {
     });
   });
 
+  it("names the address the person is signed in with on a mismatch", () => {
+    const error = new ApiRequestError(
+      403,
+      "invite_email_mismatch",
+      "Refused.",
+      undefined,
+      undefined,
+      {
+        email: "ada@example.test",
+      },
+    );
+    expect(signUpRefusal(error)?.message).toContain(
+      "than ada@example.test, the one you are signed in with",
+    );
+  });
+
   it("leaves other errors to the generic message", () => {
     expect(signUpRefusal(refused(500, "internal"))).toBeUndefined();
     expect(signUpRefusal(new Error("offline"))).toBeUndefined();

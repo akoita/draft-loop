@@ -8690,6 +8690,10 @@ msgid "That invite has already been used. Each code opens one account; ask for a
 msgstr "That invite has already been used. Each code opens one account; ask for a new invite if it was not you."
 
 #: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address than {email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to."
+msgstr "That invite is for another email address than {email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to."
+
+#: apps/web/src/beta-sign-up-model.ts
 msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
 msgstr "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
 

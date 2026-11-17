@@ -132,6 +132,9 @@ describe("signing up with a beta invite", () => {
     expect(response.status).toBe(status);
     expect(response.body.error.code).toBe(refusal);
     expect(assignPlan).not.toHaveBeenCalled();
+    expect(response.body.error.params).toEqual(
+      refusal === "invite_email_mismatch" ? { email: "ada@example.test" } : undefined,
+    );
   });
 
   it("waits after five refused attempts by one sign-in", async () => {

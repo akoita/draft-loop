@@ -234,9 +234,14 @@ export function registerBetaSignUpRoutes(
       if (!result.redeemed) {
         window.refused += 1;
         request.log.info({ event: "sign_up_refused", refusal: result.refusal }, "sign-up refused");
-        return reply
-          .code(refusalStatus[result.refusal])
-          .send(apiError(result.refusal, refusalMessage[result.refusal]));
+        return reply.code(refusalStatus[result.refusal]).send(
+          apiError(
+            result.refusal,
+            refusalMessage[result.refusal],
+            // The caller's own verified address, so the screen can say which sign-in is wrong.
+            result.refusal === "invite_email_mismatch" ? { email: identity.email } : undefined,
+          ),
+        );
       }
       await options.assignBetaPlan?.(result.organisationId, at);
       await options.recordActivity?.(result.organisationId);

@@ -8684,6 +8684,10 @@ msgid "That invite has already been used. Each code opens one account; ask for a
 msgstr "Cette invitation a déjà été utilisée. Chaque code ouvre un seul compte ; demandez une nouvelle invitation si ce n’était pas vous."
 
 #: apps/web/src/beta-sign-up-model.ts
+msgid "That invite is for another email address than {email}, the one you are signed in with. Sign out and sign in with the address the invite was sent to."
+msgstr "Cette invitation est destinée à une autre adresse e-mail que {email}, celle avec laquelle vous êtes connecté. Déconnectez-vous, puis connectez-vous avec l’adresse qui a reçu l’invitation."
+
+#: apps/web/src/beta-sign-up-model.ts
 msgid "That invite is for another email address. Sign out and sign in with the address the invite was sent to."
 msgstr "Cette invitation est destinée à une autre adresse e-mail. Déconnectez-vous, puis connectez-vous avec l’adresse qui a reçu l’invitation."
 
