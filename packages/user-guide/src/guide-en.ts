@@ -1,4 +1,4 @@
-import type { HelpGuide } from "./help-guide.js";
+import type { HelpGuide } from "./guide.js";
 
 export const englishHelpGuide: HelpGuide = {
   intro:

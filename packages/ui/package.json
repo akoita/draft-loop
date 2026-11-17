@@ -112,6 +112,7 @@
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/providers": "workspace:*",
+    "@draft-loop/user-guide": "workspace:*",
     "@lingui/core": "6.10.1",
     "@lingui/react": "6.10.1",
     "pdfjs-dist": "6.4.299",

@@ -1,8 +1,7 @@
+import { helpGuide, helpSectionIds } from "@draft-loop/user-guide";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { helpGuide, helpSectionIds } from "./help-guide.js";
 import { HelpButton, HelpDialog } from "./help-panel.js";
 import { ScreensI18nProvider } from "./i18n.js";
 

@@ -147,7 +147,8 @@ describe("agent tokens", () => {
     const document = app.swagger() as {
       paths: Record<string, Record<string, { security?: unknown[] }>>;
     };
-    const allowed = new Set([`post ${notes}`, `get ${notes}`]);
+    // The user guide is open to every journal token (#2881).
+    const allowed = new Set([`post ${notes}`, `get ${notes}`, "get /v1/workspaces/owner/help"]);
     let checked = 0;
     for (const [template, operations] of Object.entries(document.paths)) {
       const url = template.replace(/\{[^}]+\}/gu, (name) =>

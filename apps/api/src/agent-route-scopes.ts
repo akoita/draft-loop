@@ -32,6 +32,8 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`POST ${workspace}/work-journal/notes`]: { scope: "journal" },
   // Feedback goes with the journal scope, the one a token holds by default (#2843).
   [`POST ${workspace}/feedback`]: { scope: "journal" },
+  // The user guide holds no candidate material; it goes with the default scope too (#2881).
+  [`GET ${workspace}/help`]: { scope: "journal" },
   // Whole notes stay with the candidate's review; an agent lists titles only.
   [`GET ${workspace}/work-journal/notes`]: {
     scope: "journal",
@@ -111,6 +113,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/application-material/models",
   "GET /v1/auth/config",
   "GET /v1/health",
+  "GET /v1/help",
   "GET /v1/knowledge-bases",
   "GET /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules",
   "GET /v1/knowledge-bases/:knowledgeBaseId/sources",

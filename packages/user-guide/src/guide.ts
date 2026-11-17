@@ -1,14 +1,13 @@
 /**
- * The in-app user guide (#2830, #2880): short sections a member reads and searches from the Help
- * button.
+ * The user guide (#2830, #2880, #2881): short sections a member reads and searches from the Help
+ * button, and an agent reads through the API.
  *
- * The guide's prose lives in one module per language instead of the message catalog. Paragraphs
- * are too long to translate string by string, and the same text also serves search and agents
- * (#2881). Menus and buttons around it still go through the catalog.
+ * The prose lives in one module per language instead of the screens' message catalog. Paragraphs
+ * are too long to translate string by string, and the API and agents read the same text. This
+ * package has no dependency, so the browser screens and the server can both import it.
  */
-import { englishHelpGuide } from "./help-guide-en.js";
-import { frenchHelpGuide } from "./help-guide-fr.js";
-import type { ScreenLocale } from "./i18n.js";
+import { englishHelpGuide } from "./guide-en.js";
+import { frenchHelpGuide } from "./guide-fr.js";
 
 /** The guide's sections, in reading order. Every language has each one. */
 export const helpSectionIds = [
@@ -57,7 +56,14 @@ export const helpSectionFeatures: Readonly<Record<HelpSectionId, readonly string
   problems: ["feedback.md"],
 };
 
-/** The guide in the screen's language; the development pseudo-locale reads the English one. */
-export function helpGuide(locale: ScreenLocale): HelpGuide {
-  return locale === "fr" ? frenchHelpGuide : englishHelpGuide;
+/** The languages the guide is written in. */
+export const helpGuideLanguages = ["en", "fr"] as const;
+export type HelpGuideLanguage = (typeof helpGuideLanguages)[number];
+
+/**
+ * The guide in a language: French for `fr` and its regional tags, English for anything else,
+ * including the screens' development pseudo-locale.
+ */
+export function helpGuide(language: string): HelpGuide {
+  return language.toLowerCase().split("-")[0] === "fr" ? frenchHelpGuide : englishHelpGuide;
 }

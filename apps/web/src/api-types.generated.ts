@@ -473,6 +473,17 @@ export interface ApiSchemas {
   "Health": {
     readonly status: "ok";
   };
+  "HelpGuide": {
+    readonly language: "en" | "fr";
+    readonly intro: string;
+    readonly query: string | null;
+    readonly sections: readonly (ApiSchemas["HelpGuideSection"])[];
+  };
+  "HelpGuideSection": {
+    readonly id: string;
+    readonly title: string;
+    readonly paragraphs: readonly (string)[];
+  };
   "InterviewDetails": {
     readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
     readonly depth: "essential" | "extensive";
@@ -2869,6 +2880,23 @@ export interface ApiOperations {
     readonly response: {
       readonly notes: readonly (ApiSchemas["FeedbackNote"])[];
     };
+  };
+  "GET /v1/help": {
+    readonly query?: {
+      readonly language?: "en" | "fr";
+      readonly q?: string;
+    };
+    readonly response: ApiSchemas["HelpGuide"];
+  };
+  "GET /v1/workspaces/{workspaceId}/help": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly query?: {
+      readonly language?: "en" | "fr";
+      readonly q?: string;
+    };
+    readonly response: ApiSchemas["HelpGuide"];
   };
   "GET /speech-models/manifest.json": {
     readonly response: ApiSchemas["SpeechModelManifest"];

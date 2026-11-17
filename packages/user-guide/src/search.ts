@@ -2,7 +2,7 @@
  * Searching the user guide (#2880): plain word matching in the browser, no model and no request.
  * Accents and case are ignored, so "eleve" finds "élève" and "cv" finds "CV".
  */
-import type { HelpGuide, HelpSection } from "./help-guide.js";
+import type { HelpGuide, HelpSection } from "./guide.js";
 
 /** Lower case without accents or punctuation, so French and English words compare plainly. */
 export function foldForSearch(text: string): string {

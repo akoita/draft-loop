@@ -135,6 +135,9 @@ The full guide is the agent-toolkit `document-software` skill
 - `packages/embeddings` owns local text-embedding runtimes and the pinned model
   manifest behind a provider-independent port. It does not download models or
   persist vectors.
+- `packages/user-guide` owns the user guide's text in each language, its word
+  search and its Markdown form. It has no dependencies, so the browser, the API
+  and the MCP server read the same guide.
 - `packages/ui` owns the screens the desktop and the web share and the
   capability port they reach their host through. It runs in a browser: it
   never imports Electron, Node built-ins, provider SDKs or server packages.

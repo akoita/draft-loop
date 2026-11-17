@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { helpGuide } from "./help-guide.js";
-import { foldForSearch, searchHelpGuide } from "./help-search.js";
+import { helpGuide } from "./guide.js";
+import { foldForSearch, searchHelpGuide } from "./search.js";
 
 const ids = (locale: "en" | "fr", query: string) =>
   searchHelpGuide(helpGuide(locale), query).map((section) => section.id);
