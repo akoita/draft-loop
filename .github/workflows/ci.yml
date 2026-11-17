@@ -78,7 +78,7 @@ jobs:
       - name: Check dependency licenses
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm security:licenses
-      # Fails on a high or critical advisory in a production dependency.
+      # Fails on a high or critical production advisory that .audit-accept.json does not accept.
       - name: Audit production dependencies
         if: needs.scope.outputs.docs_only != 'true'
         run: pnpm security:audit

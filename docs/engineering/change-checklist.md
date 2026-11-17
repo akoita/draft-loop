@@ -60,6 +60,12 @@ and what you deferred, under the template's impact sections.
 
 ## Checks
 
+- [ ] CodeQL and the workflow audit (zizmor) have no new finding on the PR.
+      Their CI jobs run only in CI; read their results on the PR.
+- [ ] `pnpm security:audit` passes. A production advisory you cannot fix yet
+      is accepted in `.audit-accept.json` with a reason and an expiry date
+      ([SECURITY.md](../../SECURITY.md#accept-a-dependency-advisory-for-now)).
+
 Run the focused tests of the packages you changed while you work. Before the
 PR, run the full gate once:
 
