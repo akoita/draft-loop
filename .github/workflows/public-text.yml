@@ -1,0 +1,74 @@
+name: Public text check
+
+# This repository is public. Every issue, pull request, comment, review and pull request commit
+# message is scanned for private data (scripts/public-text-check.mjs): ids, emails, phone
+# numbers, cloud resource names, public IP addresses and the private deny-list held in the
+# PUBLIC_TEXT_DENYLIST secret. A hit fails this run and labels the item `privacy-check`; the log
+# names the rule and line, never the value. Event text is read from the event file, never
+# interpolated into a command.
+on:
+  issues:
+    types: [opened, edited, reopened]
+  # Safe here: the job checks out the default branch, runs no pull request code and reads the
+  # comment only from the event file.
+  issue_comment: # zizmor: ignore[dangerous-triggers]
+    types: [created, edited]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-text-${{ github.event.issue.number || github.event.pull_request.number }}-${{ github.event_name }}-${{ github.event.comment.id || github.event.review.id || 'item' }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Scan for private data
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Scan the event text
+        id: event
+        continue-on-error: true
+        env:
+          PUBLIC_TEXT_DENYLIST: ${{ secrets.PUBLIC_TEXT_DENYLIST }}
+        run: node scripts/public-text-check.mjs --github-event
+      - name: Scan the pull request's commit messages
+        id: commits
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          PUBLIC_TEXT_DENYLIST: ${{ secrets.PUBLIC_TEXT_DENYLIST }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git log --format=%B "$BASE_SHA..$HEAD_SHA" | node scripts/public-text-check.mjs
+      - name: Label the item
+        if: steps.event.outcome == 'failure' || steps.commits.outcome == 'failure'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels" -f "labels[]=privacy-check" > /dev/null
+      - name: Fail on a hit
+        if: steps.event.outcome == 'failure' || steps.commits.outcome == 'failure'
+        run: |
+          echo "::error::Possible private data in public text. Edit it out, then re-run this check."
+          exit 1

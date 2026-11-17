@@ -115,7 +115,13 @@ known problem is not reported every morning.
 - **No transcripts to a model.** The diagnosis reads these signals and the
   source code only. It never sends a run's material to a model.
 - **Public issues.** A proposed issue is anonymised: codes, counts, versions
-  and code citations.
+  and code citations. Run ids stay in the private report.
+- **Checked by code.** The diagnosis runs every draft through
+  `node scripts/public-text-check.mjs --strict` before showing it, and again
+  on the approved text. The Public text check workflow scans every issue, PR,
+  comment, review and PR commit message after posting, with a private
+  deny-list from the `PUBLIC_TEXT_DENYLIST` secret. A hit fails the run and
+  labels the item `privacy-check`; the log never prints the value.
 
 ## Act on a report
 

@@ -35,6 +35,9 @@ and what you deferred, under the template's impact sections.
       ([Sensitivity and screening](../features/sensitivity-and-screening.md)).
 - [ ] Logs carry ids, never candidate material.
 - [ ] Fixtures, tests and docs use fictional people, employers and jobs only.
+- [ ] The PR title, body and commit messages carry no ids, emails, real
+      names or infrastructure names. The Public text check workflow scans
+      them; run `node scripts/public-text-check.mjs` on a draft to check first.
 - [ ] Model and provider identities are recorded; no claim, date or metric is
       invented.
 
