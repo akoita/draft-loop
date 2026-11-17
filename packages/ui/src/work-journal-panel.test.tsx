@@ -203,3 +203,32 @@ describe("work journal provenance", () => {
     ).toBe("Filed by Claude Code on my laptop; amended by dlat_fixtureBBBB.");
   });
 });
+
+describe("project cards in the work journal (#2895)", () => {
+  it("shows the counted facts and each highlight's source before approval", () => {
+    const card = note("wjn_card", {
+      project_card: {
+        purpose: "A command-line tool that plans tide-safe kayak trips",
+        role: "sole-author",
+        contribution: {
+          own_commits: 412,
+          total_commits: 430,
+          first_commit: "2025-10-02",
+          last_commit: "2026-11-10",
+          merged_pull_requests: 37,
+          other_contributors: 2,
+        },
+        scale: { releases: 9, automated_tests: true },
+        highlights: [{ text: "Caches tide tables for offline trips", source: "README.md" }],
+      },
+    });
+    const html = renderToStaticMarkup(<WorkJournalPanel {...props} notes={[card]} />);
+    expect(html).toContain("Code project");
+    expect(html).toContain("Sole author");
+    expect(html).toContain("412 of 430 commits (96%), 2025-10-02 to 2026-11-10");
+    expect(html).toContain("Merged pull requests: 37");
+    expect(html).toContain("Releases: 9");
+    expect(html).toContain("Caches tide tables for offline trips");
+    expect(html).toContain("(README.md)");
+  });
+});

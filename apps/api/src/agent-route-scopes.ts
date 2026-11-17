@@ -25,11 +25,14 @@ const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   "jobs:write": "Add jobs",
   "drafts:read": "Read CVs and drafts",
   "runs:start": "Start runs and drafts",
+  "evidence:write": "File project cards",
 };
 
 /** Keys are `METHOD /route/:param`, as Fastify names a route. */
 export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`POST ${workspace}/work-journal/notes`]: { scope: "journal" },
+  // A project card waits for the candidate's approval like a note; its own scope (#2895).
+  [`POST ${workspace}/work-journal/projects`]: { scope: "evidence:write" },
   // Feedback goes with the journal scope, the one a token holds by default (#2843).
   [`POST ${workspace}/feedback`]: { scope: "journal" },
   // The user guide holds no candidate material; it goes with the default scope too (#2881).

@@ -22,6 +22,7 @@ import { z } from "zod";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import { apiErrorSchema } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
+import { registerProjectCardRoute } from "./project-card-routes.js";
 import type { WorkJournalSignInChecks } from "./work-journal-sign-in.js";
 
 export interface WorkJournalRoutesOptions {
@@ -226,6 +227,13 @@ export function registerWorkJournalRoutes(
       });
     },
   );
+
+  registerProjectCardRoute(app, {
+    journal,
+    idempotency,
+    requireWorkspace,
+    ...(signIn === undefined ? {} : { signIn }),
+  });
 
   app.get(
     "/v1/workspaces/:workspaceId/work-journal/notes",
