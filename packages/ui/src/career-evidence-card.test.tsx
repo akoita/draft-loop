@@ -11,6 +11,7 @@ import {
   legacyRetrievalText,
   parseSourceUrls,
 } from "./career-evidence-card.js";
+import { DisplayPreferenceProvider } from "./display-preference.js";
 
 const setup = {
   evidenceSourceCount: 0,
@@ -128,6 +129,41 @@ describe("Career evidence setup card", () => {
       open,
     );
     expect(render(selected, { knowledgeBase: section, advancedOpen: true })).toContain(open);
+  });
+
+  it("starts Advanced options open with Show everything, until the person folds it", () => {
+    const section = <section>Knowledge base</section>;
+    const open = '<details class="advanced-options" open="">';
+    const everything = (overrides: Partial<CareerEvidenceCardViewProps>) =>
+      renderToStaticMarkup(
+        <DisplayPreferenceProvider
+          value={{
+            preference: { mode: "everything", guideHidden: false },
+            choose: () => undefined,
+          }}
+        >
+          <CareerEvidenceCardView
+            status={selected}
+            setup={setup}
+            pending={false}
+            disabled={false}
+            message={null}
+            error={null}
+            url=""
+            onUrlChange={() => undefined}
+            onAddFile={() => undefined}
+            onAddUrl={() => undefined}
+            onChooseKnowledgeBase={() => undefined}
+            canAddFile
+            canAddUrl
+            knowledgeBase={section}
+            {...overrides}
+          />
+        </DisplayPreferenceProvider>,
+      );
+    expect(render(selected, { knowledgeBase: section })).not.toContain(open);
+    expect(everything({})).toContain(open);
+    expect(everything({ advancedOpen: false })).not.toContain(open);
   });
 
   it("offers Add folder under Advanced options only when evidence goes into a knowledge base", () => {
