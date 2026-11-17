@@ -42,15 +42,15 @@ Sales run in Stripe test mode only for now.
 
 A plan sets these entitlements:
 
-| Entitlement           | Meaning                                                              |
-| --------------------- | -------------------------------------------------------------------- |
-| Credits per period    | Credits granted each period (one month, three for a pass or Beta)    |
-| Model tiers           | The model tiers a run may use                                        |
-| Seats                 | Active members plus pending invitations                              |
-| Candidate records     | Records the organisation may hold                                    |
-| Runs per day, at once | Daily and concurrent run limits                                      |
-| Model calls per day   | Interview turns, drafts and profile derivations outside runs         |
-| Features              | Switches such as run comparison or bring-your-own-key                |
+| Entitlement           | Meaning                                                                     |
+| --------------------- | --------------------------------------------------------------------------- |
+| Credits per period    | Credits granted each period (one month, three for a pass or Beta)           |
+| Model tiers           | The model tiers a run may use; a new job search offers only presets in them |
+| Seats                 | Active members plus pending invitations                                     |
+| Candidate records     | Records the organisation may hold                                           |
+| Runs per day, at once | Daily and concurrent run limits                                             |
+| Model calls per day   | Interview turns, drafts and profile derivations outside runs                |
+| Features              | Switches such as run comparison or bring-your-own-key                       |
 
 ## How to test it
 
