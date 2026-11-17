@@ -134,61 +134,69 @@ export function NewApplicationFormView({
               {kindButton("file", t`Attach file`)}
             </div>
           </fieldset>
-          {draft.jobKind === "file" ? (
-            <label className="new-application-field">
-              <span>{t`Job description file`}</span>
-              <input
-                type="file"
-                accept={newApplicationJobFileAccept}
-                disabled={busy}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file === undefined) return;
-                  void withChosenJobFile(draft, file).then(onDraftChange);
-                }}
-              />
-              <span className="subtle">
-                {draft.jobFile === null
-                  ? t`A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted.`
-                  : t`${draft.jobFile.name} is ready. Only its text is kept, as if pasted.`}
-              </span>
-            </label>
-          ) : draft.jobKind === "text" ? (
-            <label className="new-application-field">
-              <span>{t`Job description`}</span>
-              <textarea
-                value={draft.jobText}
-                rows={8}
-                disabled={busy}
-                placeholder={t`Paste the job description`}
-                onChange={(event) => onDraftChange({ ...draft, jobText: event.target.value })}
-              />
-            </label>
-          ) : (
-            <>
+          <div className="new-application-job">
+            {/* Holds the job area at the pasted text's height, the tallest option, so switching
+                between the three options never resizes the dialog. */}
+            <div className="new-application-field new-application-job-sizer" aria-hidden="true">
+              <span>{"\u00a0"}</span>
+              <textarea rows={8} tabIndex={-1} disabled readOnly value="" />
+            </div>
+            {draft.jobKind === "file" ? (
               <label className="new-application-field">
-                <span>{t`Job page address`}</span>
+                <span>{t`Job description file`}</span>
                 <input
-                  type="url"
-                  value={draft.jobUrl}
+                  type="file"
+                  accept={newApplicationJobFileAccept}
                   disabled={busy}
-                  placeholder={t`https://`}
-                  onChange={(event) => onDraftChange({ ...draft, jobUrl: event.target.value })}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file === undefined) return;
+                    void withChosenJobFile(draft, file).then(onDraftChange);
+                  }}
+                />
+                <span className="subtle">
+                  {draft.jobFile === null
+                    ? t`A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted.`
+                    : t`${draft.jobFile.name} is ready. Only its text is kept, as if pasted.`}
+                </span>
+              </label>
+            ) : draft.jobKind === "text" ? (
+              <label className="new-application-field">
+                <span>{t`Job description`}</span>
+                <textarea
+                  value={draft.jobText}
+                  rows={8}
+                  disabled={busy}
+                  placeholder={t`Paste the job description`}
+                  onChange={(event) => onDraftChange({ ...draft, jobText: event.target.value })}
                 />
               </label>
-              <label className="new-application-approval">
-                <input
-                  type="checkbox"
-                  checked={draft.urlApproved}
-                  disabled={busy}
-                  onChange={(event) =>
-                    onDraftChange({ ...draft, urlApproved: event.target.checked })
-                  }
-                />
-                <span>{t`I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before.`}</span>
-              </label>
-            </>
-          )}
+            ) : (
+              <div className="new-application-job-option">
+                <label className="new-application-field">
+                  <span>{t`Job page address`}</span>
+                  <input
+                    type="url"
+                    value={draft.jobUrl}
+                    disabled={busy}
+                    placeholder={t`https://`}
+                    onChange={(event) => onDraftChange({ ...draft, jobUrl: event.target.value })}
+                  />
+                </label>
+                <label className="new-application-approval">
+                  <input
+                    type="checkbox"
+                    checked={draft.urlApproved}
+                    disabled={busy}
+                    onChange={(event) =>
+                      onDraftChange({ ...draft, urlApproved: event.target.checked })
+                    }
+                  />
+                  <span>{t`I approve DraftLoop fetching this page. It is read only when you extract requirements on the application's first step, never before.`}</span>
+                </label>
+              </div>
+            )}
+          </div>
           {languageChoice ? (
             <div className="new-application-field">
               <DocumentLanguageSelect
@@ -210,11 +218,13 @@ export function NewApplicationFormView({
               {errorMessage}
             </p>
           )}
-          {problem === null ? null : (
-            <p className="subtle" id="new-application-problem">
-              {problem}
-            </p>
-          )}
+          {/* Always present, so a problem appearing or clearing never shifts the buttons. */}
+          <p
+            className="subtle new-application-problem"
+            {...(problem === null ? {} : { id: "new-application-problem" })}
+          >
+            {problem}
+          </p>
           <div className="new-application-actions">
             <button
               className="button button-quiet"

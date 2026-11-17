@@ -127,6 +127,28 @@ describe("New application form", () => {
     expect(ready).not.toMatch(submitDisabled);
   });
 
+  it("keeps the same size whichever job option is chosen", () => {
+    for (const jobKind of ["text", "url", "file"] as const) {
+      const html = renderToStaticMarkup(
+        <NewApplicationFormView {...props} draft={{ ...emptyNewApplicationDraft, jobKind }} />,
+      );
+      // A hidden copy of the pasted-text field holds the tallest option's height in every option.
+      expect(html).toMatch(
+        /class="new-application-field new-application-job-sizer" aria-hidden="true"/u,
+      );
+      // The problem line stays in place, empty or not, so the buttons never move.
+      expect(html).toContain('class="subtle new-application-problem"');
+    }
+    const ready = renderToStaticMarkup(
+      <NewApplicationFormView
+        {...props}
+        draft={{ ...emptyNewApplicationDraft, name: "Acme", jobText: "Build things." }}
+      />,
+    );
+    expect(ready).toContain('class="subtle new-application-problem"');
+    expect(ready).not.toContain('id="new-application-problem"');
+  });
+
   it("shows a creation failure inline and a busy state", () => {
     const html = renderToStaticMarkup(
       <NewApplicationFormView
