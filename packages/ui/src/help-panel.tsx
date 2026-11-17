@@ -1,8 +1,6 @@
+import { helpGuide, searchHelpGuide } from "@draft-loop/user-guide";
 import { plural, t } from "@lingui/core/macro";
 import { useEffect, useId, useRef, useState } from "react";
-
-import { helpGuide } from "./help-guide.js";
-import { searchHelpGuide } from "./help-search.js";
 import { useScreenLocale } from "./i18n.js";
 
 export interface HelpDialogProps {

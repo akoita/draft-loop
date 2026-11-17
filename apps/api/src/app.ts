@@ -71,6 +71,7 @@ import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-routes.js";
+import { registerHelpRoutes } from "./help-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
@@ -925,6 +926,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
   }
   if (options.feedback !== undefined) registerFeedbackRoutes(app, { feedback: options.feedback });
+  registerHelpRoutes(app);
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });
   if (options.webRoot !== undefined) await registerWebScreen(app, options.webRoot);
 

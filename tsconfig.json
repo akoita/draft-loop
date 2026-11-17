@@ -37,6 +37,7 @@
     { "path": "./packages/model-gateway" },
     { "path": "./packages/run-queue" },
     { "path": "./packages/security" },
+    { "path": "./packages/user-guide" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
     { "path": "./packages/ui" },

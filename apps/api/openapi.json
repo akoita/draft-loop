@@ -5163,6 +5163,77 @@
           "sentAt"
         ]
       },
+      "HelpGuideSectionInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "paragraphs": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "paragraphs"
+        ]
+      },
+      "HelpGuideInput": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr"
+            ]
+          },
+          "intro": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelpGuideSectionInput"
+            }
+          }
+        },
+        "required": [
+          "language",
+          "intro",
+          "query",
+          "sections"
+        ]
+      },
       "InterviewGuideRequestInput": {
         "type": "object",
         "properties": {
@@ -12902,6 +12973,79 @@
           "screen",
           "text",
           "sentAt"
+        ],
+        "additionalProperties": false
+      },
+      "HelpGuideSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "paragraphs": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "paragraphs"
+        ],
+        "additionalProperties": false
+      },
+      "HelpGuide": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr"
+            ]
+          },
+          "intro": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelpGuideSection"
+            }
+          }
+        },
+        "required": [
+          "language",
+          "intro",
+          "query",
+          "sections"
         ],
         "additionalProperties": false
       },
@@ -29490,6 +29634,184 @@
             }
           },
           "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/help": {
+      "get": {
+        "summary": "Read or search the user guide",
+        "description": "The guide the Help button shows, in English or French. With `q`, only the sections that match every word, best first; accents and case do not matter.",
+        "parameters": [
+          {
+            "schema": {
+              "default": "en",
+              "type": "string",
+              "enum": [
+                "en",
+                "fr"
+              ]
+            },
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "description": "The guide's language."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Words to search for; leave it out for the whole guide."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpGuide"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/help": {
+      "get": {
+        "summary": "Read or search the user guide, from an agent",
+        "description": "As `GET /v1/help`, for an agent token with the `journal` scope, which a token gets unless issued without it. The record in the path only admits the token.",
+        "parameters": [
+          {
+            "schema": {
+              "default": "en",
+              "type": "string",
+              "enum": [
+                "en",
+                "fr"
+              ]
+            },
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "description": "The guide's language."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Words to search for; leave it out for the whole guide."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpGuide"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

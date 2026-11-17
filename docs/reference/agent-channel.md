@@ -249,6 +249,11 @@ returns a run's open draft, its findings or career evidence.
 | `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |
 | `draft_interview_prep` | `runs:start`        | Drafts and saves interview questions with talking points, within the cap                           |
 | `send_feedback`        | `journal`           | Passes the candidate's own note about DraftLoop to the people who run it                           |
+| `search_help`          | `journal`           | Searches DraftLoop's user guide, in English or French, for how a feature works                     |
+
+`search_help` and the `draftloop://help/guide/en` (or `/fr`) resource hold
+the same user guide a member reads from the Help button, so an agent can
+answer how DraftLoop works without guessing.
 
 `add_job` refuses a job page address, because fetching a page needs the
 candidate's approval in DraftLoop. The job text is screened like an upload

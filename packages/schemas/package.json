@@ -78,6 +78,10 @@
     "./saved-application-material": {
       "types": "./src/saved-application-material.ts",
       "import": "./src/saved-application-material.ts"
+    },
+    "./help-guide": {
+      "types": "./src/help-guide.ts",
+      "import": "./src/help-guide.ts"
     }
   },
   "files": [

@@ -123,11 +123,11 @@ test("requires a user guide section for every available or partial feature page 
     "docs/features/journal.md": page("available"),
     "docs/features/later.md": page("planned"),
     "apps/mcp/src/server.ts": server,
-    "packages/ui/src/help-guide.ts": guide,
+    "packages/user-guide/src/guide.ts": guide,
   });
 
   assert.deepEqual(await check(files('export const pages = { agents: ["journal.md"] };\n')), []);
   assert.deepEqual(await check(files("export const pages = { agents: [] };\n")), [
-    "docs/features/journal.md: no user guide section names it in packages/ui/src/help-guide.ts",
+    "docs/features/journal.md: no user guide section names it in packages/user-guide/src/guide.ts",
   ]);
 });

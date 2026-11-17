@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 export const catalogPath = "docs/features/README.md";
 export const mcpServerPath = "apps/mcp/src/server.ts";
 /** The user guide names the feature pages each of its sections explains (#2880). */
-export const helpGuidePath = "packages/ui/src/help-guide.ts";
+export const helpGuidePath = "packages/user-guide/src/guide.ts";
 export const statuses = Object.freeze(["available", "partial", "planned", "retired"]);
 
 const featureHeader = /^\|\s*Feature\s*\|/u;

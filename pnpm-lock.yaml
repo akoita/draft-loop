@@ -123,6 +123,9 @@ importers:
       '@draft-loop/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@draft-loop/user-guide':
+        specifier: workspace:*
+        version: link:../../packages/user-guide
       '@fastify/helmet':
         specifier: 13.2.0
         version: 13.2.0
@@ -634,6 +637,9 @@ importers:
       '@draft-loop/providers':
         specifier: workspace:*
         version: link:../providers
+      '@draft-loop/user-guide':
+        specifier: workspace:*
+        version: link:../user-guide
       '@lingui/core':
         specifier: 6.10.1
         version: 6.10.1(@babel/core@8.0.7)
@@ -656,6 +662,8 @@ importers:
       '@draft-loop/storage':
         specifier: workspace:*
         version: link:../storage
+
+  packages/user-guide: {}
 
   packages/validation:
     dependencies:
