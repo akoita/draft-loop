@@ -5122,6 +5122,14 @@
           "noteId": {
             "type": "string"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "note",
+              "support"
+            ],
+            "description": "`note` from Send feedback; `support` when a member handed a support conversation to a person."
+          },
           "organisationId": {
             "type": "string"
           },
@@ -5147,7 +5155,38 @@
             "type": "string"
           },
           "text": {
-            "type": "string"
+            "type": "string",
+            "description": "The note, or a support ticket's summary."
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "assistant"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "text"
+                  ]
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
           "sentAt": {
             "type": "string"
@@ -5155,11 +5194,13 @@
         },
         "required": [
           "noteId",
+          "kind",
           "organisationId",
           "memberId",
           "category",
           "screen",
           "text",
+          "transcript",
           "sentAt"
         ]
       },
@@ -13044,6 +13085,14 @@
           "noteId": {
             "type": "string"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "note",
+              "support"
+            ],
+            "description": "`note` from Send feedback; `support` when a member handed a support conversation to a person."
+          },
           "organisationId": {
             "type": "string"
           },
@@ -13069,7 +13118,39 @@
             "type": "string"
           },
           "text": {
-            "type": "string"
+            "type": "string",
+            "description": "The note, or a support ticket's summary."
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "assistant"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The conversation the member agreed to share with a support ticket; null for a note."
           },
           "sentAt": {
             "type": "string"
@@ -13077,11 +13158,13 @@
         },
         "required": [
           "noteId",
+          "kind",
           "organisationId",
           "memberId",
           "category",
           "screen",
           "text",
+          "transcript",
           "sentAt"
         ],
         "additionalProperties": false
@@ -29808,7 +29891,7 @@
     "/v1/operator/feedback": {
       "get": {
         "summary": "List members' feedback notes, newest first",
-        "description": "Operator only. At most `limit` notes, 100 by default.",
+        "description": "Operator only. At most `limit` notes and support tickets, 100 by default. Support tickets are deleted 90 days after they were sent.",
         "parameters": [
           {
             "schema": {
@@ -30209,6 +30292,146 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SupportReply"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/support/conversations/{conversationId}/handoff": {
+      "post": {
+        "summary": "Hand a support conversation to a person",
+        "description": "Members only, with `consent` true: stores the conversation as a support ticket the operator reads with feedback notes, kept 90 days and erased with the organisation. Owner-token mode has no organisation and answers 404.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "consent": {
+                    "type": "boolean",
+                    "description": "The member agreed to share this conversation with the people who run DraftLoop.",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "transcript": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "member",
+                            "assistant"
+                          ]
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "The conversation as the screen shows it, oldest first."
+                  }
+                },
+                "required": [
+                  "consent",
+                  "transcript"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^sup_[A-Za-z0-9-]{8,64}$"
+            },
+            "in": "path",
+            "name": "conversationId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ticket_id"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }

@@ -40,6 +40,10 @@ beforeEach(async () => {
       send: async () => {
         throw new Error("stub: owner mode stores no feedback");
       },
+      openSupportTicket: async () => {
+        throw new Error("stub: owner mode stores no ticket");
+      },
+      deleteSupportTicketsBefore: async () => 0,
       listNewest: async () => [],
     },
     application: {

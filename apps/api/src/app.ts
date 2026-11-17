@@ -940,6 +940,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: application.workspaceRoot,
       route: () => (interview?.allowProviderData === false ? undefined : interview?.route),
       ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
+      ...(options.feedback === undefined ? {} : { feedback: options.feedback }),
     });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });

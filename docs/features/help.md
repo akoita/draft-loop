@@ -50,6 +50,7 @@ play a fake model: each tool, each limit, the switch, refusals, and the
 | MCP `search_help` (scope `journal`) | Searches the guide for an agent |
 | MCP resources `draftloop://help/guide/en`, `/fr` | The whole guide as Markdown |
 | `POST /v1/workspaces/:workspaceId/support/conversations` and `…/:conversationId/messages` | The support assistant: answers a question from the guide and the member's plan, credits and runs, or returns the matching sections |
+| `…/:conversationId/handoff` | Hands the conversation to a person as a support ticket, with the member's consent; see [Feedback](feedback.md) |
 | `packages/support` | The assistant's answering loop, read tools, limits and golden set |
 | `packages/user-guide/src/guide-en.ts`, `guide-fr.ts` | The guide's text, one module per language |
 | `packages/user-guide/src/search.ts` | Word search over the guide, shared by the browser, the API and MCP |
