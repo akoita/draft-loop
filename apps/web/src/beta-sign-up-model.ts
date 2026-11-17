@@ -49,6 +49,11 @@ export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
         message: t`Too many attempts. Wait 15 minutes, then try again.`,
         retry: false,
       };
+    case "terms_not_accepted":
+      return {
+        message: t`The terms of use have changed. Reload the page, read the new version and accept it.`,
+        retry: false,
+      };
     case "already_member":
       return { message: t`This account already exists. Reload the page.`, retry: false };
     default:
@@ -56,7 +61,16 @@ export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
   }
 }
 
-/** Redeems a code; resolves when the account exists, so the screen can open the app. */
+/**
+ * The terms and privacy policy version the sign-up accepts: the date on the legal pages, which
+ * must match the API's `legalVersion` (apps/api/src/legal-pages.ts). An outdated one is refused
+ * with `terms_not_accepted`.
+ */
+export const acceptedTermsVersion = "2026-11-17";
+
+/** Redeems a code with the accepted terms; resolves when the account exists. */
 export async function redeemInvite(client: ApiClient, code: string): Promise<void> {
-  await client.call("POST /v1/sign-up", { body: { code: code.trim() } });
+  await client.call("POST /v1/sign-up", {
+    body: { code: code.trim(), accepted_terms: acceptedTermsVersion },
+  });
 }

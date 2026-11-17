@@ -235,6 +235,7 @@ export interface ApiSchemas {
     readonly organisationId?: string;
     readonly redeemedAt?: string;
     readonly revokedAt?: string;
+    readonly termsVersion?: string;
   };
   "BetaWaitlistEntry": {
     readonly entryId: string;
@@ -3028,6 +3029,7 @@ export interface ApiOperations {
   "POST /v1/sign-up": {
     readonly body: {
       readonly code: string;
+      readonly accepted_terms?: string;
     };
     readonly response: ApiSchemas["SignedUp"];
   };

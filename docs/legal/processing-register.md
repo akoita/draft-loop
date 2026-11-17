@@ -11,6 +11,14 @@ activities the operator performs on behalf of an organisation that holds a
 Team or Business plan (ADR 0011, D7). Security measures common to every row
 are listed once at the end.
 
+**Free test service (2026-11-17):** the published privacy policy
+(`/legal/privacy`) is what applies now. During the test, Claude is called
+through Anthropic's own API and OpenAI through its global endpoint, both in
+the United States under the providers' data processing terms with standard
+contractual clauses; sign-in runs on Google Cloud in `europe-west1`, and
+email goes through Brevo (France). The rows below describe the target routes
+before paid plans (ADR 0011, D7, beta exception).
+
 ## Activities
 
 | # | Activity | Purpose | Legal basis | Data subjects | Data categories | Recipients | Transfers outside the EU | Retention |

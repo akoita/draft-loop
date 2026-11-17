@@ -5,6 +5,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApi } from "./app.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
+import { legalVersion } from "./legal-pages.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -92,12 +93,17 @@ async function token(subject: string, email = "ada@example.test", verified = tru
     .sign(signingKey.privateKey);
 }
 
-async function signUp(server: FastifyInstance, authorization: string, code = "abcd-efgh") {
+async function signUp(
+  server: FastifyInstance,
+  authorization: string,
+  code = "abcd-efgh",
+  acceptedTerms: string | null = legalVersion,
+) {
   const response = await server.inject({
     method: "POST",
     url: "/v1/sign-up",
     headers: { authorization },
-    payload: { code },
+    payload: acceptedTerms === null ? { code } : { code, accepted_terms: acceptedTerms },
   });
   return { status: response.statusCode, body: response.json() };
 }
@@ -113,10 +119,45 @@ describe("signing up with a beta invite", () => {
       body: { organisationId: "beta-org", memberId: "m-new", role: "owner" },
     });
     expect(redeem).toHaveBeenCalledWith(
-      expect.objectContaining({ code: "abcd-efgh", verifiedEmail: "ada@example.test", cap: 25 }),
+      expect.objectContaining({
+        code: "abcd-efgh",
+        verifiedEmail: "ada@example.test",
+        cap: 25,
+        termsVersion: legalVersion,
+      }),
     );
     expect(assignPlan).toHaveBeenCalledWith(expect.objectContaining({ planId: "beta" }));
   });
+
+  it.each([
+    ["absent", null],
+    ["outdated", "2020-01-01"],
+  ])(
+    "refuses the account when the terms acceptance is %s, creating nothing",
+    async (_, version) => {
+      const server = await api();
+
+      const response = await signUp(
+        server,
+        `Bearer ${await token("new-person")}`,
+        "abcd-efgh",
+        version,
+      );
+
+      expect(response).toEqual({
+        status: 400,
+        body: {
+          error: {
+            code: "terms_not_accepted",
+            message: expect.any(String),
+            params: { version: legalVersion },
+          },
+        },
+      });
+      expect(redeem).not.toHaveBeenCalled();
+      expect(assignPlan).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ["invite_unknown", 404],
