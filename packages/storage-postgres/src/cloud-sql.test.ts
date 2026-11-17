@@ -1,24 +1,30 @@
+import { once } from "node:events";
 import { mkdtemp, rm, stat } from "node:fs/promises";
+import { connect, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   CloudSqlConfigError,
   type CloudSqlConnector,
+  joinTunnel,
   readCloudSqlProxyConfig,
   startCloudSqlProxy,
   startConfiguredCloudSqlProxy,
 } from "./cloud-sql.js";
 
+/** A connector whose tunnels echo what they receive, standing in for Cloud SQL. */
 function recordingConnector(failure?: Error) {
-  const calls: Parameters<CloudSqlConnector["startLocalProxy"]>[0][] = [];
+  const calls: Parameters<CloudSqlConnector["getOptions"]>[0][] = [];
   let closed = 0;
   const connector: CloudSqlConnector = {
-    startLocalProxy: async (options) => {
+    getOptions: async (options) => {
       calls.push(options);
       if (failure !== undefined) throw failure;
+      return { stream: () => new PassThrough() };
     },
     close: () => {
       closed += 1;
@@ -75,10 +81,16 @@ describe("startCloudSqlProxy", () => {
         instanceConnectionName: "example-proj:europe-west1:db",
         ipType: "PRIVATE",
         authType: "IAM",
-        listenOptions: { path: path.join(socketDirectory, ".s.PGSQL.5432") },
       },
     ]);
     expect((await stat(socketDirectory)).mode & 0o777).toBe(0o700);
+    // A client on the Postgres socket reaches the tunnel, which echoes here.
+    const client = connect(path.join(socketDirectory, ".s.PGSQL.5432"));
+    await once(client, "connect");
+    client.write("ping");
+    const [echoed] = (await once(client, "data")) as [Buffer];
+    expect(echoed.toString()).toBe("ping");
+    client.destroy();
     proxy.close();
     expect(recorded.closed()).toBe(1);
   });
@@ -110,5 +122,17 @@ describe("startCloudSqlProxy", () => {
   it("does nothing when the environment leaves it off", async () => {
     const proxy = await startConfiguredCloudSqlProxy({}, "iam");
     expect(() => proxy.close()).not.toThrow();
+  });
+});
+
+describe("joinTunnel", () => {
+  it("ends both sides on an error instead of stopping the process (EPIPE)", async () => {
+    const local = new PassThrough() as unknown as Socket;
+    const tunnel = new PassThrough();
+    joinTunnel(local, tunnel);
+    tunnel.emit("error", Object.assign(new Error("write EPIPE"), { code: "EPIPE" }));
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(tunnel.destroyed).toBe(true);
+    expect((local as unknown as PassThrough).destroyed).toBe(true);
   });
 });
