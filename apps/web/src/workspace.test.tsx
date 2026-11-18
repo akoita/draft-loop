@@ -30,6 +30,14 @@ describe("first-run setup", () => {
     ).toContain("Reading your workspace…");
   });
 
+  it("shows no setup screen while it creates a one-person plan's workspace on its own", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceStep client={unusedClient} onWorkspace={() => {}} automatic />,
+    );
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain("Set up your workspace");
+  });
+
   it("shows the shared setup screen while the record has no workspace", () => {
     const html = view({});
 

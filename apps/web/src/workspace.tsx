@@ -1,17 +1,19 @@
+import { useScreenLocale } from "@draft-loop/ui/i18n";
 import {
   presetsWithinTiers,
+  proposedCvLanguage,
   type WorkspaceSetupChoice,
   type WorkspaceSetupPreset,
   WorkspaceSetupScreen,
   workspaceSetupPresets,
 } from "@draft-loop/ui/workspace-setup";
 import { t } from "@lingui/core/macro";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { useRecordId } from "./record-context.js";
-import { routablePresets, setupRequestBody } from "./workspace-model.js";
+import { defaultSetupChoice, routablePresets, setupRequestBody } from "./workspace-model.js";
 
 type Workspace = ApiSchemas["Workspace"];
 
@@ -25,11 +27,22 @@ export interface WorkspaceStepProps {
   readonly client: ApiClient;
   /** Called with the workspace once it is read or created. */
   readonly onWorkspace: (workspace: Workspace) => void;
+  /**
+   * Creates a missing workspace with the defaults instead of asking (one-person plans). If that
+   * fails, the setup screen shows with the reason, so the person is never stuck.
+   */
+  readonly automatic?: boolean;
 }
 
 /** Reads the record's workspace and, on a first run, shows the shared setup screen to create it. */
-export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
+export function WorkspaceStep({ client, onWorkspace, automatic = false }: WorkspaceStepProps) {
   const workspaceId = useRecordId();
+  const { locale } = useScreenLocale();
+  /** Whether the automatic create was tried, so it runs once and a failure shows the screen. */
+  const [automaticTried, setAutomaticTried] = useState(false);
+  const automaticStarted = useRef(false);
+  /** Whether the offered presets were read, or could not be: the automatic create waits for it. */
+  const [presetsRead, setPresetsRead] = useState(false);
   const [state, setState] = useState<WorkspaceState>({ kind: "loading" });
   const [presets, setPresets] = useState<readonly WorkspaceSetupPreset[]>(workspaceSetupPresets);
   const [problem, setProblem] = useState<string | null>(null);
@@ -68,42 +81,86 @@ export function WorkspaceStep({ client, onWorkspace }: WorkspaceStepProps) {
         if (!current) return;
         const routable = routablePresets(workspaceSetupPresets(), catalog.models);
         const allowed = presetsWithinTiers(routable, tiers);
-        if (allowed.length > 0) setPresets(allowed);
-        else if (routable.length > 0) setPresets(routable);
+        const offered =
+          allowed.length > 0 ? allowed : routable.length > 0 ? routable : workspaceSetupPresets();
+        setPresets(offered);
+        setPresetsRead(true);
       },
-      () => undefined,
+      () => {
+        if (current) setPresetsRead(true);
+      },
     );
     return () => {
       current = false;
     };
   }, [client, state.kind]);
 
-  async function create(choice: WorkspaceSetupChoice) {
-    setProblem(null);
-    setBusy(true);
-    try {
-      const workspace = await client.call("PUT /v1/workspaces/{workspaceId}", {
-        path: { workspaceId },
-        body: setupRequestBody(choice),
-      });
-      setState({ kind: "ready", workspace });
-      onWorkspace(workspace);
-    } catch (error) {
-      setProblem(describeStartError(error));
-    } finally {
-      setBusy(false);
+  // A one-person plan has nothing to name or choose: create the workspace with what the setup
+  // screen would propose, once. Settings changes it later; a failure shows the screen instead.
+  useEffect(() => {
+    if (!automatic || state.kind !== "missing" || !presetsRead || automaticStarted.current) return;
+    automaticStarted.current = true;
+    const choice = defaultSetupChoice(presets, proposedCvLanguage(locale));
+    if (choice === undefined) {
+      setAutomaticTried(true);
+      return;
     }
+    void createWorkspace(client, workspaceId, choice, {
+      onCreated: (workspace) => {
+        setState({ kind: "ready", workspace });
+        onWorkspace(workspace);
+      },
+      onProblem: setProblem,
+      onBusy: setBusy,
+    }).finally(() => setAutomaticTried(true));
+  }, [automatic, client, locale, onWorkspace, presets, presetsRead, state.kind, workspaceId]);
+
+  function create(choice: WorkspaceSetupChoice) {
+    return createWorkspace(client, workspaceId, choice, {
+      onCreated: (workspace) => {
+        setState({ kind: "ready", workspace });
+        onWorkspace(workspace);
+      },
+      onProblem: setProblem,
+      onBusy: setBusy,
+    });
   }
 
   return (
     <WorkspaceStepView
-      state={state}
+      state={state.kind === "missing" && automatic && !automaticTried ? { kind: "loading" } : state}
       presets={presets}
       busy={busy}
       problem={problem}
       onCreate={(choice) => void create(choice)}
     />
   );
+}
+
+/** Creates the record's workspace with a setup choice, reporting the outcome through `on`. */
+async function createWorkspace(
+  client: ApiClient,
+  workspaceId: string,
+  choice: WorkspaceSetupChoice,
+  on: {
+    readonly onCreated: (workspace: Workspace) => void;
+    readonly onProblem: (problem: string | null) => void;
+    readonly onBusy: (busy: boolean) => void;
+  },
+): Promise<void> {
+  on.onProblem(null);
+  on.onBusy(true);
+  try {
+    const workspace = await client.call("PUT /v1/workspaces/{workspaceId}", {
+      path: { workspaceId },
+      body: setupRequestBody(choice),
+    });
+    on.onCreated(workspace);
+  } catch (error) {
+    on.onProblem(describeStartError(error));
+  } finally {
+    on.onBusy(false);
+  }
 }
 
 export interface WorkspaceStepViewProps {

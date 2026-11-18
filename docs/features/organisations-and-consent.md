@@ -70,6 +70,12 @@ An organisation that already holds two job searches keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own
 access from the screen.
 
+On a one-person plan the first sign-in shows no setup screen. The job search is
+created with the defaults: CV language from the screen language, the plan's
+default model preset, two rounds and demo mode off. Settings on Home changes
+them later. If that create fails, the setup screen shows with the reason. Plans
+with several job searches keep the setup screen for each new one.
+
 ## Operator screen
 
 The operator runs the beta from **Operator** in the web screen. A named

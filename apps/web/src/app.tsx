@@ -189,13 +189,14 @@ export function Shell({
                 {...(onAccountDeleted === undefined ? {} : { onAccountDeleted })}
                 onOperator={openOperator}
               >
-                {(recordId, onSaved) => (
+                {(recordId, onSaved, automaticSetup) => (
                   <RecordScreens
                     key={recordId}
                     client={client}
                     recordId={recordId}
                     mode="sign-in"
                     onSaved={onSaved}
+                    automaticSetup={automaticSetup}
                   />
                 )}
               </Records>
@@ -219,14 +220,22 @@ export interface RecordScreensProps {
   readonly onSaved?: (recordId: string) => void;
   /** Sign-in mode asks for the permission to store material, which only that mode enforces. */
   readonly mode?: "owner" | "sign-in";
+  /** Creates a new record with the defaults instead of showing the setup screen. */
+  readonly automaticSetup?: boolean;
 }
 
 /**
  * One candidate record: its workspace is read first, and a first run creates it on the shared
- * setup screen. The shared screens then open on it, from Home to the run's review, approval and
+ * setup screen, or with the defaults on a one-person plan. The shared screens then open on it, from Home to the run's review, approval and
  * export, with the web's own panels (consent, credits, file checks, private sections) in them.
  */
-export function RecordScreens({ client, recordId, onSaved, mode = "owner" }: RecordScreensProps) {
+export function RecordScreens({
+  client,
+  recordId,
+  onSaved,
+  mode = "owner",
+  automaticSetup = false,
+}: RecordScreensProps) {
   const [workspace, setWorkspace] = useState<ApiSchemas["Workspace"] | undefined>(undefined);
   const shellActions = useContext(ShellActionsContext);
   const onWorkspace = useCallback(
@@ -249,7 +258,7 @@ export function RecordScreens({ client, recordId, onSaved, mode = "owner" }: Rec
         <PageActions>
           <HeaderThemeToggle />
         </PageActions>
-        <WorkspaceStep client={client} onWorkspace={onWorkspace} />
+        <WorkspaceStep client={client} onWorkspace={onWorkspace} automatic={automaticSetup} />
       </RecordContext.Provider>
     );
   }
