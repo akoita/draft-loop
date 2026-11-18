@@ -30,6 +30,7 @@ export {
   applyCoverageJudgements,
   coverageJudgementRequestsFrom,
   coverageJudgementVerdicts,
+  isThinLexicalPass,
   maximumCoverageJudgementCitedBlocks,
   maximumCoverageJudgementRationaleCharacters,
   maximumCoverageJudgementRequests,

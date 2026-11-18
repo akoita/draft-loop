@@ -1,6 +1,7 @@
-import type {
-  RequirementCoverageAssessment,
-  RequirementCoverageEvidence,
+import {
+  type RequirementCoverageAssessment,
+  type RequirementCoverageEvidence,
+  requirementCoverageRationales,
 } from "./requirement-coverage-assessment.js";
 
 export const maximumCoverageJudgementRequests = 24;
@@ -67,9 +68,24 @@ function isJudgeable(assessment: RequirementCoverageAssessment): boolean {
   );
 }
 
+/** A lexical pass on few or partial words, which the critic checks (#2986). */
+export function isThinLexicalPass(assessment: RequirementCoverageAssessment): boolean {
+  return assessment.status === "needs-judgement" && assessment.basis === "lexical";
+}
+
+/** A thin pass the critic left unresolved keeps the lexical rule's verdict: covered. */
+function lexicalPassFrom(assessment: RequirementCoverageAssessment): RequirementCoverageAssessment {
+  return Object.freeze({
+    ...assessment,
+    status: "covered",
+    rationale: requirementCoverageRationales.lexicalCovered,
+  });
+}
+
 /**
- * Requests judgement for each judgeable assessment, in requirement order. Above the cap, those
- * with candidate blocks are kept first, then the rest, each group in requirement order.
+ * Requests judgement for each judgeable assessment, in requirement order. Above the cap, semantic
+ * candidates are kept first, then uncovered requirements, then thin lexical passes, each group in
+ * requirement order.
  */
 export function coverageJudgementRequestsFrom(
   assessments: readonly RequirementCoverageAssessment[],
@@ -77,7 +93,7 @@ export function coverageJudgementRequestsFrom(
   const requests = assessments.filter(isJudgeable).map((assessment) =>
     Object.freeze({
       requirementId: assessment.requirementId,
-      // Only semantic candidates are hints; lexical evidence of an uncovered match is not.
+      // Semantic candidates and a thin pass's matching block are hints; an uncovered match has none.
       candidateBlockIds: Object.freeze(
         assessment.status === "needs-judgement"
           ? assessment.evidence.map(({ blockId }) => blockId)
@@ -85,10 +101,15 @@ export function coverageJudgementRequestsFrom(
       ),
     }),
   );
+  const thinIds = new Set(
+    assessments.filter(isThinLexicalPass).map(({ requirementId }) => requirementId),
+  );
+  const notThin = requests.filter(({ requirementId }) => !thinIds.has(requirementId));
   const kept = new Set(
     [
-      ...requests.filter(({ candidateBlockIds }) => candidateBlockIds.length > 0),
-      ...requests.filter(({ candidateBlockIds }) => candidateBlockIds.length === 0),
+      ...notThin.filter(({ candidateBlockIds }) => candidateBlockIds.length > 0),
+      ...notThin.filter(({ candidateBlockIds }) => candidateBlockIds.length === 0),
+      ...requests.filter(({ requirementId }) => thinIds.has(requirementId)),
     ].slice(0, maximumCoverageJudgementRequests),
   );
   return Object.freeze(requests.filter((request) => kept.has(request)));
@@ -182,7 +203,8 @@ function resolveAssessment(
  * Folds critic judgements into the assessments. Only judgeable assessments that
  * were actually requested may change; every other assessment is returned as-is.
  * An invalid, duplicated, or missing judgement leaves the assessment unchanged
- * rather than guessing a verdict.
+ * rather than guessing a verdict, except that a thin lexical pass returns to
+ * `covered`, the lexical rule's own verdict, so no thin pass outlives this step.
  *
  * A satisfied verdict may cite any of `knownBlockIds`, the draft's block ids;
  * without them, only the request's candidate blocks may be cited.
@@ -210,20 +232,21 @@ export function applyCoverageJudgements(
 
   const next = assessments.map((assessment) => {
     const request = requestsById.get(assessment.requirementId);
+    const unresolved = isThinLexicalPass(assessment) ? lexicalPassFrom(assessment) : assessment;
     if (!isJudgeable(assessment) || request === undefined) {
-      return assessment;
+      return unresolved;
     }
     const answers = judgementsById.get(assessment.requirementId) ?? [];
     if (answers.length === 0) {
       unanswered += 1;
-      return assessment;
+      return unresolved;
     }
     const resolved =
       answers.length === 1
         ? resolveAssessment(assessment, answers[0], known ?? new Set(request.candidateBlockIds))
         : null;
     if (resolved === null) {
-      return assessment;
+      return unresolved;
     }
     resolvedIds.add(assessment.requirementId);
     if (resolved.status === "covered") {
