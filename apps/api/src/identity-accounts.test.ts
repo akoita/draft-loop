@@ -75,6 +75,21 @@ describe("Keycloak accounts", () => {
     });
   });
 
+  it("reaches Keycloak at its own address when one is given", async () => {
+    const { fetch, calls } = fakeFetch([tokenAnswer(), new Response(null, { status: 204 })]);
+    await keycloakAccounts({
+      issuer,
+      clientId: "c",
+      clientSecret: "s",
+      baseUrl: "https://keycloak.internal.example.test/",
+      fetch,
+    }).deleteAccount(subject);
+    expect(calls.map((call) => call.url)).toEqual([
+      "https://keycloak.internal.example.test/realms/draft-loop/protocol/openid-connect/token",
+      `https://keycloak.internal.example.test/admin/realms/draft-loop/users/${subject}`,
+    ]);
+  });
+
   it("counts an account already gone as deleted, and fails on anything else", async () => {
     const gone = fakeFetch([tokenAnswer(), new Response(null, { status: 404 })]);
     await keycloakAccounts({
@@ -122,6 +137,24 @@ describe("Keycloak accounts", () => {
         DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET: "s3cret",
       }),
     ).toEqual({ clientId: "draft-loop-api", clientSecret: "s3cret" });
+    expect(
+      identityAdminClientFromEnv({
+        DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID: "draft-loop-api",
+        DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET: "s3cret",
+        DRAFT_LOOP_IDENTITY_ADMIN_URL: "https://keycloak.internal.example.test",
+      }),
+    ).toEqual({
+      clientId: "draft-loop-api",
+      clientSecret: "s3cret",
+      baseUrl: "https://keycloak.internal.example.test",
+    });
+    expect(() =>
+      identityAdminClientFromEnv({
+        DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID: "draft-loop-api",
+        DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET: "s3cret",
+        DRAFT_LOOP_IDENTITY_ADMIN_URL: "https://keycloak.example.test/realms/x",
+      }),
+    ).toThrow(IdentityAccountsError);
     expect(() =>
       identityAdminClientFromEnv({ DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID: "draft-loop-api" }),
     ).toThrow(IdentityAccountsError);

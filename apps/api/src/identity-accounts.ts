@@ -21,6 +21,11 @@ export interface KeycloakAccountsOptions {
   /** The realm's confidential client whose service account holds `manage-users` only. */
   readonly clientId: string;
   readonly clientSecret: string;
+  /**
+   * Where the API reaches Keycloak, such as its internal address when the issuer is a public host
+   * the API cannot reach; the issuer's own host when unset.
+   */
+  readonly baseUrl?: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Each call's limit; 10 seconds when unset. */
   readonly timeoutMs?: number;
@@ -52,7 +57,9 @@ export function keycloakAccounts(options: KeycloakAccountsOptions): IdentityAcco
   const call = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? 10_000;
   const signal = () => AbortSignal.timeout(timeoutMs);
-  const tokenUrl = `${options.issuer.replace(/\/$/u, "")}/protocol/openid-connect/token`;
+  const base = (options.baseUrl ?? realm.base).replace(/\/$/u, "");
+  const realmName = encodeURIComponent(realm.realm);
+  const tokenUrl = `${base}/realms/${realmName}/protocol/openid-connect/token`;
 
   async function accessToken(): Promise<string> {
     const response = await call(tokenUrl, {
@@ -87,10 +94,11 @@ export function keycloakAccounts(options: KeycloakAccountsOptions): IdentityAcco
         throw new IdentityAccountsError("The sign-in subject is not a Keycloak user id.");
       }
       const token = await accessToken();
-      const response = await call(
-        `${realm.base}/admin/realms/${encodeURIComponent(realm.realm)}/users/${subject}`,
-        { method: "DELETE", headers: { authorization: `Bearer ${token}` }, signal: signal() },
-      );
+      const response = await call(`${base}/admin/realms/${realmName}/users/${subject}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+        signal: signal(),
+      });
       if (response.ok || response.status === 404) return;
       throw new IdentityAccountsError(
         `The identity provider did not delete the account (${response.status}).`,
@@ -101,12 +109,15 @@ export function keycloakAccounts(options: KeycloakAccountsOptions): IdentityAcco
 
 /**
  * The account client from `DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID` and
- * `DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET`: both or neither. Without them accounts are erased
+ * `DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET`, both or neither, and where to reach Keycloak from
+ * `DRAFT_LOOP_IDENTITY_ADMIN_URL`, an origin, when the issuer's host is not reachable. Without them accounts are erased
  * at the service and the identity stays, which the answer and a log line say.
  */
 export function identityAdminClientFromEnv(
   env: NodeJS.ProcessEnv,
-): { readonly clientId: string; readonly clientSecret: string } | undefined {
+):
+  | { readonly clientId: string; readonly clientSecret: string; readonly baseUrl?: string }
+  | undefined {
   const clientId = env.DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID ?? "";
   const clientSecret = env.DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET ?? "";
   if (clientId === "" && clientSecret === "") return undefined;
@@ -115,5 +126,11 @@ export function identityAdminClientFromEnv(
       "Set both DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID and DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET, or neither.",
     );
   }
-  return { clientId, clientSecret };
+  const baseUrl = env.DRAFT_LOOP_IDENTITY_ADMIN_URL ?? "";
+  if (baseUrl !== "" && !/^https?:\/\/[^/?#]+\/?$/u.test(baseUrl)) {
+    throw new IdentityAccountsError(
+      "DRAFT_LOOP_IDENTITY_ADMIN_URL must be an origin, such as https://id.example.",
+    );
+  }
+  return { clientId, clientSecret, ...(baseUrl === "" ? {} : { baseUrl }) };
 }
