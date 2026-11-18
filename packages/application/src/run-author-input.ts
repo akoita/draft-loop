@@ -189,7 +189,6 @@ export function runAuthorInputRecorder(
   };
 }
 
-/** The local driver's provider author: its identity, CLI user errors, and input recording. */
 /** The author's run-scoped dependencies from the run recorders: its input record and map use. */
 export function authorRecorderDependencies(
   recorders: RunRecorders | undefined,
@@ -203,6 +202,7 @@ export function authorRecorderDependencies(
   };
 }
 
+/** The local driver's provider author: its identity, CLI user errors, and input recording. */
 export function createRecordedAuthorAgent(
   context: ProviderAuthorAgentDependencies["context"],
   identity: { readonly company: string; readonly modelId: string },
