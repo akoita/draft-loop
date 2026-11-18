@@ -635,7 +635,7 @@ for the code and words each refusal.
 | Route                                        | Who                                | What it does                                                         |
 | -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
 | `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once |
-| `GET /v1/operator/beta-invites`              | Operator                           | Lists invites without codes, the seats used, open invites and the cap |
+| `GET /v1/operator/beta-invites`              | Operator                           | Lists a page of invites without codes (`limit`, `offset`, `q`, `state`), each state's count, the seats used, open invites and the cap |
 | `PUT /v1/operator/beta-invites/cap`          | Operator                           | Sets the cap at runtime, with no redeploy                            |
 | `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                |
 | `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner |
@@ -691,7 +691,7 @@ no analytics or third-party script, so it needs no cookie banner.
 | Route                                        | Who      | What it does                                                   |
 | -------------------------------------------- | -------- | -------------------------------------------------------------- |
 | `POST /v1/waitlist`                          | Anyone   | Lists an email with consent; answers 202 whether new or listed |
-| `GET /v1/operator/waitlist`                  | Operator | Lists entries, oldest first                                    |
+| `GET /v1/operator/waitlist`                  | Operator | Lists a page of entries, oldest first (`limit`, `offset`, `q`), and the `total` |
 | `POST /v1/operator/waitlist/:entryId/invite` | Operator | Creates an invite for the entry's email and deletes the entry  |
 
 - **Consent.** Each row records `betaWaitlistConsentVersion`, the version of

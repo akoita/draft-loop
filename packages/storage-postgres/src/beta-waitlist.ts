@@ -2,6 +2,12 @@ import { randomUUID } from "node:crypto";
 import { normalizeMemberEmail } from "@draft-loop/storage/tenant-directory";
 
 import { type CreatedBetaInvite, insertBetaInvite } from "./beta-invites.js";
+import {
+  type OperatorListPage,
+  pageLimit,
+  pageOffset,
+  searchPattern,
+} from "./operator-list-page.js";
 import type { SqlRow, SqlSession } from "./sql-client.js";
 
 export interface BetaWaitlistEntry {
@@ -24,8 +30,10 @@ export interface BetaWaitlist {
     readonly consentVersion: string;
     readonly now: Date;
   }) => Promise<boolean>;
-  /** Every entry, oldest first: the order people asked in. */
-  readonly list: () => Promise<readonly BetaWaitlistEntry[]>;
+  /** One page of entries, oldest first (the order people asked in): 50 when no limit is given. */
+  readonly list: (page?: OperatorListPage) => Promise<readonly BetaWaitlistEntry[]>;
+  /** How many entries match the search; all of them when it is blank. */
+  readonly count: (query?: string) => Promise<number>;
   /** Creates an invite for the entry's email and deletes the entry; undefined when unknown. */
   readonly invite: (input: {
     readonly entryId: string;
@@ -64,12 +72,23 @@ export function createBetaWaitlist(client: SqlSession): BetaWaitlist {
       return rows.length > 0;
     },
 
-    list: async () =>
+    list: async (page) =>
       (
         await client.query(
-          "SELECT id, email, consent_version, joined_at FROM beta_waitlist ORDER BY joined_at, id",
+          `SELECT id, email, consent_version, joined_at FROM beta_waitlist
+            WHERE ($3::text IS NULL OR email ILIKE $3)
+            ORDER BY joined_at, id LIMIT $1 OFFSET $2`,
+          [pageLimit(page), pageOffset(page), searchPattern(page?.query) ?? null],
         )
       ).map(entryRecord),
+
+    count: async (query) => {
+      const [row] = await client.query(
+        "SELECT count(*) AS total FROM beta_waitlist WHERE ($1::text IS NULL OR email ILIKE $1)",
+        [searchPattern(query) ?? null],
+      );
+      return Number(row?.total ?? 0);
+    },
 
     invite: async ({ entryId, now }) =>
       client.transaction(async (executor) => {

@@ -52,6 +52,7 @@ beforeAll(async () => {
       invites: {
         create: vi.fn(),
         list: vi.fn(async () => []),
+        stateCounts: vi.fn(async () => ({ open: 0, revoked: 0, redeemed: 0 })),
         revoke: vi.fn(),
         redeem,
         redeemedCount: vi.fn(async () => 0),
@@ -63,6 +64,7 @@ beforeAll(async () => {
     betaWaitlist: {
       join,
       list: vi.fn(async () => []),
+      count: vi.fn(async () => 0),
       invite: vi.fn(),
       deleteJoinedBefore: vi.fn(async () => 0),
     } as BetaWaitlist,

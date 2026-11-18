@@ -16,20 +16,32 @@ import {
   canOperate,
   draftIssueUrl,
   type FeedbackNote,
-  feedbackCounts,
   inviteFromWaitlist,
   inviteGoesPastCap,
   isIssueUrl,
+  movedCounts,
   operatorTarget,
   readFeedback,
+  readFeedbackNote,
   readInvites,
   readNewFeedbackCount,
   readWaitlist,
-  replaceNote,
   seatsLeft,
   triageFeedback,
   type WaitlistEntry,
 } from "./operator-model.js";
+
+/** A ready waitlist page holding every entry. */
+function waitlistOf(entries: readonly WaitlistEntry[]) {
+  return { kind: "ready" as const, value: { entries, total: entries.length } };
+}
+
+/** A ready inbox page holding every note, with each tab's count. */
+function inboxOf(notes: readonly FeedbackNote[]) {
+  const counts = { new: 0, triaged: 0, issue: 0, closed: 0 };
+  for (const each of notes) counts[each.status] += 1;
+  return { kind: "ready" as const, value: { notes, total: notes.length, counts } };
+}
 
 function render(node: ReactNode, locale: "en" | "fr" = "en"): string {
   return renderToStaticMarkup(<ScreensI18nProvider locale={locale}>{node}</ScreensI18nProvider>);
@@ -101,28 +113,33 @@ describe("who sees the operator page (#2829)", () => {
 });
 
 describe("the waitlist", () => {
-  it("is read newest first, though the API lists it oldest first", async () => {
-    const client = fakeClient({ "GET /v1/operator/waitlist": { entries: [older, newer] } });
+  it("reads one page, oldest first, with the search", async () => {
+    const calls: unknown[] = [];
+    const client = fakeClient(
+      { "GET /v1/operator/waitlist": { entries: [older, newer], total: 120 } },
+      calls,
+    );
 
-    const state = await readWaitlist(client);
+    const state = await readWaitlist(client, { offset: 50, query: "  ada " });
 
-    expect(state).toEqual({ kind: "ready", value: [newer, older] });
+    expect(state).toEqual({ kind: "ready", value: { entries: [older, newer], total: 120 } });
+    expect(calls).toEqual([
+      ["GET /v1/operator/waitlist", { query: { limit: 50, offset: 50, q: "ada" } }],
+    ]);
   });
 
   it("shows each entry with an Invite button", () => {
-    const html = render(
-      <WaitlistSection state={{ kind: "ready", value: [newer, older] }} onInvite={() => {}} />,
-    );
+    const html = render(<WaitlistSection state={waitlistOf([older, newer])} onInvite={() => {}} />);
 
-    expect(html.indexOf("grace@example.test")).toBeLessThan(html.indexOf("ada@example.test"));
+    expect(html.indexOf("ada@example.test")).toBeLessThan(html.indexOf("grace@example.test"));
     expect(html).toContain('aria-label="Invite ada@example.test"');
     expect(html).toContain("Joined 12 Nov 2026, 09:00 UTC");
   });
 
   it("says when nobody waits, while it reads, and when reading fails", () => {
-    expect(
-      render(<WaitlistSection state={{ kind: "ready", value: [] }} onInvite={() => {}} />),
-    ).toContain("Nobody is waiting.");
+    expect(render(<WaitlistSection state={waitlistOf([])} onInvite={() => {}} />)).toContain(
+      "Nobody is waiting.",
+    );
     expect(render(<WaitlistSection state={{ kind: "loading" }} onInvite={() => {}} />)).toContain(
       'role="status"',
     );
@@ -134,10 +151,7 @@ describe("the waitlist", () => {
   });
 
   it("speaks French when the screen does", () => {
-    const html = render(
-      <WaitlistSection state={{ kind: "ready", value: [] }} onInvite={() => {}} />,
-      "fr",
-    );
+    const html = render(<WaitlistSection state={waitlistOf([])} onInvite={() => {}} />, "fr");
 
     expect(html).toContain("Liste d&#x27;attente");
     expect(html).toContain("Personne n&#x27;attend.");
@@ -170,11 +184,7 @@ describe("inviting from the waitlist", () => {
     ]);
     expect(outcome).toEqual({ kind: "invited", email: older.email, code: "BETA-CODE-1234" });
     const html = render(
-      <WaitlistSection
-        state={{ kind: "ready", value: [] }}
-        outcome={outcome}
-        onInvite={() => {}}
-      />,
+      <WaitlistSection state={waitlistOf([])} outcome={outcome} onInvite={() => {}} />,
     );
     expect(html).toContain("<code>BETA-CODE-1234</code>");
     expect(html).toContain("it is shown only once");
@@ -193,11 +203,7 @@ describe("inviting from the waitlist", () => {
 
     expect(outcome.kind).toBe("failed");
     const html = render(
-      <WaitlistSection
-        state={{ kind: "ready", value: [] }}
-        outcome={outcome}
-        onInvite={() => {}}
-      />,
+      <WaitlistSection state={waitlistOf([])} outcome={outcome} onInvite={() => {}} />,
     );
     expect(html).toContain('role="alert"');
     expect(html).toContain("No invite for ada@example.test");
@@ -205,11 +211,7 @@ describe("inviting from the waitlist", () => {
 
   it("disables every Invite button while one invite is being created", () => {
     const html = render(
-      <WaitlistSection
-        state={{ kind: "ready", value: [newer, older] }}
-        inviting="entry-1"
-        onInvite={() => {}}
-      />,
+      <WaitlistSection state={waitlistOf([newer, older])} inviting="entry-1" onInvite={() => {}} />,
     );
 
     expect(html.match(/disabled=""/gu)).toHaveLength(2);
@@ -230,11 +232,7 @@ describe("inviting past the cap (#2998)", () => {
 
   it("shows the seats above the waitlist and says when the cap is reached", () => {
     const html = render(
-      <WaitlistSection
-        state={{ kind: "ready", value: [older] }}
-        seats={seats}
-        onInvite={() => {}}
-      />,
+      <WaitlistSection state={waitlistOf([older])} seats={seats} onInvite={() => {}} />,
     );
 
     expect(html).toContain(
@@ -245,7 +243,7 @@ describe("inviting past the cap (#2998)", () => {
   it("asks to confirm before an invite past the cap, in place of the button", () => {
     const html = render(
       <WaitlistSection
-        state={{ kind: "ready", value: [newer, older] }}
+        state={waitlistOf([newer, older])}
         seats={seats}
         confirming="entry-1"
         onInvite={() => {}}
@@ -265,7 +263,7 @@ describe("inviting past the cap (#2998)", () => {
   it("speaks French when the screen does", () => {
     const html = render(
       <WaitlistSection
-        state={{ kind: "ready", value: [older] }}
+        state={waitlistOf([older])}
         seats={seats}
         confirming="entry-1"
         onInvite={() => {}}
@@ -285,6 +283,8 @@ describe("the invites", () => {
     cap: 50,
     capSource: "deployment" as const,
     deploymentCap: 50,
+    total: 3,
+    counts: { open: 1, redeemed: 1, revoked: 1 },
     invites: [
       {
         inviteId: "invite-1",
@@ -309,13 +309,19 @@ describe("the invites", () => {
     ],
   };
 
-  it("are read newest first with the cap and seats left", async () => {
-    const state = await readInvites(fakeClient({ "GET /v1/operator/beta-invites": list }));
+  it("are read a page at a time, with the state and search, and the seats left", async () => {
+    const calls: unknown[] = [];
+    const state = await readInvites(fakeClient({ "GET /v1/operator/beta-invites": list }, calls), {
+      state: "open",
+      query: "lin",
+    });
 
-    expect(state.kind === "ready" && state.value.invites.map((invite) => invite.inviteId)).toEqual([
-      "invite-3",
-      "invite-2",
-      "invite-1",
+    expect(state).toEqual({ kind: "ready", value: list });
+    expect(calls).toEqual([
+      [
+        "GET /v1/operator/beta-invites",
+        { query: { limit: 50, offset: 0, q: "lin", state: "open" } },
+      ],
     ]);
     expect(seatsLeft({ redeemed: 3, open: 1, cap: 50 })).toBe(46);
     expect(seatsLeft({ redeemed: 60, open: 0, cap: 50 })).toBe(0);
@@ -336,7 +342,15 @@ describe("the invites", () => {
       <InvitesSection
         state={{
           kind: "ready",
-          value: { ...seats, invites: [], redeemed: 0, open: 0, cap: 50 },
+          value: {
+            ...seats,
+            invites: [],
+            total: 0,
+            counts: { open: 0, redeemed: 0, revoked: 0 },
+            redeemed: 0,
+            open: 0,
+            cap: 50,
+          },
         }}
       />,
     );
@@ -348,15 +362,21 @@ describe("the invites", () => {
 });
 
 describe("the feedback", () => {
-  it("is read newest first", async () => {
-    const later = { ...note, noteId: "note-2", sentAt: "2026-11-16T10:30:00.000Z" };
-    const state = await readFeedback(
-      fakeClient({ "GET /v1/operator/feedback": { notes: [note, later] } }),
-    );
+  it("reads one tab a page at a time, with the counts", async () => {
+    const calls: unknown[] = [];
+    const page = inboxOf([note]).value;
+    const state = await readFeedback(fakeClient({ "GET /v1/operator/feedback": page }, calls), {
+      status: "triaged",
+      offset: 100,
+      query: "export",
+    });
 
-    expect(state.kind === "ready" && state.value.map((each) => each.noteId)).toEqual([
-      "note-2",
-      "note-1",
+    expect(state).toEqual({ kind: "ready", value: page });
+    expect(calls).toEqual([
+      [
+        "GET /v1/operator/feedback",
+        { query: { limit: 50, offset: 100, q: "export", status: "triaged" } },
+      ],
     ]);
   });
 
@@ -371,7 +391,7 @@ describe("the feedback", () => {
         { role: "assistant", text: "Open the review." },
       ],
     };
-    const html = render(<FeedbackSection state={{ kind: "ready", value: [note, support] }} />);
+    const html = render(<FeedbackSection state={inboxOf([note, support])} />);
 
     expect(html).toContain("Something is broken");
     expect(html).toContain("from review");
@@ -383,9 +403,7 @@ describe("the feedback", () => {
   });
 
   it("says so when there is none, and shows a failed read", async () => {
-    expect(render(<FeedbackSection state={{ kind: "ready", value: [] }} />)).toContain(
-      "No feedback yet.",
-    );
+    expect(render(<FeedbackSection state={inboxOf([])} />)).toContain("No feedback yet.");
     const failed = await readFeedback(
       fakeClient({ "GET /v1/operator/feedback": new ApiRequestError(401, "unauthorised", "No.") }),
     );
@@ -394,15 +412,104 @@ describe("the feedback", () => {
 });
 
 describe("the operator page", () => {
-  it("opens on its three sections, reading, with a way back", () => {
+  it("opens on Feedback, reading, with a way to each part and back", () => {
     const html = render(<OperatorPage client={fakeClient({})} onClose={() => {}} />);
 
     expect(html).toContain("<h1");
     expect(html).toContain("Back to DraftLoop");
-    expect(html).toContain("Waitlist");
-    expect(html).toContain("Invites");
-    expect(html).toContain("Feedback");
-    expect(html.match(/role="status"/gu)).toHaveLength(3);
+    expect(html).toContain('aria-pressed="true">Feedback</button>');
+    expect(html).toContain(">Waitlist</button>");
+    expect(html).toContain(">Invites</button>");
+    expect(html).toContain('id="operator-feedback"');
+    expect(html).not.toContain('id="operator-waitlist"');
+    expect(html.match(/role="status"/gu)).toHaveLength(1);
+  });
+
+  it("can open on another part", () => {
+    const html = render(
+      <OperatorPage client={fakeClient({})} onClose={() => {}} initialView="waitlist" />,
+    );
+
+    expect(html).toContain('id="operator-waitlist"');
+    expect(html).not.toContain('id="operator-feedback"');
+  });
+});
+
+describe("long lists (#3016)", () => {
+  it("say how many rows show out of those that match, with Show more and a search", () => {
+    const html = render(
+      <WaitlistSection
+        state={{ kind: "ready", value: { entries: [older], total: 120 } }}
+        onInvite={() => {}}
+        onSearch={() => {}}
+        onMore={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Showing 1 of 120");
+    expect(html).toContain(">Show more</button>");
+    expect(html).toContain("Search by email");
+    expect(html).toContain('type="search"');
+    expect(html).toContain('class="operator-rows"');
+  });
+
+  it("offer no Show more once every row shows, and say when a search matches nothing", () => {
+    const all = render(
+      <WaitlistSection state={waitlistOf([older])} onInvite={() => {}} onMore={() => {}} />,
+    );
+    expect(all).toContain("Showing 1 of 1");
+    expect(all).not.toContain("Show more");
+    expect(
+      render(
+        <WaitlistSection
+          state={waitlistOf([])}
+          query="nobody"
+          onInvite={() => {}}
+          onSearch={() => {}}
+        />,
+      ),
+    ).toContain("No entry matches this search.");
+    expect(
+      render(<FeedbackSection state={inboxOf([])} query="nothing" onSearch={() => {}} />),
+    ).toContain("No note matches this search.");
+  });
+
+  it("filter invites by state with each state's count", () => {
+    const html = render(
+      <InvitesSection
+        state={{
+          kind: "ready",
+          value: {
+            ...seats,
+            invites: [],
+            total: 0,
+            counts: { open: 2, redeemed: 8, revoked: 1 },
+          },
+        }}
+        filter="revoked"
+        onFilter={() => {}}
+      />,
+    );
+
+    expect(html).toContain(">All 11</button>");
+    expect(html).toContain('aria-pressed="true">Revoked 1</button>');
+    expect(html).toContain("No invite matches.");
+  });
+
+  it("count a tab from the server, not from the rows read", () => {
+    const page = inboxOf([note]);
+    const html = render(
+      <FeedbackSection
+        state={{
+          kind: "ready",
+          value: { ...page.value, counts: { ...page.value.counts, new: 340 } },
+        }}
+        onMore={() => {}}
+      />,
+    );
+
+    expect(html).toContain('aria-pressed="true">New 340</button>');
+    expect(html).toContain("Showing 1 of 340");
   });
 });
 
@@ -419,11 +526,11 @@ describe("the feedback inbox (#3002)", () => {
   const triage = () => {};
 
   it("counts each tab and opens on New, with Close first and bulk close", () => {
-    const html = render(
-      <FeedbackSection state={{ kind: "ready", value: all }} onTriage={triage} />,
-    );
+    const html = render(<FeedbackSection state={inboxOf(all)} onTriage={triage} />);
 
-    expect(feedbackCounts(all)).toEqual({ new: 1, triaged: 1, issue: 1, closed: 1 });
+    expect(
+      movedCounts({ new: 2, triaged: 0, issue: 0, closed: 0 }, [{ from: "new", to: "closed" }]),
+    ).toEqual({ new: 1, triaged: 0, issue: 0, closed: 1 });
     expect(html).toContain('aria-pressed="true">New 1</button>');
     expect(html).toContain("Kept 1");
     expect(html).toContain("Linked to an issue 1");
@@ -434,16 +541,23 @@ describe("the feedback inbox (#3002)", () => {
     expect(html).toContain("Draft an issue");
     expect(html).toContain('type="checkbox"');
     expect(html).toContain("Close selected (0)");
+    expect(html).toContain("Select all shown (1)");
   });
 
-  it("opens on the tab of the note the address names, with that note first", () => {
+  it("shows the note the address names first in its tab, and reads it by id", async () => {
     const html = render(
-      <FeedbackSection
-        state={{ kind: "ready", value: all }}
-        focusNoteId="note-linked"
-        onTriage={triage}
-      />,
+      <FeedbackSection state={inboxOf(all)} filter="issue" focusNote={linked} onTriage={triage} />,
     );
+    const calls: unknown[] = [];
+    expect(
+      await readFeedbackNote(
+        fakeClient({ "GET /v1/operator/feedback/{noteId}": linked }, calls),
+        "note-linked",
+      ),
+    ).toEqual(linked);
+    expect(calls).toEqual([
+      ["GET /v1/operator/feedback/{noteId}", { path: { noteId: "note-linked" } }],
+    ]);
 
     expect(html).toContain('aria-pressed="true">Linked to an issue 1</button>');
     expect(html).toContain("operator-item-highlight");
@@ -455,11 +569,7 @@ describe("the feedback inbox (#3002)", () => {
 
   it("offers Reopen on a closed note", () => {
     const html = render(
-      <FeedbackSection
-        state={{ kind: "ready", value: [closed] }}
-        focusNoteId="note-closed"
-        onTriage={triage}
-      />,
+      <FeedbackSection state={inboxOf([closed])} filter="closed" onTriage={triage} />,
     );
 
     expect(html).toContain(">Reopen</button>");
@@ -486,9 +596,7 @@ describe("the feedback inbox (#3002)", () => {
         },
       },
     };
-    const html = render(
-      <FeedbackSection state={{ kind: "ready", value: [withContext] }} onTriage={triage} />,
-    );
+    const html = render(<FeedbackSection state={inboxOf([withContext])} onTriage={triage} />);
 
     expect(html).toContain("<summary>Context</summary>");
     expect(html).toContain("server-v0.26.20");
@@ -523,7 +631,7 @@ describe("the feedback inbox (#3002)", () => {
     expect(isIssueUrl("https://example.com/a/b/issues/3")).toBe(false);
   });
 
-  it("saves a triage through the API and replaces the note in the list", async () => {
+  it("saves a triage through the API", async () => {
     const calls: unknown[] = [];
     const updated = { ...note, status: "closed" as const };
     const outcome = await triageFeedback(
@@ -539,7 +647,6 @@ describe("the feedback inbox (#3002)", () => {
         { path: { noteId: "note-1" }, body: { status: "closed" } },
       ],
     ]);
-    expect(replaceNote([note, kept], updated)).toEqual([updated, kept]);
     const refused = await triageFeedback(
       fakeClient({
         "PATCH /v1/operator/feedback/{noteId}": new ApiRequestError(404, "not_found", "Gone."),
@@ -553,13 +660,11 @@ describe("the feedback inbox (#3002)", () => {
   it("counts new notes for the Operator button, and shows none when there are none", async () => {
     const calls: unknown[] = [];
     const count = await readNewFeedbackCount(
-      fakeClient({ "GET /v1/operator/feedback": { notes: [note, note] } }, calls),
+      fakeClient({ "GET /v1/operator/feedback": inboxOf([note, note]).value }, calls),
     );
 
     expect(count).toBe(2);
-    expect(calls).toEqual([
-      ["GET /v1/operator/feedback", { query: { status: "new", limit: 500 } }],
-    ]);
+    expect(calls).toEqual([["GET /v1/operator/feedback", { query: { status: "new", limit: 1 } }]]);
     expect(render(<OperatorButton onOpen={() => {}} newNotes={2} />)).toContain(
       'aria-label="Operator, 2 new feedback notes"',
     );

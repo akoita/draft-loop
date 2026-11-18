@@ -17,8 +17,57 @@ export type Loaded<T> =
 /** The seats invites use and the cap, which the operator changes at runtime (#2998). */
 export type BetaSeats = ApiSchemas["BetaSeats"];
 
+export type InviteState = BetaInvite["state"];
+export const inviteStates: readonly InviteState[] = ["open", "redeemed", "revoked"];
+
+/** One page of invites with the seats, and how many match the search in all and per state. */
 export interface InviteList extends BetaSeats {
   readonly invites: readonly BetaInvite[];
+  readonly total: number;
+  readonly counts: Record<InviteState, number>;
+}
+
+/** One page of the waitlist and how many entries match the search. */
+export interface WaitlistPage {
+  readonly entries: readonly WaitlistEntry[];
+  readonly total: number;
+}
+
+/** One page of the inbox, how many notes match, and each tab's count for the search. */
+export interface FeedbackPage {
+  readonly notes: readonly FeedbackNote[];
+  readonly total: number;
+  readonly counts: Record<FeedbackNote["status"], number>;
+}
+
+/** Rows an operator list reads at a time (#3016); Show more reads the next ones. */
+export const operatorPageSize = 50;
+
+/** Where a list read starts and what it looks for. */
+export interface ListRequest {
+  /** Rows already shown; the read starts after them. */
+  readonly offset?: number;
+  /** Text the rows must contain; blank reads every row. */
+  readonly query?: string;
+}
+
+function pageQuery(request: ListRequest) {
+  const query = request.query?.trim() ?? "";
+  return {
+    limit: operatorPageSize,
+    offset: request.offset ?? 0,
+    ...(query === "" ? {} : { q: query.slice(0, 200) }),
+  };
+}
+
+/** The first list followed by the rows of `more` it does not hold yet, in their order. */
+export function appendUnique<T>(
+  first: readonly T[],
+  more: readonly T[],
+  key: (item: T) => string,
+): readonly T[] {
+  const seen = new Set(first.map(key));
+  return [...first, ...more.filter((item) => !seen.has(key(item)))];
 }
 
 /** What one Invite press on a waitlist entry gave: the plain code, shown once, or a refusal. */
@@ -32,11 +81,6 @@ export type InviteOutcome =
  */
 export function canOperate(me: Me): boolean {
   return me.kind === "owner" || me.operator === true;
-}
-
-/** Newest first by an ISO 8601 time; the input is left as it was. */
-export function newestFirst<T>(items: readonly T[], time: (item: T) => string): T[] {
-  return [...items].sort((a, b) => time(b).localeCompare(time(a)));
 }
 
 type SeatCount = Pick<BetaSeats, "redeemed" | "open" | "cap">;
@@ -97,28 +141,54 @@ async function settle<T>(read: () => Promise<T>): Promise<Loaded<T>> {
   }
 }
 
-/** The waitlist, newest first; the API lists it oldest first. */
-export function readWaitlist(client: ApiClient): Promise<Loaded<readonly WaitlistEntry[]>> {
-  return settle(async () => {
-    const { entries } = await client.call("GET /v1/operator/waitlist", {});
-    return newestFirst(entries, (entry) => entry.joinedAt);
-  });
+/** One page of the waitlist, oldest first: the order people asked in, and the order to invite. */
+export function readWaitlist(
+  client: ApiClient,
+  request: ListRequest = {},
+): Promise<Loaded<WaitlistPage>> {
+  return settle(() => client.call("GET /v1/operator/waitlist", { query: pageQuery(request) }));
 }
 
-/** The invites newest first, with the accounts they created and the cap. */
-export function readInvites(client: ApiClient): Promise<Loaded<InviteList>> {
-  return settle(async () => {
-    const list = await client.call("GET /v1/operator/beta-invites", {});
-    return { ...list, invites: newestFirst(list.invites, (invite) => invite.createdAt) };
-  });
+/** One page of invites, newest first, with the seats and each state's count. */
+export function readInvites(
+  client: ApiClient,
+  request: ListRequest & { readonly state?: InviteState | undefined } = {},
+): Promise<Loaded<InviteList>> {
+  return settle(() =>
+    client.call("GET /v1/operator/beta-invites", {
+      query: {
+        ...pageQuery(request),
+        ...(request.state === undefined ? {} : { state: request.state }),
+      },
+    }),
+  );
 }
 
-/** Members' notes and support tickets, newest first, as the API lists them. */
-export function readFeedback(client: ApiClient): Promise<Loaded<readonly FeedbackNote[]>> {
-  return settle(async () => {
-    const { notes } = await client.call("GET /v1/operator/feedback", {});
-    return newestFirst(notes, (note) => note.sentAt);
-  });
+/** One page of one inbox tab, newest first, with each tab's count. */
+export function readFeedback(
+  client: ApiClient,
+  request: ListRequest & { readonly status?: FeedbackStatus | undefined } = {},
+): Promise<Loaded<FeedbackPage>> {
+  return settle(() =>
+    client.call("GET /v1/operator/feedback", {
+      query: {
+        ...pageQuery(request),
+        ...(request.status === undefined ? {} : { status: request.status }),
+      },
+    }),
+  );
+}
+
+/** The note an address names, wherever it sits; undefined when it cannot be read. */
+export async function readFeedbackNote(
+  client: ApiClient,
+  noteId: string,
+): Promise<FeedbackNote | undefined> {
+  try {
+    return await client.call("GET /v1/operator/feedback/{noteId}", { path: { noteId } });
+  } catch {
+    return undefined;
+  }
 }
 
 /** Turns one waitlist entry into an invite; the API removes the entry and logs the audit line. */
@@ -154,19 +224,21 @@ export function feedbackStatusLabel(status: FeedbackStatus): string {
   }
 }
 
-/** How many notes each tab holds. */
-export function feedbackCounts(notes: readonly FeedbackNote[]): Record<FeedbackStatus, number> {
-  const counts: Record<FeedbackStatus, number> = { new: 0, triaged: 0, issue: 0, closed: 0 };
-  for (const note of notes) counts[note.status] += 1;
-  return counts;
-}
-
-/** The list with one note replaced by its triaged copy; the order stays. */
-export function replaceNote(
-  notes: readonly FeedbackNote[],
-  updated: FeedbackNote,
-): readonly FeedbackNote[] {
-  return notes.map((note) => (note.noteId === updated.noteId ? updated : note));
+/**
+ * The counts once a triage moved notes between tabs: each moved note leaves its old tab and
+ * joins its new one.
+ */
+export function movedCounts(
+  counts: Record<FeedbackStatus, number>,
+  moves: readonly { readonly from: FeedbackStatus; readonly to: FeedbackStatus }[],
+): Record<FeedbackStatus, number> {
+  const next = { ...counts };
+  for (const { from, to } of moves) {
+    if (from === to) continue;
+    next[from] = Math.max(0, next[from] - 1);
+    next[to] += 1;
+  }
+  return next;
 }
 
 /** What one triage press asks: a status, and for `issue` the issue's address. */
@@ -203,10 +275,10 @@ export async function triageFeedback(
 /** How many notes wait in New, for the count on the Operator button; undefined when unread. */
 export async function readNewFeedbackCount(client: ApiClient): Promise<number | undefined> {
   try {
-    const { notes } = await client.call("GET /v1/operator/feedback", {
-      query: { status: "new", limit: 500 },
+    const { counts } = await client.call("GET /v1/operator/feedback", {
+      query: { status: "new", limit: 1 },
     });
-    return notes.length;
+    return counts.new;
   } catch {
     return undefined;
   }

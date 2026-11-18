@@ -2,31 +2,37 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
+import { ListMore, ListSearch, usePagedList } from "./operator-list.js";
 import {
+  appendUnique,
   type BetaSeats,
   draftIssueUrl,
   type FeedbackNote,
+  type FeedbackPage,
   type FeedbackStatus,
   type FeedbackTriage,
-  feedbackCounts,
   feedbackKindLabel,
   feedbackStatuses,
   feedbackStatusLabel,
   type InviteList,
   type InviteOutcome,
+  type InviteState,
   inviteFromWaitlist,
   inviteGoesPastCap,
   inviteStateLabel,
+  inviteStates,
   isIssueUrl,
   type Loaded,
+  movedCounts,
   operatorTime,
   readFeedback,
+  readFeedbackNote,
   readInvites,
   readWaitlist,
-  replaceNote,
   seatsLeft,
   triageFeedback,
   type WaitlistEntry,
+  type WaitlistPage,
 } from "./operator-model.js";
 
 function LoadProblem({ state }: { readonly state: Loaded<unknown> }) {
@@ -46,7 +52,7 @@ function seatsSentence(seats: BetaSeats): string {
 }
 
 export interface WaitlistSectionProps {
-  readonly state: Loaded<readonly WaitlistEntry[]>;
+  readonly state: Loaded<WaitlistPage>;
   /** The seats and the cap, once read; the Invite button warns past the cap. */
   readonly seats?: BetaSeats | undefined;
   /** The entry whose invite is being created, if any. */
@@ -59,9 +65,16 @@ export interface WaitlistSectionProps {
   /** Creates the invite the operator confirmed past the cap. */
   readonly onConfirm?: (entry: WaitlistEntry) => void;
   readonly onCancel?: () => void;
+  /** The search the list was read with; blank for every entry. */
+  readonly query?: string | undefined;
+  readonly onSearch?: ((query: string) => void) | undefined;
+  /** Reads the next page; without it the list shows only what it holds. */
+  readonly onMore?: (() => void) | undefined;
+  readonly loadingMore?: boolean | undefined;
+  readonly moreProblem?: string | undefined;
 }
 
-/** People waiting for a place, newest first, each with an Invite button. */
+/** People waiting for a place, oldest first (the order to invite in), one row each. */
 export function WaitlistSection({
   state,
   seats,
@@ -71,6 +84,11 @@ export function WaitlistSection({
   onInvite,
   onConfirm,
   onCancel,
+  query = "",
+  onSearch,
+  onMore,
+  loadingMore = false,
+  moreProblem,
 }: WaitlistSectionProps) {
   return (
     <section className="panel operator-section" aria-labelledby="operator-waitlist">
@@ -91,44 +109,57 @@ export function WaitlistSection({
           {t`No invite for ${outcome.email}: ${outcome.message}`}
         </p>
       )}
+      {onSearch === undefined ? null : (
+        <ListSearch label={t`Search by email`} query={query} onSearch={onSearch} />
+      )}
       <LoadProblem state={state} />
-      {state.kind !== "ready" ? null : state.value.length === 0 ? (
-        <p className="muted">{t`Nobody is waiting.`}</p>
+      {state.kind !== "ready" ? null : state.value.entries.length === 0 ? (
+        <p className="muted">
+          {query.trim() === "" ? t`Nobody is waiting.` : t`No entry matches this search.`}
+        </p>
       ) : (
-        <ul className="operator-list">
-          {state.value.map((entry) => (
-            <li key={entry.entryId}>
-              <article className="operator-item">
-                <h3>{entry.email}</h3>
-                <p className="muted">{t`Joined ${operatorTime(entry.joinedAt)}`}</p>
-                <footer>
-                  {confirming === entry.entryId && seats !== undefined ? (
-                    <div className="notice operator-confirm" role="alert">
-                      <p>
-                        {t`This invite goes past the cap of ${seats.cap} seats: ${seats.redeemed} are used and ${seats.open} invites are not used yet. ${entry.email} cannot sign up until a seat frees or you raise the cap.`}
-                      </p>
-                      <button type="button" onClick={() => onConfirm?.(entry)}>
-                        {t`Invite anyway`}
-                      </button>{" "}
-                      <button type="button" className="secondary" onClick={() => onCancel?.()}>
-                        {t`Cancel`}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={inviting !== undefined || confirming !== undefined}
-                      aria-label={t`Invite ${entry.email}`}
-                      onClick={() => onInvite(entry)}
-                    >
-                      {inviting === entry.entryId ? t`Inviting…` : t`Invite`}
+        <>
+          <p className="muted">{t`Oldest first: the order people asked in.`}</p>
+          <ul className="operator-rows">
+            {state.value.entries.map((entry) => (
+              <li key={entry.entryId} className="operator-row">
+                <span className="operator-row-main">
+                  <strong>{entry.email}</strong>{" "}
+                  <span className="muted">{t`Joined ${operatorTime(entry.joinedAt)}`}</span>
+                </span>
+                {confirming === entry.entryId && seats !== undefined ? (
+                  <div className="notice operator-confirm" role="alert">
+                    <p>
+                      {t`This invite goes past the cap of ${seats.cap} seats: ${seats.redeemed} are used and ${seats.open} invites are not used yet. ${entry.email} cannot sign up until a seat frees or you raise the cap.`}
+                    </p>
+                    <button type="button" onClick={() => onConfirm?.(entry)}>
+                      {t`Invite anyway`}
+                    </button>{" "}
+                    <button type="button" className="secondary" onClick={() => onCancel?.()}>
+                      {t`Cancel`}
                     </button>
-                  )}
-                </footer>
-              </article>
-            </li>
-          ))}
-        </ul>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={inviting !== undefined || confirming !== undefined}
+                    aria-label={t`Invite ${entry.email}`}
+                    onClick={() => onInvite(entry)}
+                  >
+                    {inviting === entry.entryId ? t`Inviting…` : t`Invite`}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <ListMore
+            shown={state.value.entries.length}
+            total={state.value.total}
+            loading={loadingMore}
+            problem={moreProblem}
+            onMore={onMore}
+          />
+        </>
       )}
     </section>
   );
@@ -149,8 +180,43 @@ function capSourceSentence(seats: BetaSeats): string {
     : t`This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed.`;
 }
 
-/** Every invite with its state, and the accounts invites may still create. */
-export function InvitesSection({ state }: { readonly state: Loaded<InviteList> }) {
+/** A filter tab's name on the invites list. */
+function inviteFilterLabel(state: InviteState | undefined): string {
+  switch (state) {
+    case undefined:
+      return t`All`;
+    case "open":
+      return t`Not used yet`;
+    case "redeemed":
+      return t`Redeemed`;
+    case "revoked":
+      return t`Revoked`;
+  }
+}
+
+export interface InvitesSectionProps {
+  readonly state: Loaded<InviteList>;
+  /** The state the list shows; every invite when absent. */
+  readonly filter?: InviteState | undefined;
+  readonly onFilter?: ((state: InviteState | undefined) => void) | undefined;
+  readonly query?: string | undefined;
+  readonly onSearch?: ((query: string) => void) | undefined;
+  readonly onMore?: (() => void) | undefined;
+  readonly loadingMore?: boolean | undefined;
+  readonly moreProblem?: string | undefined;
+}
+
+/** The invites, newest first, one row each, and the accounts invites may still create. */
+export function InvitesSection({
+  state,
+  filter,
+  onFilter,
+  query = "",
+  onSearch,
+  onMore,
+  loadingMore = false,
+  moreProblem,
+}: InvitesSectionProps) {
   return (
     <section className="panel operator-section" aria-labelledby="operator-invites">
       <h2 id="operator-invites">{t`Invites`}</h2>
@@ -159,24 +225,61 @@ export function InvitesSection({ state }: { readonly state: Loaded<InviteList> }
         <>
           <p className="operator-seats">{seatsSentence(state.value)}</p>
           <p className="muted">{capSourceSentence(state.value)}</p>
+          {onFilter === undefined ? null : (
+            <fieldset className="operator-tabs">
+              <legend className="operator-tabs-legend">{t`Show invites`}</legend>
+              {[undefined, ...inviteStates].map((choice) => {
+                const counts = state.value.counts;
+                const count =
+                  choice === undefined
+                    ? counts.open + counts.redeemed + counts.revoked
+                    : counts[choice];
+                return (
+                  <button
+                    key={choice ?? "all"}
+                    type="button"
+                    className={choice === filter ? undefined : "secondary"}
+                    aria-pressed={choice === filter}
+                    onClick={() => onFilter(choice)}
+                  >
+                    {inviteFilterLabel(choice)} {count}
+                  </button>
+                );
+              })}
+            </fieldset>
+          )}
+          {onSearch === undefined ? null : (
+            <ListSearch label={t`Search by email`} query={query} onSearch={onSearch} />
+          )}
           {state.value.invites.length === 0 ? (
-            <p className="muted">{t`No invite sent yet.`}</p>
+            <p className="muted">
+              {query.trim() === "" && filter === undefined
+                ? t`No invite sent yet.`
+                : t`No invite matches.`}
+            </p>
           ) : (
-            <ul className="operator-list">
-              {state.value.invites.map((invite) => (
-                <li key={invite.inviteId}>
-                  <article className="operator-item">
-                    <h3>{invite.email}</h3>
-                    <p>
-                      <span className={`operator-state operator-state-${invite.state}`}>
-                        {inviteStateLabel(invite.state)}
-                      </span>{" "}
+            <>
+              <ul className="operator-rows">
+                {state.value.invites.map((invite) => (
+                  <li key={invite.inviteId} className="operator-row">
+                    <span className="operator-row-main">
+                      <strong>{invite.email}</strong>{" "}
                       <span className="muted">{inviteTime(invite)}</span>
-                    </p>
-                  </article>
-                </li>
-              ))}
-            </ul>
+                    </span>
+                    <span className={`operator-state operator-state-${invite.state}`}>
+                      {inviteStateLabel(invite.state)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <ListMore
+                shown={state.value.invites.length}
+                total={state.value.total}
+                loading={loadingMore}
+                problem={moreProblem}
+                onMore={onMore}
+              />
+            </>
           )}
         </>
       )}
@@ -308,8 +411,8 @@ function FeedbackItem({
           />
         ) : null}
         <h3>{kind}</h3>
+        <span className="muted">{t`Sent ${operatorTime(note.sentAt)} from ${note.screen}`}</span>
       </div>
-      <p className="muted">{t`Sent ${operatorTime(note.sentAt)} from ${note.screen}`}</p>
       <p className="operator-note">{note.text}</p>
       {note.issueUrl === null ? null : (
         <p>
@@ -403,9 +506,12 @@ function FeedbackItem({
 }
 
 export interface FeedbackSectionProps {
-  readonly state: Loaded<readonly FeedbackNote[]>;
-  /** The note the page address names, shown first in its tab. */
-  readonly focusNoteId?: string | undefined;
+  readonly state: Loaded<FeedbackPage>;
+  /** The tab shown; New when absent. */
+  readonly filter?: FeedbackStatus | undefined;
+  readonly onFilter?: ((status: FeedbackStatus) => void) | undefined;
+  /** The note the page address names, shown first while it is in the tab shown. */
+  readonly focusNote?: FeedbackNote | undefined;
   /** Notes whose triage is being saved. */
   readonly busy?: ReadonlySet<string> | undefined;
   /** The last triage refusal, in words. */
@@ -414,44 +520,55 @@ export interface FeedbackSectionProps {
   readonly onTriage?: ((note: FeedbackNote, triage: FeedbackTriage) => void) | undefined;
   /** Closes the selected notes at once. */
   readonly onCloseMany?: ((notes: readonly FeedbackNote[]) => void) | undefined;
+  readonly query?: string | undefined;
+  readonly onSearch?: ((query: string) => void) | undefined;
+  readonly onMore?: (() => void) | undefined;
+  readonly loadingMore?: boolean | undefined;
+  readonly moreProblem?: string | undefined;
 }
 
 /**
  * Members' notes and support tickets as an inbox (#3002): New, Kept, Linked to an issue and
- * Closed, newest first. Most notes need no answer, so Close is each note's first action.
+ * Closed, newest first, a page at a time with a search (#3016). Most notes need no answer, so
+ * Close is each note's first action.
  */
 export function FeedbackSection({
   state,
-  focusNoteId,
+  filter = "new",
+  onFilter,
+  focusNote,
   busy,
   problem,
   onTriage,
   onCloseMany,
+  query = "",
+  onSearch,
+  onMore,
+  loadingMore = false,
+  moreProblem,
 }: FeedbackSectionProps) {
-  const notes = state.kind === "ready" ? state.value : [];
-  const focused = notes.find((note) => note.noteId === focusNoteId);
-  const [chosen, setChosen] = useState<FeedbackStatus | undefined>(undefined);
-  const filter = chosen ?? focused?.status ?? "new";
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const counts = feedbackCounts(notes);
-  const shown = notes.filter((note) => note.status === filter);
+  const page = state.kind === "ready" ? state.value : undefined;
+  const shown = (page?.notes ?? []).filter((note) => note.status === filter);
+  const pinned = focusNote !== undefined && focusNote.status === filter ? focusNote : undefined;
   const ordered =
-    focused === undefined || focused.status !== filter
+    pinned === undefined
       ? shown
-      : [focused, ...shown.filter((note) => note.noteId !== focused.noteId)];
+      : [pinned, ...shown.filter((note) => note.noteId !== pinned.noteId)];
   const selectable = filter === "new" || filter === "triaged";
-  const chosenNotes = shown.filter((note) => selected.has(note.noteId));
+  const chosenNotes = ordered.filter((note) => selected.has(note.noteId));
+  const allCounted = page === undefined ? 0 : Object.values(page.counts).reduce((a, b) => a + b, 0);
 
   useEffect(() => {
-    if (focusNoteId === undefined) return;
-    document.getElementById(`feedback-${focusNoteId}`)?.scrollIntoView({ block: "center" });
-  }, [focusNoteId]);
+    if (pinned === undefined) return;
+    document.getElementById(`feedback-${pinned.noteId}`)?.scrollIntoView({ block: "center" });
+  }, [pinned]);
 
   return (
     <section className="panel operator-section" aria-labelledby="operator-feedback">
       <h2 id="operator-feedback">{t`Feedback`}</h2>
       <LoadProblem state={state} />
-      {state.kind !== "ready" ? null : (
+      {page === undefined ? null : (
         <>
           <fieldset className="operator-tabs">
             <legend className="operator-tabs-legend">{t`Show notes`}</legend>
@@ -462,33 +579,45 @@ export function FeedbackSection({
                 className={status === filter ? undefined : "secondary"}
                 aria-pressed={status === filter}
                 onClick={() => {
-                  setChosen(status);
+                  onFilter?.(status);
                   setSelected(new Set());
                 }}
               >
-                {feedbackStatusLabel(status)} {counts[status]}
+                {feedbackStatusLabel(status)} {page.counts[status]}
               </button>
             ))}
           </fieldset>
+          {onSearch === undefined ? null : (
+            <ListSearch
+              label={t`Search the text, page or kind`}
+              query={query}
+              onSearch={(next) => {
+                setSelected(new Set());
+                onSearch(next);
+              }}
+            />
+          )}
           {problem === undefined ? null : (
             <p className="problem" role="alert">
               {problem}
             </p>
           )}
-          {onTriage !== undefined && selectable && shown.length > 0 ? (
+          {onTriage !== undefined && selectable && ordered.length > 0 ? (
             <div className="actions operator-bulk">
               <button
                 type="button"
                 className="secondary"
                 onClick={() =>
                   setSelected(
-                    chosenNotes.length === shown.length
+                    chosenNotes.length === ordered.length
                       ? new Set()
-                      : new Set(shown.map((note) => note.noteId)),
+                      : new Set(ordered.map((note) => note.noteId)),
                   )
                 }
               >
-                {chosenNotes.length === shown.length ? t`Select none` : t`Select all`}
+                {chosenNotes.length === ordered.length
+                  ? t`Select none`
+                  : t`Select all shown (${ordered.length})`}
               </button>
               <button
                 type="button"
@@ -502,33 +631,46 @@ export function FeedbackSection({
               </button>
             </div>
           ) : null}
-          {notes.length === 0 ? (
-            <p className="muted">{t`No feedback yet.`}</p>
-          ) : ordered.length === 0 ? (
-            <p className="muted">{t`Nothing here.`}</p>
+          {ordered.length === 0 ? (
+            <p className="muted">
+              {query.trim() !== ""
+                ? t`No note matches this search.`
+                : allCounted === 0
+                  ? t`No feedback yet.`
+                  : t`Nothing here.`}
+            </p>
           ) : (
-            <ul className="operator-list">
-              {ordered.map((note) => (
-                <li key={note.noteId}>
-                  <FeedbackItem
-                    note={note}
-                    busy={busy?.has(note.noteId) ?? false}
-                    selectable={selectable}
-                    selected={selected.has(note.noteId)}
-                    highlighted={note.noteId === focusNoteId}
-                    onSelect={(on) =>
-                      setSelected((previous) => {
-                        const next = new Set(previous);
-                        if (on) next.add(note.noteId);
-                        else next.delete(note.noteId);
-                        return next;
-                      })
-                    }
-                    onTriage={onTriage}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="operator-list">
+                {ordered.map((note) => (
+                  <li key={note.noteId}>
+                    <FeedbackItem
+                      note={note}
+                      busy={busy?.has(note.noteId) ?? false}
+                      selectable={selectable}
+                      selected={selected.has(note.noteId)}
+                      highlighted={note.noteId === pinned?.noteId}
+                      onSelect={(on) =>
+                        setSelected((previous) => {
+                          const next = new Set(previous);
+                          if (on) next.add(note.noteId);
+                          else next.delete(note.noteId);
+                          return next;
+                        })
+                      }
+                      onTriage={onTriage}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <ListMore
+                shown={shown.length}
+                total={page.counts[filter]}
+                loading={loadingMore}
+                problem={moreProblem}
+                onMore={onMore}
+              />
+            </>
           )}
         </>
       )}
@@ -536,28 +678,110 @@ export function FeedbackSection({
   );
 }
 
+/** The operator page's parts; one shows at a time, so a long list never hides the others. */
+export type OperatorView = "feedback" | "waitlist" | "invites";
+
 export interface OperatorPageProps {
   readonly client: ApiClient;
   /** Back to the person's own work. */
   readonly onClose: () => void;
   /** The feedback note the page address names (`#operator/feedback/<noteId>`), shown first. */
   readonly focusNoteId?: string | undefined;
+  /** The part shown first; Feedback when absent. */
+  readonly initialView?: OperatorView | undefined;
 }
 
+const sizeOf = {
+  waitlist: (page: WaitlistPage) => page.entries.length,
+  invites: (page: InviteList) => page.invites.length,
+  feedback: (page: FeedbackPage) => page.notes.length,
+};
+
+const mergeOf = {
+  waitlist: (shown: WaitlistPage, next: WaitlistPage): WaitlistPage => ({
+    ...next,
+    entries: appendUnique(shown.entries, next.entries, (entry) => entry.entryId),
+  }),
+  invites: (shown: InviteList, next: InviteList): InviteList => ({
+    ...next,
+    invites: appendUnique(shown.invites, next.invites, (invite) => invite.inviteId),
+  }),
+  feedback: (shown: FeedbackPage, next: FeedbackPage): FeedbackPage => ({
+    ...next,
+    notes: appendUnique(shown.notes, next.notes, (note) => note.noteId),
+  }),
+};
+
 /**
- * The operator's page (#2829): the beta waitlist, the invites and the account cap, and members'
- * feedback. Reached only by the owner token or an operator's sign-in with a second factor.
+ * The operator's page (#2829): members' feedback, the beta waitlist, and the invites with the
+ * account cap, one part at a time and each read a page at a time (#3016). Reached only by the
+ * owner token or an operator's sign-in with a second factor.
  */
-export function OperatorPage({ client, onClose, focusNoteId }: OperatorPageProps) {
+export function OperatorPage({
+  client,
+  onClose,
+  focusNoteId,
+  initialView = "feedback",
+}: OperatorPageProps) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const [waitlist, setWaitlist] = useState<Loaded<readonly WaitlistEntry[]>>({ kind: "loading" });
-  const [invites, setInvites] = useState<Loaded<InviteList>>({ kind: "loading" });
-  const [feedback, setFeedback] = useState<Loaded<readonly FeedbackNote[]>>({ kind: "loading" });
+  const [view, setView] = useState<OperatorView>(initialView);
+  const [waitlistQuery, setWaitlistQuery] = useState("");
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [inviteFilter, setInviteFilter] = useState<InviteState | undefined>(undefined);
+  const [feedbackQuery, setFeedbackQuery] = useState("");
+  const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus>("new");
+  const [focusNote, setFocusNote] = useState<FeedbackNote | undefined>(undefined);
   const [inviting, setInviting] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState<string | undefined>(undefined);
   const [outcome, setOutcome] = useState<InviteOutcome | undefined>(undefined);
   const [triaging, setTriaging] = useState<ReadonlySet<string>>(new Set());
   const [triageProblem, setTriageProblem] = useState<string | undefined>(undefined);
+
+  const waitlist = usePagedList(
+    useCallback(
+      (offset: number) => readWaitlist(client, { offset, query: waitlistQuery }),
+      [client, waitlistQuery],
+    ),
+    mergeOf.waitlist,
+    sizeOf.waitlist,
+  );
+  const invites = usePagedList(
+    useCallback(
+      (offset: number) => readInvites(client, { offset, query: inviteQuery, state: inviteFilter }),
+      [client, inviteQuery, inviteFilter],
+    ),
+    mergeOf.invites,
+    sizeOf.invites,
+  );
+  const feedback = usePagedList(
+    useCallback(
+      (offset: number) =>
+        readFeedback(client, { offset, query: feedbackQuery, status: feedbackFilter }),
+      [client, feedbackQuery, feedbackFilter],
+    ),
+    mergeOf.feedback,
+    sizeOf.feedback,
+  );
+  const updateFeedback = feedback.update;
+
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+
+  // The address names one note: read it wherever it sits, and open its tab.
+  useEffect(() => {
+    if (focusNoteId === undefined) return;
+    let current = true;
+    void readFeedbackNote(client, focusNoteId).then((note) => {
+      if (!current || note === undefined) return;
+      setFocusNote(note);
+      setFeedbackFilter(note.status);
+      setView("feedback");
+    });
+    return () => {
+      current = false;
+    };
+  }, [client, focusNoteId]);
 
   const triage = useCallback(
     async (notes: readonly FeedbackNote[], next: FeedbackTriage) => {
@@ -567,52 +791,35 @@ export function OperatorPage({ client, onClose, focusNoteId }: OperatorPageProps
       const results = await Promise.all(
         notes.map((note) => triageFeedback(client, note.noteId, next)),
       );
-      setFeedback((previous) => {
-        if (previous.kind !== "ready") return previous;
-        let value = previous.value;
-        for (const result of results) {
-          if (result.kind === "triaged") value = replaceNote(value, result.note);
-        }
-        return { kind: "ready", value };
-      });
+      const moved = results.flatMap((result) => (result.kind === "triaged" ? [result.note] : []));
+      const before = new Map(notes.map((note) => [note.noteId, note.status]));
+      // A triaged note leaves the tab it was in; the counts follow it.
+      updateFeedback((page) => ({
+        ...page,
+        notes: page.notes.filter(
+          (note) =>
+            !moved.some((done) => done.noteId === note.noteId && done.status !== note.status),
+        ),
+        counts: movedCounts(
+          page.counts,
+          moved.map((note) => ({ from: before.get(note.noteId) ?? note.status, to: note.status })),
+        ),
+      }));
+      setFocusNote((previous) =>
+        previous === undefined
+          ? previous
+          : (moved.find((note) => note.noteId === previous.noteId) ?? previous),
+      );
       const failed = results.find((result) => result.kind === "failed");
       if (failed?.kind === "failed") setTriageProblem(failed.message);
       setTriaging((previous) => new Set([...previous].filter((id) => !ids.includes(id))));
     },
-    [client],
+    [client, updateFeedback],
   );
-
-  const reloadInvitations = useCallback(async () => {
-    const [nextWaitlist, nextInvites] = await Promise.all([
-      readWaitlist(client),
-      readInvites(client),
-    ]);
-    setWaitlist(nextWaitlist);
-    setInvites(nextInvites);
-  }, [client]);
-
-  useEffect(() => {
-    heading.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    let current = true;
-    void Promise.all([readWaitlist(client), readInvites(client), readFeedback(client)]).then(
-      ([nextWaitlist, nextInvites, nextFeedback]) => {
-        if (!current) return;
-        setWaitlist(nextWaitlist);
-        setInvites(nextInvites);
-        setFeedback(nextFeedback);
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [client]);
 
   function requestInvite(entry: WaitlistEntry) {
     setOutcome(undefined);
-    if (invites.kind === "ready" && inviteGoesPastCap(invites.value)) {
+    if (invites.state.kind === "ready" && inviteGoesPastCap(invites.state.value)) {
       setConfirming(entry.entryId);
       return;
     }
@@ -627,8 +834,27 @@ export function OperatorPage({ client, onClose, focusNoteId }: OperatorPageProps
     setOutcome(result);
     setInviting(undefined);
     // The API removed the entry and added the invite: read both again.
-    if (result.kind === "invited") await reloadInvitations();
+    if (result.kind === "invited") await Promise.all([waitlist.reload(), invites.reload()]);
   }
+
+  const counts = {
+    feedback: feedback.state.kind === "ready" ? feedback.state.value.counts.new : undefined,
+    waitlist:
+      waitlist.state.kind === "ready" && waitlistQuery === ""
+        ? waitlist.state.value.total
+        : undefined,
+    invites: invites.state.kind === "ready" ? invites.state.value.open : undefined,
+  };
+  const viewLabel: Record<OperatorView, string> = {
+    feedback: t`Feedback`,
+    waitlist: t`Waitlist`,
+    invites: t`Invites`,
+  };
+  const countLabel: Record<OperatorView, (count: number) => string> = {
+    feedback: (count) => t`${count} new`,
+    waitlist: (count) => t`${count} waiting`,
+    invites: (count) => t`${count} not used yet`,
+  };
 
   return (
     <main className="operator-page">
@@ -641,27 +867,71 @@ export function OperatorPage({ client, onClose, focusNoteId }: OperatorPageProps
         </button>
       </div>
       <p className="muted">
-        {t`The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log.`}
+        {t`What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log.`}
       </p>
-      <WaitlistSection
-        state={waitlist}
-        seats={invites.kind === "ready" ? invites.value : undefined}
-        inviting={inviting}
-        confirming={confirming}
-        outcome={outcome}
-        onInvite={requestInvite}
-        onConfirm={(entry) => void invite(entry)}
-        onCancel={() => setConfirming(undefined)}
-      />
-      <InvitesSection state={invites} />
-      <FeedbackSection
-        state={feedback}
-        focusNoteId={focusNoteId}
-        busy={triaging}
-        problem={triageProblem}
-        onTriage={(note, next) => void triage([note], next)}
-        onCloseMany={(notes) => void triage(notes, { status: "closed" })}
-      />
+      <nav className="operator-views" aria-label={t`Operator sections`}>
+        {(["feedback", "waitlist", "invites"] as const).map((part) => {
+          const count = counts[part];
+          return (
+            <button
+              key={part}
+              type="button"
+              className={part === view ? undefined : "secondary"}
+              aria-pressed={part === view}
+              onClick={() => setView(part)}
+            >
+              {viewLabel[part]}
+              {count === undefined ? null : (
+                <span className="operator-view-count"> · {countLabel[part](count)}</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+      {view === "waitlist" ? (
+        <WaitlistSection
+          state={waitlist.state}
+          seats={invites.state.kind === "ready" ? invites.state.value : undefined}
+          inviting={inviting}
+          confirming={confirming}
+          outcome={outcome}
+          onInvite={requestInvite}
+          onConfirm={(entry) => void invite(entry)}
+          onCancel={() => setConfirming(undefined)}
+          query={waitlistQuery}
+          onSearch={setWaitlistQuery}
+          onMore={() => void waitlist.more()}
+          loadingMore={waitlist.loadingMore}
+          moreProblem={waitlist.moreProblem}
+        />
+      ) : view === "invites" ? (
+        <InvitesSection
+          state={invites.state}
+          filter={inviteFilter}
+          onFilter={setInviteFilter}
+          query={inviteQuery}
+          onSearch={setInviteQuery}
+          onMore={() => void invites.more()}
+          loadingMore={invites.loadingMore}
+          moreProblem={invites.moreProblem}
+        />
+      ) : (
+        <FeedbackSection
+          state={feedback.state}
+          filter={feedbackFilter}
+          onFilter={setFeedbackFilter}
+          focusNote={focusNote}
+          busy={triaging}
+          problem={triageProblem}
+          onTriage={(note, next) => void triage([note], next)}
+          onCloseMany={(notes) => void triage(notes, { status: "closed" })}
+          query={feedbackQuery}
+          onSearch={setFeedbackQuery}
+          onMore={() => void feedback.more()}
+          loadingMore={feedback.loadingMore}
+          moreProblem={feedback.moreProblem}
+        />
+      )}
     </main>
   );
 }

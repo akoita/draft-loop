@@ -593,8 +593,13 @@ msgstr ""
 msgid "{count} / {limit}"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "{count} not used yet"
 msgstr ""
 
 #: packages/ui/src/readiness-blocker-groups.ts
@@ -629,6 +634,10 @@ msgstr ""
 #. placeholder {0}: approvalReadinessCheckLabels[blocker.check]
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} validation checks failed: {0}"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "{count} waiting"
 msgstr ""
 
 #: packages/ui/src/work-journal-pending.tsx
@@ -1271,6 +1280,7 @@ msgstr ""
 msgid "all"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/home-list-model.ts
 msgid "All"
 msgstr ""
@@ -5860,6 +5870,10 @@ msgstr ""
 msgid "No eligible chunks for full source, so retrieval was used"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "No entry matches this search."
+msgstr ""
+
 #: packages/ui/src/run-requirement-evidence.tsx
 msgid "No evidence found"
 msgstr ""
@@ -5928,6 +5942,10 @@ msgid "No invite has that code. Check it for typos, or ask for a new invite."
 msgstr ""
 
 #: apps/web/src/operator.tsx
+msgid "No invite matches."
+msgstr ""
+
+#: apps/web/src/operator.tsx
 msgid "No invite sent yet."
 msgstr ""
 
@@ -5977,6 +5995,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "No network transmission"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "No note matches this search."
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -6234,6 +6256,10 @@ msgstr ""
 msgid "Not sure"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Not used yet"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
 msgstr ""
@@ -6317,6 +6343,10 @@ msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Off: pauses after a round with a blocking finding"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Oldest first: the order people asked in."
 msgstr ""
 
 #: packages/ui/src/profile-presentation.ts
@@ -6534,6 +6564,10 @@ msgstr ""
 
 #: apps/web/src/operator.tsx
 msgid "Operator"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Operator sections"
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -7259,6 +7293,7 @@ msgstr ""
 msgid "Reading your workspace…"
 msgstr ""
 
+#: apps/web/src/operator-list.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr ""
@@ -7384,6 +7419,7 @@ msgid "Recording… speak your answer."
 msgstr ""
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Redeemed"
 msgstr ""
 
@@ -8053,6 +8089,7 @@ msgid "Revision"
 msgstr ""
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Revoked"
 msgstr ""
 
@@ -8409,6 +8446,10 @@ msgstr ""
 msgid "Search applications"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Search by email"
+msgstr ""
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "Search by name, employer or role"
 msgstr ""
@@ -8419,6 +8460,10 @@ msgstr ""
 
 #: packages/ui/src/help-panel.tsx
 msgid "Search the guide"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Search the text, page or kind"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -8442,8 +8487,9 @@ msgstr ""
 msgid "See your job applications and how their runs stand"
 msgstr ""
 
+#. placeholder {0}: ordered.length
 #: apps/web/src/operator.tsx
-msgid "Select all"
+msgid "Select all shown ({0})"
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
@@ -8666,8 +8712,16 @@ msgstr ""
 msgid "Show everything"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Show invites"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Show me the steps"
+msgstr ""
+
+#: apps/web/src/operator-list.tsx
+msgid "Show more"
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -8713,6 +8767,10 @@ msgstr ""
 #. placeholder {0}: matched.size
 #: packages/ui/src/app.tsx
 msgid "Showing {0} of {total} matching “{wanted}”"
+msgstr ""
+
+#: apps/web/src/operator-list.tsx
+msgid "Showing {shown} of {total}"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9368,10 +9426,6 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "The beta is full for now. Your code stays valid: try again when places open."
-msgstr ""
-
-#: apps/web/src/operator.tsx
-msgid "The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -11304,6 +11358,10 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "What leads"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log."
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx

@@ -22,6 +22,16 @@ const untriaged = { status: "new", issueUrl: null, triagedAt: null } as const;
 /** Notes kept in memory, trimmed and bounded as the Postgres store does. */
 function memoryFeedback() {
   const notes: FeedbackNote[] = [];
+  const matching = (query: string | undefined) => {
+    const text = query?.trim().toLowerCase() ?? "";
+    return [...notes]
+      .reverse()
+      .filter(
+        (note) =>
+          text === "" ||
+          `${note.text} ${note.screen} ${note.category ?? ""}`.toLowerCase().includes(text),
+      );
+  };
   const store: FeedbackStore = {
     send: async (input: SendFeedbackInput) => {
       const text = input.text.trim();
@@ -61,11 +71,16 @@ function memoryFeedback() {
       notes.push(note);
       return note;
     },
-    listNewest: async (limit, status) =>
-      [...notes]
-        .reverse()
+    listNewest: async (limit, status, page) =>
+      matching(page?.query)
         .filter((note) => status === undefined || note.status === status)
-        .slice(0, limit),
+        .slice(page?.offset ?? 0, (page?.offset ?? 0) + limit),
+    get: async (noteId) => notes.find((note) => note.noteId === noteId),
+    statusCounts: async (query) => {
+      const counts = { new: 0, triaged: 0, issue: 0, closed: 0 };
+      for (const note of matching(query)) counts[note.status] += 1;
+      return counts;
+    },
     triage: async ({ noteId, status, issueUrl, now }) => {
       const index = notes.findIndex((note) => note.noteId === noteId);
       const current = notes[index];
@@ -180,6 +195,40 @@ describe("feedback notes (#2828)", () => {
     expect(listed.json().notes.map(({ text }: FeedbackNote) => text)).toEqual([
       "More templates, please.",
     ]);
+  });
+
+  it("pages and searches the operator list, with each status's count for the search", async () => {
+    const { store } = memoryFeedback();
+    const server = await api(store);
+    const authorization = await signIn("member-north");
+    for (const text of ["Export is slow.", "Export fails.", "Love the templates."]) {
+      await server.inject({
+        method: "POST",
+        url: "/v1/feedback",
+        headers: { authorization },
+        payload: { text, screen: "review" },
+      });
+    }
+    const operator = { authorization: `Bearer ${ownerToken}` };
+
+    const second = await server.inject({
+      method: "GET",
+      url: "/v1/operator/feedback?limit=1&offset=1&q=EXPORT",
+      headers: operator,
+    });
+
+    expect(second.statusCode).toBe(200);
+    expect(second.json()).toMatchObject({
+      total: 2,
+      counts: { new: 2, triaged: 0, issue: 0, closed: 0 },
+    });
+    expect(second.json().notes.map(({ text }: FeedbackNote) => text)).toEqual(["Export is slow."]);
+    const tooLong = await server.inject({
+      method: "GET",
+      url: `/v1/operator/feedback?q=${"a".repeat(201)}`,
+      headers: operator,
+    });
+    expect(tooLong.statusCode).toBe(400);
   });
 
   it("keeps the operator list from members", async () => {
@@ -403,6 +452,18 @@ describe("triaging notes (#2877)", () => {
     });
     expect(issues.json().notes.map((note: FeedbackNote) => note.noteId)).toEqual([noteId]);
     expect(fresh.json().notes).toEqual([]);
+    const one = await server.inject({
+      method: "GET",
+      url: `/v1/operator/feedback/${noteId}`,
+      headers: operator,
+    });
+    expect(one.json()).toMatchObject({ noteId, status: "issue" });
+    const unknown = await server.inject({
+      method: "GET",
+      url: "/v1/operator/feedback/no-such-note",
+      headers: operator,
+    });
+    expect(unknown.statusCode).toBe(404);
   });
 
   it("refuses a link that is not an https GitHub issue, status issue without one and an unknown note", async () => {

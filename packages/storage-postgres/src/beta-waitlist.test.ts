@@ -65,6 +65,34 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
     });
   });
 
+  it("pages and searches the entries, oldest first, with literal wildcards", async () => {
+    await withDirectory(async ({ betaWaitlist }) => {
+      for (const [index, email] of [
+        "ada@example.test",
+        "bob_1@example.test",
+        "ann@other.test",
+      ].entries()) {
+        await betaWaitlist.join({
+          email,
+          consentVersion,
+          now: new Date(now.getTime() + index * 60_000),
+        });
+      }
+
+      const second = await betaWaitlist.list({ limit: 1, offset: 1 });
+      expect(second.map((entry) => entry.email)).toEqual(["bob_1@example.test"]);
+      const searched = await betaWaitlist.list({ query: "EXAMPLE" });
+      expect(searched.map((entry) => entry.email)).toEqual([
+        "ada@example.test",
+        "bob_1@example.test",
+      ]);
+      await expect(betaWaitlist.count("example")).resolves.toBe(2);
+      await expect(betaWaitlist.count()).resolves.toBe(3);
+      await expect(betaWaitlist.count("_1")).resolves.toBe(1);
+      await expect(betaWaitlist.count("%")).resolves.toBe(0);
+    });
+  });
+
   it("deletes entries that joined before the cutoff", async () => {
     await withDirectory(async ({ betaWaitlist }) => {
       const old = new Date("2026-04-01T00:00:00.000Z");

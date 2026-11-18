@@ -4,6 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import { operatorPageQuery } from "./operator-page-query.js";
 
 /** Public: a visitor joins before any account exists. Listed with the public routes. */
 export const waitlistPath = "/v1/waitlist";
@@ -102,11 +103,23 @@ export function registerBetaWaitlistRoutes(
     {
       schema: {
         summary: "List the beta waitlist, oldest first",
-        description: "Operator only.",
-        response: { 200: z.object({ entries: z.array(entrySchema) }), 403: apiErrorSchema },
+        description:
+          "Operator only. One page: at most `limit` entries, 50 by default, after skipping `offset`. `q` keeps entries whose email contains it, without case. `total` counts every matching entry.",
+        querystring: operatorPageQuery,
+        response: {
+          200: z.object({ entries: z.array(entrySchema), total: z.number().int() }),
+          403: apiErrorSchema,
+        },
       },
     },
-    async () => ({ entries: [...(await waitlist.list())] }),
+    async (request) => {
+      const { limit, offset, q } = request.query;
+      const [entries, total] = await Promise.all([
+        waitlist.list({ limit, offset, ...(q === undefined ? {} : { query: q }) }),
+        waitlist.count(q),
+      ]);
+      return { entries: [...entries], total };
+    },
   );
 
   app.post(

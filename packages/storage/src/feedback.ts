@@ -96,6 +96,12 @@ export interface TriageFeedbackInput {
  * organisation's notes.
  * Erasing an organisation removes its notes.
  */
+/** Paging and search for the operator's inbox (#3016). */
+export interface FeedbackListPage {
+  readonly offset?: number;
+  readonly query?: string;
+}
+
 export interface FeedbackStore {
   /** Stores the trimmed note; throws `TenantDirectoryError` `invalid_input` when it is empty or too long. */
   readonly send: (input: SendFeedbackInput) => Promise<FeedbackNote>;
@@ -104,8 +110,20 @@ export interface FeedbackStore {
    * for an empty summary or a transcript over its bounds.
    */
   readonly openSupportTicket: (input: OpenSupportTicketInput) => Promise<FeedbackNote>;
-  /** The newest notes and tickets first, at most `limit`, of one status when it is given. */
-  readonly listNewest: (limit: number, status?: FeedbackStatus) => Promise<readonly FeedbackNote[]>;
+  /**
+   * The newest notes and tickets first, at most `limit`, of one status when it is given. `offset`
+   * skips that many from the start; `query` keeps those whose text, screen or category contains
+   * it, without case.
+   */
+  readonly listNewest: (
+    limit: number,
+    status?: FeedbackStatus,
+    page?: FeedbackListPage,
+  ) => Promise<readonly FeedbackNote[]>;
+  /** One note or ticket by its id, in any organisation; undefined when unknown. */
+  readonly get: (noteId: string) => Promise<FeedbackNote | undefined>;
+  /** How many notes and tickets have each status, among those matching `query` when given. */
+  readonly statusCounts: (query?: string) => Promise<Record<FeedbackStatus, number>>;
   /**
    * The operator sets a note's status and issue link; resolves `undefined` for an unknown note.
    * Throws `TenantDirectoryError` `invalid_input` for status `issue` without a link.

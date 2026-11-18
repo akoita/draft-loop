@@ -70,11 +70,15 @@ operator finds it in the account menu; owner-token mode shows it in the top
 bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
 `kind: owner` or `operator: true`.
 
+The page shows one section at a time; its buttons count the new notes, the
+people waiting and the unused invites. Each list reads 50 rows at a time with
+**Show more**, and has a search, so it stays usable with hundreds of rows.
+
 | Section  | What it shows                                                                  |
 | -------- | ------------------------------------------------------------------------------ |
-| Waitlist | The seats used, then entries newest first. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
-| Invites  | Each invite, sent, redeemed or revoked, the seats used and left, and where the cap comes from |
-| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close |
+| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first |
+| Waitlist | The seats used, then one row per entry, oldest first, searched by email. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
+| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from |
 
 Send the code to the person yourself: DraftLoop sends no email. Each invite is
 written to the audit log under the operator's sign-in.

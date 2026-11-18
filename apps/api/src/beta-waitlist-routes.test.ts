@@ -36,6 +36,7 @@ function fakeWaitlist() {
         joinedAt: "2026-11-08T10:00:00.000Z",
       },
     ]),
+    count: vi.fn<BetaWaitlist["count"]>(async () => 1),
     invite: vi.fn<BetaWaitlist["invite"]>(async ({ entryId }) =>
       entryId === "entry-1"
         ? {
@@ -127,7 +128,18 @@ describe("the beta waitlist (#2566)", () => {
       url: "/v1/operator/waitlist",
       headers: authorization,
     });
-    expect(listed.json()).toEqual({ entries: [expect.objectContaining({ entryId: "entry-1" })] });
+    expect(listed.json()).toEqual({
+      entries: [expect.objectContaining({ entryId: "entry-1" })],
+      total: 1,
+    });
+    expect(waitlist.list).toHaveBeenCalledWith({ limit: 50, offset: 0 });
+    await app.inject({
+      method: "GET",
+      url: "/v1/operator/waitlist?limit=20&offset=40&q=ada",
+      headers: authorization,
+    });
+    expect(waitlist.list).toHaveBeenLastCalledWith({ limit: 20, offset: 40, query: "ada" });
+    expect(waitlist.count).toHaveBeenLastCalledWith("ada");
 
     const invited = await app.inject({
       method: "POST",
