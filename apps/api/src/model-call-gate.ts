@@ -7,7 +7,7 @@ const applicationRoute = "/v1/workspaces/:workspaceId/applications/:applicationI
 
 /**
  * The routes that call a model outside a run (#2487), by method and route pattern. Interview
- * actions count only when they ask the interviewer. Brief extraction is free: a run needs a brief.
+ * actions count only when they ask the interviewer. Brief extraction is counted where it is queued (`brief-extraction-allowance.ts`), never refused: a run needs a brief.
  * A Prepare route (#2680) drafts or researches for one application, which its credit covers.
  */
 const meteredRoutes: ReadonlyArray<{

@@ -311,6 +311,7 @@ check off.
 | `DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS` | API | Questions one member may ask the assistant per UTC day before guide search takes over; 20 when unset |
 | `DRAFT_LOOP_SUPPORT_DAILY_COST_USD` | API | The assistant's estimated model cost per UTC day across all members before guide search takes over; 2 when unset. Shared by all instances in sign-in mode, per instance otherwise |
 | `DRAFT_LOOP_SUPPORT_LIMITS_SECRET` | API | Optional Secret Manager version whose JSON overrides the four settings above at run time, read within a minute ([Help](../features/help.md#limits-on-the-assistant)) |
+| `DRAFT_LOOP_BRIEF_EXTRACTIONS_PER_DAY` | API | Sign-in mode: job ads one organisation on an unlimited plan may have read automatically per UTC day; 50 when unset. Limited plans count them against `modelCallsPerDay` |
 | `DRAFT_LOOP_SUPPORT_SERVICE_STATE`, `DRAFT_LOOP_SUPPORT_SERVICE_CODES` | API | What the assistant tells members about the service: `operational` (default), `degraded` or `down`, and comma-separated incident codes |
 | `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                               |
 | `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                                        |

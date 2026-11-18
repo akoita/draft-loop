@@ -38,6 +38,11 @@ export interface LiveBriefExtractionInput {
   /** The brief's sources' screening; undefined when screening is off or screened nothing. */
   readonly screening: OpportunityScreening | undefined;
   readonly log: FastifyBaseLogger;
+  /**
+   * Takes one model call from the day's allowance, asked only for a brief that would be queued.
+   * False leaves the brief for the person, as when the deployment extracts nothing.
+   */
+  readonly allowance?: () => Promise<boolean>;
 }
 
 /**
@@ -66,6 +71,7 @@ export async function queueLiveBriefExtraction(
       ),
     );
   if (!cleared) return undefined;
+  if (input.allowance !== undefined && !(await input.allowance())) return undefined;
   try {
     const queued = await input.extractions.queue({
       workspaceId: input.workspaceId,

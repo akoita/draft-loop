@@ -14,6 +14,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { type BriefExtractions, queueLiveBriefExtraction } from "./brief-extraction.js";
+import type { BriefExtractionAllowance } from "./brief-extraction-allowance.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import type { EntitlementGate } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
@@ -57,6 +58,8 @@ export interface ApplicationRoutesOptions {
   readonly entitlementGate?: EntitlementGate;
   /** The worker's extraction of live briefs; without it a live brief is left for the person. */
   readonly briefExtractions?: BriefExtractions;
+  /** Sign-in mode's daily limit on automatic job-ad reading; absent, nothing is counted. */
+  readonly briefExtractionAllowance?: BriefExtractionAllowance;
   /** Replaces the pinned job page fetcher, for tests; it must keep the same address checks. */
   readonly jobPageFetcher?: UrlFetcher;
 }
@@ -293,6 +296,12 @@ export function registerApplicationRoutes(
               record,
               screening: screened,
               log: request.log,
+              ...(options.briefExtractionAllowance === undefined
+                ? {}
+                : {
+                    allowance: async () =>
+                      (await options.briefExtractionAllowance?.(request)) ?? true,
+                  }),
             });
       return reply.code(201).send({
         ...opportunityView(record),

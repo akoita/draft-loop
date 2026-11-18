@@ -9,6 +9,7 @@ import {
 import { buildApi } from "./app.js";
 import { readCoverLetterWriter } from "./application-material-routes.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
+import { readBriefExtractionsPerDay } from "./brief-extraction-allowance.js";
 import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
@@ -29,6 +30,7 @@ import { cloudRunJobWake, noWake } from "./worker-wake.js";
 const config = readApiConfig(process.env);
 const supportSettings = readSupportSettings(process.env);
 const supportLimitsSecret = readSupportLimitsSecret(process.env);
+const briefExtractionsPerDay = readBriefExtractionsPerDay(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const legalPublisher = readLegalPublisher(process.env);
@@ -82,6 +84,7 @@ const app = await buildApi({
   logger: cloudLoggingOptions(),
   rateLimits: config.rateLimits,
   support: supportSettings,
+  ...(briefExtractionsPerDay === undefined ? {} : { briefExtractionsPerDay }),
   ...(supportLimitsSecret === undefined
     ? {}
     : {
