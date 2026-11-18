@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DraftLoop: tailored CVs, checked by a second AI</title>
+    <meta
+      name="description"
+      content="DraftLoop writes a CV for each job from your own career evidence. One AI writes, an AI from another company checks every claim, and you decide."
+    />
+    <meta name="theme-color" content="#0f7d6e" />
+    <meta property="og:title" content="DraftLoop" />
+    <meta
+      property="og:description"
+      content="Tailored CVs and cover letters from your own career evidence, checked by a second AI before you approve them."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="showcase.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-row">
+        <a class="brand" href="#top" aria-label="DraftLoop">
+          <img src="mark.svg" alt="" width="28" height="28" />
+          <span>DraftLoop</span>
+        </a>
+        <nav class="top-nav" aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#screens">Screens</a>
+          <a href="#brand">Brand</a>
+        </nav>
+        <a class="button" href="/">Join the beta</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <p class="eyebrow">Job applications, written with you</p>
+            <h1>A CV for every job, built only from what you have really done.</h1>
+            <p class="lead">
+              DraftLoop reads your career evidence and the job you want. One AI writes the draft,
+              an AI from another company checks every claim against your sources, and nothing
+              leaves without your approval.
+            </p>
+            <div class="hero-actions">
+              <a class="button" href="/">Join the beta</a>
+              <a class="button secondary" href="#screens">See the screens</a>
+            </div>
+            <p class="small">Hosted in the EU. Your material stays yours, and you can delete it any time.</p>
+          </div>
+
+          <figure class="sheet hero-sheet" aria-label="A sample CV draft">
+            <p class="sheet-name">Camille Durand</p>
+            <p class="sheet-role">Lead Platform Engineer · Lyon, France</p>
+            <p class="sheet-h">Summary</p>
+            <p class="sheet-p">
+              <mark class="linked">Platform engineer with eight years building cloud infrastructure</mark>
+              for logistics and analytics teams. Leads migrations to managed Kubernetes and coaches
+              teams on calm, reliable on-call practice.
+            </p>
+            <p class="sheet-h">Experience</p>
+            <p class="sheet-line"><strong>Northwind Logistics</strong><span>2022 to present</span></p>
+            <p class="sheet-p">
+              • <ins>Moved 40 services to managed Kubernetes with no customer-facing downtime.</ins><br />
+              • Cut median deployment time from 45 to 9 minutes with cached builds.
+            </p>
+            <figcaption class="finding-chip">
+              <span class="dot ok"></span> 14 claims linked to your sources
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="how" class="band">
+        <div class="wrap">
+          <p class="eyebrow">How it works</p>
+          <h2>Write, check, decide. Then do it again until it is right.</h2>
+          <ol class="loop">
+            <li>
+              <span class="step-n">1</span>
+              <h3>Tell us about your career</h3>
+              <p>Add your CV, notes or a short conversation. DraftLoop turns them into facts you confirm.</p>
+            </li>
+            <li>
+              <span class="step-n">2</span>
+              <h3>Add the job you want</h3>
+              <p>Paste the job description or its link. We list what the employer asks for.</p>
+            </li>
+            <li>
+              <span class="step-n">3</span>
+              <h3>The author writes</h3>
+              <p>A Claude model drafts a CV that matches each requirement to your real evidence.</p>
+            </li>
+            <li>
+              <span class="step-n">4</span>
+              <h3>The critic checks</h3>
+              <p>A model from another company flags weak, vague or unsupported claims.</p>
+            </li>
+            <li>
+              <span class="step-n">5</span>
+              <h3>You decide and download</h3>
+              <p>Accept or reject each finding, approve the draft and export it as PDF or Word.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="screens" class="wrap screens">
+        <p class="eyebrow">Inside the app</p>
+        <h2>The screens you work in</h2>
+        <p class="lead narrow">Every example below uses a fictional candidate and fictional companies.</p>
+
+        <!-- Home -->
+        <article class="screen">
+          <header class="screen-head">
+            <h3>Home: your applications</h3>
+            <p>Every job you apply for, where it stands, and what to do next.</p>
+          </header>
+          <div class="app-frame light">
+            <div class="app-bar">
+              <span class="brand small-brand"><img src="mark.svg" alt="" width="20" height="20" />DraftLoop</span>
+              <span class="tabs">
+                <span class="tab active">Applications</span>
+                <span class="tab">Career profile</span>
+                <span class="tab">Prepare</span>
+              </span>
+              <span class="avatar">CD</span>
+            </div>
+            <div class="app-body">
+              <div class="row-head">
+                <h4>Applications</h4>
+                <span class="button sm">New application</span>
+              </div>
+              <table class="apps">
+                <thead>
+                  <tr><th>Job</th><th>Company</th><th>Status</th><th>Updated</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Lead Platform Engineer</strong></td>
+                    <td>Harbor Settle</td>
+                    <td><span class="pill teal">Approved</span></td>
+                    <td>Today</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Staff Site Reliability Engineer</strong></td>
+                    <td>Ledgerline</td>
+                    <td><span class="pill amber">3 findings to decide</span></td>
+                    <td>Yesterday</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Cloud Infrastructure Manager</strong></td>
+                    <td>Northbank</td>
+                    <td><span class="pill slate">Writing round 2</span></td>
+                    <td>Mon</td>
+                  </tr>
+                  <tr>
+                    <td><strong>DevOps Lead</strong></td>
+                    <td>Bluefin Analytics</td>
+                    <td><span class="pill slate">Job added</span></td>
+                    <td>12 Nov</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="guide">
+                <div class="guide-head"><strong>Getting started</strong><span class="pill outline">Step 4 of 5</span></div>
+                <p class="guide-step done"><span class="check"></span>Tell us about your career</p>
+                <p class="guide-step done"><span class="check"></span>Check what we found</p>
+                <p class="guide-step done"><span class="check"></span>Add the job you want</p>
+                <p class="guide-step current"><span class="check"></span>Review your CV <span class="button sm">Open review</span></p>
+                <p class="guide-step"><span class="check"></span>Download it</p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Review -->
+        <article class="screen">
+          <header class="screen-head">
+            <h3>Review: the draft and the critic's findings</h3>
+            <p>The draft on paper, the independent review beside it. You decide on every finding.</p>
+          </header>
+          <div class="app-frame desk">
+            <div class="desk-grid">
+              <div class="rail" aria-hidden="true">
+                <img src="mark.svg" alt="" width="22" height="22" />
+                <span></span><span></span><span></span>
+              </div>
+              <div class="desk-doc">
+                <p class="desk-label">Draft · Version 2</p>
+                <div class="sheet desk-sheet">
+                  <p class="sheet-name">Camille Durand</p>
+                  <p class="sheet-role">Staff Site Reliability Engineer</p>
+                  <p class="sheet-h">Summary</p>
+                  <p class="sheet-p">
+                    Reliability engineer who
+                    <mark class="warn">defined service level objectives for a reporting API</mark>
+                    and halved monthly paging volume.
+                  </p>
+                  <p class="sheet-h">Experience</p>
+                  <p class="sheet-line"><strong>Bluefin Analytics</strong><span>2019 to 2021</span></p>
+                  <p class="sheet-p">
+                    • <del>Responsible for monitoring.</del>
+                    <ins>Moved monitoring to Prometheus and Grafana, with alerts owned by each team.</ins><br />
+                    • Ran quarterly capacity reviews with finance and product.
+                  </p>
+                </div>
+              </div>
+              <aside class="panel">
+                <p class="desk-label">Independent review</p>
+                <p class="models">
+                  <span class="model">Author · Claude Sonnet</span>
+                  <span class="model">Critic · OpenAI</span>
+                </p>
+                <div class="readiness">
+                  <span>Evidence <b>92%</b></span><span>Relevance <b>88%</b></span><span>Clarity <b>95%</b></span>
+                </div>
+                <div class="finding amber-line">
+                  <p class="finding-kind amber-text">Needs evidence</p>
+                  <p>"Halved monthly paging volume" has no source. Add the incident report or soften the claim.</p>
+                  <p class="finding-actions"><span class="ghost">Accept</span><span class="ghost">Reject</span><span class="ghost">Decide later</span></p>
+                </div>
+                <div class="finding red-line">
+                  <p class="finding-kind red-text">Unsupported</p>
+                  <p>The job asks for incident command. No fact in your profile shows it yet.</p>
+                  <p class="finding-actions"><span class="ghost">Add a fact</span><span class="ghost">Reject</span></p>
+                </div>
+                <div class="finding teal-line">
+                  <p class="finding-kind teal-text">Resolved</p>
+                  <p>Vague line replaced by a concrete monitoring result.</p>
+                </div>
+                <span class="button block">Approve this draft</span>
+              </aside>
+            </div>
+          </div>
+        </article>
+
+        <!-- Career profile -->
+        <article class="screen two">
+          <div>
+            <header class="screen-head">
+              <h3>Career profile: facts you confirm</h3>
+              <p>Every fact keeps a link to the document it came from. The writer can use nothing else.</p>
+            </header>
+            <div class="app-frame light pad">
+              <div class="fact">
+                <p class="fact-title">Moved 40 services to managed Kubernetes</p>
+                <p class="fact-meta">Northwind Logistics · 2023 · <span class="src">From: CV 2025.pdf, page 1</span></p>
+                <span class="pill teal">Confirmed</span>
+              </div>
+              <div class="fact">
+                <p class="fact-title">Speaker at a regional DevOps meetup</p>
+                <p class="fact-meta">2024 · <span class="src">From: career conversation</span></p>
+                <span class="pill amber">Check this</span>
+              </div>
+              <div class="fact">
+                <p class="fact-title">Certified Kubernetes Administrator</p>
+                <p class="fact-meta">2021 · <span class="src">From: certificate.pdf</span></p>
+                <span class="pill teal">Confirmed</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <header class="screen-head">
+              <h3>Export: pick a template, then save</h3>
+              <p>Classic, Compact or Modern, as PDF or Word. Nothing is saved until you export.</p>
+            </header>
+            <div class="app-frame light pad export">
+              <div class="seg">
+                <span>Classic</span><span>Compact</span><span class="on">Modern</span>
+                <span class="pill teal right">1 page</span>
+              </div>
+              <div class="sheet mini">
+                <p class="sheet-name">Camille Durand, Lead Platform Engineer</p>
+                <p class="sheet-h modern">Summary</p>
+                <p class="bar w90"></p><p class="bar w75"></p>
+                <p class="sheet-h modern">Experience</p>
+                <p class="bar w95"></p><p class="bar w80"></p><p class="bar w60"></p>
+                <p class="sheet-h modern">Education</p>
+                <p class="bar w50"></p>
+              </div>
+              <div class="row-end"><span class="button secondary sm">Close</span><span class="button sm">Export this file</span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Prepare -->
+        <article class="screen">
+          <header class="screen-head">
+            <h3>Prepare: cover letter and interview</h3>
+            <p>A cover letter in your own voice, and practice questions drawn from the job and recent sources.</p>
+          </header>
+          <div class="app-frame light pad prepare">
+            <div class="letter">
+              <p class="desk-label dark">Cover letter · reads human</p>
+              <p class="letter-p">Dear Ledgerline team,</p>
+              <p class="letter-p">
+                Last spring my team stopped being woken at night. We had spent a quarter writing
+                service level objectives with the people who owned each service, and the pages
+                that remained were the ones that mattered.
+              </p>
+              <p class="letter-p muted">…</p>
+            </div>
+            <div class="questions">
+              <p class="desk-label dark">Interview practice</p>
+              <p class="q"><span class="pill outline">Likely</span> Walk us through an incident you led from first alert to review.</p>
+              <p class="q"><span class="pill outline">Likely</span> How do you decide an error budget with a product team?</p>
+              <p class="q"><span class="pill outline">Stretch</span> What would you change in our on-call rota in your first 90 days?</p>
+              <span class="button secondary sm">Practice out loud</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="band">
+        <div class="wrap values">
+          <div>
+            <h3>Only your real experience</h3>
+            <p>DraftLoop never invents employers, dates or numbers. Each claim keeps a link to its source.</p>
+          </div>
+          <div>
+            <h3>Two AIs, two companies</h3>
+            <p>The writer and the critic come from different AI companies, so one catches what the other misses.</p>
+          </div>
+          <div>
+            <h3>You stay in charge</h3>
+            <p>Nothing is sent to an employer. You approve every draft and every download.</p>
+          </div>
+          <div>
+            <h3>Private by design</h3>
+            <p>Hosted in the EU, with your consent recorded, your data encrypted and deletable at any time.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="brand" class="wrap brandbook">
+        <p class="eyebrow">Brand</p>
+        <h2>Calm, precise, honest</h2>
+        <p class="lead narrow">
+          DraftLoop looks like a careful editor's desk: slate surfaces, white paper for the document,
+          teal for the loop's signals, amber and red kept for findings. Hairline borders, 8px corners,
+          no gradients.
+        </p>
+        <div class="swatches">
+          <div class="swatch s-teal"><b>Loop teal</b><span>#0F7D6E</span></div>
+          <div class="swatch s-teal-bright"><b>Signal teal</b><span>#2FD0B8</span></div>
+          <div class="swatch s-slate"><b>Desk slate</b><span>#0F1319</span></div>
+          <div class="swatch s-surface"><b>Surface</b><span>#161A21</span></div>
+          <div class="swatch s-paper"><b>Paper</b><span>#FBFAF7</span></div>
+          <div class="swatch s-mist"><b>Mist</b><span>#F4F6F8</span></div>
+          <div class="swatch s-amber"><b>Finding amber</b><span>#F0B53C</span></div>
+          <div class="swatch s-red"><b>Finding red</b><span>#EF5350</span></div>
+        </div>
+        <div class="type">
+          <div>
+            <p class="type-sample sans">Aa</p>
+            <p><b>Inter</b> for the interface: labels, buttons and lists.</p>
+          </div>
+          <div>
+            <p class="type-sample serif">Aa</p>
+            <p><b>Serif</b> for the document on paper: the CV and the letter.</p>
+          </div>
+          <div>
+            <p class="type-sample mono">Aa</p>
+            <p><b>Monospace</b> for small labels, models and numbers.</p>
+          </div>
+        </div>
+        <p class="voice">
+          <b>Voice.</b> Plain words, short sentences, the next step first. We say what will happen and
+          whether it can be undone. We never overpromise.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot-row">
+        <span class="brand"><img src="mark.svg" alt="" width="22" height="22" />DraftLoop</span>
+        <span class="small">Sample screens with a fictional candidate. ·
+          <a href="/legal/privacy">Privacy policy</a> · <a href="/legal/terms">Terms of use</a> ·
+          <a href="/legal/notice">Legal notice</a></span>
+      </div>
+    </footer>
+  </body>
+</html>
