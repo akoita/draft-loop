@@ -21,6 +21,9 @@ Each page exists in English and French at `/legal/en/<page>` and
 `/legal/fr/<page>`; `/legal/<page>` picks the browser's language. The French
 version prevails for consumers.
 
+People reach them from the landing page footer, the sign-up form's
+acceptance box, and, once signed in, the account menu.
+
 ## How the published pages work
 
 ```mermaid
