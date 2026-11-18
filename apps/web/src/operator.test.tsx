@@ -431,6 +431,8 @@ describe("the operator page", () => {
 
     expect(html).toContain("<h1");
     expect(html).toContain("Back to DraftLoop");
+    expect(html).toContain(">Refresh</button>");
+    expect(html).toContain("The lists update every 30 seconds.");
     expect(html).toContain('aria-pressed="true">Feedback</button>');
     expect(html).toContain(">Waitlist</button>");
     expect(html).toContain(">Invites</button>");

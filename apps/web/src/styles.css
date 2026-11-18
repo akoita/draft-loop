@@ -1712,3 +1712,9 @@ button.small:where(:not(.shared-screens *)) {
 .operator-more > p {
   margin: 0;
 }
+
+.operator-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

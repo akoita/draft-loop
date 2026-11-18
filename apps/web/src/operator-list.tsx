@@ -85,6 +85,11 @@ export interface PagedList<P> {
   readonly update: (change: (page: P) => P) => void;
   /** Reads the first page again. */
   readonly reload: () => Promise<void>;
+  /**
+   * Reads the first page again in the background (#3024): a failed read keeps the rows shown, and
+   * a list grown with "Show more" is left alone so the operator's place is kept.
+   */
+  readonly refresh: () => Promise<void>;
   /** Reads the next page and adds its rows. */
   readonly more: () => Promise<void>;
   readonly loadingMore: boolean;
@@ -110,7 +115,11 @@ export function usePagedList<P>(
   const helpers = useRef({ merge, size });
   helpers.current = { merge, size };
 
+  const grown = useRef(false);
+  const readingMore = useRef(false);
+
   const readFirst = useCallback(async () => {
+    grown.current = false;
     generation.current += 1;
     const mine = generation.current;
     setMoreProblem(undefined);
@@ -122,13 +131,23 @@ export function usePagedList<P>(
     void readFirst();
   }, [readFirst]);
 
+  const refresh = useCallback(async () => {
+    if (grown.current || readingMore.current || shown.current.kind !== "ready") return;
+    generation.current += 1;
+    const mine = generation.current;
+    const next = await read(0);
+    if (mine === generation.current && next.kind === "ready" && !grown.current) setState(next);
+  }, [read]);
+
   const more = useCallback(async () => {
     const current = shown.current;
     if (current.kind !== "ready") return;
     const mine = generation.current;
     setLoadingMore(true);
+    readingMore.current = true;
     setMoreProblem(undefined);
     const next = await read(helpers.current.size(current.value));
+    readingMore.current = false;
     setLoadingMore(false);
     if (mine !== generation.current) return;
     if (next.kind === "failed") {
@@ -136,6 +155,7 @@ export function usePagedList<P>(
       return;
     }
     if (next.kind !== "ready") return;
+    grown.current = true;
     setState((previous) =>
       previous.kind === "ready"
         ? { kind: "ready", value: helpers.current.merge(previous.value, next.value) }
@@ -149,5 +169,68 @@ export function usePagedList<P>(
     );
   }, []);
 
-  return { state, update, reload: readFirst, more, loadingMore, moreProblem };
+  return { state, update, reload: readFirst, refresh, more, loadingMore, moreProblem };
+}
+
+/** How often an open operator page reads its lists again while the tab is visible. */
+export const operatorRefreshMs = 30_000;
+
+/** What the background refresh needs from the browser; tests pass a fake. */
+export interface RefreshHost {
+  readonly visible: () => boolean;
+  readonly every: (work: () => void, ms: number) => () => void;
+  readonly onShown: (work: () => void) => () => void;
+}
+
+const browserHost: RefreshHost = {
+  visible: () => document.visibilityState === "visible",
+  every: (work, ms) => {
+    const timer = window.setInterval(work, ms);
+    return () => window.clearInterval(timer);
+  },
+  onShown: (work) => {
+    document.addEventListener("visibilitychange", work);
+    window.addEventListener("focus", work);
+    return () => {
+      document.removeEventListener("visibilitychange", work);
+      window.removeEventListener("focus", work);
+    };
+  },
+};
+
+/**
+ * Calls `refresh` every `intervalMs` while the tab is visible, and again when the tab comes back
+ * into view; never while it is hidden. Returns the function that stops it.
+ */
+export function startBackgroundRefresh(
+  refresh: () => void,
+  intervalMs: number,
+  host: RefreshHost = browserHost,
+): () => void {
+  const tick = () => {
+    if (host.visible()) refresh();
+  };
+  const stopTimer = host.every(tick, intervalMs);
+  const stopShown = host.onShown(tick);
+  return () => {
+    stopTimer();
+    stopShown();
+  };
+}
+
+/**
+ * Keeps the operator page current without a socket (#3024), through `startBackgroundRefresh`.
+ * While `paused`, as during an invite, it waits.
+ */
+export function useBackgroundRefresh(
+  refresh: () => void,
+  paused: boolean,
+  intervalMs: number = operatorRefreshMs,
+): void {
+  const latest = useRef(refresh);
+  latest.current = refresh;
+  useEffect(() => {
+    if (paused) return;
+    return startBackgroundRefresh(() => latest.current(), intervalMs);
+  }, [paused, intervalMs]);
 }

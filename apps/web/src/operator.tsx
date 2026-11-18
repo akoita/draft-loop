@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
-import { ListMore, ListSearch, usePagedList } from "./operator-list.js";
+import { ListMore, ListSearch, useBackgroundRefresh, usePagedList } from "./operator-list.js";
 import {
   appendUnique,
   type BetaSeats,
@@ -830,6 +830,21 @@ export function OperatorPage({
     void invite(entry);
   }
 
+  const refreshAll = useCallback(() => {
+    void Promise.all([waitlist.refresh(), invites.refresh(), feedback.refresh()]);
+  }, [waitlist.refresh, invites.refresh, feedback.refresh]);
+  const [refreshing, setRefreshing] = useState(false);
+  async function refreshNow() {
+    setRefreshing(true);
+    await Promise.all([waitlist.reload(), invites.reload(), feedback.reload()]);
+    setRefreshing(false);
+  }
+  // An entry must not move under the operator while an invite is asked for or on its way.
+  useBackgroundRefresh(
+    refreshAll,
+    inviting !== undefined || confirming !== undefined || triaging.size > 0,
+  );
+
   async function invite(entry: WaitlistEntry) {
     setConfirming(undefined);
     setInviting(entry.entryId);
@@ -866,12 +881,22 @@ export function OperatorPage({
         <h1 ref={heading} tabIndex={-1}>
           {t`Operator`}
         </h1>
-        <button type="button" className="secondary" onClick={onClose}>
-          {t`Back to DraftLoop`}
-        </button>
+        <div className="operator-header-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void refreshNow()}
+            disabled={refreshing}
+          >
+            {refreshing ? t`Refreshing…` : t`Refresh`}
+          </button>
+          <button type="button" className="secondary" onClick={onClose}>
+            {t`Back to DraftLoop`}
+          </button>
+        </div>
       </div>
       <p className="muted">
-        {t`What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log.`}
+        {t`What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds.`}
       </p>
       <nav className="operator-views" aria-label={t`Operator sections`}>
         {(["feedback", "waitlist", "invites"] as const).map((part) => {

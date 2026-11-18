@@ -7428,9 +7428,14 @@ msgstr "Utilisée"
 msgid "Redeemed {0}"
 msgstr "Utilisée le {0}"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile.tsx
 msgid "Refresh"
 msgstr "Actualiser"
+
+#: apps/web/src/operator.tsx
+msgid "Refreshing…"
+msgstr "Actualisation…"
 
 #: packages/ui/src/model-suggestions.tsx
 msgid "registered for {roleName}"
@@ -11361,8 +11366,8 @@ msgid "What leads"
 msgstr "Ce qui vient en tête"
 
 #: apps/web/src/operator.tsx
-msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log."
-msgstr "Ce que vous disent les membres, la liste d'attente de la bêta et ses invitations. Chaque invitation est inscrite au journal d'audit."
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
+msgstr "Ce que vous disent les membres, la liste d'attente de la bêta et ses invitations. Chaque invitation est inscrite au journal d'audit. Les listes se mettent à jour toutes les 30 secondes."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "What the agent may do"
