@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { type FormEvent, useState } from "react";
 
 import { type ApiClient, ApiRequestError, describeError } from "./api-client.js";
+import { DangerDialog } from "./danger-dialog.js";
 
 export interface AccountDeletionProps {
   readonly client: ApiClient;
@@ -86,27 +87,29 @@ export function AccountDeletionPanel({
   }
 
   return (
-    <form className="inline-form account-deletion" onSubmit={remove}>
-      <p className="notice">{t`Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy.`}</p>
-      <label htmlFor="delete-account-confirm">
-        {t`Type your email address,`} {email}
-        {t`, to confirm`}
-      </label>
-      <input
-        id="delete-account-confirm"
-        type="email"
-        value={typed}
-        autoComplete="off"
-        onChange={(event) => setTyped(event.target.value)}
-      />
-      <button type="submit" className="danger" disabled={busy}>
-        {busy ? t`Deleting your account…` : t`Delete my account`}
-      </button>
-      {problem === undefined ? null : (
-        <p className="problem" role="alert">
-          {problem}
-        </p>
-      )}
-    </form>
+    <DangerDialog label={t`Delete my account…`} title={t`Delete my account`}>
+      <form className="inline-form account-deletion" onSubmit={remove}>
+        <p className="notice">{t`Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy.`}</p>
+        <label htmlFor="delete-account-confirm">
+          {t`Type your email address,`} {email}
+          {t`, to confirm`}
+        </label>
+        <input
+          id="delete-account-confirm"
+          type="email"
+          value={typed}
+          autoComplete="off"
+          onChange={(event) => setTyped(event.target.value)}
+        />
+        <button type="submit" className="danger" disabled={busy}>
+          {busy ? t`Deleting your account…` : t`Delete my account`}
+        </button>
+        {problem === undefined ? null : (
+          <p className="problem" role="alert">
+            {problem}
+          </p>
+        )}
+      </form>
+    </DangerDialog>
   );
 }

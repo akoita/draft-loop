@@ -215,6 +215,7 @@ export function Records({
         recordId={chosen}
         title={t`Your data`}
         onDeleted={onDeleted}
+        folded={false}
       >
         {accountDeletion}
       </RecordActions>
