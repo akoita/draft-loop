@@ -68,7 +68,8 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
   it("hides an entry whose email already redeemed an invite, and counts the same way", async () => {
     await withDirectory(async ({ betaWaitlist, betaInvites }) => {
       await betaWaitlist.join({ email: "ada@example.test", consentVersion, now });
-      await betaWaitlist.join({ email: "bob@example.test", consentVersion, now });
+      const later = new Date(now.getTime() + 60_000);
+      await betaWaitlist.join({ email: "bob@example.test", consentVersion, now: later });
       // Invited outside the waitlist, so the entry stays; then the invite is redeemed.
       const { code } = await betaInvites.create({ email: "ada@example.test", now });
       const open = await betaWaitlist.list();
