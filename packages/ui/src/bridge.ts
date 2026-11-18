@@ -2711,7 +2711,7 @@ export interface OpportunityRecordResult {
   readonly candidateInstructions: OpportunityCandidateInstructionsResult;
   readonly issues: readonly OpportunityIssueResult[];
   /** The service's own extraction of this version, as on `OpportunityLatestBrief`. */
-  readonly extraction?: "pending" | "failed";
+  readonly extraction?: "pending" | "failed" | "limited";
 }
 
 export interface OpportunityListResult {
@@ -2735,9 +2735,10 @@ export interface OpportunityLatestBrief {
   readonly responsibilityCount?: number;
   /**
    * The service's own extraction of this version, as the hosted worker runs it: pending while it
-   * waits or runs, failed after its retries. Absent when none is outstanding, as on the desktop.
+   * waits or runs, failed after its retries, limited when the day's allowance for reading job ads
+   * left the first draft for the person. Absent when none is outstanding, as on the desktop.
    */
-  readonly extraction?: "pending" | "failed";
+  readonly extraction?: "pending" | "failed" | "limited";
 }
 
 export type OpportunityLatestResult = OpportunityLatestBrief | null;
@@ -8248,7 +8249,7 @@ function normalizeOpportunityRecordResult(value: unknown): OpportunityRecordResu
     issues,
     ...(result.extraction === undefined
       ? {}
-      : { extraction: enumValue(result.extraction, ["pending", "failed"] as const) }),
+      : { extraction: enumValue(result.extraction, ["pending", "failed", "limited"] as const) }),
   };
 }
 
@@ -8296,7 +8297,7 @@ function normalizeOpportunityLatestResult(value: unknown): OpportunityLatestResu
     ...(responsibilityCount === undefined ? {} : { responsibilityCount }),
     ...(result.extraction === undefined
       ? {}
-      : { extraction: enumValue(result.extraction, ["pending", "failed"] as const) }),
+      : { extraction: enumValue(result.extraction, ["pending", "failed", "limited"] as const) }),
   };
 }
 

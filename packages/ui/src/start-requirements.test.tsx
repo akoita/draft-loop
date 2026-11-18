@@ -11,6 +11,8 @@ import {
   isJobRequirementRefusal,
   latestBriefNote,
   latestBriefTitle,
+  limitedExtractionNote,
+  nextUtcMidnightTime,
   notExtractedNote,
   offersRequirementsExtraction,
   pendingExtractionNote,
@@ -141,6 +143,22 @@ describe("setup card 01 latest brief", () => {
     expect(latestBriefNote(failed)).toBe(failedExtractionNote());
     expect(offersRequirementsExtraction(failed)).toBe(true);
     expect(requirementRefusalAction(failed, null, true)).toBe("extract-again");
+  });
+
+  it("says why the day's limit left the brief empty, and offers no extraction until it resets", () => {
+    const limited: OpportunityLatestBrief = {
+      ...draft,
+      version: 1,
+      requirementCount: 0,
+      extraction: "limited",
+    };
+
+    expect(latestBriefNote(limited)).toBe(limitedExtractionNote());
+    expect(latestBriefNote(limited)).toContain("today's limit for reading job ads");
+    expect(offersRequirementsExtraction(limited)).toBe(false);
+    expect(requirementRefusalAction(limited, null, true)).toBeNull();
+    expect(limitedExtractionNote("01:00")).toContain("It resets at 01:00.");
+    expect(nextUtcMidnightTime(new Date("2026-11-18T10:00:00Z"))).toMatch(/\d{1,2}.\d{2}/u);
   });
 
   it("offers a reviewed brief for viewing and says runs start from it", () => {

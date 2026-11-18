@@ -54,6 +54,7 @@ import {
   registerBetaWaitlistRoutes,
 } from "./beta-waitlist-routes.js";
 import type { BriefExtractions } from "./brief-extraction.js";
+import { createBriefExtractionAllowance } from "./brief-extraction-allowance.js";
 import type { LiveInterviewSpeech } from "./career-interview-live.js";
 import {
   type CareerInterviewParts,
@@ -246,6 +247,8 @@ export interface ApiOptions {
   readonly waitlistConfirmMailer?: WaitlistConfirmMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
+  /** The daily ceiling on automatic job-ad reading for unlimited plans; 50 when unset. */
+  readonly briefExtractionsPerDay?: number;
   /** The operator's run-time overrides of the support limits, from Secret Manager. */
   readonly supportLimits?: SupportLimitSource;
   /** The support assistant's daily use shared by every instance; without it, instance memory. */
@@ -634,6 +637,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(application.briefExtractions === undefined
         ? {}
         : { briefExtractions: application.briefExtractions }),
+      ...(auth.mode === "oidc" && entitlementsFor !== undefined
+        ? {
+            briefExtractionAllowance: createBriefExtractionAllowance({
+              entitlementsFor,
+              ...(options.briefExtractionsPerDay === undefined
+                ? {}
+                : { unlimitedPlanPerDay: options.briefExtractionsPerDay }),
+            }),
+          }
+        : {}),
       ...(application.jobPageFetcher === undefined
         ? {}
         : { jobPageFetcher: application.jobPageFetcher }),

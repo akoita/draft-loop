@@ -792,8 +792,13 @@ plans have no cap.
 | Research for an application  | `POST .../applications/:applicationId/research`                                                  |
 | A profile derivation         | `POST .../profiles/:profileId/derivation`                                                        |
 
-- **Free.** Brief extraction, since a run needs a brief. Owner-token calls
-  are not counted.
+- **Job-ad reading.** The worker's brief extraction counts once per queued
+  brief (`brief-extraction-allowance.ts`): against `modelCallsPerDay` on a
+  limited plan, and against a deployment ceiling on an unlimited one
+  (`DRAFT_LOOP_BRIEF_EXTRACTIONS_PER_DAY`, 50 when unset). Past either, the
+  brief is saved without extraction for the person to fill in, never refused,
+  since a run needs one. The API logs `brief_extraction_limited` with ids.
+- **Free.** Owner-token calls are not counted.
 - **Refusal.** 429 `model_call_cap_reached` with `limit`, and `Retry-After`
   until midnight UTC. The API logs `model call cap reached`.
 - **Counting.** `model_call_counts` holds one counter per organisation and

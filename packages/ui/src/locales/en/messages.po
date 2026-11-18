@@ -10115,6 +10115,10 @@ msgstr "The requirements could not be saved. Nothing was changed."
 msgid "The requirements have not been read from this job yet. Extract them to review them."
 msgstr "The requirements have not been read from this job yet. Extract them to review them."
 
+#: packages/ui/src/start-requirements-model.ts
+msgid "The requirements were not read automatically: today's limit for reading job ads is reached. It resets at {resetsAt}. Fill them in by hand, or extract them again after that."
+msgstr "The requirements were not read automatically: today's limit for reading job ads is reached. It resets at {resetsAt}. Fill them in by hand, or extract them again after that."
+
 #: apps/web/src/research-brief-model.ts
 msgid "The research failed and nothing was saved. Try again later."
 msgstr "The research failed and nothing was saved. Try again later."

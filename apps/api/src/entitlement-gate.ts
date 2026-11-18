@@ -35,7 +35,7 @@ export interface TenantEntitlements {
     readonly pool: Pick<SpendPool, "reserve" | "close">;
   };
   /** The organisation's daily count of model calls outside runs (#2487); uncounted when absent. */
-  readonly modelCalls?: Pick<ModelCallMeter, "take">;
+  readonly modelCalls?: Pick<ModelCallMeter, "take"> & Partial<Pick<ModelCallMeter, "used">>;
   /** The count of Prepare calls per credited application (#2680); uncounted when absent. */
   readonly prepareCalls?: Pick<PrepareCallMeter, "take">;
 }

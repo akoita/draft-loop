@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import type { OpportunityLatestBrief } from "./bridge.js";
 import { countedNouns } from "./counted-nouns.js";
+import { formatLocale } from "./locale-format.js";
 
 /** The reviewed brief a run would start from: the latest version, reviewed and selected. */
 export interface ReviewedRequirementsSelection {
@@ -130,6 +131,26 @@ export const pendingExtractionNote = () =>
 export const failedExtractionNote = () =>
   t`The requirements could not be extracted. Extract them again, or paste the job text into the application instead.`;
 
+/**
+ * What it says when the organisation's daily allowance for reading job ads left the brief empty.
+ * The allowance resets at midnight UTC, so the reset time is given in the reader's own time.
+ */
+export const limitedExtractionNote = (resetsAt: string = nextUtcMidnightTime()) =>
+  t`The requirements were not read automatically: today's limit for reading job ads is reached. It resets at ${resetsAt}. Fill them in by hand, or extract them again after that.`;
+
+/** The next midnight UTC as a local time of day, such as "01:00". */
+export function nextUtcMidnightTime(now: Date = new Date()): string {
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return new Intl.DateTimeFormat(formatLocale(), { hour: "2-digit", minute: "2-digit" }).format(
+    next,
+  );
+}
+
+/** Whether the day's allowance left the latest brief unread. */
+export function extractionLimited(latest: OpportunityLatestBrief | null | undefined): boolean {
+  return latest?.extraction === "limited";
+}
+
 /** Whether the service is still extracting the latest brief: nothing to review or extract yet. */
 export function extractionPending(latest: OpportunityLatestBrief | null | undefined): boolean {
   return latest?.extraction === "pending";
@@ -168,7 +189,8 @@ export function briefReviewActionKey(workspaceId: string, briefId: string): stri
 export function offersRequirementsExtraction(
   latest: OpportunityLatestBrief | null | undefined,
 ): boolean {
-  if (extractionPending(latest)) return false;
+  // Extracting again before the day resets would only meet the same limit.
+  if (extractionPending(latest) || extractionLimited(latest)) return false;
   return latest === null || latest === undefined || isEmptyDraftBrief(latest);
 }
 
@@ -187,7 +209,7 @@ export function requirementRefusalAction(
 ): RequirementRefusalAction {
   if (reviewed !== null) return "use-reviewed";
   // The service is still reading the job: there is nothing to review or extract yet.
-  if (extractionPending(latest)) return null;
+  if (extractionPending(latest) || extractionLimited(latest)) return null;
   const emptyDraft = latest !== null && latest !== undefined && isEmptyDraftBrief(latest);
   if (latest?.status === "draft" && !emptyDraft) return "review-draft";
   if (!canExtract) return null;
@@ -203,6 +225,7 @@ export function latestBriefTitle(latest: OpportunityLatestBrief): string {
 export function latestBriefNote(latest: OpportunityLatestBrief): string {
   if (extractionPending(latest)) return pendingExtractionNote();
   if (isEmptyDraftBrief(latest) && latest.extraction === "failed") return failedExtractionNote();
+  if (isEmptyDraftBrief(latest) && extractionLimited(latest)) return limitedExtractionNote();
   if (notExtractedYet(latest)) return notExtractedNote();
   if (isEmptyDraftBrief(latest))
     return `${noRequirementsFoundTitle()}. ${noRequirementsFoundNote()}`;

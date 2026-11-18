@@ -13,7 +13,12 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { type BriefExtractions, queueLiveBriefExtraction } from "./brief-extraction.js";
+import {
+  type BriefExtractions,
+  isUnreadFirstDraft,
+  queueLiveBriefExtraction,
+} from "./brief-extraction.js";
+import type { BriefExtractionAllowance } from "./brief-extraction-allowance.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import type { EntitlementGate } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
@@ -57,6 +62,8 @@ export interface ApplicationRoutesOptions {
   readonly entitlementGate?: EntitlementGate;
   /** The worker's extraction of live briefs; without it a live brief is left for the person. */
   readonly briefExtractions?: BriefExtractions;
+  /** Sign-in mode's daily limit on automatic job-ad reading; absent, nothing is counted. */
+  readonly briefExtractionAllowance?: BriefExtractionAllowance;
   /** Replaces the pinned job page fetcher, for tests; it must keep the same address checks. */
   readonly jobPageFetcher?: UrlFetcher;
 }
@@ -293,6 +300,12 @@ export function registerApplicationRoutes(
               record,
               screening: screened,
               log: request.log,
+              ...(options.briefExtractionAllowance === undefined
+                ? {}
+                : {
+                    allowance: async () =>
+                      (await options.briefExtractionAllowance?.take(request)) ?? true,
+                  }),
             });
       return reply.code(201).send({
         ...opportunityView(record),
@@ -319,11 +332,20 @@ export function registerApplicationRoutes(
         ...(request.query.version === undefined ? {} : { version: request.query.version }),
       });
       if (record === undefined) return reply.code(404).send(notFound("job brief"));
-      const extraction = await briefExtractions?.state({
+      const queued = await briefExtractions?.state({
         workspaceId: request.params.workspaceId,
         briefId: record.brief.id,
         version: record.brief.version,
       });
+      // An unread first draft with nothing queued, on a day the allowance is spent, was most
+      // likely left by the limit: say so until the day resets, so the person knows why.
+      const extraction =
+        queued === undefined &&
+        briefExtractions !== undefined &&
+        isUnreadFirstDraft(record) &&
+        (await options.briefExtractionAllowance?.spent(request)) === true
+          ? ("limited" as const)
+          : queued;
       return { ...opportunityView(record), ...(extraction === undefined ? {} : { extraction }) };
     },
   );
