@@ -154,6 +154,7 @@ import {
 import { configureWorkspaceRunBudget } from "./workspace-run-budget.js";
 import { workspaceSettings } from "./workspace-settings.js";
 import { managedWritingPolicy, writingPolicyFromCommand } from "./writing-policy-file.js";
+import { policyIdentity } from "./writing-policy-identity.js";
 
 export type {
   AnthropicClient,
@@ -1306,6 +1307,7 @@ function providerAgents(
     criticCompany: criticIdentity.company,
     criticModel: criticIdentity.modelId,
     userError: (message) => new CliUserError(message),
+    evidenceGrade: recorders?.evidenceGrade,
   });
   const planner = recordedApplicationPlanner(recorders, {
     promptContext,
@@ -1373,13 +1375,6 @@ function engine(
   });
 }
 const openStorage = (root: string) => storageFactory().open(root);
-
-function policyIdentity(record: WritingPolicyVersionRecord): {
-  readonly version: string;
-  readonly checksum: string;
-} {
-  return { version: record.version, checksum: record.checksum };
-}
 
 async function resolveRunWritingPolicy(
   storage: WorkspaceHistoryStorage,

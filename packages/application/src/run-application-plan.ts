@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-
 import type {
   ApplicationPlanner,
   AuthorAgent,
@@ -14,13 +13,13 @@ import {
   guidingApplicationPlan,
 } from "@draft-loop/schemas/application-plan";
 import type { AuditTrailStoragePort, JsonValue } from "@draft-loop/storage";
-
 import {
   createProviderApplicationPlanner,
   type ProviderApplicationPlannerDependencies,
 } from "./application-plan-agent.js";
 import { CliUserError } from "./cli-user-error.js";
 import type { RecordAuthorInput } from "./run-author-input.js";
+import type { RequirementEvidenceGradeHook } from "./run-requirement-evidence-grade.js";
 
 export const applicationPlanEventType = "run.application-plan";
 
@@ -48,6 +47,8 @@ export interface RunRecorders {
   readonly recordApplicationPlan?: (runId: string, state: ApplicationPlanState) => Promise<void>;
   /** Receives the run's content-free spans; absent records none. */
   readonly tracer?: RunTracer;
+  /** Grades the run's requirement-evidence map on the critic step (#2996); absent grades none. */
+  readonly evidenceGrade?: RequirementEvidenceGradeHook;
 }
 
 /** The recorders of a run; planning is on unless the run options turn it off. */

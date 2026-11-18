@@ -47,6 +47,10 @@ import {
 import * as providerArtifactInput from "./provider-artifact-input.js";
 import { responseExecution } from "./response-execution.js";
 import { criticOutputBudget } from "./run-model-profiles.js";
+import {
+  gradeRunRequirementEvidence,
+  type RequirementEvidenceGradeHook,
+} from "./run-requirement-evidence-grade.js";
 
 /** How many omission check slices run at once: enough to cut the wait, few enough for rate limits. */
 export const omissionCheckConcurrency = 4;
@@ -67,6 +71,8 @@ export interface ProviderCriticAgentDependencies {
   readonly criticModel: string;
   /** Build the user-facing error raised when no candidate evidence was retrieved. */
   readonly userError: (message: string) => Error;
+  /** Grades the run's requirement-evidence map on the first round (#2996); absent grades none. */
+  readonly evidenceGrade?: RequirementEvidenceGradeHook | undefined;
 }
 
 /** The provider-backed critic: independent review of one draft against the retrieved evidence. */
@@ -184,6 +190,30 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       };
       // The slices are independent, so a few run at once (#2233); the guard reserves each call's
       // worst cost before sending it, so calls in flight together still fit the run's budget.
+      // The evidence grade (#2996) is one call on the first round, billed like the check slices.
+      // It never fails the critique: a failed call is recorded as such inside the step.
+      if (deps.evidenceGrade !== undefined && round === 1) {
+        try {
+          const graded = await gradeRunRequirementEvidence({
+            hook: deps.evidenceGrade,
+            requirements: context.requirements ?? [],
+            runId,
+            call: (call) =>
+              adapter.execute({
+                contextSnapshotId: context.id,
+                model: context.modelConfiguration.critic,
+                ...call,
+                maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
+                dataPolicy: deps.dataPolicy(deps.criticCompany),
+                ...(signal === undefined ? {} : { signal }),
+              }),
+            ...(signal === undefined ? {} : { signal }),
+          });
+          if (graded !== undefined) billed = addBilledUsage(billed, graded);
+        } catch (error) {
+          if (signal?.aborted === true) throw error;
+        }
+      }
       let checked: (readonly OmissionCheckOmission[])[];
       try {
         checked = await mapWithBoundedConcurrency(
@@ -232,7 +262,8 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       }
       const first = slices[0];
       if (first === undefined || billed === undefined) {
-        return responseExecution(response, critique);
+        const execution = responseExecution(response, critique);
+        return billed === undefined ? execution : withBilledCall(execution, billed);
       }
       // The check owns the omission review of a run that makes it: its findings replace any the
       // critique still reports with that code, and the blocking cap applies to the merged list.
