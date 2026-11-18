@@ -46,10 +46,10 @@ describe("record picker", () => {
       />,
     );
 
-    expect(html).toContain('<label for="record-picker">Job search</label>');
+    expect(html).toContain('<label for="record-picker">Candidate</label>');
     expect(html).toContain('<option value="record-a">record-a</option>');
     expect(html).toContain('<option value="record-b" selected="">Fictional search</option>');
-    expect(html).toContain("New job search");
+    expect(html).toContain("Add a candidate");
     expect(html).not.toContain("new-record-name");
   });
 
@@ -66,8 +66,8 @@ describe("record picker", () => {
       />,
     );
 
-    expect(html).toContain('<label for="new-record-name">Name of the new job search</label>');
-    expect(html).toContain("Start job search");
+    expect(html).toContain('<label for="new-record-name">Candidate&#x27;s name</label>');
+    expect(html).toContain("Add candidate");
     expect(html).toContain("Cancel");
   });
 
@@ -101,7 +101,7 @@ describe("record picker", () => {
     expect(html).toContain("No candidate record is assigned to you yet.");
     expect(html).not.toContain("record-picker");
     // Naming the first record is the only thing to do, so the field is not folded.
-    expect(html).toContain('<label for="new-record-name">Name of the new job search</label>');
+    expect(html).toContain('<label for="new-record-name">Candidate&#x27;s name</label>');
     expect(html).not.toContain("Cancel");
   });
 });
@@ -159,8 +159,8 @@ describe("record members", () => {
       <MembersPanel client={unusedClient} recordId="record-new" exists={false} manage={true} />,
     );
 
-    expect(html).toContain("<summary>Who can open this job search</summary>");
-    expect(html).toContain("You can share this job search once it is set up.");
+    expect(html).toContain("<summary>Who can open this candidate&#x27;s file</summary>");
+    expect(html).toContain("You can share this candidate&#x27;s file once it is set up.");
   });
 
   it("reads the records before showing any step", () => {

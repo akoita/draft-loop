@@ -109,7 +109,7 @@ describe("candidate records", () => {
     expect(tidyRecordName("  Product   roles\t2026 ")).toBe("Product roles 2026");
     expect(newRecordNameProblem("Product roles 2026", names)).toBeUndefined();
     expect(newRecordNameProblem("a".repeat(80), names)).toBeUndefined();
-    expect(newRecordNameProblem("", names)).toBe("Give the new job search a name.");
+    expect(newRecordNameProblem("", names)).toBe("Give the candidate a name.");
     expect(newRecordNameProblem("a".repeat(81), names)).toBe("Use up to 80 characters.");
     expect(newRecordNameProblem("fictional SEARCH", names)).toContain("has that name already");
   });
@@ -129,8 +129,8 @@ describe("candidate records", () => {
     expect(canManageMembers(member("owner"))).toBe(true);
     expect(canManageMembers(member("admin"))).toBe(true);
     expect(canManageMembers(member("member"))).toBe(false);
-    expect(noRecordNotice(member("admin"))).toContain("Start the first one");
-    expect(noRecordNotice(member("member"))).toContain("No job search is shared with you");
+    expect(noRecordNotice(member("admin"))).toContain("Add the first one");
+    expect(noRecordNotice(member("member"))).toContain("No candidate is shared with you");
   });
 
   it("offers the organisation's members not yet assigned, by email", () => {

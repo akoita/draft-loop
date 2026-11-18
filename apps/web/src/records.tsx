@@ -248,12 +248,13 @@ export function Records({
               names={state.names}
               chosen={chosen}
               notice={noRecordNotice(state.me)}
+              limit={state.me.kind === "member" ? state.me.plan?.candidateRecords : undefined}
               onChoose={choose}
               onCreate={create}
             />
             {deleted === undefined ? null : (
               <p className="notice" role="status">
-                {t`The job search`} {deleted} {t`and everything stored for it were deleted.`}
+                {t`Everything stored for ${deleted} was deleted.`}
               </p>
             )}
             {chosen === undefined || !sharesAccess(state.me) ? null : (
@@ -271,7 +272,7 @@ export function Records({
                 key={chosen}
                 client={client}
                 recordId={chosen}
-                title={t`Download or delete this job search`}
+                title={t`Download or delete this candidate's data`}
                 onDeleted={onDeleted}
               />
             ) : null}
@@ -330,6 +331,8 @@ export interface RecordPickerProps {
   readonly chosen: string | undefined;
   /** What to say when the caller reaches no record. */
   readonly notice: string;
+  /** How many candidates the plan allows: null is unlimited, undefined is unknown. */
+  readonly limit?: number | null | undefined;
   readonly onChoose: (recordId: string) => void;
   /** Called with the tidied name of a new record. */
   readonly onCreate: (name: string) => void;
@@ -346,6 +349,7 @@ export function RecordPicker({
   names,
   chosen,
   notice,
+  limit,
   onChoose,
   onCreate,
   initiallyAdding = false,
@@ -385,12 +389,16 @@ export function RecordPicker({
 
   return (
     <section className="panel records">
-      <h2>{t`Working on`}</h2>
+      <h2>
+        {limit === undefined || limit === null
+          ? t`Candidates`
+          : t`Candidates · ${ids.length} of ${limit}`}
+      </h2>
       {options.length === 0 ? (
         <p className="muted">{notice}</p>
       ) : (
         <div className="record-field">
-          <label htmlFor="record-picker">{t`Job search`}</label>
+          <label htmlFor="record-picker">{t`Candidate`}</label>
           <select
             id="record-picker"
             value={chosen}
@@ -409,14 +417,14 @@ export function RecordPicker({
       )}
       {showForm ? (
         <form className="inline-form" onSubmit={create}>
-          <label htmlFor="new-record-name">{t`Name of the new job search`}</label>
+          <label htmlFor="new-record-name">{t`Candidate's name`}</label>
           <input
             id="new-record-name"
             ref={field}
             value={newName}
             autoComplete="off"
             maxLength={recordNameMaxLength}
-            placeholder={t`For example: Ada Martin, or Product roles 2026`}
+            placeholder={t`For example: Amina Diallo`}
             onChange={(event) => setNewName(event.target.value)}
           />
           {problem === undefined ? null : (
@@ -424,7 +432,7 @@ export function RecordPicker({
               {problem}
             </p>
           )}
-          <button type="submit">{t`Start job search`}</button>
+          <button type="submit">{t`Add candidate`}</button>
           {options.length === 0 ? null : (
             <button type="button" className="secondary" onClick={cancel}>{t`Cancel`}</button>
           )}
@@ -439,7 +447,7 @@ export function RecordPicker({
           }}
         >
           <span aria-hidden="true">+ </span>
-          {t`New job search`}
+          {t`Add a candidate`}
         </button>
       )}
     </section>
@@ -511,11 +519,11 @@ export function MembersPanel({ client, recordId, exists, manage, selfId }: Membe
 
   return (
     <details className="panel members">
-      <summary>{t`Who can open this job search`}</summary>
+      <summary>{t`Who can open this candidate's file`}</summary>
       {state.kind === "loading" ? (
         <p role="status">{t`Reading who can open it…`}</p>
       ) : state.kind === "missing" ? (
-        <p className="muted">{t`You can share this job search once it is set up.`}</p>
+        <p className="muted">{t`You can share this candidate's file once it is set up.`}</p>
       ) : state.kind === "failed" ? (
         <p className="problem" role="alert">
           {state.message}
@@ -585,7 +593,7 @@ export function MemberList({
   return (
     <>
       {members.length === 0 ? (
-        <p className="muted">{t`Nobody can open this job search yet.`}</p>
+        <p className="muted">{t`Nobody can open this candidate's file yet.`}</p>
       ) : (
         <ul className="sources">
           {members.map((member) => (

@@ -889,6 +889,10 @@ msgstr "↺ tour"
 msgid "1 responsibility"
 msgstr "1 responsabilité"
 
+#: apps/web/src/records-model.ts
+msgid "A candidate has that name already. Choose them in the list."
+msgstr "Un candidat porte déjà ce nom. Choisissez-le dans la liste."
+
 #: apps/web/src/application-material.tsx
 msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
 msgstr "Une vérification des tics que les lecteurs remarquent dans un texte écrit par un modèle, pas un détecteur d'IA. Réécrivez avec vos propres mots avant d'envoyer."
@@ -932,10 +936,6 @@ msgstr "Un guide envoie à Anthropic (Claude) les exigences du poste, les faits 
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
 msgstr "Un chemin de titres compte au plus 12 titres."
-
-#: apps/web/src/records-model.ts
-msgid "A job search has that name already. Choose it in the list."
-msgstr "Une recherche d’emploi porte déjà ce nom. Choisissez-la dans la liste."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "A job you applied for asks for \"{title}\", and your record does not show it yet."
@@ -1090,6 +1090,10 @@ msgstr "Actif maintenant :"
 msgid "Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools, batch, regional premiums, and unsupported long context. The scenario estimates list-rate API usage only and does not change the selected profiles or their runtime budgets."
 msgstr "Les coûts réels peuvent différer. Sont exclus les appels supplémentaires, les nouvelles tentatives, la croissance des entrées, le cache, les outils, le traitement par lots, les suppléments régionaux et le contexte long non pris en charge. Le scénario estime uniquement l’usage de l’API au tarif public et ne modifie ni les profils choisis ni leurs budgets d’exécution."
 
+#: apps/web/src/records.tsx
+msgid "Add a candidate"
+msgstr "Ajouter un candidat"
+
 #: packages/ui/src/getting-started.tsx
 msgid "Add a CV or other documents, or tell your story in a conversation."
 msgstr "Ajoutez un CV ou d’autres documents, ou racontez votre parcours dans une conversation."
@@ -1113,6 +1117,10 @@ msgstr "Ajoutez une description de poste cible."
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add a whole folder"
 msgstr "Ajouter un dossier entier"
+
+#: apps/web/src/records.tsx
+msgid "Add candidate"
+msgstr "Ajouter le candidat"
 
 #: packages/ui/src/home-model.ts
 msgid "Add career evidence"
@@ -1361,10 +1369,6 @@ msgstr "Une idée"
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
 msgstr "et"
-
-#: apps/web/src/records.tsx
-msgid "and everything stored for it were deleted."
-msgstr "et tout ce qui était enregistré pour lui ont été supprimés."
 
 #: packages/ui/src/review.tsx
 msgid "and its completed Round"
@@ -1931,6 +1935,23 @@ msgstr "Annuler la génération"
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Cancelling…"
 msgstr "Annulation…"
+
+#: apps/web/src/records.tsx
+msgid "Candidate"
+msgstr "Candidat"
+
+#: apps/web/src/records.tsx
+msgid "Candidate's name"
+msgstr "Nom du candidat"
+
+#: apps/web/src/records.tsx
+msgid "Candidates"
+msgstr "Candidats"
+
+#. placeholder {0}: ids.length
+#: apps/web/src/records.tsx
+msgid "Candidates · {0} of {limit}"
+msgstr "Candidats · {0} sur {limit}"
 
 #: packages/ui/src/connected-agents.tsx
 msgid "Cannot spend"
@@ -3150,8 +3171,8 @@ msgid "Download Markdown"
 msgstr "Télécharger en Markdown"
 
 #: apps/web/src/records.tsx
-msgid "Download or delete this job search"
-msgstr "Télécharger ou supprimer cette recherche d’emploi"
+msgid "Download or delete this candidate's data"
+msgstr "Télécharger ou supprimer les données de ce candidat"
 
 #: apps/web/src/application-material.tsx
 msgid "Download PDF"
@@ -3603,6 +3624,10 @@ msgstr "Toute votre équipe peut déjà l’ouvrir."
 msgid "Everything is released. Start the run again."
 msgstr "Tout est libéré. Relancez l’exécution."
 
+#: apps/web/src/records.tsx
+msgid "Everything stored for {deleted} was deleted."
+msgstr "Tout ce qui était conservé pour {deleted} a été supprimé."
+
 #: apps/web/src/account-deletion.tsx
 msgid "Everything stored for your account was deleted. Your sign-in could not be removed yet; we will remove it shortly."
 msgstr "Tout ce qui était conservé pour votre compte a été supprimé. Votre identifiant de connexion n’a pas encore pu être supprimé ; nous le supprimerons sous peu."
@@ -4013,8 +4038,8 @@ msgid "For an interview of an hour or more: adds the market, a requirement matri
 msgstr "Pour un entretien d’une heure ou plus : ajoute le marché, une grille des exigences, des récits, douze questions et une liste de contrôle. Environ 0,30 à 0,40 $ US, au plus 0,40 $ US."
 
 #: apps/web/src/records.tsx
-msgid "For example: Ada Martin, or Product roles 2026"
-msgstr "Par exemple : Ada Martin, ou Postes produit 2026"
+msgid "For example: Amina Diallo"
+msgstr "Par exemple : Amina Diallo"
 
 #: apps/web/src/application-material.tsx
 msgid "For example: my move into team leadership"
@@ -4245,6 +4270,10 @@ msgstr "Donnez-lui un nom que vous reconnaîtrez, comme « {0} »."
 msgid "Give it a name you will recognise, such as the role and the company."
 msgstr "Donnez-lui un nom que vous reconnaîtrez, comme le poste et l’entreprise."
 
+#: apps/web/src/records-model.ts
+msgid "Give the candidate a name."
+msgstr "Donnez un nom au candidat."
+
 #: packages/ui/src/home-folders.tsx
 msgid "Give the folder a name."
 msgstr "Donnez un nom au dossier."
@@ -4252,10 +4281,6 @@ msgstr "Donnez un nom au dossier."
 #: packages/ui/src/screen-hint.tsx
 msgid "Give the job a name, paste its description or link, then select Create application."
 msgstr "Donnez un nom au poste, collez l’offre ou son lien, puis choisissez Créer la candidature."
-
-#: apps/web/src/records-model.ts
-msgid "Give the new job search a name."
-msgstr "Donnez un nom à la nouvelle recherche d’emploi."
 
 #: packages/ui/src/work-journal-model.ts
 msgid "Give the note a title."
@@ -4825,10 +4850,6 @@ msgstr "Exigences lues dans l’offre d’emploi"
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
 msgstr "Exigences du poste relues"
-
-#: apps/web/src/records.tsx
-msgid "Job search"
-msgstr "Recherche d’emploi"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "Jobs you held: employer, title, dates and what you did."
@@ -5586,10 +5607,6 @@ msgstr "Indiquez au moins une technologie."
 msgid "Name it"
 msgstr "Nommez-la"
 
-#: apps/web/src/records.tsx
-msgid "Name of the new job search"
-msgstr "Nom de la nouvelle recherche d’emploi"
-
 #: packages/ui/src/new-application-model.ts
 msgid "Name the application, for example a company and role."
 msgstr "Nommez la candidature, par exemple une entreprise et un poste."
@@ -5704,10 +5721,6 @@ msgstr "Nom du nouveau dossier"
 #: packages/ui/src/getting-started.tsx
 msgid "New here? A short step-by-step guide can show you what to do first."
 msgstr "Nouveau ici ? Un court guide pas à pas peut vous montrer par où commencer."
-
-#: apps/web/src/records.tsx
-msgid "New job search"
-msgstr "Nouvelle recherche d’emploi"
 
 #: packages/ui/src/knowledge.tsx
 msgid "New knowledge base"
@@ -5852,6 +5865,10 @@ msgstr "Aucun constat bloquant n’attend d’action."
 msgid "No candidate"
 msgstr "Aucune source candidate"
 
+#: apps/web/src/records-model.ts
+msgid "No candidate is shared with you yet. Add one, or ask an owner or admin of your team to share one with you."
+msgstr "Aucun candidat ne vous est encore partagé. Ajoutez-en un, ou demandez à un propriétaire ou un administrateur de votre équipe de vous en partager un."
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5987,10 +6004,6 @@ msgstr "Pas d’invitation ? La bêta est pour l’instant sur invitation unique
 #: packages/ui/src/profile.tsx
 msgid "No issues are recorded in this version."
 msgstr "Aucun problème n’est enregistré dans cette version."
-
-#: apps/web/src/records-model.ts
-msgid "No job search is shared with you yet. Start one, or ask an owner or admin of your team to share one with you."
-msgstr "Aucune recherche d’emploi ne vous est encore partagée. Commencez-en une, ou demandez à un propriétaire ou un administrateur de votre équipe de vous en partager une."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "No knowledge base selected — runs will use legacy workspace evidence"
@@ -6154,8 +6167,8 @@ msgid "No words were heard. Try again closer to the microphone."
 msgstr "Aucune parole n’a été entendue. Réessayez plus près du microphone."
 
 #: apps/web/src/records.tsx
-msgid "Nobody can open this job search yet."
-msgstr "Personne ne peut encore ouvrir cette recherche d’emploi."
+msgid "Nobody can open this candidate's file yet."
+msgstr "Personne ne peut encore ouvrir le dossier de ce candidat."
 
 #: apps/web/src/operator.tsx
 msgid "Nobody is waiting."
@@ -9018,10 +9031,6 @@ msgstr "Partir plutôt de la description de poste brute"
 msgid "Start here"
 msgstr "Commencez ici"
 
-#: apps/web/src/records.tsx
-msgid "Start job search"
-msgstr "Commencer la recherche d’emploi"
-
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
@@ -9870,10 +9879,6 @@ msgstr "L’offre n’a pas encore été filtrée. Enregistrez de nouveau le bri
 #: apps/web/src/application-material-model.ts
 msgid "The job post was quarantined by injection screening. Release or replace it before drafting."
 msgstr "L’offre a été mise en quarantaine par le filtrage des injections. Libérez-la ou remplacez-la avant la rédaction."
-
-#: apps/web/src/records.tsx
-msgid "The job search"
-msgstr "La recherche d’emploi"
 
 #: packages/ui/src/review.tsx
 msgid "The job this draft is written for, under the Job tab. A different job needs a new application."
@@ -11511,8 +11516,8 @@ msgid "Where your evidence is kept. Most people need only one; choosing a differ
 msgstr "Où vos éléments sont conservés. Une seule suffit le plus souvent ; choisir une autre base remplace celle qu’utilise cet espace de travail."
 
 #: apps/web/src/records.tsx
-msgid "Who can open this job search"
-msgstr "Qui peut ouvrir cette recherche d’emploi"
+msgid "Who can open this candidate's file"
+msgstr "Qui peut ouvrir le dossier de ce candidat"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Who may read it"
@@ -11555,10 +11560,6 @@ msgstr "Retiré le {when}."
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Work journal"
 msgstr "Journal de travail"
-
-#: apps/web/src/records.tsx
-msgid "Working on"
-msgstr "Recherche ouverte"
 
 #: packages/ui/src/profile.tsx
 msgid "Working on your profile…"
@@ -11736,8 +11737,8 @@ msgid "You can edit the draft once this round finishes."
 msgstr "Vous pourrez modifier l’ébauche une fois ce tour terminé."
 
 #: apps/web/src/records.tsx
-msgid "You can share this job search once it is set up."
-msgstr "Vous pourrez partager cette recherche d’emploi une fois qu’elle sera créée."
+msgid "You can share this candidate's file once it is set up."
+msgstr "Vous pourrez partager le dossier de ce candidat une fois qu’il sera créé."
 
 #: packages/ui/src/career-interview-model.ts
 msgid "You chose to talk about: {title}"
@@ -11992,8 +11993,8 @@ msgid "Your sign-in has expired. Sign in again."
 msgstr "Votre session a expiré. Reconnectez-vous."
 
 #: apps/web/src/records-model.ts
-msgid "Your team has no job search yet. Start the first one."
-msgstr "Votre équipe n’a pas encore de recherche d’emploi. Commencez la première."
+msgid "Your team has no candidate yet. Add the first one."
+msgstr "Votre équipe n’a pas encore de candidat. Ajoutez le premier."
 
 #. placeholder {0}: voice.listener
 #: packages/ui/src/career-interview-live.tsx
