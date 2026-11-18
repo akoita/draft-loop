@@ -172,9 +172,13 @@ critic model, billed on that critique. A content-free
 `run.requirement-evidence-grade` event records the grades by id. A failed call
 leaves the map ungraded and never fails the critique. Grading is off by default.
 
-`DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map; each use is off unless
-named. With `fallback`, a run above its budget or cost cap adds each
-requirement's map candidates instead of its shared-word picks. With `writer`,
+`DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map. Unset, only `fallback`
+is on; `off` turns every use off; a list turns on only the uses it names. With
+`fallback`, a run above its budget or cost cap adds each requirement's map
+candidates instead of its shared-word picks. A paid comparison (#2985) found
+this recovered about two thirds more accomplishments than shared-word picks at
+about the same cost. The `writer` and `critic` uses stay opt-in: on full-source
+runs they cost about $0.21 more per run without recovering more. With `writer`,
 the writer's achievement plan gives each requirement its best sent map
 candidate before falling back to shared words; the plan step reads the same
 plan, so both keep one cached prompt prefix. With `critic`, the critic's

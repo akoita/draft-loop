@@ -12,21 +12,29 @@ import {
   runEmbeddingModelRoot,
 } from "./run-semantic-retrieval.js";
 
-/** Where a run uses its requirement-evidence map; each use is off unless the setting names it. */
+/**
+ * Where a run uses its requirement-evidence map. Unset or empty means the default uses; `off`
+ * turns every use off; otherwise only the named uses are on.
+ */
 export const requirementEvidenceMapUseSetting = "DRAFT_LOOP_EVIDENCE_MAP";
 
 export const requirementEvidenceMapUses = ["fallback", "writer", "critic"] as const;
 export type RequirementEvidenceMapUse = (typeof requirementEvidenceMapUses)[number];
 
-/** The uses named in the setting, a comma-separated list such as `fallback,writer`. */
+/**
+ * The uses on by default (#2985): a capped run's added chunks follow the map, which recovered
+ * clearly more accomplishments than shared-word picks. The writer and critic uses added cost on
+ * full-source runs without recovering more, so they stay opt-in.
+ */
+export const defaultRequirementEvidenceMapUses: readonly RequirementEvidenceMapUse[] = ["fallback"];
+
+/** The uses the setting turns on: a comma-separated list such as `fallback,writer`, or `off`. */
 export function enabledRequirementEvidenceMapUses(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): ReadonlySet<RequirementEvidenceMapUse> {
-  const named = new Set(
-    (env[requirementEvidenceMapUseSetting] ?? "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase()),
-  );
+  const value = (env[requirementEvidenceMapUseSetting] ?? "").trim();
+  if (value === "") return new Set(defaultRequirementEvidenceMapUses);
+  const named = new Set(value.split(",").map((entry) => entry.trim().toLowerCase()));
   return new Set(requirementEvidenceMapUses.filter((use) => named.has(use)));
 }
 
