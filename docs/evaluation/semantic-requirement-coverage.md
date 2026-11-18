@@ -106,16 +106,20 @@ The rules apply in order:
 1. **Protected rules decide alone.** Degree, organisation-maturity, and future
    date or metric rules are deterministic. Semantic evidence never overrides
    them, and a failure is `uncovered` with basis `protected-rule`.
-2. **Lexical coverage stays.** A requirement covered today stays `covered` with
-   basis `lexical`.
+2. **Strong lexical coverage stays.** A lexical pass that matches every word
+   of the requirement, and more than one, stays `covered` with basis `lexical`.
+   A thin pass, on part of the words or a single word, becomes
+   `needs-judgement` with basis `lexical` and its block as a hint, because it
+   may share only generic words such as "experience" (#2986).
 3. **Semantic candidates need judgement.** A lexically uncovered requirement
    whose best block passes the tier's relevance floor becomes `needs-judgement`.
    It carries the candidate blocks. Severity is unchanged until judged, so a
    critical requirement still blocks readiness.
 4. **A judge decides against the whole draft.** The critic receives every
-   lexically uncovered, non-protected requirement, up to 24 per critique, with
-   any candidate blocks as hints (#1208). Above the cap, requirements with
-   candidates go first. It judges each one against the whole artifact and
+   lexically uncovered, non-protected requirement and every thin lexical pass,
+   up to 24 per critique, with any candidate blocks as hints (#1208). Above the
+   cap, semantic candidates go first, then uncovered requirements, then thin
+   passes. A thin pass the critic does not judge returns to `covered`. It judges each one against the whole artifact and
    returns `satisfied` or `not-satisfied` with a short rationale. A `satisfied`
    verdict cites one to three blocks that exist anywhere in the draft; an
    unknown block makes the verdict invalid. `satisfied` becomes `covered` with

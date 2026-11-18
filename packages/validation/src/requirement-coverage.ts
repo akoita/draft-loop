@@ -51,6 +51,16 @@ export interface RequirementCoverageMatch {
   readonly rule: "degree" | "maturity" | "lexical";
   /** Indexes into the flattened artifact blocks that satisfied the rule, in artifact order. */
   readonly blockIndexes: readonly number[];
+  /**
+   * A lexical pass that rests on part of the requirement's words, or on a single word (#2986).
+   * Such a pass may share only generic words, so the critic judges it. Always false otherwise.
+   */
+  readonly thin: boolean;
+}
+
+/** A lexical pass is strong only when it matches every word of a branch, and more than one. */
+function isStrongMatch(matches: number, required: number): boolean {
+  return matches === required && matches > 1;
 }
 
 /**
@@ -71,6 +81,7 @@ export function findRequirementCoverage(
       basis: "protected-rule",
       rule: "degree",
       blockIndexes,
+      thin: false,
     };
   }
   const branches = (alternativeRequirementBranches(requirement.text) ?? [requirement.text])
@@ -80,6 +91,7 @@ export function findRequirementCoverage(
     }))
     .filter((branch) => branch.required.length > 0);
   const maturity = branches.some((branch) => branch.maturity !== undefined);
+  let strong = false;
   const index = blocks.findIndex((text) => {
     const available = new Set(tokens(text));
     return branches.some((branch) => {
@@ -87,7 +99,9 @@ export function findRequirementCoverage(
         return false;
       }
       const matches = branch.required.filter((token) => available.has(token)).length;
-      return matches > 0 && matches / branch.required.length >= 0.5;
+      if (matches === 0 || matches / branch.required.length < 0.5) return false;
+      strong = isStrongMatch(matches, branch.required.length);
+      return true;
     });
   });
   return {
@@ -95,6 +109,7 @@ export function findRequirementCoverage(
     basis: maturity ? "protected-rule" : "lexical",
     rule: maturity ? "maturity" : "lexical",
     blockIndexes: index >= 0 ? [index] : [],
+    thin: index >= 0 && !maturity && !strong,
   };
 }
 

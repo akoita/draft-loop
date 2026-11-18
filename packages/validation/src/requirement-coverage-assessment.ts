@@ -26,9 +26,11 @@ export interface RequirementCoverageEvidence {
 }
 
 /**
- * One coverage verdict per requirement. The deterministic rule produces only
- * `covered`, `uncovered`, and `explicit-gap` with basis `lexical` or `protected-rule`;
- * `needs-judgement`, `semantic-candidate`, and `judgement` are reserved.
+ * One coverage verdict per requirement. The deterministic rule produces `covered`, `uncovered`,
+ * and `explicit-gap` with basis `lexical` or `protected-rule`, and `needs-judgement` with basis
+ * `lexical` for a thin lexical pass (#2986). Applying the critic's judgements always resolves a
+ * thin pass, back to `covered` when the critic did not answer. `semantic-candidate` and
+ * `judgement` come from later steps.
  */
 export interface RequirementCoverageAssessment {
   readonly requirementId: string;
@@ -44,6 +46,8 @@ export const requirementCoverageRationales = Object.freeze({
   // the plain `lexical` basis rather than claiming a protected rule or judgement.
   explicitGap: "Marked as an explicit gap by the author.",
   lexicalCovered: "Covered by matching wording in one CV block.",
+  lexicalThin:
+    "Only a few of the requirement's words appear in one CV block; the critic checks it.",
   lexicalUncovered: "Not covered: no CV block repeats enough of the requirement's wording.",
   degreeCovered: "Covered under the strict degree rule.",
   degreeUncovered: "Not covered under the strict degree rule.",
@@ -83,7 +87,7 @@ export function assessRequirementCoverage(
       const match = findRequirementCoverage(requirement, artifact);
       return Object.freeze({
         requirementId: requirement.id,
-        status: match.covered ? "covered" : "uncovered",
+        status: match.thin ? "needs-judgement" : match.covered ? "covered" : "uncovered",
         basis: match.basis,
         evidence: Object.freeze(
           match.blockIndexes.flatMap((index) => {
@@ -91,7 +95,7 @@ export function assessRequirementCoverage(
             return block === undefined ? [] : [Object.freeze({ blockId: block.id })];
           }),
         ),
-        rationale: rationaleFor(match),
+        rationale: match.thin ? requirementCoverageRationales.lexicalThin : rationaleFor(match),
       });
     }),
   );

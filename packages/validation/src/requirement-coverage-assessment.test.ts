@@ -31,9 +31,14 @@ const requirements = [
   { id: "mat", text: "Early-stage startup experience." },
   { id: "mat-miss", text: "Seed stage company experience." },
   { id: "lex", text: "Experience operating Prometheus or Datadog dashboards." },
+  { id: "lex-strong", text: "Prometheus dashboards and alerting." },
+  { id: "lex-one", text: "Prometheus." },
   { id: "lex-miss", text: "Designing and training production machine learning models." },
   { id: "gap", text: "Native-level fluency in Mandarin." },
 ];
+
+/** The rule's own pass: covered, or a thin lexical pass the critic still checks (#2986). */
+const passes = (status: string | undefined) => status === "covered" || status === "needs-judgement";
 
 describe("requirement coverage assessment", () => {
   const assessments = assessRequirementCoverage(requirements, artifact, new Set(["gap"]));
@@ -48,20 +53,34 @@ describe("requirement coverage assessment", () => {
     expect(assessments.map((item) => item.requirementId)).toEqual(requirements.map((r) => r.id));
   });
 
-  it("defines the reserved statuses and bases without producing them", () => {
+  it("produces needs-judgement only for thin lexical passes, and no later-step basis", () => {
     expect(requirementCoverageStatuses).toContain("needs-judgement");
     expect(requirementCoverageBases).toContain("semantic-candidate");
     expect(requirementCoverageBases).toContain("judgement");
     for (const item of assessments) {
-      expect(item.status).not.toBe("needs-judgement");
       expect(["lexical", "protected-rule"]).toContain(item.basis);
+      if (item.status === "needs-judgement") {
+        expect(item).toMatchObject({
+          basis: "lexical",
+          rationale: requirementCoverageRationales.lexicalThin,
+        });
+      }
     }
+  });
+
+  it("sends a partial or single-word lexical pass to the critic and keeps a full match", () => {
+    // Two of four words of the Prometheus branch match: enough to pass, too few to trust.
+    expect(get("lex").status).toBe("needs-judgement");
+    expect(get("lex-one").status).toBe("needs-judgement");
+    expect(get("lex-strong").status).toBe("covered");
+    // Protected rules are never thin.
+    expect(get("mat").status).toBe("covered");
   });
 
   it("matches the existing covered and uncovered outcomes", () => {
     for (const requirement of requirements) {
       if (requirement.id === "gap") continue;
-      expect(get(requirement.id).status === "covered").toBe(
+      expect(passes(get(requirement.id).status)).toBe(
         isRequirementCoveredByBlock(requirement, artifact),
       );
     }
@@ -69,7 +88,7 @@ describe("requirement coverage assessment", () => {
     expect(get("deg-miss").status).toBe("uncovered");
     expect(get("mat").status).toBe("covered");
     expect(get("mat-miss").status).toBe("uncovered");
-    expect(get("lex").status).toBe("covered");
+    expect(get("lex-strong").status).toBe("covered");
     expect(get("lex-miss").status).toBe("uncovered");
   });
 
@@ -99,7 +118,8 @@ describe("requirement coverage assessment", () => {
     for (const item of assessments) expect(fixed.has(item.rationale)).toBe(true);
     expect(get("deg").rationale).toBe(requirementCoverageRationales.degreeCovered);
     expect(get("mat-miss").rationale).toBe(requirementCoverageRationales.maturityUncovered);
-    expect(get("lex").rationale).toBe(requirementCoverageRationales.lexicalCovered);
+    expect(get("lex-strong").rationale).toBe(requirementCoverageRationales.lexicalCovered);
+    expect(get("lex").rationale).toBe(requirementCoverageRationales.lexicalThin);
     for (const text of [...requirements.map((r) => r.text), ...blocks.map((b) => b.text)]) {
       for (const item of assessments) expect(item.rationale).not.toContain(text);
     }
@@ -137,10 +157,8 @@ describe("requirement coverage assessment on the #727 fixture", () => {
     for (const [index, requirement] of fixture.requirements.entries()) {
       const item = assessments[index];
       expect(item?.requirementId).toBe(requirement.id);
-      expect(item?.status === "covered").toBe(
-        isRequirementCoveredByBlock(requirement, fixtureArtifact),
-      );
-      expect(item?.evidence.length === 0).toBe(item?.status !== "covered");
+      expect(passes(item?.status)).toBe(isRequirementCoveredByBlock(requirement, fixtureArtifact));
+      expect(item?.evidence.length === 0).toBe(!passes(item?.status));
       for (const evidence of item?.evidence ?? [])
         expect(blockIds.has(evidence.blockId)).toBe(true);
     }

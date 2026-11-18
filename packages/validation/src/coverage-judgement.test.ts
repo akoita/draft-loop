@@ -5,10 +5,14 @@ import {
   type CoverageJudgement,
   type CoverageJudgementRequest,
   coverageJudgementRequestsFrom,
+  isThinLexicalPass,
   maximumCoverageJudgementRationaleCharacters,
   maximumCoverageJudgementRequests,
 } from "./coverage-judgement.js";
-import type { RequirementCoverageAssessment } from "./requirement-coverage-assessment.js";
+import {
+  type RequirementCoverageAssessment,
+  requirementCoverageRationales,
+} from "./requirement-coverage-assessment.js";
 
 function needsJudgement(
   requirementId: string,
@@ -472,5 +476,75 @@ describe("applyCoverageJudgements", () => {
     apply([satisfied()], [original]);
 
     expect(original).toEqual(snapshot);
+  });
+});
+
+describe("thin lexical passes (#2986)", () => {
+  function thin(requirementId: string): RequirementCoverageAssessment {
+    return {
+      requirementId,
+      status: "needs-judgement",
+      basis: "lexical",
+      evidence: [{ blockId: "block-a" }],
+      rationale: requirementCoverageRationales.lexicalThin,
+    };
+  }
+
+  it("asks the critic about a thin pass, with its matching block as a hint", () => {
+    expect(isThinLexicalPass(thin("req-1"))).toBe(true);
+    expect(isThinLexicalPass(needsJudgement("req-1"))).toBe(false);
+    expect(coverageJudgementRequestsFrom([thin("req-1")])).toEqual([
+      { requirementId: "req-1", candidateBlockIds: ["block-a"] },
+    ]);
+  });
+
+  it("keeps thin passes last when the requests exceed the cap", () => {
+    const assessments = [
+      ...Array.from({ length: maximumCoverageJudgementRequests }, (_, index) =>
+        thin(`thin-${index}`),
+      ),
+      settled("uncovered-1", "uncovered"),
+      needsJudgement("semantic-1"),
+    ];
+    const ids = coverageJudgementRequestsFrom(assessments).map(
+      ({ requirementId }) => requirementId,
+    );
+    expect(ids).toHaveLength(maximumCoverageJudgementRequests);
+    expect(ids).toContain("semantic-1");
+    expect(ids).toContain("uncovered-1");
+    expect(ids).not.toContain(`thin-${maximumCoverageJudgementRequests - 1}`);
+  });
+
+  it("applies the critic's verdict to a thin pass", () => {
+    const requests = coverageJudgementRequestsFrom([thin("req-1"), thin("req-2")]);
+    const applied = applyCoverageJudgements([thin("req-1"), thin("req-2")], requests, [
+      satisfied({ citedBlockIds: ["block-a"] }),
+      notSatisfied({ requirementId: "req-2", rationale: "The block only shares generic words." }),
+    ]);
+    expect(applied.assessments).toMatchObject([
+      { requirementId: "req-1", status: "covered", basis: "judgement" },
+      { requirementId: "req-2", status: "uncovered", basis: "judgement", evidence: [] },
+    ]);
+    expect(applied.summary).toMatchObject({ satisfied: 1, notSatisfied: 1, unanswered: 0 });
+  });
+
+  it("returns an unanswered, invalid or unrequested thin pass to covered", () => {
+    const assessments = [thin("unanswered"), thin("invalid"), thin("unrequested")];
+    const requests = coverageJudgementRequestsFrom(assessments).filter(
+      ({ requirementId }) => requirementId !== "unrequested",
+    );
+    const applied = applyCoverageJudgements(assessments, requests, [
+      satisfied({ requirementId: "invalid", citedBlockIds: ["not-a-block"] }),
+    ]);
+    for (const assessment of applied.assessments) {
+      expect(assessment).toEqual({
+        requirementId: assessment.requirementId,
+        status: "covered",
+        basis: "lexical",
+        evidence: [{ blockId: "block-a" }],
+        rationale: requirementCoverageRationales.lexicalCovered,
+      });
+    }
+    expect(applied.summary).toMatchObject({ judged: 0, unanswered: 1, invalid: 1 });
   });
 });
