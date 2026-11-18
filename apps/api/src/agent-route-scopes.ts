@@ -54,6 +54,8 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
   [`GET ${workspace}/runs/:runId/exports`]: { scope: "drafts:read" },
   [`GET ${workspace}/runs/:runId/exports/:exportId/content`]: { scope: "drafts:read" },
   [`GET ${workspace}/applications/:applicationId/material`]: { scope: "drafts:read" },
+  // Names the candidate's sources and lines per requirement, never quotes them (#3010).
+  [`GET ${workspace}/runs/:runId/requirement-evidence`]: { scope: "drafts:read" },
   // Runs within the token's monthly spend cap (#2599), on a brief the person reviewed; the
   // models, the career profile and every decision on the draft stay with the person.
   [`GET ${workspace}/runs/estimate`]: { scope: "runs:start" },
@@ -153,7 +155,6 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/freshness",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/versions",
   "GET /v1/workspaces/:workspaceId/review-state",
-  "GET /v1/workspaces/:workspaceId/runs/:runId/requirement-evidence",
   "GET /v1/workspaces/:workspaceId/runs/:runId/review",
   "GET /v1/workspaces/:workspaceId/runs/:runId/trace",
   "GET /v1/workspaces/:workspaceId/runs/:runId/usage",
