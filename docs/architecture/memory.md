@@ -115,5 +115,7 @@ holds the ordered issues. In short:
 
 - The critic never learns its false positives (#2254).
 - The agent channel cannot search career evidence (#2255, deferred).
+- What a run or review learns about the candidate never reaches the career
+  profile; suggested profile updates are planned (#3065).
 - Past approved drafts are never recalled as examples; this waits for the
   quality gate (#1309).
