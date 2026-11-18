@@ -895,6 +895,10 @@ msgstr ""
 msgid "1 responsibility"
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "A candidate has that name already. Choose them in the list."
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "A check for habits readers notice in model-written text, not an AI detector. Rewrite in your own words before you send it."
 msgstr ""
@@ -937,10 +941,6 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "A heading path has at most 12 headings."
-msgstr ""
-
-#: apps/web/src/records-model.ts
-msgid "A job search has that name already. Choose it in the list."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -1096,6 +1096,10 @@ msgstr ""
 msgid "Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools, batch, regional premiums, and unsupported long context. The scenario estimates list-rate API usage only and does not change the selected profiles or their runtime budgets."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Add a candidate"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Add a CV or other documents, or tell your story in a conversation."
 msgstr ""
@@ -1118,6 +1122,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add a whole folder"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Add candidate"
 msgstr ""
 
 #: packages/ui/src/home-model.ts
@@ -1366,10 +1374,6 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "and"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "and everything stored for it were deleted."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -1936,6 +1940,23 @@ msgstr ""
 #: packages/ui/src/profile-generation-progress.tsx
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Cancelling…"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Candidate"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Candidate's name"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Candidates"
+msgstr ""
+
+#. placeholder {0}: ids.length
+#: apps/web/src/records.tsx
+msgid "Candidates · {0} of {limit}"
 msgstr ""
 
 #: packages/ui/src/connected-agents.tsx
@@ -3156,7 +3177,7 @@ msgid "Download Markdown"
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Download or delete this job search"
+msgid "Download or delete this candidate's data"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -3609,6 +3630,10 @@ msgstr ""
 msgid "Everything is released. Start the run again."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Everything stored for {deleted} was deleted."
+msgstr ""
+
 #: apps/web/src/account-deletion.tsx
 msgid "Everything stored for your account was deleted. Your sign-in could not be removed yet; we will remove it shortly."
 msgstr ""
@@ -4019,7 +4044,7 @@ msgid "For an interview of an hour or more: adds the market, a requirement matri
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "For example: Ada Martin, or Product roles 2026"
+msgid "For example: Amina Diallo"
 msgstr ""
 
 #: apps/web/src/application-material.tsx
@@ -4251,16 +4276,16 @@ msgstr ""
 msgid "Give it a name you will recognise, such as the role and the company."
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "Give the candidate a name."
+msgstr ""
+
 #: packages/ui/src/home-folders.tsx
 msgid "Give the folder a name."
 msgstr ""
 
 #: packages/ui/src/screen-hint.tsx
 msgid "Give the job a name, paste its description or link, then select Create application."
-msgstr ""
-
-#: apps/web/src/records-model.ts
-msgid "Give the new job search a name."
 msgstr ""
 
 #: packages/ui/src/work-journal-model.ts
@@ -4829,10 +4854,6 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Job requirements reviewed"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Job search"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -5591,10 +5612,6 @@ msgstr ""
 msgid "Name it"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Name of the new job search"
-msgstr ""
-
 #: packages/ui/src/new-application-model.ts
 msgid "Name the application, for example a company and role."
 msgstr ""
@@ -5708,10 +5725,6 @@ msgstr ""
 
 #: packages/ui/src/getting-started.tsx
 msgid "New here? A short step-by-step guide can show you what to do first."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "New job search"
 msgstr ""
 
 #: packages/ui/src/knowledge.tsx
@@ -5857,6 +5870,10 @@ msgstr ""
 msgid "No candidate"
 msgstr ""
 
+#: apps/web/src/records-model.ts
+msgid "No candidate is shared with you yet. Add one, or ask an owner or admin of your team to share one with you."
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5991,10 +6008,6 @@ msgstr ""
 
 #: packages/ui/src/profile.tsx
 msgid "No issues are recorded in this version."
-msgstr ""
-
-#: apps/web/src/records-model.ts
-msgid "No job search is shared with you yet. Start one, or ask an owner or admin of your team to share one with you."
 msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
@@ -6159,7 +6172,7 @@ msgid "No words were heard. Try again closer to the microphone."
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Nobody can open this job search yet."
+msgid "Nobody can open this candidate's file yet."
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -9023,10 +9036,6 @@ msgstr ""
 msgid "Start here"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Start job search"
-msgstr ""
-
 #. placeholder {0}: blockedHint(first)
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start review · {0}"
@@ -9874,10 +9883,6 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "The job post was quarantined by injection screening. Release or replace it before drafting."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "The job search"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -11516,7 +11521,7 @@ msgid "Where your evidence is kept. Most people need only one; choosing a differ
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "Who can open this job search"
+msgid "Who can open this candidate's file"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -11559,10 +11564,6 @@ msgstr ""
 #: packages/ui/src/source-evidence-kind-contract.ts
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Work journal"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Working on"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -11741,7 +11742,7 @@ msgid "You can edit the draft once this round finishes."
 msgstr ""
 
 #: apps/web/src/records.tsx
-msgid "You can share this job search once it is set up."
+msgid "You can share this candidate's file once it is set up."
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -11997,7 +11998,7 @@ msgid "Your sign-in has expired. Sign in again."
 msgstr ""
 
 #: apps/web/src/records-model.ts
-msgid "Your team has no job search yet. Start the first one."
+msgid "Your team has no candidate yet. Add the first one."
 msgstr ""
 
 #. placeholder {0}: voice.listener

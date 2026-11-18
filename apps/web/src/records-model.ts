@@ -57,10 +57,10 @@ export function newRecordNameProblem(
   name: string,
   names: ReadonlyMap<string, string>,
 ): string | undefined {
-  if (name.length === 0) return t`Give the new job search a name.`;
+  if (name.length === 0) return t`Give the candidate a name.`;
   if (name.length > recordNameMaxLength) return t`Use up to ${recordNameMaxLength} characters.`;
   const taken = [...names.values()].some((other) => other.toLowerCase() === name.toLowerCase());
-  if (taken) return t`A job search has that name already. Choose it in the list.`;
+  if (taken) return t`A candidate has that name already. Choose them in the list.`;
   return undefined;
 }
 
@@ -94,8 +94,8 @@ export function canManageMembers(me: Me): boolean {
 /** What the screen says when the caller reaches no record yet. */
 export function noRecordNotice(me: Me): string {
   return canManageMembers(me)
-    ? t`Your team has no job search yet. Start the first one.`
-    : t`No job search is shared with you yet. Start one, or ask an owner or admin of your team to share one with you.`;
+    ? t`Your team has no candidate yet. Add the first one.`
+    : t`No candidate is shared with you yet. Add one, or ask an owner or admin of your team to share one with you.`;
 }
 
 /** The organisation's members not yet assigned to the record, by email. */

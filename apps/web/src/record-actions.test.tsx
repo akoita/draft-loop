@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { RecordActionsPanel } from "./record-actions.js";
 
 const panelProps = {
-  title: "Download or delete this job search",
+  title: "Download or delete this candidate's data",
   busy: false,
   messages: [],
   onExport: () => {},
@@ -15,7 +15,7 @@ describe("record export and deletion panel", () => {
   it("offers the archive and a delete form that asks for the id and warns it is final", () => {
     const html = renderToStaticMarkup(<RecordActionsPanel {...panelProps} />);
 
-    expect(html).toContain("<summary>Download or delete this job search</summary>");
+    expect(html).toContain("<summary>Download or delete this candidate&#x27;s data</summary>");
     expect(html).toContain('<button type="button">Download everything</button>');
     expect(html).toContain("It cannot be undone.");
     expect(html).toContain('<label for="delete-record-confirm">Type DELETE to confirm</label>');

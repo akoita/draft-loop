@@ -34,7 +34,7 @@ organisation; it erases everything with `draft-loop-server`
    it a plain name of up to 80 characters with
    `PUT /v1/workspaces/{id}/name`; the records list returns that name, and a
    record without one is shown by its id. Erasing the record removes the name.
-   On the web, **New job search** asks for the name only: the screen makes the
+   On the web, **Add a candidate** asks for the name only: the screen makes the
    id from it and saves the name once the record is set up.
 3. Check who you are and which team you act for in the account menu at the
    start of the top bar. The screen calls the organisation your team and a
@@ -60,21 +60,24 @@ organisation; it erases everything with `draft-loop-server`
 
 The screen reads the plan's limits from `GET /v1/me`, never its name.
 
-| Plan allows                    | Account menu                        | Above Home                                                       |
-| ------------------------------ | ----------------------------------- | ---------------------------------------------------------------- |
-| One job search and one seat    | Email; Your data (download, delete) | Nothing: the job search opens or is created as **My job search** |
-| Several job searches, one seat | Email                               | **Working on** picker and **New job search**                     |
-| Several seats                  | Email and team name                 | Picker, plus **Who can open this job search**                    |
+The web calls each record a **candidate**: one person, their documents and
+their applications. A one-person plan never shows the word.
 
-An organisation that already holds two job searches keeps the picker after a
+| Plan allows                  | Account menu                        | Above Home                                                    |
+| ---------------------------- | ----------------------------------- | ------------------------------------------------------------- |
+| One candidate and one seat   | Email; Your data (download, delete) | Nothing: the record opens, or is created with the defaults    |
+| Several candidates, one seat | Email                               | **Candidates · 2 of 3** picker and **Add a candidate**        |
+| Several seats                | Email and team name                 | Picker, plus **Who can open this candidate's file**           |
+
+An organisation that already holds two candidates keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own
 access from the screen.
 
-On a one-person plan the first sign-in shows no setup screen. The job search is
+On a one-person plan the first sign-in shows no setup screen. The record is
 created with the defaults: CV language from the screen language, the plan's
 default model preset, two rounds and demo mode off. Settings on Home changes
 them later. If that create fails, the setup screen shows with the reason. Plans
-with several job searches keep the setup screen for each new one.
+with several candidates keep the setup screen for each new one.
 
 ## Operator screen
 
