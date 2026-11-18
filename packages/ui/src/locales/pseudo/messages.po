@@ -10475,6 +10475,10 @@ msgstr ""
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr ""
 
+#: apps/web/src/account-deletion.tsx
+msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
+msgstr ""
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr ""

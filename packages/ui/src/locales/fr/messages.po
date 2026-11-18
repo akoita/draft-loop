@@ -10470,6 +10470,10 @@ msgstr "Ce compte existe déjà. Rechargez la page."
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "Ce compte n’est encore membre d’aucune organisation. Demandez une invitation au propriétaire de votre organisation."
 
+#: apps/web/src/account-deletion.tsx
+msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
+msgstr "Ce compte gère DraftLoop en tant qu’opérateur : il ne peut pas être supprimé d’ici. Retirez d’abord son rôle d’opérateur."
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr "La recherche sur cette candidature n'a pas pu être faite."

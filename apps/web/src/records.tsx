@@ -201,8 +201,11 @@ export function Records({
   const exists = chosen !== undefined && state.ids.includes(chosen);
   const onePerson = isOnePersonPlan(state.me, state.ids);
   // A person alone on their plan may also delete their whole account, sign-in included (#3033).
+  // An operator's account stays: deleting it would lock the service out of its own screen.
   const accountEmail =
-    state.me.kind === "member" && state.me.role === "owner" ? state.me.email : undefined;
+    state.me.kind === "member" && state.me.role === "owner" && state.me.operatorRole !== true
+      ? state.me.email
+      : undefined;
   const accountDeletion =
     onePerson && onAccountDeleted !== undefined && accountEmail !== undefined ? (
       <AccountDeletion client={client} email={accountEmail} onDeleted={onAccountDeleted} />

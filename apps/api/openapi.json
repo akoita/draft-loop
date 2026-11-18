@@ -6873,6 +6873,11 @@
                 "type": "boolean",
                 "const": true
               },
+              "operatorRole": {
+                "description": "Present when the account holds the operator role, with or without a second factor; such an account cannot be deleted from the screen.",
+                "type": "boolean",
+                "const": true
+              },
               "organisationName": {
                 "description": "The organisation's display name, which the screen calls the team.",
                 "type": "string"
@@ -15656,6 +15661,11 @@
               },
               "operator": {
                 "description": "Present when this sign-in also reaches the operator routes: the operator role with a second factor.",
+                "type": "boolean",
+                "const": true
+              },
+              "operatorRole": {
+                "description": "Present when the account holds the operator role, with or without a second factor; such an account cannot be deleted from the screen.",
                 "type": "boolean",
                 "const": true
               },
@@ -30962,7 +30972,7 @@
     "/v1/account": {
       "delete": {
         "summary": "Delete my account and everything it holds",
-        "description": "For a person alone in their organisation, signed in themselves (an agent token or an assistant's sign-in answers 403). The account's email address is typed back as `confirm` (400 `confirmation_mismatch`). Erases the organisation as `DELETE /v1/organisation` does, which frees its beta place, then deletes the sign-in account at the identity provider. A queued or running run answers 409 `run_active`; an organisation with other members answers 409 `organisation_has_members`. Calling again finishes an interrupted deletion while the sign-in still resolves.",
+        "description": "For a person alone in their organisation, signed in themselves (an agent token or an assistant's sign-in answers 403). The account's email address is typed back as `confirm` (400 `confirmation_mismatch`). Erases the organisation as `DELETE /v1/organisation` does, which frees its beta place, then deletes the sign-in account at the identity provider. A queued or running run answers 409 `run_active`; an organisation with other members answers 409 `organisation_has_members`; a sign-in with the operator role answers 409 `operator_account`, so an operator cannot lock the service out of its own screen. Calling again finishes an interrupted deletion while the sign-in still resolves.",
         "requestBody": {
           "required": true,
           "content": {

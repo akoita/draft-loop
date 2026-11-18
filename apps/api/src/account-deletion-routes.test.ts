@@ -222,9 +222,13 @@ async function api(
   return app;
 }
 
-async function as(person: string): Promise<string> {
+async function as(person: string, roles: readonly string[] = []): Promise<string> {
   if (person === "operator") return `Bearer ${ownerToken}`;
-  const token = await new SignJWT({ email_verified: true, email: `${person}@example.test` })
+  const token = await new SignJWT({
+    email_verified: true,
+    email: `${person}@example.test`,
+    ...(roles.length === 0 ? {} : { realm_access: { roles } }),
+  })
     .setProtectedHeader({ alg: "ES256", kid: "key-1" })
     .setIssuer(issuer)
     .setAudience(audience)
@@ -318,6 +322,20 @@ describe("account deletion route", () => {
       status: 200,
       body: { identity: "kept" },
     });
+    expect(deletedAccounts).toEqual([]);
+  });
+
+  it("keeps an account that holds the operator role, with or without a second factor", async () => {
+    const server = await api();
+    const response = await server.inject({
+      method: "DELETE",
+      url: "/v1/account",
+      headers: { authorization: await as("owner-south", ["draft-loop-operator"]) },
+      payload: { confirm: "owner-south@example.test" },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ error: { code: "operator_account" } });
+    expect(tenants["org-south"]?.exists).toBe(true);
     expect(deletedAccounts).toEqual([]);
   });
 

@@ -140,6 +140,9 @@ The cap starts small and rises in steps, with no redeploy:
 - Operator routes take the owner token, or a named operator's sign-in that
   holds the `draft-loop-operator` role and used a second factor
   ([setup](../operations/server-deploy.md#sign-in-as-a-named-operator)).
+- An account that holds the operator role cannot be deleted from the screen:
+  **Delete my account** is hidden and `DELETE /v1/account` answers 409
+  `operator_account`. Remove the role from the operator list first.
 - The operator screen revokes no invite; use
   `DELETE /v1/operator/beta-invites/{inviteId}`. Invites do not expire.
 - Consent covers one candidate record; each record records its own.

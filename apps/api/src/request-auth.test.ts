@@ -441,8 +441,18 @@ describe("operator routes", () => {
         `Bearer ${await token({ ...operatorClaims, amr: ["pwd"] })}`,
       );
 
-      expect(operator.json().caller).toEqual({ kind: "member", ...member, operator: true });
-      expect(passwordOnly.json().caller).toEqual({ kind: "member", ...member });
+      expect(operator.json().caller).toEqual({
+        kind: "member",
+        ...member,
+        operator: true,
+        holdsOperatorRole: true,
+      });
+      // Without the second factor the role still shows, so the account cannot be deleted.
+      expect(passwordOnly.json().caller).toEqual({
+        kind: "member",
+        ...member,
+        holdsOperatorRole: true,
+      });
     });
 
     it("gives no operator reach outside operator routes", async () => {
