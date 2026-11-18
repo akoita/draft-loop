@@ -84,7 +84,7 @@ describe("web screen", () => {
   it("keeps the owner token's single workspace, with no record picker", () => {
     const html = renderToStaticMarkup(<Shell client={unusedClient} onSignOut={() => {}} />);
 
-    expect(html).toContain("Reading your workspace…");
+    expect(html).toContain("Opening your documents…");
     expect(html).not.toContain("candidate records");
   });
 
@@ -106,8 +106,8 @@ describe("web screen", () => {
       <Shell mode="sign-in" client={unusedClient} onSignOut={() => {}} />,
     );
 
-    expect(html).toContain("Reading your job searches…");
-    expect(html).not.toContain("Reading your workspace…");
+    expect(html).toContain("Opening DraftLoop…");
+    expect(html).not.toContain("Opening your documents…");
   });
 
   it("says when the service cannot say how to sign in", () => {

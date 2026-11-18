@@ -294,7 +294,7 @@ export interface ProviderAuthenticationViewProps {
 
 /**
  * The Provider authentication dialog: every provider's key, and the OpenAI account choice. It is
- * workspace-level, so it opens from Home's Workspace settings and not from an application.
+ * workspace-level, so it opens from Home's Settings and not from an application.
  */
 export function ProviderAuthenticationView({
   statuses,
@@ -400,7 +400,7 @@ export interface ProviderAuthenticationProps extends ProviderAuthenticationCallb
 }
 
 /**
- * Provider authentication for Home's Workspace settings: a one-line readiness summary and the
+ * Provider authentication for Home's Settings: a one-line readiness summary and the
  * button that opens the dialog. Renders nothing when the host has no credential capability.
  */
 export function ProviderAuthentication({

@@ -17,4 +17,4 @@ Approving the draft, deciding findings and exporting are the candidate's, in Dra
 
 ## When a call is refused
 
-A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in DraftLoop's Workspace settings > Agents, then run `draftloop-mcp save-token`.
+A refusal that names the `applications:read` scope means the candidate's agent token lacks it. Tell them to create a token with **Read applications** ticked in DraftLoop's Settings > Agents, then run `draftloop-mcp save-token`.

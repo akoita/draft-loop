@@ -16,7 +16,7 @@ import { StartPanel } from "./start-panels.js";
  * journal review (#2024, both modes since #2783) and its waiting notes on Home (#2151); on
  * every application, the prepare panel for a cover letter or interview questions (#2217); and
  * the writing preferences suggested from review choices and Agents (#2439), with the work
- * journal's switch (#2625), in Workspace settings; and the review's preview of the file an export would save (#2498).
+ * journal's switch (#2625), in Settings; and the review's preview of the file an export would save (#2498).
  */
 export function webHostPanels(
   client: ApiClient,

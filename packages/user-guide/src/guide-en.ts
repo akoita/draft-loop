@@ -63,7 +63,7 @@ export const englishHelpGuide: HelpGuide = {
       id: "display",
       title: "Choose how much you see",
       paragraphs: [
-        "In Workspace settings, Display offers three choices. Guided shows one thing to do at a time, Simple shows the basic path, and Show everything opens every option.",
+        "In Settings, Display offers three choices. Guided shows one thing to do at a time, Simple shows the basic path, and Show everything opens every option.",
         "Technical choices, such as models, sit under Advanced options at the bottom of a card. You never need them for the basic path.",
       ],
       keywords: ["settings", "guided", "simple", "advanced", "options", "language", "theme"],
@@ -72,7 +72,7 @@ export const englishHelpGuide: HelpGuide = {
       id: "agents",
       title: "Work with an agent",
       paragraphs: [
-        "An AI agent such as Claude Code or Codex can use DraftLoop for you through MCP. In Workspace settings, open Agents, create a token for the agent and follow the setup steps shown there.",
+        "An AI agent such as Claude Code or Codex can use DraftLoop for you through MCP. In Settings, open Agents, create a token for the agent and follow the setup steps shown there.",
         "A connected agent can list your applications, add a job, start a CV run and draft cover letters. It can also note work you shipped in your Work journal; a note becomes career evidence only after you approve it.",
       ],
       keywords: ["MCP", "Claude", "Codex", "token", "work journal", "assistant", "automation"],
@@ -91,7 +91,7 @@ export const englishHelpGuide: HelpGuide = {
       title: "Privacy and your data",
       paragraphs: [
         "DraftLoop stores your material only after you give consent, and keeps it in the EU. It sends model providers only the material a step needs.",
-        "Mark a section as private to keep it out of drafts and away from model providers. An owner can download everything kept about a record, and erase a record or the whole organisation.",
+        "Mark a section as private to keep it out of drafts and away from model providers. From the account menu you can download everything, delete all your documents and applications, or delete your account.",
       ],
       keywords: [
         "consent",

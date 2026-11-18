@@ -283,7 +283,7 @@ export function parseInitArguments(argv: readonly string[]): InitArguments | { p
   };
 }
 
-const intakeLine = 'Then turn on "Accept notes from agents" under Agents in Workspace settings.';
+const intakeLine = 'Then turn on "Accept notes from agents" under Agents in Settings.';
 
 /** Issues and saves the agent token, or says why not, and whether intake is already on. */
 async function setUpAgentToken(

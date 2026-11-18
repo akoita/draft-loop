@@ -17,14 +17,14 @@ import { useRecordId } from "./record-context.js";
 
 /**
  * The web host's Work journal (#2024): reads the record's notes and intake switch through the
- * API and sends each review to the review route. The switch is set in Workspace settings (#2625). The server checks, merges and publishes.
+ * API and sends each review to the review route. The switch is set in Settings (#2625). The server checks, merges and publishes.
  */
 
 export interface WorkJournalSectionProps {
   readonly client: ApiClient;
   /** The record's selected knowledge bases, the first preselected; undefined until read. */
   readonly bases: readonly ApiSchemas["KnowledgeBase"][] | undefined;
-  /** Opens Home, where Workspace settings hold Agents; the link is absent without it. */
+  /** Opens Home, where Settings hold Agents; the link is absent without it. */
   readonly openHome?: (() => void) | undefined;
 }
 

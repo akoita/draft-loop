@@ -99,12 +99,12 @@ describe("work journal view model", () => {
 });
 
 describe("work journal panel", () => {
-  it("says how the switch is set, links to Workspace settings, and shows an empty list", () => {
+  it("says how the switch is set, links to Settings, and shows an empty list", () => {
     const on = renderToStaticMarkup(
       <WorkJournalPanel {...props} onOpenSettings={() => undefined} />,
     );
     expect(on).toContain("Agents can add notes.");
-    expect(on).toContain("Change in Workspace settings");
+    expect(on).toContain("Change in Settings");
     expect(on).not.toContain('type="checkbox"');
     expect(on).toContain("No notes wait for review.");
 
@@ -112,13 +112,11 @@ describe("work journal panel", () => {
       <WorkJournalPanel {...props} intake={false} onOpenSettings={() => undefined} />,
     );
     expect(off).toContain("Agents cannot add notes yet.");
-    expect(off).toContain("Turn on in Workspace settings");
+    expect(off).toContain("Turn on in Settings");
   });
 
-  it("shows no link where Workspace settings cannot be opened, and no status until read", () => {
-    expect(renderToStaticMarkup(<WorkJournalPanel {...props} />)).not.toContain(
-      "Workspace settings",
-    );
+  it("shows no link where Settings cannot be opened, and no status until read", () => {
+    expect(renderToStaticMarkup(<WorkJournalPanel {...props} />)).not.toContain("Settings");
     expect(renderToStaticMarkup(<WorkJournalPanel {...props} intake={undefined} />)).not.toContain(
       "add notes",
     );

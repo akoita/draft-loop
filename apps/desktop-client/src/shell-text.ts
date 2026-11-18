@@ -1,6 +1,6 @@
 /**
  * The desktop client shell's own words (#2329): menus, dialogs and the server picker. They follow
- * the screen language the person chose in a server's Workspace settings, else the system's.
+ * the screen language the person chose in a server's Settings, else the system's.
  *
  * The shell is a few dozen strings built apart from the web screen, so they live here as a typed
  * table rather than in the screens' Lingui catalog; a test keeps both languages complete. This

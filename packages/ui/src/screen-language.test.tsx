@@ -14,7 +14,7 @@ describe("the screen language", () => {
     expect(negotiateScreenLanguage(null, [])).toBe("en");
   });
 
-  it("offers the choice in Workspace settings only when the host saves it", () => {
+  it("offers the choice in Settings only when the host saves it", () => {
     expect(renderToStaticMarkup(<ScreenLanguageSetting />)).toBe("");
     const english = renderToStaticMarkup(
       <ScreensI18nProvider locale="en" onChoose={() => undefined}>

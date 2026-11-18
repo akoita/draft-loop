@@ -42,7 +42,7 @@ export function DocumentLanguageSelect({ value, disabled, onChange }: DocumentLa
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value={workspaceLanguageValue}>{t`The workspace's language`}</option>
+        <option value={workspaceLanguageValue}>{t`Your default language`}</option>
         {documentLanguages.map((language) => (
           <option key={language.code} value={language.code}>
             {documentLanguageChoiceLabel(language)}

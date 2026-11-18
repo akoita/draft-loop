@@ -223,7 +223,7 @@ describe("plan refusal messages", () => {
         refusal(409, "plan_limit_reached", { limit: "candidateRecords", value: 1 }),
       ),
     ).toBe(
-      "Your plan allows 1 candidate record, and it is in use. Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.",
+      "Your plan allows 1 candidate, and it is in use. Delete a candidate you no longer need, or ask the owner for a bigger plan, before creating another.",
     );
     expect(planRefusalMessage(refusal(409, "plan_limit_reached"))).toContain("limit is reached");
   });

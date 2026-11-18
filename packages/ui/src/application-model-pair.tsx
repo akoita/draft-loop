@@ -117,7 +117,7 @@ export function ApplicationModelPairChoice({
           ? t`Use a different model pair for this application`
           : t`This application uses its own model pair`}
       </summary>
-      <p className="subtle">{t`Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews.`}</p>
+      <p className="subtle">{t`Other applications keep your default pair. A run records the pair it used, so changing it later does not change past reviews.`}</p>
       <ModelPresetCards
         groupName="application-model-pair"
         legend={t`Model pair for this application`}
@@ -135,7 +135,7 @@ export function ApplicationModelPairChoice({
               disabled={locked}
               onChange={() => onChoose(null)}
             />
-            <span className="model-preset-card-title">{t`Workspace pair`}</span>
+            <span className="model-preset-card-title">{t`Default pair`}</span>
             <span className="model-preset-card-line">
               {modelDisplayName(workspace.author.model)} {t`writes ·`}{" "}
               {modelDisplayName(workspace.critic.model)} {t`reviews`}

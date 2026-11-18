@@ -228,7 +228,7 @@ describe("draft read tools", () => {
           error: {
             code: "forbidden",
             message:
-              'This agent token lacks the "drafts:read" scope (Read CVs and drafts on the token form); create a token with it in Workspace settings > Agents.',
+              'This agent token lacks the "drafts:read" scope (Read CVs and drafts on the token form); create a token with it in Settings > Agents.',
           },
         },
         403,

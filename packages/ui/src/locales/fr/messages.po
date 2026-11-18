@@ -120,8 +120,8 @@ msgid ". Nothing is lost: Resume retries the"
 msgstr ". Rien n’est perdu : Reprendre relance"
 
 #: packages/ui/src/application-setup-summary.tsx
-msgid ". Other applications use the workspace's pair."
-msgstr ". Les autres candidatures utilisent la paire de l’espace de travail."
+msgid ". Other applications use your default pair."
+msgstr ". Les autres candidatures utilisent votre paire par défaut."
 
 #: apps/web/src/consent.tsx
 msgid ". Record it again below for"
@@ -854,8 +854,8 @@ msgid "{unpriced, plural, one {# model call has no recorded price, from a subscr
 msgstr "{unpriced, plural, one {# appel de modèle n’a pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.} other {# appels de modèle n’ont pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.}}"
 
 #: apps/web/src/credits-model.ts
-msgid "{value, plural, one {Your plan allows # candidate record, and it is in use.} other {Your plan allows # candidate records, and all are in use.}}"
-msgstr "{value, plural, one {Votre offre permet # dossier candidat, et il est utilisé.} other {Votre offre permet # dossiers candidats, et tous sont utilisés.}}"
+msgid "{value, plural, one {Your plan allows # candidate, and it is in use.} other {Your plan allows # candidates, and all are in use.}}"
+msgstr "{value, plural, one {Votre offre permet # candidat, et il est utilisé.} other {Votre offre permet # candidats, et tous sont utilisés.}}"
 
 #: apps/web/src/credits-model.ts
 msgid "{value, plural, one {Your plan allows # seat, and it is taken.} other {Your plan allows # seats, and all are taken.}}"
@@ -1296,8 +1296,8 @@ msgid "All resolved"
 msgstr "Tout est résolu"
 
 #: apps/web/src/credits-model.ts
-msgid "All the candidate records in your plan are in use."
-msgstr "Tous les dossiers candidats de votre offre sont utilisés."
+msgid "All the candidates in your plan are in use."
+msgstr "Tous les candidats de votre offre sont utilisés."
 
 #: apps/web/src/credits-model.ts
 msgid "All the seats in your plan are taken."
@@ -2008,8 +2008,8 @@ msgid "Change"
 msgstr "Changer"
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Change in Workspace settings"
-msgstr "Modifier dans les réglages de l’espace de travail"
+msgid "Change in Settings"
+msgstr "Modifier dans les Réglages"
 
 #: packages/ui/src/connected-agents.tsx
 msgid "Change limit"
@@ -2175,8 +2175,8 @@ msgid "Choose how this workspace searches your candidate knowledge. Semantic and
 msgstr "Choisissez comment cet espace de travail recherche dans vos connaissances candidat. Les modes sémantique et hybride utilisent un petit modèle qui tourne sur cet ordinateur ; il n’est téléchargé qu’après votre accord."
 
 #: packages/ui/src/workspace-setup.tsx
-msgid "Choose how your CVs are written. You can change the models later from Home."
-msgstr "Choisissez comment vos CV sont rédigés. Vous pourrez changer de modèles plus tard depuis l’accueil."
+msgid "Choose how your CVs are written"
+msgstr "Choisissez comment vos CV sont rédigés"
 
 #: packages/ui/src/app.tsx
 msgid "Choose models for new runs"
@@ -2686,7 +2686,6 @@ msgstr "Créer ou ouvrir un espace de relecture"
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
-#: packages/ui/src/workspace-setup.tsx
 msgid "Create workspace"
 msgstr "Créer l’espace de travail"
 
@@ -2883,6 +2882,10 @@ msgstr "Par défaut"
 msgid "Default for the project's visibility"
 msgstr "Par défaut selon la visibilité du projet"
 
+#: packages/ui/src/application-model-pair.tsx
+msgid "Default pair"
+msgstr "Paire par défaut"
+
 #: packages/ui/src/review.tsx
 msgid "defer"
 msgstr "reporter"
@@ -2917,8 +2920,8 @@ msgid "Delete {0}"
 msgstr "Supprimer {0}"
 
 #: apps/web/src/credits-model.ts
-msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
-msgstr "Supprimez un dossier dont vous n’avez plus besoin, ou demandez au propriétaire une offre plus grande, avant d’en créer un autre."
+msgid "Delete a candidate you no longer need, or ask the owner for a bigger plan, before creating another."
+msgstr "Supprimez un candidat dont vous n’avez plus besoin, ou demandez au propriétaire une offre plus grande, avant d’en créer un autre."
 
 #: apps/web/src/record-actions.tsx
 msgid "Delete all documents and applications"
@@ -3975,6 +3978,10 @@ msgstr "Terminé"
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "First run"
 msgstr "Première exécution"
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "First steps"
+msgstr "Premiers pas"
 
 #: packages/ui/src/profile.tsx
 msgid "Fix the cause above, then retry. Retrying sends your selected career evidence again and may use provider credits. Renaming the profile does not help."
@@ -5731,10 +5738,6 @@ msgstr "Les nouvelles exécutions utilisent :"
 msgid "New store folder name"
 msgstr "Nom du dossier du nouveau stockage"
 
-#: packages/ui/src/workspace-setup.tsx
-msgid "New workspace"
-msgstr "Nouvel espace de travail"
-
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Next-run model profiles"
 msgstr "Profils de modèles de la prochaine exécution"
@@ -6586,9 +6589,17 @@ msgstr "Ouverture"
 msgid "Opening a workspace is unavailable in this host."
 msgstr "L’ouverture d’un espace de travail est indisponible dans cet hôte."
 
+#: apps/web/src/records.tsx
+msgid "Opening DraftLoop…"
+msgstr "Ouverture de DraftLoop…"
+
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Opening workspace…"
 msgstr "Ouverture de l’espace de travail…"
+
+#: apps/web/src/workspace.tsx
+msgid "Opening your documents…"
+msgstr "Ouverture de vos documents…"
 
 #: apps/web/src/operator.tsx
 msgid "Operator"
@@ -6641,8 +6652,8 @@ msgid "Other"
 msgstr "Autre"
 
 #: packages/ui/src/application-model-pair.tsx
-msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
-msgstr "Les autres candidatures gardent la paire de l’espace de travail. Une exécution enregistre la paire utilisée : la changer ensuite ne modifie pas les relectures passées."
+msgid "Other applications keep your default pair. A run records the pair it used, so changing it later does not change past reviews."
+msgstr "Les autres candidatures gardent votre paire par défaut. Une exécution enregistre la paire utilisée : la changer plus tard ne modifie pas les relectures passées."
 
 #: packages/ui/src/project-card-facts.tsx
 msgid "Other contributors: {others}"
@@ -7089,8 +7100,8 @@ msgid "Provider recovery remains before approval"
 msgstr "Une reprise après erreur du fournisseur reste à faire avant l’approbation"
 
 #: packages/ui/src/review.tsx
-msgid "Provider sign-in lives in Home, under Workspace settings"
-msgstr "La connexion aux fournisseurs se trouve dans Accueil, sous Réglages de l’espace de travail"
+msgid "Provider sign-in lives in Home, under Settings"
+msgstr "La connexion aux fournisseurs se trouve dans Accueil, sous Réglages"
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Provider sign-in ready"
@@ -7309,10 +7320,6 @@ msgstr "Lecture des personnes qui peuvent l’ouvrir…"
 msgid "Reading your files…"
 msgstr "Lecture de vos fichiers…"
 
-#: apps/web/src/records.tsx
-msgid "Reading your job searches…"
-msgstr "Lecture de vos recherches d’emploi…"
-
 #: apps/web/src/private-sections.tsx
 msgid "Reading your knowledge bases…"
 msgstr "Lecture de vos bases de connaissances…"
@@ -7320,10 +7327,6 @@ msgstr "Lecture de vos bases de connaissances…"
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Reading your reviewed career profiles…"
 msgstr "Lecture de vos profils professionnels relus…"
-
-#: apps/web/src/workspace.tsx
-msgid "Reading your workspace…"
-msgstr "Lecture de votre espace de travail…"
 
 #: apps/web/src/operator-list.tsx
 #: apps/web/src/operator.tsx
@@ -8707,11 +8710,8 @@ msgstr "Configurer un espace de relecture"
 msgid "Set up the workspace's author and critic models first."
 msgstr "Configurez d’abord les modèles rédacteur et relecteur de l’espace de travail."
 
-#: packages/ui/src/workspace-setup.tsx
-msgid "Set up your workspace"
-msgstr "Configurez votre espace de travail"
-
 #: packages/ui/src/app.tsx
+#: packages/ui/src/home.tsx
 msgid "Settings"
 msgstr "Réglages"
 
@@ -8828,8 +8828,8 @@ msgid "Sign in"
 msgstr "Se connecter"
 
 #: packages/ui/src/start-checklist-model.ts
-msgid "Sign in on Home, under Workspace settings."
-msgstr "Connectez-vous depuis l’accueil, dans Réglages de l’espace de travail."
+msgid "Sign in on Home, under Settings."
+msgstr "Connectez-vous dans Accueil, sous Réglages."
 
 #: apps/web/src/sign-in.tsx
 msgid "Sign in with the owner token of this deployment. It stays in this tab until you close it."
@@ -8849,8 +8849,8 @@ msgid "Sign-in could not be completed. Try again."
 msgstr "La connexion n’a pas pu aboutir. Réessayez."
 
 #: packages/ui/src/start-checklist-model.ts
-msgid "Sign-in is on Home, under Workspace settings."
-msgstr "La connexion se trouve sur l’accueil, dans Réglages de l’espace de travail."
+msgid "Sign-in is on Home, under Settings."
+msgstr "La connexion se trouve dans Accueil, sous Réglages."
 
 #: apps/web/src/records-model.ts
 msgid "Signed in"
@@ -8976,6 +8976,7 @@ msgid "Stars: {stars}"
 msgstr "Étoiles : {stars}"
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Start"
 msgstr "Démarrer"
 
@@ -10392,10 +10393,6 @@ msgstr "L’espace de travail n’a pas de candidature par défaut."
 msgid "The workspace was not opened. Choose a workspace and try again."
 msgstr "L’espace de travail n’a pas été ouvert. Choisissez un espace de travail et réessayez."
 
-#: packages/ui/src/application-language.tsx
-msgid "The workspace's language"
-msgstr "La langue de l’espace de travail"
-
 #: packages/ui/src/local-writer-warning.tsx
 msgid "The writer is a local model. Local models have not passed DraftLoop's quality check yet, so expect the draft to need more edits."
 msgstr "Le rédacteur est un modèle local. Les modèles locaux n’ont pas encore passé le contrôle qualité de DraftLoop : attendez-vous à devoir retoucher davantage l’ébauche."
@@ -10500,8 +10497,8 @@ msgid "This brief has no responsibilities."
 msgstr "Ce brief ne contient aucune responsabilité."
 
 #: apps/web/src/profile-bridge.ts
-msgid "This candidate record was erased."
-msgstr "Ce dossier candidat a été effacé."
+msgid "This candidate's data was erased."
+msgstr "Les données de ce candidat ont été effacées."
 
 #: apps/web/src/operator.tsx
 msgid "This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed."
@@ -10926,8 +10923,8 @@ msgid "Turn demo mode on"
 msgstr "Activer le mode démo"
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Turn on in Workspace settings"
-msgstr "Activer dans les réglages de l’espace de travail"
+msgid "Turn on in Settings"
+msgstr "Activer dans les Réglages"
 
 #: packages/ui/src/speech-button.tsx
 msgid "Turning your words into text on this device…"
@@ -11603,10 +11600,6 @@ msgstr "Nom de l’espace de travail"
 msgid "Workspace navigation"
 msgstr "Navigation de l’espace de travail"
 
-#: packages/ui/src/application-model-pair.tsx
-msgid "Workspace pair"
-msgstr "Paire de l’espace de travail"
-
 #: packages/ui/src/run-details.tsx
 msgid "Workspace policy"
 msgstr "Politique de l’espace de travail"
@@ -11618,11 +11611,6 @@ msgstr "La relecture de l’espace de travail n’a pas pu être actualisée. Ro
 #: packages/ui/src/review.tsx
 msgid "Workspace sections"
 msgstr "Sections de l’espace de travail"
-
-#: packages/ui/src/app.tsx
-#: packages/ui/src/home.tsx
-msgid "Workspace settings"
-msgstr "Réglages de l’espace de travail"
 
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Workspace unavailable"
@@ -11735,9 +11723,13 @@ msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte Dra
 msgid "You asked:"
 msgstr "Votre question :"
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "You can change all of this later in Settings."
+msgstr "Vous pourrez tout modifier plus tard dans les Réglages."
+
 #: packages/ui/src/first-run-question.tsx
-msgid "You can change this any time in Workspace settings."
-msgstr "Vous pourrez changer cela à tout moment dans les réglages de l’espace de travail."
+msgid "You can change this any time in Settings."
+msgstr "Vous pouvez le modifier à tout moment dans les Réglages."
 
 #: packages/ui/src/review.tsx
 msgid "You can edit the draft once this round finishes."
@@ -11848,6 +11840,10 @@ msgstr "Votre parcours ne contient aucun employeur, cette lettre n'en cite donc 
 #: apps/web/src/records.tsx
 msgid "Your data"
 msgstr "Vos données"
+
+#: packages/ui/src/application-language.tsx
+msgid "Your default language"
+msgstr "Votre langue par défaut"
 
 #: packages/ui/src/footer-running-round.tsx
 #: packages/ui/src/run-details.tsx

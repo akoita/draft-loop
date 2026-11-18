@@ -9,7 +9,7 @@ const screenLanguageNames: Readonly<Record<ScreenLanguage, string>> = {
 };
 
 /**
- * Workspace settings' screen language choice (#2328). It changes menus, buttons and messages only:
+ * Settings' screen language choice (#2328). It changes menus, buttons and messages only:
  * documents keep the language chosen for them. Renders nothing when the host offers no choice.
  */
 export function ScreenLanguageSetting() {

@@ -7,7 +7,7 @@ export { screenLanguageChannels } from "./shell-language-contract.js";
 
 export const screenLanguageFilename = "screen-language.json";
 
-/** The screen language a person chose in a server's Workspace settings, kept for every server. */
+/** The screen language a person chose in a server's Settings, kept for every server. */
 export interface ScreenLanguageStore {
   read(): ShellLanguage | undefined;
   save(language: ShellLanguage): void;

@@ -39,7 +39,7 @@ export const serverInstructions = [
   "search_help and draftloop://help/guide/en (or /fr) hold DraftLoop's user guide: answer the candidate's questions about using DraftLoop from it.",
   "A refusal coded service_maintenance means DraftLoop paused changes for planned maintenance: service_notice says until when; tell the candidate and wait instead of retrying.",
   "Approving a draft, deciding findings, exporting and every setting stay with the candidate in DraftLoop: say what waits for them instead of trying.",
-  "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Workspace settings.",
+  "A refusal that names a missing scope means the candidate must create a token with it under Agents in DraftLoop's Settings.",
 ].join(" ");
 
 export const recordWorkDescription = `File a note about notable work you just helped the candidate ship, for their career evidence. The note waits in DraftLoop's Work journal until the candidate approves, edits or discards it.

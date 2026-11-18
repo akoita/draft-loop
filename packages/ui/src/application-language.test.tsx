@@ -69,7 +69,7 @@ describe("New application language", () => {
 });
 
 describe("the application page's language", () => {
-  it("shows the workspace's language until the application has its own", () => {
+  it("shows the default language until the application has its own", () => {
     const save = async () => undefined;
     const inherited = renderToStaticMarkup(
       <ApplicationLanguageControl language={null} disabled={false} onSave={save} />,
@@ -77,7 +77,7 @@ describe("the application page's language", () => {
     const own = renderToStaticMarkup(
       <ApplicationLanguageControl language="fr" disabled={false} onSave={save} />,
     );
-    expect(inherited).toMatch(/<option value="" selected="">The workspace&#x27;s language/u);
+    expect(inherited).toMatch(/<option value="" selected="">Your default language/u);
     expect(own).toMatch(/<option value="fr" selected="">French/u);
   });
 });

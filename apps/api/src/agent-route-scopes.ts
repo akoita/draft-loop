@@ -18,7 +18,7 @@ export interface AgentRouteRule {
 
 const workspace = "/v1/workspaces/:workspaceId";
 
-/** Each scope as the token form in Workspace settings > Agents names it, for a refusal (#2534). */
+/** Each scope as the token form in Settings > Agents names it, for a refusal (#2534). */
 const agentScopeNames: Readonly<Record<AgentTokenScope, string>> = {
   journal: "Work journal",
   "applications:read": "Read applications",
@@ -269,7 +269,7 @@ export function admitAgentRoute(
   if (!token.scopes.includes(rule.scope)) {
     return {
       outcome: "refused",
-      message: `This agent token lacks the "${rule.scope}" scope (${agentScopeNames[rule.scope]} on the token form); create a token with it in Workspace settings > Agents.`,
+      message: `This agent token lacks the "${rule.scope}" scope (${agentScopeNames[rule.scope]} on the token form); create a token with it in Settings > Agents.`,
     };
   }
   if (request.method === "GET" && rule.allows !== undefined && !rule.allows(request)) {

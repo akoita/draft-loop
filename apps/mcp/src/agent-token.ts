@@ -106,7 +106,7 @@ export async function saveTokenFromInput(input: string, path: string): Promise<s
   const token = input.trim();
   if (!isAgentTokenShape(token)) {
     throw new Error(
-      "That is not a DraftLoop agent token; copy the one shown under Agents in Workspace settings.",
+      "That is not a DraftLoop agent token; copy the one shown under Agents in Settings.",
     );
   }
   await saveAgentToken(path, token);

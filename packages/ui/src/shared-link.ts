@@ -10,7 +10,7 @@ export const workJournalFragment = "#work-journal";
 /** The element id the Work journal panel carries, so the fragment can scroll to it. */
 export const workJournalPanelId = "work-journal";
 
-/** The fragment that opens Home on Workspace settings' Agents section (#2439). */
+/** The fragment that opens Home on Settings' Agents section (#2439). */
 export const codingAgentsFragment = "#coding-agents";
 
 /** The element id the Agents section carries. */

@@ -162,7 +162,7 @@ export function Records({
     return (
       <>
         {topBar(null)}
-        <p role="status">{t`Reading your job searches…`}</p>
+        <p role="status">{t`Opening DraftLoop…`}</p>
       </>
     );
   if (state.kind === "failed")

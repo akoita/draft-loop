@@ -128,7 +128,7 @@ export function DisplayChoiceCard({
   );
 }
 
-/** The three ways of working Workspace settings offers, from most help to most shown. */
+/** The three ways of working Settings offers, from most help to most shown. */
 export function displaySettingChoices(): readonly {
   readonly mode: DisplayMode;
   readonly label: string;
@@ -159,7 +159,7 @@ export function displayModeWhere(mode: DisplayMode): string {
 }
 
 /**
- * The Display setting in Workspace settings (#2789): visible, never inside Advanced options. All
+ * The Display setting in Settings (#2789): visible, never inside Advanced options. All
  * three ways of working sit side by side as choice cards, the current one marked, and a click
  * switches at once. Never a bare checkbox. Renders nothing when the host keeps no preference.
  */

@@ -2067,7 +2067,7 @@ export function ReviewWorkspace({
     {
       id: "keys",
       label: t`Open provider authentication`,
-      note: t`Provider sign-in lives in Home, under Workspace settings`,
+      note: t`Provider sign-in lives in Home, under Settings`,
       disabledReason:
         onOpenHome === undefined ? t`This host has no Home to open provider sign-in from.` : null,
       run: () => onOpenHome?.(),

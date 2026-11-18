@@ -4,7 +4,7 @@ import { useState } from "react";
 import { pendingNoteCountLimit } from "./work-journal-pending.js";
 
 /**
- * Whether agents may add work journal notes, in Workspace settings → Agents (#2625). It decides
+ * Whether agents may add work journal notes, in Settings → Agents (#2625). It decides
  * what agents may do, so it sits with the agent setup; the notes themselves wait for review in
  * the Work journal on the Career evidence page, which the link opens.
  *

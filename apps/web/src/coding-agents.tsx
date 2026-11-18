@@ -16,7 +16,7 @@ import { useRecordId } from "./record-context.js";
 import { workJournalProblem } from "./work-journal.js";
 
 /**
- * The web host's Agents section in Workspace settings (#2439): issues scoped agent tokens,
+ * The web host's Agents section in Settings (#2439): issues scoped agent tokens,
  * lists and revokes them where the server says it issues them. In both modes it holds the work
  * journal's "Accept notes from agents" switch (#2625, signed-in accounts since #2783), with a
  * link to the notes that wait. Signed-in accounts also see what their connected assistants may

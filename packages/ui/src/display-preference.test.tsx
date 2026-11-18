@@ -47,7 +47,7 @@ describe("Show everything", () => {
   });
 });
 
-describe("the Display setting in Workspace settings", () => {
+describe("the Display setting in Settings", () => {
   it("shows all three ways of working as choice cards, the current one marked, with no checkbox", () => {
     const html = withMode("everything", <DisplaySetting />);
     expect(html).toContain('<h3 id="display-setting-heading">Display</h3>');

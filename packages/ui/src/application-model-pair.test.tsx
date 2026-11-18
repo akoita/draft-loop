@@ -80,7 +80,7 @@ describe("ApplicationModelPairChoice", () => {
     expect(html).toContain("Use a different model pair for this application");
     expect(html).not.toContain('<details class="flow-model-pair" open');
     expect(html).toContain("Model pair for this application");
-    expect(html).toContain("Workspace pair");
+    expect(html).toContain("Default pair");
     expect(html).toMatch(/checked="" value="workspace"/u);
     expect(html).toContain("Standard");
     expect(html).not.toContain("Custom pair");

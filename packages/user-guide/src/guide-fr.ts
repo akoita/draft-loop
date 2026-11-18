@@ -71,7 +71,7 @@ export const frenchHelpGuide: HelpGuide = {
       id: "display",
       title: "Choisir ce que vous voyez",
       paragraphs: [
-        "Dans les réglages de l’espace de travail, Affichage propose trois choix. Guidé montre une chose à faire à la fois, Simple montre le parcours de base, et Tout afficher ouvre toutes les options.",
+        "Dans les Réglages, Affichage propose trois choix. Guidé montre une chose à faire à la fois, Simple montre le parcours de base, et Tout afficher ouvre toutes les options.",
         "Les choix techniques, comme les modèles, se trouvent sous Options avancées en bas d’une carte. Le parcours de base n’en a jamais besoin.",
       ],
       keywords: [
@@ -89,7 +89,7 @@ export const frenchHelpGuide: HelpGuide = {
       id: "agents",
       title: "Travailler avec un agent",
       paragraphs: [
-        "Un agent IA comme Claude Code ou Codex peut utiliser DraftLoop pour vous grâce à MCP. Dans les réglages de l’espace de travail, ouvrez Agents, créez un jeton pour l’agent et suivez les étapes affichées.",
+        "Un agent IA comme Claude Code ou Codex peut utiliser DraftLoop pour vous grâce à MCP. Dans les Réglages, ouvrez Agents, créez un jeton pour l’agent et suivez les étapes affichées.",
         "Un agent connecté peut lister vos candidatures, ajouter une offre, lancer un CV et rédiger des lettres de motivation. Il peut aussi noter dans votre journal de travail ce que vous avez livré ; une note ne devient un élément de parcours qu’après votre approbation.",
       ],
       keywords: [
@@ -126,7 +126,7 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Confidentialité et données",
       paragraphs: [
         "DraftLoop n’enregistre votre contenu qu’après votre consentement, et le garde dans l’UE. Il n’envoie aux fournisseurs de modèles que le contenu dont une étape a besoin.",
-        "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Un propriétaire peut télécharger tout ce qui est conservé sur un dossier, et effacer un dossier ou toute l’organisation.",
+        "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Depuis le menu du compte, vous pouvez tout télécharger, supprimer tous vos documents et candidatures, ou supprimer votre compte.",
       ],
       keywords: [
         "consentement",

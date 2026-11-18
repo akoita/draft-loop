@@ -181,7 +181,7 @@ export function WorkspaceStepView({
 }: WorkspaceStepViewProps) {
   switch (state.kind) {
     case "loading":
-      return <p role="status">{t`Reading your workspace…`}</p>;
+      return <p role="status">{t`Opening your documents…`}</p>;
     case "failed":
       return (
         <p className="problem" role="alert">

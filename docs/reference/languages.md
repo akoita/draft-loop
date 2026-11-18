@@ -22,7 +22,7 @@ English. Legal pages stay in English.
 
 Use the globe control (🌐 **English** or **Français**) at the top right of any
 screen. It is there from the sign-in page on, before you have an account or a
-candidate record. **Workspace settings** on Home has the same choice.
+candidate record. **Settings** on Home has the same choice.
 
 The screens change at once. The choice changes no document: each CV and letter
 keeps its own document language.

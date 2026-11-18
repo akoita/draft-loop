@@ -366,7 +366,7 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain("<strong>Provider authentication</strong>");
     expect(html).not.toContain('title="Provider authentication"');
     // The way to it is stated beside Start, and navigates Home.
-    expect(html).toContain("Sign-in is on Home, under Workspace settings");
+    expect(html).toContain("Sign-in is on Home, under Settings");
     expect(html).toContain("Open provider sign-in");
   });
 
@@ -382,7 +382,7 @@ describe("desktop trust-centered review", () => {
         onAction={() => undefined}
       />,
     );
-    expect(html).toContain("Sign-in is on Home, under Workspace settings");
+    expect(html).toContain("Sign-in is on Home, under Settings");
     expect(html).not.toContain("Open provider sign-in");
   });
 

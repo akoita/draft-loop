@@ -77,7 +77,7 @@ const homeProps = {
 } as const;
 
 describe("provider authentication on Home", () => {
-  it("is offered inside Workspace settings", () => {
+  it("is offered inside Settings", () => {
     const html = renderToStaticMarkup(
       <HomeView
         {...homeProps}
@@ -91,7 +91,7 @@ describe("provider authentication on Home", () => {
     );
 
     const settings = html.slice(html.indexOf('aria-labelledby="home-settings-title"'));
-    expect(settings).toMatch(/<h2[^>]*>Workspace settings<\/h2>/u);
+    expect(settings).toMatch(/<h2[^>]*>Settings<\/h2>/u);
     expect(settings).toContain('aria-label="Provider authentication"');
     expect(settings).toContain("Manage provider authentication");
     // The dialog stays closed until it is asked for, and never shows a key.

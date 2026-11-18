@@ -86,9 +86,9 @@ export function WorkspaceSetupScreen({
   return (
     <main className="workspace-setup">
       <form className="panel workspace-setup-card" onSubmit={submit}>
-        <p className="eyebrow">{t`New workspace`}</p>
-        <h1>{t`Set up your workspace`}</h1>
-        <p className="workspace-setup-intro">{t`Choose how your CVs are written. You can change the models later from Home.`}</p>
+        <p className="eyebrow">{t`First steps`}</p>
+        <h1>{t`Choose how your CVs are written`}</h1>
+        <p className="workspace-setup-intro">{t`You can change all of this later in Settings.`}</p>
         <label className="workspace-setup-field">
           <span>{t`CV language`}</span>
           <select value={language} onChange={(event) => setLanguage(event.target.value)}>
@@ -159,7 +159,7 @@ export function WorkspaceSetupScreen({
           type="submit"
           disabled={busy || preset === undefined}
         >
-          {busy ? t`Creating…` : t`Create workspace`}
+          {busy ? t`Creating…` : t`Start`}
         </button>
       </form>
     </main>

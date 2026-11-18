@@ -221,7 +221,7 @@ describe("career profile commands over HTTP", () => {
         { status: "failed", reason: "consent-required" },
         "The candidate's consent does not cover sending this evidence to the workspace's providers.",
       ],
-      [{ status: "failed", reason: "record-erased" }, "This candidate record was erased."],
+      [{ status: "failed", reason: "record-erased" }, "This candidate's data was erased."],
       [
         { status: "failed", reason: "failed", message: "Select career evidence first." },
         "Select career evidence first.",
