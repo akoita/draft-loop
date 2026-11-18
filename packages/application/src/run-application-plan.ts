@@ -18,6 +18,8 @@ import {
   type ProviderApplicationPlannerDependencies,
 } from "./application-plan-agent.js";
 import { CliUserError } from "./cli-user-error.js";
+import type { ProviderCriticAgentDependencies } from "./provider-critic-agent.js";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 import type { RecordAuthorInput } from "./run-author-input.js";
 import type { RequirementEvidenceGradeHook } from "./run-requirement-evidence-grade.js";
 
@@ -49,6 +51,10 @@ export interface RunRecorders {
   readonly tracer?: RunTracer;
   /** Grades the run's requirement-evidence map on the critic step (#2996); absent grades none. */
   readonly evidenceGrade?: RequirementEvidenceGradeHook;
+  /** The map's candidates per requirement for the writer's plan (#2983); absent uses words. */
+  readonly preferredEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
+  /** The map's candidates per requirement for the critic (#2983); absent uses words. */
+  readonly criticMapEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
 }
 
 /** The recorders of a run; planning is on unless the run options turn it off. */
@@ -81,7 +87,25 @@ export function recordedApplicationPlanner(
     ...deps,
     userError: (message) => new CliUserError(message),
     record: recorders.recordApplicationPlan,
+    ...(recorders.preferredEvidence === undefined
+      ? {}
+      : { preferredEvidence: recorders.preferredEvidence }),
+    ...(recorders.criticMapEvidence === undefined
+      ? {}
+      : { criticMapEvidence: recorders.criticMapEvidence }),
   });
+}
+
+/** The critic's run-scoped dependencies from the run recorders: the map's grade and its use. */
+export function criticRecorderDependencies(
+  recorders: RunRecorders | undefined,
+): Pick<ProviderCriticAgentDependencies, "evidenceGrade" | "mapEvidence"> {
+  return {
+    ...(recorders?.evidenceGrade === undefined ? {} : { evidenceGrade: recorders.evidenceGrade }),
+    ...(recorders?.criticMapEvidence === undefined
+      ? {}
+      : { mapEvidence: recorders.criticMapEvidence }),
+  };
 }
 
 /** Append the `run.application-plan` audit event; each completed call of the plan step appends one. */

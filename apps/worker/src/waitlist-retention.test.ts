@@ -32,6 +32,27 @@ describe("the waitlist retention sweep (#2568)", () => {
     expect(lines).toEqual([{ message: "old waitlist entries deleted", fields: { deleted: 1 } }]);
   });
 
+  it("deletes unconfirmed entries 48 hours after their last link", async () => {
+    const deleteUnconfirmedBefore = vi.fn(async () => 2);
+    const lines: unknown[] = [];
+
+    await expect(
+      sweepWaitlist(
+        {
+          deleteJoinedBefore: async () => 0,
+          deleteUnconfirmedBefore,
+          log: (message, fields) => lines.push({ message, fields }),
+        },
+        { now },
+      ),
+    ).resolves.toBe(2);
+
+    expect(deleteUnconfirmedBefore).toHaveBeenCalledWith(new Date(now.getTime() - 2 * dayMs));
+    expect(lines).toEqual([
+      { message: "unconfirmed waitlist entries deleted", fields: { unconfirmed: 2 } },
+    ]);
+  });
+
   it("stays quiet when nothing is old enough", async () => {
     const log = vi.fn();
     await expect(sweepWaitlist({ deleteJoinedBefore: async () => 0, log }, { now })).resolves.toBe(

@@ -123,7 +123,7 @@ import {
   type RunRecorders,
   recordedApplicationPlanner,
 } from "./run-application-plan.js";
-import { createRecordedAuthorAgent } from "./run-author-input.js";
+import { agentRecorderDependencies, createRecordedAuthorAgent } from "./run-author-input.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { announceRunEvidenceMode, withRunHistoryReaders } from "./run-evidence-mode.js";
@@ -1297,7 +1297,7 @@ function providerAgents(
     dataPolicy,
     createAdapter,
     authorProposalCaptureDirectory,
-    ...(recorders === undefined ? {} : { recordAuthorInput: recorders.recordAuthorInput }),
+    ...agentRecorderDependencies(recorders).author,
   });
   const critic = createProviderCriticAgent({
     context,
@@ -1307,7 +1307,7 @@ function providerAgents(
     criticCompany: criticIdentity.company,
     criticModel: criticIdentity.modelId,
     userError: (message) => new CliUserError(message),
-    evidenceGrade: recorders?.evidenceGrade,
+    ...agentRecorderDependencies(recorders).critic,
   });
   const planner = recordedApplicationPlanner(recorders, {
     promptContext,

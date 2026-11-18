@@ -6,11 +6,13 @@ labels: []
 ---
 
 <!--
-For the operator, after reading a note with `GET /v1/operator/feedback` or the
+For the operator, after reading a note on the operator screen (its Draft an
+issue button prefills this template), `GET /v1/operator/feedback` or the
 `list_feedback` tool. This issue is public: it never holds the member's words,
 email or name, nor their organisation or member id. Write the problem in your
-own words. Once the issue exists, link it to the note with
-`PATCH /v1/operator/feedback/:noteId` or the `triage_feedback` tool.
+own words. Once the issue exists, link it to the note with Link an issue on
+the operator screen, `PATCH /v1/operator/feedback/:noteId` or the
+`triage_feedback` tool.
 -->
 
 ## Summary

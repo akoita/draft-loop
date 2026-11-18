@@ -5,7 +5,7 @@ import {
   createPostgresTenantDirectory,
   startConfiguredCloudSqlProxy,
 } from "@draft-loop/storage-postgres";
-
+import { readApiMail } from "./api-mail.js";
 import { buildApi } from "./app.js";
 import { readCoverLetterWriter } from "./application-material-routes.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
@@ -14,6 +14,7 @@ import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
+import { createInviteMailer } from "./invite-mail.js";
 import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
@@ -25,6 +26,7 @@ import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shad
 import { readServiceNoticeSecret, secretServiceNotice } from "./service-notice.js";
 import { readSupportSettings } from "./support-config.js";
 import { readSupportLimitsSecret, secretSupportLimits } from "./support-limits.js";
+import { createWaitlistConfirmMailer } from "./waitlist-confirm-mail.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
@@ -33,6 +35,9 @@ const supportLimitsSecret = readSupportLimitsSecret(process.env);
 const briefExtractionsPerDay = readBriefExtractionsPerDay(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
+// Beta invites and waitlist confirmations are emailed where the deployment sets a sender; a
+// partial setting stops here.
+const mail = readApiMail(process.env);
 const legalPublisher = readLegalPublisher(process.env);
 const serviceNoticeSecret = readServiceNoticeSecret(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
@@ -119,6 +124,12 @@ const app = await buildApi({
         memberSettings: directory.memberSettings,
         feedback: directory.feedback,
         betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
+        ...(mail === undefined
+          ? {}
+          : {
+              inviteMailer: createInviteMailer(mail),
+              waitlistConfirmMailer: createWaitlistConfirmMailer(mail),
+            }),
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,

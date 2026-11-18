@@ -2,7 +2,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
 import { authConfigPath } from "./auth-config-routes.js";
-import { waitlistPath } from "./beta-waitlist-routes.js";
+import { waitlistConfirmPath, waitlistPath } from "./beta-waitlist-routes.js";
 import { clientErrorsPath } from "./client-error-routes.js";
 import { ownerTokenProofPath } from "./owner-token-proof-routes.js";
 import { paymentEventsPath } from "./payment-checkout.js";
@@ -39,8 +39,8 @@ export function contentSecurityPolicy(auth: ApiAuthOptions = { mode: "owner" }) 
 }
 
 /**
- * The `/v1` routes anyone may call: health, how the web screen signs in, the token proof, and the
- * screen's crash reports.
+ * The `/v1` routes anyone may call: health, how the web screen signs in, the token proof, the
+ * screen's crash reports, and the waitlist's join and confirmation.
  */
 const publicApiRoutes: ReadonlySet<string> = new Set([
   "/v1/health",
@@ -49,6 +49,8 @@ const publicApiRoutes: ReadonlySet<string> = new Set([
   serviceNoticePath,
   ownerTokenProofPath,
   waitlistPath,
+  // A confirmation link's token is the proof; the route limits attempts per address.
+  waitlistConfirmPath,
   // The payment provider's events carry no credential; their signature is checked by the route.
   paymentEventsPath,
 ]);

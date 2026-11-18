@@ -22,8 +22,10 @@ organisation; it erases everything with `draft-loop-server`
    organisation on first sign-in. Sign-up asks the person to accept the
    current terms of use and privacy policy, which say that drafting sends
    material to providers outside the EU, and records the accepted version.
-   A visitor without a code can join the waitlist, and the operator turns
-   an entry into an invite. Owners
+   A visitor without a code can join the waitlist. Where the server sends
+   mail, they confirm the address from an emailed link within 48 hours, and
+   only then wait for a place. The operator turns a waiting entry into an
+   invite. Owners
    and admins invite people by email; each active member or pending invitation
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
@@ -70,14 +72,25 @@ operator finds it in the account menu; owner-token mode shows it in the top
 bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
 `kind: owner` or `operator: true`.
 
+The page shows one section at a time; its buttons count the new notes, the
+people waiting and the unused invites. Each list reads 50 rows at a time with
+**Show more**, and has a search, so it stays usable with hundreds of rows.
+The lists read again every 30 seconds while the tab is visible, and when it
+comes back into view; **Refresh** reads them at once. A list grown with
+**Show more** waits for **Refresh**, so the operator keeps their place.
+
 | Section  | What it shows                                                                  |
 | -------- | ------------------------------------------------------------------------------ |
-| Waitlist | The seats used, then entries newest first. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
-| Invites  | Each invite, sent, redeemed or revoked, the seats used and left, and where the cap comes from |
-| Feedback | Members' [notes and support tickets](feedback.md), newest first, read only     |
+| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first |
+| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that already redeemed an invite has an account and is left out. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
+| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from |
 
-Send the code to the person yourself: DraftLoop sends no email. Each invite is
-written to the audit log under the operator's sign-in.
+Where the server sends mail, each new invite emails its person a link,
+`/#invite=<code>`, in French and English. The link opens sign-in, and sign-up
+then has the code filled in; the code rides after `#`, so no server log sees
+it. The screen says whether the email went. When it did not, because mail is
+off or the send failed, send the code yourself. Each invite is written to the
+audit log under the operator's sign-in.
 
 The cap starts small and rises in steps, with no redeploy:
 [raise the beta cap](../operations/server-deploy.md#raise-the-beta-cap).
@@ -103,7 +116,7 @@ The cap starts small and rises in steps, with no redeploy:
 | Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up           |
 | Screen | Operator: waitlist, invites and feedback                                                      |
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
-| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `/v1/operator/waitlist` |
+| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `POST /v1/waitlist/confirm`, `/v1/operator/waitlist` |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
 | API    | `/v1/workspaces/{id}/archive`, record and organisation erasure                                |
 | MCP    | none                                                                                          |

@@ -1,4 +1,4 @@
-import { type ScreenLocale, ScreensI18nProvider } from "@draft-loop/ui/i18n";
+import { currentScreenLanguage, type ScreenLocale, ScreensI18nProvider } from "@draft-loop/ui/i18n";
 import { type ReactNode, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -6,6 +6,13 @@ import { type ApiSchemas, createApiClient } from "./api-client.js";
 import { App } from "./app.js";
 import { desktopSignIn, withDesktopSignIn } from "./desktop-sign-in.js";
 import { installErrorReporting, sendErrorReport } from "./error-reporting.js";
+import {
+  forgetInviteCode,
+  inviteCodeFromHash,
+  keepInviteCode,
+  keptInviteCode,
+  waitlistConfirmTokenFromHash,
+} from "./invite-link.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
@@ -61,6 +68,16 @@ function Screens({ children }: { readonly children: ReactNode }) {
   );
 }
 
+// An emailed link carries its secret after `#`: keep an invite's code for this tab, read a
+// waitlist confirmation's token once, and tidy the address.
+const linkedInvite = inviteCodeFromHash(location.hash);
+const waitlistConfirmToken = waitlistConfirmTokenFromHash(location.hash);
+if (linkedInvite !== undefined) keepInviteCode(globalThis.sessionStorage, linkedInvite);
+if (linkedInvite !== undefined || waitlistConfirmToken !== undefined) {
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+}
+const inviteCode = keptInviteCode(globalThis.sessionStorage);
+
 /** The screen's own address, where the identity provider returns after signing in and out. */
 const screenAddress = `${location.origin}/`;
 
@@ -89,6 +106,7 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
     crypto: globalThis.crypto,
     storage: () => globalThis.sessionStorage,
     now: () => Date.now(),
+    uiLocale: currentScreenLanguage,
   });
   return (
     <OidcApp
@@ -96,6 +114,9 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
       createClient={createClient}
       navigation={navigation}
       waitlist={config.waitlist === true}
+      {...(inviteCode === undefined ? {} : { inviteCode })}
+      onInviteUsed={() => forgetInviteCode(globalThis.sessionStorage)}
+      {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
     />
   );
 }

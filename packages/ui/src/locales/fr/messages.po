@@ -587,9 +587,14 @@ msgstr "{count, plural, one {Afficher # fait sur l’employeur} other {Afficher 
 msgid "{count} / {limit}"
 msgstr "{count} / {limit}"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
 msgstr "{count} nouvelles"
+
+#: apps/web/src/operator.tsx
+msgid "{count} not used yet"
+msgstr "{count} pas encore utilisées"
 
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} readiness report findings block readiness"
@@ -624,6 +629,10 @@ msgstr "{count} vérifications ont échoué"
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} validation checks failed: {0}"
 msgstr "{count} vérifications ont échoué : {0}"
+
+#: apps/web/src/operator.tsx
+msgid "{count} waiting"
+msgstr "{count} en attente"
 
 #: packages/ui/src/work-journal-pending.tsx
 msgid "{count} work journal notes wait for your review."
@@ -749,6 +758,11 @@ msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr "{name} a été retiré des espaces de travail récents. Ses fichiers sont inchangés."
 
+#. placeholder {0}: entry.lines
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{name}, lines {0}"
+msgstr "{name}, lignes {0}"
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr "{needs}{has}. Demandez plus de crédits au propriétaire, ou attendez la prochaine période."
@@ -818,6 +832,10 @@ msgstr "Appels prévus ({role})"
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
 msgstr "{shown}, et le modèle que vous avez choisi."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{supported} of {total, plural, one {# requirement} other {# requirements}} with evidence"
+msgstr "{supported} sur {total, plural, one {# exigence} other {# exigences}} avec des preuves"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "{theme}: your record mentions it but tells no story about it."
@@ -1256,6 +1274,7 @@ msgstr "Les agents ne peuvent pas encore ajouter de notes."
 msgid "all"
 msgstr "tout"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/home-list-model.ts
 msgid "All"
 msgstr "Tout"
@@ -1305,6 +1324,10 @@ msgstr "Autoriser les pull requests de {0}"
 #: apps/web/src/private-sections.tsx
 msgid "Allow this repository"
 msgstr "Autoriser ce dépôt"
+
+#: apps/web/src/waitlist-model.ts
+msgid "Almost done: check your inbox. We sent you a link to confirm your address, and your place counts once you open it. The link works for 48 hours. Nothing arrived? Look in your spam folder, or join again in 10 minutes."
+msgstr "Presque fini : regardez votre boîte de réception. Nous vous avons envoyé un lien pour confirmer votre adresse, et votre place compte dès que vous l'ouvrez. Le lien fonctionne pendant 48 heures. Rien reçu ? Regardez dans vos indésirables, ou réinscrivez-vous dans 10 minutes."
 
 #: packages/ui/src/career-evidence.ts
 msgid "Already in {displayName}."
@@ -1401,6 +1424,7 @@ msgid "API key, billed per token"
 msgstr "Clé d’API, facturée au jeton"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Application"
 msgstr "Candidature"
 
@@ -1820,6 +1844,7 @@ msgid "Bring your career evidence into the loop"
 msgstr "Intégrez vos éléments de parcours à la boucle"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Browser"
 msgstr "Navigateur"
 
@@ -1989,6 +2014,10 @@ msgstr "Modifier la limite"
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
 msgstr "Changer les modèles"
+
+#: apps/web/src/operator.tsx
+msgid "Change the issue"
+msgstr "Changer le ticket"
 
 #: apps/web/src/plan-preset-choice.tsx
 msgid "Change the models in Settings, then start again."
@@ -2266,6 +2295,7 @@ msgid "close"
 msgstr "fermer"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2282,6 +2312,11 @@ msgstr "Fermez et rouvrez DraftLoop pour l’appliquer ; l’hôte actif reste i
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
 msgstr "Fermer la comparaison"
+
+#. placeholder {0}: chosenNotes.length
+#: apps/web/src/operator.tsx
+msgid "Close selected ({0})"
+msgstr "Fermer la sélection ({0})"
 
 #: packages/ui/src/export-preview.tsx
 msgid "Close the preview"
@@ -2302,6 +2337,14 @@ msgstr "Fermer l’espace de travail"
 #: packages/ui/src/app.tsx
 msgid "Close workspace is available again once your career profile is generated."
 msgstr "Fermer l’espace de travail sera de nouveau possible une fois votre profil professionnel généré."
+
+#: apps/web/src/operator.tsx
+msgid "Close, it is fixed"
+msgstr "Fermer, c’est corrigé"
+
+#: apps/web/src/operator-model.ts
+msgid "Closed"
+msgstr "Fermées"
 
 #: packages/ui/src/project-card-facts.tsx
 #: packages/ui/src/source-evidence-kind-contract.ts
@@ -2448,6 +2491,10 @@ msgstr "Confirmez que les exécutions peuvent combiner ces bases de connaissance
 msgid "Confirm that the candidate agreed to send their material."
 msgstr "Confirmez que le candidat a accepté l’envoi de son contenu."
 
+#: apps/web/src/waitlist-model.ts
+msgid "Confirming your email address…"
+msgstr "Confirmation de votre adresse email…"
+
 #: packages/ui/src/profile-presentation.ts
 msgid "Conflicting dates"
 msgstr "Dates contradictoires"
@@ -2495,6 +2542,10 @@ msgstr "Consentement à stocker les éléments du candidat"
 #: apps/web/src/private-sections.tsx
 msgid "contains"
 msgstr "contient"
+
+#: apps/web/src/operator.tsx
+msgid "Context"
+msgstr "Contexte"
 
 #: packages/ui/src/review.tsx
 msgid "Continue this run from its durable step"
@@ -3034,6 +3085,10 @@ msgstr "Document — l’ébauche"
 msgid "Documents live in Career evidence. The profile is rebuilt from them."
 msgstr "Les documents se trouvent dans Éléments de parcours. Le profil est reconstruit à partir d’eux."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "does not support"
+msgstr "n’étaie pas"
+
 #: packages/ui/src/getting-started.tsx
 msgid "done"
 msgstr "fait"
@@ -3115,6 +3170,10 @@ msgstr "Rédiger une nouvelle lettre"
 #: apps/web/src/application-material-model.ts
 msgid "Draft a new interview guide"
 msgstr "Rédiger un nouveau guide d’entretien"
+
+#: apps/web/src/operator.tsx
+msgid "Draft an issue"
+msgstr "Préparer un ticket"
 
 #: packages/ui/src/review.tsx
 msgid "Draft artifact produced"
@@ -3529,6 +3588,10 @@ msgstr "Tout est libéré. Relancez l’exécution."
 #: packages/ui/src/start-confirmation.tsx
 msgid "Evidence"
 msgstr "Éléments"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Evidence for each requirement"
+msgstr "Preuves pour chaque exigence"
 
 #. placeholder {0}: source.displayName
 #: packages/ui/src/source-evidence-kinds.tsx
@@ -4134,6 +4197,10 @@ msgstr "Premiers pas"
 msgid "Getting voice input ready ({0}%)…"
 msgstr "Préparation de la saisie vocale ({0} %)…"
 
+#: apps/web/src/operator.tsx
+msgid "GitHub issue address"
+msgstr "Adresse du ticket GitHub"
+
 #: apps/web/src/records.tsx
 msgid "Give access"
 msgstr "Donner l’accès"
@@ -4237,6 +4304,10 @@ msgstr "GPT-6.1 Sol"
 #: packages/ui/src/model-profile-presentation.ts
 msgid "GPT-6.1 Terra"
 msgstr "GPT-6.1 Terra"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Grading was attempted but failed, so no source was left out."
+msgstr "La notation a échoué, donc aucune source n’a été écartée."
 
 #: apps/web/src/consent-model.ts
 msgid "Granted"
@@ -4631,8 +4702,13 @@ msgstr "Code d’invitation"
 
 #. placeholder {0}: outcome.email
 #: apps/web/src/operator.tsx
-msgid "Invite created for {0}. Send them this code now: it is shown only once."
-msgstr "Invitation créée pour {0}. Envoyez-lui ce code maintenant : il ne s'affiche qu'une fois."
+msgid "Invite created for {0}, but no email went out. Send them this code now: it is shown only once."
+msgstr "Invitation créée pour {0}, mais aucun email n'est parti. Envoyez-lui ce code maintenant : il n'est affiché qu'une fois."
+
+#. placeholder {0}: outcome.email
+#: apps/web/src/operator.tsx
+msgid "Invite emailed to {0}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once."
+msgstr "Invitation envoyée par email à {0}, avec un lien qui remplit le code. Si elle n'arrive pas, envoyez-lui ce code : il n'est affiché qu'une fois."
 
 #: apps/web/src/operator.tsx
 msgid "Invites"
@@ -4768,6 +4844,10 @@ msgstr "Gardez au moins une exigence."
 msgid "Keep each heading to 200 characters or fewer."
 msgstr "Limitez chaque titre à 200 caractères."
 
+#: apps/web/src/operator.tsx
+msgid "Keep for later"
+msgstr "Garder pour plus tard"
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Keep it"
 msgstr "Le garder"
@@ -4804,9 +4884,17 @@ msgstr "Limitez le motif à {maximumReleaseReasonLength} caractères."
 msgid "Keep waiting"
 msgstr "Continuer d’attendre"
 
+#: apps/web/src/operator-model.ts
+msgid "Kept"
+msgstr "Gardées"
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Keyword search over your candidate knowledge. Needs no model."
 msgstr "Recherche par mots-clés dans vos connaissances candidat. Aucun modèle requis."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "keywords"
+msgstr "mots-clés"
 
 #: packages/ui/src/profile.tsx
 msgid "Kind"
@@ -4880,6 +4968,7 @@ msgid "Last activity unknown"
 msgstr "Dernière activité inconnue"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Last failed request"
 msgstr "Dernière requête en échec"
 
@@ -4978,9 +5067,17 @@ msgstr "ligne par directive, puis des règles en texte libre. Les sélecteurs ci
 msgid "lineages differ"
 msgstr "filiations différentes"
 
+#: apps/web/src/operator.tsx
+msgid "Link an issue"
+msgstr "Lier un ticket"
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
 msgstr "Affirmation liée :"
+
+#: apps/web/src/operator-model.ts
+msgid "Linked to an issue"
+msgstr "Liées à un ticket"
 
 #: packages/ui/src/source-evidence-kind-contract.ts
 msgid "LinkedIn export"
@@ -5181,6 +5278,11 @@ msgstr "Les lignes marquées diffèrent de la version active : + uniquement dans
 msgid "Marking reviewed…"
 msgstr "Marquage comme relu…"
 
+#. placeholder {0}: originLabel(candidate.origin)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "matched by {0}"
+msgstr "trouvée par {0}"
+
 #: apps/web/src/screening-model.ts
 msgid "material the run would use"
 msgstr "des éléments que l’exécution utiliserait"
@@ -5217,6 +5319,14 @@ msgstr "Score moyen de préparation"
 #: packages/ui/src/run-switcher.tsx
 msgid "mean score"
 msgstr "score moyen"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning"
+msgstr "sens"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning and keywords"
+msgstr "sens et mots-clés"
 
 #: packages/ui/src/help-ask.tsx
 msgid "Meanwhile, these guide sections may help:"
@@ -5534,6 +5644,10 @@ msgstr "Ne jamais partager avec un modèle"
 msgid "Never use \"{0}\""
 msgstr "Ne jamais utiliser « {0} »"
 
+#: apps/web/src/operator-model.ts
+msgid "New"
+msgstr "Nouvelles"
+
 #: packages/ui/src/getting-started.tsx
 #: packages/ui/src/home.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -5711,6 +5825,10 @@ msgstr "Aucune candidature pour l’instant. Commencez-en une pour le poste vis�
 msgid "No blocking findings need action."
 msgstr "Aucun constat bloquant n’attend d’action."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No candidate"
+msgstr "Aucune source candidate"
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5759,6 +5877,14 @@ msgstr "pas de plafond de durée"
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "No eligible chunks for full source, so retrieval was used"
 msgstr "Aucun fragment éligible pour la source complète ; la recherche a donc été utilisée"
+
+#: apps/web/src/operator.tsx
+msgid "No entry matches this search."
+msgstr "Aucune inscription ne correspond à cette recherche."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No evidence found"
+msgstr "Aucune preuve trouvée"
 
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
@@ -5824,6 +5950,10 @@ msgid "No invite has that code. Check it for typos, or ask for a new invite."
 msgstr "Aucune invitation ne correspond à ce code. Vérifiez qu’il n’y a pas de faute de frappe, ou demandez une nouvelle invitation."
 
 #: apps/web/src/operator.tsx
+msgid "No invite matches."
+msgstr "Aucune invitation ne correspond."
+
+#: apps/web/src/operator.tsx
 msgid "No invite sent yet."
 msgstr "Aucune invitation envoyée pour l'instant."
 
@@ -5874,6 +6004,10 @@ msgstr "Aucun profil de modèle : valeurs par défaut du fournisseur, fenêtres 
 #: packages/ui/src/review.tsx
 msgid "No network transmission"
 msgstr "Aucune transmission réseau"
+
+#: apps/web/src/operator.tsx
+msgid "No note matches this search."
+msgstr "Aucun retour ne correspond à cette recherche."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "No notes wait for review."
@@ -6061,6 +6195,10 @@ msgstr "Absent de l’offre d’emploi"
 msgid "Not generated yet"
 msgstr "Pas encore généré"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "not graded"
+msgstr "non notée"
+
 #: packages/ui/src/run-details.tsx
 msgid "not independent"
 msgstr "non indépendante"
@@ -6126,6 +6264,10 @@ msgstr "Non défini"
 msgid "Not sure"
 msgstr "Je ne sais pas"
 
+#: apps/web/src/operator.tsx
+msgid "Not used yet"
+msgstr "Pas encore utilisées"
+
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
 msgstr "Pas encore généré"
@@ -6153,6 +6295,10 @@ msgstr "Notes pour le guide"
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Notes from agents"
 msgstr "Notes des agents"
+
+#: apps/web/src/operator.tsx
+msgid "Nothing here."
+msgstr "Rien ici."
 
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
@@ -6206,6 +6352,10 @@ msgstr "Désactivé"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Off: pauses after a round with a blocking finding"
 msgstr "Désactivé : pause après un tour avec un constat bloquant"
+
+#: apps/web/src/operator.tsx
+msgid "Oldest first: the order people asked in."
+msgstr "Les plus anciennes d'abord : l'ordre des demandes."
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Omission"
@@ -6377,6 +6527,10 @@ msgstr "Ouvrir la candidature"
 msgid "Open the command palette"
 msgstr "Ouvrir la palette de commandes"
 
+#: apps/web/src/operator.tsx
+msgid "Open the issue"
+msgstr "Ouvrir le ticket"
+
 #: packages/ui/src/review.tsx
 msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 msgstr "Ouvre le panneau Préparer, sous le brouillon, pour écrire une lettre de motivation ou des questions d’entretien pour cette candidature."
@@ -6419,6 +6573,14 @@ msgstr "Ouverture de l’espace de travail…"
 #: apps/web/src/operator.tsx
 msgid "Operator"
 msgstr "Opérateur"
+
+#: apps/web/src/operator.tsx
+msgid "Operator sections"
+msgstr "Parties de la page opérateur"
+
+#: apps/web/src/operator.tsx
+msgid "Operator, {newNotes} new feedback notes"
+msgstr "Opérateur, {newNotes} nouveaux avis"
 
 #: apps/web/src/evidence-panels.tsx
 #: packages/ui/src/review.tsx
@@ -6536,6 +6698,7 @@ msgid "Owners and admins of your team choose who can open it."
 msgstr "Les propriétaires et administrateurs de votre équipe choisissent qui peut l’ouvrir."
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Page"
 msgstr "Page"
 
@@ -6556,9 +6719,17 @@ msgstr "Parent"
 msgid "part of a model id"
 msgstr "partie d’un identifiant de modèle"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "partly supports"
+msgstr "étaie en partie"
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
 msgstr "Collez un CV, un résumé de profil ou des notes sur votre travail. N’incluez ni mots de passe ni données personnelles d’autres personnes. Le texte est vérifié contre les instructions cachées, comme tout fichier."
+
+#: apps/web/src/operator.tsx
+msgid "Paste a GitHub issue address, such as https://github.com/owner/repo/issues/123."
+msgstr "Collez l’adresse d’un ticket GitHub, par exemple https://github.com/owner/repo/issues/123."
 
 #: packages/ui/src/pasted-evidence.ts
 msgid "Paste or type some text first."
@@ -6684,6 +6855,10 @@ msgstr "Choisissez vous-même le rédacteur et le relecteur."
 #: apps/web/src/landing.tsx
 msgid "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
 msgstr "Les places ouvrent par petits groupes, pour bien accompagner chaque testeur. L'accès ouvre bientôt : inscrivez-vous sur la liste d'attente et nous vous écrirons par e-mail dès que votre place sera prête."
+
+#: apps/web/src/operator.tsx
+msgid "Plan"
+msgstr "Offre"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Planned calls"
@@ -6967,6 +7142,24 @@ msgstr "Réponses rapides"
 msgid "Quota or rate limit"
 msgstr "Quota ou limite de débit"
 
+#. placeholder {0}: view.reason
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only ({0})."
+msgstr "Classées par mots-clés seulement ({0})."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only."
+msgstr "Classées par mots-clés seulement."
+
+#. placeholder {0}: view.modelId
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with {0}, then by keywords."
+msgstr "Classées par le sens avec {0}, puis par mots-clés."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with the local model, then by keywords."
+msgstr "Classées par le sens avec le modèle local, puis par mots-clés."
+
 #: packages/ui/src/start-advanced-options.tsx
 msgid "raw job description"
 msgstr "description de poste brute"
@@ -7108,6 +7301,7 @@ msgstr "Lecture de vos profils professionnels relus…"
 msgid "Reading your workspace…"
 msgstr "Lecture de votre espace de travail…"
 
+#: apps/web/src/operator-list.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr "Lecture…"
@@ -7158,6 +7352,7 @@ msgid "reasoning"
 msgstr "raisonnement"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Recent errors"
 msgstr "Erreurs récentes"
 
@@ -7182,6 +7377,7 @@ msgid "Recent workspaces could not be loaded."
 msgstr "Les espaces de travail récents n’ont pas pu être chargés."
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Record"
 msgstr "Dossier"
 
@@ -7231,6 +7427,7 @@ msgid "Recording… speak your answer."
 msgstr "Enregistrement… dites votre réponse."
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Redeemed"
 msgstr "Utilisée"
 
@@ -7239,9 +7436,14 @@ msgstr "Utilisée"
 msgid "Redeemed {0}"
 msgstr "Utilisée le {0}"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile.tsx
 msgid "Refresh"
 msgstr "Actualiser"
+
+#: apps/web/src/operator.tsx
+msgid "Refreshing…"
+msgstr "Actualisation…"
 
 #: packages/ui/src/model-suggestions.tsx
 msgid "registered for {roleName}"
@@ -7374,6 +7576,10 @@ msgstr "Renommez le fichier sans barres obliques ni caractères de contrôle."
 msgid "Rename workspace {name}"
 msgstr "Renommer l’espace de travail {name}"
 
+#: apps/web/src/operator.tsx
+msgid "Reopen"
+msgstr "Rouvrir"
+
 #: packages/ui/src/career-evidence.ts
 msgid "Reopen the workspace to refresh the review."
 msgstr "Rouvrez l’espace de travail pour actualiser la relecture."
@@ -7422,6 +7628,11 @@ msgstr "Sections obligatoires : {0}"
 #: apps/web/src/screening.tsx
 msgid "Required, up to"
 msgstr "Obligatoire, jusqu’à"
+
+#. placeholder {0}: index + 1
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Requirement {0}"
+msgstr "Exigence {0}"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Requirement {position} priority"
@@ -7891,6 +8102,7 @@ msgid "Revision"
 msgstr "Révision"
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Revoked"
 msgstr "Révoquée"
 
@@ -7972,6 +8184,7 @@ msgid "Rules apply once a knowledge base is chosen."
 msgstr "Les règles s’appliquent une fois une base de connaissances choisie."
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8101,6 +8314,10 @@ msgstr "Enregistrer l’ébauche"
 msgid "Save limit"
 msgstr "Enregistrer la limite"
 
+#: apps/web/src/operator.tsx
+msgid "Save link"
+msgstr "Enregistrer le lien"
+
 #: packages/ui/src/app.tsx
 msgid "Save models"
 msgstr "Enregistrer les modèles"
@@ -8204,6 +8421,11 @@ msgstr "enregistrement…"
 msgid "Saving…"
 msgstr "Enregistrement…"
 
+#. placeholder {0}: candidate.score.toFixed(2)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "score {0}"
+msgstr "score {0}"
+
 #: packages/ui/src/screen-language.tsx
 msgid "Screen language"
 msgstr "Langue de l’interface"
@@ -8237,6 +8459,10 @@ msgstr "Le filtrage retient cette note. Modifiez-la ou abandonnez-la ; elle ne p
 msgid "Search applications"
 msgstr "Rechercher dans les candidatures"
 
+#: apps/web/src/operator.tsx
+msgid "Search by email"
+msgstr "Rechercher par e-mail"
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "Search by name, employer or role"
 msgstr "Rechercher par nom, employeur ou poste"
@@ -8248,6 +8474,10 @@ msgstr "Rechercher une commande…"
 #: packages/ui/src/help-panel.tsx
 msgid "Search the guide"
 msgstr "Chercher dans le guide"
+
+#: apps/web/src/operator.tsx
+msgid "Search the text, page or kind"
+msgstr "Rechercher dans le texte, la page ou le type"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Section usage"
@@ -8270,13 +8500,27 @@ msgstr "Voir exactement ce qui est envoyé"
 msgid "See your job applications and how their runs stand"
 msgstr "Voir vos candidatures et l’état de leurs exécutions"
 
+#. placeholder {0}: ordered.length
+#: apps/web/src/operator.tsx
+msgid "Select all shown ({0})"
+msgstr "Tout sélectionner à l'écran ({0})"
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr "Sélectionnez un profil candidat relu exact avant de lancer une relecture."
 
+#: apps/web/src/operator.tsx
+msgid "Select none"
+msgstr "Ne rien sélectionner"
+
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "Select one supported author profile and one supported critic profile before applying."
 msgstr "Sélectionnez un profil rédacteur et un profil relecteur pris en charge avant d’appliquer."
+
+#. placeholder {0}: operatorTime(note.sentAt)
+#: apps/web/src/operator.tsx
+msgid "Select the note sent {0}"
+msgstr "Sélectionner l’avis envoyé le {0}"
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Selected"
@@ -8390,6 +8634,10 @@ msgstr "Envoyée, pas encore utilisée"
 msgid "Sent. The people who run DraftLoop will read it and get back to you."
 msgstr "Envoyé. L’équipe de DraftLoop la lira et reviendra vers vous."
 
+#: apps/web/src/operator.tsx
+msgid "Server version"
+msgstr "Version du serveur"
+
 #: apps/web/src/shell-actions.tsx
 msgid "Service is down"
 msgstr "Service indisponible"
@@ -8477,9 +8725,21 @@ msgstr "Afficher les archives ({0})"
 msgid "Show everything"
 msgstr "Tout afficher"
 
+#: apps/web/src/operator.tsx
+msgid "Show invites"
+msgstr "Afficher les invitations"
+
 #: packages/ui/src/getting-started.tsx
 msgid "Show me the steps"
 msgstr "Montrez-moi les étapes"
+
+#: apps/web/src/operator-list.tsx
+msgid "Show more"
+msgstr "Afficher plus"
+
+#: apps/web/src/operator.tsx
+msgid "Show notes"
+msgstr "Afficher les avis"
 
 #: packages/ui/src/review-panels.tsx
 msgid "Show only recent events"
@@ -8521,6 +8781,10 @@ msgstr "Montrer d’où vient la formulation de chaque affirmation"
 #: packages/ui/src/app.tsx
 msgid "Showing {0} of {total} matching “{wanted}”"
 msgstr "{0} sur {total} correspondant à « {wanted} »"
+
+#: apps/web/src/operator-list.tsx
+msgid "Showing {shown} of {total}"
+msgstr "{shown} affichés sur {total}"
 
 #: packages/ui/src/review.tsx
 msgid "shown"
@@ -8619,6 +8883,7 @@ msgid "Sort"
 msgstr "Trier"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8694,6 +8959,14 @@ msgstr "Démarrer"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
 msgstr "Démarrer une conversation"
+
+#: apps/web/src/records.tsx
+msgid "Start a new job search"
+msgstr "Lancer une nouvelle recherche d’emploi"
+
+#: apps/web/src/records.tsx
+msgid "Start a new job search when you are ready."
+msgstr "Lancez une nouvelle recherche d’emploi quand vous le souhaitez."
 
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
@@ -8945,6 +9218,10 @@ msgstr "Demande d'assistance"
 msgid "Supported with the configured authentication route"
 msgstr "Pris en charge avec la route d’authentification configurée"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "supports"
+msgstr "étaie"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "Swap sides"
 msgstr "Inverser les côtés"
@@ -9052,6 +9329,10 @@ msgstr "Merci. L'équipe de DraftLoop lit chaque message."
 #: apps/web/src/waitlist-model.ts
 msgid "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
 msgstr "Merci. Vous êtes sur la liste d'attente. Les places ouvrent par petits groupes et l'accès ouvre bientôt : nous vous enverrons une invitation par e-mail dès que votre place sera prête."
+
+#: apps/web/src/waitlist-model.ts
+msgid "That confirmation link has expired or is unknown. Join the waitlist again below to get a new one."
+msgstr "Ce lien de confirmation a expiré ou est inconnu. Réinscrivez-vous ci-dessous pour en recevoir un nouveau."
 
 #: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
@@ -9171,10 +9452,6 @@ msgstr "Le rédacteur révise seul à partir de chaque constat du relecteur. La 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "The beta is full for now. Your code stays valid: try again when places open."
 msgstr "La bêta est complète pour le moment. Votre code reste valable : réessayez quand des places se libèrent."
-
-#: apps/web/src/operator.tsx
-msgid "The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log."
-msgstr "La liste d'attente de la bêta, ses invitations et ce que les membres vous disent. Chaque invitation est inscrite au journal d'audit."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -9326,6 +9603,10 @@ msgstr "Le relecteur n’avait pas relu ce plan quand l’exécution s’est arr
 #: packages/ui/src/review-run-status.ts
 msgid "The critic is checking version {version}."
 msgstr "Le relecteur vérifie la version {version}."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The critic model graded each source; sources it found unsupportive are left out above."
+msgstr "Le modèle critique a noté chaque source ; celles qu’il juge sans rapport sont écartées ci-dessus."
 
 #: apps/web/src/application-material-model.ts
 msgid "The critic's check did not finish, so your letter stands as drafted."
@@ -10000,6 +10281,10 @@ msgstr "La source n’a pas pu être ajoutée à la base de connaissances."
 msgid "The sources said nothing useful about this employer."
 msgstr "Les sources ne disaient rien d'utile sur cet employeur."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The sources the writer and critic were pointed to for each job requirement. A requirement with no source may still be covered elsewhere in your evidence."
+msgstr "Les sources indiquées au rédacteur et au critique pour chaque exigence de l’offre. Une exigence sans source peut quand même être couverte ailleurs dans vos preuves."
+
 #: apps/web/src/interview-guide-model.ts
 msgid "The state of the field"
 msgstr "L’état du domaine"
@@ -10376,6 +10661,10 @@ msgstr "Ce profil relu est utilisé pour les nouvelles candidatures."
 msgid "This rewrites the run history stored with this workspace so it takes less space. Each draft and step is stored once instead of being copied again for every step of a run. Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and checked."
 msgstr "Ceci réécrit l’historique des exécutions de cet espace de travail pour qu’il prenne moins de place. Chaque ébauche et chaque étape sont enregistrées une seule fois au lieu d’être recopiées à chaque étape d’une exécution. Vos exécutions, ébauches et journal d’audit se relisent à l’identique, et la chaîne d’audit est reconstruite et vérifiée."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "This run did not grade the sources."
+msgstr "Cette exécution n’a pas noté les sources."
+
 #: packages/ui/src/review.tsx
 msgid "This run has no retry left. Stop it, then start a new review."
 msgstr "Cette exécution n’a plus de tentative. Arrêtez-la, puis démarrez une nouvelle relecture."
@@ -10536,6 +10825,10 @@ msgid "Tone"
 msgstr "Ton"
 
 #: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then open the link again."
+msgstr "Trop de tentatives depuis cette connexion. Attendez une heure, puis rouvrez le lien."
+
+#: apps/web/src/waitlist-model.ts
 msgid "Too many attempts from this connection. Wait an hour, then try again."
 msgstr "Trop de tentatives depuis cette connexion. Attendez une heure, puis réessayez."
 
@@ -10682,6 +10975,10 @@ msgstr "Crédits illimités"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Unlisted source"
 msgstr "Source non listée"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "unnamed source"
+msgstr "source sans nom"
 
 #: apps/web/src/application-material-model.ts
 msgid "Unsaved draft"
@@ -11060,6 +11357,7 @@ msgid "Web screen"
 msgstr "Écran web"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Web version"
 msgstr "Version web"
 
@@ -11094,6 +11392,10 @@ msgstr "Ce qui est retiré"
 #: packages/ui/src/run-details.tsx
 msgid "What leads"
 msgstr "Ce qui vient en tête"
+
+#: apps/web/src/operator.tsx
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
+msgstr "Ce que vous disent les membres, la liste d'attente de la bêta et ses invitations. Chaque invitation est inscrite au journal d'audit. Les listes se mettent à jour toutes les 30 secondes."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "What the agent may do"
@@ -11393,6 +11695,10 @@ msgstr "Vous"
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
 
+#: apps/web/src/records.tsx
+msgid "You are still signed in. Start a new job search, or sign out."
+msgstr "Votre session reste ouverte. Lancez une nouvelle recherche d’emploi, ou déconnectez-vous."
+
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
 msgstr "Votre question :"
@@ -11524,6 +11830,14 @@ msgstr "Vos documents n’ont pas pu être ouverts. Ouvrez leur stockage dans Op
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr "Vos documents : CV, fichiers de faits de carrière, exports et liens. DraftLoop y cherche et en construit votre profil."
 
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address could not be confirmed just now. Open the link again in a few minutes."
+msgstr "Votre adresse email n'a pas pu être confirmée pour l'instant. Rouvrez le lien dans quelques minutes."
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address is confirmed and you are on the waitlist. We will email you an invite when your place is ready."
+msgstr "Votre adresse email est confirmée et vous êtes sur la liste d'attente. Nous vous enverrons une invitation par email quand votre place sera prête."
+
 #: packages/ui/src/profile.tsx
 msgid "Your facts"
 msgstr "Vos faits"
@@ -11543,6 +11857,10 @@ msgstr "Vos consignes"
 #: apps/web/src/interview-guide.tsx
 msgid "Your interview"
 msgstr "Votre entretien"
+
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
+msgstr "Votre invitation est prête. Connectez-vous, ou créez un compte, avec l'adresse email qui a reçu l'invitation ; le code est rempli pour vous."
 
 #: apps/web/src/records.tsx
 msgid "Your job search and everything stored for it were deleted."

@@ -8,8 +8,10 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { legalVersion } from "./legal-pages.js";
 import type { ResolveSignIn } from "./oidc-sign-in.js";
+import { operatorPageQuery } from "./operator-page-query.js";
 import { signUpRoute } from "./request-auth.js";
 
 /** What the sign-up route needs besides the invites: the sign-in claim and the Beta plan. */
@@ -26,6 +28,8 @@ export interface BetaSignUpOptions {
   readonly assignBetaPlan?: (organisationId: string, at: Date) => Promise<void>;
   /** Records the new organisation's first activity, so retention counts from sign-up (#2538). */
   readonly recordActivity?: (organisationId: string) => Promise<void>;
+  /** Emails each new invite's link; without it the operator sends the code themselves. */
+  readonly inviteMailer?: InviteMailer;
   readonly now?: () => Date;
   /** Refused redemptions one sign-in may make in a window before it waits (default 5). */
   readonly refusedAttempts?: number;
@@ -79,6 +83,11 @@ const createdInviteSchema = z
   .object({
     invite: inviteSchema,
     code: z.string().describe("The plain code, shown once: it is stored only as a hash."),
+    emailed: z
+      .boolean()
+      .describe(
+        "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code.",
+      ),
   })
   .meta({ id: "CreatedBetaInvite" });
 
@@ -105,6 +114,20 @@ const seatsSchema = z
   })
   .meta({ id: "BetaSeats" });
 
+/** Emails a new invite's link; false when mail is off or the send failed. */
+export async function emailInvite(
+  mailer: InviteMailer | undefined,
+  created: { readonly invite: { readonly email: string }; readonly code: string },
+  locale?: "en" | "fr",
+): Promise<boolean> {
+  if (mailer === undefined) return false;
+  return mailer({
+    email: created.invite.email,
+    code: created.code,
+    ...(locale === undefined ? {} : { locale }),
+  });
+}
+
 interface Attempts {
   readonly start: number;
   refused: number;
@@ -125,15 +148,15 @@ export function registerBetaSignUpRoutes(
   const windowMs = options.windowMs ?? 15 * 60_000;
   const attempts = new Map<string, Attempts>();
 
-  const seats = async (listed?: readonly { readonly state: string }[]) => {
-    const [operatorCap, redeemed, all] = await Promise.all([
+  const seats = async () => {
+    const [operatorCap, redeemed, states] = await Promise.all([
       invites.operatorCap(),
       invites.redeemedCount(),
-      listed === undefined ? invites.list() : Promise.resolve(listed),
+      invites.stateCounts(),
     ]);
     return {
       redeemed,
-      open: all.filter((invite) => invite.state === "open").length,
+      open: states.open,
       cap: operatorCap ?? options.cap,
       capSource: operatorCap === undefined ? ("deployment" as const) : ("operator" as const),
       deploymentCap: options.cap,
@@ -156,7 +179,8 @@ export function registerBetaSignUpRoutes(
     {
       schema: {
         summary: "Create a single-use beta invite code for one email",
-        description: "Operator only. The answer carries the plain code once.",
+        description:
+          "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         body: z.strictObject({ email: z.string().max(320) }),
         response: { 201: createdInviteSchema, 400: apiErrorSchema, 403: apiErrorSchema },
       },
@@ -173,7 +197,8 @@ export function registerBetaSignUpRoutes(
         { audit: { action: "beta_invite_created", inviteId: created.invite.inviteId } },
         "audit",
       );
-      return reply.code(201).send(created);
+      const emailed = await emailInvite(options.inviteMailer, created);
+      return reply.code(201).send({ ...created, emailed });
     },
   );
 
@@ -182,16 +207,40 @@ export function registerBetaSignUpRoutes(
     {
       schema: {
         summary: "List beta invites, the seats they use and the cap",
-        description: "Operator only. Codes are never listed.",
+        description:
+          "Operator only. Codes are never listed. One page, newest first: at most `limit` invites, 50 by default, after skipping `offset`, of one `state` when given. `q` keeps invites whose email contains it, without case. `total` counts every matching invite; `counts` gives each state's count for the search.",
+        querystring: operatorPageQuery.extend({
+          state: z.enum(["open", "revoked", "redeemed"]).optional(),
+        }),
         response: {
-          200: seatsSchema.extend({ invites: z.array(inviteSchema) }),
+          200: seatsSchema.extend({
+            invites: z.array(inviteSchema),
+            total: z.number().int(),
+            counts: z.object({
+              open: z.number().int(),
+              revoked: z.number().int(),
+              redeemed: z.number().int(),
+            }),
+          }),
           403: apiErrorSchema,
         },
       },
     },
-    async () => {
-      const listed = [...(await invites.list())];
-      return { invites: listed, ...(await seats(listed)) };
+    async (request) => {
+      const { limit, offset, q, state } = request.query;
+      const [listed, counts, seatsNow] = await Promise.all([
+        invites.list({
+          limit,
+          offset,
+          ...(q === undefined ? {} : { query: q }),
+          ...(state === undefined ? {} : { state }),
+        }),
+        invites.stateCounts(q),
+        seats(),
+      ]);
+      const total =
+        state === undefined ? counts.open + counts.revoked + counts.redeemed : counts[state];
+      return { invites: [...listed], total, counts, ...seatsNow };
     },
   );
 

@@ -48,6 +48,40 @@ The picks arm returns chunks in source order, not by score, so its reciprocal
 rank understates it. It also has no relevance threshold: any shared rare word
 counts.
 
+## Reranking with a local cross-encoder (#3020)
+
+**No gain over the shipped map on this fixture.** A cross-encoder reads the
+requirement and the chunk together and scores the pair from 0 to 1. Reranking
+the semantic candidates, which the map ranks first, leaves recall and ordering
+where they were. It only repairs the RRF hybrid's ordering, which the map does
+not use.
+
+| Arm                                     | Recall | Mean reciprocal rank | R-precision |
+| --------------------------------------- | ------ | -------------------- | ----------- |
+| Semantic, as the map ranks first        | 0.97   | 0.91                 | 0.78        |
+| Semantic, reranked                      | 0.97   | 0.88                 | 0.75        |
+| Hybrid (RRF)                            | 0.97   | 0.69                 | 0.50        |
+| Hybrid, reranked                        | 0.97   | 0.92                 | 0.75        |
+| Top 24 semantic without floor, reranked | 0.97   | 0.84                 | 0.69        |
+
+- **R-precision** is the share of the first R chunks that are labelled, where
+  R is the requirement's number of labels. It rewards putting the right
+  chunks first.
+- **The fixture is near its ceiling.** Semantic already finds 31 of 32
+  labelled chunks, so it cannot show the problem #3020 found in real runs:
+  every requirement fills all eight places, and the critic marks many of them
+  unsupportive.
+- **Runs vary by a few points.** Two runs of the same arms differed by up to
+  six points of R-precision, which is one requirement.
+- The model is `BAAI/bge-reranker-v2-m3` in its ONNX int8 conversion
+  (Apache-2.0), pinned with sizes and SHA-256 in
+  [`reranker-manifest.ts`](../../packages/embeddings/src/reranker-manifest.ts).
+  The workflow downloads it with `scripts/download-reranker-model.mjs`.
+
+The decisive test is whether its score separates the picks the critic graded
+"supports" from "does not support" in real runs, where cosine similarity does
+not. No run uses the cross-encoder.
+
 ## Fixture
 
 [`requirement-evidence-cases.json`](../../packages/evaluations/fixtures/retrieval-quality/requirement-evidence-cases.json)
@@ -83,6 +117,13 @@ Model arms need the pinned model files on disk:
 ```text
 node apps/worker/scripts/download-embedding-model.mjs /tmp/granite
 DRAFT_LOOP_EMBEDDING_MODEL_DIR=/tmp/granite DRAFT_LOOP_RETRIEVAL_REPORT_PATH=/tmp/requirement-evidence.json pnpm exec vitest run packages/application/src/requirement-evidence-retrieval.eval.test.ts
+```
+
+Add the reranked arms with the pinned cross-encoder:
+
+```text
+node scripts/download-reranker-model.mjs /tmp/reranker
+DRAFT_LOOP_EMBEDDING_MODEL_DIR=/tmp/granite DRAFT_LOOP_RERANKER_MODEL_DIR=/tmp/reranker DRAFT_LOOP_RETRIEVAL_REPORT_PATH=/tmp/requirement-evidence.json pnpm exec vitest run packages/application/src/requirement-evidence-retrieval.eval.test.ts
 ```
 
 The report holds ids and numbers only. If the download fails, run the

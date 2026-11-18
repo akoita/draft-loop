@@ -4,6 +4,12 @@ import {
   requireOrganisationName,
 } from "@draft-loop/storage/tenant-directory";
 import { readOperatorCap, writeOperatorCap } from "./beta-account-cap.js";
+import {
+  type OperatorListPage,
+  pageLimit,
+  pageOffset,
+  searchPattern,
+} from "./operator-list-page.js";
 import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
 /** Serialises redemptions so two at the last seat cannot both pass the cap. */
@@ -25,6 +31,13 @@ export interface BetaInvite {
   readonly revokedAt?: string;
   /** The terms version accepted at redemption; absent for invites redeemed before #2462. */
   readonly termsVersion?: string;
+}
+
+export type BetaInviteState = BetaInvite["state"];
+
+/** One page of invites: a search on the email and, optionally, one state. */
+export interface BetaInvitePage extends OperatorListPage {
+  readonly state?: BetaInviteState;
 }
 
 /** A new invite and its plain code, which is never stored and cannot be read again. */
@@ -69,8 +82,10 @@ export interface BetaInvites {
     readonly email: string;
     readonly now: Date;
   }) => Promise<CreatedBetaInvite>;
-  /** Every invite, newest first, without codes. */
-  readonly list: () => Promise<readonly BetaInvite[]>;
+  /** One page of invites, newest first, without codes: 50 when no limit is given. */
+  readonly list: (page?: BetaInvitePage) => Promise<readonly BetaInvite[]>;
+  /** How many invites are in each state, among those whose email matches the search. */
+  readonly stateCounts: (query?: string) => Promise<Record<BetaInviteState, number>>;
   /** Revokes an open invite. False when it is unknown, already revoked or redeemed. */
   readonly revoke: (input: { readonly inviteId: string; readonly now: Date }) => Promise<boolean>;
   readonly redeem: (input: RedeemBetaInviteInput) => Promise<RedeemBetaInviteResult>;
@@ -118,6 +133,9 @@ function clock(now: Date): string {
   return now.toISOString();
 }
 
+const stateCase = `CASE WHEN redeemed_at IS NOT NULL THEN 'redeemed'
+  WHEN revoked_at IS NOT NULL THEN 'revoked' ELSE 'open' END`;
+
 const inviteColumns =
   "id, email, created_at, revoked_at, redeemed_at, organisation_id, terms_version";
 
@@ -158,10 +176,35 @@ export function createBetaInvites(client: SqlSession): BetaInvites {
   return {
     create: (input) => insertBetaInvite(client, input),
 
-    list: async () =>
-      (
-        await client.query(`SELECT ${inviteColumns} FROM beta_invites ORDER BY created_at DESC, id`)
-      ).map(inviteRecord),
+    list: async (page) => {
+      const pattern = searchPattern(page?.query);
+      const state = page?.state;
+      if (state !== undefined && !["open", "revoked", "redeemed"].includes(state)) {
+        throw new BetaInviteError("Invalid invite state.");
+      }
+      const rows = await client.query(
+        `SELECT ${inviteColumns} FROM beta_invites
+          WHERE ($3::text IS NULL OR email ILIKE $3)
+            AND ($4::text IS NULL OR ${stateCase} = $4)
+          ORDER BY created_at DESC, id LIMIT $1 OFFSET $2`,
+        [pageLimit(page), pageOffset(page), pattern ?? null, state ?? null],
+      );
+      return rows.map(inviteRecord);
+    },
+
+    stateCounts: async (query) => {
+      const rows = await client.query(
+        `SELECT ${stateCase} AS state, count(*) AS total FROM beta_invites
+          WHERE ($1::text IS NULL OR email ILIKE $1) GROUP BY 1`,
+        [searchPattern(query) ?? null],
+      );
+      const counts: Record<BetaInviteState, number> = { open: 0, revoked: 0, redeemed: 0 };
+      for (const row of rows) {
+        const state = String(row.state) as BetaInviteState;
+        if (state in counts) counts[state] = Number(row.total);
+      }
+      return counts;
+    },
 
     revoke: async ({ inviteId, now }) => {
       const rows = await client.query(

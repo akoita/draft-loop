@@ -198,6 +198,12 @@ import { normalizeRunAuthorInput } from "./run-author-input.js";
 import { normalizeRunEvidenceMode } from "./run-evidence-mode.js";
 import { normalizeRunInputs } from "./run-inputs.js";
 import {
+  normalizeRunRequirementEvidenceResult,
+  type RunRequirementEvidenceInput,
+  type RunRequirementEvidenceResult,
+  validateRunRequirementEvidenceInput,
+} from "./run-requirement-evidence-contract.js";
+import {
   normalizeRunTraceResult,
   type RunTraceInput,
   type RunTraceResult,
@@ -307,6 +313,11 @@ export type {
   ProfileFreshnessResult,
   ProfileFreshnessState,
 } from "./profile-freshness-contract.js";
+export type {
+  RunRequirementEvidenceInput,
+  RunRequirementEvidenceResult,
+  RunRequirementEvidenceView,
+} from "./run-requirement-evidence-contract.js";
 export type { RunTraceInput, RunTraceResult, RunTraceSpanView } from "./run-trace-contract.js";
 export type {
   EmbeddingModelCancelResult,
@@ -3249,6 +3260,7 @@ export interface BridgeCommandInputMap {
   "fact-usage.get": FactUsageGetInput;
   "fact-usage.set": FactUsageSetInput;
   "run.trace": RunTraceInput;
+  "run.requirement-evidence": RunRequirementEvidenceInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -3374,6 +3386,7 @@ export interface BridgeCommandOutputMap {
   "fact-usage.get": FactUsageResult;
   "fact-usage.set": FactUsageResult;
   "run.trace": RunTraceResult;
+  "run.requirement-evidence": RunRequirementEvidenceResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -6006,6 +6019,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       };
     case "run.trace":
       return { type: "run.trace", input: validateRunTraceInput(command.input) ?? invalidInput() };
+    case "run.requirement-evidence":
+      return {
+        type: "run.requirement-evidence",
+        input: validateRunRequirementEvidenceInput(command.input) ?? invalidInput(),
+      };
     case "workspace.recent-remove":
       return {
         type: "workspace.recent-remove",
@@ -8677,6 +8695,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeFactUsageResult(value) ?? invalidInput();
     case "run.trace":
       return normalizeRunTraceResult(value) ?? invalidInput();
+    case "run.requirement-evidence":
+      return normalizeRunRequirementEvidenceResult(value) ?? invalidInput();
     case "application.delete":
       return normalizeApplicationDelete(value);
     case "application.import":

@@ -76,6 +76,7 @@ import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-r
 import { registerHelpRoutes } from "./help-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
@@ -115,6 +116,7 @@ import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
+import { registerRunRequirementEvidenceRoutes } from "./run-requirement-evidence-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
@@ -129,6 +131,7 @@ import {
   TenantContextMissingError,
 } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
+import type { WaitlistConfirmMailer } from "./waitlist-confirm-mail.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
 import { createWorkJournalSignInChecks } from "./work-journal-sign-in.js";
@@ -238,6 +241,10 @@ export interface ApiOptions {
    * With it, the auth config tells the signed-out screen to show the landing page (#2567).
    */
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
+  /** Emails each new beta invite's sign-up link; absent where the deployment sets no sender. */
+  readonly inviteMailer?: InviteMailer;
+  /** Emails each waitlist sign-up a confirmation link; absent where the deployment sets no sender. */
+  readonly waitlistConfirmMailer?: WaitlistConfirmMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
   /** The daily ceiling on automatic job-ad reading for unlimited plans; 50 when unset. */
@@ -609,6 +616,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
       });
     }
+    registerRunRequirementEvidenceRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+    });
     registerRunEstimateRoute(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
@@ -951,6 +962,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...options.betaInvites,
       ...(auth.mode === "oidc" ? { resolveSignIn: auth.resolveSignIn } : {}),
       ...(recordActivity === undefined ? {} : { recordActivity }),
+      ...(options.inviteMailer === undefined ? {} : { inviteMailer: options.inviteMailer }),
       ...(operatorFor === undefined
         ? {}
         : {
@@ -965,7 +977,13 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     });
   }
   if (options.betaWaitlist !== undefined) {
-    registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
+    registerBetaWaitlistRoutes(app, {
+      waitlist: options.betaWaitlist,
+      ...(options.inviteMailer === undefined ? {} : { inviteMailer: options.inviteMailer }),
+      ...(options.waitlistConfirmMailer === undefined
+        ? {}
+        : { confirmMailer: options.waitlistConfirmMailer }),
+    });
   }
   if (options.feedback !== undefined) {
     registerFeedbackRoutes(app, {

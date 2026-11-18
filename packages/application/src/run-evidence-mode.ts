@@ -11,6 +11,7 @@ import { readRunEvidenceUsage } from "./run-evidence-usage.js";
 import { openRunHistory } from "./run-history-read.js";
 import { readRunInputs } from "./run-inputs-read.js";
 import { readRunModels } from "./run-models-read.js";
+import { readRunRequirementEvidence } from "./run-requirement-evidence-read.js";
 import { evidenceModes } from "./workspace-evidence-mode.js";
 
 /** The write side lives with the decision; the local driver reaches both through this module. */
@@ -97,5 +98,6 @@ export function withRunHistoryReaders(
     readRunModels: async (command) => readRunModels(command),
     readRunEvidenceUsage: async (command) => readRunEvidenceUsage(command),
     readRunInputs: async (command) => readRunInputs(command),
+    readRunRequirementEvidence: async (command) => readRunRequirementEvidence(command),
   };
 }

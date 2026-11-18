@@ -158,8 +158,22 @@ Without a calibrated model, or when the model fails, the map is keyword-only
 and says why.
 
 The map is shown in the preflight and recorded as a content-free
-`run.requirement-evidence-map` audit event: ids, origins and scores, never
-text. It does not yet change what the writer or the critic receives.
+`run.requirement-evidence-map` audit event: ids, source lines, origins and
+scores, never text. By default it does not change what the writer or the critic receives.
+`GET /v1/workspaces/:workspaceId/runs/:runId/requirement-evidence` reads it
+back with each candidate's source name, lines and grade. **Run details** shows
+it as **Evidence for each requirement**: the sources for each requirement, with
+scores, match and grades under Advanced options. Sources graded as not
+supporting are left out of the simple list.
+
+With `DRAFT_LOOP_EVIDENCE_RERANK=on`, a local cross-encoder reads each
+requirement with each of its candidates and reorders them, best first. It keeps
+every candidate, because its scores are too low to cut on. On graded runs it
+ranked a supporting chunk above an unsupportive one in 84% of pairs, against
+50% for cosine similarity (#3020). The model lives in
+`DRAFT_LOOP_RERANKER_MODEL_DIR`; without it, or when it fails, the map keeps its
+order. The preflight and the audit event say whether the map was reordered and
+how long it took. Reranking is off by default.
 
 With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
 as supports, partly supports or does not support. That is one extra call on the
@@ -167,9 +181,20 @@ critic model, billed on that critique. A content-free
 `run.requirement-evidence-grade` event records the grades by id. A failed call
 leaves the map ungraded and never fails the critique. Grading is off by default.
 
-`DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map; each use is off unless
-named. With `fallback`, a run above its budget or cost cap adds each
-requirement's map candidates instead of its shared-word picks. The
+`DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map. Unset, only `fallback`
+is on; `off` turns every use off; a list turns on only the uses it names. With
+`fallback`, a run above its budget or cost cap adds each requirement's map
+candidates instead of its shared-word picks. A paid comparison (#2985) found
+this recovered about two thirds more accomplishments than shared-word picks at
+about the same cost. The `writer` and `critic` uses stay opt-in: on full-source
+runs they cost about $0.21 more per run without recovering more. With `writer`,
+the writer's achievement plan gives each requirement its best sent map
+candidate before falling back to shared words; the plan step reads the same
+plan, so both keep one cached prompt prefix. With `critic`, the critic's
+achievement plan and its plan review follow the map the same way, and the
+omission check cites each map candidate for the themes its requirement belongs
+to, so evidence that meets a theme in other words is checked against the CV.
+Pairs the run's grade marked as not supporting are left out of the check. The
 measurement behind it is
 [Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
 

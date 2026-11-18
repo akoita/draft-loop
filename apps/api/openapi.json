@@ -3520,11 +3520,16 @@
           "code": {
             "type": "string",
             "description": "The plain code, shown once: it is stored only as a hash."
+          },
+          "emailed": {
+            "type": "boolean",
+            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
           "invite",
-          "code"
+          "code",
+          "emailed"
         ]
       },
       "SignedUpInput": {
@@ -9172,6 +9177,121 @@
           "status"
         ]
       },
+      "RunRequirementEvidenceInput": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "semantic",
+              "keyword"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "chunkCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "grading": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "failed"
+            ]
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requirementId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "type": "string"
+                },
+                "candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "chunkId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "origin": {
+                        "type": "string",
+                        "enum": [
+                          "semantic",
+                          "keyword",
+                          "both"
+                        ]
+                      },
+                      "score": {
+                        "type": "number",
+                        "minimum": -1,
+                        "maximum": 1
+                      },
+                      "source": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "lineStart": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "lineEnd": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "grade": {
+                        "type": "string",
+                        "enum": [
+                          "supports",
+                          "partly-supports",
+                          "does-not-support"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "chunkId",
+                      "origin"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "requirementId",
+                "candidates"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "runId",
+          "mode",
+          "chunkCount",
+          "requirements"
+        ],
+        "additionalProperties": false
+      },
       "CareerProfileCancelInput": {
         "type": "object",
         "properties": {
@@ -12795,11 +12915,16 @@
           "code": {
             "type": "string",
             "description": "The plain code, shown once: it is stored only as a hash."
+          },
+          "emailed": {
+            "type": "boolean",
+            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
           "invite",
-          "code"
+          "code",
+          "emailed"
         ],
         "additionalProperties": false
       },
@@ -17888,6 +18013,121 @@
         ],
         "additionalProperties": false
       },
+      "RunRequirementEvidence": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "semantic",
+              "keyword"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "chunkCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "grading": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "failed"
+            ]
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requirementId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "type": "string"
+                },
+                "candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "chunkId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "origin": {
+                        "type": "string",
+                        "enum": [
+                          "semantic",
+                          "keyword",
+                          "both"
+                        ]
+                      },
+                      "score": {
+                        "type": "number",
+                        "minimum": -1,
+                        "maximum": 1
+                      },
+                      "source": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "lineStart": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "lineEnd": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "grade": {
+                        "type": "string",
+                        "enum": [
+                          "supports",
+                          "partly-supports",
+                          "does-not-support"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "chunkId",
+                      "origin"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "requirementId",
+                "candidates"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "runId",
+          "mode",
+          "chunkCount",
+          "requirements"
+        ],
+        "additionalProperties": false
+      },
       "CareerProfileCancel": {
         "type": "object",
         "properties": {
@@ -20029,6 +20269,64 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/runs/{runId}/requirement-evidence": {
+      "get": {
+        "summary": "Read which evidence supports each requirement of a run",
+        "description": "Each job requirement of the run with its candidate evidence chunks, best first: the source's name and lines, whether the chunk matched by meaning, keywords or both, its similarity score, and its grade when the run graded the map. Names sources but never quotes evidence. 404 when the run recorded no map, as a run without requirements or full-source evidence does.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRequirementEvidence"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -31153,7 +31451,7 @@
     "/v1/operator/beta-invites": {
       "post": {
         "summary": "Create a single-use beta invite code for one email",
-        "description": "Operator only. The answer carries the plain code once.",
+        "description": "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31209,7 +31507,54 @@
       },
       "get": {
         "summary": "List beta invites, the seats they use and the cap",
-        "description": "Operator only. Codes are never listed.",
+        "description": "Operator only. Codes are never listed. One page, newest first: at most `limit` invites, 50 by default, after skipping `offset`, of one `state` when given. `q` keeps invites whose email contains it, without case. `total` counts every matching invite; `counts` gives each state's count for the search.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "revoked",
+                "redeemed"
+              ]
+            },
+            "in": "query",
+            "name": "state",
+            "required": false
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -31255,6 +31600,37 @@
                       "items": {
                         "$ref": "#/components/schemas/BetaInvite"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "revoked": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "redeemed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "open",
+                        "revoked",
+                        "redeemed"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -31263,7 +31639,9 @@
                     "cap",
                     "capSource",
                     "deploymentCap",
-                    "invites"
+                    "invites",
+                    "total",
+                    "counts"
                   ],
                   "additionalProperties": false
                 }
@@ -31483,7 +31861,7 @@
     "/v1/waitlist": {
       "post": {
         "summary": "Join the beta waitlist",
-        "description": "Public. Takes an email and the visitor's consent to keep it until they are invited, for at most six months. Answers 202 whether or not the email was already listed. 400 invalid_input for an address that is not an email, 429 rate_limited after 5 joins in an hour from one address.",
+        "description": "Public. Takes an email and the visitor's consent to keep it until they are invited, for at most six months. Where the server sends mail, a new email gets a confirmation link valid 48 hours, and waits unconfirmed until it is opened; one address gets at most 3 links, 10 minutes apart. `confirm` says whether this server asks for that. Answers 202 whether or not the email was already listed. 400 invalid_input for an address that is not an email, 429 rate_limited after 5 joins in an hour from one address.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31499,6 +31877,14 @@
                     "type": "boolean",
                     "enum": [
                       true
+                    ]
+                  },
+                  "locale": {
+                    "description": "The screen's language, so the emails speak it.",
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "fr"
                     ]
                   }
                 },
@@ -31525,10 +31911,15 @@
                       "enum": [
                         true
                       ]
+                    },
+                    "confirm": {
+                      "type": "boolean",
+                      "description": "True when the visitor must open the emailed link to keep their place."
                     }
                   },
                   "required": [
-                    "listed"
+                    "listed",
+                    "confirm"
                   ],
                   "additionalProperties": false
                 }
@@ -31558,10 +31949,116 @@
         }
       }
     },
+    "/v1/waitlist/confirm": {
+      "post": {
+        "summary": "Confirm a waitlist sign-up's email",
+        "description": "Public. Takes the token from the confirmation email's link. 200 when the entry is confirmed, also for a link opened twice. 404 invalid_token for an unknown token or a link older than 48 hours. 429 rate_limited after 5 attempts in an hour from one address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 16,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "confirmed": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "confirmed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/operator/waitlist": {
       "get": {
         "summary": "List the beta waitlist, oldest first",
-        "description": "Operator only.",
+        "description": "Operator only. One page: at most `limit` entries, 50 by default, after skipping `offset`. `q` keeps entries whose email contains it, without case. `total` counts every matching entry.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -31575,10 +32072,16 @@
                       "items": {
                         "$ref": "#/components/schemas/BetaWaitlistEntry"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
-                    "entries"
+                    "entries",
+                    "total"
                   ],
                   "additionalProperties": false
                 }
@@ -31601,7 +32104,7 @@
     "/v1/operator/waitlist/{entryId}/invite": {
       "post": {
         "summary": "Turn a waitlist entry into a beta invite",
-        "description": "Operator only. Creates an invite for the entry's email and deletes the entry. The answer carries the plain code once. 404 when no entry has that id.",
+        "description": "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         "parameters": [
           {
             "schema": {
@@ -31653,11 +32156,15 @@
                     },
                     "code": {
                       "type": "string"
+                    },
+                    "emailed": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "invite",
-                    "code"
+                    "code",
+                    "emailed"
                   ],
                   "additionalProperties": false
                 }
@@ -31900,7 +32407,7 @@
     "/v1/operator/feedback": {
       "get": {
         "summary": "List members' feedback notes, newest first",
-        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, of one `status` when it is given. Support tickets are deleted 90 days after they were sent.",
+        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, after skipping `offset`, of one `status` when it is given. `q` keeps notes whose text, screen or category contains it, without case. `total` counts every matching note; `counts` gives each status's count for the search. Support tickets are deleted 90 days after they were sent.",
         "parameters": [
           {
             "schema": {
@@ -31912,6 +32419,27 @@
             "in": "query",
             "name": "limit",
             "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
           },
           {
             "schema": {
@@ -31942,10 +32470,49 @@
                       "items": {
                         "$ref": "#/components/schemas/FeedbackNote"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "new": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "triaged": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "issue": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "closed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "new",
+                        "triaged",
+                        "issue",
+                        "closed"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
-                    "notes"
+                    "notes",
+                    "total",
+                    "counts"
                   ],
                   "additionalProperties": false
                 }
@@ -31976,6 +32543,64 @@
       }
     },
     "/v1/operator/feedback/{noteId}": {
+      "get": {
+        "summary": "Read one feedback note",
+        "description": "Operator only. The note or support ticket with this id, in any organisation; the alert email links to it. 404 for an unknown note.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "noteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "summary": "Triage a feedback note",
         "description": "Operator only. Sets the note's status (`new`, `triaged`, `issue`, `closed`) and its GitHub issue link: a link replaces the stored one, null clears it, leaving it out keeps it. 400 invalid_input for status `issue` without a link or a link that is not an https GitHub issue address; 404 for an unknown note.",

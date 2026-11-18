@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
   type CandidateDirection,
@@ -7,7 +6,6 @@ import {
 } from "@draft-loop/orchestrator";
 import type { AuditTrailStoragePort } from "@draft-loop/storage";
 import { z } from "zod";
-
 import { CliUserError } from "./cli-user-error.js";
 import { profileFactEvidenceIdPrefix } from "./profile-fact-evidence.js";
 import {
@@ -15,6 +13,7 @@ import {
   createProviderAuthorAgent,
   type ProviderAuthorAgentDependencies,
 } from "./provider-author-agent.js";
+import { criticRecorderDependencies, type RunRecorders } from "./run-application-plan.js";
 
 /**
  * What one author step was given, recorded in run history as a `run.author-input` audit event so a
@@ -187,6 +186,27 @@ export function runAuthorInputRecorder(
       ...(resolved === undefined ? {} : { totals: resolved }),
     });
     await recordRunAuthorInput(storage, { workspaceId, runId, summary });
+  };
+}
+
+/** The author's run-scoped dependencies from the run recorders: its input record and map use. */
+export function authorRecorderDependencies(
+  recorders: RunRecorders | undefined,
+): Pick<ProviderAuthorAgentDependencies, "recordAuthorInput" | "preferredEvidence"> {
+  if (recorders === undefined) return {};
+  return {
+    recordAuthorInput: recorders.recordAuthorInput,
+    ...(recorders.preferredEvidence === undefined
+      ? {}
+      : { preferredEvidence: recorders.preferredEvidence }),
+  };
+}
+
+/** Both agents' run-scoped dependencies from the run recorders, for the local driver. */
+export function agentRecorderDependencies(recorders: RunRecorders | undefined) {
+  return {
+    author: authorRecorderDependencies(recorders),
+    critic: criticRecorderDependencies(recorders),
   };
 }
 

@@ -37,6 +37,11 @@ export function isScreenLocale(value: string): value is ScreenLocale {
   return (screenLocales as readonly string[]).includes(value);
 }
 
+/** The language the screens show now, for a host that hands it to another service. */
+export function currentScreenLanguage(): ScreenLanguage {
+  return i18n.locale === "fr" ? "fr" : "en";
+}
+
 /** Makes a locale the active one for every screen string. */
 export function activateScreenLocale(locale: ScreenLocale): void {
   if (i18n.locale === locale) return;

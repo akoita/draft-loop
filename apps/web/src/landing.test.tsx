@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Landing, legalLinks, WaitlistFormView } from "./landing.js";
 import { OidcSignIn } from "./oidc-sign-in.js";
-import { joinWaitlist, waitlistNotice, waitlistUrl } from "./waitlist-model.js";
+import {
+  confirmWaitlist,
+  joinWaitlist,
+  waitlistConfirmUrl,
+  waitlistNotice,
+  waitlistUrl,
+} from "./waitlist-model.js";
 
 const answering = (status: number) =>
   vi.fn<typeof fetch>(
@@ -23,6 +29,21 @@ describe("joining the waitlist (#2567)", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ email: "ada@example.test", consent: true });
   });
 
+  it("reads a server that asks for confirmation as check_inbox, and sends the language", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(
+      async () => new Response('{"listed":true,"confirm":true}', { status: 202 }),
+    );
+
+    await expect(joinWaitlist("ada@example.test", fetchImpl, "fr")).resolves.toBe("check_inbox");
+    const [, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      email: "ada@example.test",
+      consent: true,
+      locale: "fr",
+    });
+    expect(waitlistNotice("check_inbox")).toContain("check your inbox");
+  });
+
   it.each([
     [400, "invalid"],
     [429, "rate_limited"],
@@ -36,6 +57,31 @@ describe("joining the waitlist (#2567)", () => {
       throw new TypeError("offline");
     });
     await expect(joinWaitlist("ada@example.test", offline)).resolves.toBe("failed");
+  });
+});
+
+describe("confirming a waitlist email", () => {
+  it.each([
+    [200, "confirmed"],
+    [404, "expired"],
+    [429, "rate_limited"],
+    [500, "failed"],
+  ] as const)("reads %i as %s", async (status, outcome) => {
+    const fetchImpl = answering(status);
+    await expect(confirmWaitlist("synthetic-token-0123456789", fetchImpl)).resolves.toBe(outcome);
+    const [url, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(url).toBe(waitlistConfirmUrl);
+    expect(JSON.parse(String(init?.body))).toEqual({ token: "synthetic-token-0123456789" });
+  });
+
+  it("says it is confirming while the link's token is checked", () => {
+    const html = renderToStaticMarkup(
+      <Landing
+        signIn={<button type="button">Sign in</button>}
+        confirmToken="synthetic-token-0123456789"
+      />,
+    );
+    expect(html).toContain("Confirming your email address");
   });
 });
 

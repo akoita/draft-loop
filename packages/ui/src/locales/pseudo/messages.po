@@ -593,8 +593,13 @@ msgstr ""
 msgid "{count} / {limit}"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "{count} not used yet"
 msgstr ""
 
 #: packages/ui/src/readiness-blocker-groups.ts
@@ -629,6 +634,10 @@ msgstr ""
 #. placeholder {0}: approvalReadinessCheckLabels[blocker.check]
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} validation checks failed: {0}"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "{count} waiting"
 msgstr ""
 
 #: packages/ui/src/work-journal-pending.tsx
@@ -755,6 +764,11 @@ msgstr ""
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr ""
 
+#. placeholder {0}: entry.lines
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{name}, lines {0}"
+msgstr ""
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr ""
@@ -823,6 +837,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{supported} of {total, plural, one {# requirement} other {# requirements}} with evidence"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts
@@ -1262,6 +1280,7 @@ msgstr ""
 msgid "all"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/home-list-model.ts
 msgid "All"
 msgstr ""
@@ -1310,6 +1329,10 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 msgid "Allow this repository"
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Almost done: check your inbox. We sent you a link to confirm your address, and your place counts once you open it. The link works for 48 hours. Nothing arrived? Look in your spam folder, or join again in 10 minutes."
 msgstr ""
 
 #: packages/ui/src/career-evidence.ts
@@ -1407,6 +1430,7 @@ msgid "API key, billed per token"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Application"
 msgstr ""
 
@@ -1826,6 +1850,7 @@ msgid "Bring your career evidence into the loop"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Browser"
 msgstr ""
 
@@ -1994,6 +2019,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Change the issue"
 msgstr ""
 
 #: apps/web/src/plan-preset-choice.tsx
@@ -2272,6 +2301,7 @@ msgid "close"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2287,6 +2317,11 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
+msgstr ""
+
+#. placeholder {0}: chosenNotes.length
+#: apps/web/src/operator.tsx
+msgid "Close selected ({0})"
 msgstr ""
 
 #: packages/ui/src/export-preview.tsx
@@ -2307,6 +2342,14 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Close workspace is available again once your career profile is generated."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Close, it is fixed"
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "Closed"
 msgstr ""
 
 #: packages/ui/src/project-card-facts.tsx
@@ -2454,6 +2497,10 @@ msgstr ""
 msgid "Confirm that the candidate agreed to send their material."
 msgstr ""
 
+#: apps/web/src/waitlist-model.ts
+msgid "Confirming your email address…"
+msgstr ""
+
 #: packages/ui/src/profile-presentation.ts
 msgid "Conflicting dates"
 msgstr ""
@@ -2500,6 +2547,10 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 msgid "contains"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Context"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3040,6 +3091,10 @@ msgstr ""
 msgid "Documents live in Career evidence. The profile is rebuilt from them."
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "does not support"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "done"
 msgstr ""
@@ -3120,6 +3175,10 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "Draft a new interview guide"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Draft an issue"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3534,6 +3593,10 @@ msgstr ""
 #: packages/ui/src/run-details.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Evidence"
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Evidence for each requirement"
 msgstr ""
 
 #. placeholder {0}: source.displayName
@@ -4140,6 +4203,10 @@ msgstr ""
 msgid "Getting voice input ready ({0}%)…"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "GitHub issue address"
+msgstr ""
+
 #: apps/web/src/records.tsx
 msgid "Give access"
 msgstr ""
@@ -4242,6 +4309,10 @@ msgstr ""
 
 #: packages/ui/src/model-profile-presentation.ts
 msgid "GPT-6.1 Terra"
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Grading was attempted but failed, so no source was left out."
 msgstr ""
 
 #: apps/web/src/consent-model.ts
@@ -4636,7 +4707,12 @@ msgstr ""
 
 #. placeholder {0}: outcome.email
 #: apps/web/src/operator.tsx
-msgid "Invite created for {0}. Send them this code now: it is shown only once."
+msgid "Invite created for {0}, but no email went out. Send them this code now: it is shown only once."
+msgstr ""
+
+#. placeholder {0}: outcome.email
+#: apps/web/src/operator.tsx
+msgid "Invite emailed to {0}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once."
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -4773,6 +4849,10 @@ msgstr ""
 msgid "Keep each heading to 200 characters or fewer."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Keep for later"
+msgstr ""
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Keep it"
 msgstr ""
@@ -4809,8 +4889,16 @@ msgstr ""
 msgid "Keep waiting"
 msgstr ""
 
+#: apps/web/src/operator-model.ts
+msgid "Kept"
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Keyword search over your candidate knowledge. Needs no model."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "keywords"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -4885,6 +4973,7 @@ msgid "Last activity unknown"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Last failed request"
 msgstr ""
 
@@ -4983,8 +5072,16 @@ msgstr ""
 msgid "lineages differ"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Link an issue"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "Linked to an issue"
 msgstr ""
 
 #: packages/ui/src/source-evidence-kind-contract.ts
@@ -5186,6 +5283,11 @@ msgstr ""
 msgid "Marking reviewed…"
 msgstr ""
 
+#. placeholder {0}: originLabel(candidate.origin)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "matched by {0}"
+msgstr ""
+
 #: apps/web/src/screening-model.ts
 msgid "material the run would use"
 msgstr ""
@@ -5221,6 +5323,14 @@ msgstr ""
 
 #: packages/ui/src/run-switcher.tsx
 msgid "mean score"
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning"
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning and keywords"
 msgstr ""
 
 #: packages/ui/src/help-ask.tsx
@@ -5539,6 +5649,10 @@ msgstr ""
 msgid "Never use \"{0}\""
 msgstr ""
 
+#: apps/web/src/operator-model.ts
+msgid "New"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 #: packages/ui/src/home.tsx
 #: packages/ui/src/new-application-form.tsx
@@ -5716,6 +5830,10 @@ msgstr ""
 msgid "No blocking findings need action."
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No candidate"
+msgstr ""
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5763,6 +5881,14 @@ msgstr ""
 
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "No eligible chunks for full source, so retrieval was used"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "No entry matches this search."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No evidence found"
 msgstr ""
 
 #: packages/ui/src/known-gaps.ts
@@ -5829,6 +5955,10 @@ msgid "No invite has that code. Check it for typos, or ask for a new invite."
 msgstr ""
 
 #: apps/web/src/operator.tsx
+msgid "No invite matches."
+msgstr ""
+
+#: apps/web/src/operator.tsx
 msgid "No invite sent yet."
 msgstr ""
 
@@ -5878,6 +6008,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "No network transmission"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "No note matches this search."
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
@@ -6066,6 +6200,10 @@ msgstr ""
 msgid "Not generated yet"
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "not graded"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "not independent"
 msgstr ""
@@ -6131,6 +6269,10 @@ msgstr ""
 msgid "Not sure"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Not used yet"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
 msgstr ""
@@ -6157,6 +6299,10 @@ msgstr ""
 
 #: packages/ui/src/work-journal-intake.tsx
 msgid "Notes from agents"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Nothing here."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -6210,6 +6356,10 @@ msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Off: pauses after a round with a blocking finding"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Oldest first: the order people asked in."
 msgstr ""
 
 #: packages/ui/src/profile-presentation.ts
@@ -6382,6 +6532,10 @@ msgstr ""
 msgid "Open the command palette"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Open the issue"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 msgstr ""
@@ -6423,6 +6577,14 @@ msgstr ""
 
 #: apps/web/src/operator.tsx
 msgid "Operator"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Operator sections"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Operator, {newNotes} new feedback notes"
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
@@ -6541,6 +6703,7 @@ msgid "Owners and admins of your team choose who can open it."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Page"
 msgstr ""
 
@@ -6561,8 +6724,16 @@ msgstr ""
 msgid "part of a model id"
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "partly supports"
+msgstr ""
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Paste a GitHub issue address, such as https://github.com/owner/repo/issues/123."
 msgstr ""
 
 #: packages/ui/src/pasted-evidence.ts
@@ -6688,6 +6859,10 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Plan"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -6972,6 +7147,24 @@ msgstr ""
 msgid "Quota or rate limit"
 msgstr ""
 
+#. placeholder {0}: view.reason
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only ({0})."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only."
+msgstr ""
+
+#. placeholder {0}: view.modelId
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with {0}, then by keywords."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with the local model, then by keywords."
+msgstr ""
+
 #: packages/ui/src/start-advanced-options.tsx
 msgid "raw job description"
 msgstr ""
@@ -7113,6 +7306,7 @@ msgstr ""
 msgid "Reading your workspace…"
 msgstr ""
 
+#: apps/web/src/operator-list.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr ""
@@ -7163,6 +7357,7 @@ msgid "reasoning"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Recent errors"
 msgstr ""
 
@@ -7187,6 +7382,7 @@ msgid "Recent workspaces could not be loaded."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Record"
 msgstr ""
 
@@ -7236,6 +7432,7 @@ msgid "Recording… speak your answer."
 msgstr ""
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Redeemed"
 msgstr ""
 
@@ -7244,8 +7441,13 @@ msgstr ""
 msgid "Redeemed {0}"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile.tsx
 msgid "Refresh"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Refreshing…"
 msgstr ""
 
 #: packages/ui/src/model-suggestions.tsx
@@ -7379,6 +7581,10 @@ msgstr ""
 msgid "Rename workspace {name}"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Reopen"
+msgstr ""
+
 #: packages/ui/src/career-evidence.ts
 msgid "Reopen the workspace to refresh the review."
 msgstr ""
@@ -7426,6 +7632,11 @@ msgstr ""
 
 #: apps/web/src/screening.tsx
 msgid "Required, up to"
+msgstr ""
+
+#. placeholder {0}: index + 1
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Requirement {0}"
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -7896,6 +8107,7 @@ msgid "Revision"
 msgstr ""
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Revoked"
 msgstr ""
 
@@ -7977,6 +8189,7 @@ msgid "Rules apply once a knowledge base is chosen."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8106,6 +8319,10 @@ msgstr ""
 msgid "Save limit"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Save link"
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "Save models"
 msgstr ""
@@ -8209,6 +8426,11 @@ msgstr ""
 msgid "Saving…"
 msgstr ""
 
+#. placeholder {0}: candidate.score.toFixed(2)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "score {0}"
+msgstr ""
+
 #: packages/ui/src/screen-language.tsx
 msgid "Screen language"
 msgstr ""
@@ -8242,6 +8464,10 @@ msgstr ""
 msgid "Search applications"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Search by email"
+msgstr ""
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "Search by name, employer or role"
 msgstr ""
@@ -8252,6 +8478,10 @@ msgstr ""
 
 #: packages/ui/src/help-panel.tsx
 msgid "Search the guide"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Search the text, page or kind"
 msgstr ""
 
 #: packages/ui/src/profile-fact-usage.tsx
@@ -8275,12 +8505,26 @@ msgstr ""
 msgid "See your job applications and how their runs stand"
 msgstr ""
 
+#. placeholder {0}: ordered.length
+#: apps/web/src/operator.tsx
+msgid "Select all shown ({0})"
+msgstr ""
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Select none"
+msgstr ""
+
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "Select one supported author profile and one supported critic profile before applying."
+msgstr ""
+
+#. placeholder {0}: operatorTime(note.sentAt)
+#: apps/web/src/operator.tsx
+msgid "Select the note sent {0}"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
@@ -8395,6 +8639,10 @@ msgstr ""
 msgid "Sent. The people who run DraftLoop will read it and get back to you."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Server version"
+msgstr ""
+
 #: apps/web/src/shell-actions.tsx
 msgid "Service is down"
 msgstr ""
@@ -8482,8 +8730,20 @@ msgstr ""
 msgid "Show everything"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Show invites"
+msgstr ""
+
 #: packages/ui/src/getting-started.tsx
 msgid "Show me the steps"
+msgstr ""
+
+#: apps/web/src/operator-list.tsx
+msgid "Show more"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Show notes"
 msgstr ""
 
 #: packages/ui/src/review-panels.tsx
@@ -8525,6 +8785,10 @@ msgstr ""
 #. placeholder {0}: matched.size
 #: packages/ui/src/app.tsx
 msgid "Showing {0} of {total} matching “{wanted}”"
+msgstr ""
+
+#: apps/web/src/operator-list.tsx
+msgid "Showing {shown} of {total}"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -8624,6 +8888,7 @@ msgid "Sort"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -8698,6 +8963,14 @@ msgstr ""
 #: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Start a conversation"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Start a new job search"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Start a new job search when you are ready."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -8950,6 +9223,10 @@ msgstr ""
 msgid "Supported with the configured authentication route"
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "supports"
+msgstr ""
+
 #: packages/ui/src/run-comparison.tsx
 msgid "Swap sides"
 msgstr ""
@@ -9056,6 +9333,10 @@ msgstr ""
 
 #: apps/web/src/waitlist-model.ts
 msgid "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "That confirmation link has expired or is unknown. Join the waitlist again below to get a new one."
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
@@ -9175,10 +9456,6 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "The beta is full for now. Your code stays valid: try again when places open."
-msgstr ""
-
-#: apps/web/src/operator.tsx
-msgid "The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log."
 msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
@@ -9330,6 +9607,10 @@ msgstr ""
 
 #: packages/ui/src/review-run-status.ts
 msgid "The critic is checking version {version}."
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The critic model graded each source; sources it found unsupportive are left out above."
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
@@ -10005,6 +10286,10 @@ msgstr ""
 msgid "The sources said nothing useful about this employer."
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The sources the writer and critic were pointed to for each job requirement. A requirement with no source may still be covered elsewhere in your evidence."
+msgstr ""
+
 #: apps/web/src/interview-guide-model.ts
 msgid "The state of the field"
 msgstr ""
@@ -10381,6 +10666,10 @@ msgstr ""
 msgid "This rewrites the run history stored with this workspace so it takes less space. Each draft and step is stored once instead of being copied again for every step of a run. Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and checked."
 msgstr ""
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "This run did not grade the sources."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "This run has no retry left. Stop it, then start a new review."
 msgstr ""
@@ -10541,6 +10830,10 @@ msgid "Tone"
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then open the link again."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
 msgid "Too many attempts from this connection. Wait an hour, then try again."
 msgstr ""
 
@@ -10686,6 +10979,10 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Unlisted source"
+msgstr ""
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "unnamed source"
 msgstr ""
 
 #: apps/web/src/application-material-model.ts
@@ -11065,6 +11362,7 @@ msgid "Web screen"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Web version"
 msgstr ""
 
@@ -11098,6 +11396,10 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "What leads"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
@@ -11398,6 +11700,10 @@ msgstr ""
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "You are still signed in. Start a new job search, or sign out."
+msgstr ""
+
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
 msgstr ""
@@ -11529,6 +11835,14 @@ msgstr ""
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr ""
 
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address could not be confirmed just now. Open the link again in a few minutes."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address is confirmed and you are on the waitlist. We will email you an invite when your place is ready."
+msgstr ""
+
 #: packages/ui/src/profile.tsx
 msgid "Your facts"
 msgstr ""
@@ -11547,6 +11861,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide.tsx
 msgid "Your interview"
+msgstr ""
+
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
 msgstr ""
 
 #: apps/web/src/records.tsx

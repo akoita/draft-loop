@@ -45,6 +45,9 @@
     },
     {
       "path": "../../packages/support"
+    },
+    {
+      "path": "../../packages/mail"
     }
   ]
 }

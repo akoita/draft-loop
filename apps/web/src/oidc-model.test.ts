@@ -102,6 +102,20 @@ describe("authorization request", () => {
     });
   });
 
+  it("passes the screen's language so the provider's pages and mail use it", () => {
+    const url = new URL(
+      authorizationUrl(`${issuer}/protocol/openid-connect/auth`, {
+        clientId: "draft-loop-web",
+        redirectUri: "https://draftloop.example.test/",
+        state: "synthetic-state",
+        codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        uiLocale: "fr",
+      }),
+    );
+
+    expect(url.searchParams.get("ui_locales")).toBe("fr");
+  });
+
   it("reads the provider's answer at the screen's address", () => {
     expect(readAuthorizationResponse("?code=abc&state=s1&session_state=x")).toEqual({
       kind: "code",

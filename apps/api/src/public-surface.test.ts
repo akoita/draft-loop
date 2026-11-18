@@ -52,6 +52,7 @@ beforeAll(async () => {
       invites: {
         create: vi.fn(),
         list: vi.fn(async () => []),
+        stateCounts: vi.fn(async () => ({ open: 0, revoked: 0, redeemed: 0 })),
         revoke: vi.fn(),
         redeem,
         redeemedCount: vi.fn(async () => 0),
@@ -63,8 +64,12 @@ beforeAll(async () => {
     betaWaitlist: {
       join,
       list: vi.fn(async () => []),
+      count: vi.fn(async () => 0),
       invite: vi.fn(),
       deleteJoinedBefore: vi.fn(async () => 0),
+      joinUnconfirmed: vi.fn(async () => "skip" as const),
+      confirm: vi.fn(async () => false),
+      deleteUnconfirmedBefore: vi.fn(async () => 0),
     } as BetaWaitlist,
     tenants: {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },

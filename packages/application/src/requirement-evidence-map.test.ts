@@ -178,14 +178,101 @@ describe("requirement-evidence map", () => {
     for (const { text } of requirements) expect(serialized).not.toContain(text);
     expect(serialized).toMatch(/"score":0\.95\d?[,}]/u);
   });
+
+  it("records each candidate's source id and lines when given the chunks", async () => {
+    const map = await buildRequirementEvidenceMap({ requirements, eligible });
+    const located = eligible.map((item, index) => ({
+      ...item,
+      lineStart: index + 1,
+      lineEnd: index + 2,
+    })) as unknown as ScoredEvidenceChunk[];
+    const payload = requirementEvidenceMapAuditPayload(map, located) as {
+      entries: { requirementId: string; candidates: Record<string, unknown>[] }[];
+    };
+    const kube = payload.entries.find(({ requirementId }) => requirementId === "r-kube");
+    expect(kube?.candidates[0]).toEqual({
+      chunkId: "kube",
+      origin: "keyword",
+      sourceId: "source-1",
+      lineStart: 4,
+      lineEnd: 5,
+    });
+  });
 });
 
 describe("requirement-evidence map uses", () => {
-  it("turns on only the uses the setting names", async () => {
+  it("turns on the fallback use by default and only the named uses otherwise", async () => {
     const { enabledRequirementEvidenceMapUses } = await import("./run-requirement-evidence-map.js");
-    expect([...enabledRequirementEvidenceMapUses({})]).toEqual([]);
+    expect([...enabledRequirementEvidenceMapUses({})]).toEqual(["fallback"]);
+    expect([...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: " " })]).toEqual([
+      "fallback",
+    ]);
+    expect([...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: "off" })]).toEqual([]);
     expect([
       ...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: " Writer, fallback ,other" }),
     ]).toEqual(["fallback", "writer"]);
+  });
+});
+
+describe("writer's preferred evidence from the map", () => {
+  it("lists each requirement's candidates only when the writer use is on", async () => {
+    const { preferredEvidenceFromMap } = await import("./run-requirement-evidence-map.js");
+    const map = async () => ({
+      mode: "keyword" as const,
+      chunkCount: 2,
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c2", origin: "keyword" as const },
+            { chunkId: "c1", origin: "keyword" as const },
+          ],
+        },
+      ],
+    });
+    expect(preferredEvidenceFromMap(map, false)).toBeUndefined();
+    expect(preferredEvidenceFromMap(undefined, true)).toBeUndefined();
+    const preferred = await preferredEvidenceFromMap(map, true)?.();
+    expect(preferred?.get("r1")).toEqual(["c2", "c1"]);
+    expect(await preferredEvidenceFromMap(async () => undefined, true)?.()).toBeUndefined();
+  });
+});
+
+describe("critic's evidence from the map", () => {
+  it("is on only for the critic use and drops pairs the grade says do not support", async () => {
+    const { criticEvidenceFromMap, withoutUnsupportedEvidence } = await import(
+      "./run-requirement-evidence-map.js"
+    );
+    const map = async () => ({
+      mode: "keyword" as const,
+      chunkCount: 2,
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c1", origin: "keyword" as const },
+            { chunkId: "c2", origin: "keyword" as const },
+          ],
+        },
+      ],
+    });
+    expect(criticEvidenceFromMap(map, false)).toBeUndefined();
+    const evidence = await criticEvidenceFromMap(map, true)?.();
+    if (evidence === undefined) throw new Error("expected evidence");
+    expect(withoutUnsupportedEvidence(evidence, undefined)).toBe(evidence);
+    const graded = {
+      ...(await map()),
+      grading: { status: "graded" as const, instructionsVersion: "v", gradedPairs: 2 },
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c1", origin: "keyword" as const, grade: "does-not-support" as const },
+            { chunkId: "c2", origin: "keyword" as const, grade: "partly-supports" as const },
+          ],
+        },
+      ],
+    };
+    expect(withoutUnsupportedEvidence(evidence, graded).get("r1")).toEqual(["c2"]);
   });
 });

@@ -445,6 +445,7 @@ export interface ApiSchemas {
   "CreatedBetaInvite": {
     readonly invite: ApiSchemas["BetaInvite"];
     readonly code: string;
+    readonly emailed: boolean;
   };
   "CreatedOrganisation": {
     readonly organisation: {
@@ -1134,6 +1135,27 @@ export interface ApiSchemas {
   "RunExports": {
     readonly exports: readonly (ApiSchemas["RunExport"])[];
   };
+  "RunRequirementEvidence": {
+    readonly runId: string;
+    readonly mode: "semantic" | "keyword";
+    readonly reason?: string;
+    readonly modelId?: string;
+    readonly chunkCount: number;
+    readonly grading?: "graded" | "failed";
+    readonly requirements: readonly ({
+      readonly requirementId: string;
+      readonly text?: string;
+      readonly candidates: readonly ({
+        readonly chunkId: string;
+        readonly origin: "semantic" | "keyword" | "both";
+        readonly score?: number;
+        readonly source?: string;
+        readonly lineStart?: number;
+        readonly lineEnd?: number;
+        readonly grade?: "supports" | "partly-supports" | "does-not-support";
+      })[];
+    })[];
+  };
   "RunReview": {
     readonly run: ApiSchemas["Run"];
     readonly draft: ApiSchemas["ReviewDraft"] | null;
@@ -1752,6 +1774,13 @@ export interface ApiOperations {
     readonly response: {
       readonly usage: ApiSchemas["FactUsage"];
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/runs/{runId}/requirement-evidence": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly response: ApiSchemas["RunRequirementEvidence"];
   };
   "GET /v1/workspaces/{workspaceId}/runs/estimate": {
     readonly path: {
@@ -3041,6 +3070,12 @@ export interface ApiOperations {
     readonly response: ApiSchemas["CreatedBetaInvite"];
   };
   "GET /v1/operator/beta-invites": {
+    readonly query?: {
+      readonly limit?: number;
+      readonly offset?: number;
+      readonly q?: string;
+      readonly state?: "open" | "revoked" | "redeemed";
+    };
     readonly response: {
       readonly redeemed: number;
       readonly open: number;
@@ -3048,6 +3083,12 @@ export interface ApiOperations {
       readonly capSource: "operator" | "deployment";
       readonly deploymentCap: number;
       readonly invites: readonly (ApiSchemas["BetaInvite"])[];
+      readonly total: number;
+      readonly counts: {
+        readonly open: number;
+        readonly revoked: number;
+        readonly redeemed: number;
+      };
     };
   };
   "PUT /v1/operator/beta-invites/cap": {
@@ -3073,14 +3114,30 @@ export interface ApiOperations {
     readonly body: {
       readonly email: string;
       readonly consent: true;
+      readonly locale?: "en" | "fr";
     };
     readonly response: {
       readonly listed: true;
+      readonly confirm: boolean;
+    };
+  };
+  "POST /v1/waitlist/confirm": {
+    readonly body: {
+      readonly token: string;
+    };
+    readonly response: {
+      readonly confirmed: true;
     };
   };
   "GET /v1/operator/waitlist": {
+    readonly query?: {
+      readonly limit?: number;
+      readonly offset?: number;
+      readonly q?: string;
+    };
     readonly response: {
       readonly entries: readonly (ApiSchemas["BetaWaitlistEntry"])[];
+      readonly total: number;
     };
   };
   "POST /v1/operator/waitlist/{entryId}/invite": {
@@ -3095,6 +3152,7 @@ export interface ApiOperations {
         readonly state: "open" | "revoked" | "redeemed";
       };
       readonly code: string;
+      readonly emailed: boolean;
     };
   };
   "POST /v1/feedback": {
@@ -3121,11 +3179,26 @@ export interface ApiOperations {
   "GET /v1/operator/feedback": {
     readonly query?: {
       readonly limit?: number;
+      readonly offset?: number;
+      readonly q?: string;
       readonly status?: "new" | "triaged" | "issue" | "closed";
     };
     readonly response: {
       readonly notes: readonly (ApiSchemas["FeedbackNote"])[];
+      readonly total: number;
+      readonly counts: {
+        readonly new: number;
+        readonly triaged: number;
+        readonly issue: number;
+        readonly closed: number;
+      };
     };
+  };
+  "GET /v1/operator/feedback/{noteId}": {
+    readonly path: {
+      readonly noteId: string;
+    };
+    readonly response: ApiSchemas["FeedbackNote"];
   };
   "PATCH /v1/operator/feedback/{noteId}": {
     readonly path: {

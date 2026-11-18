@@ -19,7 +19,6 @@ import {
   validateApplicationPlan,
   validateApplicationPlanReview,
 } from "@draft-loop/schemas/application-plan";
-
 import {
   applicationPlanReviewSystemPrompt,
   applicationPlanRevisionSystemPrompt,
@@ -44,6 +43,7 @@ import {
   criticRunPrefix,
   criticStableInputMembers,
 } from "./critic-run-prefix.js";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
 
 /**
@@ -68,6 +68,10 @@ export interface ProviderApplicationPlannerDependencies {
   readonly userError: (message: string) => Error;
   /** Keeps the plan in run history; a failure is dropped and never fails the run. */
   readonly record?: (runId: string, state: ApplicationPlanState) => Promise<void>;
+  /** The map's candidates per requirement, so the plan call shares the drafting prefix (#2983). */
+  readonly preferredEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
+  /** The map's candidates for the critic's review, so it shares the critiques' prefix (#2983). */
+  readonly criticMapEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
 }
 
 /** Whether runs recorded on this author prompt version plan; unknown versions do not. */
@@ -137,8 +141,19 @@ export function createProviderApplicationPlanner(
     };
     const prefix =
       role === "author"
-        ? authorRunPrefix(request.context, deps.promptContext, retrievedEvidence)
-        : criticRunPrefix(request.context, deps.promptContext, retrievedEvidence, true);
+        ? authorRunPrefix(
+            request.context,
+            deps.promptContext,
+            retrievedEvidence,
+            await deps.preferredEvidence?.(),
+          )
+        : criticRunPrefix(
+            request.context,
+            deps.promptContext,
+            retrievedEvidence,
+            true,
+            await deps.criticMapEvidence?.(),
+          );
     const aliasNames = aliases?.aliases ?? [];
     const modelRequest: ModelRequest<JsonObject> = {
       contextSnapshotId: request.context.id,

@@ -17,13 +17,22 @@ export interface AccountMenuProps {
   readonly onSignOut: () => void;
   /** Opens the operator page; offered only when `/v1/me` says the caller may operate (#2829). */
   readonly onOperator?: (() => void) | undefined;
+  /** Feedback notes waiting in New, shown on the Operator entry and the menu (#3002). */
+  readonly newNotes?: number | undefined;
 }
 
 /**
  * Who is signed in and, on a team plan, which team they act for: a small menu at the start of the
  * top bar with the person's data and sign-out.
  */
-export function AccountMenu({ me, onePerson, yourData, onSignOut, onOperator }: AccountMenuProps) {
+export function AccountMenu({
+  me,
+  onePerson,
+  yourData,
+  onSignOut,
+  onOperator,
+  newNotes,
+}: AccountMenuProps) {
   const menu = useRef<HTMLDetailsElement>(null);
   // A click outside the open menu, or Escape, folds it, as menus elsewhere do.
   useEffect(() => {
@@ -48,11 +57,17 @@ export function AccountMenu({ me, onePerson, yourData, onSignOut, onOperator }: 
     <details ref={menu} className="account-menu">
       <summary>
         <span className="account-name">{accountLabel(me, onePerson)}</span>
+        {onOperator !== undefined && canOperate(me) && newNotes !== undefined && newNotes > 0 ? (
+          <span className="operator-count" aria-hidden="true">
+            {newNotes}
+          </span>
+        ) : null}
       </summary>
       <div className="account-menu-body">
         {yourData}
         {onOperator !== undefined && canOperate(me) ? (
           <OperatorButton
+            newNotes={newNotes}
             onOpen={() => {
               if (menu.current !== null) menu.current.open = false;
               onOperator();

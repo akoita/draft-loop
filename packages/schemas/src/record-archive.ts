@@ -145,9 +145,10 @@ export const recordArchiveManifestSchema = z
 export type RecordArchiveManifest = z.infer<typeof recordArchiveManifestSchema>;
 
 /**
- * One table file: the record's rows of that table as the service stores them, one object per
- * row keyed by column name, without the tenant column. Text payloads keep their stored text, so
- * their recorded checksums still verify them.
+ * One table file: the record's rows of that table, one object per row keyed by column name,
+ * without the tenant column or the columns that only describe storage (locations, shared
+ * counters, the audit log's hash chain). Stored paths read relative to the account and never name
+ * the tenant, so a payload that held one no longer matches its recorded checksum.
  */
 export const recordArchiveTableFileSchema = z
   .object({

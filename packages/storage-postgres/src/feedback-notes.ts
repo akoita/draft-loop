@@ -14,7 +14,12 @@ import {
 } from "@draft-loop/storage/feedback";
 import { requireOrganisationId, TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
 
+import { pageOffset, searchPattern } from "./operator-list-page.js";
 import type { SqlClient, SqlRow } from "./sql-client.js";
+
+/** What the inbox search reads: the member's text, the screen and the category. */
+const searchMatch = `($SEARCH::text IS NULL OR body ILIKE $SEARCH OR screen ILIKE $SEARCH
+  OR coalesce(category, '') ILIKE $SEARCH)`;
 
 const columns =
   "tenant_id, id, kind, member_id, category, screen, body, transcript, context, status, issue_url, triaged_at, sent_at";
@@ -154,23 +159,42 @@ export function createPostgresFeedback(client: SqlClient): FeedbackStore {
       });
     },
 
-    listNewest: async (limit, status) => {
+    listNewest: async (limit, status, page) => {
       const bounded = Math.max(1, Math.min(500, Math.trunc(limit)));
       if (status !== undefined && !feedbackStatuses.includes(status)) {
         throw new TenantDirectoryError("invalid_input", "Invalid feedback status.");
       }
-      const rows =
-        status === undefined
-          ? await client.query(
-              `SELECT ${columns} FROM feedback_notes ORDER BY sent_at DESC, id LIMIT $1`,
-              [bounded],
-            )
-          : await client.query(
-              `SELECT ${columns} FROM feedback_notes WHERE status = $2
-               ORDER BY sent_at DESC, id LIMIT $1`,
-              [bounded, status],
-            );
+      const rows = await client.query(
+        `SELECT ${columns} FROM feedback_notes
+          WHERE ($3::text IS NULL OR status = $3) AND ${searchMatch.replaceAll("$SEARCH", "$4")}
+          ORDER BY sent_at DESC, id LIMIT $1 OFFSET $2`,
+        [bounded, pageOffset(page), status ?? null, searchPattern(page?.query) ?? null],
+      );
       return rows.map(noteRecord);
+    },
+
+    get: async (noteId) => {
+      const [row] = await client.query(`SELECT ${columns} FROM feedback_notes WHERE id = $1`, [
+        noteId,
+      ]);
+      return row === undefined ? undefined : noteRecord(row);
+    },
+
+    statusCounts: async (query) => {
+      const rows = await client.query(
+        `SELECT status, count(*) AS total FROM feedback_notes
+          WHERE ${searchMatch.replaceAll("$SEARCH", "$1")} GROUP BY status`,
+        [searchPattern(query) ?? null],
+      );
+      const counts = Object.fromEntries(feedbackStatuses.map((status) => [status, 0])) as Record<
+        FeedbackStatus,
+        number
+      >;
+      for (const row of rows) {
+        const status = String(row.status) as FeedbackStatus;
+        if (feedbackStatuses.includes(status)) counts[status] = Number(row.total);
+      }
+      return counts;
     },
 
     // Note ids are random UUIDs, so one id names one note across organisations. The

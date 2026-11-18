@@ -1,31 +1,101 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type { CrossEncoder } from "@draft-loop/embeddings";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
+import type { GradedRequirementEvidenceMap } from "./requirement-evidence-grade.js";
 
 import {
   buildRequirementEvidenceMap,
   type RequirementEvidenceMap,
 } from "./requirement-evidence-map.js";
 import {
+  openRunCrossEncoder,
+  requirementEvidenceRerankEnabled,
+  rerankRequirementEvidenceMap,
+} from "./requirement-evidence-rerank.js";
+import {
   openRunEmbedder,
   type RunSemanticRetrievalOptions,
   runEmbeddingModelRoot,
 } from "./run-semantic-retrieval.js";
 
-/** Where a run uses its requirement-evidence map; each use is off unless the setting names it. */
+/**
+ * Where a run uses its requirement-evidence map. Unset or empty means the default uses; `off`
+ * turns every use off; otherwise only the named uses are on.
+ */
 export const requirementEvidenceMapUseSetting = "DRAFT_LOOP_EVIDENCE_MAP";
 
 export const requirementEvidenceMapUses = ["fallback", "writer", "critic"] as const;
 export type RequirementEvidenceMapUse = (typeof requirementEvidenceMapUses)[number];
 
-/** The uses named in the setting, a comma-separated list such as `fallback,writer`. */
+/**
+ * The uses on by default (#2985): a capped run's added chunks follow the map, which recovered
+ * clearly more accomplishments than shared-word picks. The writer and critic uses added cost on
+ * full-source runs without recovering more, so they stay opt-in.
+ */
+export const defaultRequirementEvidenceMapUses: readonly RequirementEvidenceMapUse[] = ["fallback"];
+
+/** The uses the setting turns on: a comma-separated list such as `fallback,writer`, or `off`. */
 export function enabledRequirementEvidenceMapUses(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): ReadonlySet<RequirementEvidenceMapUse> {
-  const named = new Set(
-    (env[requirementEvidenceMapUseSetting] ?? "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase()),
-  );
+  const value = (env[requirementEvidenceMapUseSetting] ?? "").trim();
+  if (value === "") return new Set(defaultRequirementEvidenceMapUses);
+  const named = new Set(value.split(",").map((entry) => entry.trim().toLowerCase()));
   return new Set(requirementEvidenceMapUses.filter((use) => named.has(use)));
+}
+
+/**
+ * The writer's preferred evidence (#2983): each requirement's map candidates, best first, when
+ * the setting names the `writer` use and the run builds a map. Undefined otherwise.
+ */
+export function preferredEvidenceFromMap(
+  requirementEvidenceMap: (() => Promise<RequirementEvidenceMap | undefined>) | undefined,
+  enabled: boolean = enabledRequirementEvidenceMapUses().has("writer"),
+): (() => Promise<PreferredRequirementEvidence | undefined>) | undefined {
+  if (!enabled || requirementEvidenceMap === undefined) return undefined;
+  return async () => {
+    const map = await requirementEvidenceMap();
+    return map === undefined
+      ? undefined
+      : new Map(
+          map.entries.map(({ requirementId, candidates }) => [
+            requirementId,
+            candidates.map(({ chunkId }) => chunkId),
+          ]),
+        );
+  };
+}
+
+/**
+ * The critic's view of the map (#2983): each requirement's candidates, best first, when the setting
+ * names the `critic` use and the run builds a map. Undefined otherwise.
+ */
+export function criticEvidenceFromMap(
+  requirementEvidenceMap: (() => Promise<RequirementEvidenceMap | undefined>) | undefined,
+  enabled: boolean = enabledRequirementEvidenceMapUses().has("critic"),
+): (() => Promise<PreferredRequirementEvidence | undefined>) | undefined {
+  return preferredEvidenceFromMap(requirementEvidenceMap, enabled);
+}
+
+/** The map's candidates without the pairs the run's grade said do not support the requirement. */
+export function withoutUnsupportedEvidence(
+  evidence: PreferredRequirementEvidence,
+  graded: GradedRequirementEvidenceMap | undefined,
+): PreferredRequirementEvidence {
+  if (graded === undefined) return evidence;
+  const unsupported = new Set(
+    graded.entries.flatMap(({ requirementId, candidates }) =>
+      candidates
+        .filter(({ grade }) => grade === "does-not-support")
+        .map(({ chunkId }) => `${requirementId}\u0000${chunkId}`),
+    ),
+  );
+  return new Map(
+    [...evidence].map(([requirementId, chunkIds]) => [
+      requirementId,
+      chunkIds.filter((chunkId) => !unsupported.has(`${requirementId}\u0000${chunkId}`)),
+    ]),
+  );
 }
 
 export interface RequirementEvidenceMapRuntime {
@@ -36,12 +106,18 @@ export interface RequirementEvidenceMapRuntime {
 export type RunRequirementEvidenceMapOptions = Pick<
   RunSemanticRetrievalOptions,
   "tier" | "modelService" | "createEmbedder" | "shareEmbedder" | "relevanceFloor"
-> & { readonly modelRoot?: string };
+> & {
+  readonly modelRoot?: string;
+  /** Reorder candidates with the local cross-encoder; defaults to the rerank setting. */
+  readonly rerank?: boolean;
+  readonly openCrossEncoder?: () => Promise<CrossEncoder | undefined>;
+};
 
 /**
  * Give a run's retrieval a memoized requirement-evidence map (#2981). The map is built once, from
  * the same eligible chunks full source sends, with the process-shared local embedder when one is
- * installed. It is undefined when the job has no requirements or the run has no eligible chunks.
+ * installed, and reordered by the local cross-encoder when the rerank setting is on (#3022). It is
+ * undefined when the job has no requirements or the run has no eligible chunks.
  */
 export function withRequirementEvidenceMap<Runtime extends RequirementEvidenceMapRuntime>(
   runtime: Runtime,
@@ -64,12 +140,17 @@ export function withRequirementEvidenceMap<Runtime extends RequirementEvidenceMa
         ...(options.createEmbedder === undefined ? {} : { createEmbedder: options.createEmbedder }),
         ...(options.shareEmbedder === undefined ? {} : { shareEmbedder: options.shareEmbedder }),
       }).catch(() => ({ ok: false as const }));
-      return buildRequirementEvidenceMap({
+      const built = await buildRequirementEvidenceMap({
         requirements,
         eligible,
         ...(opened.ok ? { embedder: opened.embedder } : { unavailableReason: "no-model" as const }),
         ...(options.relevanceFloor === undefined ? {} : { floor: options.relevanceFloor }),
       });
+      if (!(options.rerank ?? requirementEvidenceRerankEnabled())) return built;
+      const encoder = await (options.openCrossEncoder ?? (() => openRunCrossEncoder()))().catch(
+        () => undefined,
+      );
+      return rerankRequirementEvidenceMap({ map: built, requirements, eligible, encoder });
     })();
     return map;
   };

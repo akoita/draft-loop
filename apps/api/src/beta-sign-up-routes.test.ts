@@ -27,6 +27,11 @@ const invites: BetaInvites = {
     code: "ABCDEFGHJKMNPQRS",
   })),
   list: vi.fn<BetaInvites["list"]>(async () => []),
+  stateCounts: vi.fn<BetaInvites["stateCounts"]>(async () => ({
+    open: 0,
+    revoked: 0,
+    redeemed: 0,
+  })),
   revoke: vi.fn<BetaInvites["revoke"]>(async ({ inviteId }) => inviteId === "invite-1"),
   redeem,
   redeemedCount: vi.fn(async () => 3),
@@ -265,6 +270,7 @@ describe("operator beta invite routes", () => {
     });
     expect(created.statusCode).toBe(201);
     expect(created.json().code).toBe("ABCDEFGHJKMNPQRS");
+    expect(created.json().emailed).toBe(false);
 
     const listed = await server.inject({
       method: "GET",
@@ -273,6 +279,8 @@ describe("operator beta invite routes", () => {
     });
     expect(listed.json()).toEqual({
       invites: [],
+      total: 0,
+      counts: { open: 0, revoked: 0, redeemed: 0 },
       redeemed: 3,
       open: 0,
       cap: 25,
@@ -317,6 +325,7 @@ describe("the operator's runtime cap", () => {
         state: "revoked",
       },
     ]);
+    vi.mocked(invites.stateCounts).mockResolvedValue({ open: 1, revoked: 1, redeemed: 0 });
     try {
       const set = await server.inject({
         method: "PUT",
@@ -338,11 +347,31 @@ describe("the operator's runtime cap", () => {
         url: "/v1/operator/beta-invites",
         headers: owner,
       });
-      expect(listed.json()).toMatchObject({ cap: 10, capSource: "operator", open: 1 });
+      expect(listed.json()).toMatchObject({
+        cap: 10,
+        capSource: "operator",
+        open: 1,
+        total: 2,
+        counts: { open: 1, revoked: 1, redeemed: 0 },
+      });
+      const filtered = await server.inject({
+        method: "GET",
+        url: "/v1/operator/beta-invites?state=revoked&q=b%40&limit=10&offset=10",
+        headers: owner,
+      });
+      expect(filtered.json()).toMatchObject({ total: 1 });
+      expect(invites.list).toHaveBeenLastCalledWith({
+        limit: 10,
+        offset: 10,
+        query: "b@",
+        state: "revoked",
+      });
+      expect(invites.stateCounts).toHaveBeenCalledWith("b@");
     } finally {
       vi.mocked(invites.operatorCap).mockReset();
       vi.mocked(invites.setOperatorCap).mockReset();
       vi.mocked(invites.list).mockResolvedValue([]);
+      vi.mocked(invites.stateCounts).mockResolvedValue({ open: 0, revoked: 0, redeemed: 0 });
     }
   });
 

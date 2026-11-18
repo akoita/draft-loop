@@ -90,6 +90,8 @@ export interface AuthorizationRequest {
   readonly redirectUri: string;
   readonly state: string;
   readonly codeChallenge: string;
+  /** The screen's language, so the provider's pages and mail use it too. */
+  readonly uiLocale?: string;
 }
 
 /** The provider's sign-in page for one attempt. */
@@ -102,6 +104,7 @@ export function authorizationUrl(endpoint: string, request: AuthorizationRequest
   url.searchParams.set("state", request.state);
   url.searchParams.set("code_challenge", request.codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
+  if (request.uiLocale !== undefined) url.searchParams.set("ui_locales", request.uiLocale);
   return url.toString();
 }
 

@@ -11,6 +11,14 @@ export {
   getGraniteEmbeddingModel,
   graniteEmbeddingModels,
 } from "./model-manifest.js";
+export type {
+  CrossEncoder,
+  CrossEncoderIdentity,
+  OnnxCrossEncoderOptions,
+  PairTokenizerFactory,
+  PairTokenizerLike,
+} from "./onnx-cross-encoder.js";
+export { createOnnxCrossEncoder } from "./onnx-cross-encoder.js";
 export type { OnnxRuntimeCheckOptions, OnnxRuntimeCheckResult } from "./onnx-runtime-check.js";
 export { verifyOnnxRuntime } from "./onnx-runtime-check.js";
 export type { OnnxRuntimeLoaderOptions, OnnxRuntimeModule } from "./onnx-runtime-loader.js";
@@ -29,7 +37,11 @@ export type {
   TokenizerFactory,
   TokenizerLike,
 } from "./onnx-text-embedder.js";
-export { createOnnxTextEmbedder, onnxRuntimeIdentity } from "./onnx-text-embedder.js";
+export {
+  createOnnxTextEmbedder,
+  defaultOnnxSessionFactory,
+  onnxRuntimeIdentity,
+} from "./onnx-text-embedder.js";
 export type { SemanticRelevanceFloor } from "./relevance-floor.js";
 export {
   applySemanticRelevanceFloor,
@@ -37,6 +49,8 @@ export {
   defaultSemanticRelevanceFloors,
   semanticRelevanceFloorForIdentity,
 } from "./relevance-floor.js";
+export type { CrossEncoderModel } from "./reranker-manifest.js";
+export { bgeRerankerV2M3, crossEncoderModelFiles } from "./reranker-manifest.js";
 export type {
   EmbeddingModelIdentity,
   EmbeddingRole,

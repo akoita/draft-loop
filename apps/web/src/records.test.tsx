@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
-import { MemberList, MembersPanel, RecordPicker, Records } from "./records.js";
+import { JobSearchDeleted, MemberList, MembersPanel, RecordPicker, Records } from "./records.js";
 import { createRecordMemory } from "./records-model.js";
 
 const unusedClient: ApiClient = {
@@ -172,5 +172,26 @@ describe("record members", () => {
 
     expect(html).toContain('role="status">Reading your job searches…</p>');
     expect(html).not.toContain("screens for");
+  });
+});
+
+describe("after deleting the only job search", () => {
+  it("says the person is still signed in and offers a new job search or signing out", () => {
+    const html = renderToStaticMarkup(
+      <JobSearchDeleted onStartAgain={() => {}} onSignOut={() => {}} />,
+    );
+
+    expect(html).toContain("Your job search and everything stored for it were deleted.");
+    expect(html).toContain("You are still signed in.");
+    expect(html).toContain("Start a new job search");
+    expect(html).toContain("Sign out");
+  });
+
+  it("offers only a new job search where there is no sign-in", () => {
+    const html = renderToStaticMarkup(<JobSearchDeleted onStartAgain={() => {}} />);
+
+    expect(html).toContain("Start a new job search");
+    expect(html).not.toContain("Sign out");
+    expect(html).not.toContain("still signed in");
   });
 });

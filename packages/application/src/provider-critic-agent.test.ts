@@ -653,3 +653,134 @@ describe("requirement-evidence grade on the critic step (#2996)", () => {
     );
   });
 });
+
+describe("critic use of the requirement-evidence map (#2983)", () => {
+  const v10 = {
+    ...context,
+    modelConfiguration: {
+      ...context.modelConfiguration,
+      critic: { ...context.modelConfiguration.critic, promptTemplateVersion: "cli-critic-v10" },
+    },
+  } as ContextSnapshot;
+  // Invented evidence: chunk-0 meets the requirement in other words, chunk-1 only shares words.
+  const mapped: readonly ScoredEvidenceChunk[] = [
+    { ...(evidence[0] as ScoredEvidenceChunk), text: "Wrote internal developer tooling in Go." },
+    { ...(evidence[1] as ScoredEvidenceChunk), text: "Attended a TypeScript tools meetup." },
+  ];
+  const map = {
+    mode: "semantic" as const,
+    chunkCount: 2,
+    entries: [
+      {
+        requirementId: "requirement",
+        candidates: [
+          { chunkId: "chunk-0", score: 0.9, origin: "semantic" as const },
+          { chunkId: "chunk-1", origin: "keyword" as const },
+        ],
+      },
+    ],
+  };
+
+  function mapCritic(requests: ModelRequest<JsonObject>[], withMap: boolean, grade: boolean) {
+    return createProviderCriticAgent({
+      context: v10,
+      promptContext: v10,
+      dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+      criticCompany: "openai",
+      criticModel: "c",
+      userError: (message) => new Error(message),
+      ...(withMap
+        ? { mapEvidence: async () => new Map([["requirement", ["chunk-0", "chunk-1"]]]) }
+        : {}),
+      ...(grade
+        ? {
+            evidenceGrade: {
+              map: async () => map,
+              eligible: async () => mapped,
+              record: async () => {},
+            },
+          }
+        : {}),
+      createAdapter: async () => ({
+        execute: async (request: ModelRequest<JsonObject>) => {
+          requests.push(request);
+          const output =
+            request.outputName === "requirement_evidence_grade"
+              ? {
+                  grades: [
+                    {
+                      requirementId: "requirement",
+                      chunkId: "chunk-0",
+                      grade: "supports",
+                      reason: "States developer tooling work.",
+                    },
+                    {
+                      requirementId: "requirement",
+                      chunkId: "chunk-1",
+                      grade: "does-not-support",
+                      reason: "Shares words only.",
+                    },
+                  ],
+                }
+              : request.outputName === "omission_check"
+                ? { omissions: [] }
+                : { findings: [], coverageJudgements: [] };
+          return {
+            output,
+            provider: "openai",
+            modelId: "c",
+            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            cost: { estimatedUsd: 0 },
+          } as unknown as ModelResponse<JsonObject>;
+        },
+      }),
+    });
+  }
+
+  const themesOf = (requests: ModelRequest<JsonObject>[]) =>
+    Object.fromEntries(
+      requests
+        .filter(({ outputName }) => outputName === "omission_check")
+        .flatMap(({ input }) => input.chunks as { id: string; themeIds: string[] }[])
+        .map(({ id, themeIds }) => [id, themeIds]),
+    );
+
+  it("cites the map's chunks for the check and drops the pairs the grade rejected", async () => {
+    const requests: ModelRequest<JsonObject>[] = [];
+    const critic = mapCritic(requests, true, true);
+    await critic.execute({ ...critique(1), retrievedEvidence: mapped } as never);
+    expect(themesOf(requests)).toEqual({ "chunk-0": ["requirement"], "chunk-1": [] });
+    const graded = requests.findIndex(
+      ({ outputName }) => outputName === "requirement_evidence_grade",
+    );
+    const checked = requests.findIndex(({ outputName }) => outputName === "omission_check");
+    expect(graded).toBeLessThan(checked);
+
+    // A later round keeps the first round's grade.
+    requests.length = 0;
+    await critic.execute({ ...critique(2), retrievedEvidence: mapped } as never);
+    expect(themesOf(requests)).toEqual({ "chunk-0": ["requirement"], "chunk-1": [] });
+  });
+
+  it("lets the map choose the critic's plan chunk and leaves words alone without it", async () => {
+    const withMap: ModelRequest<JsonObject>[] = [];
+    await mapCritic(withMap, true, false).execute({
+      ...critique(1),
+      retrievedEvidence: mapped,
+    } as never);
+    const plain: ModelRequest<JsonObject>[] = [];
+    await mapCritic(plain, false, false).execute({
+      ...critique(1),
+      retrievedEvidence: mapped,
+    } as never);
+    const plan = (requests: ModelRequest<JsonObject>[]) =>
+      JSON.stringify(
+        requests.find(({ outputName }) => outputName === "draft_critique")?.input.achievementPlan,
+      );
+    expect(plan(withMap)).toContain("chunk-0");
+    expect(plan(plain)).not.toContain("chunk-0");
+    expect(themesOf(plain)["chunk-0"]).toEqual([]);
+    // Ungraded, the keyword candidate is cited too; the grade is what drops it.
+    expect(themesOf(withMap)).toEqual({ "chunk-0": ["requirement"], "chunk-1": ["requirement"] });
+  });
+});

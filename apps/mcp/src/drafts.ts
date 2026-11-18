@@ -42,6 +42,67 @@ export interface AgentMaterial extends AgentMaterialSummary {
 export interface DraftsApi {
   cv(applicationId: string): Promise<AgentCv>;
   materials(applicationId: string, kind?: string): Promise<readonly AgentMaterial[]>;
+  requirementEvidence(runId: string): Promise<AgentRequirementEvidence>;
+}
+
+/** Which of the candidate's sources support each job requirement of a run (#3010). */
+export interface AgentRequirementEvidence {
+  readonly run_id: string;
+  readonly matched_by: "meaning-and-keywords" | "keywords-only";
+  readonly graded: boolean;
+  readonly requirements: readonly {
+    readonly requirement_id: string;
+    readonly requirement: string | null;
+    readonly evidence: readonly {
+      readonly source: string | null;
+      readonly lines: string | null;
+      readonly match: "meaning" | "keywords" | "both";
+      readonly score: number | null;
+      readonly grade: "supports" | "partly-supports" | "does-not-support" | null;
+    }[];
+  }[];
+}
+
+interface RequirementEvidenceBody {
+  readonly runId: string;
+  readonly mode: "semantic" | "keyword";
+  readonly grading?: "graded" | "failed";
+  readonly requirements: readonly {
+    readonly requirementId: string;
+    readonly text?: string;
+    readonly candidates: readonly {
+      readonly origin: "semantic" | "keyword" | "both";
+      readonly score?: number;
+      readonly source?: string;
+      readonly lineStart?: number;
+      readonly lineEnd?: number;
+      readonly grade?: "supports" | "partly-supports" | "does-not-support";
+    }[];
+  }[];
+}
+
+const matchOf = { semantic: "meaning", keyword: "keywords", both: "both" } as const;
+
+function requirementEvidenceOf(body: RequirementEvidenceBody): AgentRequirementEvidence {
+  return {
+    run_id: body.runId,
+    matched_by: body.mode === "semantic" ? "meaning-and-keywords" : "keywords-only",
+    graded: body.grading === "graded",
+    requirements: body.requirements.map(({ requirementId, text, candidates }) => ({
+      requirement_id: requirementId,
+      requirement: text ?? null,
+      evidence: candidates.map((candidate) => ({
+        source: candidate.source ?? null,
+        lines:
+          candidate.lineStart === undefined || candidate.lineEnd === undefined
+            ? null
+            : `${candidate.lineStart}-${candidate.lineEnd}`,
+        match: matchOf[candidate.origin],
+        score: candidate.score ?? null,
+        grade: candidate.grade ?? null,
+      })),
+    })),
+  };
 }
 
 interface ApplicationBody {
@@ -152,6 +213,12 @@ export function createDraftsApi(call: WorkspaceApiCall): DraftsApi {
       )) as { readonly drafts: readonly MaterialBody[] };
       return drafts.map(materialOf);
     },
+    requirementEvidence: async (runId) =>
+      requirementEvidenceOf(
+        (await call(`/runs/${pathId(runId, "run")}/requirement-evidence`, {
+          method: "GET",
+        })) as RequirementEvidenceBody,
+      ),
   };
 }
 
@@ -163,6 +230,9 @@ export const listMaterialsDescription =
 
 export const getMaterialDescription =
   "Read one saved cover letter, interview preparation guide or interview question set: its paragraphs, each question with its talking point, or each guide item with its section and, for a likely question, the trap to avoid. A guide's never-say list is left out. Quote it as the candidate saved it. Needs the drafts:read scope.";
+
+export const getRequirementEvidenceDescription =
+  "Read which of the candidate's evidence sources support each job requirement of one CV run: for each requirement, the sources best first with their lines, whether they matched by meaning, keywords or both, and, when the run graded them, whether each supports the requirement. It names sources but never quotes them. A run without requirement matching answers not_found. Use it to explain a draft or to see which requirements lack evidence; never as a CV claim. Needs the drafts:read scope.";
 
 const kinds = ["cover-letter", "interview-guide", "interview-questions"] as const;
 
@@ -269,6 +339,50 @@ export function registerDraftTools(server: McpServer, api: DraftsApi, failure: F
           );
         }
         return answer({ ...found, items: [...found.items] });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_requirement_evidence",
+    {
+      title: "Read which evidence supports each requirement",
+      description: getRequirementEvidenceDescription,
+      inputSchema: z.object({ run_id: applicationId }),
+      outputSchema: z.object({
+        run_id: z.string(),
+        matched_by: z.enum(["meaning-and-keywords", "keywords-only"]),
+        graded: z.boolean(),
+        requirements: z.array(
+          z.object({
+            requirement_id: z.string(),
+            requirement: z.string().nullable(),
+            evidence: z.array(
+              z.object({
+                source: z.string().nullable(),
+                lines: z.string().nullable(),
+                match: z.enum(["meaning", "keywords", "both"]),
+                score: z.number().nullable(),
+                grade: z.enum(["supports", "partly-supports", "does-not-support"]).nullable(),
+              }),
+            ),
+          }),
+        ),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ run_id }) => {
+      try {
+        const evidence = await api.requirementEvidence(run_id);
+        return answer({
+          ...evidence,
+          requirements: evidence.requirements.map((requirement) => ({
+            ...requirement,
+            evidence: [...requirement.evidence],
+          })),
+        });
       } catch (error) {
         return failure(error);
       }

@@ -43,6 +43,7 @@ import type { SqlClient } from "./sql-client.js";
 import { supportTicketsMigration } from "./support-tickets-migration.js";
 import { supportUsageMigration } from "./support-usage-migration.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
+import { waitlistConfirmationMigration } from "./waitlist-confirmation-migration.js";
 import { workJournalMigration } from "./work-journal-migration.js";
 
 /**
@@ -860,6 +861,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   betaTermsAcceptanceMigration,
   betaAccountCapMigration,
   supportUsageMigration,
+  waitlistConfirmationMigration,
 ];
 
 /** Serializes concurrent migrators on one database; any constant shared by all of them works. */

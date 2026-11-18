@@ -66,7 +66,7 @@ export function signUpRefusal(error: unknown): SignUpRefusal | undefined {
  * must match the API's `legalVersion` (apps/api/src/legal-pages.ts). An outdated one is refused
  * with `terms_not_accepted`.
  */
-export const acceptedTermsVersion = "2026-11-17";
+export const acceptedTermsVersion = "2026-11-18";
 
 /** Redeems a code with the accepted terms; resolves when the account exists. */
 export async function redeemInvite(client: ApiClient, code: string): Promise<void> {

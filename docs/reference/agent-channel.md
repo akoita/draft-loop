@@ -276,6 +276,7 @@ returns a run's open draft, its findings or career evidence.
 | `get_cv`               | `drafts:read`       | Reads the newest Markdown export of the CV the application uses                                    |
 | `list_materials`       | `drafts:read`       | Lists saved cover letters, interview guides and question sets, without text                        |
 | `get_material`         | `drafts:read`       | Reads one saved letter, guide or question set, without its cited facts or a guide's never-say list |
+| `get_requirement_evidence` | `drafts:read` | Lists which of the candidate's sources support each job requirement of a run, with lines, match type and grade, never their text |
 | `estimate_run`         | `runs:start`        | Prices a run and says what remains of the token's monthly spend cap                                |
 | `start_cv_run`         | `runs:start`        | Starts a CV run on the newest reviewed brief, within the cap                                       |
 | `draft_cover_letter`   | `runs:start`        | Drafts and saves a cover letter, within the cap                                                    |

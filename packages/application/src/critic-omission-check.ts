@@ -122,7 +122,9 @@ export type OmissionCheckScope = "cited-chunks" | "every-chunk";
  * cited for it. A `cited-chunks` scope makes one call over the cited chunks alone, with the
  * themes they serve. An `every-chunk` scope makes one call per slice of the retrieved evidence,
  * every slice with every theme, and a chunk no theme cites carries no theme id. Empty when
- * nothing is left to compare: no candidate chunk, or no theme at all.
+ * nothing is left to compare: no candidate chunk, or no theme at all. With `mapEvidence` (the
+ * critic use of the requirement-evidence map, #2983), a chunk the map links to one of a theme's
+ * requirements is cited for that theme too, so a chunk that meets it in other words counts.
  */
 export function omissionCheckInputs(
   artifact: Pick<DraftArtifact, "sections">,
@@ -131,6 +133,7 @@ export function omissionCheckInputs(
   requirements: readonly (PlanningRequirement & { readonly priority?: string })[],
   achievementPlan: Pick<RequirementAchievementPlan, "achievements">,
   scope: OmissionCheckScope,
+  mapEvidence?: ReadonlyMap<string, readonly string[]>,
 ): readonly OmissionCheckInput[] {
   const chunkThemes = new Map<string, string[]>();
   const cite = (chunkId: string, themeId: string) => {
@@ -158,6 +161,13 @@ export function omissionCheckInputs(
     }
   }
   if (themes.length === 0) return [];
+  if (mapEvidence !== undefined) {
+    for (const theme of themes) {
+      for (const requirementId of theme.requirementIds) {
+        for (const chunkId of mapEvidence.get(requirementId) ?? []) cite(chunkId, theme.id);
+      }
+    }
+  }
   const chunks: OmissionCheckChunk[] = [];
   const seen = new Set<string>();
   for (const chunk of retrievedEvidence) {

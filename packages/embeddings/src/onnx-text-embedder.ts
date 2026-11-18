@@ -72,7 +72,8 @@ export interface OnnxTextEmbedderOptions {
 const defaultBatchSize = 8;
 const defaultMaxCharacters = 20_000;
 
-const defaultSessionFactory: OnnxSessionFactory = async (modelPath, options) => {
+/** Opens an ONNX session on the CPU; shared by the embedder and the cross-encoder. */
+export const defaultOnnxSessionFactory: OnnxSessionFactory = async (modelPath, options) => {
   const ort = await loadOnnxRuntime();
   const session = await ort.InferenceSession.create(modelPath, {
     intraOpNumThreads: options.intraOpNumThreads,
@@ -228,7 +229,7 @@ export async function createOnnxTextEmbedder(
     join(options.modelDirectory, model.files.tokenizer.path),
     join(options.modelDirectory, model.files.tokenizerConfig.path),
   );
-  const session = await (options.sessionFactory ?? defaultSessionFactory)(
+  const session = await (options.sessionFactory ?? defaultOnnxSessionFactory)(
     join(options.modelDirectory, model.files.model.path),
     { intraOpNumThreads: threads },
   );
