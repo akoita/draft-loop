@@ -1331,6 +1331,10 @@ msgstr "Allow pull requests from {0}"
 msgid "Allow this repository"
 msgstr "Allow this repository"
 
+#: apps/web/src/waitlist-model.ts
+msgid "Almost done: check your inbox. We sent you a link to confirm your address, and your place counts once you open it. The link works for 48 hours. Nothing arrived? Look in your spam folder, or join again in 10 minutes."
+msgstr "Almost done: check your inbox. We sent you a link to confirm your address, and your place counts once you open it. The link works for 48 hours. Nothing arrived? Look in your spam folder, or join again in 10 minutes."
+
 #: packages/ui/src/career-evidence.ts
 msgid "Already in {displayName}."
 msgstr "Already in {displayName}."
@@ -2492,6 +2496,10 @@ msgstr "Confirm that runs may combine these knowledge bases."
 #: apps/web/src/consent-model.ts
 msgid "Confirm that the candidate agreed to send their material."
 msgstr "Confirm that the candidate agreed to send their material."
+
+#: apps/web/src/waitlist-model.ts
+msgid "Confirming your email address…"
+msgstr "Confirming your email address…"
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Conflicting dates"
@@ -9321,6 +9329,10 @@ msgid "Thanks. You are on the waitlist. Places open in small groups and access o
 msgstr "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
 
 #: apps/web/src/waitlist-model.ts
+msgid "That confirmation link has expired or is unknown. Join the waitlist again below to get a new one."
+msgstr "That confirmation link has expired or is unknown. Join the waitlist again below to get a new one."
+
+#: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
 msgstr "That does not look like an email address. Check it and try again."
 
@@ -10807,6 +10819,10 @@ msgid "Tone"
 msgstr "Tone"
 
 #: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then open the link again."
+msgstr "Too many attempts from this connection. Wait an hour, then open the link again."
+
+#: apps/web/src/waitlist-model.ts
 msgid "Too many attempts from this connection. Wait an hour, then try again."
 msgstr "Too many attempts from this connection. Wait an hour, then try again."
 
@@ -11803,6 +11819,14 @@ msgstr "Your documents could not be opened. Open their store under Advanced opti
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address could not be confirmed just now. Open the link again in a few minutes."
+msgstr "Your email address could not be confirmed just now. Open the link again in a few minutes."
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address is confirmed and you are on the waitlist. We will email you an invite when your place is ready."
+msgstr "Your email address is confirmed and you are on the waitlist. We will email you an invite when your place is ready."
 
 #: packages/ui/src/profile.tsx
 msgid "Your facts"

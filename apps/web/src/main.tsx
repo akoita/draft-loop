@@ -11,6 +11,7 @@ import {
   inviteCodeFromHash,
   keepInviteCode,
   keptInviteCode,
+  waitlistConfirmTokenFromHash,
 } from "./invite-link.js";
 import { NewReleaseWatch } from "./new-release.js";
 import { createOidcSession } from "./oidc-session.js";
@@ -67,10 +68,12 @@ function Screens({ children }: { readonly children: ReactNode }) {
   );
 }
 
-// An invite email's link carries its code after `#`: keep it for this tab and tidy the address.
+// An emailed link carries its secret after `#`: keep an invite's code for this tab, read a
+// waitlist confirmation's token once, and tidy the address.
 const linkedInvite = inviteCodeFromHash(location.hash);
-if (linkedInvite !== undefined) {
-  keepInviteCode(globalThis.sessionStorage, linkedInvite);
+const waitlistConfirmToken = waitlistConfirmTokenFromHash(location.hash);
+if (linkedInvite !== undefined) keepInviteCode(globalThis.sessionStorage, linkedInvite);
+if (linkedInvite !== undefined || waitlistConfirmToken !== undefined) {
   history.replaceState(null, "", `${location.pathname}${location.search}`);
 }
 const inviteCode = keptInviteCode(globalThis.sessionStorage);
@@ -113,6 +116,7 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
       waitlist={config.waitlist === true}
       {...(inviteCode === undefined ? {} : { inviteCode })}
       onInviteUsed={() => forgetInviteCode(globalThis.sessionStorage)}
+      {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
     />
   );
 }

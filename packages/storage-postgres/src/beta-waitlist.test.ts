@@ -140,4 +140,84 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
       expect((await betaWaitlist.list()).map((entry) => entry.email)).toEqual(["new@example.test"]);
     });
   });
+
+  const hashA = "a".repeat(64);
+  const hashB = "b".repeat(64);
+  const spacing = { resendAfterMs: 10 * 60_000, maxSends: 3 };
+  const later = (minutes: number) => new Date(now.getTime() + minutes * 60_000);
+
+  it("keeps an unconfirmed entry off the list until its link is opened", async () => {
+    await withDirectory(async ({ betaWaitlist }) => {
+      await expect(
+        betaWaitlist.joinUnconfirmed({
+          email: "ada@example.test",
+          consentVersion,
+          locale: "fr",
+          tokenHash: hashA,
+          now,
+          ...spacing,
+        }),
+      ).resolves.toBe("send");
+      await expect(betaWaitlist.list()).resolves.toEqual([]);
+      await expect(betaWaitlist.count()).resolves.toBe(0);
+
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashB, now: later(1), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(false);
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashA, now: later(1), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(true);
+      // A second click on the same link still says it worked.
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashA, now: later(2), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(true);
+      expect((await betaWaitlist.list()).map((entry) => entry.email)).toEqual(["ada@example.test"]);
+    });
+  });
+
+  it("refuses an expired link and invites only confirmed entries", async () => {
+    await withDirectory(async ({ betaWaitlist }) => {
+      await betaWaitlist.joinUnconfirmed({
+        email: "ada@example.test",
+        consentVersion,
+        tokenHash: hashA,
+        now,
+        ...spacing,
+      });
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashA, now: later(49 * 60), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(false);
+      await expect(betaWaitlist.deleteUnconfirmedBefore(later(48 * 60))).resolves.toBe(1);
+      await expect(betaWaitlist.list()).resolves.toEqual([]);
+    });
+  });
+
+  it("spaces and caps the emails one address receives, and never re-sends a confirmed one", async () => {
+    await withDirectory(async ({ betaWaitlist }) => {
+      const join = (tokenHash: string, at: Date, email = "ada@example.test") =>
+        betaWaitlist.joinUnconfirmed({ email, consentVersion, tokenHash, now: at, ...spacing });
+
+      await expect(join(hashA, now)).resolves.toBe("send");
+      await expect(join(hashB, later(5))).resolves.toBe("skip");
+      await expect(join(hashB, later(11))).resolves.toBe("send");
+      await expect(join("c".repeat(64), later(22))).resolves.toBe("send");
+      await expect(join("d".repeat(64), later(33))).resolves.toBe("skip");
+      // The newest link is the one that works.
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashA, now: later(34), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(false);
+      await expect(
+        betaWaitlist.confirm({
+          tokenHash: "c".repeat(64),
+          now: later(34),
+          validMs: 48 * 3_600_000,
+        }),
+      ).resolves.toBe(true);
+
+      // An entry from before confirmation existed counts as confirmed and gets no email.
+      await betaWaitlist.join({ email: "bob@example.test", consentVersion, now });
+      await expect(join("e".repeat(64), later(60), "bob@example.test")).resolves.toBe("skip");
+      await expect(betaWaitlist.count()).resolves.toBe(2);
+    });
+  });
 });

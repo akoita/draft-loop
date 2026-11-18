@@ -1,7 +1,15 @@
+import { currentScreenLanguage } from "@draft-loop/ui/i18n";
 import { t } from "@lingui/core/macro";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { PreferencesBar } from "./shell-actions.js";
-import { joinWaitlist, type WaitlistOutcome, waitlistNotice } from "./waitlist-model.js";
+import {
+  confirmWaitlist,
+  joinWaitlist,
+  type WaitlistConfirmOutcome,
+  type WaitlistOutcome,
+  waitlistConfirmNotice,
+  waitlistNotice,
+} from "./waitlist-model.js";
 
 /** Where #2462 serves the legal pages. */
 export const legalLinks = {
@@ -30,7 +38,7 @@ export function WaitlistFormView({
   onConsentChange,
   onSubmit,
 }: WaitlistFormViewProps) {
-  if (outcome === "listed") {
+  if (outcome === "listed" || outcome === "check_inbox") {
     return (
       <p className="notice" role="status">
         {waitlistNotice(outcome)}
@@ -92,12 +100,40 @@ export function WaitlistForm({ fetchImpl }: { readonly fetchImpl?: typeof fetch 
       onConsentChange={setConsent}
       onSubmit={() => {
         setBusy(true);
-        void joinWaitlist(email, fetchImpl).then((result) => {
+        void joinWaitlist(email, fetchImpl, currentScreenLanguage()).then((result) => {
           setBusy(false);
           setOutcome(result);
         });
       }}
     />
+  );
+}
+
+/** The answer to a confirmation link the visitor opened: it confirms once, then says how it went. */
+export function WaitlistConfirmation({
+  token,
+  fetchImpl,
+}: {
+  readonly token: string;
+  readonly fetchImpl?: typeof fetch;
+}) {
+  const [outcome, setOutcome] = useState<WaitlistConfirmOutcome | "confirming">("confirming");
+  useEffect(() => {
+    let current = true;
+    void confirmWaitlist(token, fetchImpl).then((result) => {
+      if (current) setOutcome(result);
+    });
+    return () => {
+      current = false;
+    };
+  }, [token, fetchImpl]);
+  return (
+    <p
+      className="notice"
+      role={outcome === "confirmed" || outcome === "confirming" ? "status" : "alert"}
+    >
+      {waitlistConfirmNotice(outcome)}
+    </p>
   );
 }
 
@@ -109,10 +145,13 @@ export function WaitlistForm({ fetchImpl }: { readonly fetchImpl?: typeof fetch 
 export function Landing({
   signIn,
   fetchImpl,
+  confirmToken,
 }: {
   /** The sign-in block for people who already have an invite or an account. */
   readonly signIn: ReactNode;
   readonly fetchImpl?: typeof fetch;
+  /** The token of the waitlist confirmation link the visitor opened, if any. */
+  readonly confirmToken?: string;
 }) {
   return (
     <>
@@ -129,6 +168,12 @@ export function Landing({
         </section>
         <section aria-labelledby="landing-waitlist">
           <h2 id="landing-waitlist">{t`Join the waitlist`}</h2>
+          {confirmToken === undefined ? null : (
+            <WaitlistConfirmation
+              token={confirmToken}
+              {...(fetchImpl === undefined ? {} : { fetchImpl })}
+            />
+          )}
           <p>{t`Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready.`}</p>
           <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
         </section>

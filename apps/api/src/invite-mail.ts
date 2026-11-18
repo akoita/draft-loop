@@ -4,14 +4,9 @@
  * server log. The operator still sees the code once, as a fallback when mail is off or fails.
  */
 
-import {
-  createBrevoMailSender,
-  loggedMailSender,
-  type MailConfig,
-  type MailMessage,
-  readMailConfig,
-} from "@draft-loop/mail";
-import { createSecretManagerCredentialResolver } from "@draft-loop/model-gateway";
+import type { MailMessage } from "@draft-loop/mail";
+
+import type { ApiMail } from "./api-mail.js";
 
 export type InviteMailLocale = "en" | "fr";
 
@@ -89,67 +84,14 @@ export function inviteMessage(input: {
   };
 }
 
-interface MailLogLine {
-  readonly severity: "INFO" | "WARNING";
-  readonly message: string;
-  readonly fields: Record<string, unknown>;
-}
-
-/**
- * The API's invite mailer over the shared Brevo sender, or undefined when the deployment sets no
- * sender (`DRAFT_LOOP_MAIL_FROM`, `DRAFT_LOOP_MAIL_KEY_SECRET`, `DRAFT_LOOP_PUBLIC_URL`). A
- * partial setting throws at start. Logs name the template and the outcome only.
- */
-export function readInviteMailer(
-  env: NodeJS.ProcessEnv,
-  options: {
-    readonly log?: (line: MailLogLine) => void;
-    readonly send?: Parameters<typeof loggedMailSender>[0];
-  } = {},
-): InviteMailer | undefined {
-  const config = readMailConfig(env);
-  if (config === undefined) return undefined;
-  return createInviteMailer(config, options);
-}
-
-export function createInviteMailer(
-  config: MailConfig,
-  options: {
-    readonly log?: (line: MailLogLine) => void;
-    readonly send?: Parameters<typeof loggedMailSender>[0];
-  } = {},
-): InviteMailer {
-  const log =
-    options.log ??
-    ((line: MailLogLine) =>
-      console.info(
-        JSON.stringify({ severity: line.severity, message: line.message, ...line.fields }),
-      ));
-  let send = options.send;
-  if (send === undefined) {
-    const resolveKey = createSecretManagerCredentialResolver({
-      secrets: { brevo: config.keySecret },
-    });
-    send = createBrevoMailSender({
-      from: config.from,
-      apiKey: async () => {
-        const key = await resolveKey("brevo");
-        if (key === undefined) throw new Error("The mail key is missing.");
-        return key;
-      },
-    });
-  }
-  const logged = loggedMailSender<"beta_invite">(send, {
-    info: (fields, message) => log({ severity: "INFO", message, fields }),
-    warn: (fields, message) => log({ severity: "WARNING", message, fields }),
-  });
-  // A refused send or an unreadable key resolves false: the operator still has the code.
+/** The invite mailer over the API's mail; a refused send resolves false, so the operator still has the code. */
+export function createInviteMailer(mail: ApiMail): InviteMailer {
   return ({ email, code, locale }) =>
-    logged("beta_invite", {
+    mail.send("beta_invite", {
       to: email,
       ...inviteMessage({
         code,
-        serviceUrl: config.serviceUrl,
+        serviceUrl: mail.serviceUrl,
         ...(locale === undefined ? {} : { locale }),
       }),
     });

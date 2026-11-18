@@ -676,8 +676,19 @@ flowchart LR
 ### Beta waitlist
 
 A visitor without an invite joins the waitlist, in the directory's
-`betaWaitlist` (`beta-waitlist.ts`, #2566). The operator turns an entry into
-an invite and sends the code.
+`betaWaitlist` (`beta-waitlist.ts`, #2566). Where the API sends mail, the
+visitor first confirms the address (double opt-in). The operator turns a
+confirmed entry into an invite, which the API emails.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Unconfirmed: POST /v1/waitlist (mail on), link emailed
+  [*] --> Confirmed: POST /v1/waitlist (mail off)
+  Unconfirmed --> Unconfirmed: joins again after 10 minutes, new link (3 at most)
+  Unconfirmed --> Confirmed: POST /v1/waitlist/confirm within 48 hours
+  Unconfirmed --> [*]: deleted 48 hours after the last link
+  Confirmed --> [*]: invited (invite emailed), or deleted after 183 days
+```
 
 The waitlist exists only while the deployment opens the beta
 (`DRAFT_LOOP_BETA_ACCOUNT_CAP` above 0). It stays open when the runtime cap is
@@ -690,17 +701,24 @@ no analytics or third-party script, so it needs no cookie banner.
 
 | Route                                        | Who      | What it does                                                   |
 | -------------------------------------------- | -------- | -------------------------------------------------------------- |
-| `POST /v1/waitlist`                          | Anyone   | Lists an email with consent; answers 202 whether new or listed |
-| `GET /v1/operator/waitlist`                  | Operator | Lists a page of entries, oldest first (`limit`, `offset`, `q`), and the `total` |
+| `POST /v1/waitlist`                          | Anyone   | Lists an email with consent; answers 202 whether new or listed, with `confirm` when a link was due |
+| `POST /v1/waitlist/confirm`                  | Anyone   | Confirms the entry whose link token it receives; 404 when unknown or older than 48 hours |
+| `GET /v1/operator/waitlist`                  | Operator | Lists a page of confirmed entries, oldest first (`limit`, `offset`, `q`), and the `total` |
 | `POST /v1/operator/waitlist/:entryId/invite` | Operator | Creates an invite for the entry's email and deletes the entry  |
 
 - **Consent.** Each row records `betaWaitlistConsentVersion`, the version of
   the text beside the checkbox, and the day. Change the version with the text.
-- **Privacy.** The same answer for a new and a listed email reveals nobody.
-  Log lines carry no address. One address may join 5 times an hour.
-- **Retention.** An invited entry is deleted at once. Any other entry is
-  deleted 183 days after it was made, by the worker's sweep at each start
-  (`waitlist-retention.ts`, #2568), which logs only the count.
+- **Confirmation.** The link is `/#waitlist-confirm=<token>`, in the visitor's
+  language. The token travels after `#`, so no server log holds it, and the
+  database keeps only its SHA-256. Rows from before confirmation existed count
+  as confirmed. Each address gets at most 3 links, 10 minutes apart.
+- **Privacy.** The same answer for a new, an unconfirmed and a listed email
+  reveals nobody. Log lines carry no address or token. One network address may
+  join 5 times an hour, and try 5 confirmations an hour.
+- **Retention.** An invited entry is deleted at once. An unconfirmed entry is
+  deleted 48 hours after its last link, and any other entry 183 days after it
+  was made, by the worker's sweep at each start (`waitlist-retention.ts`,
+  #2568), which logs only the counts.
 
 ### Transactional email
 
@@ -710,6 +728,7 @@ The service sends a few plain emails through `@draft-loop/mail`
 | Sender | Email | Template |
 | ------ | ----- | -------- |
 | API    | A new beta invite: a link, `/#invite=<code>`, that opens sign-up with the code filled in | `beta_invite` |
+| API    | A waitlist sign-up's confirmation link, `/#waitlist-confirm=<token>` | `waitlist_confirm` |
 | Worker | The warning before an inactive beta account is erased (#2463) | `beta_inactivity_warning` |
 
 - **Sender.** Brevo's transactional API, a French provider in the EU, as

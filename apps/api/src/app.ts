@@ -130,6 +130,7 @@ import {
   TenantContextMissingError,
 } from "./tenant-context.js";
 import { registerUsageRoutes } from "./usage-routes.js";
+import type { WaitlistConfirmMailer } from "./waitlist-confirm-mail.js";
 import { contentSecurityPolicy, registerWebScreen } from "./web-screen.js";
 import { registerWorkJournalRoutes, type SourceEvidenceKinds } from "./work-journal-routes.js";
 import { createWorkJournalSignInChecks } from "./work-journal-sign-in.js";
@@ -241,6 +242,8 @@ export interface ApiOptions {
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
   /** Emails each new beta invite's sign-up link; absent where the deployment sets no sender. */
   readonly inviteMailer?: InviteMailer;
+  /** Emails each waitlist sign-up a confirmation link; absent where the deployment sets no sender. */
+  readonly waitlistConfirmMailer?: WaitlistConfirmMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
   /** The operator's run-time overrides of the support limits, from Secret Manager. */
@@ -964,6 +967,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     registerBetaWaitlistRoutes(app, {
       waitlist: options.betaWaitlist,
       ...(options.inviteMailer === undefined ? {} : { inviteMailer: options.inviteMailer }),
+      ...(options.waitlistConfirmMailer === undefined
+        ? {}
+        : { confirmMailer: options.waitlistConfirmMailer }),
     });
   }
   if (options.feedback !== undefined) {

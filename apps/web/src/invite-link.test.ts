@@ -5,6 +5,7 @@ import {
   inviteCodeFromHash,
   keepInviteCode,
   keptInviteCode,
+  waitlistConfirmTokenFromHash,
 } from "./invite-link.js";
 
 function memoryStorage(): Storage {
@@ -40,5 +41,15 @@ describe("the invite link", () => {
   it("works without storage", () => {
     keepInviteCode(undefined, "ABCD2345EFGH6789");
     expect(keptInviteCode(undefined)).toBeUndefined();
+  });
+});
+
+describe("the waitlist confirmation link", () => {
+  it("reads the token after #waitlist-confirm= and nothing else", () => {
+    expect(waitlistConfirmTokenFromHash("#waitlist-confirm=abcdefABCDEF0123_-xy")).toBe(
+      "abcdefABCDEF0123_-xy",
+    );
+    expect(waitlistConfirmTokenFromHash("#invite=ABCD2345EFGH6789")).toBeUndefined();
+    expect(waitlistConfirmTokenFromHash("#waitlist-confirm=short")).toBeUndefined();
   });
 });

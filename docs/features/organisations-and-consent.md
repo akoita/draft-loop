@@ -22,8 +22,10 @@ organisation; it erases everything with `draft-loop-server`
    organisation on first sign-in. Sign-up asks the person to accept the
    current terms of use and privacy policy, which say that drafting sends
    material to providers outside the EU, and records the accepted version.
-   A visitor without a code can join the waitlist, and the operator turns
-   an entry into an invite. Owners
+   A visitor without a code can join the waitlist. Where the server sends
+   mail, they confirm the address from an emailed link within 48 hours, and
+   only then wait for a place. The operator turns a waiting entry into an
+   invite. Owners
    and admins invite people by email; each active member or pending invitation
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
@@ -80,7 +82,7 @@ comes back into view; **Refresh** reads them at once. A list grown with
 | Section  | What it shows                                                                  |
 | -------- | ------------------------------------------------------------------------------ |
 | Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first |
-| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. An email that already redeemed an invite has an account and is left out. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
+| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that already redeemed an invite has an account and is left out. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
 | Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from |
 
 Where the server sends mail, each new invite emails its person a link,
@@ -114,7 +116,7 @@ The cap starts small and rises in steps, with no redeploy:
 | Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up           |
 | Screen | Operator: waitlist, invites and feedback                                                      |
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
-| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `/v1/operator/waitlist` |
+| API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `POST /v1/waitlist/confirm`, `/v1/operator/waitlist` |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
 | API    | `/v1/workspaces/{id}/archive`, record and organisation erasure                                |
 | MCP    | none                                                                                          |

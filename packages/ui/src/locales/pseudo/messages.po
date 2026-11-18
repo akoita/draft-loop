@@ -1331,6 +1331,10 @@ msgstr ""
 msgid "Allow this repository"
 msgstr ""
 
+#: apps/web/src/waitlist-model.ts
+msgid "Almost done: check your inbox. We sent you a link to confirm your address, and your place counts once you open it. The link works for 48 hours. Nothing arrived? Look in your spam folder, or join again in 10 minutes."
+msgstr ""
+
 #: packages/ui/src/career-evidence.ts
 msgid "Already in {displayName}."
 msgstr ""
@@ -2491,6 +2495,10 @@ msgstr ""
 
 #: apps/web/src/consent-model.ts
 msgid "Confirm that the candidate agreed to send their material."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Confirming your email address…"
 msgstr ""
 
 #: packages/ui/src/profile-presentation.ts
@@ -9320,6 +9328,10 @@ msgid "Thanks. You are on the waitlist. Places open in small groups and access o
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
+msgid "That confirmation link has expired or is unknown. Join the waitlist again below to get a new one."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
 msgstr ""
 
@@ -10806,6 +10818,10 @@ msgid "Tone"
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
+msgid "Too many attempts from this connection. Wait an hour, then open the link again."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
 msgid "Too many attempts from this connection. Wait an hour, then try again."
 msgstr ""
 
@@ -11801,6 +11817,14 @@ msgstr ""
 
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address could not be confirmed just now. Open the link again in a few minutes."
+msgstr ""
+
+#: apps/web/src/waitlist-model.ts
+msgid "Your email address is confirmed and you are on the waitlist. We will email you an invite when your place is ready."
 msgstr ""
 
 #: packages/ui/src/profile.tsx

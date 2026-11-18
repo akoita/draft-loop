@@ -35,6 +35,7 @@ before paid plans (ADR 0011, D7, beta exception).
 | 10 | Audit trail and security logs | Prove who did what and when; detect abuse and failures | Legitimate interest (security, accountability) | Users | Content-free events: ids, actions, timestamps, access refusals, alert lines | Google Cloud (logging, EU) | None | Audit trail with the account; server logs `[N]` days |
 | 11 | Support | Answer requests and complaints | Contract; legal obligation (rights requests) | Users | Correspondence, request details | None | None | `[N]` years after closure |
 | 12 | Quality evaluation | Measure draft quality against reference applications | Not personal data: synthetic or the operator's own material only, outside the service (ADR 0011, D16) | None | None | Model providers, on synthetic data | None | Not applicable |
+| 13 | Beta waitlist | Confirm a visitor's address by email (double opt-in), then invite them when a place opens | Consent (Art. 6(1)(a)) | Visitors | Email, day, consent text version, screen language, a hash of the confirmation token | Brevo (France, the confirmation and invite emails) | None | Until invited, at most six months; unconfirmed requests 48 hours |
 
 ## Common security measures
 

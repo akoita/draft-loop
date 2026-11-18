@@ -106,6 +106,7 @@ export const legalTextsFr: LegalTexts = {
             {
               list: [
                 "Données de compte (adresse e-mail, nom, connexions) : créer et sécuriser votre compte. Base : le contrat (RGPD art. 6(1)(b)).",
+                "Demandes de liste d'attente (adresse e-mail, date, version du texte de consentement et votre langue) : vérifier par e-mail que l'adresse est la vôtre, puis vous inviter quand une place s'ouvre. Base : votre consentement (art. 6(1)(a)).",
                 "Vos éléments (CV, notes de carrière, profils, offres d'emploi et documents que vous rédigez) : préparer vos candidatures. Base : le contrat, et votre consentement pour ce que vous choisissez de téléverser.",
                 "Brouillons et historique (brouillons, remarques de la critique, vos décisions, modèles utilisés, nombre de jetons et coût estimé) : vous montrer chaque brouillon, ses sources et son coût. Base : le contrat.",
                 "Questions d'assistance et avis que vous envoyez : vous répondre et améliorer le service. Base : le contrat et notre intérêt légitime.",
@@ -136,7 +137,7 @@ export const legalTextsFr: LegalTexts = {
             {
               list: [
                 "Google Cloud (Google Cloud EMEA Limited, Irlande) : hébergement, base de données, fichiers et service de connexion, dans la région europe-west1 (Belgique), chiffrés en transit et au repos.",
-                "Brevo (Sendinblue SAS, France) : les e-mails du service, comme la vérification d'adresse et les avis sur votre compte.",
+                "Brevo (Sendinblue SAS, France) : les e-mails du service, comme la vérification d'adresse, la confirmation de liste d'attente, les invitations et les avis sur votre compte.",
               ],
             },
             "Chaque sous-traitant est lié par un accord de traitement des données. Nous ne vendons pas vos données, et ne les communiquons aux autorités que lorsque la loi l'exige.",
@@ -149,6 +150,7 @@ export const legalTextsFr: LegalTexts = {
               list: [
                 "Votre compte et vos éléments : jusqu'à ce que vous les supprimiez, ou jusqu'à la suppression du compte après 90 jours sans activité (avec un avertissement par e-mail deux semaines avant).",
                 "Après une suppression : les sauvegardes de la base expirent sous 35 jours.",
+                "Demandes de liste d'attente : jusqu'à votre invitation, au plus six mois ; une demande dont le lien de confirmation n'a jamais été ouvert est supprimée après 48 heures.",
                 "Journaux du serveur : 30 jours.",
                 "Fournisseurs d'IA : jusqu'à 30 jours, comme le dit la section 3.",
                 "Si le test s'arrête, nous ferons notre possible pour vous laisser télécharger vos données avant, puis nous les supprimerons.",
