@@ -69,7 +69,6 @@ msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription c
 msgstr ", then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key."
 
 #: apps/web/src/account-deletion.tsx
-#: apps/web/src/record-actions.tsx
 msgid ", to confirm"
 msgstr ", to confirm"
 
@@ -2909,6 +2908,10 @@ msgstr "Degrees, courses and certificates."
 msgid "Delete"
 msgstr "Delete"
 
+#: apps/web/src/record-actions-model.ts
+msgid "DELETE"
+msgstr "DELETE"
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Delete \"{name}\"? This cannot be undone."
 msgstr "Delete \"{name}\"? This cannot be undone."
@@ -2923,6 +2926,10 @@ msgstr "Delete {0}"
 msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
 msgstr "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
 
+#: apps/web/src/record-actions.tsx
+msgid "Delete all documents and applications"
+msgstr "Delete all documents and applications"
+
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder"
 msgstr "Delete folder"
@@ -2931,10 +2938,6 @@ msgstr "Delete folder"
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder {0}"
 msgstr "Delete folder {0}"
-
-#: apps/web/src/record-actions.tsx
-msgid "Delete job search"
-msgstr "Delete job search"
 
 #: apps/web/src/account-deletion.tsx
 msgid "Delete my account"
@@ -2965,13 +2968,9 @@ msgstr "Delete this version for good?"
 msgid "Deleted \"{name}\"."
 msgstr "Deleted \"{name}\"."
 
-#: apps/web/src/record-actions.tsx
-msgid "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
-msgstr "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
-
 #: apps/web/src/account-deletion.tsx
-msgid "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
-msgstr "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+msgid "Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+msgstr "Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
 
 #: apps/web/src/account-deletion.tsx
 msgid "Deleting your account…"
@@ -8991,14 +8990,6 @@ msgstr "Start"
 msgid "Start a conversation"
 msgstr "Start a conversation"
 
-#: apps/web/src/records.tsx
-msgid "Start a new job search"
-msgstr "Start a new job search"
-
-#: apps/web/src/records.tsx
-msgid "Start a new job search when you are ready."
-msgstr "Start a new job search when you are ready."
-
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -9007,6 +8998,14 @@ msgstr "Start a new review"
 #: apps/web/src/review-actions.ts
 msgid "Start a run first."
 msgstr "Start a run first."
+
+#: apps/web/src/records.tsx
+msgid "Start again"
+msgstr "Start again"
+
+#: apps/web/src/records.tsx
+msgid "Start again when you are ready."
+msgstr "Start again when you are ready."
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start author–critic review"
@@ -9154,8 +9153,8 @@ msgid "Stop the review before closing the workspace."
 msgstr "Stop the review before closing the workspace."
 
 #: apps/web/src/record-actions-model.ts
-msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search."
-msgstr "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search."
+msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
+msgstr "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 
 #: packages/ui/src/stop-reason.ts
 msgid "Stopped: author and critic agree it's ready"
@@ -10522,6 +10521,10 @@ msgstr "This claim is not linked to the candidate materials supplied to DraftLoo
 msgid "This conversation could not be found. Start a new one."
 msgstr "This conversation could not be found. Start a new one."
 
+#: apps/web/src/record-actions.tsx
+msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
+msgstr "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
 msgstr "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
@@ -10954,12 +10957,12 @@ msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk
 msgstr "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk about one of them, or about something else?"
 
 #: apps/web/src/record-actions.tsx
-msgid "Type its id,"
-msgstr "Type its id,"
+msgid "Type {word} to confirm"
+msgstr "Type {word} to confirm"
 
 #: apps/web/src/record-actions-model.ts
-msgid "Type its id, {workspaceId}, exactly to delete it."
-msgstr "Type its id, {workspaceId}, exactly to delete it."
+msgid "Type {word} to confirm."
+msgstr "Type {word} to confirm."
 
 #: apps/web/src/account-deletion.tsx
 msgid "Type the email address you sign in with to confirm."
@@ -11734,10 +11737,6 @@ msgstr "You"
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 
-#: apps/web/src/records.tsx
-msgid "You are still signed in. Start a new job search, or sign out."
-msgstr "You are still signed in. Start a new job search, or sign out."
-
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
 msgstr "You asked:"
@@ -11790,6 +11789,10 @@ msgstr "Your account and everything stored for it were deleted. Thank you for tr
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."
 msgstr "Your account could not be created. Try again."
+
+#: apps/web/src/records.tsx
+msgid "Your account stays and you are still signed in. Start again, or sign out."
+msgstr "Your account stays and you are still signed in. Start again, or sign out."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Your answer"
@@ -11869,6 +11872,10 @@ msgstr "Your documents are saved. DraftLoop reads them and lists the facts it fi
 msgid "Your documents could not be opened. Open their store under Advanced options below."
 msgstr "Your documents could not be opened. Open their store under Advanced options below."
 
+#: apps/web/src/records.tsx
+msgid "Your documents, applications and everything stored with them were deleted."
+msgstr "Your documents, applications and everything stored with them were deleted."
+
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
@@ -11904,10 +11911,6 @@ msgstr "Your interview"
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
 msgstr "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
-
-#: apps/web/src/records.tsx
-msgid "Your job search and everything stored for it were deleted."
-msgstr "Your job search and everything stored for it were deleted."
 
 #: packages/ui/src/knowledge-current.ts
 msgid "Your knowledge base is created when you add your first evidence above."

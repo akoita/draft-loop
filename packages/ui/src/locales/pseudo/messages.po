@@ -69,7 +69,6 @@ msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription c
 msgstr ""
 
 #: apps/web/src/account-deletion.tsx
-#: apps/web/src/record-actions.tsx
 msgid ", to confirm"
 msgstr ""
 
@@ -2909,6 +2908,10 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
+#: apps/web/src/record-actions-model.ts
+msgid "DELETE"
+msgstr ""
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Delete \"{name}\"? This cannot be undone."
 msgstr ""
@@ -2923,6 +2926,10 @@ msgstr ""
 msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "Delete all documents and applications"
+msgstr ""
+
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder"
 msgstr ""
@@ -2930,10 +2937,6 @@ msgstr ""
 #. placeholder {0}: folder.name
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder {0}"
-msgstr ""
-
-#: apps/web/src/record-actions.tsx
-msgid "Delete job search"
 msgstr ""
 
 #: apps/web/src/account-deletion.tsx
@@ -2965,12 +2968,8 @@ msgstr ""
 msgid "Deleted \"{name}\"."
 msgstr ""
 
-#: apps/web/src/record-actions.tsx
-msgid "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
-msgstr ""
-
 #: apps/web/src/account-deletion.tsx
-msgid "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+msgid "Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
 msgstr ""
 
 #: apps/web/src/account-deletion.tsx
@@ -8990,14 +8989,6 @@ msgstr ""
 msgid "Start a conversation"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Start a new job search"
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Start a new job search when you are ready."
-msgstr ""
-
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -9005,6 +8996,14 @@ msgstr ""
 
 #: apps/web/src/review-actions.ts
 msgid "Start a run first."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Start again"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Start again when you are ready."
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
@@ -9153,7 +9152,7 @@ msgid "Stop the review before closing the workspace."
 msgstr ""
 
 #: apps/web/src/record-actions-model.ts
-msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search."
+msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 msgstr ""
 
 #: packages/ui/src/stop-reason.ts
@@ -10521,6 +10520,10 @@ msgstr ""
 msgid "This conversation could not be found. Start a new one."
 msgstr ""
 
+#: apps/web/src/record-actions.tsx
+msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
+msgstr ""
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
 msgstr ""
@@ -10953,11 +10956,11 @@ msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
-msgid "Type its id,"
+msgid "Type {word} to confirm"
 msgstr ""
 
 #: apps/web/src/record-actions-model.ts
-msgid "Type its id, {workspaceId}, exactly to delete it."
+msgid "Type {word} to confirm."
 msgstr ""
 
 #: apps/web/src/account-deletion.tsx
@@ -11733,10 +11736,6 @@ msgstr ""
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "You are still signed in. Start a new job search, or sign out."
-msgstr ""
-
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
 msgstr ""
@@ -11788,6 +11787,10 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Your account stays and you are still signed in. Start again, or sign out."
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -11868,6 +11871,10 @@ msgstr ""
 msgid "Your documents could not be opened. Open their store under Advanced options below."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Your documents, applications and everything stored with them were deleted."
+msgstr ""
+
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr ""
@@ -11902,10 +11909,6 @@ msgstr ""
 
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
-msgstr ""
-
-#: apps/web/src/records.tsx
-msgid "Your job search and everything stored for it were deleted."
 msgstr ""
 
 #: packages/ui/src/knowledge-current.ts

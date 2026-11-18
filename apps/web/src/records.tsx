@@ -296,15 +296,15 @@ export function JobSearchDeleted({
   return (
     <div className="record-rail">
       <div className="notice" role="status">
-        <p>{t`Your job search and everything stored for it were deleted.`}</p>
+        <p>{t`Your documents, applications and everything stored with them were deleted.`}</p>
         <p>
           {onSignOut === undefined
-            ? t`Start a new job search when you are ready.`
-            : t`You are still signed in. Start a new job search, or sign out.`}
+            ? t`Start again when you are ready.`
+            : t`Your account stays and you are still signed in. Start again, or sign out.`}
         </p>
         <div className="page-actions">
           <button type="button" className="button" onClick={onStartAgain}>
-            {t`Start a new job search`}
+            {t`Start again`}
           </button>
           {onSignOut === undefined ? null : <SignOutButton onSignOut={onSignOut} />}
         </div>

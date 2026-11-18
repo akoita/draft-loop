@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { RecordActionsPanel } from "./record-actions.js";
 
 const panelProps = {
-  recordId: "candidate-ana",
   title: "Download or delete this job search",
   busy: false,
   messages: [],
@@ -20,9 +19,13 @@ describe("record export and deletion panel", () => {
     expect(html).toContain('<button type="button">Download everything</button>');
     expect(html).toContain("It cannot be undone.");
     expect(html).toContain(
-      '<label for="delete-record-confirm">Type its id, candidate-ana, to confirm</label>',
+      '<label for="delete-record-confirm">Type DELETE to confirm</label>',
     );
-    expect(html).toContain('<button type="submit" class="danger">Delete job search</button>');
+    expect(html).toContain(
+      '<button type="submit" class="danger">Delete all documents and applications</button>',
+    );
+    expect(html).toContain("The account stays");
+    expect(html).not.toContain("candidate-ana");
     expect(html).not.toContain('role="alert"');
   });
 
@@ -36,7 +39,7 @@ describe("record export and deletion panel", () => {
     );
 
     expect(html).toContain('<button type="button" disabled="">Download everything</button>');
-    expect(html).toContain('class="danger" disabled="">Delete job search</button>');
+    expect(html).toContain('class="danger" disabled="">Delete all documents and applications</button>');
     expect(html).toContain('role="alert">Stop the run first.');
   });
 });

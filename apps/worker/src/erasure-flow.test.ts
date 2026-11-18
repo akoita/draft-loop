@@ -411,7 +411,7 @@ describe.runIf(connectionString !== undefined)("record export and erasure", () =
     expect(await filesHolding(records.erased.marker)).not.toEqual([]);
 
     // Erasing the record, its id typed back, leaves no row and no stored object of it.
-    const confirmed = deleteRecordRequest(records.erased.id, records.erased.id);
+    const confirmed = deleteRecordRequest(records.erased.id, "DELETE");
     if ("problem" in confirmed) throw new Error(confirmed.problem);
     await client().call("DELETE /v1/workspaces/{workspaceId}", confirmed.request);
     for (const table of ["workspaces", "consent_events", "audit_events"])
