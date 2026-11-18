@@ -7,7 +7,7 @@ import type { Loaded } from "./operator-model.js";
 export const searchPauseMs = 300;
 
 /**
- * A search box for an operator list (#3016). It reads again once typing pauses, so a long list
+ * A search box for an operator list (#3015). It reads again once typing pauses, so a long list
  * is searched on the server rather than scrolled.
  */
 export function ListSearch({

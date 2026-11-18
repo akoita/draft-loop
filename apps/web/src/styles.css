@@ -1647,7 +1647,7 @@ button.small:where(:not(.shared-screens *)) {
   flex: none;
 }
 
-/* Long lists (#3016): one part at a time, a search, compact rows, and Show more. */
+/* Long lists (#3015): one part at a time, a search, compact rows, and Show more. */
 .operator-views {
   display: flex;
   flex-wrap: wrap;

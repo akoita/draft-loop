@@ -329,7 +329,7 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
       const fresh = await feedback.listNewest(10, "new");
       expect(fresh.map(({ text }) => text)).toEqual(["Still new."]);
 
-      // The inbox pages and searches across organisations (#3016).
+      // The inbox pages and searches across organisations (#3015).
       await expect(feedback.statusCounts()).resolves.toEqual({
         new: 1,
         triaged: 0,

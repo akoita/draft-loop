@@ -96,7 +96,7 @@ export interface TriageFeedbackInput {
  * organisation's notes.
  * Erasing an organisation removes its notes.
  */
-/** Paging and search for the operator's inbox (#3016). */
+/** Paging and search for the operator's inbox (#3015). */
 export interface FeedbackListPage {
   readonly offset?: number;
   readonly query?: string;

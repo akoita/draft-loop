@@ -529,7 +529,7 @@ export interface FeedbackSectionProps {
 
 /**
  * Members' notes and support tickets as an inbox (#3002): New, Kept, Linked to an issue and
- * Closed, newest first, a page at a time with a search (#3016). Most notes need no answer, so
+ * Closed, newest first, a page at a time with a search (#3015). Most notes need no answer, so
  * Close is each note's first action.
  */
 export function FeedbackSection({
@@ -714,7 +714,7 @@ const mergeOf = {
 
 /**
  * The operator's page (#2829): members' feedback, the beta waitlist, and the invites with the
- * account cap, one part at a time and each read a page at a time (#3016). Reached only by the
+ * account cap, one part at a time and each read a page at a time (#3015). Reached only by the
  * owner token or an operator's sign-in with a second factor.
  */
 export function OperatorPage({

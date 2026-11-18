@@ -40,7 +40,7 @@ export interface FeedbackPage {
   readonly counts: Record<FeedbackNote["status"], number>;
 }
 
-/** Rows an operator list reads at a time (#3016); Show more reads the next ones. */
+/** Rows an operator list reads at a time (#3015); Show more reads the next ones. */
 export const operatorPageSize = 50;
 
 /** Where a list read starts and what it looks for. */

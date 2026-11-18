@@ -1,5 +1,5 @@
 /**
- * One page of an operator list (#3016): the feedback inbox, the waitlist and the beta invites
+ * One page of an operator list (#3015): the feedback inbox, the waitlist and the beta invites
  * grow to hundreds of rows, so the operator reads them a page at a time and searches them.
  */
 export interface OperatorListPage {

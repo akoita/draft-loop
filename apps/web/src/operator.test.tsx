@@ -435,7 +435,7 @@ describe("the operator page", () => {
   });
 });
 
-describe("long lists (#3016)", () => {
+describe("long lists (#3015)", () => {
   it("say how many rows show out of those that match, with Show more and a search", () => {
     const html = render(
       <WaitlistSection
