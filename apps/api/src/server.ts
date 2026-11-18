@@ -23,10 +23,12 @@ import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
 import { readServiceNoticeSecret, secretServiceNotice } from "./service-notice.js";
 import { readSupportSettings } from "./support-config.js";
+import { readSupportLimitsSecret, secretSupportLimits } from "./support-limits.js";
 import { cloudRunJobWake, noWake } from "./worker-wake.js";
 
 const config = readApiConfig(process.env);
 const supportSettings = readSupportSettings(process.env);
+const supportLimitsSecret = readSupportLimitsSecret(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
 const legalPublisher = readLegalPublisher(process.env);
@@ -80,6 +82,22 @@ const app = await buildApi({
   logger: cloudLoggingOptions(),
   rateLimits: config.rateLimits,
   support: supportSettings,
+  ...(supportLimitsSecret === undefined
+    ? {}
+    : {
+        supportLimits: secretSupportLimits({
+          secret: supportLimitsSecret,
+          // An unreadable or invalid value keeps the environment's limits, and says so.
+          onReadError: (error) =>
+            console.error(
+              JSON.stringify({
+                severity: "WARNING",
+                message: "support limits read failed",
+                err: errorFields(error),
+              }),
+            ),
+        }),
+      }),
   // The release a feedback note records (#2875): the deploy's own name for it, else Cloud Run's
   // revision.
   ...(serverRelease === undefined ? {} : { serverRelease }),
@@ -101,6 +119,7 @@ const app = await buildApi({
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,
+        supportUsage: directory.supportUsage,
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),

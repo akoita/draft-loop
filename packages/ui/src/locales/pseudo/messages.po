@@ -5223,6 +5223,10 @@ msgstr ""
 msgid "mean score"
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "Meanwhile, these guide sections may help:"
+msgstr ""
+
 #: packages/ui/src/model-profile-presentation.ts
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Medium"
@@ -9078,6 +9082,10 @@ msgstr ""
 msgid "That knowledge store is not on this service."
 msgstr ""
 
+#: packages/ui/src/help-ask.tsx
+msgid "That question is too long for me. Try it in fewer words."
+msgstr ""
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr ""
@@ -9141,6 +9149,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "The artifact has not been approved."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "The assistant is resting until tomorrow."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -11417,6 +11429,14 @@ msgstr ""
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
+msgstr ""
+
+#: packages/ui/src/help-ask.tsx
+msgid "You've reached today's questions for the assistant. It answers again tomorrow."
 msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx

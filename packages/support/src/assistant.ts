@@ -32,9 +32,10 @@ import type {
  *
  * ## Limits
  *
- * A kill switch, a per-member daily question limit, a global daily cost cap and a question
- * length bound are checked before any model call. Each one, and any model failure or invalid
- * answer, returns the guide sections that match the question instead of an error.
+ * A kill switch, a question length bound, a per-member burst limit, a per-member daily question
+ * limit and a global daily cost cap are checked before any model call. Each one, and any model
+ * failure or invalid answer, returns the guide sections that match the question instead of an
+ * error.
  *
  * ## What the model never gets
  *
@@ -57,6 +58,7 @@ export type SupportOutcome = (typeof supportOutcomes)[number];
 
 export const supportFallbackReasons = [
   "disabled",
+  "member_rate",
   "member_limit",
   "cost_cap",
   "question_too_long",
@@ -68,6 +70,8 @@ export type SupportFallbackReason = (typeof supportFallbackReasons)[number];
 export interface SupportLimits {
   /** The kill switch: `false` answers every question with guide search. */
   readonly enabled: boolean;
+  /** Questions one member may ask in any 60 seconds: stops a script, not a person. */
+  readonly memberQuestionsPerMinute: number;
   readonly memberDailyQuestions: number;
   /** Across all members, in US dollars of estimated model cost. */
   readonly dailyCostCapUsd: number;
@@ -83,6 +87,7 @@ export interface SupportLimits {
 
 export const defaultSupportLimits: SupportLimits = Object.freeze({
   enabled: true,
+  memberQuestionsPerMinute: 5,
   memberDailyQuestions: 20,
   dailyCostCapUsd: 2,
   maxQuestionChars: 1000,
@@ -271,6 +276,12 @@ export function createSupportAssistant(options: SupportAssistantOptions): Suppor
         return fallback("question_too_long");
       }
       try {
+        if (
+          (await options.usage.questionsLastMinute(question.memberId)) >=
+          limits.memberQuestionsPerMinute
+        ) {
+          return fallback("member_rate");
+        }
         if (
           (await options.usage.questionsToday(question.memberId)) >= limits.memberDailyQuestions
         ) {

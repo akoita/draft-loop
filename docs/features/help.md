@@ -32,6 +32,34 @@ solve it?** with **No**, or get an answer that needs a person, and **Talk to a
 person** appears. It shows what is sent before **Send the conversation**
 (sign-in mode only).
 
+### Limits on the assistant
+
+Each question is a paid model call, so the server bounds it before any call.
+Over a limit, the member gets the matching guide sections and a sentence that
+says which limit applies and when it lifts, in English or French.
+
+| Limit | Default | Setting |
+| --- | --- | --- |
+| Question length | 1,000 characters | Fixed |
+| Questions per member in any minute | 5 | `DRAFT_LOOP_SUPPORT_MEMBER_QUESTIONS_PER_MINUTE` |
+| Questions per member per UTC day | 20 | `DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS` |
+| Estimated cost of all members per UTC day | US$2 | `DRAFT_LOOP_SUPPORT_DAILY_COST_USD` |
+| Model calls per question, output per call | 4 calls, 1,200 tokens | Fixed |
+
+In sign-in mode the daily counts live in Postgres, so a restart or a second
+API instance never resets them. The per-minute window stays in each
+instance's memory. Owner-token mode keeps all counts in memory.
+
+The operator changes these without a deploy through
+`DRAFT_LOOP_SUPPORT_LIMITS_SECRET`, a Secret Manager version the API reads
+within a minute. Its JSON sets any of `assistant` (`on` or `off`, the kill
+switch), `memberQuestionsPerMinute`, `memberDailyQuestions` and
+`dailyCostUsd`; a field it leaves out keeps the environment's value. An
+invalid value keeps the environment's limits and logs a warning.
+
+Each refusal by a limit logs a `support_limited` warning with the reason, the
+member id and the organisation id, never the question.
+
 An agent calls `search_help` with a question's words, or reads the whole
 guide from `draftloop://help/guide/en` or `/fr` as Markdown.
 
@@ -78,7 +106,7 @@ pnpm test:support:live
 - Sections name the screens to open but do not link to them yet.
 - Search matches words, not meaning. **Ask a question** answers in your own words, but only where the server sets `DRAFT_LOOP_SUPPORT_ASSISTANT=on`; elsewhere the panel shows the guide alone.
 - Answers to **Did this solve it?** are not recorded.
-- The assistant's daily limits are counted in each API instance's memory, like the request rate limits.
+- The per-minute limit is counted in each API instance's memory, like the request rate limits.
 - Not on the sign-in and sign-up screens, which come before any record.
 
 ## Keeping it current

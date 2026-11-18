@@ -119,6 +119,8 @@ import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
 import type { SupportSettings } from "./support-config.js";
+import { createSharedSupportLedger, type SharedSupportUsage } from "./support-ledger.js";
+import type { SupportLimitSource } from "./support-limits.js";
 import { registerSupportRoutes } from "./support-routes.js";
 import {
   registerTenantApplications,
@@ -237,6 +239,10 @@ export interface ApiOptions {
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
+  /** The operator's run-time overrides of the support limits, from Secret Manager. */
+  readonly supportLimits?: SupportLimitSource;
+  /** The support assistant's daily use shared by every instance; without it, instance memory. */
+  readonly supportUsage?: SharedSupportUsage;
   /** Members' feedback notes (#2828); without it `/v1/feedback` and its operator route are absent. */
   readonly feedback?: FeedbackRoutesOptions["feedback"];
   /** The release this server runs, which a feedback note records (#2875). */
@@ -970,6 +976,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       route: () => (interview?.allowProviderData === false ? undefined : interview?.route),
       ...(auth.mode === "oidc" && entitlementsFor !== undefined ? { entitlementsFor } : {}),
       ...(options.feedback === undefined ? {} : { feedback: options.feedback }),
+      ...(options.supportLimits === undefined ? {} : { limits: options.supportLimits }),
+      ...(options.supportUsage === undefined
+        ? {}
+        : { usage: createSharedSupportLedger(options.supportUsage) }),
     });
   }
   registerSpeechModelRoutes(app, { root: options.speechModelRoot });

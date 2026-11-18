@@ -161,6 +161,12 @@ export {
   type SqlTransactionOptions,
 } from "./sql-client.js";
 export {
+  createSupportUsage,
+  type SupportUsage,
+  SupportUsageError,
+  supportSpendKeepDays,
+} from "./support-usage.js";
+export {
   createPostgresTenantDirectory,
   type PostgresTenantDirectory,
 } from "./tenant-directory.js";

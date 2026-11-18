@@ -63,6 +63,35 @@ describe("the Help panel's Ask conversation (#2883)", () => {
     expect(none).toMatchObject({ text: "Nothing matches.", needsPerson: true });
   });
 
+  it("says which limit stopped the assistant, and offers no person for it", () => {
+    const limitWords = {
+      ...words,
+      sectionsText: "These may help:",
+      limitText: {
+        member_rate: "Wait a minute.",
+        member_limit: "Back tomorrow.",
+        cost_cap: "Resting today.",
+        question_too_long: "Shorter, please.",
+      },
+    };
+    const sections = [{ id: "credits", title: "Plans and credits" }];
+    const rate = assistantTurn(
+      { mode: "guide_search", outcome: null, reason: "member_rate", text: null, sections },
+      limitWords,
+    );
+    expect(rate).toMatchObject({ text: "Wait a minute. These may help:", fallback: true });
+    const capped = assistantTurn(
+      { mode: "guide_search", outcome: null, reason: "cost_cap", text: null, sections: [] },
+      limitWords,
+    );
+    expect(capped).toMatchObject({ text: "Resting today.", needsPerson: false });
+    const failed = assistantTurn(
+      { mode: "guide_search", outcome: null, reason: "model_failed", text: null, sections },
+      limitWords,
+    );
+    expect(failed).toMatchObject({ text: "Sections match:" });
+  });
+
   it("sends the last twenty turns, bounded, without the sources", () => {
     const turns = Array.from({ length: 25 }, (_, index) =>
       memberTurn(`q${index} ${"x".repeat(2100)}`),

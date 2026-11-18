@@ -35,6 +35,7 @@ export function webHelpSupport(
       return {
         mode: reply.mode,
         outcome: reply.outcome,
+        reason: reply.reason,
         text: reply.text,
         sections: reply.sections.map(({ id, title }) => ({ id, title })),
       };

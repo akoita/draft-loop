@@ -73,6 +73,13 @@ export function HelpAsk({ support, language, onShowSection }: HelpAskProps) {
         assistantTurn(reply, {
           fallbackText: t`I can't answer that myself right now. These guide sections match your question:`,
           noMatchText: t`I can't answer that myself right now, and no guide section matches.`,
+          sectionsText: t`Meanwhile, these guide sections may help:`,
+          limitText: {
+            member_rate: t`You're asking faster than I can keep up. Wait a minute, then ask again.`,
+            member_limit: t`You've reached today's questions for the assistant. It answers again tomorrow.`,
+            cost_cap: t`The assistant is resting until tomorrow.`,
+            question_too_long: t`That question is too long for me. Try it in fewer words.`,
+          },
         }),
       ]);
     } catch {

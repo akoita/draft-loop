@@ -40,6 +40,10 @@ export const tenantWideTables = new Set([
   "quality_insights",
   // The operator's deployment-wide beta account cap (#2998): one number, no tenant or record.
   "beta_account_cap",
+  // Deployment-wide support assistant counts: an opaque member id and a number, swept after a day.
+  "support_question_counts",
+  // Deployment-wide support assistant spend per day: no tenant, member or record.
+  "support_daily_spend",
 ]);
 
 /**

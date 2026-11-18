@@ -5218,6 +5218,10 @@ msgstr "Score moyen de préparation"
 msgid "mean score"
 msgstr "score moyen"
 
+#: packages/ui/src/help-ask.tsx
+msgid "Meanwhile, these guide sections may help:"
+msgstr "En attendant, ces sections du guide peuvent vous aider :"
+
 #: packages/ui/src/model-profile-presentation.ts
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Medium"
@@ -9073,6 +9077,10 @@ msgstr "Cette invitation a été retirée. Demandez une nouvelle invitation."
 msgid "That knowledge store is not on this service."
 msgstr "Ce stockage de connaissances n’est pas sur ce service."
 
+#: packages/ui/src/help-ask.tsx
+msgid "That question is too long for me. Try it in fewer words."
+msgstr "Cette question est trop longue pour moi. Essayez en moins de mots."
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr "Ce niveau d’utilisation n’a pas été enregistré. Réessayez."
@@ -9137,6 +9145,10 @@ msgstr "Les profils appliqués ne correspondent plus aux modèles configurés de
 #: packages/ui/src/review.tsx
 msgid "The artifact has not been approved."
 msgstr "Le document n’a pas été approuvé."
+
+#: packages/ui/src/help-ask.tsx
+msgid "The assistant is resting until tomorrow."
+msgstr "L’assistant fait une pause jusqu’à demain."
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
@@ -11413,6 +11425,14 @@ msgstr "Vous avez des modifications non enregistrées. Choisissez Abandonner les
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr "Vous avez des modifications non enregistrées. Enregistrez-les avant de marquer le brief comme relu."
+
+#: packages/ui/src/help-ask.tsx
+msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
+msgstr "Vous posez vos questions plus vite que je ne peux suivre. Attendez une minute, puis reposez-la."
+
+#: packages/ui/src/help-ask.tsx
+msgid "You've reached today's questions for the assistant. It answers again tomorrow."
+msgstr "Vous avez atteint les questions du jour pour l’assistant. Il répondra de nouveau demain."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."

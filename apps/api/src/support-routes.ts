@@ -26,6 +26,10 @@ import { z } from "zod";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { SupportSettings } from "./support-config.js";
+import { createMemorySupportLedger } from "./support-ledger.js";
+import { effectiveSupportSettings, type SupportLimitSource } from "./support-limits.js";
+
+export { createMemorySupportLedger } from "./support-ledger.js";
 
 /** The only model the assistant calls: the cheapest Claude, enough to answer from a guide. */
 export const supportModelId = "claude-haiku-5-5";
@@ -39,6 +43,8 @@ export interface SupportRoutesOptions {
   /** Sign-in mode's plans and credits; owner-token mode has none. */
   readonly entitlementsFor?: TenantEntitlementsFor;
   readonly usage?: SupportUsageLedger;
+  /** The operator's run-time overrides of `settings`; without it only the environment applies. */
+  readonly limits?: SupportLimitSource;
   /** Where a handed-off conversation goes; without it the hand-off route answers 404. */
   readonly feedback?: Pick<FeedbackStore, "openSupportTicket">;
   readonly now?: () => Date;
@@ -98,6 +104,14 @@ function handoffSummary(transcript: readonly { role: string; text: string }[]): 
 
 const sectionIdSchema = z.enum(helpSectionIds);
 
+/** The fallback reasons that are a limit, not a failure: each logs `support_limited`. */
+const limitReasons: ReadonlySet<string> = new Set([
+  "member_rate",
+  "member_limit",
+  "cost_cap",
+  "question_too_long",
+]);
+
 const supportReplySchema = z
   .object({
     conversation_id: z.string(),
@@ -110,6 +124,7 @@ const supportReplySchema = z
     reason: z
       .enum([
         "disabled",
+        "member_rate",
         "member_limit",
         "cost_cap",
         "question_too_long",
@@ -134,42 +149,6 @@ const supportReplySchema = z
   .meta({ id: "SupportReply" });
 
 /**
- * Today's use in this API instance's memory, like the request rate limits (`rate-limit.ts`): each
- * instance holds its own count, which resets at the UTC day and on restart.
- */
-export function createMemorySupportLedger(now: () => Date = () => new Date()): SupportUsageLedger {
-  let day = "";
-  let costUsd = 0;
-  const questions = new Map<string, number>();
-  const today = () => {
-    const current = now().toISOString().slice(0, 10);
-    if (current !== day) {
-      day = current;
-      costUsd = 0;
-      questions.clear();
-    }
-  };
-  return {
-    async questionsToday(memberId) {
-      today();
-      return questions.get(memberId) ?? 0;
-    },
-    async costTodayUsd() {
-      today();
-      return costUsd;
-    },
-    async countQuestion(memberId) {
-      today();
-      questions.set(memberId, (questions.get(memberId) ?? 0) + 1);
-    },
-    async record(entry) {
-      today();
-      costUsd += entry.estimatedUsd ?? 0;
-    },
-  };
-}
-
-/**
  * Support conversations (#2882): a member asks how DraftLoop works and the support assistant
  * answers from the user guide and their own account, or returns the matching guide sections when
  * it is off, over a limit, or fails. The server stores no conversation: the screen sends the
@@ -189,6 +168,10 @@ export function registerSupportRoutes(
     promptTemplateVersion: supportPromptVersion,
   } as const;
   const pricing = catalogModelPricing(model);
+  const settingsNow = async (): Promise<SupportSettings> =>
+    options.limits === undefined
+      ? options.settings
+      : effectiveSupportSettings(options.settings, await options.limits());
 
   const modelFor = (log: FastifyBaseLogger, conversationId: string): SupportModel | undefined => {
     const builder = options.route();
@@ -342,7 +325,7 @@ export function registerSupportRoutes(
       }
       return reply.code(201).send({
         conversation_id: `sup_${randomUUID()}`,
-        assistant_available: options.settings.enabled && options.route() !== undefined,
+        assistant_available: (await settingsNow()).enabled && options.route() !== undefined,
       });
     },
   );
@@ -354,7 +337,7 @@ export function registerSupportRoutes(
       schema: {
         summary: "Ask the support assistant a question",
         description:
-          "Answers from the user guide and the caller's own plan, credits and runs in this record, in `language`. Falls back to the matching guide sections, with `reason`, when the assistant is off, the member's daily questions or the server's daily cost cap are spent, or the model fails. Questions do not count against the plan's model calls.",
+          "Answers from the user guide and the caller's own plan, credits and runs in this record, in `language`. Falls back to the matching guide sections, with `reason`, when the assistant is off, the member asks faster than the per-minute limit (`member_rate`), the member's daily questions (`member_limit`) or the server's daily cost cap (`cost_cap`) are spent, or the model fails. Questions do not count against the plan's model calls.",
         params: conversationParams,
         body: messageBody,
         response: {
@@ -374,18 +357,34 @@ export function registerSupportRoutes(
       const { workspaceId, conversationId } = request.params;
       const memberId = caller.kind === "member" ? caller.memberId : "owner";
       const supportModel = modelFor(request.log, conversationId);
+      const settings = await settingsNow();
+      const organisationId = caller.kind === "member" ? caller.tenantId : undefined;
       const assistant = createSupportAssistant({
         model: supportModel ?? (async () => Promise.reject(new Error("no route"))),
         account: accountFor(caller.kind === "member" ? caller.tenantId : undefined, workspaceId),
         usage,
         limits: {
-          enabled: options.settings.enabled && supportModel !== undefined,
-          memberDailyQuestions: options.settings.memberDailyQuestions,
-          dailyCostCapUsd: options.settings.dailyCostCapUsd,
+          enabled: settings.enabled && supportModel !== undefined,
+          memberQuestionsPerMinute: settings.memberQuestionsPerMinute,
+          memberDailyQuestions: settings.memberDailyQuestions,
+          dailyCostCapUsd: settings.dailyCostCapUsd,
         },
-        // One content-free line per tool call and per reply.
-        onAudit: (event) =>
-          request.log.info({ event: `support_${event.kind}`, ...event }, "support"),
+        // One content-free line per tool call and per reply, and a warning when a limit refused
+        // the model, naming whose limit, so the operator can see abuse and alert on the cap.
+        onAudit: (event) => {
+          request.log.info({ event: `support_${event.kind}`, ...event }, "support");
+          if (event.kind === "reply" && limitReasons.has(event.result)) {
+            request.log.warn(
+              {
+                event: "support_limited",
+                reason: event.result,
+                memberId,
+                ...(organisationId === undefined ? {} : { organisationId }),
+              },
+              "support assistant limit reached",
+            );
+          }
+        },
         now: () => now().toISOString(),
       });
       const answer = await assistant.answer({

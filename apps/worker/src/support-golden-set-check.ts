@@ -145,6 +145,7 @@ const account = {
   serviceStatus: async () => ({ state: "operational" as const, codes: [] }),
 };
 const usage: SupportUsageLedger = {
+  questionsLastMinute: async () => 0,
   questionsToday: async () => 0,
   costTodayUsd: async () => spentUsd,
   countQuestion: async () => undefined,
