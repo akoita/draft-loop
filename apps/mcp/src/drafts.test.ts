@@ -87,7 +87,7 @@ describe("draft read tools", () => {
   it("are read-only and name the drafts:read scope", async () => {
     const client = await connect(scripted({}).config);
     const { tools } = await client.listTools();
-    for (const name of ["get_cv", "list_materials", "get_material"]) {
+    for (const name of ["get_cv", "list_materials", "get_material", "get_requirement_evidence"]) {
       const tool = tools.find((each) => each.name === name);
       expect(tool?.annotations?.readOnlyHint, name).toBe(true);
       expect(tool?.description, name).toContain("drafts:read");
@@ -240,6 +240,55 @@ describe("draft read tools", () => {
       arguments: { application_id: "app_fixture_0001" },
     });
     expect(parsed(refused).error.message).toContain("drafts:read");
+    await client.close();
+  });
+
+  it("read which sources support each requirement of a run, without their text", async () => {
+    const { config } = scripted({
+      [`GET ${base}/runs/run_new/requirement-evidence`]: json({
+        runId: "run_new",
+        mode: "semantic",
+        chunkCount: 2,
+        grading: "graded",
+        requirements: [
+          {
+            requirementId: "r1",
+            text: "A fictional requirement",
+            candidates: [
+              {
+                chunkId: "c1",
+                origin: "both",
+                score: 0.9,
+                source: "notes.md",
+                lineStart: 3,
+                lineEnd: 7,
+                grade: "supports",
+              },
+              { chunkId: "c2", origin: "keyword" },
+            ],
+          },
+        ],
+      }),
+    });
+    const client = await connect(config);
+    const evidence = parsed(
+      await client.callTool({ name: "get_requirement_evidence", arguments: { run_id: "run_new" } }),
+    );
+    expect(evidence).toEqual({
+      run_id: "run_new",
+      matched_by: "meaning-and-keywords",
+      graded: true,
+      requirements: [
+        {
+          requirement_id: "r1",
+          requirement: "A fictional requirement",
+          evidence: [
+            { source: "notes.md", lines: "3-7", match: "both", score: 0.9, grade: "supports" },
+            { source: null, lines: null, match: "keywords", score: null, grade: null },
+          ],
+        },
+      ],
+    });
     await client.close();
   });
 });
