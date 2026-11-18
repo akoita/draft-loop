@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import {
+  createOnnxCrossEncoder,
   createOnnxTextEmbedder,
   type GraniteEmbeddingTier,
   graniteEmbeddingModels,
@@ -27,6 +28,8 @@ import { pickRequirementEvidence } from "./requirement-picked-evidence.js";
  *   DRAFT_LOOP_EMBEDDING_MODEL_DIR   directory with the verified model files
  *   DRAFT_LOOP_EMBEDDING_TIER        "311m" (default here) or "97m"
  *   DRAFT_LOOP_RETRIEVAL_REPORT_PATH optional path for the content-free JSON report
+ *   DRAFT_LOOP_RERANKER_MODEL_DIR    optional directory with the pinned cross-encoder (#3020),
+ *                                    which adds the two rerank arms
  */
 const modelDirectory = process.env.DRAFT_LOOP_EMBEDDING_MODEL_DIR;
 const requestedTier = process.env.DRAFT_LOOP_EMBEDDING_TIER ?? "311m";
@@ -34,6 +37,7 @@ const tier = (
   requestedTier in graniteEmbeddingModels ? requestedTier : "311m"
 ) as GraniteEmbeddingTier;
 const reportPath = process.env.DRAFT_LOOP_RETRIEVAL_REPORT_PATH;
+const rerankerDirectory = process.env.DRAFT_LOOP_RERANKER_MODEL_DIR;
 const timestamp = "2026-11-18T00:30:00.000Z";
 const checksum = "c".repeat(64);
 const workspaceId = "fictional-requirement-evidence";
@@ -63,7 +67,7 @@ const picks: RequirementEvidenceArm = async (requirement, limit) =>
 async function compare(
   options: Pick<
     Parameters<typeof runRequirementEvidenceComparison>[0],
-    "embedder" | "relevanceFloor"
+    "embedder" | "relevanceFloor" | "rerank"
   >,
 ): Promise<RequirementEvidenceComparisonReport> {
   const storage = openSqliteStorage(":memory:");
@@ -122,14 +126,25 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
         modelDirectory: modelDirectory as string,
         tier,
       });
+      const crossEncoder =
+        rerankerDirectory === undefined || rerankerDirectory === ""
+          ? undefined
+          : await createOnnxCrossEncoder({ modelDirectory: rerankerDirectory });
       try {
         const relevanceFloor = semanticRelevanceFloorForIdentity(embedder.identity);
         const report = await compare({
           embedder,
           ...(relevanceFloor === undefined ? {} : { relevanceFloor }),
+          ...(crossEncoder === undefined
+            ? {}
+            : {
+                rerank: (requirement: string, passages: readonly string[]) =>
+                  crossEncoder.score(requirement, passages),
+              }),
         });
         expect(report.arms.semantic).toBeDefined();
         expect(report.arms.hybrid).toBeDefined();
+        if (crossEncoder !== undefined) expect(report.arms.wideReranked).toBeDefined();
         if (reportPath !== undefined) {
           mkdirSync(dirname(reportPath), { recursive: true });
           writeFileSync(
@@ -139,6 +154,7 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
                 tier,
                 embeddingIdentity: embedder.identity,
                 relevanceFloor: relevanceFloor ?? null,
+                crossEncoder: crossEncoder?.identity ?? null,
                 ...report,
               },
               null,
@@ -147,6 +163,7 @@ describe.skipIf(modelDirectory === undefined || modelDirectory === "")(
           );
         }
       } finally {
+        await crossEncoder?.dispose();
         await embedder.dispose();
       }
     }, 600_000);
