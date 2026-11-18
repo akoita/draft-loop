@@ -60,7 +60,10 @@ export async function rerankRequirementEvidenceMap(
   const { map, encoder } = request;
   const now = request.now ?? (() => performance.now());
   if (encoder === undefined) {
-    return Object.freeze({ ...map, rerank: { status: "no-model" as const, durationMs: 0, pairCount: 0 } });
+    return Object.freeze({
+      ...map,
+      rerank: { status: "no-model" as const, durationMs: 0, pairCount: 0 },
+    });
   }
   const texts = new Map(request.eligible.map((chunk) => [chunk.id, chunk.text]));
   const requirementTexts = new Map(request.requirements.map(({ id, text }) => [id, text]));
