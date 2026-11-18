@@ -87,7 +87,7 @@ export function AccountDeletionPanel({
 
   return (
     <form className="inline-form account-deletion" onSubmit={remove}>
-      <p className="notice">{t`Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy.`}</p>
+      <p className="notice">{t`Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy.`}</p>
       <label htmlFor="delete-account-confirm">
         {t`Type your email address,`} {email}
         {t`, to confirm`}

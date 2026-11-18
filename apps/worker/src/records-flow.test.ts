@@ -273,10 +273,10 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
       ),
     ).toBe(403);
 
-    // Delete record: a mistyped id never reaches the API; a member is refused.
-    expect(deleteRecordRequest("candidate-ana", "candidate-ben")).toHaveProperty("problem");
+    // Delete record: anything but the confirm word never reaches the API; a member is refused.
+    expect(deleteRecordRequest("candidate-ana", "candidate-ana")).toHaveProperty("problem");
     const confirmed = (recordId: string) => {
-      const found = deleteRecordRequest(recordId, recordId);
+      const found = deleteRecordRequest(recordId, "DELETE");
       if ("problem" in found) throw new Error(found.problem);
       return found.request;
     };

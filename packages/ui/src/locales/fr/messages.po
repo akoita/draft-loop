@@ -63,7 +63,6 @@ msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription c
 msgstr ", puis fermez et rouvrez DraftLoop. DraftLoop ne copie pas les identifiants d’abonnement dans une clé d’API."
 
 #: apps/web/src/account-deletion.tsx
-#: apps/web/src/record-actions.tsx
 msgid ", to confirm"
 msgstr ", à confirmer"
 
@@ -2903,6 +2902,10 @@ msgstr "Diplômes, formations et certifications."
 msgid "Delete"
 msgstr "Supprimer"
 
+#: apps/web/src/record-actions-model.ts
+msgid "DELETE"
+msgstr "SUPPRIMER"
+
 #: packages/ui/src/application-archive-model.ts
 msgid "Delete \"{name}\"? This cannot be undone."
 msgstr "Supprimer « {name} » ? Cette action est irréversible."
@@ -2917,6 +2920,10 @@ msgstr "Supprimer {0}"
 msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
 msgstr "Supprimez un dossier dont vous n’avez plus besoin, ou demandez au propriétaire une offre plus grande, avant d’en créer un autre."
 
+#: apps/web/src/record-actions.tsx
+msgid "Delete all documents and applications"
+msgstr "Supprimer tous les documents et candidatures"
+
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder"
 msgstr "Supprimer le dossier"
@@ -2925,10 +2932,6 @@ msgstr "Supprimer le dossier"
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder {0}"
 msgstr "Supprimer le dossier {0}"
-
-#: apps/web/src/record-actions.tsx
-msgid "Delete job search"
-msgstr "Supprimer la recherche d’emploi"
 
 #: apps/web/src/account-deletion.tsx
 msgid "Delete my account"
@@ -2959,13 +2962,9 @@ msgstr "Supprimer définitivement cette version ?"
 msgid "Deleted \"{name}\"."
 msgstr "« {name} » supprimé."
 
-#: apps/web/src/record-actions.tsx
-msgid "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
-msgstr "La suppression efface cette recherche d’emploi et tout ce qui est conservé pour elle, définitivement. C’est irréversible. Téléchargez tout d’abord si vous voulez une copie."
-
 #: apps/web/src/account-deletion.tsx
-msgid "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
-msgstr "Supprimer votre compte efface définitivement chaque recherche d’emploi, document et version, votre identifiant de connexion et votre place dans la bêta. C’est irréversible. Téléchargez tout d’abord si vous voulez en garder une copie."
+msgid "Deleting your account removes all your documents, applications and drafts, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+msgstr "Supprimer votre compte efface définitivement tous vos documents, candidatures et brouillons, votre identifiant de connexion et votre place dans la bêta. C’est irréversible. Téléchargez tout d’abord si vous voulez en garder une copie."
 
 #: apps/web/src/account-deletion.tsx
 msgid "Deleting your account…"
@@ -8985,14 +8984,6 @@ msgstr "Démarrer"
 msgid "Start a conversation"
 msgstr "Démarrer une conversation"
 
-#: apps/web/src/records.tsx
-msgid "Start a new job search"
-msgstr "Lancer une nouvelle recherche d’emploi"
-
-#: apps/web/src/records.tsx
-msgid "Start a new job search when you are ready."
-msgstr "Lancez une nouvelle recherche d’emploi quand vous le souhaitez."
-
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -9001,6 +8992,14 @@ msgstr "Démarrer une nouvelle relecture"
 #: apps/web/src/review-actions.ts
 msgid "Start a run first."
 msgstr "Lancez d’abord une exécution."
+
+#: apps/web/src/records.tsx
+msgid "Start again"
+msgstr "Recommencer"
+
+#: apps/web/src/records.tsx
+msgid "Start again when you are ready."
+msgstr "Recommencez quand vous êtes prêt."
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Start author–critic review"
@@ -9148,8 +9147,8 @@ msgid "Stop the review before closing the workspace."
 msgstr "Arrêtez la relecture avant de fermer l’espace de travail."
 
 #: apps/web/src/record-actions-model.ts
-msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then delete the job search."
-msgstr "Arrêtez d’abord l’exécution. Une exécution de cette recherche d’emploi est en attente ou en cours : mettez-la en pause ou arrêtez-la définitivement depuis sa revue, puis supprimez la recherche d’emploi."
+msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
+msgstr "Arrêtez d’abord la génération. Une génération est en attente ou en cours : mettez-la en pause ou arrêtez-la définitivement depuis sa relecture, puis réessayez."
 
 #: packages/ui/src/stop-reason.ts
 msgid "Stopped: author and critic agree it's ready"
@@ -10516,6 +10515,10 @@ msgstr "Cette affirmation n’est pas liée aux contenus du candidat fournis à 
 msgid "This conversation could not be found. Start a new one."
 msgstr "Cette conversation est introuvable. Commencez-en une nouvelle."
 
+#: apps/web/src/record-actions.tsx
+msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
+msgstr "Cela supprime définitivement tous les documents, candidatures, brouillons, le profil et les notes du journal de travail enregistrés ici. Le compte est conservé, vous pouvez donc recommencer. C’est irréversible. Téléchargez tout d’abord si vous voulez en garder une copie."
+
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
 msgstr "Cette démo découpe le texte de l’offre en exigences à relire avec des données locales. Rien n’est envoyé à un fournisseur."
@@ -10948,12 +10951,12 @@ msgid "Two things may be worth telling. 1. {one} 2. {two} Would you like to talk
 msgstr "Deux choses mériteraient d’être racontées. 1. {one} 2. {two} Voulez-vous parler de l’une d’elles, ou d’autre chose ?"
 
 #: apps/web/src/record-actions.tsx
-msgid "Type its id,"
-msgstr "Saisissez son identifiant,"
+msgid "Type {word} to confirm"
+msgstr "Tapez {word} pour confirmer"
 
 #: apps/web/src/record-actions-model.ts
-msgid "Type its id, {workspaceId}, exactly to delete it."
-msgstr "Saisissez exactement son identifiant, {workspaceId}, pour la supprimer."
+msgid "Type {word} to confirm."
+msgstr "Tapez {word} pour confirmer."
 
 #: apps/web/src/account-deletion.tsx
 msgid "Type the email address you sign in with to confirm."
@@ -11728,10 +11731,6 @@ msgstr "Vous"
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
 msgstr "Votre session est ouverte, mais ce compte n’a pas encore de compte DraftLoop. Saisissez le code d’invitation reçu par e-mail pour le créer."
 
-#: apps/web/src/records.tsx
-msgid "You are still signed in. Start a new job search, or sign out."
-msgstr "Votre session reste ouverte. Lancez une nouvelle recherche d’emploi, ou déconnectez-vous."
-
 #: packages/ui/src/help-ask.tsx
 msgid "You asked:"
 msgstr "Votre question :"
@@ -11784,6 +11783,10 @@ msgstr "Votre compte et tout ce qui était conservé pour lui ont été supprim�
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."
 msgstr "Votre compte n’a pas pu être créé. Réessayez."
+
+#: apps/web/src/records.tsx
+msgid "Your account stays and you are still signed in. Start again, or sign out."
+msgstr "Votre compte est conservé et vous êtes toujours connecté. Recommencez, ou déconnectez-vous."
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Your answer"
@@ -11863,6 +11866,10 @@ msgstr "Vos documents sont enregistrés. DraftLoop les lit et liste les faits tr
 msgid "Your documents could not be opened. Open their store under Advanced options below."
 msgstr "Vos documents n’ont pas pu être ouverts. Ouvrez leur stockage dans Options avancées ci-dessous."
 
+#: apps/web/src/records.tsx
+msgid "Your documents, applications and everything stored with them were deleted."
+msgstr "Vos documents, vos candidatures et tout ce qui y était associé ont été supprimés."
+
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
 msgstr "Vos documents : CV, fichiers de faits de carrière, exports et liens. DraftLoop y cherche et en construit votre profil."
@@ -11898,10 +11905,6 @@ msgstr "Votre entretien"
 #: apps/web/src/oidc-sign-in.tsx
 msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
 msgstr "Votre invitation est prête. Connectez-vous, ou créez un compte, avec l'adresse email qui a reçu l'invitation ; le code est rempli pour vous."
-
-#: apps/web/src/records.tsx
-msgid "Your job search and everything stored for it were deleted."
-msgstr "Votre recherche d’emploi et tout ce qui était conservé pour elle ont été supprimés."
 
 #: packages/ui/src/knowledge-current.ts
 msgid "Your knowledge base is created when you add your first evidence above."

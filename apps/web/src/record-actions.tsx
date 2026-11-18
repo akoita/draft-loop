@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import {
+  deleteConfirmWord,
   deleteRecordRequest,
   deleteRefusal,
   exportFileName,
@@ -46,7 +47,6 @@ export function RecordActions({
 
   return (
     <RecordActionsPanel
-      recordId={recordId}
       title={title}
       busy={busy}
       messages={messages}
@@ -76,7 +76,6 @@ export function RecordActions({
 }
 
 export interface RecordActionsPanelProps {
-  readonly recordId: string;
   readonly title: string;
   readonly busy: boolean;
   readonly messages: readonly string[];
@@ -87,9 +86,8 @@ export interface RecordActionsPanelProps {
   readonly extra?: ReactNode;
 }
 
-/** The record's export button and its delete form, which asks for the record id typed back. */
+/** The record's export button and its delete form, which asks for a confirm word typed back. */
 export function RecordActionsPanel({
-  recordId,
   title,
   busy,
   messages,
@@ -98,6 +96,7 @@ export function RecordActionsPanel({
   extra,
 }: RecordActionsPanelProps) {
   const [typed, setTyped] = useState("");
+  const word = deleteConfirmWord();
 
   function remove(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,18 +109,19 @@ export function RecordActionsPanel({
       <p className="muted">{t`The download holds your documents, each job application with its job text, letters and exported drafts, your profile, work journal and consent history, in files you can open.`}</p>
       <button type="button" disabled={busy} onClick={onExport}>{t`Download everything`}</button>
       <form className="inline-form" onSubmit={remove}>
-        <p className="notice">{t`Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy.`}</p>
-        <label htmlFor="delete-record-confirm">
-          {t`Type its id,`} {recordId}
-          {t`, to confirm`}
-        </label>
+        <p className="notice">{t`This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy.`}</p>
+        <label htmlFor="delete-record-confirm">{t`Type ${word} to confirm`}</label>
         <input
           id="delete-record-confirm"
           value={typed}
           autoComplete="off"
           onChange={(event) => setTyped(event.target.value)}
         />
-        <button type="submit" className="danger" disabled={busy}>{t`Delete job search`}</button>
+        <button
+          type="submit"
+          className="danger"
+          disabled={busy}
+        >{t`Delete all documents and applications`}</button>
       </form>
       {messages.map((message) => (
         <p key={message} className="problem" role="alert">

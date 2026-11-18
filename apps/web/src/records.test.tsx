@@ -181,16 +181,18 @@ describe("after deleting the only job search", () => {
       <JobSearchDeleted onStartAgain={() => {}} onSignOut={() => {}} />,
     );
 
-    expect(html).toContain("Your job search and everything stored for it were deleted.");
-    expect(html).toContain("You are still signed in.");
-    expect(html).toContain("Start a new job search");
+    expect(html).toContain(
+      "Your documents, applications and everything stored with them were deleted.",
+    );
+    expect(html).toContain("you are still signed in.");
+    expect(html).toContain("Start again");
     expect(html).toContain("Sign out");
   });
 
   it("offers only a new job search where there is no sign-in", () => {
     const html = renderToStaticMarkup(<JobSearchDeleted onStartAgain={() => {}} />);
 
-    expect(html).toContain("Start a new job search");
+    expect(html).toContain("Start again");
     expect(html).not.toContain("Sign out");
     expect(html).not.toContain("still signed in");
   });

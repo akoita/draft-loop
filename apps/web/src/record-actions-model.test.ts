@@ -30,13 +30,15 @@ describe("record export and deletion", () => {
     expect(exportFileName).toBe("draftloop-data.zip");
   });
 
-  it("deletes only once the record id is typed back exactly", () => {
-    expect(deleteRecordRequest("candidate-ana", " candidate-ana ")).toEqual({
-      request: { path: { workspaceId: "candidate-ana" }, body: { confirm: "candidate-ana" } },
-    });
-    for (const typed of ["", "candidate-ben", "Candidate-Ana"]) {
+  it("deletes only once DELETE is typed, and never asks for the internal id", () => {
+    for (const typed of ["DELETE", " delete "]) {
       expect(deleteRecordRequest("candidate-ana", typed)).toEqual({
-        problem: "Type its id, candidate-ana, exactly to delete it.",
+        request: { path: { workspaceId: "candidate-ana" }, body: { confirm: "candidate-ana" } },
+      });
+    }
+    for (const typed of ["", "candidate-ana", "DEL"]) {
+      expect(deleteRecordRequest("candidate-ana", typed)).toEqual({
+        problem: "Type DELETE to confirm.",
       });
     }
   });
