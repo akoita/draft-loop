@@ -195,6 +195,8 @@ export interface RequirementEvidenceComparisonReport {
     readonly hybrid?: RequirementEvidenceArmReport;
     /** The floored semantic candidates, reordered by the cross-encoder. */
     readonly semanticReranked?: RequirementEvidenceArmReport;
+    /** The hybrid candidates, as the shipped map picks them, reordered by the cross-encoder. */
+    readonly hybridReranked?: RequirementEvidenceArmReport;
     /** A wider semantic pool without the floor, cut back to the limit by the cross-encoder. */
     readonly wideReranked?: RequirementEvidenceArmReport;
   };
@@ -253,6 +255,17 @@ export async function runRequirementEvidenceComparison(
       ),
     limit,
   );
+  const hybridReranked = await scoreRequirementEvidenceArm(
+    input.fixture,
+    async (requirement, armLimit) =>
+      reranked(
+        rerank,
+        requirement,
+        await hybridPort.queryEvidence(requirement, { limit: armLimit }),
+        armLimit,
+      ),
+    limit,
+  );
   const wideReranked = await scoreRequirementEvidenceArm(
     input.fixture,
     async (requirement, armLimit) =>
@@ -268,7 +281,7 @@ export async function runRequirementEvidenceComparison(
   );
   return {
     ...base,
-    arms: { picks, bm25, semantic, hybrid, semanticReranked, wideReranked },
+    arms: { picks, bm25, semantic, hybrid, semanticReranked, hybridReranked, wideReranked },
     passesGate,
   };
 }
