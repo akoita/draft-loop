@@ -75,7 +75,14 @@ async function seedRecord(
   await q("SELECT set_config('draft_loop.tenant_id', $1, true)", [record.tenantId]);
   await q(
     "INSERT INTO workspace_settings (workspace_ref, name, content) VALUES ($1, 'workspace.json', $2)",
-    [reference, JSON.stringify({ id: w, instructions: `Write for ${marker}.` })],
+    [
+      reference,
+      JSON.stringify({
+        id: w,
+        instructions: `Write for ${marker}.`,
+        storeRoot: `/tenants/${record.tenantId}/knowledge-stores/knowledge`,
+      }),
+    ],
   );
   await q("INSERT INTO workspaces (id, state, created_at, updated_at) VALUES ($1, $2, $3, $3)", [
     w,
@@ -480,6 +487,21 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
     expect(everything).not.toContain(otherTenant.marker);
     expect(everything).not.toContain("tenant_id");
     expect(everything).not.toContain("key-0001");
+
+    // Nothing shows the storage layout, the tenant or the counters every tenant shares.
+    expect(everything).not.toContain("org-north");
+    expect(everything).not.toContain("tenants/");
+    expect(everything).toContain("knowledge-stores/knowledge");
+    for (const column of [
+      "sequence",
+      "workspace_ref",
+      "blob_location",
+      "output_path",
+      "previous_event_checksum",
+      "event_checksum",
+    ]) {
+      expect(everything).not.toContain(`"${column}"`);
+    }
   });
 
   it("holds every base of the tenant in owner-token scope, and still no other record's runs", async () => {
