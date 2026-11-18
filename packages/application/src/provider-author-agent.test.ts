@@ -672,7 +672,7 @@ describe("provider author agent with the evidence map (#2983)", () => {
       .catch(() => undefined);
     expect(preferredEvidence).toHaveBeenCalled();
     const plan = JSON.stringify(
-      (requests[0]?.input as { readonly achievementPlan?: unknown }).achievementPlan,
+      (requests[0]?.input as { readonly achievementPlan?: unknown } | undefined)?.achievementPlan,
     );
     // Evidence goes to the model under request-local aliases: "other" is the second, E2.
     expect(plan).toContain("E2");
