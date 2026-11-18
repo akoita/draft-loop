@@ -9,6 +9,7 @@ import { useDisplayPreference } from "./display-preference.js";
 import { FeedbackButton } from "./feedback.js";
 import { WebHelpButton } from "./help-support.js";
 import { OperatorButton, OperatorPage } from "./operator.js";
+import { operatorTarget } from "./operator-model.js";
 import { RecordContext } from "./record-context.js";
 import { Records } from "./records.js";
 import { type RecordMemory, recordMemory } from "./records-model.js";
@@ -99,12 +100,37 @@ export interface ShellProps {
   readonly memory?: RecordMemory;
 }
 
+/** The page's fragment, or nothing outside a browser. */
+function currentHash(): string {
+  return typeof window === "undefined" ? "" : window.location.hash;
+}
+
 export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
   const display = useDisplayPreference({ client, mode });
   // The operator page (#2829) covers the screens without closing them, so work in progress stays.
-  const [operating, setOperating] = useState(false);
+  // The alert email links to `#operator/feedback/<noteId>` (#3002), which opens it on that note.
+  const [operating, setOperating] = useState(() => operatorTarget(currentHash()) !== undefined);
+  const [focusNoteId, setFocusNoteId] = useState(() => operatorTarget(currentHash())?.noteId);
   const openOperator = useCallback(() => setOperating(true), []);
+  const closeOperator = useCallback(() => {
+    setOperating(false);
+    setFocusNoteId(undefined);
+    if (operatorTarget(currentHash()) !== undefined) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    const follow = () => {
+      const target = operatorTarget(currentHash());
+      if (target === undefined) return;
+      setFocusNoteId(target.noteId);
+      setOperating(true);
+    };
+    window.addEventListener("hashchange", follow);
+    return () => window.removeEventListener("hashchange", follow);
+  }, []);
 
   useEffect(() => {
     let current = true;
@@ -141,7 +167,9 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
     <DisplayPreferenceProvider value={display}>
       <div className="shell">
         {health === "unreachable" ? <ServiceDown /> : null}
-        {operating ? <OperatorPage client={client} onClose={() => setOperating(false)} /> : null}
+        {operating ? (
+          <OperatorPage client={client} onClose={closeOperator} focusNoteId={focusNoteId} />
+        ) : null}
         <div className="shell-screens" hidden={operating}>
           {mode === "sign-in" ? (
             <>

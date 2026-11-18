@@ -5,16 +5,29 @@ import { describe, expect, it } from "vitest";
 
 import { AccountMenu } from "./account-menu.js";
 import { type ApiClient, ApiRequestError } from "./api-client.js";
-import { FeedbackSection, InvitesSection, OperatorPage, WaitlistSection } from "./operator.js";
+import {
+  FeedbackSection,
+  InvitesSection,
+  OperatorButton,
+  OperatorPage,
+  WaitlistSection,
+} from "./operator.js";
 import {
   canOperate,
+  draftIssueUrl,
   type FeedbackNote,
+  feedbackCounts,
   inviteFromWaitlist,
   inviteGoesPastCap,
+  isIssueUrl,
+  operatorTarget,
   readFeedback,
   readInvites,
+  readNewFeedbackCount,
   readWaitlist,
+  replaceNote,
   seatsLeft,
+  triageFeedback,
   type WaitlistEntry,
 } from "./operator-model.js";
 
@@ -347,7 +360,7 @@ describe("the feedback", () => {
     ]);
   });
 
-  it("shows each note's kind, screen and text, with no control to change it", () => {
+  it("shows each note's kind, screen and text, with no control to change it when read only", () => {
     const support: FeedbackNote = {
       ...note,
       noteId: "note-2",
@@ -365,7 +378,8 @@ describe("the feedback", () => {
     expect(html).toContain("The export button\ndoes nothing.");
     expect(html).toContain("Support ticket");
     expect(html).toContain("How do I export?");
-    expect(html).not.toContain("<button");
+    expect(html).not.toContain("Keep for later");
+    expect(html).not.toContain('type="checkbox"');
   });
 
   it("says so when there is none, and shows a failed read", async () => {
@@ -389,5 +403,183 @@ describe("the operator page", () => {
     expect(html).toContain("Invites");
     expect(html).toContain("Feedback");
     expect(html.match(/role="status"/gu)).toHaveLength(3);
+  });
+});
+
+describe("the feedback inbox (#3002)", () => {
+  const kept: FeedbackNote = { ...note, noteId: "note-kept", status: "triaged" };
+  const linked: FeedbackNote = {
+    ...note,
+    noteId: "note-linked",
+    status: "issue",
+    issueUrl: "https://github.com/akoita/draft-loop/issues/1",
+  };
+  const closed: FeedbackNote = { ...note, noteId: "note-closed", status: "closed" };
+  const all = [note, kept, linked, closed];
+  const triage = () => {};
+
+  it("counts each tab and opens on New, with Close first and bulk close", () => {
+    const html = render(
+      <FeedbackSection state={{ kind: "ready", value: all }} onTriage={triage} />,
+    );
+
+    expect(feedbackCounts(all)).toEqual({ new: 1, triaged: 1, issue: 1, closed: 1 });
+    expect(html).toContain('aria-pressed="true">New 1</button>');
+    expect(html).toContain("Kept 1");
+    expect(html).toContain("Linked to an issue 1");
+    expect(html).toContain("Closed 1");
+    expect(html).toContain('id="feedback-note-1"');
+    expect(html).not.toContain('id="feedback-note-kept"');
+    expect(html.indexOf(">Close</button>")).toBeLessThan(html.indexOf("Keep for later"));
+    expect(html).toContain("Draft an issue");
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain("Close selected (0)");
+  });
+
+  it("opens on the tab of the note the address names, with that note first", () => {
+    const html = render(
+      <FeedbackSection
+        state={{ kind: "ready", value: all }}
+        focusNoteId="note-linked"
+        onTriage={triage}
+      />,
+    );
+
+    expect(html).toContain('aria-pressed="true">Linked to an issue 1</button>');
+    expect(html).toContain("operator-item-highlight");
+    expect(html).toContain("Open the issue");
+    expect(html).toContain("Close, it is fixed");
+    expect(html).not.toContain("Draft an issue");
+    expect(html).not.toContain('type="checkbox"');
+  });
+
+  it("offers Reopen on a closed note", () => {
+    const html = render(
+      <FeedbackSection
+        state={{ kind: "ready", value: [closed] }}
+        focusNoteId="note-closed"
+        onTriage={triage}
+      />,
+    );
+
+    expect(html).toContain(">Reopen</button>");
+    expect(html).not.toContain(">Close</button>");
+  });
+
+  it("shows the note's context folded", () => {
+    const withContext: FeedbackNote = {
+      ...note,
+      context: {
+        source: "web",
+        route: "/",
+        webBuild: "index-abc",
+        serverRelease: "server-v0.26.20",
+        plan: "individual",
+        ids: { recordId: "record-1" },
+        recentErrors: [{ code: "rate_limited", message: "Slow down.", at: note.sentAt }],
+        browser: {
+          family: "Chrome",
+          os: "Windows",
+          viewport: "1280x800",
+          language: "fr-FR",
+          theme: "light",
+        },
+      },
+    };
+    const html = render(
+      <FeedbackSection state={{ kind: "ready", value: [withContext] }} onTriage={triage} />,
+    );
+
+    expect(html).toContain("<summary>Context</summary>");
+    expect(html).toContain("server-v0.26.20");
+    expect(html).toContain("rate_limited");
+    expect(html).toContain("Chrome, Windows, 1280x800, fr-FR, light");
+  });
+
+  it("drafts a public issue with the context and note id, never the member's words or ids", () => {
+    const url = new URL(
+      draftIssueUrl({
+        ...note,
+        context: { source: "web", serverRelease: "v1", plan: null, ids: { recordId: "rec-9" } },
+      }),
+    );
+    const body = url.searchParams.get("body") ?? "";
+
+    expect(url.origin + url.pathname).toBe("https://github.com/akoita/draft-loop/issues/new");
+    expect(url.searchParams.get("template")).toBe("from-feedback.md");
+    expect(body).toContain("Note id: note-1");
+    expect(body).toContain('"serverRelease": "v1"');
+    expect(body).not.toContain("export button");
+    expect(body).not.toContain("rec-9");
+    expect(body).not.toContain("org-alder");
+    expect(body).not.toContain("member-ada");
+  });
+
+  it("takes only GitHub issue addresses as links", () => {
+    expect(isIssueUrl("https://github.com/akoita/draft-loop/issues/12")).toBe(true);
+    expect(isIssueUrl(" https://github.com/a/b/issues/3 ")).toBe(true);
+    expect(isIssueUrl("https://github.com/a/b/pull/3")).toBe(false);
+    expect(isIssueUrl("http://github.com/a/b/issues/3")).toBe(false);
+    expect(isIssueUrl("https://example.com/a/b/issues/3")).toBe(false);
+  });
+
+  it("saves a triage through the API and replaces the note in the list", async () => {
+    const calls: unknown[] = [];
+    const updated = { ...note, status: "closed" as const };
+    const outcome = await triageFeedback(
+      fakeClient({ "PATCH /v1/operator/feedback/{noteId}": updated }, calls),
+      "note-1",
+      { status: "closed" },
+    );
+
+    expect(outcome).toEqual({ kind: "triaged", note: updated });
+    expect(calls).toEqual([
+      [
+        "PATCH /v1/operator/feedback/{noteId}",
+        { path: { noteId: "note-1" }, body: { status: "closed" } },
+      ],
+    ]);
+    expect(replaceNote([note, kept], updated)).toEqual([updated, kept]);
+    const refused = await triageFeedback(
+      fakeClient({
+        "PATCH /v1/operator/feedback/{noteId}": new ApiRequestError(404, "not_found", "Gone."),
+      }),
+      "note-1",
+      { status: "closed" },
+    );
+    expect(refused.kind).toBe("failed");
+  });
+
+  it("counts new notes for the Operator button, and shows none when there are none", async () => {
+    const calls: unknown[] = [];
+    const count = await readNewFeedbackCount(
+      fakeClient({ "GET /v1/operator/feedback": { notes: [note, note] } }, calls),
+    );
+
+    expect(count).toBe(2);
+    expect(calls).toEqual([
+      ["GET /v1/operator/feedback", { query: { status: "new", limit: 500 } }],
+    ]);
+    expect(render(<OperatorButton onOpen={() => {}} newNotes={2} />)).toContain(
+      'aria-label="Operator, 2 new feedback notes"',
+    );
+    expect(render(<OperatorButton onOpen={() => {}} newNotes={0} />)).not.toContain(
+      "operator-count",
+    );
+    expect(
+      await readNewFeedbackCount(
+        fakeClient({ "GET /v1/operator/feedback": new ApiRequestError(403, "forbidden", "No.") }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("reads the operator page's address, and nothing else", () => {
+    expect(operatorTarget("#operator")).toEqual({});
+    expect(operatorTarget("#operator/feedback")).toEqual({});
+    expect(operatorTarget("#operator/feedback/8dea1500-c6d3")).toEqual({
+      noteId: "8dea1500-c6d3",
+    });
+    expect(operatorTarget("#review")).toBeUndefined();
+    expect(operatorTarget("#operator/feedback/<script>")).toBeUndefined();
   });
 });

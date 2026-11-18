@@ -1528,3 +1528,117 @@ button.small:where(:not(.shared-screens *)) {
   font-weight: 600;
   user-select: all;
 }
+
+/* The feedback inbox (#3002): tabs, a note's heading and actions, its context and the counts. */
+.operator-tabs,
+.operator-actions,
+.operator-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.operator-tabs {
+  margin-top: 0.75rem;
+}
+
+.operator-bulk {
+  margin-top: 0.5rem;
+}
+
+.operator-item-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.operator-item-heading > h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.operator-item-highlight {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px var(--teal);
+}
+
+.operator-link-button {
+  display: inline-block;
+  border: 1px solid var(--teal);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.9rem;
+  color: var(--teal);
+  text-decoration: none;
+}
+
+.operator-link-form {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 36rem;
+}
+
+.operator-link-form > .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.operator-context {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.35rem 0 0;
+}
+
+.operator-context > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: 0.75rem;
+}
+
+.operator-context dt {
+  color: var(--text-2);
+}
+
+.operator-context dd {
+  margin: 0;
+}
+
+.operator-count {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.operator-tabs {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+/* The tabs' group name, read by screen readers only. */
+.operator-tabs-legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.operator-item-heading > input[type="checkbox"] {
+  flex: none;
+  width: auto;
+  margin: 0;
+}
+
+.operator-item-heading > h3 {
+  flex: 1;
+}

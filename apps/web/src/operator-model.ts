@@ -135,3 +135,135 @@ export async function inviteFromWaitlist(
     return { kind: "failed", email: entry.email, message: describeError(error) };
   }
 }
+
+/** The inbox's tabs (#3002): a note's triage status, as the operator reads it. */
+export type FeedbackStatus = FeedbackNote["status"];
+export const feedbackStatuses: readonly FeedbackStatus[] = ["new", "triaged", "issue", "closed"];
+
+/** A tab's name. */
+export function feedbackStatusLabel(status: FeedbackStatus): string {
+  switch (status) {
+    case "new":
+      return t`New`;
+    case "triaged":
+      return t`Kept`;
+    case "issue":
+      return t`Linked to an issue`;
+    case "closed":
+      return t`Closed`;
+  }
+}
+
+/** How many notes each tab holds. */
+export function feedbackCounts(notes: readonly FeedbackNote[]): Record<FeedbackStatus, number> {
+  const counts: Record<FeedbackStatus, number> = { new: 0, triaged: 0, issue: 0, closed: 0 };
+  for (const note of notes) counts[note.status] += 1;
+  return counts;
+}
+
+/** The list with one note replaced by its triaged copy; the order stays. */
+export function replaceNote(
+  notes: readonly FeedbackNote[],
+  updated: FeedbackNote,
+): readonly FeedbackNote[] {
+  return notes.map((note) => (note.noteId === updated.noteId ? updated : note));
+}
+
+/** What one triage press asks: a status, and for `issue` the issue's address. */
+export interface FeedbackTriage {
+  readonly status: FeedbackStatus;
+  readonly issueUrl?: string | null;
+}
+
+/** What a triage press gave: the stored note, or the API's refusal in words. */
+export type TriageOutcome =
+  | { readonly kind: "triaged"; readonly note: FeedbackNote }
+  | { readonly kind: "failed"; readonly message: string };
+
+/** Sets one note's status and issue link. */
+export async function triageFeedback(
+  client: ApiClient,
+  noteId: string,
+  triage: FeedbackTriage,
+): Promise<TriageOutcome> {
+  try {
+    const note = await client.call("PATCH /v1/operator/feedback/{noteId}", {
+      path: { noteId },
+      body: {
+        status: triage.status,
+        ...(triage.issueUrl === undefined ? {} : { issueUrl: triage.issueUrl }),
+      },
+    });
+    return { kind: "triaged", note };
+  } catch (error) {
+    return { kind: "failed", message: describeError(error) };
+  }
+}
+
+/** How many notes wait in New, for the count on the Operator button; undefined when unread. */
+export async function readNewFeedbackCount(client: ApiClient): Promise<number | undefined> {
+  try {
+    const { notes } = await client.call("GET /v1/operator/feedback", {
+      query: { status: "new", limit: 500 },
+    });
+    return notes.length;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A GitHub issue address, the only kind of link a note takes. */
+export function isIssueUrl(value: string): boolean {
+  return /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/\d+$/u.test(value.trim());
+}
+
+/** The public repository the From feedback template lives in. */
+export const feedbackIssueRepository = "https://github.com/akoita/draft-loop";
+
+/**
+ * GitHub's new-issue page with the From feedback template, prefilled with the note's technical
+ * context and id. The member's words, the ids in view and the organisation never go in it: the
+ * issue is public, and the operator writes the summary in their own words.
+ */
+export function draftIssueUrl(note: FeedbackNote): string {
+  const { ids: _ids, ...context } = note.context ?? {};
+  const body = [
+    "## Summary",
+    "",
+    "<!-- What the member ran into, in your own anonymised words. Never their text, email or name. -->",
+    "",
+    "## Technical context",
+    "",
+    "```json",
+    JSON.stringify(context, null, 2),
+    "```",
+    "",
+    "## Note",
+    "",
+    `- Note id: ${note.noteId}`,
+    `- Kind: ${note.kind === "support" ? "support" : (note.category ?? "not given")}`,
+    "",
+    "This issue never holds the member's words, email or name.",
+  ].join("\n");
+  const query = new URLSearchParams({
+    template: "from-feedback.md",
+    title: "[Feedback]: ",
+    body,
+  });
+  return `${feedbackIssueRepository}/issues/new?${query.toString()}`;
+}
+
+/** Where a page address sends the operator: the page, and the note to show first, if any. */
+export interface OperatorTarget {
+  readonly noteId?: string;
+}
+
+/**
+ * Reads `#operator`, `#operator/feedback` or `#operator/feedback/<noteId>`, the address the alert
+ * email links to; any other fragment is not the operator page's.
+ */
+export function operatorTarget(hash: string): OperatorTarget | undefined {
+  const match = /^#operator(?:\/feedback(?:\/([A-Za-z0-9-]{1,128}))?)?$/u.exec(hash);
+  if (match === null) return undefined;
+  return match[1] === undefined ? {} : { noteId: match[1] };
+}

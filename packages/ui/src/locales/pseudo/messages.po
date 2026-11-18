@@ -1407,6 +1407,7 @@ msgid "API key, billed per token"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Application"
 msgstr ""
 
@@ -1826,6 +1827,7 @@ msgid "Bring your career evidence into the loop"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Browser"
 msgstr ""
 
@@ -1994,6 +1996,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Change models for new runs"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Change the issue"
 msgstr ""
 
 #: apps/web/src/plan-preset-choice.tsx
@@ -2272,6 +2278,7 @@ msgid "close"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -2287,6 +2294,11 @@ msgstr ""
 
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
+msgstr ""
+
+#. placeholder {0}: chosenNotes.length
+#: apps/web/src/operator.tsx
+msgid "Close selected ({0})"
 msgstr ""
 
 #: packages/ui/src/export-preview.tsx
@@ -2307,6 +2319,14 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "Close workspace is available again once your career profile is generated."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Close, it is fixed"
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "Closed"
 msgstr ""
 
 #: packages/ui/src/project-card-facts.tsx
@@ -2500,6 +2520,10 @@ msgstr ""
 
 #: apps/web/src/private-sections.tsx
 msgid "contains"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Context"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -3120,6 +3144,10 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "Draft a new interview guide"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Draft an issue"
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -4140,6 +4168,10 @@ msgstr ""
 msgid "Getting voice input ready ({0}%)…"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "GitHub issue address"
+msgstr ""
+
 #: apps/web/src/records.tsx
 msgid "Give access"
 msgstr ""
@@ -4773,6 +4805,10 @@ msgstr ""
 msgid "Keep each heading to 200 characters or fewer."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Keep for later"
+msgstr ""
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Keep it"
 msgstr ""
@@ -4807,6 +4843,10 @@ msgstr ""
 
 #: packages/ui/src/provider-recovery.tsx
 msgid "Keep waiting"
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "Kept"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -4885,6 +4925,7 @@ msgid "Last activity unknown"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Last failed request"
 msgstr ""
 
@@ -4983,8 +5024,16 @@ msgstr ""
 msgid "lineages differ"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Link an issue"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Linked claim:"
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "Linked to an issue"
 msgstr ""
 
 #: packages/ui/src/source-evidence-kind-contract.ts
@@ -5537,6 +5586,10 @@ msgstr ""
 #. placeholder {0}: suggestion.term ?? ""
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Never use \"{0}\""
+msgstr ""
+
+#: apps/web/src/operator-model.ts
+msgid "New"
 msgstr ""
 
 #: packages/ui/src/getting-started.tsx
@@ -6159,6 +6212,10 @@ msgstr ""
 msgid "Notes from agents"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Nothing here."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Nothing is running to stop."
 msgstr ""
@@ -6382,6 +6439,10 @@ msgstr ""
 msgid "Open the command palette"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Open the issue"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Open the Prepare panel under the draft to write a cover letter or interview questions for this application."
 msgstr ""
@@ -6423,6 +6484,10 @@ msgstr ""
 
 #: apps/web/src/operator.tsx
 msgid "Operator"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Operator, {newNotes} new feedback notes"
 msgstr ""
 
 #: apps/web/src/evidence-panels.tsx
@@ -6541,6 +6606,7 @@ msgid "Owners and admins of your team choose who can open it."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Page"
 msgstr ""
 
@@ -6563,6 +6629,10 @@ msgstr ""
 
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Paste a GitHub issue address, such as https://github.com/owner/repo/issues/123."
 msgstr ""
 
 #: packages/ui/src/pasted-evidence.ts
@@ -6688,6 +6758,10 @@ msgstr ""
 
 #: apps/web/src/landing.tsx
 msgid "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Plan"
 msgstr ""
 
 #: packages/ui/src/model-profile-budget.tsx
@@ -7163,6 +7237,7 @@ msgid "reasoning"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Recent errors"
 msgstr ""
 
@@ -7187,6 +7262,7 @@ msgid "Recent workspaces could not be loaded."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Record"
 msgstr ""
 
@@ -7377,6 +7453,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-title.tsx
 msgid "Rename workspace {name}"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Reopen"
 msgstr ""
 
 #: packages/ui/src/career-evidence.ts
@@ -7977,6 +8057,7 @@ msgid "Rules apply once a knowledge base is chosen."
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/run-comparison-model.ts
 #: packages/ui/src/run-switcher.tsx
 msgid "Run"
@@ -8104,6 +8185,10 @@ msgstr ""
 
 #: packages/ui/src/connected-agents.tsx
 msgid "Save limit"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Save link"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -8275,12 +8360,25 @@ msgstr ""
 msgid "See your job applications and how their runs stand"
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Select all"
+msgstr ""
+
 #: packages/ui/src/start-checklist-model.ts
 msgid "Select an exact reviewed candidate profile before starting a review."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Select none"
+msgstr ""
+
 #: packages/ui/src/model-profile-picker-state.ts
 msgid "Select one supported author profile and one supported critic profile before applying."
+msgstr ""
+
+#. placeholder {0}: operatorTime(note.sentAt)
+#: apps/web/src/operator.tsx
+msgid "Select the note sent {0}"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
@@ -8395,6 +8493,10 @@ msgstr ""
 msgid "Sent. The people who run DraftLoop will read it and get back to you."
 msgstr ""
 
+#: apps/web/src/operator.tsx
+msgid "Server version"
+msgstr ""
+
 #: apps/web/src/shell-actions.tsx
 msgid "Service is down"
 msgstr ""
@@ -8484,6 +8586,10 @@ msgstr ""
 
 #: packages/ui/src/getting-started.tsx
 msgid "Show me the steps"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Show notes"
 msgstr ""
 
 #: packages/ui/src/review-panels.tsx
@@ -8624,6 +8730,7 @@ msgid "Sort"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/semantic-retrieval.tsx
@@ -11061,6 +11168,7 @@ msgid "Web screen"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 msgid "Web version"
 msgstr ""
 
