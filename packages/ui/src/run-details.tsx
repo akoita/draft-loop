@@ -8,7 +8,8 @@ import { plural, t } from "@lingui/core/macro";
  *
  * The drawer holds the author and critic with their claimed lineages, the data and writing
  * policy, the evidence mode, the author input, the run's event timeline once it is not running,
- * the steps the server executed when the host records them, and **Start a new review**. What the reviewer must act on or weigh stays outside it: run
+ * the steps the server executed when the host records them, the evidence for each requirement
+ * when the run mapped it, and **Start a new review**. What the reviewer must act on or weigh stays outside it: run
  * progress and Stop while a run executes, Resume for a paused or interrupted run, and the
  * shared-lineage warning, which a person about to approve has to see.
  *
@@ -41,6 +42,10 @@ import {
 import { runApplicationPlanDisplay } from "./run-application-plan.js";
 import { runAuthorInputDisplay } from "./run-author-input-display.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
+import {
+  type LoadRunRequirementEvidence,
+  RunRequirementEvidence,
+} from "./run-requirement-evidence.js";
 import { type LoadRunTrace, RunSteps } from "./run-steps.js";
 import { plainStopReason } from "./stop-reason.js";
 
@@ -507,6 +512,7 @@ export function RunDetailsDrawer({
   start,
   autopilot,
   loadTrace,
+  loadRequirementEvidence,
 }: {
   readonly id: string;
   readonly open: boolean;
@@ -521,6 +527,8 @@ export function RunDetailsDrawer({
   readonly autopilot: ReactNode;
   /** Reads the run's trace for the Steps section; without it there is no section. */
   readonly loadTrace?: LoadRunTrace;
+  /** Reads the run's requirement evidence; without it there is no such section. */
+  readonly loadRequirementEvidence?: LoadRunRequirementEvidence;
 }): JSX.Element {
   const headingId = useId();
   const drawerRef = useRef<HTMLElement>(null);
@@ -599,6 +607,13 @@ export function RunDetailsDrawer({
             )}
             {loadTrace === undefined ? null : (
               <RunSteps runId={state.runId} active={open && !runInProgress} load={loadTrace} />
+            )}
+            {loadRequirementEvidence === undefined ? null : (
+              <RunRequirementEvidence
+                runId={state.runId}
+                active={open && !runInProgress}
+                load={loadRequirementEvidence}
+              />
             )}
           </section>
           <RunTrustFacts state={state} />

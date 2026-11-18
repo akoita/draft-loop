@@ -87,6 +87,10 @@ import {
   type RecentWorkspaceSummary,
 } from "./recent-workspaces.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
+import {
+  createRunRequirementEvidenceCapabilities,
+  type RunRequirementEvidenceCapabilities,
+} from "./run-requirement-evidence-capabilities.js";
 import { createRunTraceCapabilities, type RunTraceCapabilities } from "./run-trace-capabilities.js";
 import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
 
@@ -399,6 +403,8 @@ export interface DesktopApplicationCapabilities {
   readonly applicationFolders?: ApplicationFolderCapabilities;
   /** Reads a run's trace for Run details; absent on a host that records none. */
   readonly runTrace?: RunTraceCapabilities;
+  /** Reads which evidence supports each requirement of a run; absent on a host without it. */
+  readonly runRequirementEvidence?: RunRequirementEvidenceCapabilities;
   /** Sets the model pair one application's new runs use, or clears it with `null`. */
   readonly setApplicationModels?: (
     workspaceId: string,
@@ -550,6 +556,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
   const runTrace = createRunTraceCapabilities(capabilityPort, unwrap);
+  const runRequirementEvidence = createRunRequirementEvidenceCapabilities(capabilityPort, unwrap);
   return {
     load,
     ...(capabilityPort.hasCapability("workspace.open") ||
@@ -738,6 +745,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     ...(applicationFolders === undefined ? {} : { applicationFolders }),
     ...(factUsage === undefined ? {} : { factUsage }),
     ...(runTrace === undefined ? {} : { runTrace }),
+    ...(runRequirementEvidence === undefined ? {} : { runRequirementEvidence }),
     ...(capabilityPort.hasCapability("application.delete")
       ? {
           deleteApplication: async (workspaceId: string, applicationId: string) => {
