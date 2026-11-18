@@ -8,6 +8,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { legalVersion } from "./legal-pages.js";
 import type { ResolveSignIn } from "./oidc-sign-in.js";
 import { operatorPageQuery } from "./operator-page-query.js";
@@ -27,6 +28,8 @@ export interface BetaSignUpOptions {
   readonly assignBetaPlan?: (organisationId: string, at: Date) => Promise<void>;
   /** Records the new organisation's first activity, so retention counts from sign-up (#2538). */
   readonly recordActivity?: (organisationId: string) => Promise<void>;
+  /** Emails each new invite's link; without it the operator sends the code themselves. */
+  readonly inviteMailer?: InviteMailer;
   readonly now?: () => Date;
   /** Refused redemptions one sign-in may make in a window before it waits (default 5). */
   readonly refusedAttempts?: number;
@@ -80,6 +83,11 @@ const createdInviteSchema = z
   .object({
     invite: inviteSchema,
     code: z.string().describe("The plain code, shown once: it is stored only as a hash."),
+    emailed: z
+      .boolean()
+      .describe(
+        "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code.",
+      ),
   })
   .meta({ id: "CreatedBetaInvite" });
 
@@ -105,6 +113,20 @@ const seatsSchema = z
       .describe("DRAFT_LOOP_BETA_ACCOUNT_CAP, used while no runtime cap is set."),
   })
   .meta({ id: "BetaSeats" });
+
+/** Emails a new invite's link; false when mail is off or the send failed. */
+export async function emailInvite(
+  mailer: InviteMailer | undefined,
+  created: { readonly invite: { readonly email: string }; readonly code: string },
+  locale?: "en" | "fr",
+): Promise<boolean> {
+  if (mailer === undefined) return false;
+  return mailer({
+    email: created.invite.email,
+    code: created.code,
+    ...(locale === undefined ? {} : { locale }),
+  });
+}
 
 interface Attempts {
   readonly start: number;
@@ -157,7 +179,8 @@ export function registerBetaSignUpRoutes(
     {
       schema: {
         summary: "Create a single-use beta invite code for one email",
-        description: "Operator only. The answer carries the plain code once.",
+        description:
+          "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         body: z.strictObject({ email: z.string().max(320) }),
         response: { 201: createdInviteSchema, 400: apiErrorSchema, 403: apiErrorSchema },
       },
@@ -174,7 +197,8 @@ export function registerBetaSignUpRoutes(
         { audit: { action: "beta_invite_created", inviteId: created.invite.inviteId } },
         "audit",
       );
-      return reply.code(201).send(created);
+      const emailed = await emailInvite(options.inviteMailer, created);
+      return reply.code(201).send({ ...created, emailed });
     },
   );
 

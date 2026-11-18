@@ -3,7 +3,9 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { emailInvite } from "./beta-sign-up-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { operatorPageQuery } from "./operator-page-query.js";
 
 /** Public: a visitor joins before any account exists. Listed with the public routes. */
@@ -30,6 +32,8 @@ const entrySchema = z
 
 export interface BetaWaitlistRoutesOptions {
   readonly waitlist: BetaWaitlist;
+  /** Emails each new invite's link; without it the operator sends the code themselves. */
+  readonly inviteMailer?: InviteMailer;
   readonly now?: () => Date;
 }
 
@@ -128,7 +132,7 @@ export function registerBetaWaitlistRoutes(
       schema: {
         summary: "Turn a waitlist entry into a beta invite",
         description:
-          "Operator only. Creates an invite for the entry's email and deletes the entry. The answer carries the plain code once. 404 when no entry has that id.",
+          "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         params: z.strictObject({ entryId: z.string().min(1).max(128) }),
         response: {
           201: z.object({
@@ -139,6 +143,7 @@ export function registerBetaWaitlistRoutes(
               state: z.enum(["open", "revoked", "redeemed"]),
             }),
             code: z.string(),
+            emailed: z.boolean(),
           }),
           403: apiErrorSchema,
           404: apiErrorSchema,
@@ -156,7 +161,8 @@ export function registerBetaWaitlistRoutes(
         },
         "audit",
       );
-      return reply.code(201).send(created);
+      const emailed = await emailInvite(options.inviteMailer, created);
+      return reply.code(201).send({ ...created, emailed });
     },
   );
 }

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@draft-loop/application": "workspace:*",
+    "@draft-loop/mail": "workspace:*",
     "@draft-loop/model-gateway": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
     "@draft-loop/providers": "workspace:*",

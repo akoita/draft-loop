@@ -101,7 +101,11 @@ export function WaitlistSection({
       )}
       {outcome === undefined ? null : outcome.kind === "invited" ? (
         <div className="operator-code" role="status">
-          <p>{t`Invite created for ${outcome.email}. Send them this code now: it is shown only once.`}</p>
+          <p>
+            {outcome.emailed
+              ? t`Invite emailed to ${outcome.email}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once.`
+              : t`Invite created for ${outcome.email}, but no email went out. Send them this code now: it is shown only once.`}
+          </p>
           <code>{outcome.code}</code>
         </div>
       ) : (

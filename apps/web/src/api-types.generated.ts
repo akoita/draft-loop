@@ -445,6 +445,7 @@ export interface ApiSchemas {
   "CreatedBetaInvite": {
     readonly invite: ApiSchemas["BetaInvite"];
     readonly code: string;
+    readonly emailed: boolean;
   };
   "CreatedOrganisation": {
     readonly organisation: {
@@ -3141,6 +3142,7 @@ export interface ApiOperations {
         readonly state: "open" | "revoked" | "redeemed";
       };
       readonly code: string;
+      readonly emailed: boolean;
     };
   };
   "POST /v1/feedback": {

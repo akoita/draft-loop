@@ -8,6 +8,7 @@ import {
   waitlistJoinsPerWindow,
   waitlistPath,
 } from "./beta-waitlist-routes.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { cloudLoggingOptions } from "./logging.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -55,11 +56,12 @@ function fakeWaitlist() {
   return waitlist;
 }
 
-async function start(waitlist: BetaWaitlist): Promise<void> {
+async function start(waitlist: BetaWaitlist, inviteMailer?: InviteMailer): Promise<void> {
   lines = [];
   app = await buildApi({
     ownerToken,
     betaWaitlist: waitlist,
+    ...(inviteMailer === undefined ? {} : { inviteMailer }),
     logger: cloudLoggingOptions({
       write: (line) => lines.push(JSON.parse(line) as Record<string, unknown>),
     }),
@@ -150,6 +152,7 @@ describe("the beta waitlist (#2566)", () => {
     expect(invited.json()).toMatchObject({
       invite: { inviteId: "invite-1", state: "open" },
       code: "ABCDEFGHJKMNPQRS",
+      emailed: false,
     });
     const unknown = await app.inject({
       method: "POST",
@@ -157,5 +160,22 @@ describe("the beta waitlist (#2566)", () => {
       headers: authorization,
     });
     expect(unknown.statusCode).toBe(404);
+  });
+
+  it("emails the invite's person a link with the code where mail is on", async () => {
+    const mailer = vi.fn<InviteMailer>(async () => true);
+    await start(fakeWaitlist(), mailer);
+
+    const invited = await app.inject({
+      method: "POST",
+      url: "/v1/operator/waitlist/entry-1/invite",
+      headers: authorization,
+    });
+
+    expect(invited.json()).toMatchObject({ code: "ABCDEFGHJKMNPQRS", emailed: true });
+    expect(mailer).toHaveBeenCalledWith({
+      email: expect.any(String),
+      code: "ABCDEFGHJKMNPQRS",
+    });
   });
 });

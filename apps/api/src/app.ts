@@ -75,6 +75,7 @@ import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-r
 import { registerHelpRoutes } from "./help-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
 import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
+import type { InviteMailer } from "./invite-mail.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
 import { registerKnowledgeRoutes } from "./knowledge-routes.js";
 import { registerKnowledgeSourceFileRoutes } from "./knowledge-source-file-routes.js";
@@ -238,6 +239,8 @@ export interface ApiOptions {
    * With it, the auth config tells the signed-out screen to show the landing page (#2567).
    */
   readonly betaWaitlist?: BetaWaitlistRoutesOptions["waitlist"];
+  /** Emails each new beta invite's sign-up link; absent where the deployment sets no sender. */
+  readonly inviteMailer?: InviteMailer;
   /** The support assistant's switch and limits (#2882); without it the support routes are absent. */
   readonly support?: SupportSettings;
   /** The operator's run-time overrides of the support limits, from Secret Manager. */
@@ -943,6 +946,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...options.betaInvites,
       ...(auth.mode === "oidc" ? { resolveSignIn: auth.resolveSignIn } : {}),
       ...(recordActivity === undefined ? {} : { recordActivity }),
+      ...(options.inviteMailer === undefined ? {} : { inviteMailer: options.inviteMailer }),
       ...(operatorFor === undefined
         ? {}
         : {
@@ -957,7 +961,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     });
   }
   if (options.betaWaitlist !== undefined) {
-    registerBetaWaitlistRoutes(app, { waitlist: options.betaWaitlist });
+    registerBetaWaitlistRoutes(app, {
+      waitlist: options.betaWaitlist,
+      ...(options.inviteMailer === undefined ? {} : { inviteMailer: options.inviteMailer }),
+    });
   }
   if (options.feedback !== undefined) {
     registerFeedbackRoutes(app, {

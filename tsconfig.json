@@ -39,6 +39,7 @@
     { "path": "./packages/security" },
     { "path": "./packages/user-guide" },
     { "path": "./packages/support" },
+    { "path": "./packages/mail" },
     { "path": "./packages/embeddings" },
     { "path": "./packages/evaluations" },
     { "path": "./packages/ui" },

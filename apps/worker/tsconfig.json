@@ -35,6 +35,9 @@
       "path": "../../packages/storage-postgres"
     },
     {
+      "path": "../../packages/mail"
+    },
+    {
       "path": "../../packages/support"
     },
     {

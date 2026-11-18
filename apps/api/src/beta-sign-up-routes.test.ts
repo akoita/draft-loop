@@ -270,6 +270,7 @@ describe("operator beta invite routes", () => {
     });
     expect(created.statusCode).toBe(201);
     expect(created.json().code).toBe("ABCDEFGHJKMNPQRS");
+    expect(created.json().emailed).toBe(false);
 
     const listed = await server.inject({
       method: "GET",
