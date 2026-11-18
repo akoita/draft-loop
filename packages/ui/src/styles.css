@@ -1028,8 +1028,11 @@ input[type="text"].workspace-title-input {
 
 .page-toolbar-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
+  min-width: 0;
   margin-left: auto;
 }
 
@@ -9550,6 +9553,7 @@ input[type="text"].application-card-name-input {
 /* The application screen: three numbered steps, each with its state and its own controls. */
 .application-steps {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   margin: var(--space-4) 0 0;
   padding: 0;
@@ -9558,6 +9562,7 @@ input[type="text"].application-card-name-input {
 
 .application-step {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   min-width: 0;
   border: 1px solid var(--border);
@@ -9576,6 +9581,7 @@ input[type="text"].application-card-name-input {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .application-step-head h3 {
@@ -9624,6 +9630,7 @@ input[type="text"].application-card-name-input {
 
 .application-step-subject {
   flex-basis: 100%;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   color: var(--text-3);
@@ -10134,6 +10141,12 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 @media (max-width: 640px) {
   .app-frame {
     flex-direction: column;
+  }
+
+  /* The rail becomes a sticky bar across the top, so a step or section scrolled into view
+     stops below it instead of under it. */
+  :root {
+    scroll-padding-top: 4rem;
   }
 
   .side-rail {

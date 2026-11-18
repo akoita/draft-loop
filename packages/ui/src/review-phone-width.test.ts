@@ -47,6 +47,21 @@ describe("review screen at phone width", () => {
     expect(rule(".home-card-head,\n.home-section-head")).toContain("flex-wrap: wrap;");
   });
 
+  it("keeps the application screen's toolbar and steps inside a phone's column (#2947)", () => {
+    const actions = rule(".page-toolbar-actions");
+    expect(actions).toContain("flex-wrap: wrap;");
+    expect(actions).toContain("min-width: 0;");
+    expect(rule(".application-steps")).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(rule(".application-step")).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(rule(".application-step-subject")).toContain("min-width: 0;");
+  });
+
+  it("stops scrolled-to steps below the phone's sticky top bar (#2947)", () => {
+    const phone = styles.indexOf("@media (max-width: 640px) {");
+    expect(phone).toBeGreaterThanOrEqual(0);
+    expect(styles.slice(phone)).toMatch(/:root \{\s*scroll-padding-top: 4rem;/u);
+  });
+
   it("wraps the application screen's start button below 760px", () => {
     const narrow = styles.indexOf("@media (max-width: 760px) {");
     expect(rule(".onboarding-footer .button-primary", narrow)).toContain("white-space: normal;");
