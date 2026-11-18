@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ApiClient } from "./api-client.js";
 import {
+  type BetaSeats,
   type FeedbackNote,
   feedbackKindLabel,
   type InviteList,
   type InviteOutcome,
   inviteFromWaitlist,
+  inviteGoesPastCap,
   inviteStateLabel,
   type Loaded,
   operatorTime,
@@ -29,19 +31,47 @@ function LoadProblem({ state }: { readonly state: Loaded<unknown> }) {
   return null;
 }
 
+/** The seats used, the open invites and the seats left, in one sentence. */
+function seatsSentence(seats: BetaSeats): string {
+  return t`${seats.redeemed} of ${seats.cap} seats used, ${seats.open} invites not used yet, ${seatsLeft(seats)} left.`;
+}
+
 export interface WaitlistSectionProps {
   readonly state: Loaded<readonly WaitlistEntry[]>;
+  /** The seats and the cap, once read; the Invite button warns past the cap. */
+  readonly seats?: BetaSeats | undefined;
   /** The entry whose invite is being created, if any. */
   readonly inviting?: string | undefined;
+  /** The entry whose invite waits for the operator to confirm going past the cap, if any. */
+  readonly confirming?: string | undefined;
   readonly outcome?: InviteOutcome | undefined;
+  /** Asks for an invite: creates it, or first asks to confirm when it goes past the cap. */
   readonly onInvite: (entry: WaitlistEntry) => void;
+  /** Creates the invite the operator confirmed past the cap. */
+  readonly onConfirm?: (entry: WaitlistEntry) => void;
+  readonly onCancel?: () => void;
 }
 
 /** People waiting for a place, newest first, each with an Invite button. */
-export function WaitlistSection({ state, inviting, outcome, onInvite }: WaitlistSectionProps) {
+export function WaitlistSection({
+  state,
+  seats,
+  inviting,
+  confirming,
+  outcome,
+  onInvite,
+  onConfirm,
+  onCancel,
+}: WaitlistSectionProps) {
   return (
     <section className="panel operator-section" aria-labelledby="operator-waitlist">
       <h2 id="operator-waitlist">{t`Waitlist`}</h2>
+      {seats === undefined ? null : (
+        <p className="operator-seats">
+          {seatsSentence(seats)}
+          {inviteGoesPastCap(seats) ? ` ${t`The cap is reached.`}` : ""}
+        </p>
+      )}
       {outcome === undefined ? null : outcome.kind === "invited" ? (
         <div className="operator-code" role="status">
           <p>{t`Invite created for ${outcome.email}. Send them this code now: it is shown only once.`}</p>
@@ -63,14 +93,28 @@ export function WaitlistSection({ state, inviting, outcome, onInvite }: Waitlist
                 <h3>{entry.email}</h3>
                 <p className="muted">{t`Joined ${operatorTime(entry.joinedAt)}`}</p>
                 <footer>
-                  <button
-                    type="button"
-                    disabled={inviting !== undefined}
-                    aria-label={t`Invite ${entry.email}`}
-                    onClick={() => onInvite(entry)}
-                  >
-                    {inviting === entry.entryId ? t`Inviting…` : t`Invite`}
-                  </button>
+                  {confirming === entry.entryId && seats !== undefined ? (
+                    <div className="notice operator-confirm" role="alert">
+                      <p>
+                        {t`This invite goes past the cap of ${seats.cap} seats: ${seats.redeemed} are used and ${seats.open} invites are not used yet. ${entry.email} cannot sign up until a seat frees or you raise the cap.`}
+                      </p>
+                      <button type="button" onClick={() => onConfirm?.(entry)}>
+                        {t`Invite anyway`}
+                      </button>{" "}
+                      <button type="button" className="secondary" onClick={() => onCancel?.()}>
+                        {t`Cancel`}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={inviting !== undefined || confirming !== undefined}
+                      aria-label={t`Invite ${entry.email}`}
+                      onClick={() => onInvite(entry)}
+                    >
+                      {inviting === entry.entryId ? t`Inviting…` : t`Invite`}
+                    </button>
+                  )}
                 </footer>
               </article>
             </li>
@@ -89,6 +133,13 @@ function inviteTime(invite: InviteList["invites"][number]): string {
   return t`Sent ${operatorTime(invite.createdAt)}`;
 }
 
+/** Where the cap comes from, and how to change it. */
+function capSourceSentence(seats: BetaSeats): string {
+  return seats.capSource === "operator"
+    ? t`The operator set this cap. Change it with pnpm beta:cap; no redeploy is needed.`
+    : t`This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed.`;
+}
+
 /** Every invite with its state, and the accounts invites may still create. */
 export function InvitesSection({ state }: { readonly state: Loaded<InviteList> }) {
   return (
@@ -97,9 +148,8 @@ export function InvitesSection({ state }: { readonly state: Loaded<InviteList> }
       <LoadProblem state={state} />
       {state.kind !== "ready" ? null : (
         <>
-          <p className="operator-seats">
-            {t`${state.value.redeemed} of ${state.value.cap} beta accounts used, ${seatsLeft(state.value)} left.`}
-          </p>
+          <p className="operator-seats">{seatsSentence(state.value)}</p>
+          <p className="muted">{capSourceSentence(state.value)}</p>
           {state.value.invites.length === 0 ? (
             <p className="muted">{t`No invite sent yet.`}</p>
           ) : (
@@ -181,6 +231,7 @@ export function OperatorPage({ client, onClose }: OperatorPageProps) {
   const [invites, setInvites] = useState<Loaded<InviteList>>({ kind: "loading" });
   const [feedback, setFeedback] = useState<Loaded<readonly FeedbackNote[]>>({ kind: "loading" });
   const [inviting, setInviting] = useState<string | undefined>(undefined);
+  const [confirming, setConfirming] = useState<string | undefined>(undefined);
   const [outcome, setOutcome] = useState<InviteOutcome | undefined>(undefined);
 
   const reloadInvitations = useCallback(async () => {
@@ -211,7 +262,17 @@ export function OperatorPage({ client, onClose }: OperatorPageProps) {
     };
   }, [client]);
 
+  function requestInvite(entry: WaitlistEntry) {
+    setOutcome(undefined);
+    if (invites.kind === "ready" && inviteGoesPastCap(invites.value)) {
+      setConfirming(entry.entryId);
+      return;
+    }
+    void invite(entry);
+  }
+
   async function invite(entry: WaitlistEntry) {
+    setConfirming(undefined);
     setInviting(entry.entryId);
     setOutcome(undefined);
     const result = await inviteFromWaitlist(client, entry);
@@ -236,9 +297,13 @@ export function OperatorPage({ client, onClose }: OperatorPageProps) {
       </p>
       <WaitlistSection
         state={waitlist}
+        seats={invites.kind === "ready" ? invites.value : undefined}
         inviting={inviting}
+        confirming={confirming}
         outcome={outcome}
-        onInvite={(entry) => void invite(entry)}
+        onInvite={requestInvite}
+        onConfirm={(entry) => void invite(entry)}
+        onCancel={() => setConfirming(undefined)}
       />
       <InvitesSection state={invites} />
       <FeedbackSection state={feedback} />

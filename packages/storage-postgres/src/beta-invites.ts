@@ -3,6 +3,7 @@ import {
   normalizeMemberEmail,
   requireOrganisationName,
 } from "@draft-loop/storage/tenant-directory";
+import { readOperatorCap, writeOperatorCap } from "./beta-account-cap.js";
 import type { SqlExecutor, SqlRow, SqlSession } from "./sql-client.js";
 
 /** Serialises redemptions so two at the last seat cannot both pass the cap. */
@@ -47,7 +48,10 @@ export interface RedeemBetaInviteInput {
   readonly code: string;
   /** The sign-in's verified email; the invite must name it. */
   readonly verifiedEmail: string;
-  /** The most redeemed invites the beta allows; 0 closes sign-up. */
+  /**
+   * The deployment's cap (`DRAFT_LOOP_BETA_ACCOUNT_CAP`): the most redeemed invites the beta
+   * allows while the operator has set none at runtime; 0 closes sign-up.
+   */
   readonly cap: number;
   readonly organisationName: string;
   /** The terms version the person accepted (YYYY-MM-DD), kept on the redeemed invite (#2462). */
@@ -72,6 +76,10 @@ export interface BetaInvites {
   readonly redeem: (input: RedeemBetaInviteInput) => Promise<RedeemBetaInviteResult>;
   /** Invites redeemed so far: the accounts the cap counts. */
   readonly redeemedCount: () => Promise<number>;
+  /** The cap the operator set at runtime (#2998), or undefined while the deployment's applies. */
+  readonly operatorCap: () => Promise<number | undefined>;
+  /** Sets the runtime cap; redemptions read it under the same lock from then on. */
+  readonly setOperatorCap: (input: { readonly cap: number; readonly now: Date }) => Promise<void>;
 }
 
 export class BetaInviteError extends Error {
@@ -184,7 +192,8 @@ export function createBetaInvites(client: SqlSession): BetaInvites {
         const [counted] = await executor.query(
           "SELECT count(*) AS redeemed FROM beta_invites WHERE redeemed_at IS NOT NULL",
         );
-        if (Number(counted?.redeemed ?? 0) >= input.cap) {
+        const cap = (await readOperatorCap(executor)) ?? input.cap;
+        if (Number(counted?.redeemed ?? 0) >= cap) {
           return { redeemed: false, refusal: "beta_full" };
         }
 
@@ -216,5 +225,9 @@ export function createBetaInvites(client: SqlSession): BetaInvites {
       );
       return Number(row?.redeemed ?? 0);
     },
+
+    operatorCap: () => readOperatorCap(client),
+
+    setOperatorCap: (input) => writeOperatorCap(client, input),
   };
 }

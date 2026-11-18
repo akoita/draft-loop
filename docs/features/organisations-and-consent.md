@@ -72,12 +72,15 @@ bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
 
 | Section  | What it shows                                                                  |
 | -------- | ------------------------------------------------------------------------------ |
-| Waitlist | Entries newest first. **Invite** turns one into an invite and shows its code once |
-| Invites  | Each invite, sent, redeemed or revoked, and the beta accounts used and left    |
+| Waitlist | The seats used, then entries newest first. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
+| Invites  | Each invite, sent, redeemed or revoked, the seats used and left, and where the cap comes from |
 | Feedback | Members' [notes and support tickets](feedback.md), newest first, read only     |
 
 Send the code to the person yourself: DraftLoop sends no email. Each invite is
 written to the audit log under the operator's sign-in.
+
+The cap starts small and rises in steps, with no redeploy:
+[raise the beta cap](../operations/server-deploy.md#raise-the-beta-cap).
 
 ## How to test it
 
@@ -88,7 +91,7 @@ written to the audit log under the operator's sign-in.
   `apps/api/src/consent-routes.test.ts`,
   `apps/api/src/record-erasure-routes.test.ts` and
   `apps/web/src/consent.test.tsx`.
-- The operator screen: `apps/web/src/operator.test.tsx`, and
+- The operator screen: `apps/web/src/operator.test.tsx`, `scripts/beta-cap.test.mjs`, and
   `apps/api/src/request-auth.test.ts` for refusing a member without the role.
 - `pnpm test:postgres` adds the tenant isolation, consent enforcement and
   erasure suites.

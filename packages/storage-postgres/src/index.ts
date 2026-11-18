@@ -1,3 +1,4 @@
+export { maximumBetaAccountCap } from "./beta-account-cap.js";
 export {
   type BetaInvite,
   BetaInviteError,
