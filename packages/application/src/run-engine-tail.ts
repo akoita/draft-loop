@@ -1,6 +1,5 @@
 import type { CoverageJudgementPlanner } from "@draft-loop/orchestrator";
 import type { AuditTrailStoragePort, RetrievalPort } from "@draft-loop/storage";
-
 import type { CandidateKnowledgeSensitivityExclusions } from "./candidate-knowledge-sensitivity-exclusion.js";
 import { type RunRecorders, runRecorders } from "./run-application-plan.js";
 import { type RunAuthorInputTotalsSource, runAuthorInputRecorder } from "./run-author-input.js";
@@ -10,6 +9,7 @@ import {
   type RequirementEvidenceGradeHook,
   runRequirementEvidenceGradeHook,
 } from "./run-requirement-evidence-grade.js";
+import { preferredEvidenceFromMap } from "./run-requirement-evidence-map.js";
 
 /** The trailing, run-scoped arguments of the engine factory, in its parameter order. */
 export type RunEngineTail = readonly [
@@ -52,6 +52,7 @@ export function runEngineTail(
         options.tracer,
       ),
       runRequirementEvidenceGradeHook(retrieval, storage, workspaceId),
+      preferredEvidenceFromMap(retrieval?.requirementEvidenceMap),
     ),
   ];
 }
@@ -59,6 +60,11 @@ export function runEngineTail(
 function withEvidenceGrade(
   recorders: RunRecorders,
   evidenceGrade: RequirementEvidenceGradeHook | undefined,
+  preferredEvidence: RunRecorders["preferredEvidence"],
 ): RunRecorders {
-  return evidenceGrade === undefined ? recorders : { ...recorders, evidenceGrade };
+  return {
+    ...recorders,
+    ...(evidenceGrade === undefined ? {} : { evidenceGrade }),
+    ...(preferredEvidence === undefined ? {} : { preferredEvidence }),
+  };
 }

@@ -111,3 +111,50 @@ describe("requirements without sent evidence (#1775)", () => {
     expect(requirementsWithoutEvidence(requirements, [chunk("b", "   ", -1)])).toEqual(["art"]);
   });
 });
+
+describe("requirement-to-achievement planning with the evidence map (#2983)", () => {
+  const requirements = [
+    { id: "lead", text: "Engineering leadership experience" },
+    { id: "cloud", text: "Led a cloud migration" },
+  ];
+  const evidence = [
+    chunk("guided", "Guided a team of five engineers through a platform rewrite.", 0),
+    chunk("fr", "Responsable de la migration vers le nuage.", 1),
+    chunk("meetup", "Attended an engineering leadership meetup.", 2),
+  ];
+
+  it("prefers the map's sent, unclaimed candidates and keeps words as the fallback", () => {
+    const byWords = createRequirementAchievementPlan(requirements, evidence);
+    expect(byWords.coverage).toEqual([
+      { requirementId: "lead", evidenceChunkId: "meetup" },
+      { requirementId: "cloud", evidenceChunkId: "fr" },
+    ]);
+
+    const byMap = createRequirementAchievementPlan(
+      requirements,
+      evidence,
+      new Map([
+        ["lead", ["missing", "guided"]],
+        // Already claimed by "lead", so the next candidate is taken.
+        ["cloud", ["guided", "fr"]],
+      ]),
+    );
+    expect(byMap.coverage).toEqual([
+      { requirementId: "lead", evidenceChunkId: "guided" },
+      { requirementId: "cloud", evidenceChunkId: "fr" },
+    ]);
+    expect(byMap.achievements.map(({ evidenceChunkId }) => evidenceChunkId)).toEqual([
+      "guided",
+      "fr",
+    ]);
+  });
+
+  it("falls back to words for a requirement the map has nothing sent for", () => {
+    const plan = createRequirementAchievementPlan(
+      requirements,
+      evidence,
+      new Map([["lead", ["missing"]]]),
+    );
+    expect(plan.coverage[0]).toEqual({ requirementId: "lead", evidenceChunkId: "meetup" });
+  });
+});

@@ -117,9 +117,14 @@ const rejectedText = "Built TypeScript tools in 2023.";
 const acceptedText = "Built TypeScript tools in 2021.";
 
 /** An author agent over a fake adapter that answers with the queued proposals. */
-function agent(outputs: JsonObject[], agentContext: ContextSnapshot = context) {
+function agent(
+  outputs: JsonObject[],
+  agentContext: ContextSnapshot = context,
+  extraDeps: Partial<Parameters<typeof createProviderAuthorAgent>[0]> = {},
+) {
   const requests: ModelRequest<JsonObject>[] = [];
   const author = createProviderAuthorAgent({
+    ...extraDeps,
     context: agentContext,
     promptContext: agentContext,
     dataPolicy: () => ({
@@ -647,5 +652,30 @@ describe("provider author agent document language", () => {
     expect(sentFrench?.systemPrompt).toContain("in French (fr)");
     expect(sentFrench?.promptCache?.systemPrompt).toBe(sentEnglish?.promptCache?.systemPrompt);
     expect(sentEnglish?.systemPrompt).not.toContain("conventions for dates");
+  });
+});
+
+describe("provider author agent with the evidence map (#2983)", () => {
+  beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  it("plans each requirement with the map's preferred chunk when given", async () => {
+    const other = {
+      ...(evidence[0] as ScoredEvidenceChunk),
+      id: "other",
+      text: "Shipped internal developer tooling.",
+      rank: 1,
+    };
+    const preferredEvidence = vi.fn(async () => new Map([["requirement", ["other"]]]));
+    const { author, requests } = agent([], context, { preferredEvidence });
+    await author
+      .execute({ ...request("run-map"), retrievedEvidence: [...evidence, other] })
+      .catch(() => undefined);
+    expect(preferredEvidence).toHaveBeenCalled();
+    const plan = JSON.stringify(
+      (requests[0]?.input as { readonly achievementPlan?: unknown }).achievementPlan,
+    );
+    // Evidence goes to the model under request-local aliases: "other" is the second, E2.
+    expect(plan).toContain("E2");
+    expect(plan).not.toContain("E1");
   });
 });
