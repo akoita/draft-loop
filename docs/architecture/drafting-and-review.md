@@ -165,7 +165,11 @@ With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
 as supports, partly supports or does not support. That is one extra call on the
 critic model, billed on that critique. A content-free
 `run.requirement-evidence-grade` event records the grades by id. A failed call
-leaves the map ungraded and never fails the critique. Grading is off by default. The
+leaves the map ungraded and never fails the critique. Grading is off by default.
+
+`DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map; each use is off unless
+named. With `fallback`, a run above its budget or cost cap adds each
+requirement's map candidates instead of its shared-word picks. The
 measurement behind it is
 [Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
 

@@ -179,3 +179,13 @@ describe("requirement-evidence map", () => {
     expect(serialized).toMatch(/"score":0\.95\d?[,}]/u);
   });
 });
+
+describe("requirement-evidence map uses", () => {
+  it("turns on only the uses the setting names", async () => {
+    const { enabledRequirementEvidenceMapUses } = await import("./run-requirement-evidence-map.js");
+    expect([...enabledRequirementEvidenceMapUses({})]).toEqual([]);
+    expect([
+      ...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: " Writer, fallback ,other" }),
+    ]).toEqual(["fallback", "writer"]);
+  });
+});
