@@ -1,0 +1,239 @@
+{
+  "description": "Invented career evidence for one fictional candidate and sixteen job requirements, labelled before any retriever ran. Most supporting chunks share few words with their requirement; three chunks are in French; four are distractors.",
+  "corpus": [
+    {
+      "id": "c01",
+      "language": "en",
+      "text": "Led a team of six engineers rebuilding the checkout service; ran weekly one-to-ones and hiring loops."
+    },
+    {
+      "id": "c02",
+      "language": "en",
+      "text": "Mentored two junior developers until both were promoted within a year."
+    },
+    {
+      "id": "c03",
+      "language": "en",
+      "text": "Moved 40 services from virtual machines to K8s clusters managed with Helm and Argo CD."
+    },
+    {
+      "id": "c04",
+      "language": "en",
+      "text": "Wrote Terraform modules for the shared networking layer across three cloud accounts."
+    },
+    {
+      "id": "c05",
+      "language": "en",
+      "text": "Set up GitHub Actions pipelines that build, test and ship every merge to production in under ten minutes."
+    },
+    {
+      "id": "c06",
+      "language": "en",
+      "text": "Cut p95 latency of the search API from 900 ms to 180 ms by adding a Redis cache and query batching."
+    },
+    {
+      "id": "c07",
+      "language": "en",
+      "text": "Designed the event-sourced ledger for wallet balances, with Kafka topics as the source of truth."
+    },
+    {
+      "id": "c08",
+      "language": "en",
+      "text": "Built a consumer that replays Kafka records to rebuild read models after schema changes."
+    },
+    {
+      "id": "c09",
+      "language": "en",
+      "text": "Interviewed 30 customers to choose which reporting features came first, and dropped two planned ones."
+    },
+    {
+      "id": "c10",
+      "language": "en",
+      "text": "Wrote the design records for the billing rewrite and presented the options to the leadership team."
+    },
+    {
+      "id": "c11",
+      "language": "en",
+      "text": "Introduced property-based checks and contract tests between the mobile app and the backend."
+    },
+    {
+      "id": "c12",
+      "language": "en",
+      "text": "Raised unit test coverage of the payments module from 40% to 85%."
+    },
+    {
+      "id": "c13",
+      "language": "en",
+      "text": "On-call lead for the platform team: wrote runbooks and ran blameless post-mortems after outages."
+    },
+    {
+      "id": "c14",
+      "language": "en",
+      "text": "Added OpenTelemetry tracing and Grafana dashboards that halved the time to diagnose outages."
+    },
+    {
+      "id": "c15",
+      "language": "fr",
+      "text": "A conçu une API GraphQL en TypeScript pour l'application mobile de réservation."
+    },
+    {
+      "id": "c16",
+      "language": "fr",
+      "text": "A animé des ateliers avec les clients et l'équipe produit pour prioriser la feuille de route trimestrielle."
+    },
+    {
+      "id": "c17",
+      "language": "fr",
+      "text": "Migration d'une base Oracle vers PostgreSQL sans interruption de service."
+    },
+    {
+      "id": "c18",
+      "language": "en",
+      "text": "Built React and Next.js screens for the merchant dashboard, with accessibility audits to WCAG AA."
+    },
+    {
+      "id": "c19",
+      "language": "en",
+      "text": "Implemented GDPR data export and erasure flows, with retention rules per data category."
+    },
+    {
+      "id": "c20",
+      "language": "en",
+      "text": "Encrypted customer documents at rest with per-tenant keys held in a cloud key management service."
+    },
+    {
+      "id": "c21",
+      "language": "en",
+      "text": "MSc in Computer Science, University of Lyon, 2014 to 2016."
+    },
+    {
+      "id": "c22",
+      "language": "en",
+      "text": "Fluent in English and French; working knowledge of Italian."
+    },
+    {
+      "id": "c23",
+      "language": "en",
+      "text": "Organised the office football tournament and a charity run."
+    },
+    {
+      "id": "c24",
+      "language": "en",
+      "text": "Prepared quarterly sales reports in Excel for the regional director."
+    },
+    { "id": "c25", "language": "en", "text": "Hobbies: sailing, chess and Italian cooking." },
+    {
+      "id": "c26",
+      "language": "en",
+      "text": "Read and summarised articles on machine learning for the team newsletter."
+    },
+    {
+      "id": "c27",
+      "language": "en",
+      "text": "Built a churn prediction model in Python with scikit-learn, run as a nightly batch job for the retention team."
+    },
+    {
+      "id": "c28",
+      "language": "en",
+      "text": "Designed REST endpoints in Node.js and TypeScript with OpenAPI contracts generated from Zod schemas."
+    }
+  ],
+  "cases": [
+    {
+      "id": "r01",
+      "kind": "paraphrase",
+      "requirement": "Experience managing and growing an engineering team",
+      "groundTruthEvidenceIds": ["c01", "c02"]
+    },
+    {
+      "id": "r02",
+      "kind": "synonym",
+      "requirement": "Hands-on Kubernetes and infrastructure as code",
+      "groundTruthEvidenceIds": ["c03", "c04"]
+    },
+    {
+      "id": "r03",
+      "kind": "synonym",
+      "requirement": "Continuous integration and continuous delivery",
+      "groundTruthEvidenceIds": ["c05"]
+    },
+    {
+      "id": "r04",
+      "kind": "paraphrase",
+      "requirement": "Strong performance optimisation skills",
+      "groundTruthEvidenceIds": ["c06"]
+    },
+    {
+      "id": "r05",
+      "kind": "paraphrase",
+      "requirement": "Event-driven architecture with message streaming",
+      "groundTruthEvidenceIds": ["c07", "c08"]
+    },
+    {
+      "id": "r06",
+      "kind": "cross-language",
+      "requirement": "Product sense: talk to users and decide what to build and what to cut",
+      "groundTruthEvidenceIds": ["c09", "c16"]
+    },
+    {
+      "id": "r07",
+      "kind": "paraphrase",
+      "requirement": "Write down architecture decisions and explain trade-offs",
+      "groundTruthEvidenceIds": ["c10"]
+    },
+    {
+      "id": "r08",
+      "kind": "paraphrase",
+      "requirement": "A culture of automated testing",
+      "groundTruthEvidenceIds": ["c11", "c12"]
+    },
+    {
+      "id": "r09",
+      "kind": "paraphrase",
+      "requirement": "Production operations: incident response and observability",
+      "groundTruthEvidenceIds": ["c13", "c14"]
+    },
+    {
+      "id": "r10",
+      "kind": "cross-language",
+      "requirement": "TypeScript API design",
+      "groundTruthEvidenceIds": ["c15", "c28"]
+    },
+    {
+      "id": "r11",
+      "kind": "cross-language",
+      "requirement": "Database migrations without downtime",
+      "groundTruthEvidenceIds": ["c17"]
+    },
+    {
+      "id": "r12",
+      "kind": "exact",
+      "requirement": "Frontend development with React",
+      "groundTruthEvidenceIds": ["c18"]
+    },
+    {
+      "id": "r13",
+      "kind": "paraphrase",
+      "requirement": "Privacy and security of personal data",
+      "groundTruthEvidenceIds": ["c19", "c20"]
+    },
+    {
+      "id": "r14",
+      "kind": "keyword-trap",
+      "requirement": "Machine learning in production",
+      "groundTruthEvidenceIds": ["c27"]
+    },
+    {
+      "id": "r15",
+      "kind": "exact",
+      "requirement": "Master's degree in computer science",
+      "groundTruthEvidenceIds": ["c21"]
+    },
+    {
+      "id": "r16",
+      "kind": "paraphrase",
+      "requirement": "Professional working proficiency in French",
+      "groundTruthEvidenceIds": ["c22"]
+    }
+  ]
+}

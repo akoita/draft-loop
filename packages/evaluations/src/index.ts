@@ -14,6 +14,7 @@ export * from "./evidence-usage.js";
 export * from "./pilot.js";
 export * from "./pilot-comparison-gate.js";
 export * from "./readiness-report.js";
+export * from "./requirement-evidence-retrieval.js";
 export * from "./retrieval.js";
 export * from "./stopping-decision.js";
 export * from "./synthetic-scenarios.js";
