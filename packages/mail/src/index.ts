@@ -39,7 +39,15 @@ export interface MailConfig {
   readonly serviceUrl: string;
 }
 
-const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/u;
+/** One `@`, no space, and a dot inside the domain; parsed without a backtracking pattern. */
+function isEmailAddress(value: string): boolean {
+  if (value.length > 320 || /\s/u.test(value)) return false;
+  const at = value.indexOf("@");
+  if (at < 1 || at !== value.lastIndexOf("@")) return false;
+  const domain = value.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  return dot > 0 && dot < domain.length - 1;
+}
 const secretVersionPattern = /^projects\/[^/]+\/secrets\/[^/]+\/versions\/[^/]+$/u;
 
 /**
@@ -51,7 +59,7 @@ export function readMailConfig(env: NodeJS.ProcessEnv): MailConfig | undefined {
   const keySecret = env.DRAFT_LOOP_MAIL_KEY_SECRET?.trim() ?? "";
   const serviceUrl = env.DRAFT_LOOP_PUBLIC_URL?.trim() ?? "";
   if (from === "" && keySecret === "") return undefined;
-  if (!emailPattern.test(from)) {
+  if (!isEmailAddress(from)) {
     throw new MailConfigError("DRAFT_LOOP_MAIL_FROM must be the sender's email address.");
   }
   if (!secretVersionPattern.test(keySecret)) {

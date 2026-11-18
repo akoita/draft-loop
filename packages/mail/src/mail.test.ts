@@ -32,6 +32,8 @@ describe("readMailConfig", () => {
   it.each([
     [{ DRAFT_LOOP_MAIL_FROM: "beta@mail.example.test" }, /KEY_SECRET/u],
     [{ DRAFT_LOOP_MAIL_FROM: "not-an-address", DRAFT_LOOP_MAIL_KEY_SECRET: keySecret }, /FROM/u],
+    [{ DRAFT_LOOP_MAIL_FROM: "a@b@c.test", DRAFT_LOOP_MAIL_KEY_SECRET: keySecret }, /FROM/u],
+    [{ DRAFT_LOOP_MAIL_FROM: "beta@localhost.", DRAFT_LOOP_MAIL_KEY_SECRET: keySecret }, /FROM/u],
     [
       {
         DRAFT_LOOP_MAIL_FROM: "beta@mail.example.test",
