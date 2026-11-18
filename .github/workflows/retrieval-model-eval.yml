@@ -73,7 +73,9 @@ jobs:
           fi
           # The content-free reports, also in the log for readers without artifact access.
           for file in "$REPORT_DIR"/*.json; do
-            [ -f "$file" ] && jq -c '{file: input_filename} + (del(.embeddingIdentity, .crossEncoder))' "$file"
+            if [ -f "$file" ]; then
+              jq -c '{file: input_filename} + (del(.embeddingIdentity, .crossEncoder))' "$file"
+            fi
           done
       - name: Upload reports
         if: always()

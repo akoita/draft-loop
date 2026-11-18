@@ -40,7 +40,7 @@ export const bgeRerankerV2M3: CrossEncoderModel = Object.freeze({
     tokenizerConfig: Object.freeze({
       path: "tokenizer_config.json",
       sizeBytes: 1203,
-      sha256: "TOKENIZER_CONFIG_SHA256",
+      sha256: "b87c8703482b0300d3da30e201519aa641f6a450f5eb5bf1e624afbf70c74d80",
     }),
   }),
 });
