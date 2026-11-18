@@ -5,6 +5,18 @@ import type { FastifyBaseLogger } from "fastify";
 
 import type { OpportunityScreening } from "./content-screening-views.js";
 
+/**
+ * What the API says about a version's extraction: the queue's state, or `limited` when the day's
+ * allowance left the brief for the person to fill in.
+ */
+export type BriefExtractionView = BriefExtractionState | "limited";
+
+/** Whether a version is the unread first draft a spent allowance would explain. */
+export function isUnreadFirstDraft(record: OpportunityBriefVersionRecord): boolean {
+  const { brief } = record;
+  return brief.version === 1 && brief.role === null && brief.requirements.length === 0;
+}
+
 /** One version of a brief in a workspace, as the API addresses it. */
 export interface BriefExtractionVersion {
   readonly workspaceId: string;
@@ -53,13 +65,13 @@ export interface LiveBriefExtractionInput {
  */
 export async function queueLiveBriefExtraction(
   input: LiveBriefExtractionInput,
-): Promise<BriefExtractionState | undefined> {
+): Promise<BriefExtractionView | undefined> {
   const { record, screening, applicationId } = input;
   const { brief } = record;
   if (input.workspace.fixtureMode || applicationId === undefined || applicationId === "default") {
     return undefined;
   }
-  if (brief.version !== 1 || brief.role !== null || brief.requirements.length > 0) return undefined;
+  if (!isUnreadFirstDraft(record)) return undefined;
   const postings = brief.sources.filter((source) => source.classification === "job-posting");
   const cleared =
     screening !== undefined &&
@@ -71,7 +83,7 @@ export async function queueLiveBriefExtraction(
       ),
     );
   if (!cleared) return undefined;
-  if (input.allowance !== undefined && !(await input.allowance())) return undefined;
+  if (input.allowance !== undefined && !(await input.allowance())) return "limited";
   try {
     const queued = await input.extractions.queue({
       workspaceId: input.workspaceId,

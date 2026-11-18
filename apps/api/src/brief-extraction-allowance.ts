@@ -6,8 +6,12 @@ import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 /** The daily ceiling on job-ad reading for a plan whose model calls are unlimited. */
 export const defaultBriefExtractionsPerDay = 50;
 
-/** Whether this request's brief may be read by the model now; false leaves it for the person. */
-export type BriefExtractionAllowance = (request: FastifyRequest) => Promise<boolean>;
+export interface BriefExtractionAllowance {
+  /** Takes one reading from the day's allowance; false leaves the brief for the person. */
+  readonly take: (request: FastifyRequest) => Promise<boolean>;
+  /** Whether the day's allowance is spent, without taking from it: why a brief stayed empty. */
+  readonly spent: (request: FastifyRequest) => Promise<boolean>;
+}
 
 export interface BriefExtractionAllowanceOptions {
   readonly entitlementsFor: TenantEntitlementsFor;
@@ -28,15 +32,27 @@ export function createBriefExtractionAllowance(
 ): BriefExtractionAllowance {
   const now = options.now ?? (() => new Date());
   const ceiling = options.unlimitedPlanPerDay ?? defaultBriefExtractionsPerDay;
-  return async (request) => {
+  /** The member's organisation, its meter and its limit; undefined when nothing is counted. */
+  const counted = async (request: FastifyRequest) => {
     const caller = request.caller;
-    if (caller?.kind !== "member") return true;
+    if (caller?.kind !== "member") return undefined;
     const tenant = options.entitlementsFor(caller.tenantId);
-    if (tenant.modelCalls === undefined) return true;
+    if (tenant.modelCalls === undefined) return undefined;
     const entitlements = await tenant.entitlements();
-    if (entitlements === undefined) return true;
+    if (entitlements === undefined) return undefined;
     const limit = entitlements.modelCallsPerDay ?? ceiling;
-    const taken = await tenant.modelCalls.take({ limit, now: now() });
+    return { caller, meter: tenant.modelCalls, entitlements, limit };
+  };
+  const spent: BriefExtractionAllowance["spent"] = async (request) => {
+    const count = await counted(request);
+    if (count?.meter.used === undefined) return false;
+    return (await count.meter.used(now())) >= count.limit;
+  };
+  const take: BriefExtractionAllowance["take"] = async (request) => {
+    const count = await counted(request);
+    if (count === undefined) return true;
+    const { caller, meter, entitlements, limit } = count;
+    const taken = await meter.take({ limit, now: now() });
     if (taken.allowed) return true;
     // Ids and numbers only: never the job ad.
     request.log.warn(
@@ -51,6 +67,7 @@ export function createBriefExtractionAllowance(
     );
     return false;
   };
+  return { take, spent };
 }
 
 /** Reads `DRAFT_LOOP_BRIEF_EXTRACTIONS_PER_DAY`; unset keeps the default ceiling. */

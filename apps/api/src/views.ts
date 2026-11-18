@@ -79,10 +79,10 @@ export const opportunityViewSchema = z
       .optional()
       .describe("Injection screening of the brief's sources; present when it is created."),
     extraction: z
-      .enum(["pending", "failed"])
+      .enum(["pending", "failed", "limited"])
       .optional()
       .describe(
-        "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+        "The worker's extraction of this version: pending while it waits or runs, failed after its retries, limited when the organisation's daily allowance for reading job ads is spent and the first draft was left for the person (until the next UTC day). Absent when none is outstanding; a finished extraction is the next version.",
       ),
   })
   .meta({ id: "Opportunity" });

@@ -16,7 +16,7 @@ function opportunityRecordObject(
 ): {
   readonly brief: Record<string, unknown>;
   readonly checksum: string | null;
-  readonly extraction?: "pending" | "failed";
+  readonly extraction?: "pending" | "failed" | "limited";
 } {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return fail(t`The opportunity service returned an invalid record.`);
@@ -27,7 +27,9 @@ function opportunityRecordObject(
     return {
       brief: brief as Record<string, unknown>,
       checksum: typeof record.checksum === "string" ? record.checksum : null,
-      ...(record.extraction === "pending" || record.extraction === "failed"
+      ...(record.extraction === "pending" ||
+      record.extraction === "failed" ||
+      record.extraction === "limited"
         ? { extraction: record.extraction }
         : {}),
     };
@@ -198,7 +200,7 @@ export function projectOpportunityRecord(
 /** The brief fields the latest-brief projection reads; text is only compared, never returned. */
 interface LatestBriefRecord {
   /** The service's extraction of this version, when a hosted worker still owes it. */
-  readonly extraction?: "pending" | "failed";
+  readonly extraction?: "pending" | "failed" | "limited";
   readonly brief: {
     readonly id: string;
     readonly version: number;

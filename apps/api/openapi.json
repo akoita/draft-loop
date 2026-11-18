@@ -2299,11 +2299,12 @@
             "$ref": "#/components/schemas/OpportunityScreeningInput"
           },
           "extraction": {
-            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries, limited when the organisation's daily allowance for reading job ads is spent and the first draft was left for the person (until the next UTC day). Absent when none is outstanding; a finished extraction is the next version.",
             "type": "string",
             "enum": [
               "pending",
-              "failed"
+              "failed",
+              "limited"
             ]
           }
         },
@@ -11543,11 +11544,12 @@
             "$ref": "#/components/schemas/OpportunityScreening"
           },
           "extraction": {
-            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries. Absent when none is outstanding; a finished extraction is the next version.",
+            "description": "The worker's extraction of this version: pending while it waits or runs, failed after its retries, limited when the organisation's daily allowance for reading job ads is spent and the first draft was left for the person (until the next UTC day). Absent when none is outstanding; a finished extraction is the next version.",
             "type": "string",
             "enum": [
               "pending",
-              "failed"
+              "failed",
+              "limited"
             ]
           }
         },

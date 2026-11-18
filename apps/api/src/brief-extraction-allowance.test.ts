@@ -27,6 +27,7 @@ function tenant(modelCallsPerDay: number | null | "no-plan", used: number) {
   const value = {
     entitlements: async () => (modelCallsPerDay === "no-plan" ? undefined : { modelCallsPerDay }),
     modelCalls: {
+      used: async () => used,
       take: async ({ limit }: { limit: number }) => {
         limits.push(limit);
         return used < limit ? { allowed: true, used: used + 1 } : { allowed: false, used };
@@ -45,7 +46,7 @@ describe("the brief extraction allowance", () => {
       entitlementsFor: () => org.value,
       now: () => now,
     });
-    expect(await allow(request(member).request)).toBe(true);
+    expect(await allow.take(request(member).request)).toBe(true);
     expect(org.limits).toEqual([20]);
   });
 
@@ -57,7 +58,7 @@ describe("the brief extraction allowance", () => {
       now: () => now,
     });
     const { request: refused, warnings } = request(member);
-    expect(await allow(refused)).toBe(false);
+    expect(await allow.take(refused)).toBe(false);
     expect(org.limits).toEqual([7]);
     expect(warnings).toEqual([
       {
@@ -70,11 +71,22 @@ describe("the brief extraction allowance", () => {
     ]);
   });
 
+  it("says the day is spent without taking from it", async () => {
+    const full = tenant(20, 20);
+    const allow = createBriefExtractionAllowance({ entitlementsFor: () => full.value });
+    expect(await allow.spent(request(member).request)).toBe(true);
+    expect(full.limits).toEqual([]);
+    const open = tenant(null, 3);
+    const openAllow = createBriefExtractionAllowance({ entitlementsFor: () => open.value });
+    expect(await openAllow.spent(request(member).request)).toBe(false);
+    expect(await openAllow.spent(request({ kind: "owner" }).request)).toBe(false);
+  });
+
   it("counts nothing for the owner token or an organisation with no plan", async () => {
     const noPlan = tenant("no-plan", 0);
     const allow = createBriefExtractionAllowance({ entitlementsFor: () => noPlan.value });
-    expect(await allow(request({ kind: "owner" }).request)).toBe(true);
-    expect(await allow(request(member).request)).toBe(true);
+    expect(await allow.take(request({ kind: "owner" }).request)).toBe(true);
+    expect(await allow.take(request(member).request)).toBe(true);
     expect(noPlan.limits).toEqual([]);
   });
 
@@ -125,7 +137,7 @@ describe("queueing a live brief under the allowance", () => {
   it("leaves the brief for the person when the allowance is spent", async () => {
     const asked: string[] = [];
     const { input: spent, queued } = input(false, "clear", asked);
-    expect(await queueLiveBriefExtraction(spent)).toBeUndefined();
+    expect(await queueLiveBriefExtraction(spent)).toBe("limited");
     expect(queued).toEqual([]);
     const { input: open, queued: queuedOpen } = input(true, "clear", asked);
     expect(await queueLiveBriefExtraction(open)).toBe("pending");

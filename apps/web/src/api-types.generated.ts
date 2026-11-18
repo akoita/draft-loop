@@ -804,7 +804,7 @@ export interface ApiSchemas {
       })[];
     };
     readonly screening?: ApiSchemas["OpportunityScreening"];
-    readonly extraction?: "pending" | "failed";
+    readonly extraction?: "pending" | "failed" | "limited";
   };
   "OpportunityScreening": {
     readonly verdict: "clear" | "flagged" | "unscreened";

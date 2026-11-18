@@ -83,7 +83,8 @@ A plan sets these entitlements:
 - Free and Beta allow 20 model calls a day outside runs; past that, those routes answer
   `429 model_call_cap_reached` until midnight UTC. Reading a job ad
   automatically counts as one call; past the cap the brief is saved for you to
-  fill in. Unlimited plans read at most 50 job ads a day.
+  fill in, with a notice that says when the limit resets (midnight UTC, shown in
+  your time). Unlimited plans read at most 50 job ads a day.
 - A credit covers 20 cover letter or question drafts, interview guides and
   research runs for its application, outside the daily count; past that, those
   routes answer `429 prepare_fair_use_reached`. An application without a credit

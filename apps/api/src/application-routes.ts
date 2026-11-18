@@ -13,7 +13,11 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
-import { type BriefExtractions, queueLiveBriefExtraction } from "./brief-extraction.js";
+import {
+  type BriefExtractions,
+  isUnreadFirstDraft,
+  queueLiveBriefExtraction,
+} from "./brief-extraction.js";
 import type { BriefExtractionAllowance } from "./brief-extraction-allowance.js";
 import type { ContentScreeningHooks } from "./content-screening-routes.js";
 import type { EntitlementGate } from "./entitlement-gate.js";
@@ -300,7 +304,7 @@ export function registerApplicationRoutes(
                 ? {}
                 : {
                     allowance: async () =>
-                      (await options.briefExtractionAllowance?.(request)) ?? true,
+                      (await options.briefExtractionAllowance?.take(request)) ?? true,
                   }),
             });
       return reply.code(201).send({
@@ -328,11 +332,20 @@ export function registerApplicationRoutes(
         ...(request.query.version === undefined ? {} : { version: request.query.version }),
       });
       if (record === undefined) return reply.code(404).send(notFound("job brief"));
-      const extraction = await briefExtractions?.state({
+      const queued = await briefExtractions?.state({
         workspaceId: request.params.workspaceId,
         briefId: record.brief.id,
         version: record.brief.version,
       });
+      // An unread first draft with nothing queued, on a day the allowance is spent, was most
+      // likely left by the limit: say so until the day resets, so the person knows why.
+      const extraction =
+        queued === undefined &&
+        briefExtractions !== undefined &&
+        isUnreadFirstDraft(record) &&
+        (await options.briefExtractionAllowance?.spent(request)) === true
+          ? ("limited" as const)
+          : queued;
       return { ...opportunityView(record), ...(extraction === undefined ? {} : { extraction }) };
     },
   );

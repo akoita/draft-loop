@@ -14,6 +14,7 @@ import { modelDisplayName, providerDisplayName } from "./model-profile-presentat
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";
 import {
+  limitedExtractionNote,
   noRequirementsFoundNote,
   noRequirementsFoundTitle,
   pendingExtractionNote,
@@ -111,6 +112,8 @@ export async function runJobRequirementsExtraction(
     });
     // The service extracts it in the background: the setup card follows the saved brief until then.
     if (record.extraction === "pending") return { kind: "running", background: true };
+    // The day's allowance left the brief for the person: say why instead of an empty summary.
+    if (record.extraction === "limited") return { kind: "idle", notice: limitedExtractionNote() };
     return { kind: "done", summary: summarizeJobRequirements(record) };
   } catch (reason: unknown) {
     // A cancelled extraction is the person's own decision, so the card calmly returns to idle.

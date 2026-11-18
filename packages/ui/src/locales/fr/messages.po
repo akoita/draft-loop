@@ -9828,6 +9828,10 @@ msgstr "Les exigences n’ont pas pu être enregistrées. Rien n’a été modif
 msgid "The requirements have not been read from this job yet. Extract them to review them."
 msgstr "Les exigences de cette offre n’ont pas encore été lues. Extrayez-les pour les relire."
 
+#: packages/ui/src/start-requirements-model.ts
+msgid "The requirements were not read automatically: today's limit for reading job ads is reached. It resets at {resetsAt}. Fill them in by hand, or extract them again after that."
+msgstr "Les exigences n’ont pas été lues automatiquement : la limite du jour pour la lecture des offres est atteinte. Elle se réinitialise à {resetsAt}. Remplissez-les à la main, ou relancez l’extraction après cette heure."
+
 #: apps/web/src/research-brief-model.ts
 msgid "The research failed and nothing was saved. Try again later."
 msgstr "La recherche a échoué et rien n'a été enregistré. Réessayez plus tard."
