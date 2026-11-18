@@ -15,12 +15,17 @@ the Zod schemas in `@draft-loop/schemas/record-archive`.
 | `tables/<table>.json` | The record's rows of one table, as `{ "table": ..., "rows": [...] }` |
 | `objects/<sha256>` | The original bytes of one source version or exported document, named by their SHA-256 |
 
-Table rows keep the service's column names and values. Text payloads keep their
-stored text, so the checksums recorded beside them still verify them. Times
-stored as timestamps are ISO 8601 text, and 64-bit integers such as sizes and
-sequence numbers are decimal strings. Rows never carry the tenant column. A
-table the record has no rows in is left out, and identical bytes are stored
-once.
+Table rows keep the service's column names and values, minus what only
+describes storage:
+
+- No tenant column, storage locations (`workspace_ref`, `blob_location`,
+  `output_path`), shared `sequence` counters or audit hash chain columns.
+- Stored paths read relative to the account and never name the tenant. A
+  payload that held such a path no longer matches its recorded checksum.
+
+Times stored as timestamps are ISO 8601 text, and 64-bit integers such as sizes
+are decimal strings. A table the record has no rows in is left out, and
+identical bytes are stored once. Objects are linked to their rows by checksum.
 
 ## What it holds
 

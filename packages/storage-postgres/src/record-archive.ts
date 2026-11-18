@@ -310,6 +310,48 @@ export function createRecordArchiveRows(client: SqlSession) {
   };
 }
 
+/**
+ * Columns that describe how the service stores a row rather than what it holds: the tenant's
+ * storage locations, counters shared by every tenant, and the audit log's hash chain. A person's
+ * archive leaves them out, so it reveals neither the storage layout nor how busy the service is.
+ */
+const internalColumns: ReadonlySet<string> = new Set([
+  "sequence",
+  "workspace_ref",
+  "blob_location",
+  "output_path",
+  "previous_event_checksum",
+  "event_checksum",
+]);
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+/**
+ * A row as the person's archive shows it: without internal columns, and with the tenant's storage
+ * prefix taken out of every text value, so stored paths read relative to the account and the
+ * tenant id never appears. A payload whose text held such a path no longer matches its recorded
+ * checksum; the manifest's checksums cover the files as written.
+ */
+function publicRows(tenantId: string): (row: SqlRow) => SqlRow {
+  const prefix = new RegExp(`/?tenants/${escapeRegExp(tenantId)}/`, "gu");
+  const scrub = (value: unknown): unknown => {
+    if (typeof value === "string") return value.replace(prefix, "").replaceAll(tenantId, "account");
+    if (Array.isArray(value)) return value.map(scrub);
+    if (typeof value === "object" && value !== null) {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, scrub(inner)]));
+    }
+    return value;
+  };
+  return (row) =>
+    Object.fromEntries(
+      Object.entries(row)
+        .filter(([column]) => !internalColumns.has(column))
+        .map(([column, value]) => [column, scrub(value)]),
+    );
+}
+
 /** Where an object's bytes are read from and what they must still be. */
 interface ArchiveObject {
   readonly blobs: BlobStoragePort;
@@ -438,8 +480,11 @@ export function openPostgresRecordArchives(options: PostgresRecordArchivesOption
       });
       const tableFiles = new Map<string, Uint8Array>();
       const entries: RecordArchiveEntry[] = [];
+      const publicRow = publicRows(tenantId);
       for (const [table, tableRows] of rows) {
-        const content = encoder.encode(`${JSON.stringify({ table, rows: tableRows }, null, 2)}\n`);
+        const content = encoder.encode(
+          `${JSON.stringify({ table, rows: tableRows.map(publicRow) }, null, 2)}\n`,
+        );
         const path = recordArchiveTablePath(table);
         tableFiles.set(path, content);
         entries.push({

@@ -215,11 +215,10 @@ export function Records({
       )}
       {onePerson ? (
         deleted === undefined ? null : (
-          <div className="record-rail">
-            <p className="notice" role="status">
-              {t`Your job search and everything stored for it were deleted.`}
-            </p>
-          </div>
+          <JobSearchDeleted
+            onStartAgain={() => create(firstJobSearchName())}
+            onSignOut={onSignOut}
+          />
         )
       ) : (
         <div className="record-rail">
@@ -265,6 +264,37 @@ export function Records({
         </ReleaseAccess.Provider>
       )}
     </>
+  );
+}
+
+/**
+ * What a person on a one-person plan sees once their only job search is deleted: what happened,
+ * that they are still signed in, and the two ways on, so the page is never left empty.
+ */
+export function JobSearchDeleted({
+  onStartAgain,
+  onSignOut,
+}: {
+  readonly onStartAgain: () => void;
+  readonly onSignOut?: (() => void) | undefined;
+}) {
+  return (
+    <div className="record-rail">
+      <div className="notice" role="status">
+        <p>{t`Your job search and everything stored for it were deleted.`}</p>
+        <p>
+          {onSignOut === undefined
+            ? t`Start a new job search when you are ready.`
+            : t`You are still signed in. Start a new job search, or sign out.`}
+        </p>
+        <div className="page-actions">
+          <button type="button" className="button" onClick={onStartAgain}>
+            {t`Start a new job search`}
+          </button>
+          {onSignOut === undefined ? null : <SignOutButton onSignOut={onSignOut} />}
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -8965,6 +8965,14 @@ msgstr ""
 msgid "Start a conversation"
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Start a new job search"
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "Start a new job search when you are ready."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-details.tsx
 msgid "Start a new review"
@@ -11686,6 +11694,10 @@ msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "You are signed in, but this account has no DraftLoop account yet. Enter the invite code you received by email to create it."
+msgstr ""
+
+#: apps/web/src/records.tsx
+msgid "You are still signed in. Start a new job search, or sign out."
 msgstr ""
 
 #: packages/ui/src/help-ask.tsx
