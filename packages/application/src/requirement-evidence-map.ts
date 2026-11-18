@@ -8,6 +8,10 @@ import {
 } from "@draft-loop/embeddings";
 import type { JsonValue } from "@draft-loop/storage";
 
+import {
+  type RequirementEvidenceRerank,
+  requirementEvidenceRerankClause,
+} from "./requirement-evidence-rerank.js";
 import { rankRequirementEvidence } from "./requirement-picked-evidence.js";
 
 /*
@@ -50,6 +54,8 @@ export interface RequirementEvidenceMap {
   readonly modelId?: string;
   readonly chunkCount: number;
   readonly entries: readonly RequirementEvidenceMapEntry[];
+  /** Present when the run asked for the cross-encoder to reorder the candidates (#3022). */
+  readonly rerank?: RequirementEvidenceRerank;
 }
 
 export interface BuildRequirementEvidenceMapRequest {
@@ -216,6 +222,7 @@ export function requirementEvidenceMapAuditPayload(
     ...(map.reason === undefined ? {} : { reason: map.reason }),
     ...(map.modelId === undefined ? {} : { modelId: map.modelId }),
     chunkCount: map.chunkCount,
+    ...(map.rerank === undefined ? {} : { rerank: { ...map.rerank } }),
     requirementCount: map.entries.length,
     requirementsWithEvidence: map.entries.filter(({ candidates }) => candidates.length > 0).length,
     entries: map.entries.map(({ requirementId, candidates }) => ({
@@ -248,5 +255,6 @@ export function requirementEvidenceMapPreflightLine(map: RequirementEvidenceMap)
               ? "the local model failed"
               : "no local model is installed"
         })`;
-  return `Requirement evidence: ${found} of ${map.entries.length} requirements matched ${how}`;
+  const reordered = map.rerank === undefined ? "" : requirementEvidenceRerankClause(map.rerank);
+  return `Requirement evidence: ${found} of ${map.entries.length} requirements matched ${how}${reordered}`;
 }

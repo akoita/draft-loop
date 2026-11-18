@@ -1,4 +1,5 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type { CrossEncoder } from "@draft-loop/embeddings";
 import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 import type { GradedRequirementEvidenceMap } from "./requirement-evidence-grade.js";
 
@@ -6,6 +7,11 @@ import {
   buildRequirementEvidenceMap,
   type RequirementEvidenceMap,
 } from "./requirement-evidence-map.js";
+import {
+  openRunCrossEncoder,
+  requirementEvidenceRerankEnabled,
+  rerankRequirementEvidenceMap,
+} from "./requirement-evidence-rerank.js";
 import {
   openRunEmbedder,
   type RunSemanticRetrievalOptions,
@@ -100,12 +106,18 @@ export interface RequirementEvidenceMapRuntime {
 export type RunRequirementEvidenceMapOptions = Pick<
   RunSemanticRetrievalOptions,
   "tier" | "modelService" | "createEmbedder" | "shareEmbedder" | "relevanceFloor"
-> & { readonly modelRoot?: string };
+> & {
+  readonly modelRoot?: string;
+  /** Reorder candidates with the local cross-encoder; defaults to the rerank setting. */
+  readonly rerank?: boolean;
+  readonly openCrossEncoder?: () => Promise<CrossEncoder | undefined>;
+};
 
 /**
  * Give a run's retrieval a memoized requirement-evidence map (#2981). The map is built once, from
  * the same eligible chunks full source sends, with the process-shared local embedder when one is
- * installed. It is undefined when the job has no requirements or the run has no eligible chunks.
+ * installed, and reordered by the local cross-encoder when the rerank setting is on (#3022). It is
+ * undefined when the job has no requirements or the run has no eligible chunks.
  */
 export function withRequirementEvidenceMap<Runtime extends RequirementEvidenceMapRuntime>(
   runtime: Runtime,
@@ -128,12 +140,17 @@ export function withRequirementEvidenceMap<Runtime extends RequirementEvidenceMa
         ...(options.createEmbedder === undefined ? {} : { createEmbedder: options.createEmbedder }),
         ...(options.shareEmbedder === undefined ? {} : { shareEmbedder: options.shareEmbedder }),
       }).catch(() => ({ ok: false as const }));
-      return buildRequirementEvidenceMap({
+      const built = await buildRequirementEvidenceMap({
         requirements,
         eligible,
         ...(opened.ok ? { embedder: opened.embedder } : { unavailableReason: "no-model" as const }),
         ...(options.relevanceFloor === undefined ? {} : { floor: options.relevanceFloor }),
       });
+      if (!(options.rerank ?? requirementEvidenceRerankEnabled())) return built;
+      const encoder = await (options.openCrossEncoder ?? (() => openRunCrossEncoder()))().catch(
+        () => undefined,
+      );
+      return rerankRequirementEvidenceMap({ map: built, requirements, eligible, encoder });
     })();
     return map;
   };
