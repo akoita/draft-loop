@@ -21,6 +21,9 @@ export function accountDeletionRefusal(error: unknown): string {
     if (error.code === "run_active") {
       return t`A draft is being written. Wait for it to finish or stop it, then delete your account.`;
     }
+    if (error.code === "operator_account") {
+      return t`This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first.`;
+    }
     if (error.code === "organisation_has_members") {
       return t`Other people share your account's team, so it cannot be deleted from here. Ask us to close it.`;
     }

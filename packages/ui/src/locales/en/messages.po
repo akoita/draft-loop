@@ -10476,6 +10476,10 @@ msgstr "This account already exists. Reload the page."
 msgid "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 msgstr "This account is not a member of an organisation yet. Ask your organisation's owner for an invite."
 
+#: apps/web/src/account-deletion.tsx
+msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
+msgstr "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr "This application could not be researched."

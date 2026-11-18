@@ -67,6 +67,12 @@ const meSchema = z
         .describe(
           "Present when this sign-in also reaches the operator routes: the operator role with a second factor.",
         ),
+      operatorRole: z
+        .literal(true)
+        .optional()
+        .describe(
+          "Present when the account holds the operator role, with or without a second factor; such an account cannot be deleted from the screen.",
+        ),
       organisationName: z
         .string()
         .optional()
@@ -217,6 +223,7 @@ export function registerOrganisationRoutes(
         memberId: caller.memberId,
         role: caller.role,
         ...(caller.operator === true ? { operator: true as const } : {}),
+        ...(caller.holdsOperatorRole === true ? { operatorRole: true as const } : {}),
         ...(record === undefined ? {} : { email: record.email }),
         ...(organisationName === undefined ? {} : { organisationName }),
         ...(plan === undefined

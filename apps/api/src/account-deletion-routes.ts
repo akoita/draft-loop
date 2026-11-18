@@ -53,7 +53,7 @@ export function registerAccountDeletionRoutes(
       schema: {
         summary: "Delete my account and everything it holds",
         description:
-          "For a person alone in their organisation, signed in themselves (an agent token or an assistant's sign-in answers 403). The account's email address is typed back as `confirm` (400 `confirmation_mismatch`). Erases the organisation as `DELETE /v1/organisation` does, which frees its beta place, then deletes the sign-in account at the identity provider. A queued or running run answers 409 `run_active`; an organisation with other members answers 409 `organisation_has_members`. Calling again finishes an interrupted deletion while the sign-in still resolves.",
+          "For a person alone in their organisation, signed in themselves (an agent token or an assistant's sign-in answers 403). The account's email address is typed back as `confirm` (400 `confirmation_mismatch`). Erases the organisation as `DELETE /v1/organisation` does, which frees its beta place, then deletes the sign-in account at the identity provider. A queued or running run answers 409 `run_active`; an organisation with other members answers 409 `organisation_has_members`; a sign-in with the operator role answers 409 `operator_account`, so an operator cannot lock the service out of its own screen. Calling again finishes an interrupted deletion while the sign-in still resolves.",
         body: deleteBody,
         response: {
           200: deletedSchema,
@@ -71,6 +71,16 @@ export function registerAccountDeletionRoutes(
           .code(403)
           .send(
             apiError("forbidden", "Only the person themselves, signed in, deletes an account."),
+          );
+      }
+      if (caller.holdsOperatorRole === true) {
+        return reply
+          .code(409)
+          .send(
+            apiError(
+              "operator_account",
+              "This account runs DraftLoop as an operator; remove its operator role before deleting it.",
+            ),
           );
       }
       if (!sameEmail(request.body.confirm, signInIdentity.email)) {

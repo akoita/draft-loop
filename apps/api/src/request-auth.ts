@@ -31,6 +31,8 @@ export type Caller =
       readonly kind: "member";
       /** Whether this sign-in would also pass on operator routes (#2953), for the screen. */
       readonly operator?: true;
+      /** Whether the sign-in carries the operator role, with or without a second factor. */
+      readonly holdsOperatorRole?: true;
     } & SignedInMember);
 
 declare module "fastify" {
@@ -186,6 +188,7 @@ function signInAuthenticator(
         ...(operatorRefusal(verification, webClientId) === undefined
           ? { operator: true as const }
           : {}),
+        ...(verification.roles.includes(operatorRole) ? { holdsOperatorRole: true as const } : {}),
       },
     };
   };
