@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { ApiRequestError, type ApiSchemas } from "./api-client.js";
 import {
-  archiveFileName,
-  archiveRequest,
   canExportAndDelete,
   deleteRecordRequest,
   deleteRefusal,
+  exportFileName,
+  exportRequest,
   withoutRecord,
 } from "./record-actions-model.js";
 
@@ -26,8 +26,8 @@ describe("record export and deletion", () => {
   });
 
   it("downloads the record's archive under the API's file name", () => {
-    expect(archiveRequest("candidate-ana")).toEqual({ path: { workspaceId: "candidate-ana" } });
-    expect(archiveFileName("candidate-ana")).toBe("candidate-ana-archive.zip");
+    expect(exportRequest("candidate-ana")).toEqual({ path: { workspaceId: "candidate-ana" } });
+    expect(exportFileName).toBe("draftloop-data.zip");
   });
 
   it("deletes only once the record id is typed back exactly", () => {

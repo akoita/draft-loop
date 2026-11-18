@@ -30181,6 +30181,75 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/export": {
+      "get": {
+        "summary": "Download a readable copy of a candidate record as a zip",
+        "description": "Streams what a person reads rather than how the service stores it: a README, their documents under their own names, one folder per job application with its job text, saved letters and exported drafts, their profile, work journal and consent history. Each file is built from an allow list of fields, so no storage location, counter, checksum or token id appears. Owners and admins only. A stored document that is missing or no longer matches its checksum answers 409 archive_integrity before anything is sent.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The readable export, as application/zip.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The readable export, as application/zip."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/display-preference": {
       "get": {
         "summary": "Read how the screens show themselves to the caller",

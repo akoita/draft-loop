@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { hostedWorkspaceReference } from "./hosted-application-ports.js";
 import type { PostgresTenancy } from "./postgres-storage.js";
+import { openPostgresReadableExports } from "./readable-export.js";
 import { openPostgresRecordArchives } from "./record-archive.js";
 import type { SqlExecutor } from "./sql-client.js";
 import { createTestSchema, type TestSchema } from "./test-schema.js";
@@ -609,5 +610,89 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
     });
     expect(archive.manifest.entries).toEqual([]);
     await expect(collect(archive.files())).resolves.toHaveLength(1);
+  });
+
+  describe("readable export (#3036)", () => {
+    const readable = () =>
+      openPostgresReadableExports({
+        storage: tenancy.forTenant("org-north"),
+        tenantId: "org-north",
+        blobs: north.port,
+        now: () => new Date(at),
+      });
+    const request = {
+      workspaceId: first.workspaceId,
+      historyId: first.historyId,
+      knowledgeScope: "owned" as const,
+    };
+    const decoder = new TextDecoder();
+
+    it("names files as the person knows them and copies their documents' bytes", async () => {
+      const prepared = await readable().prepare(request);
+      const files = await collect(prepared.files());
+      expect(files).toHaveLength(prepared.fileCount);
+      expect(files.map((file) => file.path)).toEqual([
+        "README.md",
+        "account.json",
+        "consent-history.json",
+        "profile.json",
+        "documents/notes-alder-quill.md",
+        "applications/Role at alder-quill/job.md",
+        "other drafts/cover letter 2026-10-24.md",
+        "applications/Role at alder-quill/exports/2026-10-24 document.md",
+      ]);
+      const text = (path: string) =>
+        decoder.decode(files.find((file) => file.path === path)?.content);
+      expect(text("documents/notes-alder-quill.md")).toBe(
+        "# Experience\n\nBuilt TypeScript services, codenamed alder-quill.\n",
+      );
+      expect(JSON.parse(text("consent-history.json"))).toEqual([
+        {
+          kind: "provider-transmission",
+          action: "granted",
+          basis: "candidate-consent",
+          recordedBy: "owner",
+          providers: ["anthropic", "openai"],
+          note: "Agreed by alder-quill.",
+          recordedAt: expect.any(String),
+        },
+      ]);
+      expect(text("other drafts/cover letter 2026-10-24.md")).toContain(
+        "A fictional paragraph for alder-quill.",
+      );
+      expect(text("README.md")).toContain("| documents/ |");
+    });
+
+    it("shows nothing of how the service stores the record, nor another record or tenant", async () => {
+      const files = await collect((await readable().prepare(request)).files());
+      const everything = files.map((file) => `${file.path}\n${decoder.decode(file.content)}`);
+      for (const leak of [
+        "org-north",
+        "tenants/",
+        "history-1",
+        "knowledge/version",
+        "blob_location",
+        "checksum",
+        "sequence",
+        "birch-otter",
+        "cedar-wren",
+      ]) {
+        expect(everything.filter((file) => file.includes(leak))).toEqual([]);
+      }
+    });
+
+    it("fails closed on a document that is missing or changed", async () => {
+      const integrity = expect.objectContaining({ code: "object_integrity" });
+      const sourceLocation = `knowledge/version-${first.knowledgeBaseId}`;
+      const original = north.objects.get(sourceLocation) ?? new Uint8Array();
+      north.objects.delete(sourceLocation);
+      await expect(readable().prepare(request)).rejects.toEqual(integrity);
+      north.objects.set(sourceLocation, original);
+
+      const prepared = await readable().prepare(request);
+      north.objects.set(sourceLocation, encoder.encode("changed bytes"));
+      await expect(collect(prepared.files())).rejects.toEqual(integrity);
+      north.objects.set(sourceLocation, original);
+    });
   });
 });

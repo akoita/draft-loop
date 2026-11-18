@@ -16,6 +16,7 @@ import {
   hostedApplicationPorts,
   hostedKnowledgeStoreReference,
   hostedWorkspaceReference,
+  openPostgresReadableExports,
   openPostgresRecordArchives,
   openPostgresTenancy,
   type PostgresTenancy,
@@ -115,6 +116,7 @@ export function composeHostedApplication(
       setup: parts.screening ?? rulesScreeningSetup(),
     }),
     recordArchives: openPostgresRecordArchives({ storage, tenantId, blobs }),
+    readableExports: openPostgresReadableExports({ storage, tenantId, blobs }),
     workJournal: createWorkJournalService({ store: storage.workJournalNotes, tenantId }),
     preferenceSuggestions: createPreferenceSuggestions({
       storage: ports.storage,

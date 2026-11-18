@@ -9671,8 +9671,8 @@ msgid "The desktop operation could not be completed."
 msgstr "L’opération de bureau n’a pas pu aboutir."
 
 #: apps/web/src/record-actions.tsx
-msgid "The download holds everything stored for this job search: its material, runs, drafts, exports, consent history and audit trail."
-msgstr "Le téléchargement contient tout ce qui est conservé pour cette recherche d’emploi : ses documents, exécutions, brouillons, exports, historique des consentements et journal d’audit."
+msgid "The download holds your documents, each job application with its job text, letters and exported drafts, your profile, work journal and consent history, in files you can open."
+msgstr "Le téléchargement contient vos documents, chaque candidature avec le texte de l'offre, ses lettres et ses brouillons exportés, votre profil, votre journal de travail et l'historique de vos consentements, dans des fichiers que vous pouvez ouvrir."
 
 #: apps/web/src/application-material-model.ts
 msgid "The draft cited something your record does not support, so it was refused. Try again, or add the missing facts to your record."

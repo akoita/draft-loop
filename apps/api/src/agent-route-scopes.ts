@@ -141,6 +141,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/agent-tokens",
   "GET /v1/workspaces/:workspaceId/application-folders",
   "GET /v1/workspaces/:workspaceId/archive",
+  "GET /v1/workspaces/:workspaceId/export",
   "GET /v1/workspaces/:workspaceId/career-interview/sessions/:sessionId",
   "GET /v1/workspaces/:workspaceId/career-interview/sessions/current",
   "GET /v1/workspaces/:workspaceId/career-interview/sessions/:sessionId/conflicts",

@@ -127,6 +127,11 @@ export {
   type QualitySweepSpan,
 } from "./quality-digests.js";
 export {
+  openPostgresReadableExports,
+  type PostgresReadableExportsOptions,
+  readableExportFormat,
+} from "./readable-export.js";
+export {
   openPostgresRecordArchives,
   type PostgresRecordArchivesOptions,
 } from "./record-archive.js";

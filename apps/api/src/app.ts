@@ -16,7 +16,7 @@ import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connecti
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
-import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { ReadableRecordExports, RecordArchives } from "@draft-loop/storage/record-archive";
 import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { SavedApplicationMaterialStore } from "@draft-loop/storage/saved-application-material";
@@ -173,6 +173,8 @@ export interface ApiOptions {
     readonly consents?: ConsentLedger;
     /** Each candidate record's archive; without it the archive route is not served. */
     readonly recordArchives?: RecordArchives;
+    /** Each candidate record's readable copy; without it the readable export route is not served. */
+    readonly readableExports?: ReadableRecordExports;
     /**
      * The tenant's injection screening (ADR 0011, phase 2d): intake screens job sources and
      * uploads, a run refuses quarantined material and the release route is served. Without it
@@ -901,6 +903,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         service: application.service,
         workspaceRoot: application.workspaceRoot,
         archives: application.recordArchives,
+        ...(application.readableExports === undefined
+          ? {}
+          : { readableExports: application.readableExports }),
         knowledgeScope: auth.mode === "oidc" ? "owned" : "tenant",
       });
     }

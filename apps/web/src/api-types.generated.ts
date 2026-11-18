@@ -2937,6 +2937,12 @@ export interface ApiOperations {
     };
     readonly response: Blob;
   };
+  "GET /v1/workspaces/{workspaceId}/export": {
+    readonly path: {
+      readonly workspaceId: string;
+    };
+    readonly response: Blob;
+  };
   "GET /v1/me/display-preference": {
     readonly response: ApiSchemas["MemberDisplayPreference"];
   };

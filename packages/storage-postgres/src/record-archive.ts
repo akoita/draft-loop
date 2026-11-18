@@ -353,7 +353,7 @@ function publicRows(tenantId: string): (row: SqlRow) => SqlRow {
 }
 
 /** Where an object's bytes are read from and what they must still be. */
-interface ArchiveObject {
+export interface ArchiveObject {
   readonly blobs: BlobStoragePort;
   readonly reference: BlobReference;
 }
@@ -373,7 +373,7 @@ function payloadField(row: SqlRow, name: string): unknown {
   }
 }
 
-const integrityFailure = () =>
+export const integrityFailure = () =>
   new RecordArchiveError(
     "object_integrity",
     "A stored source or exported document is missing or no longer matches its recorded checksum.",
@@ -435,7 +435,7 @@ function referencedObjects(
   return objects;
 }
 
-async function readChecked(object: ArchiveObject): Promise<Uint8Array> {
+export async function readChecked(object: ArchiveObject): Promise<Uint8Array> {
   const content = await object.blobs.get(object.reference);
   if (
     content === undefined ||
