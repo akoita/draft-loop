@@ -117,7 +117,7 @@ sets them from its infrastructure and differs from the local stack here:
 | `DRAFT_LOOP_COVER_LETTER_WRITER`                        | Unset (`items`) on the API until the blind test (#2483) picks the writer; `free-form` on staging to try prose letters checked sentence by sentence                                                                                                                                                   |
 | `DRAFT_LOOP_RESEARCH_SEARCH`                            | Unset (`claude`) on the worker, so research searches with Claude on Vertex AI in the EU; with the Claude API fallback on, a search Vertex refuses for quota runs once on the Claude API and records `claude-api-fallback`; `linkup` has no Secret Manager key yet and ends each run as `unavailable` |
 | `DRAFT_LOOP_PAGE_FETCHER_URL`                           | The page fetcher's address on the API, so approved job pages go through it (#1837)                                                                                                                                                                                                                   |
-| `DRAFT_LOOP_BETA_ACCOUNT_CAP`                           | `25` on the public beta's API, so invites create at most 25 accounts; unset (closed) elsewhere ([beta invites](../architecture/hosted-service.md#beta-invites))                                                                                                                                      |
+| `DRAFT_LOOP_BETA_ACCOUNT_CAP` | The starting cap on the public beta's API; unset (closed) elsewhere. The operator changes the cap at runtime with `pnpm beta:cap` ([raise the beta cap](#raise-the-beta-cap)) |
 | `DRAFT_LOOP_SPEND_POOL_USD`                             | Set on the public beta's API to its monthly model budget; unset elsewhere ([spend pool](../architecture/hosted-service.md#monthly-spend-pool))                                                                                                                                                       |
 | `DRAFT_LOOP_SCREENING_SHADOW`, `DRAFT_LOOP_JEV_API_KEY` | `jev` on staging only, with the key from Secret Manager: job pages also go to Jev, which only logs ([decision models](../architecture/runtime-and-trust.md#decision-models))                                                                                                                         |
 | `DRAFT_LOOP_SERVER_RELEASE`                             | Optional on the API: the release name a feedback note records; unset, it records Cloud Run's `K_REVISION` ([feedback](../features/feedback.md)) |
@@ -268,6 +268,39 @@ curl "$API/v1/operator/organisations/org-fern/credits" \
 A seat-priced plan needs its seats, for example `{"planId":"team","seats":3}`.
 The [worker flow test](../../apps/worker/src/plans-credits-flow.test.ts) runs
 this sequence against Postgres with scripted providers.
+
+## Raise the beta cap
+
+The cap is how many accounts beta invites may create. Start small and raise
+it in steps while things stay stable. The change applies at once, with no
+code change or redeploy.
+
+Set `DRAFT_LOOP_API_URL` to the API's address and `DRAFT_LOOP_OWNER_TOKEN` to
+the deployment's owner token, then run from the repository root:
+
+```sh
+pnpm beta:cap        # read the cap and the seats
+pnpm beta:cap 20     # set the cap to 20
+```
+
+Expected output: `Set. Cap 20 (set by the operator): 9 accounts, 1 invites
+not used yet, 10 seats left.`
+
+- **What counts:** a seat is a redeemed invite. Open invites are shown
+  because each takes a seat when used. Organisations the operator creates
+  directly do not count.
+- **Lowering it:** existing accounts stay. New sign-ups answer `beta_full`
+  until a seat frees; the person's code stays valid.
+- **Where it lives:** one row in Postgres. While no runtime cap is set,
+  `DRAFT_LOOP_BETA_ACCOUNT_CAP` applies. Each change logs one
+  `beta_account_cap_set` audit line with the new and previous cap.
+- **The screen:** **Operator** shows the seats used and asks to confirm an
+  invite that goes past the cap.
+- **When it fails:** 401 or 403 means the token is wrong; 400 means the cap is
+  not a whole number from 0 to 100,000.
+
+The script calls `PUT /v1/operator/beta-invites/cap` with body `{"cap": 20}`;
+`GET /v1/operator/beta-invites` reads the same numbers.
 
 ## Erasing records and organisations
 

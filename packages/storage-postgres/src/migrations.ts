@@ -6,6 +6,7 @@ import { agentTokenScopesMigration } from "./agent-token-scopes-migration.js";
 import { agentTokenSpendMigration } from "./agent-token-spend-migration.js";
 import { agentTokensMigration } from "./agent-tokens-migration.js";
 import { applicationFoldersMigration } from "./application-folders-migration.js";
+import { betaAccountCapMigration } from "./beta-account-cap-migration.js";
 import { betaInvitesMigration } from "./beta-invites-migration.js";
 import { betaTermsAcceptanceMigration } from "./beta-terms-acceptance-migration.js";
 import { betaWaitlistMigration } from "./beta-waitlist-migration.js";
@@ -857,6 +858,7 @@ export const postgresMigrations: readonly PostgresMigration[] = [
   projectEvidenceKindMigration,
   feedbackTriageMigration,
   betaTermsAcceptanceMigration,
+  betaAccountCapMigration,
   supportUsageMigration,
 ];
 

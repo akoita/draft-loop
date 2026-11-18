@@ -10,6 +10,7 @@ import {
   canOperate,
   type FeedbackNote,
   inviteFromWaitlist,
+  inviteGoesPastCap,
   readFeedback,
   readInvites,
   readWaitlist,
@@ -203,10 +204,74 @@ describe("inviting from the waitlist", () => {
   });
 });
 
+const seats = { redeemed: 8, open: 2, cap: 10, capSource: "operator" as const, deploymentCap: 25 };
+
+describe("inviting past the cap (#2998)", () => {
+  it("counts open invites against the cap", () => {
+    expect(inviteGoesPastCap({ redeemed: 8, open: 1, cap: 10 })).toBe(false);
+    expect(inviteGoesPastCap({ redeemed: 8, open: 2, cap: 10 })).toBe(true);
+    expect(inviteGoesPastCap({ redeemed: 0, open: 0, cap: 0 })).toBe(true);
+    expect(seatsLeft({ redeemed: 8, open: 1, cap: 10 })).toBe(1);
+    expect(seatsLeft({ redeemed: 11, open: 2, cap: 10 })).toBe(0);
+  });
+
+  it("shows the seats above the waitlist and says when the cap is reached", () => {
+    const html = render(
+      <WaitlistSection
+        state={{ kind: "ready", value: [older] }}
+        seats={seats}
+        onInvite={() => {}}
+      />,
+    );
+
+    expect(html).toContain(
+      "8 of 10 seats used, 2 invites not used yet, 0 left. The cap is reached.",
+    );
+  });
+
+  it("asks to confirm before an invite past the cap, in place of the button", () => {
+    const html = render(
+      <WaitlistSection
+        state={{ kind: "ready", value: [newer, older] }}
+        seats={seats}
+        confirming="entry-1"
+        onInvite={() => {}}
+      />,
+    );
+
+    expect(html).toContain('role="alert"');
+    expect(html).toContain(
+      "This invite goes past the cap of 10 seats: 8 are used and 2 invites are not used yet. ada@example.test cannot sign up until a seat frees or you raise the cap.",
+    );
+    expect(html).toContain("Invite anyway");
+    expect(html).not.toContain('aria-label="Invite ada@example.test"');
+    // The other entry's button waits until the operator answers.
+    expect(html.match(/disabled=""/gu)).toHaveLength(1);
+  });
+
+  it("speaks French when the screen does", () => {
+    const html = render(
+      <WaitlistSection
+        state={{ kind: "ready", value: [older] }}
+        seats={seats}
+        confirming="entry-1"
+        onInvite={() => {}}
+      />,
+      "fr",
+    );
+
+    expect(html).toContain("Inviter quand même");
+    expect(html).toContain("Le plafond est atteint.");
+  });
+});
+
 describe("the invites", () => {
   const list = {
     redeemed: 3,
+    open: 1,
     cap: 50,
+    capSource: "deployment" as const,
+    deploymentCap: 50,
     invites: [
       {
         inviteId: "invite-1",
@@ -239,14 +304,15 @@ describe("the invites", () => {
       "invite-2",
       "invite-1",
     ]);
-    expect(seatsLeft({ redeemed: 3, cap: 50 })).toBe(47);
-    expect(seatsLeft({ redeemed: 60, cap: 50 })).toBe(0);
+    expect(seatsLeft({ redeemed: 3, open: 1, cap: 50 })).toBe(46);
+    expect(seatsLeft({ redeemed: 60, open: 0, cap: 50 })).toBe(0);
   });
 
   it("show each invite's state and the seats left", () => {
     const html = render(<InvitesSection state={{ kind: "ready", value: list }} />);
 
-    expect(html).toContain("3 of 50 beta accounts used, 47 left.");
+    expect(html).toContain("3 of 50 seats used, 1 invites not used yet, 46 left.");
+    expect(html).toContain("This cap comes from the deployment setting.");
     expect(html).toContain("Sent, not used yet");
     expect(html).toContain("Redeemed 2 Nov 2026, 08:00 UTC");
     expect(html).toContain("Revoked 4 Nov 2026, 08:00 UTC");
@@ -254,11 +320,17 @@ describe("the invites", () => {
 
   it("say so when none was sent", () => {
     const html = render(
-      <InvitesSection state={{ kind: "ready", value: { invites: [], redeemed: 0, cap: 50 } }} />,
+      <InvitesSection
+        state={{
+          kind: "ready",
+          value: { ...seats, invites: [], redeemed: 0, open: 0, cap: 50 },
+        }}
+      />,
     );
 
     expect(html).toContain("No invite sent yet.");
-    expect(html).toContain("0 of 50 beta accounts used, 50 left.");
+    expect(html).toContain("0 of 50 seats used, 0 invites not used yet, 50 left.");
+    expect(html).toContain("The operator set this cap.");
   });
 });
 

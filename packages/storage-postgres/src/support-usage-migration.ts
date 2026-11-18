@@ -10,7 +10,7 @@ import type { PostgresMigration } from "./migrations.js";
  * - Rows belong to no tenant: the cost cap is deployment-wide, so the policy is too.
  */
 export const supportUsageMigration: PostgresMigration = {
-  version: 56,
+  version: 57,
   name: "support assistant daily use",
   sql: `
     CREATE TABLE support_question_counts (

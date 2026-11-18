@@ -635,13 +635,14 @@ for the code and words each refusal.
 | Route                                        | Who                                | What it does                                                         |
 | -------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------- |
 | `POST /v1/operator/beta-invites`             | Operator                           | Creates a code for one email; the answer carries the plain code once |
-| `GET /v1/operator/beta-invites`              | Operator                           | Lists invites without codes, the accounts they created and the cap   |
+| `GET /v1/operator/beta-invites`              | Operator                           | Lists invites without codes, the seats used, open invites and the cap |
+| `PUT /v1/operator/beta-invites/cap`          | Operator                           | Sets the cap at runtime, with no redeploy                            |
 | `DELETE /v1/operator/beta-invites/:inviteId` | Operator                           | Revokes an open invite; 404 otherwise                                |
 | `POST /v1/sign-up`                           | A verified sign-in with no account | Redeems a code, assigns the Beta plan and makes the caller the owner |
 
 `POST /v1/sign-up` is the one route a sign-in without a membership reaches
 (`request-auth.ts`). After five refused codes in 15 minutes, one sign-in gets
-429 `rate_limited` with `Retry-After`. The cap is `DRAFT_LOOP_BETA_ACCOUNT_CAP`.
+429 `rate_limited` with `Retry-After`.
 
 ```mermaid
 flowchart LR
@@ -659,7 +660,11 @@ flowchart LR
   `invite_unknown`, `invite_revoked`, `invite_used`, `invite_email_mismatch`
   and `beta_full`.
 - **Cap.** It counts redeemed invites; 0 closes sign-up. Organisations the
-  operator creates directly are not counted.
+  operator creates directly are not counted. The operator sets it at runtime
+  (`beta_account_cap`, one deployment-wide row, #2998); while unset,
+  `DRAFT_LOOP_BETA_ACCOUNT_CAP` applies. Redemption reads it under the same
+  lock. [Raise the beta cap](../operations/server-deploy.md#raise-the-beta-cap)
+  gives the command.
 - **Data.** The table belongs to no tenant and holds an email and ids only.
 - **Activity.** The directory's `organisationActivity` keeps, per
   organisation, when a member last made a request and when its owners were
@@ -674,8 +679,10 @@ A visitor without an invite joins the waitlist, in the directory's
 `betaWaitlist` (`beta-waitlist.ts`, #2566). The operator turns an entry into
 an invite and sends the code.
 
-The waitlist exists only while the beta is open (`DRAFT_LOOP_BETA_ACCOUNT_CAP`
-above 0). Then `GET /v1/auth/config` answers `waitlist: true`, and a signed-out
+The waitlist exists only while the deployment opens the beta
+(`DRAFT_LOOP_BETA_ACCOUNT_CAP` above 0). It stays open when the runtime cap is
+full: the landing page says places open in small groups and that an invite
+comes by email. Then `GET /v1/auth/config` answers `waitlist: true`, and a signed-out
 visitor sees the landing page (`landing.tsx`, #2567) instead of the bare
 sign-in. It says what DraftLoop does, that it is a test that sends material
 outside the EU, and links `/legal/privacy` and `/legal/terms` (#2462). It loads

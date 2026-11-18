@@ -146,6 +146,38 @@ describe.runIf(connectionString !== undefined)("Postgres beta invites", () => {
     });
   });
 
+  it("lets the operator's runtime cap replace the deployment's cap", async () => {
+    await withDirectory(async (directory) => {
+      const first = await directory.betaInvites.create({ email: "ada@example.test", now });
+      const second = await directory.betaInvites.create({ email: "bob@example.test", now });
+      await expect(directory.betaInvites.operatorCap()).resolves.toBeUndefined();
+
+      await directory.betaInvites.setOperatorCap({ cap: 0, now });
+      await expect(directory.betaInvites.operatorCap()).resolves.toBe(0);
+      await expect(redeem(directory, first.code, "ada@example.test", 25)).resolves.toEqual({
+        redeemed: false,
+        refusal: "beta_full",
+      });
+
+      await directory.betaInvites.setOperatorCap({ cap: 1, now });
+      await expect(redeem(directory, first.code, "ada@example.test", 0)).resolves.toMatchObject({
+        redeemed: true,
+      });
+      await expect(redeem(directory, second.code, "bob@example.test", 25)).resolves.toEqual({
+        redeemed: false,
+        refusal: "beta_full",
+      });
+
+      await directory.betaInvites.setOperatorCap({ cap: 2, now });
+      await expect(redeem(directory, second.code, "bob@example.test", 0)).resolves.toMatchObject({
+        redeemed: true,
+      });
+      await expect(directory.betaInvites.setOperatorCap({ cap: 100_001, now })).rejects.toThrow(
+        /cap/u,
+      );
+    });
+  });
+
   it("removes the invite with its organisation's erasure, freeing the seat", async () => {
     await withDirectory(async (directory, schema) => {
       const { code } = await directory.betaInvites.create({ email: "ada@example.test", now });

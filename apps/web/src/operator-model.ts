@@ -14,12 +14,11 @@ export type Loaded<T> =
   | { readonly kind: "failed"; readonly message: string }
   | { readonly kind: "ready"; readonly value: T };
 
-export interface InviteList {
+/** The seats invites use and the cap, which the operator changes at runtime (#2998). */
+export type BetaSeats = ApiSchemas["BetaSeats"];
+
+export interface InviteList extends BetaSeats {
   readonly invites: readonly BetaInvite[];
-  /** Accounts the invites created. */
-  readonly redeemed: number;
-  /** The most accounts invites may create (`readBetaAccountCap`). */
-  readonly cap: number;
 }
 
 /** What one Invite press on a waitlist entry gave: the plain code, shown once, or a refusal. */
@@ -40,9 +39,19 @@ export function newestFirst<T>(items: readonly T[], time: (item: T) => string): 
   return [...items].sort((a, b) => time(b).localeCompare(time(a)));
 }
 
-/** Accounts invites may still create; never below zero. */
-export function seatsLeft(list: Pick<InviteList, "redeemed" | "cap">): number {
-  return Math.max(0, list.cap - list.redeemed);
+type SeatCount = Pick<BetaSeats, "redeemed" | "open" | "cap">;
+
+/** Seats still free once every open invite is used; never below zero. */
+export function seatsLeft(list: SeatCount): number {
+  return Math.max(0, list.cap - list.redeemed - list.open);
+}
+
+/**
+ * Whether one more invite goes past the cap: every seat is used or promised to an open invite.
+ * The invite is still allowed, but its person cannot sign up until a seat frees or the cap rises.
+ */
+export function inviteGoesPastCap(list: SeatCount): boolean {
+  return list.redeemed + list.open >= list.cap;
 }
 
 /** An invite's state as the operator reads it. */

@@ -32,7 +32,7 @@ export async function joinWaitlist(
 export function waitlistNotice(outcome: WaitlistOutcome): string {
   switch (outcome) {
     case "listed":
-      return t`Thanks. You are on the waitlist, and we will email you an invite when a place opens.`;
+      return t`Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready.`;
     case "invalid":
       return t`That does not look like an email address. Check it and try again.`;
     case "rate_limited":

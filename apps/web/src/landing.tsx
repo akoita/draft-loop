@@ -129,6 +129,7 @@ export function Landing({
         </section>
         <section aria-labelledby="landing-waitlist">
           <h2 id="landing-waitlist">{t`Join the waitlist`}</h2>
+          <p>{t`Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready.`}</p>
           <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
         </section>
         <footer>
