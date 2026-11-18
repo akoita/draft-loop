@@ -91,13 +91,15 @@ export function BetaSignUpView({
 
 export interface BetaSignUpProps {
   readonly client: ApiClient;
+  /** The code an invite email's link carried. */
+  readonly initialCode?: string;
   readonly onSignedUp: () => void;
   readonly onSignOut: () => void;
 }
 
 /** The sign-up screen and its one call. */
-export function BetaSignUp({ client, onSignedUp, onSignOut }: BetaSignUpProps) {
-  const [code, setCode] = useState("");
+export function BetaSignUp({ client, initialCode, onSignedUp, onSignOut }: BetaSignUpProps) {
+  const [code, setCode] = useState(initialCode ?? "");
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | undefined>();

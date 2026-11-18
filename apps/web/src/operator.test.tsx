@@ -172,6 +172,7 @@ describe("inviting from the waitlist", () => {
             state: "open",
           },
           code: "BETA-CODE-1234",
+          emailed: true,
         },
       },
       calls,
@@ -182,12 +183,25 @@ describe("inviting from the waitlist", () => {
     expect(calls).toEqual([
       ["POST /v1/operator/waitlist/{entryId}/invite", { path: { entryId: "entry-1" } }],
     ]);
-    expect(outcome).toEqual({ kind: "invited", email: older.email, code: "BETA-CODE-1234" });
+    expect(outcome).toEqual({
+      kind: "invited",
+      email: older.email,
+      code: "BETA-CODE-1234",
+      emailed: true,
+    });
     const html = render(
       <WaitlistSection state={waitlistOf([])} outcome={outcome} onInvite={() => {}} />,
     );
     expect(html).toContain("<code>BETA-CODE-1234</code>");
-    expect(html).toContain("it is shown only once");
+    expect(html).toContain("Invite emailed to");
+    const unsent = render(
+      <WaitlistSection
+        state={waitlistOf([])}
+        outcome={{ kind: "invited", email: older.email, code: "BETA-CODE-1234", emailed: false }}
+        onInvite={() => {}}
+      />,
+    );
+    expect(unsent).toContain("no email went out");
   });
 
   it("shows a refusal as an alert", async () => {

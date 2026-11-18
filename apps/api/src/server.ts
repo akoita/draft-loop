@@ -13,6 +13,7 @@ import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
+import { readInviteMailer } from "./invite-mail.js";
 import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
@@ -31,6 +32,8 @@ const supportSettings = readSupportSettings(process.env);
 const supportLimitsSecret = readSupportLimitsSecret(process.env);
 const localModels = readLocalModels(process.env);
 const betaAccountCap = readBetaAccountCap(process.env);
+// Beta invites are emailed where the deployment sets a sender; a partial setting stops here.
+const inviteMailer = readInviteMailer(process.env);
 const legalPublisher = readLegalPublisher(process.env);
 const serviceNoticeSecret = readServiceNoticeSecret(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
@@ -116,6 +119,7 @@ const app = await buildApi({
         memberSettings: directory.memberSettings,
         feedback: directory.feedback,
         betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
+        ...(inviteMailer === undefined ? {} : { inviteMailer }),
         // The waitlist and the public landing page exist only while the beta is open (#2567).
         ...(betaAccountCap > 0 ? { betaWaitlist: directory.betaWaitlist } : {}),
         organisationActivity: directory.organisationActivity,

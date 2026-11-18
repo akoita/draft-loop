@@ -3519,11 +3519,16 @@
           "code": {
             "type": "string",
             "description": "The plain code, shown once: it is stored only as a hash."
+          },
+          "emailed": {
+            "type": "boolean",
+            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
           "invite",
-          "code"
+          "code",
+          "emailed"
         ]
       },
       "SignedUpInput": {
@@ -12908,11 +12913,16 @@
           "code": {
             "type": "string",
             "description": "The plain code, shown once: it is stored only as a hash."
+          },
+          "emailed": {
+            "type": "boolean",
+            "description": "True when the invite's person was emailed a sign-up link with the code; false when mail is off or the send failed, so the operator sends the code."
           }
         },
         "required": [
           "invite",
-          "code"
+          "code",
+          "emailed"
         ],
         "additionalProperties": false
       },
@@ -31439,7 +31449,7 @@
     "/v1/operator/beta-invites": {
       "post": {
         "summary": "Create a single-use beta invite code for one email",
-        "description": "Operator only. The answer carries the plain code once.",
+        "description": "Operator only. Emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once.",
         "requestBody": {
           "required": true,
           "content": {
@@ -32007,7 +32017,7 @@
     "/v1/operator/waitlist/{entryId}/invite": {
       "post": {
         "summary": "Turn a waitlist entry into a beta invite",
-        "description": "Operator only. Creates an invite for the entry's email and deletes the entry. The answer carries the plain code once. 404 when no entry has that id.",
+        "description": "Operator only. Creates an invite for the entry's email, deletes the entry and emails the person a sign-up link with the code where mail is on; `emailed` says whether it went. The answer carries the plain code once. 404 when no entry has that id.",
         "parameters": [
           {
             "schema": {
@@ -32059,11 +32069,15 @@
                     },
                     "code": {
                       "type": "string"
+                    },
+                    "emailed": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "invite",
-                    "code"
+                    "code",
+                    "emailed"
                   ],
                   "additionalProperties": false
                 }

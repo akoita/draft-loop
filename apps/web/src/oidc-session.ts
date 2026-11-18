@@ -52,6 +52,8 @@ export interface OidcSessionOptions {
   /** The tab's session storage; never local storage, so tokens end with the tab. */
   readonly storage: () => Storage | undefined;
   readonly now: () => number;
+  /** The screen's language when the person signs in (`en`, `fr`), passed as `ui_locales`. */
+  readonly uiLocale?: () => string | undefined;
   /** Waits between refresh attempts while the provider wakes; defaults to a timer. */
   readonly wait?: (ms: number) => Promise<void>;
 }
@@ -225,11 +227,13 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       const codeVerifier = createCodeVerifier(options.crypto);
       const challenge = await codeChallenge(options.crypto.subtle, codeVerifier);
       attemptStore.write(JSON.stringify({ state, codeVerifier } satisfies Attempt));
+      const uiLocale = options.uiLocale?.();
       return authorizationUrl(found.authorizationEndpoint, {
         clientId: options.clientId,
         redirectUri: options.redirectUri,
         state,
         codeChallenge: challenge,
+        ...(uiLocale === undefined ? {} : { uiLocale }),
       });
     },
 

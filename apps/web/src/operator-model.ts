@@ -72,7 +72,13 @@ export function appendUnique<T>(
 
 /** What one Invite press on a waitlist entry gave: the plain code, shown once, or a refusal. */
 export type InviteOutcome =
-  | { readonly kind: "invited"; readonly email: string; readonly code: string }
+  | {
+      readonly kind: "invited";
+      readonly email: string;
+      readonly code: string;
+      /** The person was emailed a sign-up link with the code. */
+      readonly emailed: boolean;
+    }
   | { readonly kind: "failed"; readonly email: string; readonly message: string };
 
 /**
@@ -200,7 +206,12 @@ export async function inviteFromWaitlist(
     const created = await client.call("POST /v1/operator/waitlist/{entryId}/invite", {
       path: { entryId: entry.entryId },
     });
-    return { kind: "invited", email: created.invite.email, code: created.code };
+    return {
+      kind: "invited",
+      email: created.invite.email,
+      code: created.code,
+      emailed: created.emailed,
+    };
   } catch (error) {
     return { kind: "failed", email: entry.email, message: describeError(error) };
   }

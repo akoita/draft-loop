@@ -135,6 +135,10 @@ The full guide is the agent-toolkit `document-software` skill
 - `packages/embeddings` owns local text-embedding and cross-encoder runtimes
   and their pinned model manifests behind provider-independent ports. It does
   not download models or persist vectors.
+- `packages/mail` owns the hosted service's transactional email port, its Brevo
+  adapter and the sender settings, shared by the API and the worker. It holds
+  no templates of its own and no Secret Manager code. The desktop and the CLI
+  never depend on it.
 - `packages/user-guide` owns the user guide's text in each language, its word
   search and its Markdown form. It has no dependencies, so the browser, the API
   and the MCP server read the same guide.

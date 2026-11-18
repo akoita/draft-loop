@@ -100,12 +100,23 @@ export interface OidcAppProps {
   readonly navigation: ScreenNavigation;
   /** The public beta is open: a signed-out visitor sees the landing page and waitlist. */
   readonly waitlist?: boolean;
+  /** The code an invite email's link carried: sign-in comes first and sign-up fills it in. */
+  readonly inviteCode?: string;
+  /** Called once the invite's account exists, so the kept code is forgotten. */
+  readonly onInviteUsed?: () => void;
 }
 
 type Phase = "completing" | "signed-out" | "signed-in";
 
 /** The web screen when the API signs people in through the identity provider (ADR 0011, D6). */
-export function OidcApp({ session, createClient, navigation, waitlist = false }: OidcAppProps) {
+export function OidcApp({
+  session,
+  createClient,
+  navigation,
+  waitlist = false,
+  inviteCode,
+  onInviteUsed,
+}: OidcAppProps) {
   const [phase, setPhase] = useState<Phase>(() =>
     readAuthorizationResponse(navigation.search) !== undefined
       ? "completing"
@@ -113,7 +124,13 @@ export function OidcApp({ session, createClient, navigation, waitlist = false }:
         ? "signed-in"
         : "signed-out",
   );
-  const [notice, setNotice] = useState<string | undefined>(() => session.takeNotice());
+  const [notice, setNotice] = useState<string | undefined>(
+    () =>
+      session.takeNotice() ??
+      (inviteCode === undefined
+        ? undefined
+        : t`Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you.`),
+  );
   const [leaving, setLeaving] = useState(false);
   // A verified sign-in with no account sees beta sign-up; a new account remounts the app.
   const [needsAccount, setNeedsAccount] = useState(false);
@@ -174,7 +191,8 @@ export function OidcApp({ session, createClient, navigation, waitlist = false }:
   if (client === undefined || leaving)
     return (
       <OidcSignIn
-        waitlist={waitlist}
+        // An invited visitor skips the landing page and goes straight to sign-in.
+        waitlist={waitlist && inviteCode === undefined}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || leaving}
         onPrepare={() => session.prepare()}
@@ -197,7 +215,9 @@ export function OidcApp({ session, createClient, navigation, waitlist = false }:
     return (
       <BetaSignUp
         client={client.api}
+        {...(inviteCode === undefined ? {} : { initialCode: inviteCode })}
         onSignedUp={() => {
+          onInviteUsed?.();
           setNeedsAccount(false);
           setAccountVersion((version) => version + 1);
         }}

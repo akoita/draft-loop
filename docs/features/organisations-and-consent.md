@@ -77,11 +77,15 @@ people waiting and the unused invites. Each list reads 50 rows at a time with
 | Section  | What it shows                                                                  |
 | -------- | ------------------------------------------------------------------------------ |
 | Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first |
-| Waitlist | The seats used, then one row per entry, oldest first, searched by email. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
+| Waitlist | The seats used, then one row per entry, oldest first, searched by email. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
 | Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from |
 
-Send the code to the person yourself: DraftLoop sends no email. Each invite is
-written to the audit log under the operator's sign-in.
+Where the server sends mail, each new invite emails its person a link,
+`/#invite=<code>`, in French and English. The link opens sign-in, and sign-up
+then has the code filled in; the code rides after `#`, so no server log sees
+it. The screen says whether the email went. When it did not, because mail is
+off or the send failed, send the code yourself. Each invite is written to the
+audit log under the operator's sign-in.
 
 The cap starts small and rises in steps, with no redeploy:
 [raise the beta cap](../operations/server-deploy.md#raise-the-beta-cap).

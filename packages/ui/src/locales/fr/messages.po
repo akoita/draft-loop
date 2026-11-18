@@ -4694,8 +4694,13 @@ msgstr "Code d’invitation"
 
 #. placeholder {0}: outcome.email
 #: apps/web/src/operator.tsx
-msgid "Invite created for {0}. Send them this code now: it is shown only once."
-msgstr "Invitation créée pour {0}. Envoyez-lui ce code maintenant : il ne s'affiche qu'une fois."
+msgid "Invite created for {0}, but no email went out. Send them this code now: it is shown only once."
+msgstr "Invitation créée pour {0}, mais aucun email n'est parti. Envoyez-lui ce code maintenant : il n'est affiché qu'une fois."
+
+#. placeholder {0}: outcome.email
+#: apps/web/src/operator.tsx
+msgid "Invite emailed to {0}, with a link that fills in the code. If it does not arrive, send them this code: it is shown only once."
+msgstr "Invitation envoyée par email à {0}, avec un lien qui remplit le code. Si elle n'arrive pas, envoyez-lui ce code : il n'est affiché qu'une fois."
 
 #: apps/web/src/operator.tsx
 msgid "Invites"
@@ -11807,6 +11812,10 @@ msgstr "Vos consignes"
 #: apps/web/src/interview-guide.tsx
 msgid "Your interview"
 msgstr "Votre entretien"
+
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Your invite is ready. Sign in, or create an account, with the email address the invite was sent to; the code is filled in for you."
+msgstr "Votre invitation est prête. Connectez-vous, ou créez un compte, avec l'adresse email qui a reçu l'invitation ; le code est rempli pour vous."
 
 #: apps/web/src/records.tsx
 msgid "Your job search and everything stored for it were deleted."
