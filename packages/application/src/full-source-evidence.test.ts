@@ -15,6 +15,7 @@ import {
   announceRunEvidenceMode,
   decideFullSourceEvidence,
   defaultFullSourceBudgetCharacters,
+  type EvidenceModeDecision,
   evidenceModePreflightLine,
   fullSourceBudgetCharacters,
 } from "./full-source-evidence.js";
@@ -367,6 +368,45 @@ describe("full-source evidence", () => {
     expect(decideFullSourceEvidence(evidence, 100).fallbackReason).toBe("budget-exceeded");
     expect(evidenceModePreflightLine(decideFullSourceEvidence(evidence, 100, 10_000))).toContain(
       "exceeds the workspace cost cap",
+    );
+  });
+
+  it("shows and records the requirement-evidence map without evidence text", async () => {
+    const lines: string[] = [];
+    const appendAuditEvent = vi.fn(async (input: unknown) => input as never);
+    await announceRunEvidenceMode(
+      { appendAuditEvent },
+      {
+        evidenceModeDecision: async () =>
+          ({ requestedMode: "retrieval", effectiveMode: "retrieval" }) as EvidenceModeDecision,
+        requirementEvidenceMap: async () => ({
+          mode: "keyword",
+          reason: "no-model",
+          chunkCount: 2,
+          entries: [
+            { requirementId: "r1", candidates: [{ chunkId: "c1", origin: "keyword" }] },
+            { requirementId: "r2", candidates: [] },
+          ],
+        }),
+      },
+      "workspace",
+      "run-4",
+      (line) => lines.push(line),
+    );
+    expect(lines).toEqual([
+      "Requirement evidence: 1 of 2 requirements matched by keywords only (no local model is installed)",
+    ]);
+    expect(appendAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "run.requirement-evidence-map",
+        entityId: "run-4",
+        payload: expect.objectContaining({
+          mode: "keyword",
+          reason: "no-model",
+          requirementCount: 2,
+          requirementsWithEvidence: 1,
+        }),
+      }),
     );
   });
 });
