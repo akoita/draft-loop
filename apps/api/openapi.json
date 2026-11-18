@@ -30890,6 +30890,100 @@
         }
       }
     },
+    "/v1/account": {
+      "delete": {
+        "summary": "Delete my account and everything it holds",
+        "description": "For a person alone in their organisation, signed in themselves (an agent token or an assistant's sign-in answers 403). The account's email address is typed back as `confirm` (400 `confirmation_mismatch`). Erases the organisation as `DELETE /v1/organisation` does, which frees its beta place, then deletes the sign-in account at the identity provider. A queued or running run answers 409 `run_active`; an organisation with other members answers 409 `organisation_has_members`. Calling again finishes an interrupted deletion while the sign-in still resolves.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "maxLength": 320,
+                    "description": "The account's email address, typed back by the person."
+                  }
+                },
+                "required": [
+                  "confirm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The account and everything it held were deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "type": "string",
+                      "enum": [
+                        "deleted",
+                        "kept"
+                      ],
+                      "description": "Whether the sign-in account was deleted too. `kept` means it could not be deleted now; the operator is told, and signing in again finds no account."
+                    }
+                  },
+                  "required": [
+                    "identity"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The account and everything it held were deleted."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/organisation": {
       "delete": {
         "summary": "Delete the caller's organisation and everything it holds",

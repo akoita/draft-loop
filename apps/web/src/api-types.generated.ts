@@ -3001,6 +3001,14 @@ export interface ApiOperations {
     };
     readonly response: ApiSchemas["CreditPackCheckout"];
   };
+  "DELETE /v1/account": {
+    readonly body: {
+      readonly confirm: string;
+    };
+    readonly response: {
+      readonly identity: "deleted" | "kept";
+    };
+  };
   "DELETE /v1/organisation": {
     readonly body: {
       readonly confirm: string;

@@ -12,6 +12,8 @@ export interface OrganisationClosingOptions {
 }
 
 const deleteRoute = "/v1/organisation";
+// Deleting one's own account erases the organisation the same way (#3033).
+const accountRoute = "/v1/account";
 
 const closing = apiError(
   "organisation_closing",
@@ -21,7 +23,8 @@ const closing = apiError(
 /**
  * Refuses every request of a caller whose organisation is being deleted (ADR 0011, D7), so no
  * record or object is created after its record was erased. Only the repeated `DELETE
- * /v1/organisation`, which finishes the deletion, and the operator's routes pass. It runs on the
+ * /v1/organisation` or `DELETE /v1/account`, which finish the deletion, and the operator's routes
+ * pass. It runs on the
  * request's arrival, before any body is read, so a refused upload is never received.
  */
 export function registerOrganisationClosing(
@@ -31,7 +34,12 @@ export function registerOrganisationClosing(
   const { erasureFor, ownerTenantId } = options;
   app.addHook("onRequest", async (request, reply) => {
     if (isOperatorRequest(request.routeOptions.url, request.url)) return;
-    if (request.method === "DELETE" && request.routeOptions.url === deleteRoute) return;
+    if (
+      request.method === "DELETE" &&
+      (request.routeOptions.url === deleteRoute || request.routeOptions.url === accountRoute)
+    ) {
+      return;
+    }
     const tenantId = tenantIdOf(request.caller, ownerTenantId);
     if (tenantId === undefined) return;
     if (!(await erasureFor(tenantId).organisation.isClosing())) return;

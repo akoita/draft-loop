@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import {
@@ -17,10 +17,18 @@ export interface RecordActionsProps {
   readonly title: string;
   /** Called once the API erased the record, so the screen returns to the record list. */
   readonly onDeleted: (recordId: string) => void;
+  /** More of the fold, such as deleting the whole account. */
+  readonly children?: ReactNode;
 }
 
 /** Exports or deletes the record the screen shows; owners and admins only (ADR 0011, D7). */
-export function RecordActions({ client, recordId, title, onDeleted }: RecordActionsProps) {
+export function RecordActions({
+  client,
+  recordId,
+  title,
+  onDeleted,
+  children,
+}: RecordActionsProps) {
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<readonly string[]>([]);
 
@@ -42,6 +50,7 @@ export function RecordActions({ client, recordId, title, onDeleted }: RecordActi
       title={title}
       busy={busy}
       messages={messages}
+      extra={children}
       onExport={() =>
         void attempt(async () => {
           const bytes = await client.call(
@@ -74,6 +83,8 @@ export interface RecordActionsPanelProps {
   readonly onExport: () => void;
   /** Called with the id the person typed to confirm. */
   readonly onDelete: (typed: string) => void;
+  /** Drawn after the record's own forms. */
+  readonly extra?: ReactNode;
 }
 
 /** The record's export button and its delete form, which asks for the record id typed back. */
@@ -84,6 +95,7 @@ export function RecordActionsPanel({
   messages,
   onExport,
   onDelete,
+  extra,
 }: RecordActionsPanelProps) {
   const [typed, setTyped] = useState("");
 
@@ -116,6 +128,7 @@ export function RecordActionsPanel({
           {message}
         </p>
       ))}
+      {extra}
     </details>
   );
 }

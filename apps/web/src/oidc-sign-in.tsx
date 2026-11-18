@@ -243,7 +243,13 @@ export function OidcApp({
 
   return (
     <AccountScreenLanguage key={accountVersion} client={client.api}>
-      <Shell mode="sign-in" client={client.api} onSignOut={() => client.end(undefined, true)} />
+      <Shell
+        mode="sign-in"
+        client={client.api}
+        onSignOut={() => client.end(undefined, true)}
+        // The provider deleted the account and its sessions: leave without its sign-out page.
+        onAccountDeleted={(notice) => client.end(notice, false)}
+      />
     </AccountScreenLanguage>
   );
 }

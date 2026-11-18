@@ -42,6 +42,11 @@ declare module "fastify" {
      * create the person's account from an invite code.
      */
     signUpIdentity: SignInIdentity | undefined;
+    /**
+     * The person's own verified sign-in, set when a member signed in themselves (never through an
+     * agent token or an assistant's grant), for the routes that act on the account itself (#3033).
+     */
+    signInIdentity: SignInIdentity | undefined;
   }
 }
 
@@ -60,7 +65,12 @@ export type ApiAuthOptions =
     });
 
 type Authentication =
-  | { readonly outcome: "authenticated"; readonly caller: Caller; readonly grant?: AgentGrant }
+  | {
+      readonly outcome: "authenticated";
+      readonly caller: Caller;
+      readonly grant?: AgentGrant;
+      readonly identity?: SignInIdentity;
+    }
   | { readonly outcome: "unauthenticated"; readonly reason?: string }
   | { readonly outcome: "forbidden"; readonly identity?: SignInIdentity };
 
@@ -167,7 +177,7 @@ function signInAuthenticator(
     }
     return {
       outcome: "authenticated",
-      ...(grant === undefined ? {} : { grant }),
+      ...(grant === undefined ? { identity: verification.identity } : { grant }),
       caller: {
         kind: "member",
         tenantId: member.tenantId,
@@ -319,6 +329,7 @@ export function registerRequestAuthentication(
   app.decorateRequest("caller", undefined);
   app.decorateRequest("agentToken", undefined);
   app.decorateRequest("signUpIdentity", undefined);
+  app.decorateRequest("signInIdentity", undefined);
   app.addHook("onRequest", async (request: FastifyRequest, reply) => {
     if (isPublicRequest(request.routeOptions.url, request.url)) return;
     const operator = isOperatorRequest(request.routeOptions.url, request.url);
@@ -407,6 +418,7 @@ export function registerRequestAuthentication(
         );
       }
       request.caller = authentication.caller;
+      request.signInIdentity = authentication.identity;
       return;
     }
     if (authentication.outcome === "forbidden") {

@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { AccountDeletion } from "./account-deletion.js";
 import { AccountMenu } from "./account-menu.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
@@ -52,6 +53,8 @@ export interface RecordsProps {
   /** The service status, language and feedback, drawn after the account menu in the top bar. */
   readonly shellActions?: ReactNode;
   readonly onSignOut?: () => void;
+  /** Leaves the signed-in screen with this notice once the person deleted their account (#3033). */
+  readonly onAccountDeleted?: (notice: string) => void;
   /** Opens the operator page from the account menu, for a caller who may operate (#2829). */
   readonly onOperator?: () => void;
   /** The screens for the chosen record; they call `onSaved` once they create or read the record. */
@@ -68,6 +71,7 @@ export function Records({
   memory,
   shellActions,
   onSignOut,
+  onAccountDeleted,
   onOperator,
   children,
 }: RecordsProps) {
@@ -188,6 +192,13 @@ export function Records({
   };
   const exists = chosen !== undefined && state.ids.includes(chosen);
   const onePerson = isOnePersonPlan(state.me, state.ids);
+  // A person alone on their plan may also delete their whole account, sign-in included (#3033).
+  const accountEmail =
+    state.me.kind === "member" && state.me.role === "owner" ? state.me.email : undefined;
+  const accountDeletion =
+    onePerson && onAccountDeleted !== undefined && accountEmail !== undefined ? (
+      <AccountDeletion client={client} email={accountEmail} onDeleted={onAccountDeleted} />
+    ) : null;
   const yourData =
     onePerson && exists && canExportAndDelete(state.me) ? (
       <RecordActions
@@ -196,7 +207,9 @@ export function Records({
         recordId={chosen}
         title={t`Your data`}
         onDeleted={onDeleted}
-      />
+      >
+        {accountDeletion}
+      </RecordActions>
     ) : undefined;
 
   return (
@@ -215,10 +228,9 @@ export function Records({
       )}
       {onePerson ? (
         deleted === undefined ? null : (
-          <JobSearchDeleted
-            onStartAgain={() => create(firstJobSearchName())}
-            onSignOut={onSignOut}
-          />
+          <JobSearchDeleted onStartAgain={() => create(firstJobSearchName())} onSignOut={onSignOut}>
+            {accountDeletion}
+          </JobSearchDeleted>
         )
       ) : (
         <div className="record-rail">
@@ -274,9 +286,12 @@ export function Records({
 export function JobSearchDeleted({
   onStartAgain,
   onSignOut,
+  children,
 }: {
   readonly onStartAgain: () => void;
   readonly onSignOut?: (() => void) | undefined;
+  /** More ways on, such as deleting the whole account. */
+  readonly children?: ReactNode;
 }) {
   return (
     <div className="record-rail">
@@ -293,6 +308,7 @@ export function JobSearchDeleted({
           </button>
           {onSignOut === undefined ? null : <SignOutButton onSignOut={onSignOut} />}
         </div>
+        {children}
       </div>
     </div>
   );
