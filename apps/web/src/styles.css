@@ -368,6 +368,15 @@ button.danger-link:where(:not(.shared-screens *)):hover {
   justify-self: start;
 }
 
+/* The legal pages, a quiet line under sign-out, as on the landing page. */
+.account-menu-legal {
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
 /* The theme and language above sign-in and sign-up (#2772). */
 .preferences-bar {
   padding-inline: 1rem;

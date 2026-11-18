@@ -39,4 +39,15 @@ describe("account menu (#2861)", () => {
     expect(html).not.toContain("Alder coaching");
     expect(html).toContain("<p>your data here</p>");
   });
+
+  it("links the privacy policy, terms and legal notice in a new tab (#2462)", () => {
+    const html = renderToStaticMarkup(
+      <AccountMenu me={coach} onePerson={false} onSignOut={() => {}} />,
+    );
+
+    for (const page of ["privacy", "terms", "notice"]) {
+      expect(html).toContain(`<a href="/legal/${page}" target="_blank" rel="noopener">`);
+    }
+    expect(html).toMatch(/Sign out<\/button>[\s\S]*account-menu-legal/u);
+  });
 });

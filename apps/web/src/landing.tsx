@@ -18,6 +18,23 @@ export const legalLinks = {
   notice: "/legal/notice",
 } as const;
 
+/**
+ * The privacy policy, terms of use and legal notice as one line of links: on the landing page,
+ * and in the signed-in account menu, where `newTab` keeps the open screen in place.
+ */
+export function LegalLinks({ newTab = false }: { readonly newTab?: boolean }) {
+  const target = newTab ? { target: "_blank", rel: "noopener" } : {};
+  return (
+    <>
+      <a href={legalLinks.privacy} {...target}>{t`Privacy policy`}</a>
+      {" · "}
+      <a href={legalLinks.terms} {...target}>{t`Terms of use`}</a>
+      {" · "}
+      <a href={legalLinks.notice} {...target}>{t`Legal notice`}</a>
+    </>
+  );
+}
+
 export interface WaitlistFormViewProps {
   readonly email: string;
   readonly consent: boolean;
@@ -178,11 +195,7 @@ export function Landing({
           <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
         </section>
         <footer>
-          <a href={legalLinks.privacy}>{t`Privacy policy`}</a>
-          {" · "}
-          <a href={legalLinks.terms}>{t`Terms of use`}</a>
-          {" · "}
-          <a href={legalLinks.notice}>{t`Legal notice`}</a>
+          <LegalLinks />
         </footer>
       </main>
     </>
