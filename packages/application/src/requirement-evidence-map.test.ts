@@ -189,3 +189,27 @@ describe("requirement-evidence map uses", () => {
     ]).toEqual(["fallback", "writer"]);
   });
 });
+
+describe("writer's preferred evidence from the map", () => {
+  it("lists each requirement's candidates only when the writer use is on", async () => {
+    const { preferredEvidenceFromMap } = await import("./run-requirement-evidence-map.js");
+    const map = async () => ({
+      mode: "keyword" as const,
+      chunkCount: 2,
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c2", origin: "keyword" as const },
+            { chunkId: "c1", origin: "keyword" as const },
+          ],
+        },
+      ],
+    });
+    expect(preferredEvidenceFromMap(map, false)).toBeUndefined();
+    expect(preferredEvidenceFromMap(undefined, true)).toBeUndefined();
+    const preferred = await preferredEvidenceFromMap(map, true)?.();
+    expect(preferred?.get("r1")).toEqual(["c2", "c1"]);
+    expect(await preferredEvidenceFromMap(async () => undefined, true)?.()).toBeUndefined();
+  });
+});
