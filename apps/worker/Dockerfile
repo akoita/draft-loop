@@ -10,6 +10,15 @@ COPY packages/embeddings/src/model-manifest.ts packages/embeddings/src/
 COPY apps/worker/scripts/download-embedding-model.mjs apps/worker/scripts/
 RUN node apps/worker/scripts/download-embedding-model.mjs /download/files
 
+# The pinned cross-encoder (about 590 MB) that reorders the requirement-evidence map when
+# DRAFT_LOOP_EVIDENCE_RERANK=on (#3022). The script checks each file's size and SHA-256 against
+# the manifest, so a bad download fails the build.
+FROM node:24.22.1-bookworm-slim AS reranker-model
+WORKDIR /download
+COPY packages/embeddings/src/reranker-manifest.ts packages/embeddings/src/
+COPY scripts/download-reranker-model.mjs scripts/
+RUN node scripts/download-reranker-model.mjs /download/files
+
 # Install stage: pnpm and its store stay here, out of the image.
 FROM node:24.22.1-bookworm-slim AS dependencies
 
@@ -41,8 +50,10 @@ RUN /app/node_modules/.bin/tsx apps/worker/src/install-embedding-model.ts /tmp/e
 FROM node:24.22.1-bookworm-slim
 
 ENV NODE_ENV=production \
-    DRAFT_LOOP_EMBEDDING_MODEL_ROOT=/app/models
+    DRAFT_LOOP_EMBEDDING_MODEL_ROOT=/app/models \
+    DRAFT_LOOP_RERANKER_MODEL_DIR=/app/reranker-model
 COPY --from=dependencies /app /app
+COPY --from=reranker-model /download/files /app/reranker-model
 
 # Take the base image's security updates, and drop npm: nothing runs it at run time, and its
 # bundled packages are where most of the base image's scan findings live.

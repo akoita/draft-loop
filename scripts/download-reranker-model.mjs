@@ -1,6 +1,6 @@
 // Downloads the pinned cross-encoder's files into a directory and verifies each against the
 // manifest's size and SHA-256 (#3020): `node scripts/download-reranker-model.mjs <directory>`.
-// The retrieval evaluation workflow uses it; no run uses the cross-encoder yet.
+// The retrieval evaluation workflow and the worker image use it.
 import console from "node:console";
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
