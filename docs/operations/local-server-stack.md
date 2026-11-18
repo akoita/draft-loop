@@ -280,6 +280,7 @@ With `filesystem`, the host disk's encryption protects the files.
 | `DRAFT_LOOP_OIDC_AUDIENCE`          | API         | The audience the API's tokens carry                                                                                                                |
 | `DRAFT_LOOP_OIDC_WEB_CLIENT_ID`     | API         | The web screen's public client id                                                                                                                  |
 | `DRAFT_LOOP_OIDC_MEMBER_CLIENT_IDS` | API         | Optional; other client ids, comma-separated, that act as the member like the web screen, such as the deploy smoke's. They cannot create an account |
+| `DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID`, `DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_SECRET` | API | Optional, both or neither; the realm client whose service account holds `manage-users`, with which `DELETE /v1/account` deletes the person's Keycloak user. Unset, the sign-in account stays |
 | `DRAFT_LOOP_OIDC_JWKS_URL`          | API         | The provider's key set; discovered from the issuer when unset                                                                                      |
 | `DRAFT_LOOP_OIDC_ALLOW_HTTP`        | API         | `1` accepts plain-http provider addresses, for the local stack only                                                                                |
 

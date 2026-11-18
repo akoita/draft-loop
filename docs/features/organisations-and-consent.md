@@ -50,6 +50,10 @@ organisation; it erases everything with `draft-loop-server`
    too, and the history is kept.
 5. Owners download a record's [archive](../reference/record-archive.md), erase
    one record, or delete the whole organisation.
+6. A person alone in their organisation deletes their own account with
+   `DELETE /v1/account`, typing their email address to confirm. It erases the
+   organisation, which frees its beta place, then deletes their sign-in account
+   at the identity provider. Agents cannot reach it.
 
 ## What the screen shows
 
@@ -118,7 +122,7 @@ The cap starts small and rises in steps, with no redeploy:
 | API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
 | API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `POST /v1/waitlist/confirm`, `/v1/operator/waitlist` |
 | API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
-| API    | `/v1/workspaces/{id}/archive`, record and organisation erasure                                |
+| API    | `/v1/workspaces/{id}/archive`, record and organisation erasure, `DELETE /v1/account`          |
 | MCP    | none                                                                                          |
 
 ## Limits

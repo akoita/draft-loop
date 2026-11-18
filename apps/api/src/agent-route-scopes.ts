@@ -102,6 +102,7 @@ export const agentRoutes: Readonly<Record<string, AgentRouteRule>> = {
 
 /** Routes only the person reaches: decisions, consent, settings, records and tokens (D17). */
 export const humanOnlyRoutes: readonly string[] = [
+  "DELETE /v1/account",
   "DELETE /v1/knowledge-bases/:knowledgeBaseId/sensitivity-rules/:ruleId",
   "DELETE /v1/operator/organisations/:organisationId",
   "DELETE /v1/organisation",

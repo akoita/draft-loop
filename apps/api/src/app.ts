@@ -34,6 +34,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import { type ZodType, z } from "zod";
+import { registerAccountDeletionRoutes } from "./account-deletion-routes.js";
 import { registerAgentConnectionCapRoutes } from "./agent-connection-cap-routes.js";
 import { type AgentConnectionCapsFor, registerAgentSpendGate } from "./agent-spend-gate.js";
 import { registerAgentTokenRoutes } from "./agent-token-routes.js";
@@ -75,6 +76,7 @@ import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-routes.js";
 import { registerHelpRoutes } from "./help-routes.js";
 import { createMemoryIdempotencyStore, type IdempotencyStore } from "./idempotency.js";
+import type { IdentityAccounts } from "./identity-accounts.js";
 import { registerInterviewGuideRoutes } from "./interview-guide-routes.js";
 import type { InviteMailer } from "./invite-mail.js";
 import { type KnowledgeOwnership, registerKnowledgeAccess } from "./knowledge-access.js";
@@ -234,6 +236,8 @@ export interface ApiOptions {
    * routes are not served. The server opens it with per-request tenancy (#1591).
    */
   readonly directory?: TenantDirectory;
+  /** Deletes a person's sign-in account with their own (#3033); without it the account stays. */
+  readonly identityAccounts?: IdentityAccounts;
   /** The public beta's invite codes and account cap (#2502); unset, those routes are not served. */
   readonly betaInvites?: Pick<BetaSignUpOptions, "invites" | "cap">;
   /**
@@ -944,6 +948,15 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   const purchasesFor = options.tenants?.creditPurchasesFor;
   if (options.paymentEvents !== undefined && purchasesFor !== undefined) {
     registerPaymentEventRoutes(app, { events: options.paymentEvents, purchasesFor });
+  }
+  if (erasureFor !== undefined && options.directory !== undefined) {
+    registerAccountDeletionRoutes(app, {
+      erasureFor,
+      directory: options.directory,
+      ...(options.identityAccounts === undefined
+        ? {}
+        : { identityAccounts: options.identityAccounts }),
+    });
   }
   if (erasureFor !== undefined) {
     registerOrganisationErasureRoutes(app, {

@@ -14,6 +14,7 @@ import { readApiConfig, readHostedStorageConfig } from "./config.js";
 import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
+import { identityAdminClientFromEnv, keycloakAccounts } from "./identity-accounts.js";
 import { createInviteMailer } from "./invite-mail.js";
 import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
@@ -81,6 +82,13 @@ const auth: ApiAuthOptions =
   config.auth.mode === "oidc" && directory !== undefined
     ? { ...config.auth, resolveSignIn: directory.resolveSignIn }
     : { mode: "owner" };
+// The identity provider's account client, which deletes a person's sign-in with their account
+// (#3033); without it the sign-in account stays and the operator removes it.
+const identityAdminClient = identityAdminClientFromEnv(process.env);
+const identityAccounts =
+  config.auth.mode === "oidc" && identityAdminClient !== undefined
+    ? keycloakAccounts({ issuer: config.auth.issuer, ...identityAdminClient })
+    : undefined;
 const serverRelease =
   process.env.DRAFT_LOOP_SERVER_RELEASE?.trim() || process.env.K_REVISION?.trim() || undefined;
 const app = await buildApi({
@@ -121,6 +129,7 @@ const app = await buildApi({
     ? {}
     : {
         directory,
+        ...(identityAccounts === undefined ? {} : { identityAccounts }),
         memberSettings: directory.memberSettings,
         feedback: directory.feedback,
         betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
