@@ -387,12 +387,13 @@ msgstr "{0} ms"
 msgid "{0} of {1}"
 msgstr "{0} of {1}"
 
-#. placeholder {0}: state.value.redeemed
-#. placeholder {1}: state.value.cap
-#. placeholder {2}: seatsLeft(state.value)
+#. placeholder {0}: seats.redeemed
+#. placeholder {1}: seats.cap
+#. placeholder {2}: seats.open
+#. placeholder {3}: seatsLeft(seats)
 #: apps/web/src/operator.tsx
-msgid "{0} of {1} beta accounts used, {2} left."
-msgstr "{0} of {1} beta accounts used, {2} left."
+msgid "{0} of {1} seats used, {2} invites not used yet, {3} left."
+msgstr "{0} of {1} seats used, {2} invites not used yet, {3} left."
 
 #. placeholder {0}: requirements.covered
 #. placeholder {1}: responsibilities.covered
@@ -1861,6 +1862,7 @@ msgstr "Can't start yet: {0}"
 
 #: apps/web/src/application-material.tsx
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
@@ -4625,6 +4627,10 @@ msgstr "Invite"
 msgid "Invite {0}"
 msgstr "Invite {0}"
 
+#: apps/web/src/operator.tsx
+msgid "Invite anyway"
+msgstr "Invite anyway"
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "Invite code"
 msgstr "Invite code"
@@ -6676,6 +6682,10 @@ msgstr "Pick a version to read its text."
 #: packages/ui/src/model-preset-cards.tsx
 msgid "Pick the writer and reviewer yourself."
 msgstr "Pick the writer and reviewer yourself."
+
+#: apps/web/src/landing.tsx
+msgid "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
+msgstr "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Planned calls"
@@ -9042,8 +9052,8 @@ msgid "Thank you. The people who run DraftLoop read every note."
 msgstr "Thank you. The people who run DraftLoop read every note."
 
 #: apps/web/src/waitlist-model.ts
-msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
-msgstr "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
+msgid "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
+msgstr "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
 
 #: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
@@ -9214,6 +9224,10 @@ msgstr "The candidate's material cannot be stored yet. Record the permission to 
 #: packages/ui/src/profile-projection.ts
 msgid "The canonical candidate profile service returned an invalid record."
 msgstr "The canonical candidate profile service returned an invalid record."
+
+#: apps/web/src/operator.tsx
+msgid "The cap is reached."
+msgstr "The cap is reached."
 
 #: apps/web/src/profile-bridge.ts
 msgid "The career profile could not be derived."
@@ -9667,6 +9681,10 @@ msgstr "The notes already waiting stay for review."
 #: packages/ui/src/profile.tsx
 msgid "The operation did not complete. No new profile version was confirmed."
 msgstr "The operation did not complete. No new profile version was confirmed."
+
+#: apps/web/src/operator.tsx
+msgid "The operator set this cap. Change it with pnpm beta:cap; no redeploy is needed."
+msgstr "The operator set this cap. Change it with pnpm beta:cap; no redeploy is needed."
 
 #: packages/ui/src/opportunity-projection.ts
 msgid "The opportunity service returned an invalid fact."
@@ -10166,6 +10184,10 @@ msgstr "This brief has no responsibilities."
 msgid "This candidate record was erased."
 msgstr "This candidate record was erased."
 
+#: apps/web/src/operator.tsx
+msgid "This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed."
+msgstr "This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed."
+
 #: packages/ui/src/review.tsx
 msgid "This claim is not linked to the candidate materials supplied to DraftLoop."
 msgstr "This claim is not linked to the candidate materials supplied to DraftLoop."
@@ -10222,6 +10244,14 @@ msgstr "This host does not offer model discovery."
 #: packages/ui/src/review.tsx
 msgid "This host has no Home to open provider sign-in from."
 msgstr "This host has no Home to open provider sign-in from."
+
+#. placeholder {0}: seats.cap
+#. placeholder {1}: seats.redeemed
+#. placeholder {2}: seats.open
+#. placeholder {3}: entry.email
+#: apps/web/src/operator.tsx
+msgid "This invite goes past the cap of {0} seats: {1} are used and {2} invites are not used yet. {3} cannot sign up until a seat frees or you raise the cap."
+msgstr "This invite goes past the cap of {0} seats: {1} are used and {2} invites are not used yet. {3} cannot sign up until a seat frees or you raise the cap."
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This is a draft: it has not been reviewed and cannot start a run yet."

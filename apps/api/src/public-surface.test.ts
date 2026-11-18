@@ -55,6 +55,8 @@ beforeAll(async () => {
         revoke: vi.fn(),
         redeem,
         redeemedCount: vi.fn(async () => 0),
+        operatorCap: vi.fn(async () => undefined),
+        setOperatorCap: vi.fn(),
       } as BetaInvites,
       cap: 25,
     },

@@ -238,6 +238,13 @@ export interface ApiSchemas {
     readonly revokedAt?: string;
     readonly termsVersion?: string;
   };
+  "BetaSeats": {
+    readonly redeemed: number;
+    readonly open: number;
+    readonly cap: number;
+    readonly capSource: "operator" | "deployment";
+    readonly deploymentCap: number;
+  };
   "BetaWaitlistEntry": {
     readonly entryId: string;
     readonly email: string;
@@ -3035,10 +3042,19 @@ export interface ApiOperations {
   };
   "GET /v1/operator/beta-invites": {
     readonly response: {
-      readonly invites: readonly (ApiSchemas["BetaInvite"])[];
       readonly redeemed: number;
+      readonly open: number;
+      readonly cap: number;
+      readonly capSource: "operator" | "deployment";
+      readonly deploymentCap: number;
+      readonly invites: readonly (ApiSchemas["BetaInvite"])[];
+    };
+  };
+  "PUT /v1/operator/beta-invites/cap": {
+    readonly body: {
       readonly cap: number;
     };
+    readonly response: ApiSchemas["BetaSeats"];
   };
   "DELETE /v1/operator/beta-invites/{inviteId}": {
     readonly path: {

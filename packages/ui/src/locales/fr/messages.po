@@ -381,12 +381,13 @@ msgstr "{0} ms"
 msgid "{0} of {1}"
 msgstr "{0} sur {1}"
 
-#. placeholder {0}: state.value.redeemed
-#. placeholder {1}: state.value.cap
-#. placeholder {2}: seatsLeft(state.value)
+#. placeholder {0}: seats.redeemed
+#. placeholder {1}: seats.cap
+#. placeholder {2}: seats.open
+#. placeholder {3}: seatsLeft(seats)
 #: apps/web/src/operator.tsx
-msgid "{0} of {1} beta accounts used, {2} left."
-msgstr "{0} comptes bêta utilisés sur {1}, {2} restants."
+msgid "{0} of {1} seats used, {2} invites not used yet, {3} left."
+msgstr "{0} places utilisées sur {1}, {2} invitations pas encore utilisées, {3} restantes."
 
 #. placeholder {0}: requirements.covered
 #. placeholder {1}: responsibilities.covered
@@ -1855,6 +1856,7 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 
 #: apps/web/src/application-material.tsx
 #: apps/web/src/feedback.tsx
+#: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
 #: apps/web/src/research-brief.tsx
 #: apps/web/src/screening.tsx
@@ -4619,6 +4621,10 @@ msgstr "Inviter"
 msgid "Invite {0}"
 msgstr "Inviter {0}"
 
+#: apps/web/src/operator.tsx
+msgid "Invite anyway"
+msgstr "Inviter quand même"
+
 #: apps/web/src/beta-sign-up.tsx
 msgid "Invite code"
 msgstr "Code d’invitation"
@@ -6670,6 +6676,10 @@ msgstr "Choisissez une version pour lire son texte."
 #: packages/ui/src/model-preset-cards.tsx
 msgid "Pick the writer and reviewer yourself."
 msgstr "Choisissez vous-même le rédacteur et le relecteur."
+
+#: apps/web/src/landing.tsx
+msgid "Places open in small groups, so we can help each tester well. Access opens soon: join the waitlist and we will email you when your place is ready."
+msgstr "Les places ouvrent par petits groupes, pour bien accompagner chaque testeur. L'accès ouvre bientôt : inscrivez-vous sur la liste d'attente et nous vous écrirons par e-mail dès que votre place sera prête."
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Planned calls"
@@ -9036,8 +9046,8 @@ msgid "Thank you. The people who run DraftLoop read every note."
 msgstr "Merci. L'équipe de DraftLoop lit chaque message."
 
 #: apps/web/src/waitlist-model.ts
-msgid "Thanks. You are on the waitlist, and we will email you an invite when a place opens."
-msgstr "Merci. Vous êtes sur la liste d'attente, et nous vous enverrons une invitation par e-mail dès qu'une place se libère."
+msgid "Thanks. You are on the waitlist. Places open in small groups and access opens soon: we will email you an invite when your place is ready."
+msgstr "Merci. Vous êtes sur la liste d'attente. Les places ouvrent par petits groupes et l'accès ouvre bientôt : nous vous enverrons une invitation par e-mail dès que votre place sera prête."
 
 #: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
@@ -9208,6 +9218,10 @@ msgstr "Les éléments du candidat ne peuvent pas encore être stockés. Enregis
 #: packages/ui/src/profile-projection.ts
 msgid "The canonical candidate profile service returned an invalid record."
 msgstr "Le service de profil candidat canonique a renvoyé un enregistrement non valide."
+
+#: apps/web/src/operator.tsx
+msgid "The cap is reached."
+msgstr "Le plafond est atteint."
 
 #: apps/web/src/profile-bridge.ts
 msgid "The career profile could not be derived."
@@ -9661,6 +9675,10 @@ msgstr "Les notes déjà en attente restent à relire."
 #: packages/ui/src/profile.tsx
 msgid "The operation did not complete. No new profile version was confirmed."
 msgstr "L’opération n’a pas abouti. Aucune nouvelle version du profil n’a été confirmée."
+
+#: apps/web/src/operator.tsx
+msgid "The operator set this cap. Change it with pnpm beta:cap; no redeploy is needed."
+msgstr "Ce plafond a été fixé par l'opérateur. Modifiez-le avec pnpm beta:cap, sans redéploiement."
 
 #: packages/ui/src/opportunity-projection.ts
 msgid "The opportunity service returned an invalid fact."
@@ -10160,6 +10178,10 @@ msgstr "Ce brief ne contient aucune responsabilité."
 msgid "This candidate record was erased."
 msgstr "Ce dossier candidat a été effacé."
 
+#: apps/web/src/operator.tsx
+msgid "This cap comes from the deployment setting. Set another with pnpm beta:cap; no redeploy is needed."
+msgstr "Ce plafond vient du réglage du déploiement. Fixez-en un autre avec pnpm beta:cap, sans redéploiement."
+
 #: packages/ui/src/review.tsx
 msgid "This claim is not linked to the candidate materials supplied to DraftLoop."
 msgstr "Cette affirmation n’est pas liée aux contenus du candidat fournis à DraftLoop."
@@ -10216,6 +10238,14 @@ msgstr "Cet hôte ne propose pas la découverte de modèles."
 #: packages/ui/src/review.tsx
 msgid "This host has no Home to open provider sign-in from."
 msgstr "Cet hôte n’a pas d’Accueil depuis lequel ouvrir la connexion aux fournisseurs."
+
+#. placeholder {0}: seats.cap
+#. placeholder {1}: seats.redeemed
+#. placeholder {2}: seats.open
+#. placeholder {3}: entry.email
+#: apps/web/src/operator.tsx
+msgid "This invite goes past the cap of {0} seats: {1} are used and {2} invites are not used yet. {3} cannot sign up until a seat frees or you raise the cap."
+msgstr "Cette invitation dépasse le plafond de {0} places : {1} sont utilisées et {2} invitations ne sont pas encore utilisées. {3} ne pourra pas s'inscrire tant qu'une place ne se libère pas ou que vous ne relevez pas le plafond."
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This is a draft: it has not been reviewed and cannot start a run yet."

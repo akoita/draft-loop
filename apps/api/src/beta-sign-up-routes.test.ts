@@ -30,6 +30,8 @@ const invites: BetaInvites = {
   revoke: vi.fn<BetaInvites["revoke"]>(async ({ inviteId }) => inviteId === "invite-1"),
   redeem,
   redeemedCount: vi.fn(async () => 3),
+  operatorCap: vi.fn<BetaInvites["operatorCap"]>(async () => undefined),
+  setOperatorCap: vi.fn<BetaInvites["setOperatorCap"]>(async () => undefined),
 };
 
 beforeAll(async () => {
@@ -269,7 +271,14 @@ describe("operator beta invite routes", () => {
       url: "/v1/operator/beta-invites",
       headers: owner,
     });
-    expect(listed.json()).toEqual({ invites: [], redeemed: 3, cap: 25 });
+    expect(listed.json()).toEqual({
+      invites: [],
+      redeemed: 3,
+      open: 0,
+      cap: 25,
+      capSource: "deployment",
+      deploymentCap: 25,
+    });
 
     const revoke = (id: string) =>
       server.inject({ method: "DELETE", url: `/v1/operator/beta-invites/${id}`, headers: owner });
@@ -282,6 +291,75 @@ describe("operator beta invite routes", () => {
       headers: { authorization: `Bearer ${await token("member-1")}` },
     });
     expect(member.statusCode).toBe(401);
+  });
+});
+
+describe("the operator's runtime cap", () => {
+  it("sets the cap without a redeploy and lists it with the open invites", async () => {
+    const server = await api();
+    const owner = { authorization: `Bearer ${ownerToken}` };
+    let stored: number | undefined;
+    vi.mocked(invites.operatorCap).mockImplementation(async () => stored);
+    vi.mocked(invites.setOperatorCap).mockImplementation(async ({ cap }) => {
+      stored = cap;
+    });
+    vi.mocked(invites.list).mockResolvedValue([
+      {
+        inviteId: "a",
+        email: "a@example.test",
+        createdAt: "2026-11-18T10:00:00.000Z",
+        state: "open",
+      },
+      {
+        inviteId: "b",
+        email: "b@example.test",
+        createdAt: "2026-11-18T10:00:00.000Z",
+        state: "revoked",
+      },
+    ]);
+    try {
+      const set = await server.inject({
+        method: "PUT",
+        url: "/v1/operator/beta-invites/cap",
+        headers: owner,
+        payload: { cap: 10 },
+      });
+      expect(set.statusCode).toBe(200);
+      expect(set.json()).toEqual({
+        redeemed: 3,
+        open: 1,
+        cap: 10,
+        capSource: "operator",
+        deploymentCap: 25,
+      });
+
+      const listed = await server.inject({
+        method: "GET",
+        url: "/v1/operator/beta-invites",
+        headers: owner,
+      });
+      expect(listed.json()).toMatchObject({ cap: 10, capSource: "operator", open: 1 });
+    } finally {
+      vi.mocked(invites.operatorCap).mockReset();
+      vi.mocked(invites.setOperatorCap).mockReset();
+      vi.mocked(invites.list).mockResolvedValue([]);
+    }
+  });
+
+  it("refuses a cap out of range and any caller but the operator", async () => {
+    const server = await api();
+    const put = (authorization: string, cap: unknown) =>
+      server.inject({
+        method: "PUT",
+        url: "/v1/operator/beta-invites/cap",
+        headers: { authorization },
+        payload: { cap },
+      });
+    for (const cap of [-1, 2.5, 100_001, "10"]) {
+      expect((await put(`Bearer ${ownerToken}`, cap)).statusCode).toBe(400);
+    }
+    expect((await put(`Bearer ${await token("member-1")}`, 10)).statusCode).toBe(401);
+    expect(invites.setOperatorCap).not.toHaveBeenCalled();
   });
 });
 

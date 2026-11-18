@@ -1,4 +1,8 @@
-import type { BetaInviteRefusal, BetaInvites } from "@draft-loop/storage-postgres";
+import {
+  type BetaInviteRefusal,
+  type BetaInvites,
+  maximumBetaAccountCap,
+} from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -11,7 +15,10 @@ import { signUpRoute } from "./request-auth.js";
 /** What the sign-up route needs besides the invites: the sign-in claim and the Beta plan. */
 export interface BetaSignUpOptions {
   readonly invites: BetaInvites;
-  /** The most accounts invites may create; 0 closes sign-up. */
+  /**
+   * The deployment's cap (`DRAFT_LOOP_BETA_ACCOUNT_CAP`): the most accounts invites may create
+   * until the operator sets another at runtime (#2998); 0 closes sign-up.
+   */
   readonly cap: number;
   /** In sign-in mode, so a redeemed invite's owner is claimed on the same request. */
   readonly resolveSignIn?: ResolveSignIn;
@@ -79,6 +86,25 @@ const signedUpSchema = z
   .object({ organisationId: z.string(), memberId: z.string(), role: z.literal("owner") })
   .meta({ id: "SignedUp" });
 
+const capSourceSchema = z
+  .enum(["operator", "deployment"])
+  .describe(
+    "`operator` when the cap was set at runtime with PUT /v1/operator/beta-invites/cap, `deployment` while DRAFT_LOOP_BETA_ACCOUNT_CAP applies.",
+  );
+
+const seatsSchema = z
+  .object({
+    redeemed: z.number().int().describe("Accounts invites created: the seats used."),
+    open: z.number().int().describe("Invites sent and not used yet; each takes a seat if used."),
+    cap: z.number().int().describe("The most accounts invites may create now; 0 closes sign-up."),
+    capSource: capSourceSchema,
+    deploymentCap: z
+      .number()
+      .int()
+      .describe("DRAFT_LOOP_BETA_ACCOUNT_CAP, used while no runtime cap is set."),
+  })
+  .meta({ id: "BetaSeats" });
+
 interface Attempts {
   readonly start: number;
   refused: number;
@@ -98,6 +124,21 @@ export function registerBetaSignUpRoutes(
   const limit = options.refusedAttempts ?? 5;
   const windowMs = options.windowMs ?? 15 * 60_000;
   const attempts = new Map<string, Attempts>();
+
+  const seats = async (listed?: readonly { readonly state: string }[]) => {
+    const [operatorCap, redeemed, all] = await Promise.all([
+      invites.operatorCap(),
+      invites.redeemedCount(),
+      listed === undefined ? invites.list() : Promise.resolve(listed),
+    ]);
+    return {
+      redeemed,
+      open: all.filter((invite) => invite.state === "open").length,
+      cap: operatorCap ?? options.cap,
+      capSource: operatorCap === undefined ? ("deployment" as const) : ("operator" as const),
+      deploymentCap: options.cap,
+    };
+  };
 
   const attemptsFor = (key: string, at: number): Attempts => {
     const current = attempts.get(key);
@@ -140,23 +181,53 @@ export function registerBetaSignUpRoutes(
     "/v1/operator/beta-invites",
     {
       schema: {
-        summary: "List beta invites, the accounts they created and the cap",
+        summary: "List beta invites, the seats they use and the cap",
         description: "Operator only. Codes are never listed.",
         response: {
-          200: z.object({
-            invites: z.array(inviteSchema),
-            redeemed: z.number().int(),
-            cap: z.number().int(),
-          }),
+          200: seatsSchema.extend({ invites: z.array(inviteSchema) }),
           403: apiErrorSchema,
         },
       },
     },
-    async () => ({
-      invites: [...(await invites.list())],
-      redeemed: await invites.redeemedCount(),
-      cap: options.cap,
-    }),
+    async () => {
+      const listed = [...(await invites.list())];
+      return { invites: listed, ...(await seats(listed)) };
+    },
+  );
+
+  app.put(
+    "/v1/operator/beta-invites/cap",
+    {
+      schema: {
+        summary: "Set how many accounts beta invites may create",
+        description:
+          "Operator only. Takes effect at once, with no redeploy, and replaces DRAFT_LOOP_BETA_ACCOUNT_CAP until set again. Accounts already created stay when the cap is lowered below them; new sign-ups answer 409 beta_full until a seat frees. 0 closes sign-up. Answers the seats and the new cap.",
+        body: z.strictObject({
+          cap: z
+            .number()
+            .int()
+            .min(0)
+            .max(maximumBetaAccountCap)
+            .describe("The most accounts invites may create, 0 to 100000."),
+        }),
+        response: { 200: seatsSchema, 400: apiErrorSchema, 403: apiErrorSchema },
+      },
+    },
+    async (request) => {
+      const before = await invites.operatorCap();
+      await invites.setOperatorCap({ cap: request.body.cap, now: now() });
+      request.log.info(
+        {
+          audit: {
+            action: "beta_account_cap_set",
+            cap: request.body.cap,
+            previous: before ?? options.cap,
+          },
+        },
+        "audit",
+      );
+      return seats();
+    },
   );
 
   app.delete(
