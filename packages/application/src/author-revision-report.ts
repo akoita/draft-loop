@@ -255,7 +255,11 @@ export function buildAuthorRevisionReport(
   const retrievedEvidence = validationInputs.retrievedEvidence ?? [];
   const evidenceById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk.text] as const));
   const proposal = validatedProposal(validationInputs.proposal, retrievedEvidence);
-  return issues.slice(0, maxAuthorRevisionReportItems).map((issue) => {
+  // Why the grounded filter gave up is for people reading the failure, not a fix for the author.
+  const authorIssues = issues.filter(
+    (issue) => proposalIssueCode(issue) !== "grounded_filter_failed",
+  );
+  return authorIssues.slice(0, maxAuthorRevisionReportItems).map((issue) => {
     const path = issuePath(issue);
     const code = proposalIssueCode(issue) ?? "invalid_proposal";
     const text = textAtPath(proposal ?? validationInputs.proposal, path);
