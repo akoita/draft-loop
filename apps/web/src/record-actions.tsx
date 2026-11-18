@@ -117,7 +117,11 @@ export function RecordActionsPanel({
           autoComplete="off"
           onChange={(event) => setTyped(event.target.value)}
         />
-        <button type="submit" className="danger" disabled={busy}>{t`Delete all documents and applications`}</button>
+        <button
+          type="submit"
+          className="danger"
+          disabled={busy}
+        >{t`Delete all documents and applications`}</button>
       </form>
       {messages.map((message) => (
         <p key={message} className="problem" role="alert">

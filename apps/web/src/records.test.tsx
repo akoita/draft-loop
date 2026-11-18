@@ -181,7 +181,9 @@ describe("after deleting the only job search", () => {
       <JobSearchDeleted onStartAgain={() => {}} onSignOut={() => {}} />,
     );
 
-    expect(html).toContain("Your documents, applications and everything stored with them were deleted.");
+    expect(html).toContain(
+      "Your documents, applications and everything stored with them were deleted.",
+    );
     expect(html).toContain("you are still signed in.");
     expect(html).toContain("Start again");
     expect(html).toContain("Sign out");
