@@ -43,10 +43,17 @@ function overlap(left: ReadonlySet<string>, right: ReadonlySet<string>): number 
   return count;
 }
 
+/**
+ * Each requirement's preferred chunk ids, best first: the requirement-evidence map's candidates
+ * when the writer use is on (#2983). Absent, the plan matches by shared words alone.
+ */
+export type PreferredRequirementEvidence = ReadonlyMap<string, readonly string[]>;
+
 /** Build the single-workflow MVP plan without inventing or duplicating evidence. */
 export function createRequirementAchievementPlan(
   requirements: readonly PlanningRequirement[],
   retrievedEvidence: readonly ScoredEvidenceChunk[],
+  preferred?: PreferredRequirementEvidence,
 ): RequirementAchievementPlan {
   const seenEvidenceIds = new Set<string>();
   const evidence = retrievedEvidence
@@ -62,29 +69,37 @@ export function createRequirementAchievementPlan(
   const achievements: PlannedAchievement[] = [];
   const uncoveredRequirementIds: string[] = [];
 
+  const evidenceById = new Map(evidence.map((candidate) => [candidate.chunk.id, candidate]));
   for (const requirement of requirements) {
     const requirementTerms = terms(requirement.text);
-    const selected = evidence
-      .filter(({ chunk }) => !claimed.has(chunk.id))
-      .map((candidate) => ({ ...candidate, overlap: overlap(requirementTerms, candidate.terms) }))
-      .filter(({ overlap: matchedTerms }) => matchedTerms > 0)
-      .sort(
-        (left, right) =>
-          right.overlap - left.overlap ||
-          left.chunk.rank - right.chunk.rank ||
-          left.chunk.id.localeCompare(right.chunk.id, "en-US"),
-      )[0];
+    // A preferred chunk that was sent and is not yet claimed wins; otherwise shared words decide.
+    const preferredId = preferred
+      ?.get(requirement.id)
+      ?.find((id) => evidenceById.has(id) && !claimed.has(id));
+    const preferredChoice = preferredId === undefined ? undefined : evidenceById.get(preferredId);
+    const chosen =
+      preferredChoice ??
+      evidence
+        .filter(({ chunk }) => !claimed.has(chunk.id))
+        .map((candidate) => ({ ...candidate, overlap: overlap(requirementTerms, candidate.terms) }))
+        .filter(({ overlap: matchedTerms }) => matchedTerms > 0)
+        .sort(
+          (left, right) =>
+            right.overlap - left.overlap ||
+            left.chunk.rank - right.chunk.rank ||
+            left.chunk.id.localeCompare(right.chunk.id, "en-US"),
+        )[0];
 
-    if (selected === undefined) {
+    if (chosen === undefined) {
       coverage.push({ requirementId: requirement.id, evidenceChunkId: null });
       uncoveredRequirementIds.push(requirement.id);
       continue;
     }
-    claimed.add(selected.chunk.id);
-    coverage.push({ requirementId: requirement.id, evidenceChunkId: selected.chunk.id });
+    claimed.add(chosen.chunk.id);
+    coverage.push({ requirementId: requirement.id, evidenceChunkId: chosen.chunk.id });
     achievements.push({
-      evidenceChunkId: selected.chunk.id,
-      sourceId: selected.chunk.sourceId,
+      evidenceChunkId: chosen.chunk.id,
+      sourceId: chosen.chunk.sourceId,
       requirementIds: [requirement.id],
     });
   }

@@ -42,6 +42,7 @@ import {
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import {
   createRequirementAchievementPlan,
+  type PreferredRequirementEvidence,
   requirementsWithoutEvidence,
 } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
@@ -75,6 +76,8 @@ export interface ProviderAuthorAgentDependencies {
   readonly userError: (message: string) => Error;
   /** Records the step's input in run history; a failure is dropped and never fails the run. */
   readonly recordAuthorInput?: (input: AuthorInputRecord) => Promise<void>;
+  /** The map's candidates per requirement, when the writer use is on (#2983). */
+  readonly preferredEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
 }
 
 /**
@@ -108,6 +111,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       const achievementPlan = createRequirementAchievementPlan(
         context.requirements,
         retrievedEvidence,
+        await deps.preferredEvidence?.(),
       );
       if (achievementPlan.status === "no-evidence") {
         throw deps.userError("Drafting requires retrieved candidate evidence.");

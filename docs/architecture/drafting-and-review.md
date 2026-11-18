@@ -169,7 +169,10 @@ leaves the map ungraded and never fails the critique. Grading is off by default.
 
 `DRAFT_LOOP_EVIDENCE_MAP` names where runs use the map; each use is off unless
 named. With `fallback`, a run above its budget or cost cap adds each
-requirement's map candidates instead of its shared-word picks. The
+requirement's map candidates instead of its shared-word picks. With `writer`,
+the writer's achievement plan gives each requirement its best sent map
+candidate before falling back to shared words; the plan step reads the same
+plan, so both keep one cached prompt prefix. The
 measurement behind it is
 [Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
 

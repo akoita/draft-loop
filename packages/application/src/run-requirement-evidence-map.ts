@@ -1,4 +1,5 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 
 import {
   buildRequirementEvidenceMap,
@@ -26,6 +27,28 @@ export function enabledRequirementEvidenceMapUses(
       .map((value) => value.trim().toLowerCase()),
   );
   return new Set(requirementEvidenceMapUses.filter((use) => named.has(use)));
+}
+
+/**
+ * The writer's preferred evidence (#2983): each requirement's map candidates, best first, when
+ * the setting names the `writer` use and the run builds a map. Undefined otherwise.
+ */
+export function preferredEvidenceFromMap(
+  requirementEvidenceMap: (() => Promise<RequirementEvidenceMap | undefined>) | undefined,
+  enabled: boolean = enabledRequirementEvidenceMapUses().has("writer"),
+): (() => Promise<PreferredRequirementEvidence | undefined>) | undefined {
+  if (!enabled || requirementEvidenceMap === undefined) return undefined;
+  return async () => {
+    const map = await requirementEvidenceMap();
+    return map === undefined
+      ? undefined
+      : new Map(
+          map.entries.map(({ requirementId, candidates }) => [
+            requirementId,
+            candidates.map(({ chunkId }) => chunkId),
+          ]),
+        );
+  };
 }
 
 export interface RequirementEvidenceMapRuntime {

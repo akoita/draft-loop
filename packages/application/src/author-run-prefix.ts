@@ -13,7 +13,10 @@ import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
+import {
+  createRequirementAchievementPlan,
+  type PreferredRequirementEvidence,
+} from "./requirement-achievement-plan.js";
 
 /** The leading author input members that every author call of a run repeats: context to output budget. */
 export const runStableInputMembers = 5;
@@ -35,6 +38,7 @@ export function authorRunPrefix(
   context: ContextSnapshot,
   promptContext: ContextSnapshot,
   retrievedEvidence: readonly ScoredEvidenceChunk[],
+  preferred?: PreferredRequirementEvidence,
 ) {
   const groundingGuide = createAuthorGroundingGuide(retrievedEvidence);
   const { systemPrompt, providerInput } = createAuthorAdjudicationPrompt(
@@ -47,7 +51,7 @@ export function authorRunPrefix(
   );
   const evidence = modelFacingRunEvidence(
     retrievedEvidence,
-    createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+    createRequirementAchievementPlan(context.requirements, retrievedEvidence, preferred),
   );
   return {
     systemPrompt: `${systemPrompt}\n\n${evidenceReferenceTableInstructions}`,

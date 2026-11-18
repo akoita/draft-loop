@@ -18,6 +18,7 @@ import {
   type ProviderApplicationPlannerDependencies,
 } from "./application-plan-agent.js";
 import { CliUserError } from "./cli-user-error.js";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 import type { RecordAuthorInput } from "./run-author-input.js";
 import type { RequirementEvidenceGradeHook } from "./run-requirement-evidence-grade.js";
 
@@ -49,6 +50,8 @@ export interface RunRecorders {
   readonly tracer?: RunTracer;
   /** Grades the run's requirement-evidence map on the critic step (#2996); absent grades none. */
   readonly evidenceGrade?: RequirementEvidenceGradeHook;
+  /** The map's candidates per requirement for the writer's plan (#2983); absent uses words. */
+  readonly preferredEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
 }
 
 /** The recorders of a run; planning is on unless the run options turn it off. */
@@ -81,6 +84,9 @@ export function recordedApplicationPlanner(
     ...deps,
     userError: (message) => new CliUserError(message),
     record: recorders.recordApplicationPlan,
+    ...(recorders.preferredEvidence === undefined
+      ? {}
+      : { preferredEvidence: recorders.preferredEvidence }),
   });
 }
 
