@@ -552,3 +552,104 @@ describe("provider critic agent document language", () => {
     expect(inEnglish?.promptCache?.callInstructions).toBe("");
   });
 });
+
+describe("requirement-evidence grade on the critic step (#2996)", () => {
+  const map = {
+    mode: "semantic" as const,
+    chunkCount: 2,
+    entries: [
+      {
+        requirementId: "requirement",
+        candidates: [{ chunkId: "chunk-0", score: 0.9, origin: "semantic" as const }],
+      },
+    ],
+  };
+
+  function gradingCritic(
+    requests: ModelRequest<JsonObject>[],
+    recorded: unknown[],
+    failGrade = false,
+  ) {
+    return createProviderCriticAgent({
+      context,
+      promptContext: context,
+      dataPolicy: () => ({}) as ModelRequest<JsonObject>["dataPolicy"],
+      criticCompany: "openai",
+      criticModel: "c",
+      userError: (message) => new Error(message),
+      evidenceGrade: {
+        map: async () => map,
+        eligible: async () => evidence,
+        record: async (runId, graded) => {
+          recorded.push({ runId, graded });
+        },
+      },
+      createAdapter: async () => ({
+        execute: async (request: ModelRequest<JsonObject>) => {
+          requests.push(request);
+          const grading = request.outputName === "requirement_evidence_grade";
+          if (grading && failGrade) throw new Error("provider down");
+          return {
+            output: grading
+              ? {
+                  grades: [
+                    {
+                      requirementId: "requirement",
+                      chunkId: "chunk-0",
+                      grade: "supports",
+                      reason: "The chunk states TypeScript tools.",
+                    },
+                  ],
+                }
+              : { findings: [], coverageJudgements: [] },
+            provider: "openai",
+            modelId: "c",
+            usage: {
+              inputTokens: grading ? 10 : 1,
+              outputTokens: 1,
+              totalTokens: grading ? 11 : 2,
+            },
+            cost: { estimatedUsd: grading ? 0.01 : 0.02 },
+          } as unknown as ModelResponse<JsonObject>;
+        },
+      }),
+    });
+  }
+
+  it("grades once on the first round, on the critic model, and bills the critique", async () => {
+    const requests: ModelRequest<JsonObject>[] = [];
+    const recorded: { runId: string; graded: { grading: { status: string } } }[] = [];
+    const critic = gradingCritic(requests, recorded);
+    const first = await critic.execute(critique(1) as never);
+    await critic.execute(critique(2) as never);
+
+    const grades = requests.filter(({ outputName }) => outputName === "requirement_evidence_grade");
+    expect(grades).toHaveLength(1);
+    expect(grades[0]?.model).toBe(context.modelConfiguration.critic);
+    expect(grades[0]?.maxOutputTokens).toBe(criticOutputBudget(context.modelConfiguration.critic));
+    expect(grades[0]?.input).toMatchObject({
+      pairs: [{ requirementId: "requirement", chunkId: "chunk-0" }],
+    });
+    expect(first.totalTokens).toBe(13);
+    expect(first.estimatedUsd).toBeCloseTo(0.03);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({ runId: "run", graded: { grading: { status: "graded" } } });
+  });
+
+  it("records a failed grade and still returns the critique", async () => {
+    const requests: ModelRequest<JsonObject>[] = [];
+    const recorded: { graded: { grading: { status: string } } }[] = [];
+    const result = await gradingCritic(requests, recorded, true).execute(critique(1) as never);
+    expect(result.output).toMatchObject({ findings: [] });
+    expect(result.totalTokens).toBe(2);
+    expect(recorded[0]?.graded.grading.status).toBe("failed");
+  });
+
+  it("makes no grade call without the hook", async () => {
+    const requests: ModelRequest<JsonObject>[] = [];
+    await recordingCritic(requests).execute(critique(1) as never);
+    expect(requests.map(({ outputName }) => outputName)).not.toContain(
+      "requirement_evidence_grade",
+    );
+  });
+});

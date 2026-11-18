@@ -6,6 +6,10 @@ import { type RunRecorders, runRecorders } from "./run-application-plan.js";
 import { type RunAuthorInputTotalsSource, runAuthorInputRecorder } from "./run-author-input.js";
 import { createRunCoverageJudgementPlanner } from "./run-coverage-judgement.js";
 import type { RunOptions } from "./run-model-profiles.js";
+import {
+  type RequirementEvidenceGradeHook,
+  runRequirementEvidenceGradeHook,
+} from "./run-requirement-evidence-grade.js";
 
 /** The trailing, run-scoped arguments of the engine factory, in its parameter order. */
 export type RunEngineTail = readonly [
@@ -22,7 +26,10 @@ export type RunEngineTail = readonly [
 /** Gathers the run-scoped engine arguments that start, begin, and resume pass identically. */
 export function runEngineTail(
   options: RunOptions,
-  retrieval: (RunAuthorInputTotalsSource & { readonly port: RetrievalPort }) | undefined,
+  retrieval:
+    | (RunAuthorInputTotalsSource &
+        Parameters<typeof runRequirementEvidenceGradeHook>[0] & { readonly port: RetrievalPort })
+    | undefined,
   withheld: CandidateKnowledgeSensitivityExclusions | undefined,
   root: string,
   storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
@@ -36,12 +43,22 @@ export function runEngineTail(
     options.localClaudeCategoryCaptureParent,
     withheld,
     createRunCoverageJudgementPlanner({ root }),
-    runRecorders(
-      storage,
-      workspaceId,
-      runAuthorInputRecorder(storage, workspaceId, retrieval),
-      options.applicationPlan,
-      options.tracer,
+    withEvidenceGrade(
+      runRecorders(
+        storage,
+        workspaceId,
+        runAuthorInputRecorder(storage, workspaceId, retrieval),
+        options.applicationPlan,
+        options.tracer,
+      ),
+      runRequirementEvidenceGradeHook(retrieval, storage, workspaceId),
     ),
   ];
+}
+
+function withEvidenceGrade(
+  recorders: RunRecorders,
+  evidenceGrade: RequirementEvidenceGradeHook | undefined,
+): RunRecorders {
+  return evidenceGrade === undefined ? recorders : { ...recorders, evidenceGrade };
 }

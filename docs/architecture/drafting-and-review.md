@@ -159,7 +159,13 @@ and says why.
 
 The map is shown in the preflight and recorded as a content-free
 `run.requirement-evidence-map` audit event: ids, origins and scores, never
-text. It does not yet change what the writer or the critic receives. The
+text. It does not yet change what the writer or the critic receives.
+
+With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
+as supports, partly supports or does not support. That is one extra call on the
+critic model, billed on that critique. A content-free
+`run.requirement-evidence-grade` event records the grades by id. A failed call
+leaves the map ungraded and never fails the critique. Grading is off by default. The
 measurement behind it is
 [Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
 

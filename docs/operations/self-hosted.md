@@ -88,6 +88,7 @@ clone, which Git ignores:
 | `DRAFT_LOOP_LIVE_TURN_PAUSE_MS`   | `2500,5000` | The silence that ends a spoken answer, then the longer wait when it sounds cut off                                                                                                               |
 | `DRAFT_LOOP_COVER_LETTER_WRITER`  | `items`     | `free-form` writes a cover letter as prose, then checks each sentence against your facts ([free-form letters](../reference/application-material.md#free-form-cover-letters))                     |
 | `DRAFT_LOOP_RESEARCH_SEARCH`      | `claude`    | The research brief's web search: `claude` with `keys/anthropic_api_key`, `linkup` with `keys/linkup_api_key`, or `off` ([research briefs](../reference/application-material.md#research-briefs)) |
+| `DRAFT_LOOP_EVIDENCE_GRADE`       | `off`       | `on` grades each run's requirement-evidence map with one call on the critic model, billed on the first critique ([drafting and review](../architecture/drafting-and-review.md#requirement-evidence-map)) |
 | `DRAFT_LOOP_RUN_MAX_COST_USD`     | `3`         | The most one run may spend on provider calls                                                                                                                                                     |
 | `DRAFT_LOOP_RUN_MAX_ROUNDS`       | `5`         | The most revision rounds one run may take                                                                                                                                                        |
 
