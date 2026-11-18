@@ -166,6 +166,15 @@ it as **Evidence for each requirement**: the sources for each requirement, with
 scores, match and grades under Advanced options. Sources graded as not
 supporting are left out of the simple list.
 
+With `DRAFT_LOOP_EVIDENCE_RERANK=on`, a local cross-encoder reads each
+requirement with each of its candidates and reorders them, best first. It keeps
+every candidate, because its scores are too low to cut on. On graded runs it
+ranked a supporting chunk above an unsupportive one in 84% of pairs, against
+50% for cosine similarity (#3020). The model lives in
+`DRAFT_LOOP_RERANKER_MODEL_DIR`; without it, or when it fails, the map keeps its
+order. The preflight and the audit event say whether the map was reordered and
+how long it took. Reranking is off by default.
+
 With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
 as supports, partly supports or does not support. That is one extra call on the
 critic model, billed on that critique. A content-free
