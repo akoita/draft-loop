@@ -201,9 +201,13 @@ describe("requirement-evidence map", () => {
 });
 
 describe("requirement-evidence map uses", () => {
-  it("turns on only the uses the setting names", async () => {
+  it("turns on the fallback use by default and only the named uses otherwise", async () => {
     const { enabledRequirementEvidenceMapUses } = await import("./run-requirement-evidence-map.js");
-    expect([...enabledRequirementEvidenceMapUses({})]).toEqual([]);
+    expect([...enabledRequirementEvidenceMapUses({})]).toEqual(["fallback"]);
+    expect([...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: " " })]).toEqual([
+      "fallback",
+    ]);
+    expect([...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: "off" })]).toEqual([]);
     expect([
       ...enabledRequirementEvidenceMapUses({ DRAFT_LOOP_EVIDENCE_MAP: " Writer, fallback ,other" }),
     ]).toEqual(["fallback", "writer"]);
