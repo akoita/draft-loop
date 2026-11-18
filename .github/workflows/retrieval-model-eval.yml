@@ -64,8 +64,12 @@ jobs:
               jq -r '.arms | to_entries[] | "| \(.key) | \(.value.metrics.recall * 1000 | round / 1000) | \(.value.metrics.meanReciprocalRank * 1000 | round / 1000) | \(.value.metrics.anyHit * 1000 | round / 1000) |"' "$report"
               echo
               echo "Passes gate: $(jq .passesGate "$report")"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+          # The content-free reports, also in the log for readers without artifact access.
+          for file in "$REPORT_DIR"/*.json; do
+            [ -f "$file" ] && jq -c '{file: input_filename} + (del(.embeddingIdentity))' "$file"
+          done
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
