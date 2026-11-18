@@ -91,6 +91,8 @@ export function App({ tokens, createClient }: AppProps) {
 export interface ShellProps {
   readonly client: ApiClient;
   readonly onSignOut: () => void;
+  /** Sign-in mode: leaves for the signed-out screen with this notice once the account is deleted. */
+  readonly onAccountDeleted?: (notice: string) => void;
   /**
    * Sign-in mode lists the caller's candidate records and switches between them; owner-token
    * mode keeps the owner's single workspace.
@@ -105,7 +107,13 @@ function currentHash(): string {
   return typeof window === "undefined" ? "" : window.location.hash;
 }
 
-export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory }: ShellProps) {
+export function Shell({
+  client,
+  onSignOut,
+  onAccountDeleted,
+  mode = "owner",
+  memory = recordMemory,
+}: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
   const display = useDisplayPreference({ client, mode });
   // The operator page (#2829) covers the screens without closing them, so work in progress stays.
@@ -178,6 +186,7 @@ export function Shell({ client, onSignOut, mode = "owner", memory = recordMemory
                 memory={memory}
                 shellActions={common}
                 onSignOut={onSignOut}
+                {...(onAccountDeleted === undefined ? {} : { onAccountDeleted })}
                 onOperator={openOperator}
               >
                 {(recordId, onSaved) => (

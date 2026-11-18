@@ -68,6 +68,7 @@ msgstr ", show in the draft"
 msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key."
 msgstr ", then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key."
 
+#: apps/web/src/account-deletion.tsx
 #: apps/web/src/record-actions.tsx
 msgid ", to confirm"
 msgstr ", to confirm"
@@ -918,6 +919,10 @@ msgstr "A critic from another company is checking this letter for sentences that
 #: packages/ui/src/career-conversation-start.tsx
 msgid "A CV, a profile export or notes about your work."
 msgstr "A CV, a profile export or notes about your work."
+
+#: apps/web/src/account-deletion.tsx
+msgid "A draft is being written. Wait for it to finish or stop it, then delete your account."
+msgstr "A draft is being written. Wait for it to finish or stop it, then delete your account."
 
 #: packages/ui/src/compact-history.tsx
 msgid "A full backup of the current history is kept beside it, so the old history is not lost. The backup needs as much disk space as the history does now; delete it once you are satisfied. Compacting can take a minute on a large history and refuses while a run is working. Nothing is sent anywhere."
@@ -2931,6 +2936,10 @@ msgstr "Delete folder {0}"
 msgid "Delete job search"
 msgstr "Delete job search"
 
+#: apps/web/src/account-deletion.tsx
+msgid "Delete my account"
+msgstr "Delete my account"
+
 #. placeholder {0}: folder.name
 #: packages/ui/src/home-folder-model.ts
 msgid "Delete the folder “{0}”? {what} No application is deleted."
@@ -2959,6 +2968,14 @@ msgstr "Deleted \"{name}\"."
 #: apps/web/src/record-actions.tsx
 msgid "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
 msgstr "Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy."
+
+#: apps/web/src/account-deletion.tsx
+msgid "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+msgstr "Deleting your account removes every job search, document and draft, your sign-in and your beta place, for good. It cannot be undone. Download everything first if you need a copy."
+
+#: apps/web/src/account-deletion.tsx
+msgid "Deleting your account…"
+msgstr "Deleting your account…"
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Demo mode"
@@ -3589,6 +3606,10 @@ msgstr "Everyone in your team can already open it."
 #: apps/web/src/screening.tsx
 msgid "Everything is released. Start the run again."
 msgstr "Everything is released. Start the run again."
+
+#: apps/web/src/account-deletion.tsx
+msgid "Everything stored for your account was deleted. Your sign-in could not be removed yet; we will remove it shortly."
+msgstr "Everything stored for your account was deleted. Your sign-in could not be removed yet; we will remove it shortly."
 
 #: packages/ui/src/run-details.tsx
 #: packages/ui/src/start-confirmation.tsx
@@ -6641,6 +6662,10 @@ msgstr "Other MCP agents (JSON)"
 #: packages/ui/src/app.tsx
 msgid "Other model…"
 msgstr "Other model…"
+
+#: apps/web/src/account-deletion.tsx
+msgid "Other people share your account's team, so it cannot be deleted from here. Ask us to close it."
+msgstr "Other people share your account's team, so it cannot be deleted from here. Ask us to close it."
 
 #: apps/web/src/interview-guide.tsx
 msgid "Other topics, one per line"
@@ -10936,9 +10961,17 @@ msgstr "Type its id,"
 msgid "Type its id, {workspaceId}, exactly to delete it."
 msgstr "Type its id, {workspaceId}, exactly to delete it."
 
+#: apps/web/src/account-deletion.tsx
+msgid "Type the email address you sign in with to confirm."
+msgstr "Type the email address you sign in with to confirm."
+
 #: packages/ui/src/review.tsx
 msgid "Type to narrow · ↑↓ to move · Enter to run · Esc to close"
 msgstr "Type to narrow · ↑↓ to move · Enter to run · Esc to close"
+
+#: apps/web/src/account-deletion.tsx
+msgid "Type your email address,"
+msgstr "Type your email address,"
 
 #: packages/ui/src/application-setup-summary.tsx
 #: packages/ui/src/home-model.ts
@@ -11749,6 +11782,10 @@ msgstr "You're asking faster than I can keep up. Wait a minute, then ask again."
 #: packages/ui/src/help-ask.tsx
 msgid "You've reached today's questions for the assistant. It answers again tomorrow."
 msgstr "You've reached today's questions for the assistant. It answers again tomorrow."
+
+#: apps/web/src/account-deletion.tsx
+msgid "Your account and everything stored for it were deleted. Thank you for trying DraftLoop."
+msgstr "Your account and everything stored for it were deleted. Thank you for trying DraftLoop."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."
