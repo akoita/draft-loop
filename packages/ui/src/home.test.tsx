@@ -266,22 +266,22 @@ describe("Home dashboard", () => {
   });
 
   it("renders the workspace settings section only when it has content", () => {
-    expect(render()).not.toContain("Workspace settings");
+    expect(render()).not.toContain("Settings");
     const html = render({ settings: <button type="button">Settings</button> });
-    expect(html).toMatch(/<h2[^>]*>Workspace settings<\/h2>/u);
+    expect(html).toMatch(/<h2[^>]*>Settings<\/h2>/u);
     expect(html).toContain("Settings");
   });
 
-  it("keeps a header button to Workspace settings, which a long list pushes far down", () => {
+  it("keeps a header button to Settings, which a long list pushes far down", () => {
     expect(render()).not.toContain(
-      '<button class="button button-outline" type="button">Workspace settings</button>',
+      '<button class="button button-outline" type="button">Settings</button>',
     );
     const html = render({ settings: <button type="button">Settings</button> });
     const header = html.slice(
       html.indexOf('class="home-header-actions"'),
       html.indexOf("</header>"),
     );
-    expect(header).toContain(">Workspace settings</button>");
+    expect(header).toContain(">Settings</button>");
     expect(html).toContain(
       '<section id="home-settings" class="panel home-settings" aria-labelledby="home-settings-title" tabindex="-1">',
     );

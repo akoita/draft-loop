@@ -249,7 +249,7 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
       label,
       done: false,
       advisory: true,
-      detail: summary === null ? t`Sign in on Home, under Workspace settings.` : `${summary}.`,
+      detail: summary === null ? t`Sign in on Home, under Settings.` : `${summary}.`,
       action,
     };
   }
@@ -259,7 +259,7 @@ function providerSignInCondition(input: StartChecklistInput): StartCondition {
     label,
     done: false,
     checkedAtStart: true,
-    detail: t`Sign-in is on Home, under Workspace settings.`,
+    detail: t`Sign-in is on Home, under Settings.`,
     action,
   };
 }

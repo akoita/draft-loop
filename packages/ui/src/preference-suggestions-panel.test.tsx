@@ -59,7 +59,7 @@ describe("suggested preferences panel", () => {
     expect(preferenceSuggestionTitle(order)).toBe("Order sections as summary, skills, experience");
   });
 
-  it("renders the host's Workspace settings panel, and nothing without one", () => {
+  it("renders the host's Settings panel, and nothing without one", () => {
     expect(renderToStaticMarkup(<HostWorkspaceSettings openEvidence={() => undefined} />)).toBe("");
     const html = renderToStaticMarkup(
       <HostPanelsContext.Provider value={{ workspaceSettings: () => <p>host panel</p> }}>

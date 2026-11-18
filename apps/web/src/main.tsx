@@ -52,7 +52,7 @@ const firstScreenLocale = initialScreenLocale({
   development: import.meta.env.DEV,
 });
 
-/** The screens in the chosen language; Workspace settings changes it and it is saved here. */
+/** The screens in the chosen language; Settings changes it and it is saved here. */
 function Screens({ children }: { readonly children: ReactNode }) {
   const [locale, setLocale] = useState<ScreenLocale>(firstScreenLocale);
   return (

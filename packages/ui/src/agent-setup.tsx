@@ -24,7 +24,7 @@ import { formatDate } from "./locale-format.js";
 import { codingAgentsSectionId } from "./shared-link.js";
 
 /**
- * Agents in Workspace settings (#2427, moved app-wide in #2439): creates an agent token
+ * Agents in Settings (#2427, moved app-wide in #2439): creates an agent token
  * with the scopes the person ticks and shows the configuration to paste into the agent, with the
  * token in it. The secret lives only in this component's state, shown once; a server that issues
  * no agent tokens gets one line instead.

@@ -36,7 +36,7 @@ You need a running [self-hosted server](../operations/self-hosted.md) and
 | A copied configuration | Claude Code, Codex, any | The tools only                                      |
 | `draftloop-mcp init`   | Claude Code, Codex      | The tools, `/log-work` and the hook, in one project |
 
-The Agents section of Workspace settings on Home shows the first two and
+The Agents section of Settings on Home shows the first two and
 holds the **Accept notes from agents** button; the Work journal panel links
 to it.
 
@@ -60,7 +60,7 @@ to it.
    find both `claude` and `draftloop-mcp`: use one Node version for both, or
    put both versions' `bin` folders on `PATH`.
 
-2. Under **Agents** in Workspace settings, turn on **Accept notes from
+2. Under **Agents** in Settings, turn on **Accept notes from
    agents**; the server refuses notes while intake is off. Then, in the same
    section, open **Connect an agent** and select **Create agent
    token**. The three scopes the plugin uses are ticked by default; untick
@@ -337,7 +337,7 @@ the other.
 - **Stays human.** The models, the career profile, the budget, approving the
   draft and deciding findings stay with the candidate in DraftLoop.
 
-The token list in Workspace settings shows what each token used this month.
+The token list in Settings shows what each token used this month.
 `start_cv_run` sends a new `Idempotency-Key` on each call, so the agent never
 calls it twice for one request. `init` never issues `runs:start`: the
 candidate sets the spend limit on the token form.
@@ -423,7 +423,7 @@ sequenceDiagram
   only when the person adds them.
 - **Runs and drafts.** With `runs:start`, the assistant starts them within
   [the connection's spend cap](#the-connections-spend-cap). Without a cap, the
-  tool tells the person to set one in Workspace settings > Agents.
+  tool tells the person to set one in Settings > Agents.
 - **Workspace.** The tools act in the signed-in person's workspace. A person
   who reaches several gets the first by id; choosing one is not built.
 - **A dead token** answers `401` with `invalid_token`, so the assistant
@@ -480,7 +480,7 @@ its own client. The API treats that token as an **agent grant**:
 
 ### The connection's spend cap
 
-The person sets the cap in **Workspace settings > Agents**, on the
+The person sets the cap in **Settings > Agents**, on the
 assistant's row of **Connected agents**. An assistant that asks to spend
 without a cap is refused and listed there, waiting for a limit, so nobody
 types its id. One cap holds for one workspace and one assistant client.

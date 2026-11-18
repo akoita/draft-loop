@@ -2365,7 +2365,7 @@ export function App({
           <span className="brand-name">{t`DraftLoop`}</span>
           <ThemeToggle />
         </div>
-        <p className="eyebrow">{t`Workspace settings`}</p>
+        <p className="eyebrow">{t`Settings`}</p>
         <h1>
           {modelEditorFromCreation ? t`Choose models for new runs` : t`Change models for new runs`}
         </h1>

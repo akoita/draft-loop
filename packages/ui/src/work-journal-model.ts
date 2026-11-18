@@ -44,7 +44,7 @@ export interface WorkJournalReviewNote {
   readonly amended_by_agent_token_ids?: readonly string[] | undefined;
 }
 
-/** Agent token names by token id, as Workspace settings' Agents list labels them. */
+/** Agent token names by token id, as Settings' Agents list labels them. */
 export type WorkJournalAgentNames = ReadonlyMap<string, string>;
 
 /**

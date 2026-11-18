@@ -32,7 +32,7 @@ describe("first-run workspace setup", () => {
   it("asks for the language, with rounds, a preset and demo mode under Advanced options", () => {
     const html = renderToStaticMarkup(<WorkspaceSetupScreen onCreate={() => undefined} />);
 
-    expect(html).toContain("Set up your workspace");
+    expect(html).toContain("Choose how your CVs are written");
     for (const { label } of workspaceSetupLanguages) expect(html).toContain(`>${label}</option>`);
     const [basic = "", advanced = ""] = html.split('<details class="advanced-options">');
     expect(basic).toContain("CV language");
@@ -44,7 +44,7 @@ describe("first-run workspace setup", () => {
     expect(advanced).toContain("<strong>Standard</strong>");
     expect(advanced).toContain("Runs use fixtures and call no model.");
     expect(advanced).toContain('aria-pressed="false">Turn demo mode on</button>');
-    expect(html).toContain(">Create workspace</button>");
+    expect(html).toContain(">Start</button>");
     // No free-text model ids or language codes to type.
     expect(html).not.toContain('type="text"');
     expect(html).not.toMatch(/<input(?![^>]*type="radio")/u);

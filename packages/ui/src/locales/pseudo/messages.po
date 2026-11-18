@@ -126,7 +126,7 @@ msgid ". Nothing is lost: Resume retries the"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
-msgid ". Other applications use the workspace's pair."
+msgid ". Other applications use your default pair."
 msgstr ""
 
 #: apps/web/src/consent.tsx
@@ -860,7 +860,7 @@ msgid "{unpriced, plural, one {# model call has no recorded price, from a subscr
 msgstr ""
 
 #: apps/web/src/credits-model.ts
-msgid "{value, plural, one {Your plan allows # candidate record, and it is in use.} other {Your plan allows # candidate records, and all are in use.}}"
+msgid "{value, plural, one {Your plan allows # candidate, and it is in use.} other {Your plan allows # candidates, and all are in use.}}"
 msgstr ""
 
 #: apps/web/src/credits-model.ts
@@ -1302,7 +1302,7 @@ msgid "All resolved"
 msgstr ""
 
 #: apps/web/src/credits-model.ts
-msgid "All the candidate records in your plan are in use."
+msgid "All the candidates in your plan are in use."
 msgstr ""
 
 #: apps/web/src/credits-model.ts
@@ -2014,7 +2014,7 @@ msgid "Change"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Change in Workspace settings"
+msgid "Change in Settings"
 msgstr ""
 
 #: packages/ui/src/connected-agents.tsx
@@ -2181,7 +2181,7 @@ msgid "Choose how this workspace searches your candidate knowledge. Semantic and
 msgstr ""
 
 #: packages/ui/src/workspace-setup.tsx
-msgid "Choose how your CVs are written. You can change the models later from Home."
+msgid "Choose how your CVs are written"
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -2692,7 +2692,6 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
-#: packages/ui/src/workspace-setup.tsx
 msgid "Create workspace"
 msgstr ""
 
@@ -2889,6 +2888,10 @@ msgstr ""
 msgid "Default for the project's visibility"
 msgstr ""
 
+#: packages/ui/src/application-model-pair.tsx
+msgid "Default pair"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "defer"
 msgstr ""
@@ -2923,7 +2926,7 @@ msgid "Delete {0}"
 msgstr ""
 
 #: apps/web/src/credits-model.ts
-msgid "Delete a record you no longer need, or ask the owner for a bigger plan, before creating another."
+msgid "Delete a candidate you no longer need, or ask the owner for a bigger plan, before creating another."
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
@@ -3980,6 +3983,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "First run"
+msgstr ""
+
+#: packages/ui/src/workspace-setup.tsx
+msgid "First steps"
 msgstr ""
 
 #: packages/ui/src/profile.tsx
@@ -5736,10 +5743,6 @@ msgstr ""
 msgid "New store folder name"
 msgstr ""
 
-#: packages/ui/src/workspace-setup.tsx
-msgid "New workspace"
-msgstr ""
-
 #: packages/ui/src/model-profile-picker.tsx
 msgid "Next-run model profiles"
 msgstr ""
@@ -6591,8 +6594,16 @@ msgstr ""
 msgid "Opening a workspace is unavailable in this host."
 msgstr ""
 
+#: apps/web/src/records.tsx
+msgid "Opening DraftLoop…"
+msgstr ""
+
 #: packages/ui/src/workspace-recovery.tsx
 msgid "Opening workspace…"
+msgstr ""
+
+#: apps/web/src/workspace.tsx
+msgid "Opening your documents…"
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -6646,7 +6657,7 @@ msgid "Other"
 msgstr ""
 
 #: packages/ui/src/application-model-pair.tsx
-msgid "Other applications keep the workspace's pair. A run records the pair it used, so changing it later does not change past reviews."
+msgid "Other applications keep your default pair. A run records the pair it used, so changing it later does not change past reviews."
 msgstr ""
 
 #: packages/ui/src/project-card-facts.tsx
@@ -7094,7 +7105,7 @@ msgid "Provider recovery remains before approval"
 msgstr ""
 
 #: packages/ui/src/review.tsx
-msgid "Provider sign-in lives in Home, under Workspace settings"
+msgid "Provider sign-in lives in Home, under Settings"
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
@@ -7314,20 +7325,12 @@ msgstr ""
 msgid "Reading your files…"
 msgstr ""
 
-#: apps/web/src/records.tsx
-msgid "Reading your job searches…"
-msgstr ""
-
 #: apps/web/src/private-sections.tsx
 msgid "Reading your knowledge bases…"
 msgstr ""
 
 #: packages/ui/src/application-setup-summary.tsx
 msgid "Reading your reviewed career profiles…"
-msgstr ""
-
-#: apps/web/src/workspace.tsx
-msgid "Reading your workspace…"
 msgstr ""
 
 #: apps/web/src/operator-list.tsx
@@ -8712,11 +8715,8 @@ msgstr ""
 msgid "Set up the workspace's author and critic models first."
 msgstr ""
 
-#: packages/ui/src/workspace-setup.tsx
-msgid "Set up your workspace"
-msgstr ""
-
 #: packages/ui/src/app.tsx
+#: packages/ui/src/home.tsx
 msgid "Settings"
 msgstr ""
 
@@ -8833,7 +8833,7 @@ msgid "Sign in"
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
-msgid "Sign in on Home, under Workspace settings."
+msgid "Sign in on Home, under Settings."
 msgstr ""
 
 #: apps/web/src/sign-in.tsx
@@ -8854,7 +8854,7 @@ msgid "Sign-in could not be completed. Try again."
 msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
-msgid "Sign-in is on Home, under Workspace settings."
+msgid "Sign-in is on Home, under Settings."
 msgstr ""
 
 #: apps/web/src/records-model.ts
@@ -8981,6 +8981,7 @@ msgid "Stars: {stars}"
 msgstr ""
 
 #: packages/ui/src/start-confirmation.tsx
+#: packages/ui/src/workspace-setup.tsx
 msgid "Start"
 msgstr ""
 
@@ -10397,10 +10398,6 @@ msgstr ""
 msgid "The workspace was not opened. Choose a workspace and try again."
 msgstr ""
 
-#: packages/ui/src/application-language.tsx
-msgid "The workspace's language"
-msgstr ""
-
 #: packages/ui/src/local-writer-warning.tsx
 msgid "The writer is a local model. Local models have not passed DraftLoop's quality check yet, so expect the draft to need more edits."
 msgstr ""
@@ -10505,7 +10502,7 @@ msgid "This brief has no responsibilities."
 msgstr ""
 
 #: apps/web/src/profile-bridge.ts
-msgid "This candidate record was erased."
+msgid "This candidate's data was erased."
 msgstr ""
 
 #: apps/web/src/operator.tsx
@@ -10931,7 +10928,7 @@ msgid "Turn demo mode on"
 msgstr ""
 
 #: packages/ui/src/work-journal-panel.tsx
-msgid "Turn on in Workspace settings"
+msgid "Turn on in Settings"
 msgstr ""
 
 #: packages/ui/src/speech-button.tsx
@@ -11608,10 +11605,6 @@ msgstr ""
 msgid "Workspace navigation"
 msgstr ""
 
-#: packages/ui/src/application-model-pair.tsx
-msgid "Workspace pair"
-msgstr ""
-
 #: packages/ui/src/run-details.tsx
 msgid "Workspace policy"
 msgstr ""
@@ -11622,11 +11615,6 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Workspace sections"
-msgstr ""
-
-#: packages/ui/src/app.tsx
-#: packages/ui/src/home.tsx
-msgid "Workspace settings"
 msgstr ""
 
 #: packages/ui/src/workspace-recovery.tsx
@@ -11740,8 +11728,12 @@ msgstr ""
 msgid "You asked:"
 msgstr ""
 
+#: packages/ui/src/workspace-setup.tsx
+msgid "You can change all of this later in Settings."
+msgstr ""
+
 #: packages/ui/src/first-run-question.tsx
-msgid "You can change this any time in Workspace settings."
+msgid "You can change this any time in Settings."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -11852,6 +11844,10 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "Your data"
+msgstr ""
+
+#: packages/ui/src/application-language.tsx
+msgid "Your default language"
 msgstr ""
 
 #: packages/ui/src/footer-running-round.tsx

@@ -16,7 +16,7 @@ export interface HostPanels {
   /**
    * Shown below the Career evidence page's knowledge panel. `revision` changes whenever the page
    * changes the knowledge selection or adds files, so the panel can read its data again.
-   * `openHome` opens Home, where Workspace settings are, when the screens offer it.
+   * `openHome` opens Home, where Settings are, when the screens offer it.
    */
   readonly evidenceAfter?: (context: EvidenceAfterContext) => ReactNode;
   /**
@@ -39,7 +39,7 @@ export interface HostPanels {
   /** Shown under an application's header, such as drafting its cover letter (#2217). */
   readonly application?: (context: ApplicationPanelContext) => ReactNode;
   /**
-   * Shown under Home's Workspace settings actions, such as suggested preferences (#2265).
+   * Shown under Home's Settings actions, such as suggested preferences (#2265).
    * `openEvidence` opens the Career evidence page.
    */
   readonly workspaceSettings?: (context: HomeEvidenceContext) => ReactNode;
@@ -69,7 +69,7 @@ export interface ApplicationPanelContext {
   readonly applicationId: string;
 }
 
-/** What the host's panels on Home, in the Career evidence card and Workspace settings, are given. */
+/** What the host's panels on Home, in the Career evidence card and Settings, are given. */
 export interface HomeEvidenceContext {
   readonly openEvidence: () => void;
 }
@@ -133,7 +133,7 @@ export function useHasApplicationPanel(): boolean {
   return useContext(HostPanelsContext).application !== undefined;
 }
 
-/** The host's panel under Home's Workspace settings actions; nothing without one. */
+/** The host's panel under Home's Settings actions; nothing without one. */
 export function HostWorkspaceSettings(context: HomeEvidenceContext) {
   return useContext(HostPanelsContext).workspaceSettings?.(context) ?? null;
 }

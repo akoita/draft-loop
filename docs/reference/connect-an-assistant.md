@@ -58,7 +58,7 @@ starts none until you set its monthly limit:
 
 1. Ask your assistant to start something once. Without a limit it is refused,
    and it then appears in DraftLoop.
-2. In DraftLoop, open **Workspace settings > Agents**. Under **Connected
+2. In DraftLoop, open **Settings > Agents**. Under **Connected
    agents**, find your assistant's row: it says "No limit yet".
 3. Select **Set a limit**, type a monthly limit in US dollars and select
    **Save limit**.
@@ -85,7 +85,7 @@ under its own privacy terms.
 
 | To                               | Do this                                                                |
 | -------------------------------- | ---------------------------------------------------------------------- |
-| Stop the assistant from spending | In Workspace settings > Agents, select **Stop spending** for it        |
+| Stop the assistant from spending | In Settings > Agents, select **Stop spending** for it        |
 | Change what it may do            | Disconnect it in your assistant, then connect again with other choices |
 | Disconnect it                    | Remove DraftLoop in your assistant's connector settings                |
 
@@ -98,7 +98,7 @@ disconnect.
 | The assistant says                         | What to do                                                |
 | ------------------------------------------ | --------------------------------------------------------- |
 | It was not granted a permission            | Connect again and add that permission                     |
-| It has no monthly spend cap                | Set its limit in Workspace settings > Agents              |
+| It has no monthly spend cap                | Set its limit in Settings > Agents              |
 | It reached its monthly cap                 | Raise the limit, or wait for next month                   |
 | The account has no DraftLoop workspace     | Sign up in DraftLoop first, then connect again            |
 | It needs a Markdown export to read your CV | Export the CV as Markdown in DraftLoop                    |

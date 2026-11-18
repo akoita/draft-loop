@@ -23,7 +23,7 @@ import {
 /**
  * The Work journal on the Career evidence page (#2024): the notes an agent recorded wait
  * here until the candidate approves, edits, merges or discards each one. The switch that lets
- * agents add notes is in Workspace settings (#2625); the panel says how it is set. A host that
+ * agents add notes is in Settings (#2625); the panel says how it is set. A host that
  * serves the work journal provides it as a host panel; the desktop has none.
  */
 
@@ -46,7 +46,7 @@ export interface WorkJournalPanelProps {
     noteId: string,
     action: WorkJournalReviewAction,
   ) => Promise<string | undefined>;
-  /** Opens Agents in Workspace settings, where the switch is (#2625); no link without it. */
+  /** Opens Agents in Settings, where the switch is (#2625); no link without it. */
   readonly onOpenSettings?: (() => void) | undefined;
   /** Agent token names by id, so a note says which agent filed it; ids show without it. */
   readonly agentNames?: WorkJournalAgentNames | undefined;
@@ -77,7 +77,7 @@ export function WorkJournalPanel({
           {intake ? t`Agents can add notes.` : t`Agents cannot add notes yet.`}{" "}
           {onOpenSettings === undefined ? null : (
             <button type="button" className="link-action" onClick={onOpenSettings}>
-              {intake ? t`Change in Workspace settings` : t`Turn on in Workspace settings`}
+              {intake ? t`Change in Settings` : t`Turn on in Settings`}
             </button>
           )}
         </p>

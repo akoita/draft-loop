@@ -205,12 +205,12 @@ function planLimitMessage(details: ApiRequestError["details"]): string {
   if (details?.limit === "candidateRecords") {
     const lead =
       value === undefined
-        ? t`All the candidate records in your plan are in use.`
+        ? t`All the candidates in your plan are in use.`
         : plural(value, {
-            one: "Your plan allows # candidate record, and it is in use.",
-            other: "Your plan allows # candidate records, and all are in use.",
+            one: "Your plan allows # candidate, and it is in use.",
+            other: "Your plan allows # candidates, and all are in use.",
           });
-    return `${lead} ${t`Delete a record you no longer need, or ask the owner for a bigger plan, before creating another.`}`;
+    return `${lead} ${t`Delete a candidate you no longer need, or ask the owner for a bigger plan, before creating another.`}`;
   }
   return t`Your plan's limit is reached. Ask the owner for a bigger plan.`;
 }

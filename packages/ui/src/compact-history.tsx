@@ -76,7 +76,7 @@ export interface CompactHistoryActionProps {
   readonly disabledReason?: string | null;
 }
 
-/** Workspace settings' Compact run history: asks first, then shows the before and after sizes. */
+/** Settings' Compact run history: asks first, then shows the before and after sizes. */
 export function CompactHistoryAction({
   workspaceId,
   compactHistory,

@@ -190,7 +190,7 @@ export function WorkspaceSettingsLinks({
       {applicationPair === null ? null : (
         <li className="application-workspace-note">
           {t`This application uses`} {applicationPairLabel(applicationPair)}
-          {t`. Other applications use the workspace's pair.`}
+          {t`. Other applications use your default pair.`}
         </li>
       )}
       {writingPolicyStatus === "unavailable" ? (

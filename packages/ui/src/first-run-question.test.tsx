@@ -30,7 +30,7 @@ describe("the first-run question on Home", () => {
     expect(html).toContain("<strong>I know apps like this</strong>");
     expect(html).toContain("We show every screen and option, including advanced ones.");
     expect(html).toContain(">Decide later</button>");
-    expect(html).toContain("You can change this any time in Workspace settings.");
+    expect(html).toContain("You can change this any time in Settings.");
   });
 
   it("never comes back once answered, and is absent when the host keeps no preference", () => {

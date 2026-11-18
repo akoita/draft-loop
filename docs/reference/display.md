@@ -1,7 +1,7 @@
 # How DraftLoop shows itself
 
 This page is for a candidate or coach who wants DraftLoop simpler or fuller.
-One **Display** choice in **Workspace settings** on Home sets how much each
+One **Display** choice in **Settings** on Home sets how much each
 screen shows at once.
 
 | Display         | What you see                                                                                  |
@@ -47,7 +47,7 @@ steps** turns Guided on, **No thanks** hides the offer.
 
 ## Change it
 
-1. Open **Workspace settings** on Home.
+1. Open **Settings** on Home.
 2. Under **Display**, pick one of the three cards: **Guide me step by step**,
    **Simple** or **Show everything**. The current one is marked **Current**.
 

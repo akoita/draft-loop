@@ -228,7 +228,7 @@ describe("application tools", () => {
           error: {
             code: "forbidden",
             message:
-              'This agent token lacks the "applications:read" scope (Read applications on the token form); create a token with it in Workspace settings > Agents.',
+              'This agent token lacks the "applications:read" scope (Read applications on the token form); create a token with it in Settings > Agents.',
           },
         },
         403,

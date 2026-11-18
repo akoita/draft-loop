@@ -581,7 +581,7 @@ when the disk cannot hold the backup and the copy. Any failure leaves the
 history as it was. Delete the backup yourself once you are satisfied.
 
 **On screen**, **Compact run history** sits under **Advanced options** at the
-end of Home's Workspace settings, where the host offers it.
+end of Home's Settings, where the host offers it.
 
 ## Opportunity briefs
 
@@ -1114,7 +1114,7 @@ pnpm --filter @draft-loop/cli start policy show <checksum> ./workspace --content
 - **Anti-formulaic defaults** are on unless the policy says
   `Anti-formulaic defaults: disabled`.
 
-**On screen**, **Edit policy** in Home's Workspace settings opens the active
+**On screen**, **Edit policy** in Home's Settings opens the active
 policy as text, or the default when there is none. Selectors for tone,
 verbosity, page target and spelling locale rewrite the matching lines. The
 spelling locale field suggests `en-GB`, `en-US`, `fr-FR` and `fr-CA`. Saving
@@ -1151,7 +1151,7 @@ pnpm --filter @draft-loop/cli start preferences sources ./workspace
 - **Accept** adds the preference to the policy as a new version for future runs.
 - **Dismiss** keeps the policy as it is, and the suggestion is never offered
   again. Only its id is stored.
-- **On screen**, **Suggested preferences** under Home's Workspace settings
+- **On screen**, **Suggested preferences** under Home's Settings
   shows each suggestion with **Add to policy** and **Dismiss**, on the web and
   the desktop client.
 - **Server.** The same suggestions are at

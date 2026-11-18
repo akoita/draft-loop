@@ -27,7 +27,7 @@ describe("first-run setup", () => {
   it("reads the workspace first", () => {
     expect(
       renderToStaticMarkup(<WorkspaceStep client={unusedClient} onWorkspace={() => {}} />),
-    ).toContain("Reading your workspace…");
+    ).toContain("Opening your documents…");
   });
 
   it("shows no setup screen while it creates a one-person plan's workspace on its own", () => {
@@ -35,14 +35,14 @@ describe("first-run setup", () => {
       <WorkspaceStep client={unusedClient} onWorkspace={() => {}} automatic />,
     );
     expect(html).toContain('role="status"');
-    expect(html).not.toContain("Set up your workspace");
+    expect(html).not.toContain("Choose how your CVs are written");
   });
 
   it("shows the shared setup screen while the record has no workspace", () => {
     const html = view({});
 
     expect(html).toContain('class="shared-screens"');
-    expect(html).toContain("Set up your workspace");
+    expect(html).toContain("Choose how your CVs are written");
   });
 
   it("says why the setup could not be saved", () => {

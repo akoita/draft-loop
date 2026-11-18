@@ -79,7 +79,7 @@ interface Ledger {
   /** The connection's client id, which the refusal names. */
   readonly clientId?: string;
   reserve(month: string, key: string, cents: number): Promise<AgentSpendOutcome>;
-  /** Lists a connection without a cap in Workspace settings, where its limit is set (#2785). */
+  /** Lists a connection without a cap in Settings, where its limit is set (#2785). */
   noteWithoutCap?(): Promise<void>;
   release(month: string, key: string, cents: number): Promise<void>;
 }
@@ -162,11 +162,11 @@ export function registerAgentSpendGate(
     if (outcome.outcome === "no_cap") await ledger.noteWithoutCap?.();
     const noCap =
       ledger.noun === "connection"
-        ? `This agent connection has no monthly spend cap; the person sets one in Workspace settings > Agents, where the assistant "${ledger.clientId}" now waits under Connected agents.`
-        : "This agent token has no monthly spend cap; create a token with Start runs and drafts in Workspace settings > Agents.";
+        ? `This agent connection has no monthly spend cap; the person sets one in Settings > Agents, where the assistant "${ledger.clientId}" now waits under Connected agents.`
+        : "This agent token has no monthly spend cap; create a token with Start runs and drafts in Settings > Agents.";
     const raise =
       ledger.noun === "connection"
-        ? "the person raises the cap in Workspace settings > Agents"
+        ? "the person raises the cap in Settings > Agents"
         : "the person raises the cap with a new token";
     const message =
       outcome.outcome !== "cap_reached"

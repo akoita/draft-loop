@@ -795,7 +795,7 @@ export function HomeView({
                   className="button button-outline"
                   type="button"
                   onClick={openHomeSettings}
-                >{t`Workspace settings`}</button>
+                >{t`Settings`}</button>
               )}
               <HeaderThemeToggle />
               {workspaceNavigation}
@@ -957,7 +957,7 @@ export function HomeView({
               tabIndex={-1}
             >
               <div className="home-section-head">
-                <h2 id="home-settings-title">{t`Workspace settings`}</h2>
+                <h2 id="home-settings-title">{t`Settings`}</h2>
               </div>
               {settings}
             </section>
@@ -970,7 +970,7 @@ export function HomeView({
 
 const homeSettingsId = "home-settings";
 
-/** A long application list pushes Workspace settings far down, so the header keeps a way there. */
+/** A long application list pushes Settings far down, so the header keeps a way there. */
 function openHomeSettings(): void {
   const section = document.getElementById(homeSettingsId);
   section?.scrollIntoView({ behavior: "smooth", block: "start" });

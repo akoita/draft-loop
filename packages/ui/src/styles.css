@@ -8881,7 +8881,7 @@ button.career-tab .career-step-number {
   gap: var(--space-3);
 }
 
-/* The header's Workspace settings button scrolls here and focuses the section. */
+/* The header's Settings button scrolls here and focuses the section. */
 .home-settings {
   scroll-margin-top: var(--space-4);
 }
@@ -10219,7 +10219,7 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   margin: 0.5rem 0;
 }
 
-/* Connect an agent, in Workspace settings (#2427, #2439). */
+/* Connect an agent, in Settings (#2427, #2439). */
 .coding-agents {
   margin-top: 1rem;
   border-top: 1px solid var(--border);
@@ -10346,7 +10346,7 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   justify-content: space-between;
 }
 
-/* Connected agents in Workspace settings > Agents (#2785): one table, stacked when narrow. */
+/* Connected agents in Settings > Agents (#2785): one table, stacked when narrow. */
 .connected-agents {
   display: grid;
   gap: 0.5rem;
@@ -10445,7 +10445,7 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   }
 }
 
-/* Suggested writing preferences under Workspace settings (#2265). */
+/* Suggested writing preferences under Settings (#2265). */
 .preference-suggestion-list {
   list-style: none;
   margin: 0;

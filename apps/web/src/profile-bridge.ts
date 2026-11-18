@@ -60,7 +60,7 @@ function derivationFailure(state: ApiSchemas["CareerProfileDerivation"]): never 
       t`The candidate's consent does not cover sending this evidence to the workspace's providers.`,
     );
   }
-  if (state.reason === "record-erased") return refuse(t`This candidate record was erased.`);
+  if (state.reason === "record-erased") return refuse(t`This candidate's data was erased.`);
   return refuse(state.message ?? t`The career profile could not be derived. Try again.`);
 }
 

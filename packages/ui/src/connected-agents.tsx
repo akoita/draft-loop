@@ -10,7 +10,7 @@ import {
 import { formatDate, formatNumber } from "./locale-format.js";
 
 /**
- * Connected agents in Workspace settings → Agents (#2785): one table of every active agent token
+ * Connected agents in Settings → Agents (#2785): one table of every active agent token
  * and every assistant that signed in, with what it may do, what it spends and one way to stop it.
  * An assistant appears once it asks to spend, so the person sets its limit on its row and never
  * types an id. Stopping asks once, because the agent then works no more.
