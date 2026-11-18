@@ -45,12 +45,15 @@ import {
   criticStableInputMembers,
 } from "./critic-run-prefix.js";
 import * as providerArtifactInput from "./provider-artifact-input.js";
+import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
+import type { GradedRequirementEvidenceMap } from "./requirement-evidence-grade.js";
 import { responseExecution } from "./response-execution.js";
 import { criticOutputBudget } from "./run-model-profiles.js";
 import {
   gradeRunRequirementEvidence,
   type RequirementEvidenceGradeHook,
 } from "./run-requirement-evidence-grade.js";
+import { withoutUnsupportedEvidence } from "./run-requirement-evidence-map.js";
 
 /** How many omission check slices run at once: enough to cut the wait, few enough for rate limits. */
 export const omissionCheckConcurrency = 4;
@@ -73,12 +76,30 @@ export interface ProviderCriticAgentDependencies {
   readonly userError: (message: string) => Error;
   /** Grades the run's requirement-evidence map on the first round (#2996); absent grades none. */
   readonly evidenceGrade?: RequirementEvidenceGradeHook | undefined;
+  /**
+   * The map's candidates per requirement when the critic use is on (#2983): they drive the
+   * critic's achievement plan and cite chunks for the omission check's themes. Absent uses words.
+   */
+  readonly mapEvidence?: (() => Promise<PreferredRequirementEvidence | undefined>) | undefined;
 }
 
 /** The provider-backed critic: independent review of one draft against the retrieved evidence. */
 export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies): CriticAgent {
   const { context } = deps;
   const promptVersion = context.modelConfiguration.critic.promptTemplateVersion;
+  // The run's graded map, kept in process memory once the first round grades it, so later rounds'
+  // omission checks also leave out the pairs the grade rejected. A resumed run starts ungraded.
+  let graded: GradedRequirementEvidenceMap | undefined;
+  const evidenceGrade: RequirementEvidenceGradeHook | undefined =
+    deps.evidenceGrade === undefined
+      ? undefined
+      : {
+          ...deps.evidenceGrade,
+          record: async (runId, map) => {
+            graded = map;
+            await deps.evidenceGrade?.record(runId, map);
+          },
+        };
   return {
     execute: async ({
       executionId,
@@ -105,11 +126,13 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       const judgement = judgementFor(coverageJudgementRequests);
       const judgesCoverage = judgement.instructionsVersion !== undefined;
       const basePrompt = criticPrompt.create(promptVersion);
+      const mapEvidence = await deps.mapEvidence?.();
       const prefix = criticRunPrefix(
         context,
         deps.promptContext,
         retrievedEvidence,
         applicationPlan !== undefined,
+        mapEvidence,
       );
       if (prefix.input.achievementPlan.status === "no-evidence") {
         throw deps.userError("Critique requires retrieved candidate evidence.");
@@ -169,18 +192,6 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       // selected profile's, which is how the 2026-11-01 r10 run of reference G lost its
       // critique before the check was sent (#2044). A v10 run makes one call per slice of the
       // retrieved evidence (#2046); a refusal mid-way carries what the earlier slices billed.
-      const scope = omissionCheckScope(promptVersion);
-      const slices =
-        scope === undefined
-          ? []
-          : omissionCheckInputs(
-              artifact,
-              retrievedEvidence,
-              applicationPlan,
-              context.requirements,
-              prefix.input.achievementPlan,
-              scope,
-            );
       let billed: BilledUsage | undefined;
       const withBill = (error: unknown) => {
         if (error instanceof CallCostBudgetError && billed !== undefined) {
@@ -192,10 +203,10 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
       // worst cost before sending it, so calls in flight together still fit the run's budget.
       // The evidence grade (#2996) is one call on the first round, billed like the check slices.
       // It never fails the critique: a failed call is recorded as such inside the step.
-      if (deps.evidenceGrade !== undefined && round === 1) {
+      if (evidenceGrade !== undefined && round === 1) {
         try {
-          const graded = await gradeRunRequirementEvidence({
-            hook: deps.evidenceGrade,
+          const gradeBill = await gradeRunRequirementEvidence({
+            hook: evidenceGrade,
             requirements: context.requirements ?? [],
             runId,
             call: (call) =>
@@ -209,11 +220,27 @@ export function createProviderCriticAgent(deps: ProviderCriticAgentDependencies)
               }),
             ...(signal === undefined ? {} : { signal }),
           });
-          if (graded !== undefined) billed = addBilledUsage(billed, graded);
+          if (gradeBill !== undefined) billed = addBilledUsage(billed, gradeBill);
         } catch (error) {
           if (signal?.aborted === true) throw error;
         }
       }
+      // The slices follow the grade, so a chunk it rejected for a requirement is not cited for it.
+      const scope = omissionCheckScope(promptVersion);
+      const slices =
+        scope === undefined
+          ? []
+          : omissionCheckInputs(
+              artifact,
+              retrievedEvidence,
+              applicationPlan,
+              context.requirements,
+              prefix.input.achievementPlan,
+              scope,
+              mapEvidence === undefined
+                ? undefined
+                : withoutUnsupportedEvidence(mapEvidence, graded),
+            );
       let checked: (readonly OmissionCheckOmission[])[];
       try {
         checked = await mapWithBoundedConcurrency(

@@ -213,3 +213,42 @@ describe("writer's preferred evidence from the map", () => {
     expect(await preferredEvidenceFromMap(async () => undefined, true)?.()).toBeUndefined();
   });
 });
+
+describe("critic's evidence from the map", () => {
+  it("is on only for the critic use and drops pairs the grade says do not support", async () => {
+    const { criticEvidenceFromMap, withoutUnsupportedEvidence } = await import(
+      "./run-requirement-evidence-map.js"
+    );
+    const map = async () => ({
+      mode: "keyword" as const,
+      chunkCount: 2,
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c1", origin: "keyword" as const },
+            { chunkId: "c2", origin: "keyword" as const },
+          ],
+        },
+      ],
+    });
+    expect(criticEvidenceFromMap(map, false)).toBeUndefined();
+    const evidence = await criticEvidenceFromMap(map, true)?.();
+    if (evidence === undefined) throw new Error("expected evidence");
+    expect(withoutUnsupportedEvidence(evidence, undefined)).toBe(evidence);
+    const graded = {
+      ...(await map()),
+      grading: { status: "graded" as const, instructionsVersion: "v", gradedPairs: 2 },
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "c1", origin: "keyword" as const, grade: "does-not-support" as const },
+            { chunkId: "c2", origin: "keyword" as const, grade: "partly-supports" as const },
+          ],
+        },
+      ],
+    };
+    expect(withoutUnsupportedEvidence(evidence, graded).get("r1")).toEqual(["c2"]);
+  });
+});

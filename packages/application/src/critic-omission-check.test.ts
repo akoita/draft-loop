@@ -146,6 +146,27 @@ describe("omission check input", () => {
     expect(input?.cuts).toEqual([]);
   });
 
+  it("cites the chunks the requirement-evidence map links to a theme's requirements (#2983)", () => {
+    // chunk-c meets req-3 in other words: the plan does not cite it, the map does.
+    const input = omissionCheckInputs(
+      artifact,
+      evidence,
+      plan,
+      [],
+      noAchievements,
+      "cited-chunks",
+      new Map([
+        ["req-3", ["chunk-c"]],
+        ["req-2", ["chunk-a"]],
+      ]),
+    )[0];
+    expect(input?.chunks.map(({ id, themeIds }) => [id, themeIds])).toEqual([
+      ["chunk-a", ["theme-1"]],
+      ["chunk-b", ["theme-1", "theme-3"]],
+      ["chunk-c", ["theme-3"]],
+    ]);
+  });
+
   it("is undefined when no candidate chunk was retrieved", () => {
     expect(omissionCheckInput(artifact, [], plan, [], noAchievements)).toBeUndefined();
     expect(omissionCheckInput(artifact, evidence, undefined, [], noAchievements)).toBeUndefined();

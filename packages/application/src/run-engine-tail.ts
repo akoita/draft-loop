@@ -9,7 +9,7 @@ import {
   type RequirementEvidenceGradeHook,
   runRequirementEvidenceGradeHook,
 } from "./run-requirement-evidence-grade.js";
-import { preferredEvidenceFromMap } from "./run-requirement-evidence-map.js";
+import { criticEvidenceFromMap, preferredEvidenceFromMap } from "./run-requirement-evidence-map.js";
 
 /** The trailing, run-scoped arguments of the engine factory, in its parameter order. */
 export type RunEngineTail = readonly [
@@ -53,6 +53,7 @@ export function runEngineTail(
       ),
       runRequirementEvidenceGradeHook(retrieval, storage, workspaceId),
       preferredEvidenceFromMap(retrieval?.requirementEvidenceMap),
+      criticEvidenceFromMap(retrieval?.requirementEvidenceMap),
     ),
   ];
 }
@@ -61,10 +62,12 @@ function withEvidenceGrade(
   recorders: RunRecorders,
   evidenceGrade: RequirementEvidenceGradeHook | undefined,
   preferredEvidence: RunRecorders["preferredEvidence"],
+  criticMapEvidence: RunRecorders["criticMapEvidence"],
 ): RunRecorders {
   return {
     ...recorders,
     ...(evidenceGrade === undefined ? {} : { evidenceGrade }),
     ...(preferredEvidence === undefined ? {} : { preferredEvidence }),
+    ...(criticMapEvidence === undefined ? {} : { criticMapEvidence }),
   };
 }

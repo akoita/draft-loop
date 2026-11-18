@@ -13,7 +13,7 @@ import {
   createProviderAuthorAgent,
   type ProviderAuthorAgentDependencies,
 } from "./provider-author-agent.js";
-import type { RunRecorders } from "./run-application-plan.js";
+import { criticRecorderDependencies, type RunRecorders } from "./run-application-plan.js";
 
 /**
  * What one author step was given, recorded in run history as a `run.author-input` audit event so a
@@ -199,6 +199,14 @@ export function authorRecorderDependencies(
     ...(recorders.preferredEvidence === undefined
       ? {}
       : { preferredEvidence: recorders.preferredEvidence }),
+  };
+}
+
+/** Both agents' run-scoped dependencies from the run recorders, for the local driver. */
+export function agentRecorderDependencies(recorders: RunRecorders | undefined) {
+  return {
+    author: authorRecorderDependencies(recorders),
+    critic: criticRecorderDependencies(recorders),
   };
 }
 

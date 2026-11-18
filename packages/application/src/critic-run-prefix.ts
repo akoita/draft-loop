@@ -10,7 +10,10 @@ import { critiqueOutputSchemaFor } from "./critic-critique-contract.js";
 import { withCriticLanguageReview } from "./critic-document-language.js";
 import { withPlanThemeSource } from "./critic-emphasis.js";
 import { modelFacingRunEvidence } from "./model-facing-evidence.js";
-import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
+import {
+  createRequirementAchievementPlan,
+  type PreferredRequirementEvidence,
+} from "./requirement-achievement-plan.js";
 
 /** The leading critic input members every critic call of a run repeats: context to achievement plan. */
 export const criticStableInputMembers = 3;
@@ -31,12 +34,14 @@ export function criticRunPrefix(
   promptContext: ContextSnapshot,
   retrievedEvidence: readonly ScoredEvidenceChunk[],
   plans: boolean,
+  /** The map's candidates per requirement when the critic use is on (#2983); stable per run. */
+  preferred?: PreferredRequirementEvidence,
 ) {
   const version = context.modelConfiguration.critic.promptTemplateVersion;
   const basePrompt = criticPrompt.create(version);
   const evidence = modelFacingRunEvidence(
     retrievedEvidence,
-    createRequirementAchievementPlan(context.requirements, retrievedEvidence),
+    createRequirementAchievementPlan(context.requirements, retrievedEvidence, preferred),
   );
   return {
     systemPrompt: plans && reviewsEmphasis(version) ? withPlanThemeSource(basePrompt) : basePrompt,
