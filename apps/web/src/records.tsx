@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useStat
 import { AccountMenu } from "./account-menu.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
+import { useNewFeedbackCount } from "./operator-count.js";
 import { RecordActions } from "./record-actions.js";
 import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
@@ -75,6 +76,7 @@ export function Records({
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
   /** New records whose name waits for the record to exist, by id. */
   const unsavedNames = useRef(new Map<string, string>());
+  const newNotes = useNewFeedbackCount(client, state.kind === "ready" ? state.me : undefined);
 
   useEffect(() => {
     let current = true;
@@ -207,6 +209,7 @@ export function Records({
             yourData={yourData}
             onSignOut={onSignOut}
             onOperator={onOperator}
+            newNotes={newNotes}
           />
         ),
       )}

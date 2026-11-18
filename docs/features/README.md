@@ -106,8 +106,8 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Organisations and members](organisations-and-consent.md) | `available` | hosted        | `none`       | Invite people, set roles and choose who opens each job search; sign-up accepts the published terms. |
 | [Consent and erasure](organisations-and-consent.md)       | `available` | hosted        | `none`       | Records consent before storing material, and erases a record or an organisation. |
 | [Help](help.md) | `partial` | web, server | `search_help` | A Help button on every screen opens a searchable user guide in English or French, and an AI assistant that answers questions and hands them to a person where the server turns it on; agents search and read the same guide. |
-| [Feedback](feedback.md) | `partial` | web, server | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about DraftLoop, with its technical context, from the header's Send feedback button or through their agent. The operator triages notes and links GitHub issues. |
-| [Operator screen](organisations-and-consent.md#operator-screen) | `available` | server | `none` | The operator invites people from the beta waitlist, follows invites and the seats used, is warned before inviting past the account cap, changes the cap at runtime with `pnpm beta:cap`, and reads members' feedback. |
+| [Feedback](feedback.md) | `partial` | web, server | `send_feedback`; the operator's `list_feedback`, `triage_feedback` | A member sends the operator a note about DraftLoop, with its technical context, from the header's Send feedback button or through their agent. The operator triages notes on the operator screen's inbox or through the API, and links GitHub issues. |
+| [Operator screen](organisations-and-consent.md#operator-screen) | `available` | server | `none` | The operator invites people from the beta waitlist, follows invites and the seats used, is warned before inviting past the account cap, changes the cap at runtime with `pnpm beta:cap`, and triages members' feedback in an inbox. |
 
 ## Planned
 

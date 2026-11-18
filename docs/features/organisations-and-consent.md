@@ -74,7 +74,7 @@ bar. Nobody else sees it: the screen offers it only when `GET /v1/me` answers
 | -------- | ------------------------------------------------------------------------------ |
 | Waitlist | The seats used, then entries newest first. **Invite** turns one into an invite and shows its code once; past the cap it asks to confirm first |
 | Invites  | Each invite, sent, redeemed or revoked, the seats used and left, and where the cap comes from |
-| Feedback | Members' [notes and support tickets](feedback.md), newest first, read only     |
+| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close |
 
 Send the code to the person yourself: DraftLoop sends no email. Each invite is
 written to the audit log under the operator's sign-in.
