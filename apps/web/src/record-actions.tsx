@@ -3,10 +3,10 @@ import { type FormEvent, type ReactNode, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import {
-  archiveFileName,
-  archiveRequest,
   deleteRecordRequest,
   deleteRefusal,
+  exportFileName,
+  exportRequest,
 } from "./record-actions-model.js";
 import { saveFile } from "./save-file.js";
 
@@ -54,10 +54,10 @@ export function RecordActions({
       onExport={() =>
         void attempt(async () => {
           const bytes = await client.call(
-            "GET /v1/workspaces/{workspaceId}/archive",
-            archiveRequest(recordId),
+            "GET /v1/workspaces/{workspaceId}/export",
+            exportRequest(recordId),
           );
-          saveFile(bytes, archiveFileName(recordId));
+          saveFile(bytes, exportFileName);
         }, describeError)
       }
       onDelete={(typed) => {
@@ -107,7 +107,7 @@ export function RecordActionsPanel({
   return (
     <details className="panel record-actions">
       <summary>{title}</summary>
-      <p className="muted">{t`The download holds everything stored for this job search: its material, runs, drafts, exports, consent history and audit trail.`}</p>
+      <p className="muted">{t`The download holds your documents, each job application with its job text, letters and exported drafts, your profile, work journal and consent history, in files you can open.`}</p>
       <button type="button" disabled={busy} onClick={onExport}>{t`Download everything`}</button>
       <form className="inline-form" onSubmit={remove}>
         <p className="notice">{t`Deleting removes this job search and everything stored for it, for good. It cannot be undone. Download everything first if you need a copy.`}</p>

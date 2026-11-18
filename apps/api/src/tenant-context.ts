@@ -53,10 +53,12 @@ export type TenantApplication = Required<
     | "preferenceSuggestions"
     | "factUsage"
     | "writingSamples"
+    | "readableExports"
   >
 > &
   Pick<
     ApiApplication,
+    | "readableExports"
     | "idempotency"
     | "contentScreening"
     | "briefExtractions"
@@ -271,6 +273,11 @@ export function registerTenantApplications(
     sensitivityRules: forwarding(() => current().sensitivityRules),
     consents: forwarding(() => current().consents),
     recordArchives: forwarding(() => current().recordArchives),
+    readableExports: forwarding(() => {
+      const exports = current().readableExports;
+      if (exports === undefined) throw new TenantContextMissingError();
+      return exports;
+    }),
     // An application composed without screening holds none, so nothing is quarantined.
     contentScreening: forwarding(() => current().contentScreening ?? noContentScreening),
     // An application composed without a queue extracts nothing on the worker.

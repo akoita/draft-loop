@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { type ApplicationService, WorkspaceNotFoundError } from "@draft-loop/application";
 import {
+  type ReadableRecordExports,
   type RecordArchive,
   RecordArchiveError,
   type RecordArchiveFile,
@@ -90,7 +91,10 @@ afterEach(async () => {
 });
 
 /** The route alone, with callers from a test header: `owner`, or a member's role. */
-async function routeServer(archives: RecordArchives): Promise<FastifyInstance> {
+async function routeServer(
+  archives: RecordArchives,
+  readableExports?: ReadableRecordExports,
+): Promise<FastifyInstance> {
   logLines = [];
   const server = Fastify({
     logger: cloudLoggingOptions({ write: (line) => logLines.push(line) }),
@@ -116,6 +120,7 @@ async function routeServer(archives: RecordArchives): Promise<FastifyInstance> {
     service,
     workspaceRoot: (workspaceId) => `/tenants/t/workspaces/${workspaceId}`,
     archives,
+    ...(readableExports === undefined ? {} : { readableExports }),
     knowledgeScope: "owned",
   });
   app = server;
@@ -124,6 +129,43 @@ async function routeServer(archives: RecordArchives): Promise<FastifyInstance> {
 
 const download = (server: FastifyInstance, caller: string, url = archiveUrl) =>
   server.inject({ method: "GET", url, headers: { "x-test-caller": caller } });
+
+describe("readable export route (#3036)", () => {
+  const readable: ReadableRecordExports = {
+    prepare: async () => ({
+      createdAt: "2026-10-24T10:00:00.000Z",
+      fileCount: 2,
+      files: async function* (): AsyncGenerator<RecordArchiveFile> {
+        yield { path: "README.md", content: encoder.encode("# Your DraftLoop data\n") };
+        yield { path: "documents/cv.md", content: encoder.encode("# CV alder-quill\n") };
+      },
+    }),
+  };
+  const exportUrl = "/v1/workspaces/coach-north/export";
+
+  it("streams the readable copy to owners and admins and refuses members", async () => {
+    const server = await routeServer(fixedArchives().archives, readable);
+    for (const caller of ["owner", "admin"]) {
+      const response = await download(server, caller, exportUrl);
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["content-disposition"]).toBe(
+        'attachment; filename="draftloop-data.zip"',
+      );
+      expect(readZip(response.rawPayload).map((file) => file.path)).toEqual([
+        "README.md",
+        "documents/cv.md",
+      ]);
+    }
+    expect((await download(server, "member", exportUrl)).statusCode).toBe(403);
+    expect(logLines.join("\n")).toContain("readable_export_downloaded");
+    expect(logLines.join("\n")).not.toContain("alder-quill");
+  });
+
+  it("is not served without readable exports", async () => {
+    const server = await routeServer(fixedArchives().archives);
+    expect((await download(server, "owner", exportUrl)).statusCode).toBe(404);
+  });
+});
 
 describe("record archive route", () => {
   it("streams the archive as a zip to owners and admins, with one content-free log line", async () => {

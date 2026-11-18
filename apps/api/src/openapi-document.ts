@@ -9,7 +9,7 @@ import type { CandidateRecordAccess } from "@draft-loop/storage/candidate-record
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
 import type { FeedbackStore } from "@draft-loop/storage/feedback";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
-import type { RecordArchives } from "@draft-loop/storage/record-archive";
+import type { ReadableRecordExports, RecordArchives } from "@draft-loop/storage/record-archive";
 import type { RunSpanStore } from "@draft-loop/storage/run-spans";
 import type { TenantDirectory } from "@draft-loop/storage/tenant-directory";
 import type {
@@ -57,6 +57,7 @@ export async function generateOpenApiDocument(): Promise<string> {
         sensitivityRules: {} as HostedSensitivityRules,
         consents: {} as ConsentLedger,
         recordArchives: {} as RecordArchives,
+        readableExports: {} as ReadableRecordExports,
       }),
     },
     directory: {} as TenantDirectory,

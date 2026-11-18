@@ -5,7 +5,9 @@ record, so an organisation can hand the candidate their data or keep a copy
 before deleting the record (ADR 0011, D7). Owners and admins download it as a
 zip from `GET /v1/workspaces/{workspaceId}/archive`, which carries the
 manifest's SHA-256 in `X-Archive-Manifest-SHA256`. The format is defined by
-the Zod schemas in `@draft-loop/schemas/record-archive`.
+the Zod schemas in `@draft-loop/schemas/record-archive`. The web screen's
+**Download everything** gives the [readable export](readable-export.md)
+instead.
 
 ## Layout
 

@@ -9676,7 +9676,7 @@ msgid "The desktop operation could not be completed."
 msgstr ""
 
 #: apps/web/src/record-actions.tsx
-msgid "The download holds everything stored for this job search: its material, runs, drafts, exports, consent history and audit trail."
+msgid "The download holds your documents, each job application with its job text, letters and exported drafts, your profile, work journal and consent history, in files you can open."
 msgstr ""
 
 #: apps/web/src/application-material-model.ts

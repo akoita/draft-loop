@@ -1,5 +1,6 @@
 import type { ApplicationService } from "@draft-loop/application";
 import type {
+  ReadableRecordExports,
   RecordArchiveKnowledgeScope,
   RecordArchives,
 } from "@draft-loop/storage/record-archive";
@@ -17,6 +18,8 @@ export interface RecordArchiveRoutesOptions {
   readonly workspaceRoot: (workspaceId: string) => string;
   /** The tenant's record archives (ADR 0011, D7). */
   readonly archives: RecordArchives;
+  /** Each record's readable copy (#3036); without it the readable export route is not served. */
+  readonly readableExports?: ReadableRecordExports;
   /**
    * Which knowledge bases an archive holds, from the API's authentication mode: `owned` in
    * sign-in mode, where each base belongs to one record, and `tenant` in owner-token mode, whose
@@ -46,7 +49,7 @@ export function registerRecordArchiveRoutes(
   options: RecordArchiveRoutesOptions,
 ): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, archives, knowledgeScope } = options;
+  const { service, workspaceRoot, archives, readableExports, knowledgeScope } = options;
 
   app.get(
     "/v1/workspaces/:workspaceId/archive",
@@ -93,6 +96,55 @@ export function registerRecordArchiveRoutes(
         .header("x-archive-manifest-sha256", archive.manifestSha256)
         .header("cache-control", "private, no-store")
         .send(zipStream(archive.files(), new Date(archive.manifest.createdAt)));
+    },
+  );
+
+  if (readableExports === undefined) return;
+
+  app.get(
+    "/v1/workspaces/:workspaceId/export",
+    {
+      schema: {
+        summary: "Download a readable copy of a candidate record as a zip",
+        description:
+          "Streams what a person reads rather than how the service stores it: a README, their documents under their own names, one folder per job application with its job text, saved letters and exported drafts, their profile, work journal and consent history. Each file is built from an allow list of fields, so no storage location, counter, checksum or token id appears. Owners and admins only. A stored document that is missing or no longer matches its checksum answers 409 archive_integrity before anything is sent.",
+        params: workspaceParams,
+        response: {
+          200: z.any().describe("The readable export, as application/zip."),
+          400: apiErrorSchema,
+          403: apiErrorSchema,
+          404: apiErrorSchema,
+          409: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { caller } = request;
+      const { workspaceId } = request.params;
+      if (caller === undefined || !reachesEveryRecord(caller)) {
+        logAccessRefusal(request, { resource: "record", reason: "role", resourceId: workspaceId });
+        return reply.code(403).send(ownersAndAdminsOnly);
+      }
+      const historyId = (await service.readWorkspace(workspaceRoot(workspaceId))).id;
+      const prepared = await readableExports.prepare({ workspaceId, historyId, knowledgeScope });
+      // Content-free: ids and counts only. The tenant id comes with the request's logger.
+      request.log.info(
+        {
+          audit: {
+            action: "readable_export_downloaded",
+            workspaceId,
+            ...(caller.kind === "member" ? { memberId: caller.memberId } : {}),
+            files: prepared.fileCount,
+          },
+        },
+        "readable export downloaded",
+      );
+      return reply
+        .code(200)
+        .header("content-type", "application/zip")
+        .header("content-disposition", 'attachment; filename="draftloop-data.zip"')
+        .header("cache-control", "private, no-store")
+        .send(zipStream(prepared.files(), new Date(prepared.createdAt)));
     },
   );
 }

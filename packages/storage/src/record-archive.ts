@@ -61,3 +61,21 @@ export class RecordArchiveError extends Error {
     this.code = code;
   }
 }
+
+/**
+ * A readable copy of one record: what a person reads, not how the service stores it. Each file is
+ * built from an allow list of fields, so ids of storage, counters, checksums and agent tokens
+ * never appear. The record archive above stays the complete, checkable copy.
+ */
+export interface ReadableRecordExport {
+  readonly createdAt: string;
+  /** How many files `files` yields. */
+  readonly fileCount: number;
+  /** Each file in a stable order; a stored document that changed throws `object_integrity`. */
+  readonly files: () => AsyncIterable<RecordArchiveFile>;
+}
+
+export interface ReadableRecordExports {
+  /** Reads the record from one snapshot and checks every document it will copy. */
+  readonly prepare: (request: RecordArchiveRequest) => Promise<ReadableRecordExport>;
+}

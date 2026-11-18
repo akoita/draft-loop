@@ -12,17 +12,22 @@ export function canExportAndDelete(me: Me): boolean {
   return canManageMembers(me);
 }
 
-/** The request that downloads a record's archive. */
+/** The request that downloads a record's complete archive, which tests and operators read. */
 export function archiveRequest(
   workspaceId: string,
 ): ApiInput<"GET /v1/workspaces/{workspaceId}/archive"> {
   return { path: { workspaceId } };
 }
 
-/** The file a downloaded archive is saved under, as the API names it. */
-export function archiveFileName(workspaceId: string): string {
-  return `${workspaceId}-archive.zip`;
+/** The request that downloads a readable copy of a record (#3036). */
+export function exportRequest(
+  workspaceId: string,
+): ApiInput<"GET /v1/workspaces/{workspaceId}/export"> {
+  return { path: { workspaceId } };
 }
+
+/** The file a downloaded copy is saved under, as the API names it. */
+export const exportFileName = "draftloop-data.zip";
 
 /**
  * The request that deletes a record, once the person typed its id back exactly; otherwise what to
