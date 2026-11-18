@@ -25,6 +25,7 @@ import type {
 } from "./local-provider-adapter.js";
 import { isMistralAuthorProfile } from "./mistral-development-profile.js";
 import { applyModelProfileEffort } from "./model-profile-efforts.js";
+import { currentModelProfileReferences } from "./model-profile-supersession.js";
 import type { ModelProfileRegistry } from "./model-profiles.js";
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 import { requirementsSourcePreflightLine } from "./run-requirements-source.js";
@@ -261,9 +262,22 @@ export function resolveRequestedRunModelProfiles(
   registry: ModelProfileRegistry | undefined,
   authModes: RunProviderAuthModeConfiguration,
 ): ResolvedRunModelProfiles | undefined {
-  return references === undefined
-    ? undefined
-    : resolveRunModelProfiles(references, registry ?? defaultModelProfileRegistry, authModes);
+  if (references === undefined) return undefined;
+  // A new run never starts on a superseded version, whichever saved pair named it (#3017).
+  const current = isModelProfileReferences(references)
+    ? currentModelProfileReferences(references)
+    : references;
+  return resolveRunModelProfiles(current, registry ?? defaultModelProfileRegistry, authModes);
+}
+
+function isModelProfileReferences(value: unknown): value is ModelProfileReferences {
+  if (!isRecord(value)) return false;
+  return [value.author, value.critic].every(
+    (reference) =>
+      isRecord(reference) &&
+      typeof reference.id === "string" &&
+      typeof reference.version === "number",
+  );
 }
 
 function bindSelection(selection: ModelSelection, profile: ModelProfile): ModelSelection {
