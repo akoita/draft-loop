@@ -178,6 +178,26 @@ describe("requirement-evidence map", () => {
     for (const { text } of requirements) expect(serialized).not.toContain(text);
     expect(serialized).toMatch(/"score":0\.95\d?[,}]/u);
   });
+
+  it("records each candidate's source id and lines when given the chunks", async () => {
+    const map = await buildRequirementEvidenceMap({ requirements, eligible });
+    const located = eligible.map((item, index) => ({
+      ...item,
+      lineStart: index + 1,
+      lineEnd: index + 2,
+    })) as unknown as ScoredEvidenceChunk[];
+    const payload = requirementEvidenceMapAuditPayload(map, located) as {
+      entries: { requirementId: string; candidates: Record<string, unknown>[] }[];
+    };
+    const kube = payload.entries.find(({ requirementId }) => requirementId === "r-kube");
+    expect(kube?.candidates[0]).toEqual({
+      chunkId: "kube",
+      origin: "keyword",
+      sourceId: "source-1",
+      lineStart: 4,
+      lineEnd: 5,
+    });
+  });
 });
 
 describe("requirement-evidence map uses", () => {

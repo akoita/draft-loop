@@ -138,6 +138,8 @@ export interface EvidenceModeRetrieval {
   readonly retrievalModeDecision?: () => Promise<RetrievalModeDecision | undefined>;
   /** The run's requirement-evidence map (#2981); undefined without requirements or full source. */
   readonly requirementEvidenceMap?: () => Promise<RequirementEvidenceMap | undefined>;
+  /** The map's chunks, so the event records where each candidate came from (#3009). */
+  readonly fullSourceEvidence?: () => Promise<readonly ScoredEvidenceChunk[]>;
 }
 
 /**
@@ -200,7 +202,10 @@ async function announceRequirementEvidenceMap(
     eventType: "run.requirement-evidence-map",
     entityType: "run",
     entityId: runId,
-    payload: requirementEvidenceMapAuditPayload(map),
+    payload: requirementEvidenceMapAuditPayload(
+      map,
+      (await retrieval.fullSourceEvidence?.()) ?? [],
+    ),
     createdAt: new Date().toISOString(),
   });
 }

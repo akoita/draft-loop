@@ -12,6 +12,7 @@ import type {
   AuthorAdjudicationDecisionInput,
   IndependentReadinessReport,
 } from "@draft-loop/schemas";
+import type { RunRequirementEvidence } from "@draft-loop/schemas/run-requirement-evidence";
 import type {
   CanonicalCandidateProfileVersionRecord,
   OpportunityBriefVersionRecord,
@@ -620,6 +621,10 @@ export interface ApplicationDriver {
   readonly readRunModels?: (command: StatusCommand) => Promise<RunModels | undefined>;
   /** Which retrieved evidence each author call cited, from the saved run alone (#2010). */
   readonly readRunEvidenceUsage?: (command: StatusCommand) => Promise<RunEvidenceUsage | undefined>;
+  /** Which evidence supports each requirement, from the run's evidence map (#3009). */
+  readonly readRunRequirementEvidence?: (
+    command: StatusCommand,
+  ) => Promise<RunRequirementEvidence | undefined>;
   /**
    * The requirements brief and career profile version a run recorded when it started;
    * `undefined` without a context.
@@ -886,6 +891,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.readRunEvidenceUsage === undefined
         ? undefined
         : driver.readRunEvidenceUsage({ ...command, root: requireRoot(command.root) }),
+    readRunRequirementEvidence: async (command) =>
+      driver.readRunRequirementEvidence === undefined
+        ? undefined
+        : driver.readRunRequirementEvidence({ ...command, root: requireRoot(command.root) }),
     readRunInputs: async (command) =>
       driver.readRunInputs === undefined
         ? undefined
@@ -1134,6 +1143,10 @@ export { RunModelProfileError } from "./run-model-profiles.js";
 export { type RunModelIdentity, type RunModels, readRunModels } from "./run-models-read.js";
 export { currentRoundCoverageJudgement } from "./run-output.js";
 export { type ReleasePauseCommand, releaseRunPause } from "./run-pause-release.js";
+export {
+  readRunRequirementEvidence,
+  runRequirementEvidence,
+} from "./run-requirement-evidence-read.js";
 export {
   type RunReview,
   type RunReviewApprovalCheck,

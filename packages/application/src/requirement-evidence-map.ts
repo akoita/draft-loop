@@ -203,9 +203,14 @@ function semanticEntries(
 }
 
 /** Content-free audit payload: ids, origins, rounded scores and counts, never text. */
-export function requirementEvidenceMapAuditPayload(map: RequirementEvidenceMap): {
+export function requirementEvidenceMapAuditPayload(
+  map: RequirementEvidenceMap,
+  /** The map's chunks, so each candidate also records its source id and lines (#3009). */
+  eligible: readonly ScoredEvidenceChunk[] = [],
+): {
   readonly [key: string]: JsonValue;
 } {
+  const located = new Map(eligible.map((chunk) => [chunk.id, chunk]));
   return {
     mode: map.mode,
     ...(map.reason === undefined ? {} : { reason: map.reason }),
@@ -215,11 +220,17 @@ export function requirementEvidenceMapAuditPayload(map: RequirementEvidenceMap):
     requirementsWithEvidence: map.entries.filter(({ candidates }) => candidates.length > 0).length,
     entries: map.entries.map(({ requirementId, candidates }) => ({
       requirementId,
-      candidates: candidates.map(({ chunkId, origin, score }) => ({
-        chunkId,
-        origin,
-        ...(score === undefined ? {} : { score: Math.round(score * 1000) / 1000 }),
-      })),
+      candidates: candidates.map(({ chunkId, origin, score }) => {
+        const chunk = located.get(chunkId);
+        return {
+          chunkId,
+          origin,
+          ...(score === undefined ? {} : { score: Math.round(score * 1000) / 1000 }),
+          ...(chunk === undefined
+            ? {}
+            : { sourceId: chunk.sourceId, lineStart: chunk.lineStart, lineEnd: chunk.lineEnd }),
+        };
+      }),
     })),
   };
 }
