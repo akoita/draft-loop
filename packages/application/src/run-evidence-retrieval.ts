@@ -22,7 +22,10 @@ import {
   runCandidateProfileUnavailableMessage,
   withPinnedProfileFacts,
 } from "./run-profile-fact-retrieval.js";
-import { withRequirementEvidenceMap } from "./run-requirement-evidence-map.js";
+import {
+  enabledRequirementEvidenceMapUses,
+  withRequirementEvidenceMap,
+} from "./run-requirement-evidence-map.js";
 import {
   type RunSemanticRetrievalOptions,
   runEmbeddingModelRoot,
@@ -116,10 +119,12 @@ export async function openRunCandidateRetrieval(
     context,
     ...(semantic === undefined ? {} : { semanticOptions: semantic }),
   });
-  // Outermost, so the picks are added to the final selection, profile facts included.
-  const picked = withRequirementPickedEvidence(withFacts, context);
-  return withRequirementEvidenceMap(picked, context, {
+  const mapped = withRequirementEvidenceMap(withFacts, context, {
     tier: retrieval.modelTier,
     ...semanticDependencies,
+  });
+  // Outermost, so the picks are added to the final selection, profile facts included.
+  return withRequirementPickedEvidence(mapped, context, {
+    useEvidenceMap: enabledRequirementEvidenceMapUses().has("fallback"),
   });
 }

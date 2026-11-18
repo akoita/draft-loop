@@ -1,6 +1,7 @@
 import type { ContextSnapshot, RetrievalPort, ScoredEvidenceChunk } from "@draft-loop/domain";
 
 import type { EvidenceModeDecision } from "./full-source-evidence.js";
+import type { RequirementEvidenceMap } from "./requirement-evidence-map.js";
 
 /**
  * Requirement-picked evidence (#2667, #2907): what a run sends when its full source passes the
@@ -80,6 +81,11 @@ export interface PickRequirementEvidenceRequest {
   readonly requirements: readonly string[];
   /** Serialized characters the picks may add. */
   readonly budgetCharacters: number;
+  /**
+   * Each requirement's chunk ids, best first, from the requirement-evidence map (#2983). When
+   * given, they replace the shared-word rankings; ids that are not eligible are skipped.
+   */
+  readonly rankings?: readonly (readonly string[])[];
 }
 
 /**
@@ -95,9 +101,20 @@ export function pickRequirementEvidence(
     .filter(({ chunk }) => !selectedIds.has(chunk.id));
   if (candidates.length === 0 || request.budgetCharacters <= 0) return [];
 
-  const rankings = request.requirements.map((requirement) =>
-    rankedCandidates(candidates, requirement).slice(0, maximumPicksPerRequirement),
-  );
+  const byId = new Map(candidates.map((candidate) => [candidate.chunk.id, candidate]));
+  const rankings =
+    request.rankings === undefined
+      ? request.requirements.map((requirement) =>
+          rankedCandidates(candidates, requirement).slice(0, maximumPicksPerRequirement),
+        )
+      : request.rankings.map((ids) =>
+          ids
+            .flatMap((id) => {
+              const candidate = byId.get(id);
+              return candidate === undefined ? [] : [candidate];
+            })
+            .slice(0, maximumPicksPerRequirement),
+        );
 
   const picked = new Map<string, (typeof candidates)[number]>();
   let remaining = request.budgetCharacters;
@@ -122,6 +139,25 @@ export interface RequirementPickedRuntime {
   readonly evidenceModeDecision: () => Promise<EvidenceModeDecision>;
   /** Every eligible chunk of the pinned sources, as full source would send them. */
   readonly fullSourceEvidence: () => Promise<readonly ScoredEvidenceChunk[]>;
+  /** The run's requirement-evidence map, when the run builds one (#2981). */
+  readonly requirementEvidenceMap?: () => Promise<RequirementEvidenceMap | undefined>;
+}
+
+export interface RequirementPickedOptions {
+  /** Rank the picks with the requirement-evidence map instead of shared words (#2983). */
+  readonly useEvidenceMap?: boolean;
+}
+
+/** Each requirement's map candidates in requirement order, or undefined to rank by words. */
+async function mapRankings(
+  runtime: RequirementPickedRuntime,
+  options: RequirementPickedOptions,
+): Promise<readonly (readonly string[])[] | undefined> {
+  if (options.useEvidenceMap !== true || runtime.requirementEvidenceMap === undefined) {
+    return undefined;
+  }
+  const map = await runtime.requirementEvidenceMap();
+  return map?.entries.map(({ candidates }) => candidates.map(({ chunkId }) => chunkId));
 }
 
 /**
@@ -132,6 +168,7 @@ export interface RequirementPickedRuntime {
 export function withRequirementPickedEvidence<Runtime extends RequirementPickedRuntime>(
   runtime: Runtime,
   context: Pick<ContextSnapshot, "requirements">,
+  pickOptions: RequirementPickedOptions = {},
 ): Runtime {
   const port: RetrievalPort = {
     queryEvidence: async (text, options) => {
@@ -144,11 +181,13 @@ export function withRequirementPickedEvidence<Runtime extends RequirementPickedR
         return selected;
       }
       const requirements = (context.requirements ?? []).map((requirement) => requirement.text);
+      const rankings = await mapRankings(runtime, pickOptions);
       const picks = pickRequirementEvidence({
         eligible: await runtime.fullSourceEvidence(),
         selected,
         requirements: requirements.length === 0 ? [text] : requirements,
         budgetCharacters: decision.budgetCharacters - JSON.stringify(selected).length,
+        ...(rankings === undefined ? {} : { rankings }),
       });
       return picks.length === 0 ? selected : [...selected, ...picks];
     },

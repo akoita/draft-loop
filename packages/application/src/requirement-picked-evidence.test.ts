@@ -136,4 +136,59 @@ describe("requirement-picked evidence", () => {
     expect(evidence).toBe(selected);
     expect(base.fullSourceEvidence).not.toHaveBeenCalled();
   });
+
+  describe("ranked by the requirement-evidence map (#2983)", () => {
+    // Meaning found the garden chunk for this requirement; shared words find the Kubernetes ones.
+    const map = {
+      mode: "semantic" as const,
+      chunkCount: eligible.length,
+      entries: [
+        {
+          requirementId: "r1",
+          candidates: [
+            { chunkId: "garden", score: 0.9, origin: "semantic" as const },
+            { chunkId: "missing", origin: "keyword" as const },
+            { chunkId: "kube", origin: "both" as const },
+          ],
+        },
+      ],
+    };
+
+    it("picks the map's candidates and skips ids that are not eligible", () => {
+      const picks = pickRequirementEvidence({
+        eligible,
+        selected: [],
+        requirements: ["Kubernetes operations"],
+        budgetCharacters: 100_000,
+        rankings: [["garden", "missing", "kube"]],
+      });
+      expect(picks.map(({ id }) => id)).toEqual(["kube", "garden"]);
+    });
+
+    it("uses the map only when the setting turns it on", async () => {
+      const base = {
+        ...runtime({ fallbackReason: "cost-cap-exceeded" }, []),
+        requirementEvidenceMap: vi.fn(async () => map),
+      };
+      const byMap = await withRequirementPickedEvidence(base, context, {
+        useEvidenceMap: true,
+      }).port.queryEvidence("job");
+      expect(byMap.map(({ id }) => id)).toEqual(["kube", "garden"]);
+
+      const byWords = await withRequirementPickedEvidence(base, context).port.queryEvidence("job");
+      expect(byWords.map(({ id }) => id)).toEqual(["kube", "kube-2"]);
+      expect(base.requirementEvidenceMap).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to shared words when the run has no map", async () => {
+      const base = {
+        ...runtime({ fallbackReason: "budget-exceeded" }, []),
+        requirementEvidenceMap: async () => undefined,
+      };
+      const evidence = await withRequirementPickedEvidence(base, context, {
+        useEvidenceMap: true,
+      }).port.queryEvidence("job");
+      expect(evidence.map(({ id }) => id)).toEqual(["kube", "kube-2"]);
+    });
+  });
 });

@@ -10,6 +10,24 @@ import {
   runEmbeddingModelRoot,
 } from "./run-semantic-retrieval.js";
 
+/** Where a run uses its requirement-evidence map; each use is off unless the setting names it. */
+export const requirementEvidenceMapUseSetting = "DRAFT_LOOP_EVIDENCE_MAP";
+
+export const requirementEvidenceMapUses = ["fallback", "writer", "critic"] as const;
+export type RequirementEvidenceMapUse = (typeof requirementEvidenceMapUses)[number];
+
+/** The uses named in the setting, a comma-separated list such as `fallback,writer`. */
+export function enabledRequirementEvidenceMapUses(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): ReadonlySet<RequirementEvidenceMapUse> {
+  const named = new Set(
+    (env[requirementEvidenceMapUseSetting] ?? "")
+      .split(",")
+      .map((value) => value.trim().toLowerCase()),
+  );
+  return new Set(requirementEvidenceMapUses.filter((use) => named.has(use)));
+}
+
 export interface RequirementEvidenceMapRuntime {
   /** Every eligible chunk of the pinned sources; empty when the run does not use full source. */
   readonly fullSourceEvidence: () => Promise<readonly ScoredEvidenceChunk[]>;
