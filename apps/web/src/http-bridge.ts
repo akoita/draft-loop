@@ -48,6 +48,11 @@ import {
 } from "./profile-bridge.js";
 import { createReviewActions, type DownloadFile } from "./review-actions.js";
 import {
+  createRunRequirementEvidenceAnswers,
+  hostedRunRequirementEvidenceCapabilities,
+  isRunRequirementEvidenceCommand,
+} from "./run-requirement-evidence-bridge.js";
+import {
   createRunTraceAnswers,
   hostedRunTraceCapabilities,
   isRunTraceCommand,
@@ -91,6 +96,7 @@ export const hostedBridgeCapabilities = [
   "run.resume",
   "run.stop",
   ...hostedRunTraceCapabilities,
+  ...hostedRunRequirementEvidenceCapabilities,
   "review.load",
   "review.dispatch",
   "models.list",
@@ -248,6 +254,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerFolder = createApplicationFolderAnswers(client);
   const answerFactUsage = createFactUsageAnswers(client);
   const answerRunTrace = createRunTraceAnswers(client);
+  const answerRequirementEvidence = createRunRequirementEvidenceAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
 
   /** The run as the server projects it, with the owner token's fixed workspace named in words. */
@@ -296,6 +303,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isApplicationFolderCommand(command)) return answerFolder(command);
     if (isFactUsageCommand(command)) return answerFactUsage(command);
     if (isRunTraceCommand(command)) return answerRunTrace(command);
+    if (isRunRequirementEvidenceCommand(command)) return answerRequirementEvidence(command);
     switch (command.type) {
       case "application.list": {
         const { workspaceId } = command.input;

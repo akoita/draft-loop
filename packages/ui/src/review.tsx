@@ -156,6 +156,7 @@ import {
 } from "./run-details.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import { runEvidenceModeDisplay } from "./run-evidence-mode-display.js";
+import type { LoadRunRequirementEvidence } from "./run-requirement-evidence.js";
 import type { LoadRunTrace } from "./run-steps.js";
 import { RunSwitcher } from "./run-switcher.js";
 import { ScreenHint } from "./screen-hint.js";
@@ -236,6 +237,8 @@ interface ReviewWorkspaceProps {
   readonly onSaveJobCopy?: (text?: string) => Promise<ApplicationJobResult>;
   /** Reads a run's trace for the Steps section of Run details; without it there is none. */
   readonly onLoadRunTrace?: LoadRunTrace;
+  /** Reads which evidence supports each requirement of a run, for Run details. */
+  readonly onLoadRunRequirementEvidence?: LoadRunRequirementEvidence;
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
@@ -999,6 +1002,7 @@ export function ReviewWorkspace({
   onReadJob,
   onSaveJobCopy,
   onLoadRunTrace,
+  onLoadRunRequirementEvidence,
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
@@ -2931,6 +2935,9 @@ export function ReviewWorkspace({
           state={state}
           describeState={stateLabel}
           {...(onLoadRunTrace === undefined ? {} : { loadTrace: onLoadRunTrace })}
+          {...(onLoadRunRequirementEvidence === undefined
+            ? {}
+            : { loadRequirementEvidence: onLoadRunRequirementEvidence })}
           start={
             readOnly
               ? null

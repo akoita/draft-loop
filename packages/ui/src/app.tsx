@@ -1071,6 +1071,16 @@ export function App({
         : (runId: string) => runTraceCapabilities.getRunTrace(activeWorkspaceId, runId),
     [runTraceCapabilities, activeWorkspaceId],
   );
+  const requirementEvidenceCapabilities = activePort.runRequirementEvidence;
+  /** Reads a run's requirement evidence for Run details; undefined on a host without it. */
+  const loadRunRequirementEvidence = useMemo(
+    () =>
+      requirementEvidenceCapabilities === undefined || activeWorkspaceId === null
+        ? undefined
+        : (runId: string) =>
+            requirementEvidenceCapabilities.getRunRequirementEvidence(activeWorkspaceId, runId),
+    [requirementEvidenceCapabilities, activeWorkspaceId],
+  );
   const workspaceGeneration = contextGenerationRef.current;
   const profilePendingForActiveWorkspace =
     activeWorkspaceId !== null &&
@@ -2916,6 +2926,9 @@ export function App({
         ? {}
         : { onSaveJobCopy: activePort.saveApplicationJobCopy })}
       {...(loadRunTrace === undefined ? {} : { onLoadRunTrace: loadRunTrace })}
+      {...(loadRunRequirementEvidence === undefined
+        ? {}
+        : { onLoadRunRequirementEvidence: loadRunRequirementEvidence })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
       providerSignInReadiness={
         // A host without credential reads holds the provider keys itself (#2866).

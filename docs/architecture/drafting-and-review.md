@@ -161,7 +161,10 @@ The map is shown in the preflight and recorded as a content-free
 `run.requirement-evidence-map` audit event: ids, source lines, origins and
 scores, never text. By default it does not change what the writer or the critic receives.
 `GET /v1/workspaces/:workspaceId/runs/:runId/requirement-evidence` reads it
-back with each candidate's source name, lines and grade.
+back with each candidate's source name, lines and grade. **Run details** shows
+it as **Evidence for each requirement**: the sources for each requirement, with
+scores, match and grades under Advanced options. Sources graded as not
+supporting are left out of the simple list.
 
 With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
 as supports, partly supports or does not support. That is one extra call on the

@@ -755,6 +755,11 @@ msgstr "{name} ({role}), under US$0.01 a draft"
 msgid "{name} was removed from recent workspaces. Its files are unchanged."
 msgstr "{name} was removed from recent workspaces. Its files are unchanged."
 
+#. placeholder {0}: entry.lines
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{name}, lines {0}"
+msgstr "{name}, lines {0}"
+
 #: apps/web/src/credits-model.ts
 msgid "{needs}{has}. Ask the owner for more credits, or wait for the next period."
 msgstr "{needs}{has}. Ask the owner for more credits, or wait for the next period."
@@ -824,6 +829,10 @@ msgstr "{role} planned calls"
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
 msgstr "{shown}, and the model you chose."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "{supported} of {total, plural, one {# requirement} other {# requirements}} with evidence"
+msgstr "{supported} of {total, plural, one {# requirement} other {# requirements}} with evidence"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "{theme}: your record mentions it but tells no story about it."
@@ -3064,6 +3073,10 @@ msgstr "Document — the draft"
 msgid "Documents live in Career evidence. The profile is rebuilt from them."
 msgstr "Documents live in Career evidence. The profile is rebuilt from them."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "does not support"
+msgstr "does not support"
+
 #: packages/ui/src/getting-started.tsx
 msgid "done"
 msgstr "done"
@@ -3563,6 +3576,10 @@ msgstr "Everything is released. Start the run again."
 #: packages/ui/src/start-confirmation.tsx
 msgid "Evidence"
 msgstr "Evidence"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Evidence for each requirement"
+msgstr "Evidence for each requirement"
 
 #. placeholder {0}: source.displayName
 #: packages/ui/src/source-evidence-kinds.tsx
@@ -4276,6 +4293,10 @@ msgstr "GPT-6.1 Sol"
 msgid "GPT-6.1 Terra"
 msgstr "GPT-6.1 Terra"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Grading was attempted but failed, so no source was left out."
+msgstr "Grading was attempted but failed, so no source was left out."
+
 #: apps/web/src/consent-model.ts
 msgid "Granted"
 msgstr "Granted"
@@ -4854,6 +4875,10 @@ msgstr "Kept"
 msgid "Keyword search over your candidate knowledge. Needs no model."
 msgstr "Keyword search over your candidate knowledge. Needs no model."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "keywords"
+msgstr "keywords"
+
 #: packages/ui/src/profile.tsx
 msgid "Kind"
 msgstr "Kind"
@@ -5236,6 +5261,11 @@ msgstr "Marked lines differ from the active version: + only in this version, −
 msgid "Marking reviewed…"
 msgstr "Marking reviewed…"
 
+#. placeholder {0}: originLabel(candidate.origin)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "matched by {0}"
+msgstr "matched by {0}"
+
 #: apps/web/src/screening-model.ts
 msgid "material the run would use"
 msgstr "material the run would use"
@@ -5272,6 +5302,14 @@ msgstr "Mean readiness score"
 #: packages/ui/src/run-switcher.tsx
 msgid "mean score"
 msgstr "mean score"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning"
+msgstr "meaning"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "meaning and keywords"
+msgstr "meaning and keywords"
 
 #: packages/ui/src/help-ask.tsx
 msgid "Meanwhile, these guide sections may help:"
@@ -5770,6 +5808,10 @@ msgstr "No applications yet. Start a new application for the job you are applyin
 msgid "No blocking findings need action."
 msgstr "No blocking findings need action."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No candidate"
+msgstr "No candidate"
+
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/home-model.ts
 msgid "No career evidence yet"
@@ -5818,6 +5860,10 @@ msgstr "no duration cap"
 #: packages/ui/src/run-evidence-mode-display.ts
 msgid "No eligible chunks for full source, so retrieval was used"
 msgstr "No eligible chunks for full source, so retrieval was used"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "No evidence found"
+msgstr "No evidence found"
 
 #: packages/ui/src/known-gaps.ts
 msgid "No evidence found for: "
@@ -6119,6 +6165,10 @@ msgstr "Not found in the job description"
 #: packages/ui/src/profile-freshness.ts
 msgid "Not generated yet"
 msgstr "Not generated yet"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "not graded"
+msgstr "not graded"
 
 #: packages/ui/src/run-details.tsx
 msgid "not independent"
@@ -6628,6 +6678,10 @@ msgstr "Parent"
 msgid "part of a model id"
 msgstr "part of a model id"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "partly supports"
+msgstr "partly supports"
+
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
 msgstr "Paste a CV, a profile summary or notes about your work. Leave out passwords and other people's personal data. It is checked for hidden instructions like any file."
@@ -7046,6 +7100,24 @@ msgstr "Quick replies"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Quota or rate limit"
 msgstr "Quota or rate limit"
+
+#. placeholder {0}: view.reason
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only ({0})."
+msgstr "Ranked by keywords only ({0})."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by keywords only."
+msgstr "Ranked by keywords only."
+
+#. placeholder {0}: view.modelId
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with {0}, then by keywords."
+msgstr "Ranked by meaning with {0}, then by keywords."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Ranked by meaning with the local model, then by keywords."
+msgstr "Ranked by meaning with the local model, then by keywords."
 
 #: packages/ui/src/start-advanced-options.tsx
 msgid "raw job description"
@@ -7508,6 +7580,11 @@ msgstr "Required sections: {0}"
 #: apps/web/src/screening.tsx
 msgid "Required, up to"
 msgstr "Required, up to"
+
+#. placeholder {0}: index + 1
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "Requirement {0}"
+msgstr "Requirement {0}"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Requirement {position} priority"
@@ -8295,6 +8372,11 @@ msgstr "saving…"
 msgid "Saving…"
 msgstr "Saving…"
 
+#. placeholder {0}: candidate.score.toFixed(2)
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "score {0}"
+msgstr "score {0}"
+
 #: packages/ui/src/screen-language.tsx
 msgid "Screen language"
 msgstr "Screen language"
@@ -9058,6 +9140,10 @@ msgstr "Support ticket"
 msgid "Supported with the configured authentication route"
 msgstr "Supported with the configured authentication route"
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "supports"
+msgstr "supports"
+
 #: packages/ui/src/run-comparison.tsx
 msgid "Swap sides"
 msgstr "Swap sides"
@@ -9439,6 +9525,10 @@ msgstr "The critic had not reviewed this plan when the run stopped."
 #: packages/ui/src/review-run-status.ts
 msgid "The critic is checking version {version}."
 msgstr "The critic is checking version {version}."
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The critic model graded each source; sources it found unsupportive are left out above."
+msgstr "The critic model graded each source; sources it found unsupportive are left out above."
 
 #: apps/web/src/application-material-model.ts
 msgid "The critic's check did not finish, so your letter stands as drafted."
@@ -10109,6 +10199,10 @@ msgstr "The source could not be added to the knowledge base."
 msgid "The sources said nothing useful about this employer."
 msgstr "The sources said nothing useful about this employer."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "The sources the writer and critic were pointed to for each job requirement. A requirement with no source may still be covered elsewhere in your evidence."
+msgstr "The sources the writer and critic were pointed to for each job requirement. A requirement with no source may still be covered elsewhere in your evidence."
+
 #: apps/web/src/interview-guide-model.ts
 msgid "The state of the field"
 msgstr "The state of the field"
@@ -10485,6 +10579,10 @@ msgstr "This reviewed profile is used for new applications."
 msgid "This rewrites the run history stored with this workspace so it takes less space. Each draft and step is stored once instead of being copied again for every step of a run. Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and checked."
 msgstr "This rewrites the run history stored with this workspace so it takes less space. Each draft and step is stored once instead of being copied again for every step of a run. Your runs, drafts and audit trail read back the same, and the audit chain is rebuilt and checked."
 
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "This run did not grade the sources."
+msgstr "This run did not grade the sources."
+
 #: packages/ui/src/review.tsx
 msgid "This run has no retry left. Stop it, then start a new review."
 msgstr "This run has no retry left. Stop it, then start a new review."
@@ -10791,6 +10889,10 @@ msgstr "Unlimited credits"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Unlisted source"
 msgstr "Unlisted source"
+
+#: packages/ui/src/run-requirement-evidence.tsx
+msgid "unnamed source"
+msgstr "unnamed source"
 
 #: apps/web/src/application-material-model.ts
 msgid "Unsaved draft"

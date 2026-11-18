@@ -94,6 +94,7 @@ export const bridgeCapabilities = [
   "run.resume",
   "run.stop",
   "run.trace",
+  "run.requirement-evidence",
   "review.load",
   "review.dispatch",
   "review.preview-evidence",
