@@ -1,0 +1,79 @@
+name: Retrieval model evaluation
+
+# Runs the local-embedding retrieval evaluations on invented fixtures (#2980). It downloads the
+# pinned Granite model from its manifest, calls no model provider and uses no secret. The
+# content-free reports are uploaded as an artifact and summarised on the run page.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/retrieval-model-eval.yml
+      - packages/evaluations/fixtures/retrieval-quality/**
+      - packages/evaluations/src/requirement-evidence-retrieval.ts
+      - packages/evaluations/src/semantic-retrieval*.ts
+      - packages/application/src/requirement-evidence-retrieval.eval.test.ts
+      - packages/application/src/requirement-picked-evidence.ts
+      - packages/embeddings/src/**
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: Requirement-evidence retrieval with the local model
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DRAFT_LOOP_EMBEDDING_TIER: 311m
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.18.3
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Choose working directories
+        run: |
+          echo "DRAFT_LOOP_EMBEDDING_MODEL_DIR=$RUNNER_TEMP/embedding-model" >> "$GITHUB_ENV"
+          echo "REPORT_DIR=$RUNNER_TEMP/retrieval-reports" >> "$GITHUB_ENV"
+      - name: Download the pinned embedding model
+        run: node apps/worker/scripts/download-embedding-model.mjs "$DRAFT_LOOP_EMBEDDING_MODEL_DIR"
+      - name: Requirement-evidence retrieval
+        run: DRAFT_LOOP_RETRIEVAL_REPORT_PATH="$REPORT_DIR/requirement-evidence.json" pnpm exec vitest run packages/application/src/requirement-evidence-retrieval.eval.test.ts
+      - name: Cross-language retrieval
+        run: DRAFT_LOOP_RETRIEVAL_REPORT_PATH="$REPORT_DIR/cross-language.json" pnpm exec vitest run packages/evaluations/src/cross-language-retrieval.test.ts
+      - name: Summarise
+        if: always()
+        run: |
+          report="$REPORT_DIR/requirement-evidence.json"
+          if [ -f "$report" ]; then
+            {
+              echo "### Requirement-evidence retrieval (limit $(jq .limit "$report"), gate $(jq .gate "$report"))"
+              echo
+              echo "| Arm | Recall | MRR | Any hit |"
+              echo "| --- | --- | --- | --- |"
+              jq -r '.arms | to_entries[] | "| \(.key) | \(.value.metrics.recall * 1000 | round / 1000) | \(.value.metrics.meanReciprocalRank * 1000 | round / 1000) | \(.value.metrics.anyHit * 1000 | round / 1000) |"' "$report"
+              echo
+              echo "Passes gate: $(jq .passesGate "$report")"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          # The content-free reports, also in the log for readers without artifact access.
+          for file in "$REPORT_DIR"/*.json; do
+            [ -f "$file" ] && jq -c '{file: input_filename} + (del(.embeddingIdentity))' "$file"
+          done
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: retrieval-model-reports
+          path: ${{ runner.temp }}/retrieval-reports
+          if-no-files-found: ignore
