@@ -31859,7 +31859,7 @@
     "/v1/waitlist": {
       "post": {
         "summary": "Join the beta waitlist",
-        "description": "Public. Takes an email and the visitor's consent to keep it until they are invited, for at most six months. Answers 202 whether or not the email was already listed. 400 invalid_input for an address that is not an email, 429 rate_limited after 5 joins in an hour from one address.",
+        "description": "Public. Takes an email and the visitor's consent to keep it until they are invited, for at most six months. Where the server sends mail, a new email gets a confirmation link valid 48 hours, and waits unconfirmed until it is opened; one address gets at most 3 links, 10 minutes apart. `confirm` says whether this server asks for that. Answers 202 whether or not the email was already listed. 400 invalid_input for an address that is not an email, 429 rate_limited after 5 joins in an hour from one address.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31875,6 +31875,14 @@
                     "type": "boolean",
                     "enum": [
                       true
+                    ]
+                  },
+                  "locale": {
+                    "description": "The screen's language, so the emails speak it.",
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "fr"
                     ]
                   }
                 },
@@ -31901,10 +31909,15 @@
                       "enum": [
                         true
                       ]
+                    },
+                    "confirm": {
+                      "type": "boolean",
+                      "description": "True when the visitor must open the emailed link to keep their place."
                     }
                   },
                   "required": [
-                    "listed"
+                    "listed",
+                    "confirm"
                   ],
                   "additionalProperties": false
                 }
@@ -31912,6 +31925,78 @@
             }
           },
           "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/waitlist/confirm": {
+      "post": {
+        "summary": "Confirm a waitlist sign-up's email",
+        "description": "Public. Takes the token from the confirmation email's link. 200 when the entry is confirmed, also for a link opened twice. 404 invalid_token for an unknown token or a link older than 48 hours. 429 rate_limited after 5 attempts in an hour from one address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 16,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "confirmed": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "confirmed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

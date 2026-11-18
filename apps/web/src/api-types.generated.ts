@@ -3114,9 +3114,19 @@ export interface ApiOperations {
     readonly body: {
       readonly email: string;
       readonly consent: true;
+      readonly locale?: "en" | "fr";
     };
     readonly response: {
       readonly listed: true;
+      readonly confirm: boolean;
+    };
+  };
+  "POST /v1/waitlist/confirm": {
+    readonly body: {
+      readonly token: string;
+    };
+    readonly response: {
+      readonly confirmed: true;
     };
   };
   "GET /v1/operator/waitlist": {

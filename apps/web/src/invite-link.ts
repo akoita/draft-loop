@@ -1,7 +1,9 @@
 /**
- * The invite email's link (`/#invite=CODE`): the code rides after `#`, so no server sees it. The
- * screen keeps it in the tab's session storage through the sign-in round trip, then fills it in
- * on the sign-up screen and forgets it once the account exists.
+ * The links the service emails carry their secret after `#`, so no server sees it:
+ * - an invite (`/#invite=CODE`): the screen keeps the code in the tab's session storage through
+ *   the sign-in round trip, fills it in on the sign-up screen and forgets it once the account
+ *   exists;
+ * - a waitlist confirmation (`/#waitlist-confirm=TOKEN`): the landing page posts the token once.
  */
 
 const inviteKey = "draft-loop.invite-code";
@@ -37,4 +39,11 @@ export function forgetInviteCode(storage: Storage | undefined): void {
   } catch {
     // Nothing kept, nothing to forget.
   }
+}
+
+/** The token a waitlist confirmation link's fragment carries (`#waitlist-confirm=TOKEN`). */
+export function waitlistConfirmTokenFromHash(hash: string): string | undefined {
+  const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  const token = params.get("waitlist-confirm")?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{16,128}$/u.test(token) ? token : undefined;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createInviteMailer, inviteLink, inviteMessage, readInviteMailer } from "./invite-mail.js";
+import { createApiMail, readApiMail } from "./api-mail.js";
+import { createInviteMailer, inviteLink, inviteMessage } from "./invite-mail.js";
 
 const serviceUrl = "https://app.example.test";
 const code = "ABCD2345EFGH6789";
@@ -26,15 +27,21 @@ describe("the invite email", () => {
 
 describe("the invite mailer", () => {
   it("is off without a sender", () => {
-    expect(readInviteMailer({})).toBeUndefined();
+    expect(readApiMail({})).toBeUndefined();
   });
 
   it("sends to the invite's address and logs only the template and outcome", async () => {
     const send = vi.fn(async () => undefined);
     const lines: unknown[] = [];
     const mailer = createInviteMailer(
-      { from: "beta@mail.example.test", keySecret: "projects/p/secrets/k/versions/1", serviceUrl },
-      { send, log: (line) => lines.push(line) },
+      createApiMail(
+        {
+          from: "beta@mail.example.test",
+          keySecret: "projects/p/secrets/k/versions/1",
+          serviceUrl,
+        },
+        { send, log: (line) => lines.push(line) },
+      ),
     );
 
     await expect(mailer({ email: "ada@example.test", code, locale: "en" })).resolves.toBe(true);
@@ -48,13 +55,19 @@ describe("the invite mailer", () => {
 
   it("resolves false when the provider refuses, so the operator sends the code", async () => {
     const mailer = createInviteMailer(
-      { from: "beta@mail.example.test", keySecret: "projects/p/secrets/k/versions/1", serviceUrl },
-      {
-        send: async () => {
-          throw new Error("refused");
+      createApiMail(
+        {
+          from: "beta@mail.example.test",
+          keySecret: "projects/p/secrets/k/versions/1",
+          serviceUrl,
         },
-        log: () => undefined,
-      },
+        {
+          send: async () => {
+            throw new Error("refused");
+          },
+          log: () => undefined,
+        },
+      ),
     );
 
     await expect(mailer({ email: "ada@example.test", code })).resolves.toBe(false);

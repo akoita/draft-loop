@@ -71,10 +71,22 @@ function SignInBlock({ notice, busy = false, onSignIn, onPrepare }: OidcSignInPr
 }
 
 /** Sends the person to the identity provider to sign in. */
-export function OidcSignIn(props: OidcSignInProps & { readonly waitlist?: boolean }) {
-  const { waitlist = false, ...signIn } = props;
+export function OidcSignIn(
+  props: OidcSignInProps & {
+    readonly waitlist?: boolean;
+    /** The token of a waitlist confirmation link the visitor opened. */
+    readonly waitlistConfirmToken?: string;
+  },
+) {
+  const { waitlist = false, waitlistConfirmToken, ...signIn } = props;
   // While the beta is open, a visitor who is not signed in sees the landing page (#2567).
-  if (waitlist && signIn.busy !== true) return <Landing signIn={<SignInBlock {...signIn} />} />;
+  if (waitlist && signIn.busy !== true)
+    return (
+      <Landing
+        signIn={<SignInBlock {...signIn} />}
+        {...(waitlistConfirmToken === undefined ? {} : { confirmToken: waitlistConfirmToken })}
+      />
+    );
   return (
     <>
       <PreferencesBar />
@@ -104,6 +116,8 @@ export interface OidcAppProps {
   readonly inviteCode?: string;
   /** Called once the invite's account exists, so the kept code is forgotten. */
   readonly onInviteUsed?: () => void;
+  /** The token of a waitlist confirmation link the visitor opened. */
+  readonly waitlistConfirmToken?: string;
 }
 
 type Phase = "completing" | "signed-out" | "signed-in";
@@ -116,6 +130,7 @@ export function OidcApp({
   waitlist = false,
   inviteCode,
   onInviteUsed,
+  waitlistConfirmToken,
 }: OidcAppProps) {
   const [phase, setPhase] = useState<Phase>(() =>
     readAuthorizationResponse(navigation.search) !== undefined
@@ -193,6 +208,7 @@ export function OidcApp({
       <OidcSignIn
         // An invited visitor skips the landing page and goes straight to sign-in.
         waitlist={waitlist && inviteCode === undefined}
+        {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
         {...(notice === undefined ? {} : { notice })}
         busy={phase === "completing" || leaving}
         onPrepare={() => session.prepare()}

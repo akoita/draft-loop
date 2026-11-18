@@ -109,6 +109,7 @@ export const legalTextsEn: LegalTexts = {
             {
               list: [
                 "Account data (email address, name, sign-in events): to create and secure your account. Basis: the contract (GDPR Art. 6(1)(b)).",
+                "Waitlist requests (email address, the day, the version of the consent text and your language): to confirm the address is yours by email, then to invite you when a place opens. Basis: your consent (Art. 6(1)(a)).",
                 "Your material (CVs, career notes, profiles, job posts and the documents you write): to prepare your applications. Basis: the contract, and your consent for what you choose to upload.",
                 "Drafts and run history (drafts, the critic's findings, your decisions, the models used, token counts and estimated cost): to show you each draft, its sources and its cost. Basis: the contract.",
                 "Support questions and feedback you send: to answer you and improve the service. Basis: the contract and our legitimate interest.",
@@ -139,7 +140,7 @@ export const legalTextsEn: LegalTexts = {
             {
               list: [
                 "Google Cloud (Google Cloud EMEA Limited, Ireland): hosting, database, files and the sign-in service, in the europe-west1 region (Belgium), encrypted in transit and at rest.",
-                "Brevo (Sendinblue SAS, France): the service's emails, such as address verification and account notices.",
+                "Brevo (Sendinblue SAS, France): the service's emails, such as address verification, waitlist confirmations, invites and account notices.",
               ],
             },
             "Each processor is bound by a data processing agreement. We do not sell your data, and we share it with authorities only when the law requires it.",
@@ -152,6 +153,7 @@ export const legalTextsEn: LegalTexts = {
               list: [
                 "Your account and material: until you delete them, or until your account is deleted after 90 days without activity (you get an email warning two weeks before).",
                 "After a deletion: database backups age out within 35 days.",
+                "Waitlist requests: until you are invited, at most six months; a request whose confirmation link was never opened goes after 48 hours.",
                 "Server logs: 30 days.",
                 "AI providers: up to 30 days, as section 3 says.",
                 "If the test stops, we will make an effort to let you download your data first, then delete it.",
