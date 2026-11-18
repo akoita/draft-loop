@@ -57,8 +57,16 @@ export interface RecordsProps {
   readonly onAccountDeleted?: (notice: string) => void;
   /** Opens the operator page from the account menu, for a caller who may operate (#2829). */
   readonly onOperator?: () => void;
-  /** The screens for the chosen record; they call `onSaved` once they create or read the record. */
-  readonly children: (recordId: string, onSaved: (recordId: string) => void) => ReactNode;
+  /**
+   * The screens for the chosen record; they call `onSaved` once they create or read the record.
+   * `automaticSetup` is true on a one-person plan: a new record is created with the defaults,
+   * with no setup screen, since that person has nothing to name or choose.
+   */
+  readonly children: (
+    recordId: string,
+    onSaved: (recordId: string) => void,
+    automaticSetup: boolean,
+  ) => ReactNode;
 }
 
 /**
@@ -272,7 +280,7 @@ export function Records({
       )}
       {chosen === undefined ? null : (
         <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
-          {children(chosen, onSaved)}
+          {children(chosen, onSaved, onePerson)}
         </ReleaseAccess.Provider>
       )}
     </>

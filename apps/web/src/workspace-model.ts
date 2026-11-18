@@ -1,6 +1,8 @@
-import type {
-  WorkspaceSetupChoice,
-  WorkspaceSetupPreset,
+import {
+  defaultWorkspaceSetupRounds,
+  initialSetupPresetId,
+  type WorkspaceSetupChoice,
+  type WorkspaceSetupPreset,
 } from "@draft-loop/ui/workspace-setup-model";
 import { t } from "@lingui/core/macro";
 
@@ -18,6 +20,21 @@ export const ownerWorkspaceName = (): string => t`Your workspace`;
 export type Company = "anthropic" | "openai";
 
 type CreateWorkspaceBody = ApiInput<"PUT /v1/workspaces/{workspaceId}">["body"];
+
+/**
+ * What the setup screen would submit if nobody touched it: the CV language given, the default
+ * preset among those offered, the default rounds and demo mode off. A one-person plan creates its
+ * record with this choice and shows no setup screen; Settings changes it later.
+ */
+export function defaultSetupChoice(
+  presets: readonly WorkspaceSetupPreset[],
+  language: string,
+): WorkspaceSetupChoice | undefined {
+  const presetId = initialSetupPresetId(presets);
+  const preset = presets.find(({ id }) => id === presetId);
+  if (preset === undefined) return undefined;
+  return { language, maxRounds: defaultWorkspaceSetupRounds, preset, fixtureMode: false };
+}
 
 /** The create request for the first-run choice: the preset's two models, language and rounds. */
 export function setupRequestBody(choice: WorkspaceSetupChoice): CreateWorkspaceBody {
