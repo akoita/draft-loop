@@ -22,6 +22,7 @@ import {
   runCandidateProfileUnavailableMessage,
   withPinnedProfileFacts,
 } from "./run-profile-fact-retrieval.js";
+import { withRequirementEvidenceMap } from "./run-requirement-evidence-map.js";
 import {
   type RunSemanticRetrievalOptions,
   runEmbeddingModelRoot,
@@ -116,5 +117,9 @@ export async function openRunCandidateRetrieval(
     ...(semantic === undefined ? {} : { semanticOptions: semantic }),
   });
   // Outermost, so the picks are added to the final selection, profile facts included.
-  return withRequirementPickedEvidence(withFacts, context);
+  const picked = withRequirementPickedEvidence(withFacts, context);
+  return withRequirementEvidenceMap(picked, context, {
+    tier: retrieval.modelTier,
+    ...semanticDependencies,
+  });
 }

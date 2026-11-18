@@ -10,6 +10,11 @@ import type { AuditTrailStoragePort } from "@draft-loop/storage";
 import type { CandidateKnowledgeRetrievalResult } from "./knowledge-base.js";
 import { legacyEvidencePreflightLine } from "./legacy-evidence-migration.js";
 import {
+  type RequirementEvidenceMap,
+  requirementEvidenceMapAuditPayload,
+  requirementEvidenceMapPreflightLine,
+} from "./requirement-evidence-map.js";
+import {
   type RetrievalModeDecision,
   retrievalModePreflightLine,
 } from "./run-semantic-retrieval.js";
@@ -131,6 +136,8 @@ export interface EvidenceModeRetrieval {
   readonly evidenceModeDecision: () => Promise<EvidenceModeDecision>;
   /** Present only when the workspace retrieval mode is semantic or hybrid. */
   readonly retrievalModeDecision?: () => Promise<RetrievalModeDecision | undefined>;
+  /** The run's requirement-evidence map (#2981); undefined without requirements or full source. */
+  readonly requirementEvidenceMap?: () => Promise<RequirementEvidenceMap | undefined>;
 }
 
 /**
@@ -153,6 +160,7 @@ export async function announceRunEvidenceMode(
   if (decision.requestedMode === "full-source") {
     await announceEvidenceMode(storage, decision, workspaceId, runId, write);
   }
+  await announceRequirementEvidenceMap(storage, retrieval, workspaceId, runId, write);
   const retrievalMode = await retrieval.retrievalModeDecision?.();
   if (retrievalMode === undefined || retrievalMode.requestedMode === "lexical") return;
   write(retrievalModePreflightLine(retrievalMode));
@@ -171,6 +179,28 @@ export async function announceRunEvidenceMode(
       ...(retrievalMode.modelId === undefined ? {} : { modelId: retrievalMode.modelId }),
       ...(retrievalMode.revision === undefined ? {} : { revision: retrievalMode.revision }),
     },
+    createdAt: new Date().toISOString(),
+  });
+}
+
+/** Show and record the requirement-evidence map; content-free, ids and scores only. */
+async function announceRequirementEvidenceMap(
+  storage: Pick<AuditTrailStoragePort, "appendAuditEvent">,
+  retrieval: EvidenceModeRetrieval,
+  workspaceId: string,
+  runId: string,
+  write: (line: string) => void,
+): Promise<void> {
+  const map = await retrieval.requirementEvidenceMap?.();
+  if (map === undefined) return;
+  write(requirementEvidenceMapPreflightLine(map));
+  await storage.appendAuditEvent({
+    id: `requirement-evidence-map:${runId}:${randomUUID()}`,
+    workspaceId,
+    eventType: "run.requirement-evidence-map",
+    entityType: "run",
+    entityId: runId,
+    payload: requirementEvidenceMapAuditPayload(map),
     createdAt: new Date().toISOString(),
   });
 }

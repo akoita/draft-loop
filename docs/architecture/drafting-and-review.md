@@ -149,6 +149,20 @@ Every reservation below shares these limits. When protected evidence cannot
 fit, retrieval fails visibly before any provider call. All queries run locally,
 add no provider call and infer no dates.
 
+### Requirement-evidence map
+
+When a run has requirements and full-source chunks, it maps each requirement
+to at most eight chunks before the writer starts. The local embedding model
+ranks by meaning first, then keyword matches fill the remaining places.
+Without a calibrated model, or when the model fails, the map is keyword-only
+and says why.
+
+The map is shown in the preflight and recorded as a content-free
+`run.requirement-evidence-map` audit event: ids, origins and scores, never
+text. It does not yet change what the writer or the critic receives. The
+measurement behind it is
+[Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
+
 ### Required CV sections
 
 Before evidence reaches the author, bounded supplementary searches reserve

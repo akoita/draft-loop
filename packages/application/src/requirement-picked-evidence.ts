@@ -29,6 +29,49 @@ function tokens(text: string): ReadonlySet<string> {
   );
 }
 
+interface PickCandidate {
+  readonly chunk: ScoredEvidenceChunk;
+  readonly index: number;
+  readonly words: ReadonlySet<string>;
+}
+
+/** Candidates sharing a word with the requirement, best first; rare words count more. */
+function rankedCandidates(
+  candidates: readonly PickCandidate[],
+  requirement: string,
+): readonly PickCandidate[] {
+  const documentFrequency = new Map<string, number>();
+  for (const { words } of candidates) {
+    for (const word of words) documentFrequency.set(word, (documentFrequency.get(word) ?? 0) + 1);
+  }
+  const weight = (word: string) =>
+    Math.log(1 + candidates.length / (documentFrequency.get(word) ?? candidates.length));
+  const wanted = [...tokens(requirement)].filter((word) => documentFrequency.has(word));
+  return candidates
+    .map((candidate) => ({
+      candidate,
+      score: wanted.reduce(
+        (sum, word) => (candidate.words.has(word) ? sum + weight(word) : sum),
+        0,
+      ),
+    }))
+    .filter(({ score }) => score > 0)
+    .sort((left, right) => right.score - left.score || left.candidate.index - right.candidate.index)
+    .map(({ candidate }) => candidate);
+}
+
+/**
+ * The chunks that share a word with one requirement, best first, rare words counting more. The
+ * requirement-evidence map uses it for its keyword candidates.
+ */
+export function rankRequirementEvidence(
+  eligible: readonly ScoredEvidenceChunk[],
+  requirement: string,
+): readonly ScoredEvidenceChunk[] {
+  const candidates = eligible.map((chunk, index) => ({ chunk, index, words: tokens(chunk.text) }));
+  return rankedCandidates(candidates, requirement).map(({ chunk }) => chunk);
+}
+
 export interface PickRequirementEvidenceRequest {
   /** Every eligible chunk, in the order full source would send them. */
   readonly eligible: readonly ScoredEvidenceChunk[];
@@ -52,30 +95,9 @@ export function pickRequirementEvidence(
     .filter(({ chunk }) => !selectedIds.has(chunk.id));
   if (candidates.length === 0 || request.budgetCharacters <= 0) return [];
 
-  const documentFrequency = new Map<string, number>();
-  for (const { words } of candidates) {
-    for (const word of words) documentFrequency.set(word, (documentFrequency.get(word) ?? 0) + 1);
-  }
-  const weight = (word: string) =>
-    Math.log(1 + candidates.length / (documentFrequency.get(word) ?? candidates.length));
-
-  const rankings = request.requirements.map((requirement) => {
-    const wanted = [...tokens(requirement)].filter((word) => documentFrequency.has(word));
-    return candidates
-      .map((candidate) => ({
-        candidate,
-        score: wanted.reduce(
-          (sum, word) => (candidate.words.has(word) ? sum + weight(word) : sum),
-          0,
-        ),
-      }))
-      .filter(({ score }) => score > 0)
-      .sort(
-        (left, right) => right.score - left.score || left.candidate.index - right.candidate.index,
-      )
-      .slice(0, maximumPicksPerRequirement)
-      .map(({ candidate }) => candidate);
-  });
+  const rankings = request.requirements.map((requirement) =>
+    rankedCandidates(candidates, requirement).slice(0, maximumPicksPerRequirement),
+  );
 
   const picked = new Map<string, (typeof candidates)[number]>();
   let remaining = request.budgetCharacters;
