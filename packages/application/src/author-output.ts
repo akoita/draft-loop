@@ -32,7 +32,7 @@ import {
   proposalIssues,
 } from "./author-diagnostic-counts.js";
 import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
-import { filterGroundedAuthorProposal } from "./author-grounded-filter.js";
+import { groundAuthorProposal } from "./author-grounded-filter.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
 
 function proposalFailureStage(error: unknown): ProviderFailureStage {
@@ -298,12 +298,29 @@ function buildArtifact(
     groundingIssues.length === 0
       ? { proposal: completedProposal, removedBlocks: 0, shortenedBlocks: 0 }
       : keepGroundedBlocks
-        ? filterGroundedAuthorProposal(completedProposal, retrievedEvidence, requiredSections)
+        ? groundAuthorProposal(completedProposal, retrievedEvidence, requiredSections)
         : undefined;
-  if (grounded === undefined) {
-    throw new z.ZodError(
-      groundingIssues.map((issue) => ({
-        code: "custom",
+  if (grounded === undefined || "failed" in grounded) {
+    // When keeping the grounded blocks also failed, the first diagnostic names the rule that
+    // stopped it, content-free, so a failed run says why (#2992).
+    const filterFailure =
+      grounded === undefined
+        ? []
+        : [
+            {
+              code: "custom" as const,
+              path: ["groundedFilter", grounded.reason],
+              message: "the grounded part of the draft could not be kept",
+              params: {
+                stage: "factual-invariant-rejection",
+                invariantCode: "grounded_filter_failed",
+              },
+            },
+          ];
+    throw new z.ZodError([
+      ...filterFailure,
+      ...groundingIssues.map((issue) => ({
+        code: "custom" as const,
         path: issue.path,
         message: issue.message,
         params: {
@@ -311,7 +328,7 @@ function buildArtifact(
           invariantCode: issue.code,
         },
       })),
-    );
+    ]);
   }
   const { proposal, removedBlocks, shortenedBlocks } = grounded;
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);

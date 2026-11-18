@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterGroundedAuthorProposal,
+  groundAuthorProposal,
   ungroundedAuthorContentFindings,
 } from "./author-grounded-filter.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
@@ -96,7 +97,7 @@ describe("filterGroundedAuthorProposal", () => {
     });
   });
 
-  it("removes only the blocks whose claims fail grounding", () => {
+  it("drops only the failing claims and removes blocks left without a claim", () => {
     const input = proposal([inventedMetric, grounded, inventedName]);
     expect(completeCvProposalIssues(input, evidence).map(({ code }) => code)).toEqual([
       "factual_invariant_violation",
@@ -106,10 +107,34 @@ describe("filterGroundedAuthorProposal", () => {
 
     const result = filterGroundedAuthorProposal(input, evidence);
 
-    expect(result?.removedBlocks).toBe(2);
-    expect(result?.shortenedBlocks).toBe(0);
-    expect(result?.proposal.sections[1]?.blocks.map(({ text }) => text)).toEqual([grounded.text]);
+    expect(result?.removedBlocks).toBe(1);
+    expect(result?.shortenedBlocks).toBe(1);
+    expect(result?.proposal.sections[1]?.blocks.map(({ text }) => text)).toEqual([
+      grounded.text,
+      "Maintained deployment tooling",
+    ]);
     expect(completeCvProposalIssues(result?.proposal ?? input, evidence)).toEqual([]);
+  });
+
+  it("keeps a required section whose only block still has a grounded claim", () => {
+    const input = proposal([
+      {
+        text: "Reduced processing time by 25 percent. Reduced costs by 60 percent.",
+        claims: ["Reduced processing time by 25 percent.", "Reduced costs by 60 percent."],
+        cite: "work",
+      },
+    ]);
+
+    const result = filterGroundedAuthorProposal(input, evidence, ["Experience"]);
+
+    expect(result?.removedBlocks).toBe(0);
+    expect(result?.shortenedBlocks).toBe(1);
+    expect(result?.proposal.sections[1]?.blocks[0]?.text).toBe(
+      "Reduced processing time by 25 percent.",
+    );
+    expect(completeCvProposalIssues(result?.proposal ?? input, evidence, ["Experience"])).toEqual(
+      [],
+    );
   });
 
   it("shortens a block whose text adds an ungrounded fact around grounded claims", () => {
@@ -175,6 +200,17 @@ describe("filterGroundedAuthorProposal", () => {
     });
 
     expect(filterGroundedAuthorProposal(input, evidence)).toBeUndefined();
+    expect(groundAuthorProposal(input, evidence)).toEqual({
+      failed: true,
+      reason: "no_section_left",
+    });
+  });
+
+  it("names the issue that no block repair can fix", () => {
+    expect(groundAuthorProposal(proposal([inventedMetric]), evidence, ["Experience"])).toEqual({
+      failed: true,
+      reason: expect.stringMatching(/^required_section/u),
+    });
   });
 });
 

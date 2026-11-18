@@ -390,6 +390,7 @@ describe("adjudicated revision failure-stage classification with 10-finding carr
         failureReason: "factual-invariant-rejection",
         retryable: true,
         diagnostics: [
+          { code: "grounded_filter_failed", path: "groundedFilter.no_section_left" },
           { code: "factual_invariant_violation", path: "sections.0.blocks.0.claims.0.text" },
         ],
       });
