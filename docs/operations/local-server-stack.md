@@ -307,8 +307,10 @@ check off.
 | `DRAFT_LOOP_API_RATE_LIMIT`          | API               | Requests one source address may make per minute, health excepted; 1200 when unset. Past it the API answers 429 `rate_limited`          |
 | `DRAFT_LOOP_API_REFUSED_TOKEN_LIMIT` | API               | Refused credentials one address may present per minute before all its requests wait for the next minute; 30 when unset                 |
 | `DRAFT_LOOP_SUPPORT_ASSISTANT` | API | `on` lets the support assistant answer with Claude Haiku on the Claude route; `off` (default) answers every question with guide search |
+| `DRAFT_LOOP_SUPPORT_MEMBER_QUESTIONS_PER_MINUTE` | API | Questions one member may ask the assistant in any minute before guide search takes over; 5 when unset |
 | `DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS` | API | Questions one member may ask the assistant per UTC day before guide search takes over; 20 when unset |
-| `DRAFT_LOOP_SUPPORT_DAILY_COST_USD` | API | The assistant's estimated model cost per UTC day across all members, per API instance, before guide search takes over; 2 when unset |
+| `DRAFT_LOOP_SUPPORT_DAILY_COST_USD` | API | The assistant's estimated model cost per UTC day across all members before guide search takes over; 2 when unset. Shared by all instances in sign-in mode, per instance otherwise |
+| `DRAFT_LOOP_SUPPORT_LIMITS_SECRET` | API | Optional Secret Manager version whose JSON overrides the four settings above at run time, read within a minute ([Help](../features/help.md#limits-on-the-assistant)) |
 | `DRAFT_LOOP_SUPPORT_SERVICE_STATE`, `DRAFT_LOOP_SUPPORT_SERVICE_CODES` | API | What the assistant tells members about the service: `operational` (default), `degraded` or `down`, and comma-separated incident codes |
 | `DRAFT_LOOP_WORKER_JOB`              | API               | The worker's Cloud Run job, started after each queued run; unset locally                                                               |
 | `DRAFT_LOOP_WORKER_MODE`             | worker            | `serve` (default) keeps claiming jobs; `drain` exits once the queue stays empty                                                        |

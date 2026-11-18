@@ -15,9 +15,27 @@ export interface HelpSourceRef {
 export interface HelpAskReply {
   readonly mode: "assistant" | "guide_search";
   readonly outcome: "answered" | "refused" | "needs_person" | null;
+  /** Why a guide-search reply did not come from the assistant; absent from older hosts. */
+  readonly reason?: HelpFallbackReason | null;
   readonly text: string | null;
   readonly sections: readonly HelpSourceRef[];
 }
+
+/** The server's reasons for answering with guide search instead of the assistant. */
+export type HelpFallbackReason =
+  | "disabled"
+  | "member_rate"
+  | "member_limit"
+  | "cost_cap"
+  | "question_too_long"
+  | "model_failed"
+  | "no_answer";
+
+/** The reasons that are a limit, each with its own sentence instead of the generic one. */
+export type HelpLimitReason = Extract<
+  HelpFallbackReason,
+  "member_rate" | "member_limit" | "cost_cap" | "question_too_long"
+>;
 
 export interface HelpSupport {
   /** Opens a conversation; `assistantAvailable` false hides Ask, since search does the same. */
@@ -64,20 +82,40 @@ export function memberTurn(question: string): HelpTurn {
 
 /**
  * The assistant's turn. A guide-search reply has no text of its own, so it carries the screen's
- * sentence for it: `fallbackText` when sections match, `noMatchText` when none do.
+ * sentence for it: the limit's own sentence when a limit stopped the assistant, otherwise
+ * `fallbackText` when sections match and `noMatchText` when none do.
  */
 export function assistantTurn(
   reply: HelpAskReply,
-  words: { readonly fallbackText: string; readonly noMatchText: string },
+  words: {
+    readonly fallbackText: string;
+    readonly noMatchText: string;
+    readonly limitText?: Readonly<Record<HelpLimitReason, string>>;
+    /** Follows a limit's sentence when guide sections match. */
+    readonly sectionsText?: string;
+  },
 ): HelpTurn {
   const sources = reply.sections.map(({ id, title }) => ({ id, title }));
   if (reply.mode === "guide_search" || reply.text === null) {
+    const reason = reply.reason ?? null;
+    const limited =
+      reason !== null && words.limitText !== undefined && reason in words.limitText
+        ? words.limitText[reason as HelpLimitReason]
+        : undefined;
     return {
       role: "assistant",
-      text: sources.length === 0 ? words.noMatchText : words.fallbackText,
+      text:
+        limited === undefined
+          ? sources.length === 0
+            ? words.noMatchText
+            : words.fallbackText
+          : sources.length === 0 || words.sectionsText === undefined
+            ? limited
+            : `${limited} ${words.sectionsText}`,
       sources,
       fallback: true,
-      needsPerson: sources.length === 0,
+      // A limit is no reason to call a person; the member waits or reads the guide.
+      needsPerson: sources.length === 0 && limited === undefined,
     };
   }
   return {

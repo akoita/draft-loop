@@ -7904,6 +7904,7 @@
                 "type": "string",
                 "enum": [
                   "disabled",
+                  "member_rate",
                   "member_limit",
                   "cost_cap",
                   "question_too_long",
@@ -16553,6 +16554,7 @@
                 "type": "string",
                 "enum": [
                   "disabled",
+                  "member_rate",
                   "member_limit",
                   "cost_cap",
                   "question_too_long",
@@ -32131,7 +32133,7 @@
     "/v1/workspaces/{workspaceId}/support/conversations/{conversationId}/messages": {
       "post": {
         "summary": "Ask the support assistant a question",
-        "description": "Answers from the user guide and the caller's own plan, credits and runs in this record, in `language`. Falls back to the matching guide sections, with `reason`, when the assistant is off, the member's daily questions or the server's daily cost cap are spent, or the model fails. Questions do not count against the plan's model calls.",
+        "description": "Answers from the user guide and the caller's own plan, credits and runs in this record, in `language`. Falls back to the matching guide sections, with `reason`, when the assistant is off, the member asks faster than the per-minute limit (`member_rate`), the member's daily questions (`member_limit`) or the server's daily cost cap (`cost_cap`) are spent, or the model fails. Questions do not count against the plan's model calls.",
         "requestBody": {
           "required": true,
           "content": {

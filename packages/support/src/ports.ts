@@ -86,6 +86,8 @@ export type SupportModel = (request: SupportModelRequest) => Promise<SupportMode
 
 /** Today's use, for the per-member and global daily limits. */
 export interface SupportUsageLedger {
+  /** Questions the member asked in the last 60 seconds, for the burst limit. */
+  questionsLastMinute(memberId: string): Promise<number>;
   questionsToday(memberId: string): Promise<number>;
   costTodayUsd(): Promise<number>;
   /** Counts one question against the member's day, once it passed the limits. */

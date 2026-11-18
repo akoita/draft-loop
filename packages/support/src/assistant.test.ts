@@ -64,7 +64,11 @@ const account: SupportAccountPort = {
 /** A fake model that plays the scripted steps, or computes each from the request. */
 function harness(
   script: readonly (StepOutput | ((request: SupportModelRequest) => StepOutput))[],
-  overrides: Partial<SupportAssistantOptions> & { today?: number; costToday?: number } = {},
+  overrides: Partial<SupportAssistantOptions> & {
+    today?: number;
+    costToday?: number;
+    lastMinute?: number;
+  } = {},
 ) {
   const requests: SupportModelRequest[] = [];
   const recorded: SupportUsageEntry[] = [];
@@ -87,6 +91,7 @@ function harness(
     },
     account,
     usage: {
+      questionsLastMinute: async () => overrides.lastMinute ?? 0,
       questionsToday: async () => overrides.today ?? 0,
       costTodayUsd: async () => overrides.costToday ?? 0,
       countQuestion: async (memberId) => {
@@ -310,6 +315,16 @@ describe("the support assistant's limits (#2882)", () => {
         modelCalls: 0,
       }),
     ]);
+  });
+
+  it("falls back at the member's burst limit before counting the question", async () => {
+    const burst = harness([], { lastMinute: 5 });
+    expect(await burst.assistant.answer(ask("credits"))).toMatchObject({
+      mode: "guide_search",
+      reason: "member_rate",
+    });
+    expect(burst.requests).toHaveLength(0);
+    expect(burst.counted).toHaveLength(0);
   });
 
   it("falls back at the member's daily limit and at the global cost cap", async () => {

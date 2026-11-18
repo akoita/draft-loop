@@ -5218,6 +5218,10 @@ msgstr "Mean readiness score"
 msgid "mean score"
 msgstr "mean score"
 
+#: packages/ui/src/help-ask.tsx
+msgid "Meanwhile, these guide sections may help:"
+msgstr "Meanwhile, these guide sections may help:"
+
 #: packages/ui/src/model-profile-presentation.ts
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Medium"
@@ -9069,6 +9073,10 @@ msgstr "That invite was withdrawn. Ask for a new invite."
 msgid "That knowledge store is not on this service."
 msgstr "That knowledge store is not on this service."
 
+#: packages/ui/src/help-ask.tsx
+msgid "That question is too long for me. Try it in fewer words."
+msgstr "That question is too long for me. Try it in fewer words."
+
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "That usage level was not saved. Try again."
 msgstr "That usage level was not saved. Try again."
@@ -9133,6 +9141,10 @@ msgstr "The applied profiles no longer match the configured workspace models. Ap
 #: packages/ui/src/review.tsx
 msgid "The artifact has not been approved."
 msgstr "The artifact has not been approved."
+
+#: packages/ui/src/help-ask.tsx
+msgid "The assistant is resting until tomorrow."
+msgstr "The assistant is resting until tomorrow."
 
 #: packages/ui/src/app.tsx
 #: packages/ui/src/workspace-creation.tsx
@@ -11389,6 +11401,14 @@ msgstr "You have unsaved changes. Choose Discard changes to close without saving
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr "You have unsaved changes. Save them before marking the brief reviewed."
+
+#: packages/ui/src/help-ask.tsx
+msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
+msgstr "You're asking faster than I can keep up. Wait a minute, then ask again."
+
+#: packages/ui/src/help-ask.tsx
+msgid "You've reached today's questions for the assistant. It answers again tomorrow."
+msgstr "You've reached today's questions for the assistant. It answers again tomorrow."
 
 #: apps/web/src/beta-sign-up.tsx
 msgid "Your account could not be created. Try again."

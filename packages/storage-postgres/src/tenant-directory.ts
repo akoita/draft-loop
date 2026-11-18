@@ -24,6 +24,7 @@ import { createPostgresMemberSettings } from "./member-settings.js";
 import { createOrganisationActivity, type OrganisationActivity } from "./organisation-activity.js";
 import type { PostgresSchemaOptions } from "./postgres-storage.js";
 import { createSqlClient, type SqlClient, type SqlExecutor, type SqlRow } from "./sql-client.js";
+import { createSupportUsage, type SupportUsage } from "./support-usage.js";
 import { tenantDirectoryMigration } from "./tenant-directory-migration.js";
 
 /** The tenant directory on Postgres, with the pool it opened and its members' settings. */
@@ -37,6 +38,8 @@ export interface PostgresTenantDirectory extends TenantDirectory {
   readonly feedback: FeedbackStore;
   /** When each organisation was last active, for the beta's retention (#2538). */
   readonly organisationActivity: OrganisationActivity;
+  /** The support assistant's daily questions and spend, shared by every API instance. */
+  readonly supportUsage: SupportUsage;
   readonly close: () => Promise<void>;
 }
 
@@ -310,6 +313,7 @@ export async function createPostgresTenantDirectory(
     betaWaitlist: createBetaWaitlist(client),
     feedback: createPostgresFeedback(client),
     organisationActivity: createOrganisationActivity(client),
+    supportUsage: createSupportUsage(client),
     close: () => client.close(),
   };
 }

@@ -9,6 +9,8 @@ import { ApiConfigError } from "./config.js";
  */
 export interface SupportSettings {
   readonly enabled: boolean;
+  /** Questions one member may ask in any 60 seconds. */
+  readonly memberQuestionsPerMinute: number;
   readonly memberDailyQuestions: number;
   /** Across all members of this API instance, in US dollars of estimated model cost. */
   readonly dailyCostCapUsd: number;
@@ -40,6 +42,12 @@ export function readSupportSettings(env: NodeJS.ProcessEnv): SupportSettings {
   }
   return {
     enabled: switchValue === "on",
+    memberQuestionsPerMinute: readPositive(
+      env.DRAFT_LOOP_SUPPORT_MEMBER_QUESTIONS_PER_MINUTE,
+      "DRAFT_LOOP_SUPPORT_MEMBER_QUESTIONS_PER_MINUTE",
+      defaultSupportLimits.memberQuestionsPerMinute,
+      true,
+    ),
     memberDailyQuestions: readPositive(
       env.DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS,
       "DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS",

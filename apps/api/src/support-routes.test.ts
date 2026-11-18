@@ -7,6 +7,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
 import { readSupportSettings, type SupportSettings } from "./support-config.js";
+import { createSharedSupportLedger, type SharedSupportUsage } from "./support-ledger.js";
+import {
+  effectiveSupportSettings,
+  parseSupportLimitOverrides,
+  type SupportLimitOverrides,
+} from "./support-limits.js";
 import { createMemorySupportLedger, registerSupportRoutes } from "./support-routes.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -90,11 +96,25 @@ function scriptedRoute(steps: readonly Record<string, unknown>[]) {
   return { builder, requests };
 }
 
-async function start(settings: Partial<SupportSettings>, route?: AnthropicRouteBuilder) {
+async function start(
+  settings: Partial<SupportSettings>,
+  route?: AnthropicRouteBuilder,
+  extra: { overrides?: () => SupportLimitOverrides; logs?: Record<string, unknown>[] } = {},
+) {
+  const logs = extra.logs;
   app = await buildApi({
     ownerToken,
-    logger: false,
+    logger:
+      logs === undefined
+        ? false
+        : {
+            level: "info",
+            stream: { write: (line: string) => logs.push(JSON.parse(line)) },
+          },
     support: { ...readSupportSettings({ DRAFT_LOOP_SUPPORT_ASSISTANT: "on" }), ...settings },
+    ...(extra.overrides === undefined
+      ? {}
+      : { supportLimits: async () => extra.overrides?.() ?? {} }),
     application: {
       service,
       workspaceRoot: (workspaceId) => `/tenants/owner/workspaces/${workspaceId}`,
@@ -192,6 +212,49 @@ describe("the support routes (#2882)", () => {
     expect(body.sections[0]).toMatchObject({ id: "review", title: "Relire et exporter" });
     expect(body.sections[0].paragraphs.length).toBeGreaterThan(0);
     expect(requests).toHaveLength(0);
+  });
+
+  it("follow the operator's run-time overrides, including the kill switch", async () => {
+    const { builder, requests } = scriptedRoute([]);
+    let overrides: SupportLimitOverrides = { assistant: "off" };
+    const api = await start({}, builder, { overrides: () => overrides });
+
+    const opened = await api.inject({ method: "POST", url: conversations, headers: owner });
+    expect(opened.json()).toMatchObject({ assistant_available: false });
+    expect((await ask(api, "How do I add a job?")).json()).toMatchObject({ reason: "disabled" });
+
+    overrides = { memberDailyQuestions: 1 };
+    // The question asked while off did not count; the day's one question passes the limit.
+    expect((await ask(api, "How do I add a job?")).json()).toMatchObject({
+      reason: "model_failed",
+    });
+    expect((await ask(api, "How do I add a job?")).json()).toMatchObject({
+      reason: "member_limit",
+    });
+    expect(requests).toHaveLength(1);
+  });
+
+  it("refuse a burst of questions and log whose limit was reached, without the words", async () => {
+    const logs: Record<string, unknown>[] = [];
+    const answer = {
+      step: "answer",
+      answer: "Open the review and choose Export.",
+      section_ids: ["review"],
+      outcome: "answered",
+    };
+    const { builder } = scriptedRoute([answer, answer]);
+    const api = await start({ memberQuestionsPerMinute: 2 }, builder, { logs });
+
+    expect((await ask(api, "How do I export?")).json()).toMatchObject({ mode: "assistant" });
+    expect((await ask(api, "How do I export?")).json()).toMatchObject({ mode: "assistant" });
+    const third = (await ask(api, "How do I export?")).json();
+    expect(third).toMatchObject({ mode: "guide_search", reason: "member_rate" });
+
+    const limited = logs.filter((line) => line.event === "support_limited");
+    expect(limited).toEqual([
+      expect.objectContaining({ reason: "member_rate", memberId: "owner", level: 40 }),
+    ]);
+    expect(JSON.stringify(limited)).not.toMatch(/export/iu);
   });
 
   it("answer with guide search when the server has no Claude route", async () => {
@@ -337,6 +400,7 @@ describe("the support settings and ledger (#2882)", () => {
   it("default to off, with the package's limits", () => {
     expect(readSupportSettings({})).toEqual({
       enabled: false,
+      memberQuestionsPerMinute: 5,
       memberDailyQuestions: 20,
       dailyCostCapUsd: 2,
       serviceStatus: { state: "operational", codes: [] },
@@ -344,6 +408,7 @@ describe("the support settings and ledger (#2882)", () => {
     expect(
       readSupportSettings({
         DRAFT_LOOP_SUPPORT_ASSISTANT: "on",
+        DRAFT_LOOP_SUPPORT_MEMBER_QUESTIONS_PER_MINUTE: "3",
         DRAFT_LOOP_SUPPORT_MEMBER_DAILY_QUESTIONS: "5",
         DRAFT_LOOP_SUPPORT_DAILY_COST_USD: "0.5",
         DRAFT_LOOP_SUPPORT_SERVICE_STATE: "degraded",
@@ -351,6 +416,7 @@ describe("the support settings and ledger (#2882)", () => {
       }),
     ).toEqual({
       enabled: true,
+      memberQuestionsPerMinute: 3,
       memberDailyQuestions: 5,
       dailyCostCapUsd: 0.5,
       serviceStatus: { state: "degraded", codes: ["model-route-slow", "sign-in-slow"] },
@@ -365,6 +431,72 @@ describe("the support settings and ledger (#2882)", () => {
     expect(() => readSupportSettings({ DRAFT_LOOP_SUPPORT_DAILY_COST_USD: "-1" })).toThrow();
     expect(() => readSupportSettings({ DRAFT_LOOP_SUPPORT_SERVICE_STATE: "fine" })).toThrow();
     expect(() => readSupportSettings({ DRAFT_LOOP_SUPPORT_SERVICE_CODES: "Bad Code" })).toThrow();
+  });
+
+  it("take the operator's overrides field by field and refuse invalid ones", () => {
+    const base = readSupportSettings({ DRAFT_LOOP_SUPPORT_ASSISTANT: "on" });
+    expect(parseSupportLimitOverrides("")).toEqual({});
+    expect(parseSupportLimitOverrides(" {} ")).toEqual({});
+    const overrides = parseSupportLimitOverrides('{"assistant":"off","dailyCostUsd":0.5}');
+    expect(effectiveSupportSettings(base, overrides)).toEqual({
+      ...base,
+      enabled: false,
+      dailyCostCapUsd: 0.5,
+    });
+    expect(effectiveSupportSettings(base, { memberQuestionsPerMinute: 2 })).toMatchObject({
+      enabled: true,
+      memberQuestionsPerMinute: 2,
+      memberDailyQuestions: 20,
+    });
+    expect(() => parseSupportLimitOverrides('{"assistant":"maybe"}')).toThrow();
+    expect(() => parseSupportLimitOverrides('{"dailyCostUsd":1000}')).toThrow();
+    expect(() => parseSupportLimitOverrides('{"other":1}')).toThrow();
+    expect(() => parseSupportLimitOverrides("not json")).toThrow();
+  });
+
+  it("count a member's questions in the last minute only", async () => {
+    let now = new Date("2026-11-18T10:00:00Z");
+    const ledger = createMemorySupportLedger(() => now);
+    await ledger.countQuestion("m1");
+    await ledger.countQuestion("m1");
+    expect(await ledger.questionsLastMinute("m1")).toBe(2);
+    expect(await ledger.questionsLastMinute("m2")).toBe(0);
+    now = new Date("2026-11-18T10:01:00Z");
+    expect(await ledger.questionsLastMinute("m1")).toBe(0);
+    expect(await ledger.questionsToday("m1")).toBe(2);
+  });
+
+  it("keep the daily counts in the shared store and the burst window in memory", async () => {
+    const now = new Date("2026-11-18T10:00:00Z");
+    const calls: string[] = [];
+    const store: SharedSupportUsage = {
+      questionsToday: async (memberId, at) => {
+        calls.push(`today:${memberId}:${at.toISOString()}`);
+        return 7;
+      },
+      countQuestion: async (memberId) => {
+        calls.push(`count:${memberId}`);
+      },
+      costTodayUsd: async () => 1.5,
+      addCost: async (usd) => {
+        calls.push(`cost:${usd}`);
+      },
+    };
+    const ledger = createSharedSupportLedger(store, () => now);
+    expect(await ledger.questionsToday("m1")).toBe(7);
+    expect(await ledger.costTodayUsd()).toBe(1.5);
+    await ledger.countQuestion("m1");
+    expect(await ledger.questionsLastMinute("m1")).toBe(1);
+    await ledger.record({
+      memberId: "m1",
+      conversationId: "c",
+      modelId: "claude-haiku-5-5",
+      inputTokens: 1,
+      outputTokens: 1,
+      estimatedUsd: null,
+      at: now.toISOString(),
+    });
+    expect(calls).toEqual(["today:m1:2026-11-18T10:00:00.000Z", "count:m1", "cost:0"]);
   });
 
   it("count questions per member and cost per day, and reset at the UTC day", async () => {

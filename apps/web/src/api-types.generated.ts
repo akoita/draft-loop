@@ -1273,7 +1273,7 @@ export interface ApiSchemas {
     readonly conversation_id: string;
     readonly mode: "assistant" | "guide_search";
     readonly outcome: "answered" | "refused" | "needs_person" | null;
-    readonly reason: "disabled" | "member_limit" | "cost_cap" | "question_too_long" | "model_failed" | "no_answer" | null;
+    readonly reason: "disabled" | "member_rate" | "member_limit" | "cost_cap" | "question_too_long" | "model_failed" | "no_answer" | null;
     readonly text: string | null;
     readonly sections: readonly ({
       readonly id: "evidence" | "job" | "draft" | "review" | "prepare" | "display" | "agents" | "credits" | "privacy" | "problems";
