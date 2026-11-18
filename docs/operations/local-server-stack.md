@@ -232,6 +232,16 @@ relevance counts only word matches (#1806).
 - Each worker start logs `embedding model`, with a warning when it is not
   ready.
 
+The worker also carries the pinned cross-encoder (`BAAI/bge-reranker-v2-m3`,
+about 590 MB) at `/app/reranker-model`. It is used only when
+`DRAFT_LOOP_EVIDENCE_RERANK=on`, to reorder each requirement's evidence map
+candidates. Its own stage downloads and verifies it the same way.
+
+Reranking is slow on CPU. On a 12th-gen Intel i9 laptop, a run of 13
+requirements (104 pairs) took about 57 seconds, and the process peaked at
+about 2.1 GB of memory (#3023). Check the worker's memory limit before turning
+it on.
+
 The Node base image is about 330 MB of each image. The same images run in a
 deployment, reading that deployment's values from the environment.
 
