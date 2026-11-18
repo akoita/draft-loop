@@ -323,6 +323,47 @@ label:where(:not(.shared-screens *)) {
   border: 0;
 }
 
+/* A destructive action as one quiet line; its warning and confirm open in a dialog. */
+button.danger-link:where(:not(.shared-screens *)) {
+  justify-self: start;
+  background: transparent;
+  border-color: transparent;
+  color: var(--red);
+  padding-inline: 0;
+  text-align: start;
+}
+
+button.danger-link:where(:not(.shared-screens *)):hover {
+  text-decoration: underline;
+}
+
+.record-actions > .eyebrow {
+  margin: 0;
+}
+
+.record-actions:not(details) {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.record-actions:not(details) > button:not(.danger-link) {
+  justify-self: start;
+}
+
+.record-actions:not(details) > .muted {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.danger-dialog .inline-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.danger-dialog .inline-form > button {
+  justify-self: start;
+}
+
 .account-menu-body > .button-toolbar {
   justify-self: start;
 }

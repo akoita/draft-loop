@@ -1894,6 +1894,7 @@ msgid "Can't start yet: {0}"
 msgstr "Can't start yet: {0}"
 
 #: apps/web/src/application-material.tsx
+#: apps/web/src/danger-dialog.tsx
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator.tsx
 #: apps/web/src/records.tsx
@@ -2954,6 +2955,10 @@ msgstr "Delete a candidate you no longer need, or ask the owner for a bigger pla
 msgid "Delete all documents and applications"
 msgstr "Delete all documents and applications"
 
+#: apps/web/src/record-actions.tsx
+msgid "Delete all documents and applications…"
+msgstr "Delete all documents and applications…"
+
 #: packages/ui/src/home-folders.tsx
 msgid "Delete folder"
 msgstr "Delete folder"
@@ -2966,6 +2971,10 @@ msgstr "Delete folder {0}"
 #: apps/web/src/account-deletion.tsx
 msgid "Delete my account"
 msgstr "Delete my account"
+
+#: apps/web/src/account-deletion.tsx
+msgid "Delete my account…"
+msgstr "Delete my account…"
 
 #. placeholder {0}: folder.name
 #: packages/ui/src/home-folder-model.ts

@@ -27,6 +27,33 @@ describe("record export and deletion panel", () => {
     expect(html).not.toContain('role="alert"');
   });
 
+  it("shows one line per action and keeps the warning and confirm in a dialog", () => {
+    const html = renderToStaticMarkup(
+      <RecordActionsPanel {...panelProps} title="Your data" folded={false} />,
+    );
+
+    expect(html).not.toContain("<summary>");
+    expect(html).toContain('<h3 class="eyebrow">Your data</h3>');
+    expect(html).toContain(
+      '<button type="button" class="danger-link">Delete all documents and applications…</button>',
+    );
+    const [menu = "", dialog = ""] = html.split("<dialog");
+    expect(menu).not.toContain("It cannot be undone.");
+    expect(menu).not.toContain("delete-record-confirm");
+    expect(dialog).toContain("It cannot be undone.");
+    expect(dialog).toContain('<label for="delete-record-confirm">Type DELETE to confirm</label>');
+    expect(dialog).toContain(">Cancel</button>");
+  });
+
+  it("shows a refused delete in its dialog, not under the download", () => {
+    const html = renderToStaticMarkup(
+      <RecordActionsPanel {...panelProps} deleteMessages={["Type DELETE exactly to delete it."]} />,
+    );
+    const [menu = "", dialog = ""] = html.split("<dialog");
+    expect(menu).not.toContain('role="alert"');
+    expect(dialog).toContain('role="alert">Type DELETE exactly to delete it.</p>');
+  });
+
   it("disables both actions while one is under way, and shows refusals", () => {
     const html = renderToStaticMarkup(
       <RecordActionsPanel
