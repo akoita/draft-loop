@@ -65,6 +65,36 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
     });
   });
 
+  it("hides an entry whose email already redeemed an invite, and counts the same way", async () => {
+    await withDirectory(async ({ betaWaitlist, betaInvites }) => {
+      await betaWaitlist.join({ email: "ada@example.test", consentVersion, now });
+      await betaWaitlist.join({ email: "bob@example.test", consentVersion, now });
+      // Invited outside the waitlist, so the entry stays; then the invite is redeemed.
+      const { code } = await betaInvites.create({ email: "ada@example.test", now });
+      const open = await betaWaitlist.list();
+      expect(open.map((entry) => entry.email)).toEqual(["ada@example.test", "bob@example.test"]);
+
+      const result = await betaInvites.redeem({
+        code,
+        verifiedEmail: "ada@example.test",
+        cap: 10,
+        organisationName: "My applications",
+        termsVersion: "2026-11-17",
+        now,
+      });
+      expect(result.redeemed).toBe(true);
+
+      const entries = await betaWaitlist.list();
+      expect(entries.map((entry) => entry.email)).toEqual(["bob@example.test"]);
+      await expect(betaWaitlist.count()).resolves.toBe(1);
+      await expect(betaWaitlist.count("ada")).resolves.toBe(0);
+      const bob = entries[0]?.entryId ?? "";
+      await expect(betaWaitlist.invite({ entryId: bob, now })).resolves.toMatchObject({
+        invite: { email: "bob@example.test", state: "open" },
+      });
+    });
+  });
+
   it("pages and searches the entries, oldest first, with literal wildcards", async () => {
     await withDirectory(async ({ betaWaitlist }) => {
       for (const [index, email] of [
