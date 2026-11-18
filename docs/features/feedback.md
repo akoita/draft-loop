@@ -54,11 +54,13 @@ stateDiagram-v2
 
 | Control | What it does |
 | --- | --- |
-| Tabs: New, Kept, Linked to an issue, Closed | Show one status, with each tab's count; New is the default |
+| Tabs: New, Kept, Linked to an issue, Closed | Show one status, with each tab's count from the server; New is the default |
+| Search | Keeps notes whose text, page or kind contains the words, in every tab's count too |
+| **Show more** | Reads the next 50 notes; the list says how many show out of how many match |
 | **Close**, **Keep for later**, **Reopen** | Set the note's status |
 | **Link an issue** | Saves a GitHub issue address on the note and moves it to Linked |
 | **Draft an issue** | Opens GitHub's From feedback template with the note's context and id, never its text or ids in view |
-| Checkboxes, **Close selected** | Close several New or Kept notes at once |
+| Checkboxes, **Close selected** | Close several New or Kept notes at once; **Select all shown** picks the notes read so far |
 | **Context** | The note's page, versions, plan, ids, recent errors and browser |
 
 ### Triage notes through the API
@@ -122,7 +124,8 @@ Postgres store, its triage policy and its erasure are tested in
 | `POST /v1/workspaces/:workspaceId/feedback` | The same, for a member's agent token with the `journal` scope; its source is `agent` |
 | `send_feedback` (MCP) | An agent passes on the candidate's note; its screen is `agent` |
 | Web: **Operator**, Feedback | The operator's inbox: tabs by status, Close, Keep for later, Link or Draft an issue, Reopen, bulk close and the new-notes count ([operator screen](organisations-and-consent.md#operator-screen)) |
-| `GET /v1/operator/feedback` | The operator lists notes and support tickets with their context and triage, newest first, 100 by default and at most 500, of one `status` when given. A ticket has kind `support` and its shared `transcript` |
+| `GET /v1/operator/feedback` | The operator lists notes and support tickets with their context and triage, newest first, 100 by default and at most 500, after `offset`, of one `status` and matching `q` when given. The answer adds `total` and each status's `counts`. A ticket has kind `support` and its shared `transcript` |
+| `GET /v1/operator/feedback/:noteId` | The operator reads one note by id, the one the alert email links to |
 | `PATCH /v1/operator/feedback/:noteId` | The operator sets a note's `status` (`new`, `triaged`, `issue`, `closed`) and its `issueUrl`, an https GitHub issue address |
 | `list_feedback`, `triage_feedback` (MCP) | The same two operator routes, offered only when the MCP server runs with the owner token |
 | `.github/ISSUE_TEMPLATE/from-feedback.md` | The **From feedback** issue template: anonymised summary, context and note id |

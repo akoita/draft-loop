@@ -31495,7 +31495,54 @@
       },
       "get": {
         "summary": "List beta invites, the seats they use and the cap",
-        "description": "Operator only. Codes are never listed.",
+        "description": "Operator only. Codes are never listed. One page, newest first: at most `limit` invites, 50 by default, after skipping `offset`, of one `state` when given. `q` keeps invites whose email contains it, without case. `total` counts every matching invite; `counts` gives each state's count for the search.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "revoked",
+                "redeemed"
+              ]
+            },
+            "in": "query",
+            "name": "state",
+            "required": false
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -31541,6 +31588,37 @@
                       "items": {
                         "$ref": "#/components/schemas/BetaInvite"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "revoked": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "redeemed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "open",
+                        "revoked",
+                        "redeemed"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -31549,7 +31627,9 @@
                     "cap",
                     "capSource",
                     "deploymentCap",
-                    "invites"
+                    "invites",
+                    "total",
+                    "counts"
                   ],
                   "additionalProperties": false
                 }
@@ -31847,7 +31927,41 @@
     "/v1/operator/waitlist": {
       "get": {
         "summary": "List the beta waitlist, oldest first",
-        "description": "Operator only.",
+        "description": "Operator only. One page: at most `limit` entries, 50 by default, after skipping `offset`. `q` keeps entries whose email contains it, without case. `total` counts every matching entry.",
+        "parameters": [
+          {
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -31861,10 +31975,16 @@
                       "items": {
                         "$ref": "#/components/schemas/BetaWaitlistEntry"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
-                    "entries"
+                    "entries",
+                    "total"
                   ],
                   "additionalProperties": false
                 }
@@ -32186,7 +32306,7 @@
     "/v1/operator/feedback": {
       "get": {
         "summary": "List members' feedback notes, newest first",
-        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, of one `status` when it is given. Support tickets are deleted 90 days after they were sent.",
+        "description": "Operator only. At most `limit` notes and support tickets, 100 by default, after skipping `offset`, of one `status` when it is given. `q` keeps notes whose text, screen or category contains it, without case. `total` counts every matching note; `counts` gives each status's count for the search. Support tickets are deleted 90 days after they were sent.",
         "parameters": [
           {
             "schema": {
@@ -32198,6 +32318,27 @@
             "in": "query",
             "name": "limit",
             "required": false
+          },
+          {
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Only rows that contain this text, without case."
           },
           {
             "schema": {
@@ -32228,10 +32369,49 @@
                       "items": {
                         "$ref": "#/components/schemas/FeedbackNote"
                       }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "new": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "triaged": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "issue": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "closed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "new",
+                        "triaged",
+                        "issue",
+                        "closed"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
-                    "notes"
+                    "notes",
+                    "total",
+                    "counts"
                   ],
                   "additionalProperties": false
                 }
@@ -32262,6 +32442,64 @@
       }
     },
     "/v1/operator/feedback/{noteId}": {
+      "get": {
+        "summary": "Read one feedback note",
+        "description": "Operator only. The note or support ticket with this id, in any organisation; the alert email links to it. 404 for an unknown note.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "in": "path",
+            "name": "noteId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackNote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "summary": "Triage a feedback note",
         "description": "Operator only. Sets the note's status (`new`, `triaged`, `issue`, `closed`) and its GitHub issue link: a link replaces the stored one, null clears it, leaving it out keeps it. 400 invalid_input for status `issue` without a link or a link that is not an https GitHub issue address; 404 for an unknown note.",

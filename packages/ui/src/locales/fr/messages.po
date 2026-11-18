@@ -587,9 +587,14 @@ msgstr "{count, plural, one {Afficher # fait sur l’employeur} other {Afficher 
 msgid "{count} / {limit}"
 msgstr "{count} / {limit}"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} new"
 msgstr "{count} nouvelles"
+
+#: apps/web/src/operator.tsx
+msgid "{count} not used yet"
+msgstr "{count} pas encore utilisées"
 
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} readiness report findings block readiness"
@@ -624,6 +629,10 @@ msgstr "{count} vérifications ont échoué"
 #: packages/ui/src/readiness-blocker-groups.ts
 msgid "{count} validation checks failed: {0}"
 msgstr "{count} vérifications ont échoué : {0}"
+
+#: apps/web/src/operator.tsx
+msgid "{count} waiting"
+msgstr "{count} en attente"
 
 #: packages/ui/src/work-journal-pending.tsx
 msgid "{count} work journal notes wait for your review."
@@ -1265,6 +1274,7 @@ msgstr "Les agents ne peuvent pas encore ajouter de notes."
 msgid "all"
 msgstr "tout"
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/home-list-model.ts
 msgid "All"
 msgstr "Tout"
@@ -5855,6 +5865,10 @@ msgstr "pas de plafond de durée"
 msgid "No eligible chunks for full source, so retrieval was used"
 msgstr "Aucun fragment éligible pour la source complète ; la recherche a donc été utilisée"
 
+#: apps/web/src/operator.tsx
+msgid "No entry matches this search."
+msgstr "Aucune inscription ne correspond à cette recherche."
+
 #: packages/ui/src/run-requirement-evidence.tsx
 msgid "No evidence found"
 msgstr "Aucune preuve trouvée"
@@ -5923,6 +5937,10 @@ msgid "No invite has that code. Check it for typos, or ask for a new invite."
 msgstr "Aucune invitation ne correspond à ce code. Vérifiez qu’il n’y a pas de faute de frappe, ou demandez une nouvelle invitation."
 
 #: apps/web/src/operator.tsx
+msgid "No invite matches."
+msgstr "Aucune invitation ne correspond."
+
+#: apps/web/src/operator.tsx
 msgid "No invite sent yet."
 msgstr "Aucune invitation envoyée pour l'instant."
 
@@ -5973,6 +5991,10 @@ msgstr "Aucun profil de modèle : valeurs par défaut du fournisseur, fenêtres 
 #: packages/ui/src/review.tsx
 msgid "No network transmission"
 msgstr "Aucune transmission réseau"
+
+#: apps/web/src/operator.tsx
+msgid "No note matches this search."
+msgstr "Aucun retour ne correspond à cette recherche."
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "No notes wait for review."
@@ -6229,6 +6251,10 @@ msgstr "Non défini"
 msgid "Not sure"
 msgstr "Je ne sais pas"
 
+#: apps/web/src/operator.tsx
+msgid "Not used yet"
+msgstr "Pas encore utilisées"
+
 #: packages/ui/src/home-model.ts
 msgid "Not yet generated"
 msgstr "Pas encore généré"
@@ -6313,6 +6339,10 @@ msgstr "Désactivé"
 #: packages/ui/src/start-confirmation.tsx
 msgid "Off: pauses after a round with a blocking finding"
 msgstr "Désactivé : pause après un tour avec un constat bloquant"
+
+#: apps/web/src/operator.tsx
+msgid "Oldest first: the order people asked in."
+msgstr "Les plus anciennes d'abord : l'ordre des demandes."
 
 #: packages/ui/src/profile-presentation.ts
 msgid "Omission"
@@ -6530,6 +6560,10 @@ msgstr "Ouverture de l’espace de travail…"
 #: apps/web/src/operator.tsx
 msgid "Operator"
 msgstr "Opérateur"
+
+#: apps/web/src/operator.tsx
+msgid "Operator sections"
+msgstr "Parties de la page opérateur"
 
 #: apps/web/src/operator.tsx
 msgid "Operator, {newNotes} new feedback notes"
@@ -7254,6 +7288,7 @@ msgstr "Lecture de vos profils professionnels relus…"
 msgid "Reading your workspace…"
 msgstr "Lecture de votre espace de travail…"
 
+#: apps/web/src/operator-list.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr "Lecture…"
@@ -7379,6 +7414,7 @@ msgid "Recording… speak your answer."
 msgstr "Enregistrement… dites votre réponse."
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Redeemed"
 msgstr "Utilisée"
 
@@ -8048,6 +8084,7 @@ msgid "Revision"
 msgstr "Révision"
 
 #: apps/web/src/operator-model.ts
+#: apps/web/src/operator.tsx
 msgid "Revoked"
 msgstr "Révoquée"
 
@@ -8404,6 +8441,10 @@ msgstr "Le filtrage retient cette note. Modifiez-la ou abandonnez-la ; elle ne p
 msgid "Search applications"
 msgstr "Rechercher dans les candidatures"
 
+#: apps/web/src/operator.tsx
+msgid "Search by email"
+msgstr "Rechercher par e-mail"
+
 #: packages/ui/src/home-applications-view.tsx
 msgid "Search by name, employer or role"
 msgstr "Rechercher par nom, employeur ou poste"
@@ -8415,6 +8456,10 @@ msgstr "Rechercher une commande…"
 #: packages/ui/src/help-panel.tsx
 msgid "Search the guide"
 msgstr "Chercher dans le guide"
+
+#: apps/web/src/operator.tsx
+msgid "Search the text, page or kind"
+msgstr "Rechercher dans le texte, la page ou le type"
 
 #: packages/ui/src/profile-fact-usage.tsx
 msgid "Section usage"
@@ -8437,9 +8482,10 @@ msgstr "Voir exactement ce qui est envoyé"
 msgid "See your job applications and how their runs stand"
 msgstr "Voir vos candidatures et l’état de leurs exécutions"
 
+#. placeholder {0}: ordered.length
 #: apps/web/src/operator.tsx
-msgid "Select all"
-msgstr "Tout sélectionner"
+msgid "Select all shown ({0})"
+msgstr "Tout sélectionner à l'écran ({0})"
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Select an exact reviewed candidate profile before starting a review."
@@ -8661,9 +8707,17 @@ msgstr "Afficher les archives ({0})"
 msgid "Show everything"
 msgstr "Tout afficher"
 
+#: apps/web/src/operator.tsx
+msgid "Show invites"
+msgstr "Afficher les invitations"
+
 #: packages/ui/src/getting-started.tsx
 msgid "Show me the steps"
 msgstr "Montrez-moi les étapes"
+
+#: apps/web/src/operator-list.tsx
+msgid "Show more"
+msgstr "Afficher plus"
 
 #: apps/web/src/operator.tsx
 msgid "Show notes"
@@ -8709,6 +8763,10 @@ msgstr "Montrer d’où vient la formulation de chaque affirmation"
 #: packages/ui/src/app.tsx
 msgid "Showing {0} of {total} matching “{wanted}”"
 msgstr "{0} sur {total} correspondant à « {wanted} »"
+
+#: apps/web/src/operator-list.tsx
+msgid "Showing {shown} of {total}"
+msgstr "{shown} affichés sur {total}"
 
 #: packages/ui/src/review.tsx
 msgid "shown"
@@ -9364,10 +9422,6 @@ msgstr "Le rédacteur révise seul à partir de chaque constat du relecteur. La 
 #: apps/web/src/beta-sign-up-model.ts
 msgid "The beta is full for now. Your code stays valid: try again when places open."
 msgstr "La bêta est complète pour le moment. Votre code reste valable : réessayez quand des places se libèrent."
-
-#: apps/web/src/operator.tsx
-msgid "The beta's waitlist, its invites and what members tell you. Each invite is written to the audit log."
-msgstr "La liste d'attente de la bêta, ses invitations et ce que les membres vous disent. Chaque invitation est inscrite au journal d'audit."
 
 #: packages/ui/src/opportunity-brief-review-model.ts
 #: packages/ui/src/opportunity-brief-review.tsx
@@ -11300,6 +11354,10 @@ msgstr "Ce qui est retiré"
 #: packages/ui/src/run-details.tsx
 msgid "What leads"
 msgstr "Ce qui vient en tête"
+
+#: apps/web/src/operator.tsx
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log."
+msgstr "Ce que vous disent les membres, la liste d'attente de la bêta et ses invitations. Chaque invitation est inscrite au journal d'audit."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "What the agent may do"

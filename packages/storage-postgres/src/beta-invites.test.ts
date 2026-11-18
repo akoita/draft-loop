@@ -91,6 +91,34 @@ describe.runIf(connectionString !== undefined)("Postgres beta invites", () => {
     });
   });
 
+  it("pages invites newest first, filters by state and searches the email", async () => {
+    await withDirectory(async (directory) => {
+      const invites = directory.betaInvites;
+      const made = [];
+      for (const [index, email] of ["a@example.test", "b@example.test", "c@other.test"].entries()) {
+        made.push(await invites.create({ email, now: new Date(now.getTime() + index * 60_000) }));
+      }
+      await invites.revoke({ inviteId: made[1]?.invite.inviteId ?? "", now });
+
+      expect((await invites.list({ limit: 1, offset: 1 })).map((i) => i.email)).toEqual([
+        "b@example.test",
+      ]);
+      expect((await invites.list({ state: "open" })).map((i) => i.email)).toEqual([
+        "c@other.test",
+        "a@example.test",
+      ]);
+      expect((await invites.list({ query: "EXAMPLE", state: "open" })).map((i) => i.email)).toEqual(
+        ["a@example.test"],
+      );
+      await expect(invites.stateCounts()).resolves.toEqual({ open: 2, revoked: 1, redeemed: 0 });
+      await expect(invites.stateCounts("example")).resolves.toEqual({
+        open: 1,
+        revoked: 1,
+        redeemed: 0,
+      });
+    });
+  });
+
   it("refuses an unknown code, another email and a revoked code, creating nothing", async () => {
     await withDirectory(async (directory, schema) => {
       const { invite, code } = await directory.betaInvites.create({

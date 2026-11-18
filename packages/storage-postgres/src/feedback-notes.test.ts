@@ -328,6 +328,26 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
       expect(closed.map(({ noteId }) => noteId)).toEqual([first.noteId]);
       const fresh = await feedback.listNewest(10, "new");
       expect(fresh.map(({ text }) => text)).toEqual(["Still new."]);
+
+      // The inbox pages and searches across organisations (#3015).
+      await expect(feedback.statusCounts()).resolves.toEqual({
+        new: 1,
+        triaged: 0,
+        issue: 0,
+        closed: 1,
+      });
+      await expect(feedback.statusCounts("STILL")).resolves.toEqual({
+        new: 1,
+        triaged: 0,
+        issue: 0,
+        closed: 0,
+      });
+      const searched = await feedback.listNewest(10, undefined, { query: "home" });
+      expect(searched.map(({ text }) => text)).toEqual(["Still new."]);
+      await expect(feedback.listNewest(10, undefined, { offset: 2 })).resolves.toEqual([]);
+      await expect(feedback.listNewest(10, undefined, { query: "%" })).resolves.toEqual([]);
+      await expect(feedback.get(first.noteId)).resolves.toMatchObject({ status: "closed" });
+      await expect(feedback.get("no-such-note")).resolves.toBeUndefined();
     });
   });
 

@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import { operatorPageQuery } from "./operator-page-query.js";
 
 export interface FeedbackRoutesOptions {
   readonly feedback: FeedbackStore;
@@ -80,7 +81,7 @@ const sendBody = z.strictObject({
     ),
 });
 
-const listQuery = z.strictObject({
+const listQuery = operatorPageQuery.extend({
   limit: z.coerce.number().int().min(1).max(500).default(100),
   status: z.enum(feedbackStatuses).optional().describe("Only notes with this status."),
 });
@@ -192,18 +193,61 @@ export function registerFeedbackRoutes(
       schema: {
         summary: "List members' feedback notes, newest first",
         description:
-          "Operator only. At most `limit` notes and support tickets, 100 by default, of one `status` when it is given. Support tickets are deleted 90 days after they were sent.",
+          "Operator only. At most `limit` notes and support tickets, 100 by default, after skipping `offset`, of one `status` when it is given. `q` keeps notes whose text, screen or category contains it, without case. `total` counts every matching note; `counts` gives each status's count for the search. Support tickets are deleted 90 days after they were sent.",
         querystring: listQuery,
         response: {
-          200: z.object({ notes: z.array(noteSchema) }),
+          200: z.object({
+            notes: z.array(noteSchema),
+            total: z.number().int(),
+            counts: z.object({
+              new: z.number().int(),
+              triaged: z.number().int(),
+              issue: z.number().int(),
+              closed: z.number().int(),
+            }),
+          }),
           401: apiErrorSchema,
           403: apiErrorSchema,
         },
       },
     },
-    async (request) => ({
-      notes: (await feedback.listNewest(request.query.limit, request.query.status)).map(toResponse),
-    }),
+    async (request) => {
+      const { limit, offset, q, status } = request.query;
+      const [notes, counts] = await Promise.all([
+        feedback.listNewest(limit, status, { offset, ...(q === undefined ? {} : { query: q }) }),
+        feedback.statusCounts(q),
+      ]);
+      const total =
+        status === undefined
+          ? Object.values(counts).reduce((sum, count) => sum + count, 0)
+          : counts[status];
+      return { notes: notes.map(toResponse), total, counts };
+    },
+  );
+
+  app.get(
+    "/v1/operator/feedback/:noteId",
+    {
+      schema: {
+        summary: "Read one feedback note",
+        description:
+          "Operator only. The note or support ticket with this id, in any organisation; the alert email links to it. 404 for an unknown note.",
+        params: z.strictObject({ noteId: z.string().min(1).max(128) }),
+        response: {
+          200: noteSchema,
+          401: apiErrorSchema,
+          403: apiErrorSchema,
+          404: apiErrorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const note = await feedback.get(request.params.noteId);
+      if (note === undefined) {
+        return reply.code(404).send(apiError("not_found", "No such feedback note."));
+      }
+      return reply.code(200).send(toResponse(note));
+    },
   );
 
   app.patch(

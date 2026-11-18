@@ -10,6 +10,7 @@ import { z } from "zod";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { legalVersion } from "./legal-pages.js";
 import type { ResolveSignIn } from "./oidc-sign-in.js";
+import { operatorPageQuery } from "./operator-page-query.js";
 import { signUpRoute } from "./request-auth.js";
 
 /** What the sign-up route needs besides the invites: the sign-in claim and the Beta plan. */
@@ -125,15 +126,15 @@ export function registerBetaSignUpRoutes(
   const windowMs = options.windowMs ?? 15 * 60_000;
   const attempts = new Map<string, Attempts>();
 
-  const seats = async (listed?: readonly { readonly state: string }[]) => {
-    const [operatorCap, redeemed, all] = await Promise.all([
+  const seats = async () => {
+    const [operatorCap, redeemed, states] = await Promise.all([
       invites.operatorCap(),
       invites.redeemedCount(),
-      listed === undefined ? invites.list() : Promise.resolve(listed),
+      invites.stateCounts(),
     ]);
     return {
       redeemed,
-      open: all.filter((invite) => invite.state === "open").length,
+      open: states.open,
       cap: operatorCap ?? options.cap,
       capSource: operatorCap === undefined ? ("deployment" as const) : ("operator" as const),
       deploymentCap: options.cap,
@@ -182,16 +183,40 @@ export function registerBetaSignUpRoutes(
     {
       schema: {
         summary: "List beta invites, the seats they use and the cap",
-        description: "Operator only. Codes are never listed.",
+        description:
+          "Operator only. Codes are never listed. One page, newest first: at most `limit` invites, 50 by default, after skipping `offset`, of one `state` when given. `q` keeps invites whose email contains it, without case. `total` counts every matching invite; `counts` gives each state's count for the search.",
+        querystring: operatorPageQuery.extend({
+          state: z.enum(["open", "revoked", "redeemed"]).optional(),
+        }),
         response: {
-          200: seatsSchema.extend({ invites: z.array(inviteSchema) }),
+          200: seatsSchema.extend({
+            invites: z.array(inviteSchema),
+            total: z.number().int(),
+            counts: z.object({
+              open: z.number().int(),
+              revoked: z.number().int(),
+              redeemed: z.number().int(),
+            }),
+          }),
           403: apiErrorSchema,
         },
       },
     },
-    async () => {
-      const listed = [...(await invites.list())];
-      return { invites: listed, ...(await seats(listed)) };
+    async (request) => {
+      const { limit, offset, q, state } = request.query;
+      const [listed, counts, seatsNow] = await Promise.all([
+        invites.list({
+          limit,
+          offset,
+          ...(q === undefined ? {} : { query: q }),
+          ...(state === undefined ? {} : { state }),
+        }),
+        invites.stateCounts(q),
+        seats(),
+      ]);
+      const total =
+        state === undefined ? counts.open + counts.revoked + counts.redeemed : counts[state];
+      return { invites: [...listed], total, counts, ...seatsNow };
     },
   );
 
