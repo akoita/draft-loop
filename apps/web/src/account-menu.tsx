@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
 import type { ApiSchemas } from "./api-client.js";
+import { LegalLinks } from "./landing.js";
 import { OperatorButton } from "./operator.js";
 import { canOperate } from "./operator-model.js";
 import { accountLabel } from "./records-model.js";
@@ -23,7 +24,7 @@ export interface AccountMenuProps {
 
 /**
  * Who is signed in and, on a team plan, which team they act for: a small menu at the start of the
- * top bar with the person's data and sign-out.
+ * top bar with the person's data, sign-out and the legal pages they accepted at sign-up.
  */
 export function AccountMenu({
   me,
@@ -75,6 +76,9 @@ export function AccountMenu({
           />
         ) : null}
         <SignOutButton onSignOut={onSignOut} />
+        <p className="account-menu-legal">
+          <LegalLinks newTab={true} />
+        </p>
       </div>
     </details>
   );
