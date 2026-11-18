@@ -1,5 +1,6 @@
 import type { ContextSnapshot, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
+import type { GradedRequirementEvidenceMap } from "./requirement-evidence-grade.js";
 
 import {
   buildRequirementEvidenceMap,
@@ -49,6 +50,38 @@ export function preferredEvidenceFromMap(
           ]),
         );
   };
+}
+
+/**
+ * The critic's view of the map (#2983): each requirement's candidates, best first, when the setting
+ * names the `critic` use and the run builds a map. Undefined otherwise.
+ */
+export function criticEvidenceFromMap(
+  requirementEvidenceMap: (() => Promise<RequirementEvidenceMap | undefined>) | undefined,
+  enabled: boolean = enabledRequirementEvidenceMapUses().has("critic"),
+): (() => Promise<PreferredRequirementEvidence | undefined>) | undefined {
+  return preferredEvidenceFromMap(requirementEvidenceMap, enabled);
+}
+
+/** The map's candidates without the pairs the run's grade said do not support the requirement. */
+export function withoutUnsupportedEvidence(
+  evidence: PreferredRequirementEvidence,
+  graded: GradedRequirementEvidenceMap | undefined,
+): PreferredRequirementEvidence {
+  if (graded === undefined) return evidence;
+  const unsupported = new Set(
+    graded.entries.flatMap(({ requirementId, candidates }) =>
+      candidates
+        .filter(({ grade }) => grade === "does-not-support")
+        .map(({ chunkId }) => `${requirementId}\u0000${chunkId}`),
+    ),
+  );
+  return new Map(
+    [...evidence].map(([requirementId, chunkIds]) => [
+      requirementId,
+      chunkIds.filter((chunkId) => !unsupported.has(`${requirementId}\u0000${chunkId}`)),
+    ]),
+  );
 }
 
 export interface RequirementEvidenceMapRuntime {

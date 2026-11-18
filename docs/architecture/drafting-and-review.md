@@ -159,7 +159,7 @@ and says why.
 
 The map is shown in the preflight and recorded as a content-free
 `run.requirement-evidence-map` audit event: ids, origins and scores, never
-text. It does not yet change what the writer or the critic receives.
+text. By default it does not change what the writer or the critic receives.
 
 With `DRAFT_LOOP_EVIDENCE_GRADE=on`, the first critique grades each candidate
 as supports, partly supports or does not support. That is one extra call on the
@@ -172,7 +172,11 @@ named. With `fallback`, a run above its budget or cost cap adds each
 requirement's map candidates instead of its shared-word picks. With `writer`,
 the writer's achievement plan gives each requirement its best sent map
 candidate before falling back to shared words; the plan step reads the same
-plan, so both keep one cached prompt prefix. The
+plan, so both keep one cached prompt prefix. With `critic`, the critic's
+achievement plan and its plan review follow the map the same way, and the
+omission check cites each map candidate for the themes its requirement belongs
+to, so evidence that meets a theme in other words is checked against the CV.
+Pairs the run's grade marked as not supporting are left out of the check. The
 measurement behind it is
 [Requirement-evidence retrieval](../evaluation/requirement-evidence-retrieval.md).
 
