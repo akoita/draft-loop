@@ -7,35 +7,42 @@ candidate and no model provider.
 
 ## Result
 
-- **Keywords find about half.** Today's requirement-picked fallback (#2701)
-  finds 56% of the labelled evidence, and BM25 finds 53%, at eight chunks per
-  requirement.
-- **Keywords miss reworded and French evidence.** BM25 finds 17% of the
-  evidence written in French and half of the reworded evidence. It finds every
-  exact match.
-- **Semantic and hybrid arms:** measured by the
-  [Retrieval model evaluation](../../.github/workflows/retrieval-model-eval.yml)
-  workflow, which downloads the pinned model. Results are recorded below once
-  it has run.
-- **Gate:** the map work continues if the semantic or hybrid arm reaches 0.85
-  mean recall.
+**Go.** Semantic and hybrid retrieval both find 97% of each requirement's
+evidence, against 56% for today's fallback and 53% for BM25. Both pass the
+0.85 gate, so the requirement-evidence map (#2981) goes ahead.
 
-| Arm | Recall | Mean reciprocal rank | Requirements with a hit |
-| --- | --- | --- | --- |
-| Today's picks (shared rare words) | 0.56 | 0.35 | 12 of 16 |
-| BM25 | 0.53 | 0.38 | 10 of 16 |
-| Semantic, Granite 311M with floor | Pending | Pending | Pending |
-| Hybrid, BM25 plus semantic (RRF) | Pending | Pending | Pending |
+- **Keywords miss reworded and French evidence.** BM25 finds 17% of the
+  evidence that is partly in French and half of the reworded evidence.
+- **The local model closes both gaps.** Granite 311M with the pinned floor
+  finds every French and synonym match, and it skips the "machine learning"
+  distractor in favour of the chunk that really supports the requirement.
+- **Semantic ranks better than hybrid.** Mean reciprocal rank is 0.90 for
+  semantic against 0.70 for hybrid: the keyword hits that hybrid adds push
+  the right chunk down. The map should rank semantic first and use BM25 to
+  add exact matches.
+- Every arm returns at most eight chunks per requirement.
+
+| Arm                               | Recall | Mean reciprocal rank | Requirements with a hit |
+| --------------------------------- | ------ | -------------------- | ----------------------- |
+| Today's picks (shared rare words) | 0.56   | 0.35                 | 12 of 16                |
+| BM25                              | 0.53   | 0.38                 | 10 of 16                |
+| Semantic, Granite 311M with floor | 0.97   | 0.90                 | 16 of 16                |
+| Hybrid, BM25 plus semantic (RRF)  | 0.97   | 0.70                 | 16 of 16                |
 
 Recall by kind of requirement:
 
-| Kind | Requirements | Today's picks | BM25 |
-| --- | --- | --- | --- |
-| Paraphrase | 8 | 0.50 | 0.50 |
-| Synonym or abbreviation | 2 | 0.75 | 1.00 |
-| Evidence partly in French | 3 | 0.50 | 0.17 |
-| Exact terms | 2 | 1.00 | 1.00 |
-| Keyword trap | 1 | 0 | 0 |
+| Kind                      | Requirements | Today's picks | BM25 | Semantic | Hybrid |
+| ------------------------- | ------------ | ------------- | ---- | -------- | ------ |
+| Paraphrase                | 8            | 0.50          | 0.50 | 0.94     | 0.94   |
+| Synonym or abbreviation   | 2            | 0.75          | 1.00 | 1.00     | 1.00   |
+| Evidence partly in French | 3            | 0.50          | 0.17 | 1.00     | 1.00   |
+| Exact terms               | 2            | 1.00          | 1.00 | 1.00     | 1.00   |
+| Keyword trap              | 1            | 0             | 0    | 1.00     | 1.00   |
+
+The model numbers come from the
+[Retrieval model evaluation](../../.github/workflows/retrieval-model-eval.yml)
+workflow on PR #2991, which also reproduced the cross-language result:
+keywords 40% across languages, semantic and hybrid 100%.
 
 The picks arm returns chunks in source order, not by score, so its reciprocal
 rank understates it. It also has no relevance threshold: any shared rare word
