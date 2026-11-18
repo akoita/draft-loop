@@ -94,6 +94,10 @@
     "./feedback": {
       "types": "./src/feedback.ts",
       "import": "./src/feedback.ts"
+    },
+    "./run-requirement-evidence": {
+      "types": "./src/run-requirement-evidence.ts",
+      "import": "./src/run-requirement-evidence.ts"
     }
   },
   "files": [

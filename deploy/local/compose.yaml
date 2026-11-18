@@ -175,6 +175,9 @@ services:
       # The research brief's web search: `claude` with keys/anthropic_api_key, `linkup` with
       # keys/linkup_api_key, or `off`.
       DRAFT_LOOP_RESEARCH_SEARCH: ${DRAFT_LOOP_RESEARCH_SEARCH:-claude}
+      # Where runs use the requirement-evidence map, and whether they grade it (self-hosted.md).
+      DRAFT_LOOP_EVIDENCE_MAP: ${DRAFT_LOOP_EVIDENCE_MAP:-}
+      DRAFT_LOOP_EVIDENCE_GRADE: ${DRAFT_LOOP_EVIDENCE_GRADE:-off}
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes:

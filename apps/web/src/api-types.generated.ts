@@ -1134,6 +1134,27 @@ export interface ApiSchemas {
   "RunExports": {
     readonly exports: readonly (ApiSchemas["RunExport"])[];
   };
+  "RunRequirementEvidence": {
+    readonly runId: string;
+    readonly mode: "semantic" | "keyword";
+    readonly reason?: string;
+    readonly modelId?: string;
+    readonly chunkCount: number;
+    readonly grading?: "graded" | "failed";
+    readonly requirements: readonly ({
+      readonly requirementId: string;
+      readonly text?: string;
+      readonly candidates: readonly ({
+        readonly chunkId: string;
+        readonly origin: "semantic" | "keyword" | "both";
+        readonly score?: number;
+        readonly source?: string;
+        readonly lineStart?: number;
+        readonly lineEnd?: number;
+        readonly grade?: "supports" | "partly-supports" | "does-not-support";
+      })[];
+    })[];
+  };
   "RunReview": {
     readonly run: ApiSchemas["Run"];
     readonly draft: ApiSchemas["ReviewDraft"] | null;
@@ -1752,6 +1773,13 @@ export interface ApiOperations {
     readonly response: {
       readonly usage: ApiSchemas["FactUsage"];
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/runs/{runId}/requirement-evidence": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly runId: string;
+    };
+    readonly response: ApiSchemas["RunRequirementEvidence"];
   };
   "GET /v1/workspaces/{workspaceId}/runs/estimate": {
     readonly path: {

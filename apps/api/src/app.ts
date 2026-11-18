@@ -114,6 +114,7 @@ import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
+import { registerRunRequirementEvidenceRoutes } from "./run-requirement-evidence-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
@@ -606,6 +607,10 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
         workspaceRoot: application.workspaceRoot,
       });
     }
+    registerRunRequirementEvidenceRoutes(app, {
+      service: application.service,
+      workspaceRoot: application.workspaceRoot,
+    });
     registerRunEstimateRoute(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,

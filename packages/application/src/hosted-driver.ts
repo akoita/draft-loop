@@ -80,6 +80,7 @@ export const hostedDriverMethods = [
   "readRunApplicationPlan",
   "readRunModels",
   "readRunEvidenceUsage",
+  "readRunRequirementEvidence",
   "recordReviewDecision",
   "lifecycle",
   "export",

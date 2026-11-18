@@ -153,6 +153,7 @@ export const humanOnlyRoutes: readonly string[] = [
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/freshness",
   "GET /v1/workspaces/:workspaceId/profiles/:profileId/versions",
   "GET /v1/workspaces/:workspaceId/review-state",
+  "GET /v1/workspaces/:workspaceId/runs/:runId/requirement-evidence",
   "GET /v1/workspaces/:workspaceId/runs/:runId/review",
   "GET /v1/workspaces/:workspaceId/runs/:runId/trace",
   "GET /v1/workspaces/:workspaceId/runs/:runId/usage",
