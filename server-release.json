@@ -2,9 +2,9 @@
   "project": "draft-loop",
   "stage": "client-server-version",
   "channel": "staging",
-  "releaseName": "Drafts keep their grounded part",
+  "releaseName": "Economy drafts finish on every saved pair",
   "stageIssue": 1359,
   "milestone": 104,
-  "summary": "A draft whose writer adds one unsupported sentence is no longer thrown away: only that sentence is dropped, and the rest of its block stays when it checks out against the evidence. Everything kept passes the same grounding check. When a draft still cannot be kept, the error names the rule that stopped it. The release also carries the change that measures how keywords and the local model find each requirement's evidence.",
+  "summary": "Economy drafts no longer stop at the writer's output limit when a workspace or an application saved its model pair before the low-effort fix: a new run swaps the old Haiku writer version for the current one. A run already under way keeps the version it started with.",
   "knownLimitations": "Inviting people to a team still goes through the API or an operator; the account menu does not list the team's people yet. The operator reads and triages feedback through the API or MCP; there is no operator screen yet (#2829). Starting from a conversation needs the server's interviewer model. Signed-in users get the written interview only: live voice shows with the owner token (#2750). Agents cannot add text evidence yet (#2751). Credit packs sell only where the operator has set up Stripe; staging uses Stripe test mode. Self-service sign-up needs an invite code. The interview guide's paid walk is partial (#2623). The dating of relative source ages is not yet checked against a live search (#2579). Claude runs on the direct Claude API, outside the EU, until Claude on Vertex AI is available (#1564). French is beta until the French quality gate (milestone 83) runs. The legal pages show placeholder publisher details until the deployment sets them. The run dialog can still offer Start when the day's runs are used (#2974)."
 }
