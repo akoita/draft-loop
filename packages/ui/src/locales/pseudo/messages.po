@@ -7428,8 +7428,13 @@ msgstr ""
 msgid "Redeemed {0}"
 msgstr ""
 
+#: apps/web/src/operator.tsx
 #: packages/ui/src/profile.tsx
 msgid "Refresh"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Refreshing…"
 msgstr ""
 
 #: packages/ui/src/model-suggestions.tsx
@@ -11361,7 +11366,7 @@ msgid "What leads"
 msgstr ""
 
 #: apps/web/src/operator.tsx
-msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log."
+msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
