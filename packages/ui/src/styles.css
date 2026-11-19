@@ -6832,46 +6832,6 @@ input[type="text"].workspace-title-input {
   line-height: 1.6;
 }
 
-.credential-sections {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.credential-row {
-  display: grid;
-  gap: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  background: var(--surface-2);
-}
-
-.credential-row-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
-
-.credential-row-header strong {
-  flex: 1 1 auto;
-  color: var(--text-1);
-  font-size: var(--text-base);
-  font-weight: 650;
-}
-
-.credential-note {
-  margin: 0;
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
-.credential-protection {
-  flex: 1 1 100%;
-  color: var(--text-4);
-  font-size: var(--text-xs);
-}
-
 .status-app {
   color: var(--teal-bright);
   background: var(--teal-wash);
@@ -6885,119 +6845,6 @@ input[type="text"].workspace-title-input {
 .status-none {
   color: var(--text-4);
   background: var(--surface-3);
-}
-
-.credential-input-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.credential-input-group input {
-  flex: 1 1 220px;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-}
-
-.credential-test-result {
-  margin: 0;
-  color: var(--text-3);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-}
-
-.credential-test-works strong {
-  color: var(--teal-bright);
-}
-
-.credential-test-rejected strong {
-  color: var(--red);
-}
-
-.credential-test-warning strong {
-  color: var(--amber);
-}
-
-.credential-test-unknown strong {
-  color: var(--text-2);
-}
-
-.provider-auth-mode {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  background: var(--surface-2);
-}
-
-.provider-auth-mode legend {
-  padding: 0 var(--space-2);
-  color: var(--text-1);
-  font-size: var(--text-base);
-  font-weight: 650;
-}
-
-.credential-mode-copy,
-.credential-mode-status,
-.credential-mode-pending,
-.credential-mode-warning,
-.credential-session-guidance p {
-  margin: 0;
-  color: var(--text-3);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-}
-
-.provider-auth-choice {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-.provider-auth-choice input {
-  margin-top: 3px;
-}
-
-.provider-auth-choice span {
-  display: grid;
-  gap: 2px;
-}
-
-.provider-auth-choice strong {
-  color: var(--text-1);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.provider-auth-choice small {
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
-.credential-mode-pending {
-  color: var(--amber);
-}
-
-.credential-mode-warning {
-  color: var(--red);
-}
-
-.credential-session-guidance {
-  display: grid;
-  gap: var(--space-2);
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-3);
-}
-
-.credential-session-guidance strong {
-  color: var(--text-1);
-  font-size: var(--text-sm);
 }
 
 /* =========================================================================
@@ -9272,24 +9119,6 @@ input[type="text"].application-card-name-input {
 
 .home-archived-applications-body {
   justify-self: stretch;
-}
-
-.provider-authentication {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-
-.provider-authentication-head {
-  display: grid;
-  gap: 2px;
-}
-
-.provider-authentication-summary {
-  color: var(--text-3);
-  font-size: var(--text-xs);
-  line-height: 1.5;
 }
 
 .home-settings-actions {

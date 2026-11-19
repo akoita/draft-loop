@@ -278,31 +278,6 @@ describe("desktop native profile capabilities", () => {
     expect(portWith(["review.load"]).jobPagesAllowed).toBeUndefined();
   });
 
-  it("offers provider keys only from a host that keeps them", () => {
-    const state = createFixtureReviewState();
-    const portWith = (capabilities: readonly string[]) =>
-      createBridgeReviewPort(
-        createNativeCapabilityPort({
-          capabilities: capabilities as never,
-          invoke: async () => ({ ok: true, value: state }),
-        }),
-      );
-    const keeping = portWith([
-      "review.load",
-      "credential.status",
-      "credential.set",
-      "credential.remove",
-    ]);
-    const hosted = portWith(["review.load"]);
-
-    expect(keeping.getCredentialStatus).toBeDefined();
-    expect(keeping.setCredential).toBeDefined();
-    expect(keeping.removeCredential).toBeDefined();
-    expect(hosted.getCredentialStatus).toBeUndefined();
-    expect(hosted.setCredential).toBeUndefined();
-    expect(hosted.removeCredential).toBeUndefined();
-  });
-
   it("keeps profile methods capability-gated", async () => {
     const state = createFixtureReviewState();
     const port = createBridgeReviewPort(

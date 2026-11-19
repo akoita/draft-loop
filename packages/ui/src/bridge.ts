@@ -110,13 +110,6 @@ import {
   workspaceEvidenceMigrationResultKeys,
 } from "./career-evidence-contract.js";
 import { normalizeReviewCoverage } from "./coverage-contract.js";
-import {
-  type CredentialTestInput,
-  type CredentialTestResult,
-  credentialTestInputKeys,
-  credentialTestProviders,
-  normalizeCredentialTestResult,
-} from "./credential-test-contract.js";
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
 import {
@@ -281,12 +274,6 @@ export type {
   ApplicationJobResult,
 } from "./application-job-contract.js";
 export type {
-  CredentialTestInput,
-  CredentialTestOutcome,
-  CredentialTestProvider,
-  CredentialTestResult,
-} from "./credential-test-contract.js";
-export type {
   FactSuggestionAcceptInput,
   FactSuggestionAcceptItem,
   FactSuggestionAcceptResult,
@@ -372,21 +359,6 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = [
-  "anthropic",
-  "openai",
-  "deepinfra",
-  "google",
-  "mistral",
-] as const;
-export type CredentialProvider = (typeof credentialProviders)[number];
-
-export const providerAuthModeProviders = ["anthropic", "openai"] as const;
-export type ProviderAuthModeProvider = (typeof providerAuthModeProviders)[number];
-
-export const providerAuthModes = ["api-key", "user-session"] as const;
-export type ProviderAuthMode = (typeof providerAuthModes)[number];
-
 /**
  * The provider companies a workspace can be configured to use.
  *
@@ -407,20 +379,6 @@ export type ModelCompany = (typeof modelCompanies)[number];
  */
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
-
-export const credentialSources = ["app", "env", "user-session", "none"] as const;
-export type CredentialSource = (typeof credentialSources)[number];
-
-export const credentialProtections = [
-  "os-backed",
-  "basic-text",
-  "local-aes-gcm",
-  "environment",
-  "session-memory",
-  "provider-managed-session",
-  "none",
-] as const;
-export type CredentialProtection = (typeof credentialProtections)[number];
 
 export const runStates = [
   "collecting",
@@ -1109,39 +1067,6 @@ const exportWriteKeys = inputKeys<ExportWriteInput>()([
   "format",
   "relativePath",
 ]);
-
-export interface CredentialStatusInput {
-  readonly provider: CredentialProvider;
-}
-
-export interface CredentialSetInput {
-  readonly provider: CredentialProvider;
-  readonly apiKey: string;
-}
-
-const credentialSetKeys = inputKeys<CredentialSetInput>()(["provider", "apiKey"]);
-
-export interface CredentialRemoveInput {
-  readonly provider: CredentialProvider;
-}
-
-export interface ProviderAuthModeStatusInput {
-  readonly provider: ProviderAuthModeProvider;
-}
-
-export interface ProviderAuthModeSetInput {
-  readonly provider: ProviderAuthModeProvider;
-  readonly mode: ProviderAuthMode;
-}
-
-/**
- * credential.status and credential.remove share one validator, so the guard
- * covers both interfaces: either one gaining a key breaks the build.
- */
-const credentialKeys = inputKeys<CredentialStatusInput & CredentialRemoveInput>()(["provider"]);
-
-const providerAuthModeStatusKeys = inputKeys<ProviderAuthModeStatusInput>()(["provider"]);
-const providerAuthModeSetKeys = inputKeys<ProviderAuthModeSetInput>()(["provider", "mode"]);
 
 export interface ModelsListInput {
   readonly provider: ModelDiscoveryProvider;
@@ -3070,41 +2995,6 @@ const exportResultKeys = resultKeys<ExportResult>()([
   "relativePath",
 ]);
 
-export interface CredentialStatus {
-  readonly provider: CredentialProvider;
-  readonly configured: boolean;
-  readonly source: CredentialSource;
-  /** Non-secret description of how the active credential is protected. */
-  readonly protection: CredentialProtection;
-}
-
-export type CredentialResult = CredentialStatus;
-
-const credentialResultKeys = resultKeys<CredentialResult>()([
-  "provider",
-  "configured",
-  "source",
-  "protection",
-]);
-
-export interface ProviderAuthModeStatus {
-  readonly provider: ProviderAuthModeProvider;
-  readonly activeMode: ProviderAuthMode;
-  readonly preferredMode: ProviderAuthMode;
-  readonly restartRequired: boolean;
-  readonly environmentOverride: boolean;
-}
-
-export type ProviderAuthModeResult = ProviderAuthModeStatus;
-
-const providerAuthModeResultKeys = resultKeys<ProviderAuthModeResult>()([
-  "provider",
-  "activeMode",
-  "preferredMode",
-  "restartRequired",
-  "environmentOverride",
-]);
-
 /**
  * A model id the provider says the configured credential can reach.
  *
@@ -3264,12 +3154,6 @@ export interface BridgeCommandInputMap {
   "file.save-markdown": MarkdownFileSaveInput;
   "source.add-url": SourceAddUrlInput;
   "export.write": ExportWriteInput;
-  "credential.status": CredentialStatusInput;
-  "credential.set": CredentialSetInput;
-  "credential.remove": CredentialRemoveInput;
-  "credential.test": CredentialTestInput;
-  "provider-auth.status": ProviderAuthModeStatusInput;
-  "provider-auth.set": ProviderAuthModeSetInput;
   "models.list": ModelsListInput;
   "models.preview-independence": ModelsPreviewIndependenceInput;
   "models.profile-support": ModelProfileSupportInput;
@@ -3386,12 +3270,6 @@ export interface BridgeCommandOutputMap {
   "file.save-markdown": MarkdownFileSaveResult;
   "source.add-url": SourceAddUrlResult;
   "export.write": ExportResult;
-  "credential.status": CredentialStatus;
-  "credential.set": CredentialResult;
-  "credential.remove": CredentialResult;
-  "credential.test": CredentialTestResult;
-  "provider-auth.status": ProviderAuthModeStatus;
-  "provider-auth.set": ProviderAuthModeResult;
   "models.list": ModelsListResult;
   "models.preview-independence": ModelsPreviewIndependenceResult;
   "models.profile-support": ModelProfileSupportResult;
@@ -5504,41 +5382,6 @@ function validateExportWriteInput(value: unknown): ExportWriteInput {
   };
 }
 
-function validateCredentialInput(value: unknown): CredentialStatusInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, credentialProviders) };
-}
-
-function validateCredentialSetInput(value: unknown): CredentialSetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialSetKeys)) return invalidInput();
-  const provider = enumValue(input.provider, credentialProviders);
-  if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) return invalidInput();
-  return { provider, apiKey: input.apiKey.trim() };
-}
-
-function validateCredentialTestInput(value: unknown): CredentialTestInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, credentialTestInputKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, credentialTestProviders) };
-}
-
-function validateProviderAuthModeStatusInput(value: unknown): ProviderAuthModeStatusInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, providerAuthModeStatusKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, providerAuthModeProviders) };
-}
-
-function validateProviderAuthModeSetInput(value: unknown): ProviderAuthModeSetInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, providerAuthModeSetKeys)) return invalidInput();
-  return {
-    provider: enumValue(input.provider, providerAuthModeProviders),
-    mode: enumValue(input.mode, providerAuthModes),
-  };
-}
-
 function validateModelsListInput(value: unknown): ModelsListInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, modelsListKeys)) return invalidInput();
@@ -6132,24 +5975,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "source.add-url", input: validateSourceAddUrlInput(command.input) };
     case "export.write":
       return { type: "export.write", input: validateExportWriteInput(command.input) };
-    case "credential.status":
-      return { type: "credential.status", input: validateCredentialInput(command.input) };
-    case "credential.set":
-      return { type: "credential.set", input: validateCredentialSetInput(command.input) };
-    case "credential.remove":
-      return { type: "credential.remove", input: validateCredentialInput(command.input) };
-    case "credential.test":
-      return { type: "credential.test", input: validateCredentialTestInput(command.input) };
-    case "provider-auth.status":
-      return {
-        type: "provider-auth.status",
-        input: validateProviderAuthModeStatusInput(command.input),
-      };
-    case "provider-auth.set":
-      return {
-        type: "provider-auth.set",
-        input: validateProviderAuthModeSetInput(command.input),
-      };
     case "models.list":
       return { type: "models.list", input: validateModelsListInput(command.input) };
     case "models.preview-independence":
@@ -8411,29 +8236,6 @@ function normalizeExportResult(value: unknown): ExportResult {
   };
 }
 
-function normalizeCredentialResult(value: unknown): CredentialResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, credentialResultKeys)) return invalidInput();
-  return {
-    provider: enumValue(result.provider, credentialProviders),
-    configured: booleanValue(result.configured),
-    source: enumValue(result.source, credentialSources),
-    protection: enumValue(result.protection, credentialProtections),
-  };
-}
-
-function normalizeProviderAuthModeResult(value: unknown): ProviderAuthModeResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, providerAuthModeResultKeys)) return invalidInput();
-  return {
-    provider: enumValue(result.provider, providerAuthModeProviders),
-    activeMode: enumValue(result.activeMode, providerAuthModes),
-    preferredMode: enumValue(result.preferredMode, providerAuthModes),
-    restartRequired: booleanValue(result.restartRequired),
-    environmentOverride: booleanValue(result.environmentOverride),
-  };
-}
-
 /**
  * Polices a catalogue on its way to the renderer.
  *
@@ -8656,15 +8458,6 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeSourceAddUrlResult(value);
     case "export.write":
       return normalizeExportResult(value);
-    case "credential.status":
-    case "credential.set":
-    case "credential.remove":
-      return normalizeCredentialResult(value);
-    case "credential.test":
-      return normalizeCredentialTestResult(value) ?? invalidInput();
-    case "provider-auth.status":
-    case "provider-auth.set":
-      return normalizeProviderAuthModeResult(value);
     case "models.list":
       return normalizeModelsListResult(value);
     case "models.preview-independence":

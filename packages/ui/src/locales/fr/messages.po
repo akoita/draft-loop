@@ -58,10 +58,6 @@ msgstr ", avant toute nouvelle ébauche ou critique. Version"
 msgid ", show in the draft"
 msgstr ", apparaît dans l’ébauche"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid ", then close and reopen DraftLoop. DraftLoop does not copy subscription credentials into an API key."
-msgstr ", puis fermez et rouvrez DraftLoop. DraftLoop ne copie pas les identifiants d’abonnement dans une clé d’API."
-
 #: apps/web/src/account-deletion.tsx
 msgid ", to confirm"
 msgstr ", à confirmer"
@@ -130,10 +126,6 @@ msgstr ". Enregistrez-le à nouveau ci-dessous pour"
 #: apps/web/src/screening.tsx
 msgid ". Releasing lets runs use it. The release covers this screening result only and is recorded with your name and your reason."
 msgstr ". La libération permet aux exécutions de l’utiliser. Elle ne couvre que ce résultat de filtrage et est enregistrée avec votre nom et votre motif."
-
-#: packages/ui/src/provider-authentication.tsx
-msgid ". Saved preference:"
-msgstr ". Préférence enregistrée :"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid ". This is an explicit example, not a measured forecast, hard cap, or actual bill. Subscription quota and charges are not estimated."
@@ -308,16 +300,6 @@ msgstr "{0} Ajoutez-y une source pour l’utiliser dans cet espace de travail."
 msgid "{0} and {1}"
 msgstr "{0} et {1}"
 
-#. placeholder {0}: credentialProviderLabels()[provider]
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "{0} API key removed from app storage."
-msgstr "Clé d’API {0} retirée du stockage de l’application."
-
-#. placeholder {0}: credentialProviderLabels()[provider]
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "{0} API key saved in app storage. Review the protection status below."
-msgstr "Clé d’API {0} enregistrée dans le stockage de l’application. Vérifiez l’état de protection ci-dessous."
-
 #. placeholder {0}: tierNotInPlan(details?.role, details?.tier)
 #: apps/web/src/credits-model.ts
 msgid "{0} Ask the owner about a bigger plan."
@@ -343,11 +325,6 @@ msgstr "{0} pour {price}"
 #: packages/ui/src/home-model.ts
 msgid "{0} in this workspace"
 msgstr "{0} dans cet espace de travail"
-
-#. placeholder {0}: providerAuthModeLabels()[mode]
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "{0} is active for OpenAI."
-msgstr "{0} est actif pour OpenAI."
 
 #. placeholder {0}: draft.jobFile.name
 #: packages/ui/src/new-application-form.tsx
@@ -409,11 +386,6 @@ msgstr "{0} L’état de préparation n’a pas pu être vérifié ; certaines s
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "{0} responsibilities"
 msgstr "{0} responsabilités"
-
-#. placeholder {0}: providerAuthModeLabels()[mode]
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "{0} selected for OpenAI. Close and reopen DraftLoop to apply it."
-msgstr "{0} sélectionné pour OpenAI. Fermez et rouvrez DraftLoop pour l’appliquer."
 
 #. placeholder {0}: countedNouns.requirement(latest.requirementCount)
 #. placeholder {1}: latest.criticalCount
@@ -1140,10 +1112,6 @@ msgstr "Actions"
 msgid "Active"
 msgstr "Actif"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Active now:"
-msgstr "Actif maintenant :"
-
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Actual costs may differ. This excludes extra calls, retries, input growth, cache, tools, batch, regional premiums, and unsupported long context. The scenario estimates list-rate API usage only and does not change the selected profiles or their runtime budgets."
 msgstr "Les coûts réels peuvent différer. Sont exclus les appels supplémentaires, les nouvelles tentatives, la croissance des entrées, le cache, les outils, le traitement par lots, les suppléments régionaux et le contexte long non pris en charge. Le scénario estime uniquement l’usage de l’API au tarif public et ne modifie ni les profils choisis ni leurs budgets d’exécution."
@@ -1431,10 +1399,6 @@ msgstr "Un agent que vous avez connecté"
 msgid "An AI assistant answers from this guide and your account. It can make mistakes."
 msgstr "Un assistant IA répond à partir de ce guide et de votre compte. Il peut se tromper."
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "An environment override controls this mode. Unset the provider auth override and restart DraftLoop before changing the saved preference."
-msgstr "Une variable d’environnement impose ce mode. Supprimez la variable d’authentification du fournisseur et redémarrez DraftLoop avant de modifier la préférence enregistrée."
-
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator-model.ts
 msgid "An idea"
@@ -1472,34 +1436,10 @@ msgstr "Réponse :"
 #: packages/ui/src/app.tsx
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-profile-presentation.ts
-#: packages/ui/src/provider-authentication-actions.ts
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/usage-limit.ts
 msgid "Anthropic"
 msgstr "Anthropic"
-
-#. placeholder {0}: describeMode("Anthropic", anthropicMode)
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Anthropic {0}"
-msgstr "Anthropic {0}"
-
-#. placeholder {0}: describeMode("Anthropic", anthropicMode)
-#. placeholder {1}: describeMode( "OpenAI", openaiMode, )
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Anthropic {0} & OpenAI {1} configured"
-msgstr "Anthropic {0} et OpenAI {1} configurés"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Anthropic & OpenAI API keys configured"
-msgstr "Clés d’API Anthropic et OpenAI configurées"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Anthropic API key (Claude)"
-msgstr "Clé d’API Anthropic (Claude)"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "API key"
-msgstr "Clé d’API"
 
 #: packages/ui/src/start-confirmation.tsx
 msgid "API key, billed per token"
@@ -1719,10 +1659,6 @@ msgstr "La tentative {next} sur {0} démarre."
 msgid "Attempt {next} of {0} starts in {1}."
 msgstr "La tentative {next} sur {0} démarre dans {1}."
 
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Authenticated Codex / ChatGPT subscription"
-msgstr "Abonnement Codex / ChatGPT authentifié"
-
 #: packages/ui/src/app.tsx
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-suggestions.tsx
@@ -1809,10 +1745,6 @@ msgstr "Pilote automatique : tout exécuter"
 #: apps/web/src/interview-guide-model.ts
 msgid "Availability and notice"
 msgstr "Disponibilité et préavis"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "available"
-msgstr "disponible"
 
 #: packages/ui/src/review.tsx
 msgid "Available after approval"
@@ -2169,10 +2101,6 @@ msgstr "Vérifiez ce que l’exécution utilisera. Aucun appel au fournisseur n�
 msgid "Check what we found"
 msgstr "Vérifiez ce que nous avons trouvé"
 
-#: packages/ui/src/provider-key-test.tsx
-msgid "Checked at"
-msgstr "Vérifié le"
-
 #: packages/ui/src/start-checklist.tsx
 msgid "Checked when the review starts"
 msgstr "Vérifié au démarrage de la relecture"
@@ -2311,10 +2239,6 @@ msgstr "Choisissez ce que votre agent peut faire, puis créez son jeton."
 msgid "Choose which models write and review your next runs. Changing this does not affect runs already in progress. Sending candidate material still asks for your approval each time."
 msgstr "Choisissez les modèles qui rédigent et relisent vos prochaines exécutions. Ce choix n’affecte pas les exécutions en cours. L’envoi du contenu du candidat demande toujours votre accord à chaque fois."
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it does not change the current host."
-msgstr "Choisissez le compte OpenAI qu’utilise DraftLoop. Cette préférence est enregistrée pour le prochain lancement ; elle ne modifie pas l’hôte actuel."
-
 #: packages/ui/src/run-draft-choice.tsx
 msgid "Choosing…"
 msgstr "Sélection…"
@@ -2370,7 +2294,6 @@ msgstr "Claude Haiku 5.5"
 msgid "Claude Opus 5.5"
 msgstr "Claude Opus 5.5"
 
-#: packages/ui/src/provider-authentication-summary.ts
 #: packages/ui/src/start-confirmation.tsx
 msgid "Claude session"
 msgstr "session Claude"
@@ -2400,15 +2323,10 @@ msgstr "fermer"
 #: packages/ui/src/export-preview.tsx
 #: packages/ui/src/help-panel.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
-#: packages/ui/src/provider-authentication.tsx
 #: packages/ui/src/run-details.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Close"
 msgstr "Fermer"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Close and reopen DraftLoop to apply it; the active host remains unchanged until then."
-msgstr "Fermez et rouvrez DraftLoop pour l’appliquer ; l’hôte actif reste inchangé d’ici là."
 
 #: packages/ui/src/run-comparison.tsx
 msgid "Close comparison"
@@ -2439,14 +2357,6 @@ msgstr "Fermées"
 #: packages/ui/src/source-evidence-kind-contract.ts
 msgid "Code project"
 msgstr "Projet de code"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Codex session"
-msgstr "session Codex"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Codex session:"
-msgstr "Session Codex :"
 
 #: packages/ui/src/profile.tsx
 msgid "Collapse all"
@@ -2543,26 +2453,9 @@ msgstr "Terminez ou récupérez l’étape du rédacteur avant de relire les con
 msgid "Compress"
 msgstr "Compresser"
 
-#. placeholder {0}: missing.join(" and ")
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Configure {0} for live review"
-msgstr "Configurez {0} pour la relecture réelle"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Configure provider authentication for live review"
-msgstr "Configurez l’authentification des fournisseurs pour la relecture réelle"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Configured in app"
-msgstr "Configuré dans l’application"
-
 #: packages/ui/src/app.tsx
 msgid "Configured model pair"
 msgstr "Paire de modèles configurée"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Configured via env"
-msgstr "Configuré par l’environnement"
 
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "Confirm a fact"
@@ -2703,10 +2596,6 @@ msgstr "Coût non enregistré"
 #: packages/ui/src/run-comparison.tsx
 msgid "could not be read for comparison:"
 msgstr "n’a pas pu être lu pour la comparaison :"
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "Could not check"
-msgstr "Vérification impossible"
 
 #: packages/ui/src/profile.tsx
 msgid "Could not load reviewed profiles. Refresh to try again."
@@ -2943,15 +2832,6 @@ msgstr "Décider plus tard"
 msgid "Decision for"
 msgstr "Décision pour"
 
-#: packages/ui/src/provider-authentication-summary.ts
-#: packages/ui/src/provider-authentication.tsx
-msgid "DeepInfra API key"
-msgstr "Clé d’API DeepInfra"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "DeepInfra API key (Z.ai GLM)"
-msgstr "Clé d’API DeepInfra (Z.ai GLM)"
-
 #: packages/ui/src/profile-outcome.ts
 msgid "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved."
 msgstr "DeepInfra a renvoyé un flux GLM mal formé. Vérifiez la compatibilité du fournisseur ou du modèle et mettez DraftLoop à jour ; aucun fait n’a été enregistré."
@@ -3071,10 +2951,6 @@ msgstr "Suppression de votre compte…"
 #: packages/ui/src/workspace-setup.tsx
 msgid "Demo mode"
 msgstr "Mode démo"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Demo mode (no provider authentication required)"
-msgstr "Mode démo (aucune authentification de fournisseur requise)"
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Demo mode on"
@@ -3391,10 +3267,6 @@ msgstr "DraftLoop"
 msgid "DraftLoop / Opportunity brief"
 msgstr "DraftLoop / Brief d’opportunité"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "DraftLoop / Provider authentication"
-msgstr "DraftLoop / Authentification des fournisseurs"
-
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "DraftLoop / Writing policy"
 msgstr "DraftLoop / Politique de rédaction"
@@ -3407,10 +3279,6 @@ msgstr "Données de candidature DraftLoop"
 #: apps/web/src/credits-model.ts
 msgid "DraftLoop cannot price one of the workspace's models yet. Choose another preset or model."
 msgstr "DraftLoop ne peut pas encore chiffrer l’un des modèles de l’espace de travail. Choisissez un autre préréglage ou modèle."
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "DraftLoop could not reach the provider, so the key was not tested. Try again when you are online."
-msgstr "DraftLoop n’a pas pu joindre le fournisseur, la clé n’a donc pas été testée. Réessayez une fois en ligne."
 
 #: apps/web/src/landing.tsx
 msgid "DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI model writes, a model from another company checks each claim against your sources, and you approve what goes out."
@@ -3687,10 +3555,6 @@ msgstr "Saisissez l’adresse web (http ou https) de la page de l’offre."
 msgid "Entered by you"
 msgstr "Saisi par vous"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Environment variable"
-msgstr "Variable d’environnement"
-
 #: apps/web/src/interview-guide-model.ts
 msgid "Essential"
 msgstr "Essentiel"
@@ -3936,18 +3800,6 @@ msgstr "échec"
 #: packages/ui/src/run-steps.tsx
 msgid "Failed"
 msgstr "Échec"
-
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Failed to remove API key."
-msgstr "Impossible de retirer la clé d’API."
-
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Failed to save API key."
-msgstr "Impossible d’enregistrer la clé d’API."
-
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Failed to save provider authentication mode."
-msgstr "Impossible d’enregistrer le mode d’authentification du fournisseur."
 
 #. placeholder {0}: entry.errorType
 #: packages/ui/src/run-steps.tsx
@@ -4291,10 +4143,6 @@ msgstr "Gemini 4 Carbon"
 msgid "Gemini 4 Hydrogen"
 msgstr "Gemini 4 Hydrogen"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Gemini API key"
-msgstr "Clé d’API Gemini"
-
 #: packages/ui/src/profile-status.ts
 msgid "Generate a profile from your career evidence. You review it once before applications use it."
 msgstr "Générez un profil à partir de vos éléments de parcours. Vous le relisez une fois avant que les candidatures ne l’utilisent."
@@ -4419,15 +4267,6 @@ msgstr "Google Cloud"
 msgid "Google Cloud in the EU"
 msgstr "Google Cloud dans l’UE"
 
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Google Gemini"
-msgstr "Google Gemini"
-
-#: packages/ui/src/provider-authentication-summary.ts
-#: packages/ui/src/provider-authentication.tsx
-msgid "Google Gemini API key"
-msgstr "Clé d’API Google Gemini"
-
 #: packages/ui/src/model-profile-presentation.ts
 msgid "GPT-5.6 Luna"
 msgstr "GPT-5.6 Luna"
@@ -4513,10 +4352,6 @@ msgstr "Santé > Notes"
 #: packages/ui/src/help-panel.tsx
 msgid "Help"
 msgstr "Aide"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Hide"
-msgstr "Masquer"
 
 #. placeholder {0}: label.toLowerCase()
 #: packages/ui/src/review-panels.tsx
@@ -4776,10 +4611,6 @@ msgstr "Installez draftloop-mcp une fois sur cet ordinateur."
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Install model"
 msgstr "Installer le modèle"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Install the Codex CLI, run"
-msgstr "Installez la CLI Codex, exécutez"
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
 msgid "Installed"
@@ -5203,10 +5034,6 @@ msgstr "Export LinkedIn"
 msgid "Links and technologies are combined and the period widened."
 msgstr "Les liens et les technologies sont réunis et la période élargie."
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Linux basic_text (weak protection)"
-msgstr "Linux basic_text (protection faible)"
-
 #: packages/ui/src/home-applications-view.tsx
 msgid "List"
 msgstr "Liste"
@@ -5277,10 +5104,6 @@ msgstr "Chargement de la politique de rédaction…"
 msgid "Loading your profile…"
 msgstr "Chargement de votre profil…"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Local AES fallback (key stored beside app data)"
-msgstr "Repli AES local (clé stockée à côté des données de l’application)"
-
 #: packages/ui/src/model-profile-presentation.ts
 msgid "Local model"
 msgstr "Modèle local"
@@ -5288,10 +5111,6 @@ msgstr "Modèle local"
 #: packages/ui/src/app.tsx
 msgid "Local model server"
 msgstr "Serveur de modèles local"
-
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Local model server (no provider key required)"
-msgstr "Serveur de modèles local (aucune clé de fournisseur requise)"
 
 #: packages/ui/src/app.tsx
 msgid "Local model server address"
@@ -5350,17 +5169,9 @@ msgstr "La maintenance dure plus longtemps que prévu. Les modifications sont to
 msgid "Manage"
 msgstr "Gérer"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Manage API keys for Anthropic, OpenAI, DeepInfra, Google Gemini, and Mistral. Anthropic and OpenAI also support provider-managed sessions; app keys override their API-key environment variables."
-msgstr "Gérez les clés d’API d’Anthropic, OpenAI, DeepInfra, Google Gemini et Mistral. Anthropic et OpenAI acceptent aussi des sessions gérées par le fournisseur ; les clés de l’application remplacent leurs variables d’environnement de clé d’API."
-
 #: packages/ui/src/knowledge.tsx
 msgid "Manage career evidence"
 msgstr "Gérer les éléments de parcours"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Manage provider authentication"
-msgstr "Gérer l’authentification des fournisseurs"
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Managing people"
@@ -5482,18 +5293,12 @@ msgstr "Relecture des métadonnées"
 
 #: packages/ui/src/model-profile-budget.tsx
 #: packages/ui/src/model-profile-presentation.ts
-#: packages/ui/src/provider-authentication-actions.ts
 msgid "Mistral"
 msgstr "Mistral"
 
 #: packages/ui/src/app.tsx
 msgid "Mistral AI"
 msgstr "Mistral AI"
-
-#: packages/ui/src/provider-authentication-summary.ts
-#: packages/ui/src/provider-authentication.tsx
-msgid "Mistral API key"
-msgstr "Clé d’API Mistral"
 
 #: packages/ui/src/model-profile-presentation.ts
 msgid "Mistral Large 4 (preview)"
@@ -5900,10 +5705,6 @@ msgstr "Étape suivante : attendre la relecture"
 msgid "No"
 msgstr "Non"
 
-#: packages/ui/src/provider-key-test.tsx
-msgid "No access to the model"
-msgstr "Pas d’accès au modèle"
-
 #: packages/ui/src/knowledge.tsx
 msgid "No active knowledge bases are available."
 msgstr "Aucune base de connaissances active n’est disponible."
@@ -5952,10 +5753,6 @@ msgstr "Aucun tic d'écriture automatique courant trouvé."
 #: packages/ui/src/review.tsx
 msgid "no cost cap"
 msgstr "pas de plafond de coût"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "No credential"
-msgstr "Aucun identifiant"
 
 #: packages/ui/src/career-conversation-start.tsx
 msgid "No CV needed. An interviewer asks about your work, in writing or out loud."
@@ -6269,14 +6066,6 @@ msgstr "Non disponible avec votre connexion actuelle"
 #: packages/ui/src/model-profile-details.tsx
 msgid "Not checked"
 msgstr "Non vérifié"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Not configured"
-msgstr "Non configuré"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "not detected"
-msgstr "non détecté"
 
 #: packages/ui/src/start-checklist.tsx
 msgid "Not done"
@@ -6663,19 +6452,6 @@ msgstr "Ouvrir la version précédente à côté de l’ébauche"
 msgid "Open workspace"
 msgstr "Ouvrir l’espace de travail"
 
-#. placeholder {0}: describeMode("OpenAI", openaiMode)
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "OpenAI {0}"
-msgstr "OpenAI {0}"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "OpenAI API key (GPT)"
-msgstr "Clé d’API OpenAI (GPT)"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "OpenAI authentication"
-msgstr "Authentification OpenAI"
-
 #: packages/ui/src/app.tsx
 msgid "Opening"
 msgstr "Ouverture"
@@ -6737,10 +6513,6 @@ msgstr "Identifiant d’organisation"
 #: packages/ui/src/home.tsx
 msgid "Original workspace job"
 msgstr "Offre d’origine de l’espace de travail"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "OS-backed encryption"
-msgstr "Chiffrement fourni par le système"
 
 #: packages/ui/src/source-evidence-kind-contract.ts
 msgid "Other"
@@ -7177,14 +6949,6 @@ msgstr "Provenance du point {0}"
 msgid "Provider and model"
 msgstr "Fournisseur et modèle"
 
-#: packages/ui/src/provider-authentication-actions.ts
-msgid "Provider API key"
-msgstr "Clé d’API du fournisseur"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Provider authentication"
-msgstr "Authentification des fournisseurs"
-
 #: packages/ui/src/model-profile-presentation.ts
 msgid "Provider default"
 msgstr "Valeur par défaut du fournisseur"
@@ -7217,14 +6981,6 @@ msgstr "La transmission aux fournisseurs n’a pas été acceptée."
 #: packages/ui/src/review.tsx
 msgid "Provider transmission preflight"
 msgstr "Contrôle préalable de l’envoi aux fournisseurs"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Provider user session"
-msgstr "Session utilisateur du fournisseur"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Provider-managed session"
-msgstr "Session gérée par le fournisseur"
 
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Public"
@@ -7275,10 +7031,6 @@ msgstr "Aide rapide"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Quick replies"
 msgstr "Réponses rapides"
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "Quota or rate limit"
-msgstr "Quota ou limite de débit"
 
 #. placeholder {0}: view.reason
 #: packages/ui/src/run-requirement-evidence.tsx
@@ -7582,10 +7334,6 @@ msgstr "rejeter"
 msgid "Reject"
 msgstr "Rejeter"
 
-#: packages/ui/src/provider-key-test.tsx
-msgid "Rejected"
-msgstr "Rejeté"
-
 #: packages/ui/src/profile-fact-suggestions.tsx
 msgid "Rejected. DraftLoop will not suggest that change again."
 msgstr "Refusée. DraftLoop ne suggérera plus cette modification."
@@ -7624,7 +7372,6 @@ msgstr "Télétravail et déplacements"
 #: apps/web/src/records.tsx
 #: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/profile.tsx
-#: packages/ui/src/provider-authentication.tsx
 msgid "Remove"
 msgstr "Retirer"
 
@@ -8431,10 +8178,6 @@ msgstr "Même texte que la version active."
 msgid "Samples saved"
 msgstr "Textes enregistrés"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Save"
-msgstr "Enregistrer"
-
 #: packages/ui/src/job-description-panel.tsx
 msgid "Save a copy now"
 msgstr "Enregistrer une copie maintenant"
@@ -8800,10 +8543,6 @@ msgstr "Service indisponible"
 msgid "Service is up"
 msgstr "Service disponible"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Session memory only"
-msgstr "Mémoire de session uniquement"
-
 #: packages/ui/src/connected-agents.tsx
 msgid "Set a limit"
 msgstr "Fixer une limite"
@@ -8853,10 +8592,6 @@ msgstr "Filiation partagée passée outre sur justification enregistrée ; la cr
 #: apps/web/src/application-material-model.ts
 msgid "Short"
 msgstr "Court"
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Show"
-msgstr "Afficher"
 
 #. placeholder {0}: label.toLowerCase()
 #: packages/ui/src/review-panels.tsx
@@ -9479,14 +9214,6 @@ msgstr "Modèle de mise en page"
 msgid "Terms of use"
 msgstr "Conditions d'utilisation"
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Test key"
-msgstr "Tester la clé"
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "Testing the key with the provider…"
-msgstr "Test de la clé auprès du fournisseur…"
-
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Text"
 msgstr "Texte"
@@ -10026,15 +9753,6 @@ msgstr "L’offre a été mise en quarantaine par le filtrage des injections. Li
 msgid "The job this draft is written for, under the Job tab. A different job needs a new application."
 msgstr "L’offre pour laquelle cette ébauche est rédigée, sous l’onglet Offre. Une autre offre demande une nouvelle candidature."
 
-#: packages/ui/src/provider-key-test.tsx
-msgid "The key could not be tested."
-msgstr "La clé n’a pas pu être testée."
-
-#. placeholder {0}: listModels(result.models)
-#: packages/ui/src/provider-key-test.tsx
-msgid "The key works, but {0} is not available to it. Choose another model or use a key from an account that has it."
-msgstr "La clé fonctionne, mais {0} ne lui est pas accessible. Choisissez un autre modèle ou utilisez la clé d’un compte qui y a accès."
-
 #. placeholder {0}: material.sourceId
 #. placeholder {1}: material.knowledgeBaseId
 #: apps/web/src/screening-model.ts
@@ -10235,31 +9953,9 @@ msgstr "La paire de profils n’a pas pu être appliquée : {0}"
 msgid "The profile pair could not be applied. Your draft is unchanged."
 msgstr "La paire de profils n’a pas pu être appliquée. Votre brouillon est inchangé."
 
-#: packages/ui/src/provider-key-test.tsx
-msgid "The provider accepted the request but refused it for now. Check the account's quota, or try again later."
-msgstr "Le fournisseur a accepté la requête mais la refuse pour l’instant. Vérifiez le quota du compte, ou réessayez plus tard."
-
-#. placeholder {0}: listModels(result.models)
-#: packages/ui/src/provider-key-test.tsx
-msgid "The provider accepts this key, and it can use {0}."
-msgstr "Le fournisseur accepte cette clé, et elle peut utiliser {0}."
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "The provider accepts this key. The open workspace uses none of its models, so no model was checked."
-msgstr "Le fournisseur accepte cette clé. L’espace de travail ouvert n’utilise aucun de ses modèles, aucun modèle n’a donc été vérifié."
-
-#. placeholder {0}: result.providerCode
-#: packages/ui/src/provider-key-test.tsx
-msgid "The provider answered {0}. Check the account's quota, or try again later."
-msgstr "Le fournisseur a répondu {0}. Vérifiez le quota du compte, ou réessayez plus tard."
-
 #: packages/ui/src/app.tsx
 msgid "The provider could not be reached."
 msgstr "Le fournisseur est injoignable."
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "The provider does not accept this key. Check it for a typo or replace it."
-msgstr "Le fournisseur n’accepte pas cette clé. Vérifiez-la (faute de frappe) ou remplacez-la."
 
 #: apps/web/src/refusal-text.ts
 msgid "The request could not be processed."
@@ -10769,14 +10465,6 @@ msgstr "C’est la première version du document."
 msgid "This job posting looks {label}."
 msgstr "Cette annonce semble {label}."
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "This key sends candidate material to Mistral AI (api.mistral.ai). Mistral Large 4 is a public preview."
-msgstr "Cette clé envoie les éléments du candidat à Mistral AI (api.mistral.ai). Mistral Large 4 est en préversion publique."
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key."
-msgstr "Cette clé envoie le contenu soumis à Google ; les conditions de l’offre gratuite de l’API Gemini permettent à Google de l’utiliser, les éléments du candidat exigent donc une clé payante."
-
 #: packages/ui/src/career-interview-live.tsx
 msgid "This live conversation reached its time limit. Start it again to go on."
 msgstr "Cette conversation en direct a atteint sa durée maximale. Relancez-la pour continuer."
@@ -11172,10 +10860,6 @@ msgstr "Brouillon non enregistré"
 msgid "Unsupported"
 msgstr "Non pris en charge"
 
-#: packages/ui/src/provider-authentication-summary.ts
-msgid "Unsupported provider route"
-msgstr "Route de fournisseur non prise en charge"
-
 #: packages/ui/src/model-profile-details.tsx
 msgid "Unsupported with the configured authentication route"
 msgstr "Non pris en charge avec la route d’authentification configurée"
@@ -11279,10 +10963,6 @@ msgstr "Utiliser une autre paire de modèles pour cette candidature"
 msgid "Use a local server address on this machine, such as http://127.0.0.1:11434/v1."
 msgstr "Utilisez l’adresse d’un serveur local sur cette machine, comme http://127.0.0.1:11434/v1."
 
-#: packages/ui/src/provider-authentication.tsx
-msgid "Use an OpenAI API key with direct API billing."
-msgstr "Utiliser une clé d’API OpenAI avec facturation directe de l’API."
-
 #: packages/ui/src/source-evidence-kinds.tsx
 msgid "use detected"
 msgstr "utiliser la valeur détectée"
@@ -11290,10 +10970,6 @@ msgstr "utiliser la valeur détectée"
 #: packages/ui/src/model-profile-budget.tsx
 msgid "Use nonnegative whole-token counts and planned call counts, with no more than 1,000 calls per role."
 msgstr "Utilisez des nombres entiers positifs de jetons et d’appels prévus, avec au plus 1 000 appels par rôle."
-
-#: packages/ui/src/provider-authentication.tsx
-msgid "Use the local Codex CLI session with subscription billing."
-msgstr "Utiliser la session locale de la CLI Codex avec facturation par abonnement."
 
 #: packages/ui/src/start-advanced-options.tsx
 msgid "Use the raw job description"
@@ -11728,10 +11404,6 @@ msgstr "Travail sur votre profil…"
 #: packages/ui/src/profile-status-view.tsx
 msgid "Working…"
 msgstr "Traitement…"
-
-#: packages/ui/src/provider-key-test.tsx
-msgid "Works"
-msgstr "Fonctionne"
 
 #: apps/web/src/operator-trace.tsx
 msgid "Workspace {workspaceId}."
