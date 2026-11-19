@@ -7,6 +7,7 @@ import {
 import { applicationMaterialRecordInput } from "@draft-loop/application/application-material-input";
 import { applicationMaterialDefaultModelId } from "@draft-loop/application/application-material-model";
 import { failedCallCostUsd, guardCallCost } from "@draft-loop/application/call-cost-guard";
+import { billedCallUsage } from "@draft-loop/application/career-interview-usage";
 import {
   coverLetterClaimCheckModelId,
   createModelCoverLetterClaimChecker,
@@ -298,7 +299,21 @@ export function registerInterviewGuideRoutes(
               : writerRoute;
           const response = await target.execute(modelRequest).catch((error: unknown) => {
             // A rejected answer, such as one cut off at its output limit, was billed too.
-            spentUsd += failedCallCostUsd(error);
+            const failedUsd = failedCallCostUsd(error);
+            spentUsd += failedUsd;
+            const billed = billedCallUsage(error);
+            request.log.warn(
+              {
+                workspaceId,
+                applicationId,
+                model: modelRequest.model.modelId,
+                inputTokens: billed?.inputTokens ?? 0,
+                outputTokens: billed?.outputTokens ?? 0,
+                costUsd: failedUsd,
+                failed: true,
+              },
+              "interview guide model call",
+            );
             throw error;
           });
           const cost = response.cost.estimatedUsd ?? 0;

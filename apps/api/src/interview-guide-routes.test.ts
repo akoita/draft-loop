@@ -317,6 +317,32 @@ describe("interview guide route", () => {
     expect(saved?.interview_details?.depth).toBe("essential");
   });
 
+  it("logs a failed call with what the provider billed for it (#2806)", async () => {
+    const billed = Object.assign(new Error("cut off"), {
+      code: "invalid-response",
+      billed: {
+        usage: { inputTokens: 900, outputTokens: 4000, totalTokens: 4900 },
+        cost: { estimatedUsd: 0.021 },
+      },
+    });
+    await build({
+      consent: granted,
+      route: () => ({
+        provider: "anthropic",
+        route: "anthropic-api",
+        execute: async () => {
+          throw billed;
+        },
+      }),
+    });
+    const response = await post({ details: essential, research: "skip" });
+    expect(response.statusCode).toBeGreaterThanOrEqual(400);
+    const line = logs
+      .map((entry) => JSON.parse(entry) as Record<string, unknown>)
+      .find((entry) => entry.msg === "interview guide model call" && entry.failed === true);
+    expect(line).toMatchObject({ inputTokens: 900, outputTokens: 4000, costUsd: 0.021 });
+  });
+
   it("queues guide research when the candidate approved and the brief cannot serve", async () => {
     const queued: unknown[] = [];
     const runs: ResearchRuns = {
