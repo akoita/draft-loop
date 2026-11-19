@@ -8854,6 +8854,10 @@ msgstr "Set the draft's length in the writing policy on the hosted service."
 msgid "Set this topic aside"
 msgstr "Set this topic aside"
 
+#: apps/web/src/account-menu.tsx
+msgid "Set up a passkey or an authenticator app for the step after your password"
+msgstr "Set up a passkey or an authenticator app for the step after your password"
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Set up a review workspace"
 msgstr "Set up a review workspace"
@@ -9011,6 +9015,10 @@ msgstr "Sign-in could not be completed. Try again."
 #: packages/ui/src/start-checklist-model.ts
 msgid "Sign-in is on Home, under Settings."
 msgstr "Sign-in is on Home, under Settings."
+
+#: apps/web/src/account-menu.tsx
+msgid "Sign-in security"
+msgstr "Sign-in security"
 
 #: apps/web/src/records-model.ts
 msgid "Signed in"
@@ -12108,8 +12116,8 @@ msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Your organisation has no plan yet. Ask the owner to choose one."
 
 #: apps/web/src/refusal-text.ts
-msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
-msgstr "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
+msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again and retry."
+msgstr "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again and retry."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Your pitch"

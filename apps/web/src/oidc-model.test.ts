@@ -14,6 +14,7 @@ import {
   parseTokenResponse,
   readAuthorizationResponse,
   refreshBody,
+  signInSecurityUrl,
 } from "./oidc-model.js";
 
 const issuer = "https://id.example.test/realms/draft-loop";
@@ -235,5 +236,14 @@ describe("sign-out", () => {
         "https://draftloop.example.test/",
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("sign-in security page", () => {
+  it("is the provider's account page for passkeys and authenticator apps, under the issuer", () => {
+    const page = "https://id.example.test/realms/draft-loop/account/account-security/signing-in";
+
+    expect(signInSecurityUrl(issuer)).toBe(page);
+    expect(signInSecurityUrl(`${issuer}/`)).toBe(page);
   });
 });

@@ -8848,6 +8848,10 @@ msgstr "Définissez la longueur de l’ébauche dans la politique de rédaction 
 msgid "Set this topic aside"
 msgstr "Mettre ce sujet de côté"
 
+#: apps/web/src/account-menu.tsx
+msgid "Set up a passkey or an authenticator app for the step after your password"
+msgstr "Configurez une clé d’accès ou une application d’authentification pour l’étape après votre mot de passe"
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Set up a review workspace"
 msgstr "Configurer un espace de relecture"
@@ -9005,6 +9009,10 @@ msgstr "La connexion n’a pas pu aboutir. Réessayez."
 #: packages/ui/src/start-checklist-model.ts
 msgid "Sign-in is on Home, under Settings."
 msgstr "La connexion se trouve dans Accueil, sous Réglages."
+
+#: apps/web/src/account-menu.tsx
+msgid "Sign-in security"
+msgstr "Sécurité de connexion"
 
 #: apps/web/src/records-model.ts
 msgid "Signed in"
@@ -12102,8 +12110,8 @@ msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Votre organisation n’a pas encore d’offre. Demandez au propriétaire d’en choisir une."
 
 #: apps/web/src/refusal-text.ts
-msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
-msgstr "Votre organisation compte d’autres membres : cette action demande une connexion avec un second facteur. Configurez une application d’authentification dans votre compte, reconnectez-vous et réessayez."
+msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again and retry."
+msgstr "Votre organisation compte d’autres membres : cette action demande une connexion avec un second facteur. Configurez une clé d’accès ou une application d’authentification dans Sécurité de connexion, depuis le menu du compte, reconnectez-vous et réessayez."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Your pitch"

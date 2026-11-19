@@ -92,6 +92,8 @@ export interface ShellProps {
   readonly onSignOut: () => void;
   /** Sign-in mode: leaves for the signed-out screen with this notice once the account is deleted. */
   readonly onAccountDeleted?: (notice: string) => void;
+  /** Sign-in mode: the provider's page where a person sets up a passkey or an authenticator app. */
+  readonly signInSecurity?: string;
   /**
    * Sign-in mode lists the caller's candidate records and switches between them; owner-token
    * mode keeps the owner's single workspace.
@@ -110,6 +112,7 @@ export function Shell({
   client,
   onSignOut,
   onAccountDeleted,
+  signInSecurity,
   mode = "owner",
   memory = recordMemory,
 }: ShellProps) {
@@ -185,6 +188,7 @@ export function Shell({
                 shellActions={common}
                 onSignOut={onSignOut}
                 {...(onAccountDeleted === undefined ? {} : { onAccountDeleted })}
+                {...(signInSecurity === undefined ? {} : { signInSecurity })}
                 onOperator={openOperator}
               >
                 {(recordId, onSaved, automaticSetup) => (

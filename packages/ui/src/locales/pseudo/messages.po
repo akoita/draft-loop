@@ -8853,6 +8853,10 @@ msgstr ""
 msgid "Set this topic aside"
 msgstr ""
 
+#: apps/web/src/account-menu.tsx
+msgid "Set up a passkey or an authenticator app for the step after your password"
+msgstr ""
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Set up a review workspace"
 msgstr ""
@@ -9009,6 +9013,10 @@ msgstr ""
 
 #: packages/ui/src/start-checklist-model.ts
 msgid "Sign-in is on Home, under Settings."
+msgstr ""
+
+#: apps/web/src/account-menu.tsx
+msgid "Sign-in security"
 msgstr ""
 
 #: apps/web/src/records-model.ts
@@ -12107,7 +12115,7 @@ msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr ""
 
 #: apps/web/src/refusal-text.ts
-msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
+msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again and retry."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
