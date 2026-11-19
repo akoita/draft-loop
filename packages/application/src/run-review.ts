@@ -28,6 +28,8 @@ export interface RunReviewBlock {
   readonly text: string;
   /** The text is the candidate's: an edit recorded in the review or applied at approval. */
   readonly edited: boolean;
+  /** The author's text, present while an edit recorded in this review replaces it. */
+  readonly draftedText?: string;
   readonly claimIds: readonly string[];
 }
 
@@ -120,6 +122,7 @@ function reviewDraft(artifact: DraftArtifact, edits: ReadonlyMap<string, string>
             type: block.type,
             text: edit ?? block.text,
             edited: edit !== undefined || approvedEdits.has(block.id),
+            ...(edit === undefined ? {} : { draftedText: block.text }),
             claimIds: [...block.claimIds],
           };
         }),

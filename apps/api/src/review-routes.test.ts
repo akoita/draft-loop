@@ -1,5 +1,9 @@
 import { type ApplicationService, RunActionError, type RunReview } from "@draft-loop/application";
 import { type RunSnapshot, RunTransitionError } from "@draft-loop/orchestrator";
+import {
+  createMemoryFactSuggestionStore,
+  type FactSuggestionStore,
+} from "@draft-loop/storage/fact-suggestions";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -95,6 +99,7 @@ let logs: string[] = [];
 async function build(
   service: Partial<ApplicationService>,
   enqueueRun: (workspaceId: string, runId: string) => Promise<void> = async () => undefined,
+  factSuggestions?: FactSuggestionStore,
 ): Promise<void> {
   logs = [];
   app = await buildApi({
@@ -106,6 +111,7 @@ async function build(
       enqueueRun,
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
       monthUsage: async () => [],
+      ...(factSuggestions === undefined ? {} : { factSuggestions }),
     },
   });
 }
@@ -328,6 +334,81 @@ describe("approve and stop", () => {
       action: "approve",
       readinessOverrideRationale: "The page length is what the employer asked for.",
     });
+  });
+
+  it("files a profile suggestion when an approval edit changes a pinned fact (#3167)", async () => {
+    const lifecycle = vi.fn(async () => ({ ...snapshot, state: "approved", approval: "approved" }));
+    const edited = {
+      ...syntheticReview,
+      findings: [],
+      draft: {
+        ...syntheticReview.draft,
+        sections: [
+          {
+            id: "experience",
+            title: "Experience",
+            kind: "experience",
+            blocks: [
+              {
+                id: "block-1",
+                type: "bullet",
+                text: "Led a team of 8 engineers at Example Ledger.",
+                draftedText: "Led a team of 5 engineers at Example Ledger.",
+                edited: true,
+                claimIds: ["claim-1"],
+              },
+            ],
+          },
+        ],
+      },
+    } as unknown as RunReview;
+    const store = createMemoryFactSuggestionStore();
+    await build(
+      {
+        lifecycle,
+        readRunReview: vi.fn(async () => edited),
+        readRunInputs: vi.fn(async () => ({
+          brief: null,
+          profile: { profileId: "profile-1", version: 2 },
+          authorDirections: true,
+        })),
+        getCanonicalCandidateProfile: vi.fn(async () => ({
+          workspaceId: "workspace-1",
+          checksum: "a".repeat(64),
+          profile: {
+            id: "profile-1",
+            version: 2,
+            facts: [
+              {
+                id: "fact-team",
+                category: "achievement",
+                field: "summary",
+                value: "Led a team of 5 engineers",
+                provenance: [],
+              },
+            ],
+          },
+        })),
+      } as unknown as Partial<ApplicationService>,
+      undefined,
+      store,
+    );
+
+    const approved = await app.inject({
+      method: "POST",
+      url: "/v1/workspaces/workspace-1/runs/run-1/approve",
+      headers: { authorization },
+      payload: {},
+    });
+
+    expect(approved.statusCode).toBe(200);
+    const [suggestion] = await store.list("workspace-1", { profileId: "profile-1", limit: 10 });
+    expect(suggestion).toMatchObject({
+      change: { kind: "correct", value: "Led a team of 8 engineers" },
+      quote: "Led a team of 8 engineers at Example Ledger.",
+      origin: { kind: "review-edit", runId: "run-1", blockId: "block-1", round: 1 },
+    });
+    expect(logs.join("")).not.toContain("team of 8");
   });
 
   it("answers a blocked approval and a state conflict with 409 and their codes", async () => {
