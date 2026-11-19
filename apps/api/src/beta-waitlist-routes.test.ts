@@ -19,7 +19,8 @@ const authorization = { authorization: `Bearer ${ownerToken}` };
 let app: FastifyInstance;
 let lines: Record<string, unknown>[];
 
-function fakeWaitlist() {
+/** `placed`: emails that hold an open or redeemed invite, which the store refuses to list. */
+function fakeWaitlist(placed: readonly string[] = []) {
   const listed = new Set<string>();
   /** Unconfirmed sign-ups: email by token hash, and the emails each address was sent. */
   const pending = new Map<string, string>();
@@ -30,7 +31,7 @@ function fakeWaitlist() {
         throw Object.assign(new Error("bad"), { name: "TenantDirectoryError" });
       }
       const key = email.trim().toLowerCase();
-      if (listed.has(key)) return false;
+      if (listed.has(key) || placed.includes(key)) return false;
       listed.add(key);
       return true;
     }),
@@ -64,7 +65,7 @@ function fakeWaitlist() {
         }
         const key = email.trim().toLowerCase();
         const sent = sends.get(key) ?? 0;
-        if (listed.has(key) || sent >= maxSends) return "skip";
+        if (listed.has(key) || placed.includes(key) || sent >= maxSends) return "skip";
         sends.set(key, sent + 1);
         pending.set(tokenHash, key);
         return "send";
@@ -249,5 +250,44 @@ describe("the beta waitlist (#2566)", () => {
 
     expect(again.json()).toEqual(first.json());
     expect(mailer).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers an account's or an invitee's email like a new one, and emails them nothing", async () => {
+    const mailer = vi.fn<WaitlistConfirmMailer>(async () => true);
+    await start(fakeWaitlist(["ada@example.test", "bob@example.test"]), undefined, mailer);
+
+    const fresh = await join({ email: "cy@example.test", consent: true });
+    const member = await join({ email: " Ada@Example.Test ", consent: true });
+    const invitee = await join({ email: "bob@example.test", consent: true });
+
+    expect(member.statusCode).toBe(202);
+    expect(member.json()).toEqual(fresh.json());
+    expect(invitee.json()).toEqual(fresh.json());
+    expect(mailer).toHaveBeenCalledTimes(1);
+    expect(mailer.mock.calls[0]?.[0]).toMatchObject({ email: "cy@example.test" });
+  });
+
+  it("answers an account's email the same where the server sends no mail", async () => {
+    await start(fakeWaitlist(["ada@example.test"]));
+
+    const fresh = await join({ email: "cy@example.test", consent: true });
+    const member = await join({ email: "ada@example.test", consent: true });
+
+    expect(member.statusCode).toBe(202);
+    expect(member.json()).toEqual(fresh.json());
+  });
+
+  it("sends an unconfirmed address a fresh link on a later join, up to the cap", async () => {
+    const mailer = vi.fn<WaitlistConfirmMailer>(async () => true);
+    await start(fakeWaitlist(), undefined, mailer);
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      expect((await join({ email: "ada@example.test", consent: true })).statusCode).toBe(202);
+    }
+
+    // The fake store caps at three sends, as the real one does (spacing is tested there).
+    expect(mailer).toHaveBeenCalledTimes(3);
+    const tokens = new Set(mailer.mock.calls.map(([sent]) => sent.token));
+    expect(tokens.size).toBe(3);
   });
 });
