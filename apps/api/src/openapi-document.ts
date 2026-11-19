@@ -62,7 +62,11 @@ export async function generateOpenApiDocument(): Promise<string> {
     },
     directory: {} as TenantDirectory,
     memberSettings: {} as MemberSettingsStore,
-    betaInvites: { invites: {} as BetaInvites, cap: 0 },
+    betaInvites: {
+      invites: {} as BetaInvites,
+      cap: 0,
+      prepareInvitedAccount: async () => "exists",
+    },
     betaWaitlist: {} as BetaWaitlist,
     feedback: {} as FeedbackStore,
     support: readSupportSettings({}),

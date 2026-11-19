@@ -5,6 +5,7 @@ import {
   identityAdminClientFromEnv,
   keycloakAccounts,
   keycloakRealmOf,
+  passwordLinkLifespanSeconds,
 } from "./identity-accounts.js";
 
 const issuer = "https://id.example.test/realms/draft-loop";
@@ -158,5 +159,132 @@ describe("Keycloak accounts", () => {
     expect(() =>
       identityAdminClientFromEnv({ DRAFT_LOOP_IDENTITY_ADMIN_CLIENT_ID: "draft-loop-api" }),
     ).toThrow(IdentityAccountsError);
+  });
+});
+
+describe("an invited person's sign-in (#3082)", () => {
+  const screenUrl = "https://draftloop.example.test/";
+  const make = (answers: readonly Response[]) => {
+    const fake = fakeFetch(answers);
+    const accounts = keycloakAccounts({
+      issuer,
+      clientId: "draft-loop-api",
+      clientSecret: "s3cret",
+      webClientId: "draft-loop-web",
+      screenUrl,
+      fetch: fake.fetch,
+    });
+    return { ...fake, accounts };
+  };
+  const found = (email = "ada@example.test") => Response.json([{ id: subject, email }]);
+  const admin = "https://id.example.test/admin/realms/draft-loop";
+
+  it("creates a verified account and has Keycloak email a choose-a-password link", async () => {
+    const { accounts, calls } = make([
+      tokenAnswer(),
+      new Response(null, { status: 201 }),
+      found(),
+      new Response(null, { status: 204 }),
+    ]);
+
+    await expect(
+      accounts.prepareInvitedAccount({ email: " Ada@Example.Test ", locale: "fr" }),
+    ).resolves.toBe("password-email");
+
+    expect(calls[1]).toMatchObject({ url: `${admin}/users`, method: "POST" });
+    expect(JSON.parse(calls[1]?.body ?? "")).toEqual({
+      username: "ada@example.test",
+      email: "ada@example.test",
+      enabled: true,
+      emailVerified: true,
+      attributes: { locale: ["fr"] },
+    });
+    expect(calls[2]?.url).toBe(
+      `${admin}/users?exact=true&briefRepresentation=true&email=ada%40example.test`,
+    );
+    const sent = new URL(calls[3]?.url ?? "");
+    expect(sent.pathname).toBe(`/admin/realms/draft-loop/users/${subject}/execute-actions-email`);
+    expect(Object.fromEntries(sent.searchParams)).toEqual({
+      client_id: "draft-loop-web",
+      redirect_uri: screenUrl,
+      lifespan: String(passwordLinkLifespanSeconds),
+    });
+    expect(calls[3]).toMatchObject({ method: "PUT", body: '["UPDATE_PASSWORD"]' });
+  });
+
+  it("sends nothing to an existing account that has a password", async () => {
+    const { accounts, calls } = make([
+      tokenAnswer(),
+      new Response(null, { status: 409 }),
+      found(),
+      Response.json([
+        { id: "c1", type: "otp" },
+        { id: "c2", type: "password" },
+      ]),
+    ]);
+
+    await expect(accounts.prepareInvitedAccount({ email: "ada@example.test" })).resolves.toBe(
+      "exists",
+    );
+    expect(calls).toHaveLength(4);
+    expect(calls[3]?.url).toBe(`${admin}/users/${subject}/credentials`);
+  });
+
+  it("sends the link again to an existing account with no password yet", async () => {
+    const { accounts, calls } = make([
+      tokenAnswer(),
+      new Response(null, { status: 409 }),
+      found(),
+      Response.json([]),
+      new Response(null, { status: 204 }),
+    ]);
+
+    await expect(accounts.prepareInvitedAccount({ email: "ada@example.test" })).resolves.toBe(
+      "password-email",
+    );
+    expect(calls[4]?.method).toBe("PUT");
+  });
+
+  it("matches the account by its exact email, not a similar one", async () => {
+    const { accounts } = make([
+      tokenAnswer(),
+      new Response(null, { status: 409 }),
+      Response.json([{ id: subject, email: "ada@example.test.other" }]),
+    ]);
+
+    await expect(accounts.prepareInvitedAccount({ email: "ada@example.test" })).rejects.toThrow(
+      IdentityAccountsError,
+    );
+  });
+
+  it("fails when Keycloak refuses to create the account or to send the email", async () => {
+    await expect(
+      make([tokenAnswer(), new Response(null, { status: 403 })]).accounts.prepareInvitedAccount({
+        email: "ada@example.test",
+      }),
+    ).rejects.toThrow("did not create the account (403)");
+    await expect(
+      make([
+        tokenAnswer(),
+        new Response(null, { status: 201 }),
+        found(),
+        new Response(null, { status: 500 }),
+      ]).accounts.prepareInvitedAccount({ email: "ada@example.test" }),
+    ).rejects.toThrow("did not send the password email (500)");
+  });
+
+  it("refuses an address that is not an email, and a client without the web screen", async () => {
+    await expect(make([]).accounts.prepareInvitedAccount({ email: "nobody" })).rejects.toThrow(
+      IdentityAccountsError,
+    );
+    const bare = keycloakAccounts({
+      issuer,
+      clientId: "draft-loop-api",
+      clientSecret: "s3cret",
+      fetch: fakeFetch([]).fetch,
+    });
+    await expect(bare.prepareInvitedAccount({ email: "ada@example.test" })).rejects.toThrow(
+      "web screen",
+    );
   });
 });

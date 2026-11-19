@@ -3366,6 +3366,34 @@
         ],
         "additionalProperties": false
       },
+      "PreparedInviteSignInsInput": {
+        "type": "object",
+        "properties": {
+          "passwordEmails": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites whose person was sent the provider's choose-a-password email."
+          },
+          "existing": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites whose person already has a sign-in with a password."
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites the provider did not prepare; call again."
+          }
+        },
+        "required": [
+          "passwordEmails",
+          "existing",
+          "failed"
+        ]
+      },
       "BetaWaitlistEntryInput": {
         "type": "object",
         "properties": {
@@ -12758,6 +12786,35 @@
         },
         "required": [
           "status"
+        ],
+        "additionalProperties": false
+      },
+      "PreparedInviteSignIns": {
+        "type": "object",
+        "properties": {
+          "passwordEmails": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites whose person was sent the provider's choose-a-password email."
+          },
+          "existing": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites whose person already has a sign-in with a password."
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Open invites the provider did not prepare; call again."
+          }
+        },
+        "required": [
+          "passwordEmails",
+          "existing",
+          "failed"
         ],
         "additionalProperties": false
       },
@@ -31609,6 +31666,34 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/beta-invites/sign-ins": {
+      "post": {
+        "summary": "Prepare a sign-in account for every open beta invite",
+        "description": "Operator only. For each open invite, at most 200 per call, creates the person's sign-in account at the identity provider where it is missing, and has the provider email a link to choose a password where none is set yet. An account with a password is left alone. Answers the counts.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparedInviteSignIns"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Default Response",
             "content": {
               "application/json": {
