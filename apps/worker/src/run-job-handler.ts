@@ -3,6 +3,7 @@ import {
   type RunBudgetCeiling,
   runBudgetCeilingViolation,
 } from "@draft-loop/application";
+import type { RunCriticFallback } from "@draft-loop/application/critic-fallback";
 import type { RunSpanRecorder } from "@draft-loop/application/run-span-recorder";
 import {
   automaticRetryTime,
@@ -109,6 +110,11 @@ export interface RunJobHandlerOptions {
    * Unset, the worker records none. A recorder never fails or delays the run's outcome.
    */
   readonly spansFor?: (job: RunJob) => RunSpanRecorder;
+  /**
+   * The deployment's fallback critic for the job's run (#3131), used only after a provider error
+   * the run cannot wait out and when the record's consent covers its company. Unset, none.
+   */
+  readonly criticFallbackFor?: (job: RunJob) => RunCriticFallback | undefined;
   /** How long to wait when a usage limit names no reset time. Defaults to 15 minutes. */
   readonly usageLimitRetryMs?: number;
   /** The least wait after a rate limit, which can outlast the provider's hint. Defaults to 1 minute. */
@@ -219,6 +225,7 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
       return "material-quarantined";
     }
     const spans = options.spansFor?.(job);
+    const criticFallback = options.criticFallbackFor?.(job);
     let advanced: RunSnapshot;
     try {
       advanced = await service.resume({
@@ -226,6 +233,7 @@ export function createRunJobHandler(options: RunJobHandlerOptions): RunJobHandle
         runId: job.runId,
         allowProviderData: options.allowProviderData,
         ...(spans === undefined ? {} : { tracer: spans.tracer }),
+        ...(criticFallback === undefined ? {} : { criticFallback }),
       });
     } finally {
       // Also after a throw: the spans of a failed step are the ones worth reading.

@@ -9,6 +9,7 @@ import { parseRuntimeRoleMembers } from "@draft-loop/storage-postgres";
 
 import { type BlobBackendConfig, readBlobBackend } from "./blob-backend.js";
 import { WorkerConfigError } from "./config-error.js";
+import { type CriticFallbackConfig, readCriticFallback } from "./critic-fallback-config.js";
 import { readLocalModelEndpoint } from "./local-models-config.js";
 import { readModelRoutes, type WorkerModelRoutes } from "./route-config.js";
 
@@ -45,6 +46,8 @@ export interface WorkerConfig {
   readonly modelRoutes?: WorkerModelRoutes;
   /** The deployment's endpoint for `local` models; without it a local model's call is refused. */
   readonly localModelEndpoint?: string;
+  /** The critic a run switches to after a provider error it cannot wait out (#3131). */
+  readonly criticFallback?: CriticFallbackConfig;
   /** Touched once the worker is claiming jobs, for a container health check. */
   readonly readyFile?: string;
   /**
@@ -144,6 +147,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const readyFile = optional(env, "DRAFT_LOOP_WORKER_READY_FILE");
   const modelRoutes = readModelRoutes(env);
   const localModelEndpoint = readLocalModelEndpoint(env);
+  const criticFallback = readCriticFallback(env);
   return {
     databaseUrl: required(env, "DRAFT_LOOP_DATABASE_URL"),
     databaseSchema: schemaName(env, "DRAFT_LOOP_DATABASE_SCHEMA", "draft_loop"),
@@ -155,6 +159,7 @@ export function readWorkerConfig(env: NodeJS.ProcessEnv): WorkerConfig {
     budgetCeiling: readRunBudgetCeiling(env),
     ...(modelRoutes === undefined ? {} : { modelRoutes }),
     ...(localModelEndpoint === undefined ? {} : { localModelEndpoint }),
+    ...(criticFallback === undefined ? {} : { criticFallback }),
     ...(readyFile === undefined ? {} : { readyFile }),
     mode: workerMode(env),
   };

@@ -8,6 +8,7 @@ import {
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import type { RunBudget, RunTracer } from "@draft-loop/orchestrator";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
+import type { RunCriticFallback } from "./critic-fallback.js";
 import { isGoogleGemini4AuthorProfile } from "./gemini-4-profiles.js";
 import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
@@ -62,6 +63,8 @@ export interface RunOptions {
   readonly applicationPlan?: boolean;
   /** Receives the run's content-free spans (#2686); absent records none. */
   readonly tracer?: RunTracer;
+  /** The deployment's fallback critic (#3131); absent keeps the configured critic only. */
+  readonly criticFallback?: RunCriticFallback;
 }
 
 export type BeginStartRunOptions = Omit<RunOptions, "signal" | "writingPolicyOverrideChecksum">;
@@ -110,7 +113,10 @@ export function projectStartRunOptions(
 
 export function projectResumeRunOptions(
   command: ResumeRunCommand,
-  providerOptions: Omit<ResumeRunOptions, "runId" | "allowProviderData" | "signal" | "tracer">,
+  providerOptions: Omit<
+    ResumeRunOptions,
+    "runId" | "allowProviderData" | "signal" | "tracer" | "criticFallback"
+  >,
 ): ResumeRunOptions {
   return {
     ...(command.runId === undefined ? {} : { runId: command.runId }),
@@ -119,6 +125,7 @@ export function projectResumeRunOptions(
       : { allowProviderData: command.allowProviderData }),
     ...(command.signal === undefined ? {} : { signal: command.signal }),
     ...(command.tracer === undefined ? {} : { tracer: command.tracer }),
+    ...(command.criticFallback === undefined ? {} : { criticFallback: command.criticFallback }),
     ...providerOptions,
   };
 }

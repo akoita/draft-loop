@@ -27,7 +27,17 @@ export interface CriticFallbackOptions {
    * The fallback critic, or undefined when none may be used: no fallback is configured, or the
    * candidate's consent does not cover the fallback's company. Read once, on the first failure.
    */
-  readonly fallback: () => CriticAgent | undefined;
+  readonly fallback: () => CriticAgent | undefined | Promise<CriticAgent | undefined>;
+}
+
+/**
+ * The deployment's fallback critic for one run (#3131): its company and model, and whether the
+ * candidate's recorded consent covers that company, read once on the first failure.
+ */
+export interface RunCriticFallback {
+  readonly company: string;
+  readonly modelId: string;
+  readonly permitted: () => Promise<boolean>;
 }
 
 function errorClass(error: unknown): string | undefined {
@@ -61,7 +71,7 @@ export function withCriticFallback(options: CriticFallbackOptions): CriticAgent 
         const cause = errorClass(error);
         if (refused || cause === undefined || !criticFallbackErrorClasses.has(cause)) throw error;
         if (request.signal?.aborted === true) throw error;
-        const agent = options.fallback();
+        const agent = await options.fallback();
         if (agent === undefined) {
           refused = true;
           throw error;
@@ -79,4 +89,29 @@ export function withCriticFallback(options: CriticFallbackOptions): CriticAgent 
       }
     },
   };
+}
+
+/**
+ * The run's critic from its factory, wrapped with the run's fallback when the deployment names
+ * one and it is a different critic; otherwise the configured critic alone.
+ */
+export function runCriticWithFallback(
+  identity: { readonly company: string; readonly modelId: string },
+  fallback: RunCriticFallback | undefined,
+  criticFor: (company: string, modelId: string) => CriticAgent,
+): CriticAgent {
+  const primary = criticFor(identity.company, identity.modelId);
+  if (
+    fallback === undefined ||
+    (fallback.company === identity.company && fallback.modelId === identity.modelId)
+  ) {
+    return primary;
+  }
+  return withCriticFallback({
+    primary,
+    primaryProvider: identity.company,
+    primaryModel: identity.modelId,
+    fallback: async () =>
+      (await fallback.permitted()) ? criticFor(fallback.company, fallback.modelId) : undefined,
+  });
 }
