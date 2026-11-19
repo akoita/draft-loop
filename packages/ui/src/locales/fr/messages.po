@@ -8853,13 +8853,13 @@ msgstr "Se connecter"
 msgid "Sign in on Home, under Settings."
 msgstr "Connectez-vous dans Accueil, sous Réglages."
 
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in with the email address your invitation was sent to."
+msgstr "Connectez-vous avec l’adresse e-mail à laquelle votre invitation a été envoyée."
+
 #: apps/web/src/sign-in.tsx
 msgid "Sign in with the owner token of this deployment. It stays in this tab until you close it."
 msgstr "Connectez-vous avec le jeton propriétaire de ce déploiement. Il reste dans cet onglet jusqu’à sa fermeture."
-
-#: apps/web/src/oidc-sign-in.tsx
-msgid "Sign in with your organisation account. You stay signed in until you close this tab."
-msgstr "Connectez-vous avec le compte de votre organisation. Vous restez connecté jusqu’à la fermeture de cet onglet."
 
 #: apps/web/src/beta-sign-up.tsx
 #: apps/web/src/shell-actions.tsx

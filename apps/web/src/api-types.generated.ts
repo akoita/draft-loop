@@ -1,16 +1,23 @@
 // Generated from apps/api/openapi.json by `pnpm --filter @draft-loop/web api-types`. Do not edit.
 
 export interface ApiSchemas {
-  "AgentConnectionCap": {
+  AgentConnectionCap: {
     readonly client_id: string;
     readonly monthly_cap_usd?: number;
     readonly spent_this_month_usd: number;
     readonly updated_at: string;
   };
-  "AgentToken": {
+  AgentToken: {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+    readonly scopes: readonly (
+      | "journal"
+      | "applications:read"
+      | "jobs:write"
+      | "drafts:read"
+      | "runs:start"
+      | "evidence:write"
+    )[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -18,16 +25,16 @@ export interface ApiSchemas {
     readonly monthly_cap_usd?: number;
     readonly spent_this_month_usd?: number;
   };
-  "ApiError": {
+  ApiError: {
     readonly error: {
       readonly code: string;
       readonly message: string;
-      readonly issues?: readonly ({
+      readonly issues?: readonly {
         readonly path: string;
         readonly message: string;
-      })[];
-      readonly quarantined?: readonly (ApiSchemas["QuarantinedMaterial"])[];
-      readonly unscreened?: readonly (ApiSchemas["UnscreenedMaterial"])[];
+      }[];
+      readonly quarantined?: readonly ApiSchemas["QuarantinedMaterial"][];
+      readonly unscreened?: readonly ApiSchemas["UnscreenedMaterial"][];
       readonly role?: "author" | "critic";
       readonly tier?: string;
       readonly cap?: "concurrent" | "per_day";
@@ -38,7 +45,7 @@ export interface ApiSchemas {
       readonly params?: Record<string, never>;
     };
   };
-  "Application": {
+  Application: {
     readonly id: string;
     readonly name: string;
     readonly nameChosen: boolean;
@@ -49,18 +56,18 @@ export interface ApiSchemas {
     readonly folderId: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
-    readonly briefs: readonly ({
+    readonly briefs: readonly {
       readonly briefId: string;
       readonly latestVersion: number;
       readonly status: string;
       readonly createdAt: string;
-    })[];
-    readonly runs: readonly ({
+    }[];
+    readonly runs: readonly {
       readonly id: string;
       readonly state: string;
       readonly startedAt: string;
       readonly updatedAt: string;
-    })[];
+    }[];
     readonly chosenRunId: string | null;
     readonly jobSourceKind: "pasted-text" | "approved-url" | "local-file";
     readonly suggestedName: string | null;
@@ -79,17 +86,17 @@ export interface ApiSchemas {
     } | null;
     readonly language: string | null;
   };
-  "ApplicationFolder": {
+  ApplicationFolder: {
     readonly id: string;
     readonly name: string;
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly applicationCount: number;
   };
-  "ApplicationFolderList": {
-    readonly folders: readonly (ApiSchemas["ApplicationFolder"])[];
+  ApplicationFolderList: {
+    readonly folders: readonly ApiSchemas["ApplicationFolder"][];
   };
-  "ApplicationImport": {
+  ApplicationImport: {
     readonly applicationId: string;
     readonly name: string;
     readonly status: "imported" | "already-imported";
@@ -99,7 +106,7 @@ export interface ApiSchemas {
       readonly briefVersions: number;
     };
   };
-  "ApplicationJob": {
+  ApplicationJob: {
     readonly origin: "pasted-text" | "url" | "unavailable";
     readonly text: string | null;
     readonly url: string | null;
@@ -110,40 +117,56 @@ export interface ApiSchemas {
       readonly savedAt: string;
     } | null;
   };
-  "ApplicationMaterialDraft": {
+  ApplicationMaterialDraft: {
     readonly id?: string;
     readonly created_at?: string;
     readonly kind: "cover-letter" | "interview-questions" | "interview-guide";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidance"];
     readonly career_profile?: ApiSchemas["CareerProfileSource"];
     readonly interview_details?: ApiSchemas["InterviewDetails"];
-    readonly items: readonly ({
+    readonly items: readonly {
       readonly question: string;
       readonly text: string;
-      readonly section?: "read-first" | "interview" | "company" | "role" | "market" | "matrix" | "pitch" | "stories" | "defense" | "questions" | "ask" | "practical" | "topic" | "never-say" | "checklist" | "sources";
+      readonly section?:
+        | "read-first"
+        | "interview"
+        | "company"
+        | "role"
+        | "market"
+        | "matrix"
+        | "pitch"
+        | "stories"
+        | "defense"
+        | "questions"
+        | "ask"
+        | "practical"
+        | "topic"
+        | "never-say"
+        | "checklist"
+        | "sources";
       readonly trap?: string;
       readonly edited?: boolean;
-      readonly unsupported_numbers?: readonly (string)[];
-      readonly citations: readonly ({
+      readonly unsupported_numbers?: readonly string[];
+      readonly citations: readonly {
         readonly fact_id: string;
         readonly text: string;
-      })[];
-      readonly company_citations?: readonly ({
+      }[];
+      readonly company_citations?: readonly {
         readonly finding_id: string;
         readonly text: string;
-      })[];
-    })[];
+      }[];
+    }[];
     readonly research_brief_id?: string;
     readonly based_on?: string;
     readonly model: {
       readonly provider: string;
       readonly model: string;
     };
-    readonly critic_findings?: readonly ({
+    readonly critic_findings?: readonly {
       readonly paragraph: number;
       readonly sentence: string;
       readonly reason: string;
-    })[];
+    }[];
     readonly critic_model?: {
       readonly provider: string;
       readonly model: string;
@@ -151,56 +174,68 @@ export interface ApiSchemas {
     readonly review?: {
       readonly status: "pending";
     };
-    readonly tells?: readonly ({
-      readonly code: "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
+    readonly tells?: readonly {
+      readonly code:
+        "stock_phrase" | "heavy_dashes" | "list_of_three" | "mirrored_openings" | "word_count";
       readonly paragraph?: number;
       readonly sentence?: string;
       readonly match?: string;
-    })[];
-    readonly dropped_sentences?: readonly (string)[];
+    }[];
+    readonly dropped_sentences?: readonly string[];
     readonly record_gaps?: readonly ("employer" | "dates")[];
-    readonly unsourced_topics?: readonly ("company" | "news" | "role" | "field" | "process" | "salary")[];
+    readonly unsourced_topics?: readonly (
+      "company" | "news" | "role" | "field" | "process" | "salary"
+    )[];
     readonly prompt_version: string;
     readonly cost_usd: number;
   };
-  "ApplicationMaterialDraftList": {
-    readonly drafts: readonly (ApiSchemas["ApplicationMaterialDraft"])[];
+  ApplicationMaterialDraftList: {
+    readonly drafts: readonly ApiSchemas["ApplicationMaterialDraft"][];
   };
-  "ApplicationMaterialEditInput": {
-    readonly items: readonly ({
+  ApplicationMaterialEditInput: {
+    readonly items: readonly {
       readonly text: string;
-    })[];
+    }[];
   };
-  "ApplicationMaterialGuidance": {
+  ApplicationMaterialGuidance: {
     readonly emphasis?: string;
     readonly tone?: "formal" | "warm" | "direct";
     readonly length?: "short" | "standard" | "long";
     readonly addressee?: string;
   };
-  "ApplicationMaterialGuidanceInput": {
+  ApplicationMaterialGuidanceInput: {
     readonly emphasis?: string;
     readonly tone?: "formal" | "warm" | "direct";
     readonly length?: "short" | "standard" | "long";
     readonly addressee?: string;
   };
-  "ApplicationMaterialModels": {
-    readonly models: readonly ({
+  ApplicationMaterialModels: {
+    readonly models: readonly {
       readonly model_id: "claude-sonnet-5-5" | "claude-haiku-5-5";
       readonly default: boolean;
       readonly estimated_cost_usd?: number;
-    })[];
+    }[];
   };
-  "ApplicationMaterialRequestInput": {
+  ApplicationMaterialRequestInput: {
     readonly kind: "cover-letter" | "interview-questions";
     readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
     readonly guidance?: ApiSchemas["ApplicationMaterialGuidanceInput"];
   };
-  "ApplicationMaterialReview": {
+  ApplicationMaterialReview: {
     readonly status: "none" | "pending" | "done" | "failed";
-    readonly outcome?: "revised" | "clean" | "kept" | "missing" | "skipped" | "superseded" | "consent-required" | "record-erased" | "unavailable";
+    readonly outcome?:
+      | "revised"
+      | "clean"
+      | "kept"
+      | "missing"
+      | "skipped"
+      | "superseded"
+      | "consent-required"
+      | "record-erased"
+      | "unavailable";
     readonly revision_id?: string;
   };
-  "AssignedPlan": {
+  AssignedPlan: {
     readonly assignment: ApiSchemas["PlanAssignment"];
     readonly entitlements: {
       readonly creditsPerPeriod: number | null;
@@ -220,15 +255,17 @@ export interface ApiSchemas {
       };
     };
   };
-  "AuthConfig": {
-    readonly mode: "owner";
-  } | {
-    readonly mode: "oidc";
-    readonly issuer: string;
-    readonly clientId: string;
-    readonly waitlist?: boolean;
-  };
-  "BetaInvite": {
+  AuthConfig:
+    | {
+        readonly mode: "owner";
+      }
+    | {
+        readonly mode: "oidc";
+        readonly issuer: string;
+        readonly clientId: string;
+        readonly waitlist?: boolean;
+      };
+  BetaInvite: {
     readonly inviteId: string;
     readonly email: string;
     readonly createdAt: string;
@@ -238,83 +275,97 @@ export interface ApiSchemas {
     readonly revokedAt?: string;
     readonly termsVersion?: string;
   };
-  "BetaSeats": {
+  BetaSeats: {
     readonly redeemed: number;
     readonly open: number;
     readonly cap: number;
     readonly capSource: "operator" | "deployment";
     readonly deploymentCap: number;
   };
-  "BetaWaitlistEntry": {
+  BetaWaitlistEntry: {
     readonly entryId: string;
     readonly email: string;
     readonly consentVersion: string;
     readonly joinedAt: string;
   };
-  "CareerInterviewActionInput": {
-    readonly action: "accept";
-    readonly topic_key: string;
-    readonly language?: "fr" | "en";
-  } | {
-    readonly action: "decline";
-    readonly topic_key: string;
-  } | {
-    readonly action: "own_subject";
-    readonly subject: string;
-    readonly language?: "fr" | "en";
-  } | {
-    readonly action: "answer";
-    readonly topic_key: string;
-    readonly text?: string;
-    readonly mark?: "skipped" | "unknown";
-    readonly language?: "fr" | "en";
-  } | {
-    readonly action: "confirm";
-    readonly topic_key: string;
-    readonly knowledge_base_id: string;
-    readonly tier?: "normal" | "sensitive" | "never-share";
-    readonly summary?: string;
-  } | {
-    readonly action: "set_aside";
-    readonly topic_key: string;
-  } | {
-    readonly action: "pause";
-  } | {
-    readonly action: "close";
-  };
-  "CareerInterviewConflicts": {
-    readonly conflicts: readonly ({
+  CareerInterviewActionInput:
+    | {
+        readonly action: "accept";
+        readonly topic_key: string;
+        readonly language?: "fr" | "en";
+      }
+    | {
+        readonly action: "decline";
+        readonly topic_key: string;
+      }
+    | {
+        readonly action: "own_subject";
+        readonly subject: string;
+        readonly language?: "fr" | "en";
+      }
+    | {
+        readonly action: "answer";
+        readonly topic_key: string;
+        readonly text?: string;
+        readonly mark?: "skipped" | "unknown";
+        readonly language?: "fr" | "en";
+      }
+    | {
+        readonly action: "confirm";
+        readonly topic_key: string;
+        readonly knowledge_base_id: string;
+        readonly tier?: "normal" | "sensitive" | "never-share";
+        readonly summary?: string;
+      }
+    | {
+        readonly action: "set_aside";
+        readonly topic_key: string;
+      }
+    | {
+        readonly action: "pause";
+      }
+    | {
+        readonly action: "close";
+      };
+  CareerInterviewConflicts: {
+    readonly conflicts: readonly {
       readonly kind: "date";
       readonly summary_value: string;
       readonly fact_id: string;
       readonly fact_value: string;
-    })[];
+    }[];
   };
-  "CareerInterviewCurrentSession": {
+  CareerInterviewCurrentSession: {
     readonly current: ApiSchemas["CareerInterviewSessionView"] | null;
   };
-  "CareerInterviewSessionView": {
+  CareerInterviewSessionView: {
     readonly session: {
       readonly id: string;
       readonly workspace_id: string;
       readonly status: "open" | "paused" | "closed";
-      readonly topics: readonly ({
+      readonly topics: readonly {
         readonly key: string;
-        readonly kind: "role-gap" | "untold-period" | "untold-theme" | "application-relevance" | "candidate-subject" | "career-start";
+        readonly kind:
+          | "role-gap"
+          | "untold-period"
+          | "untold-theme"
+          | "application-relevance"
+          | "candidate-subject"
+          | "career-start";
         readonly reason: string;
         readonly title?: string;
         readonly missing?: readonly ("dates" | "outcome" | "scope")[];
         readonly status: "proposed" | "declined" | "open" | "summarised" | "closed";
-        readonly fact_ids: readonly (string)[];
-        readonly requirement_ids: readonly (string)[];
-        readonly turns: readonly ({
+        readonly fact_ids: readonly string[];
+        readonly requirement_ids: readonly string[];
+        readonly turns: readonly {
           readonly role: "interviewer" | "candidate";
           readonly text: string;
           readonly mark?: "skipped" | "unknown";
           readonly at: string;
-        })[];
+        }[];
         readonly summary?: string;
-      })[];
+      }[];
       readonly model?: {
         readonly provider: string;
         readonly model: string;
@@ -327,69 +378,78 @@ export interface ApiSchemas {
     readonly interviewer_available: boolean;
     readonly live_voice_available: boolean;
   };
-  "CareerProfile": {
+  CareerProfile: {
     readonly workspaceId: string;
     readonly checksum: string;
     readonly profile: unknown;
   };
-  "CareerProfileCancel": {
+  CareerProfileCancel: {
     readonly cancelled: boolean;
   };
-  "CareerProfileDerivation": {
-    readonly status: "pending";
-    readonly started: boolean;
-    readonly completedCalls?: number;
-    readonly plannedCalls?: number;
-  } | {
-    readonly status: "derived";
-    readonly version: number;
-    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
-    readonly reusedSourceCount?: number;
-    readonly extractedSourceCount?: number;
-  } | {
-    readonly status: "cancelled";
-    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
-  } | {
-    readonly status: "failed";
-    readonly reason: "failed" | "consent-required" | "record-erased";
-    readonly message?: string;
-    readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
-  };
-  "CareerProfileDerivationUsage": {
+  CareerProfileDerivation:
+    | {
+        readonly status: "pending";
+        readonly started: boolean;
+        readonly completedCalls?: number;
+        readonly plannedCalls?: number;
+      }
+    | {
+        readonly status: "derived";
+        readonly version: number;
+        readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
+        readonly reusedSourceCount?: number;
+        readonly extractedSourceCount?: number;
+      }
+    | {
+        readonly status: "cancelled";
+        readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
+      }
+    | {
+        readonly status: "failed";
+        readonly reason: "failed" | "consent-required" | "record-erased";
+        readonly message?: string;
+        readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
+      };
+  CareerProfileDerivationUsage: {
     readonly calls: number;
     readonly failedCalls: number;
     readonly inputTokens: number;
     readonly outputTokens: number;
     readonly estimatedUsd: number | null;
   };
-  "CareerProfileFreshness": {
-    readonly state: "not-generated";
-  } | {
-    readonly state: "up-to-date";
-    readonly version: number;
-  } | {
-    readonly state: "update-available";
-    readonly version: number;
-    readonly newSourceCount: number;
-    readonly changedSourceCount: number;
-    readonly removedSourceCount: number;
-  } | {
-    readonly state: "review-pending";
-    readonly version: number;
-    readonly reviewedVersion?: number;
-  } | {
-    readonly state: "unavailable";
-    readonly version: number;
-  };
-  "CareerProfileSource": {
+  CareerProfileFreshness:
+    | {
+        readonly state: "not-generated";
+      }
+    | {
+        readonly state: "up-to-date";
+        readonly version: number;
+      }
+    | {
+        readonly state: "update-available";
+        readonly version: number;
+        readonly newSourceCount: number;
+        readonly changedSourceCount: number;
+        readonly removedSourceCount: number;
+      }
+    | {
+        readonly state: "review-pending";
+        readonly version: number;
+        readonly reviewedVersion?: number;
+      }
+    | {
+        readonly state: "unavailable";
+        readonly version: number;
+      };
+  CareerProfileSource: {
     readonly version: number;
     readonly reviewed: boolean;
     readonly newer_draft_waiting: boolean;
   };
-  "CareerProfileVersions": {
-    readonly versions: readonly (ApiSchemas["CareerProfile"])[];
+  CareerProfileVersions: {
+    readonly versions: readonly ApiSchemas["CareerProfile"][];
   };
-  "CatalogModel": {
+  CatalogModel: {
     readonly id: string;
     readonly version: number;
     readonly company: "anthropic" | "openai";
@@ -407,7 +467,7 @@ export interface ApiSchemas {
       readonly maxInputTokens: number;
     };
   };
-  "CatalogPreset": {
+  CatalogPreset: {
     readonly id: string;
     readonly label: string;
     readonly tier: "economy" | "standard" | "premium";
@@ -420,34 +480,36 @@ export interface ApiSchemas {
       readonly version: number;
     };
   };
-  "ConsentEntry": {
+  ConsentEntry: {
     readonly id: string;
     readonly kind: "material-storage" | "provider-transmission";
     readonly action: "granted" | "withdrawn";
     readonly basis: "candidate-consent" | "contract" | "legitimate-interest";
-    readonly recordedBy: {
-      readonly kind: "owner";
-    } | {
-      readonly kind: "member";
-      readonly memberId: string;
-    };
-    readonly providers: readonly (string)[];
+    readonly recordedBy:
+      | {
+          readonly kind: "owner";
+        }
+      | {
+          readonly kind: "member";
+          readonly memberId: string;
+        };
+    readonly providers: readonly string[];
     readonly note?: string;
     readonly recordedAt: string;
   };
-  "Consents": {
+  Consents: {
     readonly current: {
       readonly "material-storage": ApiSchemas["ConsentEntry"] | null;
       readonly "provider-transmission": ApiSchemas["ConsentEntry"] | null;
     };
-    readonly history: readonly (ApiSchemas["ConsentEntry"])[];
+    readonly history: readonly ApiSchemas["ConsentEntry"][];
   };
-  "CreatedBetaInvite": {
+  CreatedBetaInvite: {
     readonly invite: ApiSchemas["BetaInvite"];
     readonly code: string;
     readonly emailed: boolean;
   };
-  "CreatedOrganisation": {
+  CreatedOrganisation: {
     readonly organisation: {
       readonly organisationId: string;
       readonly name: string;
@@ -455,7 +517,7 @@ export interface ApiSchemas {
     };
     readonly firstOwner: ApiSchemas["OrganisationMember"];
   };
-  "CreditBalance": {
+  CreditBalance: {
     readonly periodStart: string | null;
     readonly periodEnd: string | null;
     readonly allowance: number;
@@ -465,35 +527,35 @@ export interface ApiSchemas {
     readonly remaining: number;
     readonly unlimited: boolean;
   };
-  "CreditPackCheckout": {
+  CreditPackCheckout: {
     readonly pack: "pack-1" | "pack-5";
     readonly credits: number;
     readonly priceEurCents: number;
     readonly checkoutUrl: string;
   };
-  "DeletedApplicationFolder": {
+  DeletedApplicationFolder: {
     readonly folderId: string;
     readonly movedApplications: number;
   };
-  "FactUsage": {
+  FactUsage: {
     readonly sections: Record<string, never>;
     readonly facts: Record<string, never>;
   };
-  "FeedbackBrowser": {
+  FeedbackBrowser: {
     readonly family: string;
     readonly os: string;
     readonly viewport: string;
     readonly language: string;
     readonly theme: "light" | "dark";
   };
-  "FeedbackBrowserInput": {
+  FeedbackBrowserInput: {
     readonly family: string;
     readonly os: string;
     readonly viewport: string;
     readonly language: string;
     readonly theme: "light" | "dark";
   };
-  "FeedbackClientContextInput": {
+  FeedbackClientContextInput: {
     readonly route?: string;
     readonly webBuild?: string;
     readonly ids?: {
@@ -501,11 +563,11 @@ export interface ApiSchemas {
       readonly applicationId?: string;
       readonly runId?: string;
     };
-    readonly recentErrors?: readonly (ApiSchemas["FeedbackRecentErrorInput"])[];
+    readonly recentErrors?: readonly ApiSchemas["FeedbackRecentErrorInput"][];
     readonly lastFailedRequestId?: string;
     readonly browser?: ApiSchemas["FeedbackBrowserInput"];
   };
-  "FeedbackContext": {
+  FeedbackContext: {
     readonly route?: string;
     readonly webBuild?: string;
     readonly ids?: {
@@ -513,14 +575,14 @@ export interface ApiSchemas {
       readonly applicationId?: string;
       readonly runId?: string;
     };
-    readonly recentErrors?: readonly (ApiSchemas["FeedbackRecentError"])[];
+    readonly recentErrors?: readonly ApiSchemas["FeedbackRecentError"][];
     readonly lastFailedRequestId?: string;
     readonly browser?: ApiSchemas["FeedbackBrowser"];
     readonly source: "web" | "agent";
     readonly serverRelease: string | null;
     readonly plan: string | null;
   };
-  "FeedbackNote": {
+  FeedbackNote: {
     readonly noteId: string;
     readonly kind: "note" | "support";
     readonly organisationId: string;
@@ -528,31 +590,33 @@ export interface ApiSchemas {
     readonly category: "bug" | "idea" | "other" | null;
     readonly screen: string;
     readonly text: string;
-    readonly transcript: readonly ({
-      readonly role: "member" | "assistant";
-      readonly text: string;
-    })[] | null;
+    readonly transcript:
+      | readonly {
+          readonly role: "member" | "assistant";
+          readonly text: string;
+        }[]
+      | null;
     readonly context: ApiSchemas["FeedbackContext"] | null;
     readonly status: "new" | "triaged" | "issue" | "closed";
     readonly issueUrl: string | null;
     readonly triagedAt: string | null;
     readonly sentAt: string;
   };
-  "FeedbackRecentError": {
+  FeedbackRecentError: {
     readonly code: string;
     readonly message: string;
     readonly at: string;
   };
-  "FeedbackRecentErrorInput": {
+  FeedbackRecentErrorInput: {
     readonly code: string;
     readonly message: string;
     readonly at: string;
   };
-  "FeedbackTriageInput": {
+  FeedbackTriageInput: {
     readonly status: "new" | "triaged" | "issue" | "closed";
     readonly issueUrl?: string | null;
   };
-  "GrantedCredits": {
+  GrantedCredits: {
     readonly grant: {
       readonly sequence: number;
       readonly credits: number;
@@ -561,21 +625,21 @@ export interface ApiSchemas {
     };
     readonly balance: ApiSchemas["CreditBalance"];
   };
-  "Health": {
+  Health: {
     readonly status: "ok";
   };
-  "HelpGuide": {
+  HelpGuide: {
     readonly language: "en" | "fr";
     readonly intro: string;
     readonly query: string | null;
-    readonly sections: readonly (ApiSchemas["HelpGuideSection"])[];
+    readonly sections: readonly ApiSchemas["HelpGuideSection"][];
   };
-  "HelpGuideSection": {
+  HelpGuideSection: {
     readonly id: string;
     readonly title: string;
-    readonly paragraphs: readonly (string)[];
+    readonly paragraphs: readonly string[];
   };
-  "InterviewDetails": {
+  InterviewDetails: {
     readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
     readonly depth: "essential" | "extensive";
     readonly scheduled_at?: string;
@@ -583,12 +647,21 @@ export interface ApiSchemas {
     readonly format?: "video" | "phone" | "onsite";
     readonly interviewer_role?: string;
     readonly language?: string;
-    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
-    readonly other_topics?: readonly (string)[];
+    readonly topics?: readonly (
+      | "salary"
+      | "availability"
+      | "remote-and-travel"
+      | "language"
+      | "career-gap"
+      | "departure"
+      | "management"
+      | "unused-technology"
+    )[];
+    readonly other_topics?: readonly string[];
     readonly notes?: string;
-    readonly never_say?: readonly (string)[];
+    readonly never_say?: readonly string[];
   };
-  "InterviewDetailsInput": {
+  InterviewDetailsInput: {
     readonly stage: "screen" | "technical" | "manager" | "case" | "combined" | "final";
     readonly depth: "essential" | "extensive";
     readonly scheduled_at?: string;
@@ -596,28 +669,44 @@ export interface ApiSchemas {
     readonly format?: "video" | "phone" | "onsite";
     readonly interviewer_role?: string;
     readonly language?: string;
-    readonly topics?: readonly ("salary" | "availability" | "remote-and-travel" | "language" | "career-gap" | "departure" | "management" | "unused-technology")[];
-    readonly other_topics?: readonly (string)[];
+    readonly topics?: readonly (
+      | "salary"
+      | "availability"
+      | "remote-and-travel"
+      | "language"
+      | "career-gap"
+      | "departure"
+      | "management"
+      | "unused-technology"
+    )[];
+    readonly other_topics?: readonly string[];
     readonly notes?: string;
-    readonly never_say?: readonly (string)[];
+    readonly never_say?: readonly string[];
   };
-  "InterviewGuideRequestInput": {
+  InterviewGuideRequestInput: {
     readonly details: ApiSchemas["InterviewDetailsInput"];
     readonly model?: "claude-sonnet-5-5" | "claude-haiku-5-5";
     readonly research: "approved" | "skip";
     readonly parts?: readonly ("context" | "story" | "practice")[];
     readonly based_on?: string;
   };
-  "InterviewGuideResearching": {
+  InterviewGuideResearching: {
     readonly status: "researching";
     readonly research: {
       readonly status: "pending";
     };
   };
-  "IssuedAgentToken": {
+  IssuedAgentToken: {
     readonly id: string;
     readonly label: string;
-    readonly scopes: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+    readonly scopes: readonly (
+      | "journal"
+      | "applications:read"
+      | "jobs:write"
+      | "drafts:read"
+      | "runs:start"
+      | "evidence:write"
+    )[];
     readonly created_at: string;
     readonly expires_at: string;
     readonly revoked_at?: string;
@@ -626,7 +715,7 @@ export interface ApiSchemas {
     readonly spent_this_month_usd?: number;
     readonly token: string;
   };
-  "KnowledgeBase": {
+  KnowledgeBase: {
     readonly id: string;
     readonly displayName: string;
     readonly description: string;
@@ -634,7 +723,7 @@ export interface ApiSchemas {
     readonly createdAt: string;
     readonly archivedAt: string | null;
   };
-  "KnowledgeSource": {
+  KnowledgeSource: {
     readonly id: string;
     readonly knowledgeBaseId: string;
     readonly displayName: string;
@@ -646,23 +735,25 @@ export interface ApiSchemas {
     readonly createdAt: string;
     readonly screening?: ApiSchemas["ScreeningOutcome"];
   };
-  "Me": {
-    readonly kind: "owner";
-  } | {
-    readonly kind: "member";
-    readonly organisationId: string;
-    readonly memberId: string;
-    readonly role: "owner" | "admin" | "member";
-    readonly email?: string;
-    readonly operator?: true;
-    readonly operatorRole?: true;
-    readonly organisationName?: string;
-    readonly plan?: {
-      readonly candidateRecords: number | null;
-      readonly seats: number | null;
-    };
-  };
-  "MemberCredits": {
+  Me:
+    | {
+        readonly kind: "owner";
+      }
+    | {
+        readonly kind: "member";
+        readonly organisationId: string;
+        readonly memberId: string;
+        readonly role: "owner" | "admin" | "member";
+        readonly email?: string;
+        readonly operator?: true;
+        readonly operatorRole?: true;
+        readonly organisationName?: string;
+        readonly plan?: {
+          readonly candidateRecords: number | null;
+          readonly seats: number | null;
+        };
+      };
+  MemberCredits: {
     readonly organisationId: string;
     readonly planId: string;
     readonly entitlements: {
@@ -682,35 +773,35 @@ export interface ApiSchemas {
     readonly grantsRemaining: number;
     readonly remaining: number | null;
     readonly warning: boolean;
-    readonly creditPacks: readonly ({
+    readonly creditPacks: readonly {
       readonly id: "pack-1" | "pack-5";
       readonly credits: number;
       readonly priceEurCents: number;
-    })[];
+    }[];
   };
-  "MemberDisplayPreference": {
+  MemberDisplayPreference: {
     readonly mode: "guided" | "standard" | "everything" | null;
     readonly guideHidden: boolean;
   };
-  "MemberScreenLanguage": {
+  MemberScreenLanguage: {
     readonly language: "en" | "fr" | null;
   };
-  "ModelCatalog": {
-    readonly models: readonly (ApiSchemas["CatalogModel"])[];
-    readonly presets: readonly (ApiSchemas["CatalogPreset"])[];
+  ModelCatalog: {
+    readonly models: readonly ApiSchemas["CatalogModel"][];
+    readonly presets: readonly ApiSchemas["CatalogPreset"][];
     readonly defaultPresetId: string;
-    readonly localModels: readonly (string)[];
+    readonly localModels: readonly string[];
   };
-  "MonthUsage": {
+  MonthUsage: {
     readonly calls: number;
     readonly inputTokens: number;
     readonly outputTokens: number;
     readonly estimatedUsd: number;
     readonly unpricedCalls: number;
-    readonly lines: readonly (ApiSchemas["UsageLine"])[];
+    readonly lines: readonly ApiSchemas["UsageLine"][];
     readonly month: string;
   };
-  "Opportunity": {
+  Opportunity: {
     readonly workspaceId: string;
     readonly checksum: string;
     readonly brief: {
@@ -721,112 +812,142 @@ export interface ApiSchemas {
       readonly status: "draft" | "reviewed";
       readonly createdAt: string;
       readonly reviewedAt: string | null;
-      readonly sources: readonly ({
+      readonly sources: readonly {
         readonly id: string;
-        readonly classification: "job-posting" | "social-announcement" | "company-context" | "candidate-instruction" | "candidate-provided-fact";
-        readonly status: "available" | "inaccessible" | "unsupported" | "failed" | "partial" | "stale";
-        readonly provenance: {
-          readonly kind: "approved-url";
-          readonly originalUrl: string;
-          readonly finalUrl?: string;
-          readonly capturedAt: string;
-          readonly contentChecksum: unknown | null;
-          readonly textOrigin?: "job-posting-json-ld";
-        } | {
-          readonly kind: "local-file";
-          readonly displayName: string;
-          readonly capturedAt: string;
-          readonly checksum: unknown | null;
-          readonly textOrigin?: "job-posting-json-ld";
-        } | {
-          readonly kind: "pasted-content";
-          readonly capturedAt: string;
-          readonly checksum: unknown | null;
-        } | {
-          readonly kind: "candidate-input";
-          readonly capturedAt: string;
-          readonly checksum: unknown | null;
-        };
-      })[];
+        readonly classification:
+          | "job-posting"
+          | "social-announcement"
+          | "company-context"
+          | "candidate-instruction"
+          | "candidate-provided-fact";
+        readonly status:
+          "available" | "inaccessible" | "unsupported" | "failed" | "partial" | "stale";
+        readonly provenance:
+          | {
+              readonly kind: "approved-url";
+              readonly originalUrl: string;
+              readonly finalUrl?: string;
+              readonly capturedAt: string;
+              readonly contentChecksum: unknown | null;
+              readonly textOrigin?: "job-posting-json-ld";
+            }
+          | {
+              readonly kind: "local-file";
+              readonly displayName: string;
+              readonly capturedAt: string;
+              readonly checksum: unknown | null;
+              readonly textOrigin?: "job-posting-json-ld";
+            }
+          | {
+              readonly kind: "pasted-content";
+              readonly capturedAt: string;
+              readonly checksum: unknown | null;
+            }
+          | {
+              readonly kind: "candidate-input";
+              readonly capturedAt: string;
+              readonly checksum: unknown | null;
+            };
+      }[];
       readonly role: {
         readonly value: string;
-        readonly sourceIds: readonly (string)[];
+        readonly sourceIds: readonly string[];
       } | null;
       readonly employer: {
         readonly value: string;
-        readonly sourceIds: readonly (string)[];
+        readonly sourceIds: readonly string[];
       } | null;
       readonly location?: {
         readonly value: string;
-        readonly sourceIds: readonly (string)[];
+        readonly sourceIds: readonly string[];
       } | null;
-      readonly responsibilities: readonly ({
+      readonly responsibilities: readonly {
         readonly id: string;
         readonly text: string;
-        readonly sourceIds: readonly (string)[];
+        readonly sourceIds: readonly string[];
         readonly excerpt?: string;
-      })[];
-      readonly requirements: readonly ({
+      }[];
+      readonly requirements: readonly {
         readonly id: string;
         readonly text: string;
         readonly priority: "critical" | "high" | "medium" | "low";
-        readonly sourceIds: readonly (string)[];
+        readonly sourceIds: readonly string[];
         readonly excerpt?: string;
-      })[];
-      readonly priorities: readonly ({
+      }[];
+      readonly priorities: readonly {
         readonly id: string;
         readonly text: string;
-        readonly sourceIds: readonly (string)[];
-      })[];
+        readonly sourceIds: readonly string[];
+      }[];
       readonly candidateInstructions: {
         readonly tone: {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
         } | null;
         readonly applicationGoal: {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
         } | null;
-        readonly forbiddenLanguage: readonly ({
+        readonly forbiddenLanguage: readonly {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
-        })[];
-        readonly focusAreas: readonly ({
+          readonly sourceIds: readonly string[];
+        }[];
+        readonly focusAreas: readonly {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
-        })[];
+          readonly sourceIds: readonly string[];
+        }[];
       };
-      readonly issues: readonly ({
+      readonly issues: readonly {
         readonly id: string;
-        readonly code: "inaccessible-source" | "unsupported-source" | "fetch-failure" | "extraction-failure" | "duplicate-source" | "contradiction" | "stale-source" | "partial-fetch";
+        readonly code:
+          | "inaccessible-source"
+          | "unsupported-source"
+          | "fetch-failure"
+          | "extraction-failure"
+          | "duplicate-source"
+          | "contradiction"
+          | "stale-source"
+          | "partial-fetch";
         readonly status: "open" | "acknowledged" | "resolved";
         readonly severity: "error" | "warning";
         readonly message: string;
-        readonly sourceIds: readonly (string)[];
-      })[];
+        readonly sourceIds: readonly string[];
+      }[];
     };
     readonly screening?: ApiSchemas["OpportunityScreening"];
     readonly extraction?: "pending" | "failed" | "limited";
   };
-  "OpportunityScreening": {
+  OpportunityScreening: {
     readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
-    readonly sources: readonly ({
+    readonly signals: readonly (
+      | "exfiltration-link"
+      | "hidden-text"
+      | "instruction-override"
+      | "role-change"
+      | "screener-unavailable"
+    )[];
+    readonly sources: readonly {
       readonly resultId: string;
       readonly verdict: "clear" | "flagged" | "unscreened";
-      readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+      readonly signals: readonly (
+        | "exfiltration-link"
+        | "hidden-text"
+        | "instruction-override"
+        | "role-change"
+        | "screener-unavailable"
+      )[];
       readonly sourceId: string;
-    })[];
+    }[];
   };
-  "OpportunityVersions": {
-    readonly versions: readonly ({
+  OpportunityVersions: {
+    readonly versions: readonly {
       readonly version: number;
       readonly status: string;
       readonly createdAt: string;
       readonly reviewedAt: string | null;
-    })[];
+    }[];
   };
-  "OrganisationCredits": {
+  OrganisationCredits: {
     readonly organisationId: string;
     readonly assignment: ApiSchemas["PlanAssignment"] | null;
     readonly entitlements: {
@@ -848,7 +969,7 @@ export interface ApiSchemas {
     } | null;
     readonly balance: ApiSchemas["CreditBalance"];
   };
-  "OrganisationMember": {
+  OrganisationMember: {
     readonly memberId: string;
     readonly email: string;
     readonly role: "owner" | "admin" | "member";
@@ -856,21 +977,21 @@ export interface ApiSchemas {
     readonly invitedAt: string;
     readonly activatedAt?: string;
   };
-  "OrganisationMembers": {
+  OrganisationMembers: {
     readonly organisationId: string;
-    readonly members: readonly (ApiSchemas["OrganisationMember"])[];
+    readonly members: readonly ApiSchemas["OrganisationMember"][];
   };
-  "OwnerTokenProof": {
+  OwnerTokenProof: {
     readonly proof: string;
   };
-  "OwnerTokenProofRequestInput": {
+  OwnerTokenProofRequestInput: {
     readonly challenge: string;
   };
-  "PaymentEventReceipt": {
+  PaymentEventReceipt: {
     readonly received: true;
     readonly outcome: "granted" | "already_granted" | "refunded" | "already_refunded" | "ignored";
   };
-  "PlanAssignment": {
+  PlanAssignment: {
     readonly planId: string;
     readonly catalogVersion: number;
     readonly overrides: {
@@ -894,41 +1015,55 @@ export interface ApiSchemas {
     readonly periodStart: string;
     readonly assignedAt: string;
   };
-  "PreferenceSuggestion": {
+  PreferenceSuggestion: {
     readonly id: string;
     readonly kind: "forbidden-term" | "section-order";
     readonly term?: string;
-    readonly sectionOrder?: readonly (string)[];
+    readonly sectionOrder?: readonly string[];
     readonly occurrences: number;
     readonly applications: number;
     readonly reason: string;
   };
-  "ProjectCardResult": {
+  ProjectCardResult: {
     readonly card_id?: string;
     readonly status: "pending" | "duplicate" | "previously_discarded" | "validated";
     readonly duplicate_of?: string;
-    readonly possible_duplicate_of: readonly (string)[];
+    readonly possible_duplicate_of: readonly string[];
     readonly screening?: "clear" | "flagged" | "unscreened";
     readonly review_url?: string;
     readonly message: string;
   };
-  "QuarantinedMaterial": {
-    readonly resultId: string;
-    readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
-    readonly kind: "job-source";
-    readonly briefId: string;
-    readonly sourceId: string;
-  } | {
-    readonly resultId: string;
-    readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
-    readonly kind: "knowledge-source-version";
-    readonly knowledgeBaseId: string;
-    readonly sourceId: string;
-    readonly sourceVersionId: string;
-  };
-  "RecordAssignment": {
+  QuarantinedMaterial:
+    | {
+        readonly resultId: string;
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
+        readonly kind: "job-source";
+        readonly briefId: string;
+        readonly sourceId: string;
+      }
+    | {
+        readonly resultId: string;
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
+        readonly kind: "knowledge-source-version";
+        readonly knowledgeBaseId: string;
+        readonly sourceId: string;
+        readonly sourceVersionId: string;
+      };
+  RecordAssignment: {
     readonly memberId: string;
     readonly email: string;
     readonly role: "owner" | "admin" | "member";
@@ -936,28 +1071,28 @@ export interface ApiSchemas {
     readonly assignedAt: string;
     readonly workspaceId: string;
   };
-  "RecordMember": {
+  RecordMember: {
     readonly memberId: string;
     readonly email: string;
     readonly role: "owner" | "admin" | "member";
     readonly status: "invited" | "active";
     readonly assignedAt: string;
   };
-  "RecordMembers": {
+  RecordMembers: {
     readonly workspaceId: string;
-    readonly members: readonly (ApiSchemas["RecordMember"])[];
+    readonly members: readonly ApiSchemas["RecordMember"][];
   };
-  "RecordName": {
+  RecordName: {
     readonly id: string;
     readonly name: string;
   };
-  "ResearchBrief": {
+  ResearchBrief: {
     readonly id: string;
     readonly application_id: string;
-    readonly queries: readonly (string)[];
+    readonly queries: readonly string[];
     readonly from_date: string;
-    readonly sources: readonly (ApiSchemas["ResearchSource"])[];
-    readonly findings: readonly (ApiSchemas["ResearchFinding"])[];
+    readonly sources: readonly ApiSchemas["ResearchSource"][];
+    readonly findings: readonly ApiSchemas["ResearchFinding"][];
     readonly dropped: {
       readonly flagged: number;
       readonly outdated: number;
@@ -970,20 +1105,26 @@ export interface ApiSchemas {
     readonly cost_usd: number;
     readonly created_at: string;
   };
-  "ResearchBriefList": {
-    readonly briefs: readonly (ApiSchemas["ResearchBrief"])[];
+  ResearchBriefList: {
+    readonly briefs: readonly ApiSchemas["ResearchBrief"][];
   };
-  "ResearchFinding": {
+  ResearchFinding: {
     readonly id: string;
     readonly text: string;
-    readonly source_ids: readonly (string)[];
+    readonly source_ids: readonly string[];
   };
-  "ResearchRunState": {
+  ResearchRunState: {
     readonly status: "none" | "pending" | "done" | "failed";
-    readonly outcome?: "researched" | "missing" | "no-employer" | "consent-required" | "record-erased" | "unavailable";
+    readonly outcome?:
+      | "researched"
+      | "missing"
+      | "no-employer"
+      | "consent-required"
+      | "record-erased"
+      | "unavailable";
     readonly brief_id?: string;
   };
-  "ResearchSource": {
+  ResearchSource: {
     readonly id: string;
     readonly kind: "upload" | "company-page" | "web-result";
     readonly url?: string;
@@ -993,39 +1134,39 @@ export interface ApiSchemas {
     readonly topic?: "company" | "news" | "role" | "field" | "process" | "salary";
     readonly reliability?: "primary" | "press" | "weak";
   };
-  "ResearchStartInput": {
+  ResearchStartInput: {
     readonly approved: true;
     readonly window_months?: number;
   };
-  "ReviewDraft": {
+  ReviewDraft: {
     readonly id: string;
     readonly version: number;
     readonly createdAt: string;
-    readonly sections: readonly ({
+    readonly sections: readonly {
       readonly id: string;
       readonly title: string;
       readonly kind: string;
-      readonly blocks: readonly ({
+      readonly blocks: readonly {
         readonly id: string;
         readonly type: string;
         readonly text: string;
         readonly edited: boolean;
-        readonly claimIds: readonly (string)[];
-      })[];
-    })[];
-    readonly claims: readonly ({
+        readonly claimIds: readonly string[];
+      }[];
+    }[];
+    readonly claims: readonly {
       readonly id: string;
       readonly text: string;
       readonly status: string;
       readonly substantive: boolean;
-      readonly evidence: readonly ({
+      readonly evidence: readonly {
         readonly sourcePath: string;
         readonly locator?: string;
         readonly excerpt: string;
-      })[];
-    })[];
+      }[];
+    }[];
   };
-  "ReviewFinding": {
+  ReviewFinding: {
     readonly id: string;
     readonly code: string;
     readonly category: string;
@@ -1039,12 +1180,12 @@ export interface ApiSchemas {
       readonly text?: string;
     };
   };
-  "ReviewState": {
+  ReviewState: {
     readonly workspaceId: string;
     readonly runId: string;
     readonly state: string;
   };
-  "Run": {
+  Run: {
     readonly runId: string;
     readonly workspaceId: string;
     readonly state: string;
@@ -1052,14 +1193,14 @@ export interface ApiSchemas {
     readonly currentStep: "author" | "critic" | "revision" | null;
     readonly approval: "pending" | "approved" | "rejected";
     readonly totalCostUsd: number;
-    readonly routes: readonly ({
+    readonly routes: readonly {
       readonly step: "author" | "critic" | "revision";
       readonly route: string;
       readonly fallback?: {
         readonly from: string;
         readonly cause: string;
       };
-    })[];
+    }[];
     readonly findingCount: number;
     readonly hasDraft: boolean;
     readonly startedAt: string;
@@ -1079,18 +1220,24 @@ export interface ApiSchemas {
         readonly rateLimit: string | null;
         readonly retryAfterSeconds: number | null;
       };
-      readonly failureStage: "transport-parsing" | "response-schema-validation" | "artifact-schema-validation" | "factual-invariant-rejection" | "output-token-budget-exceeded" | null;
-      readonly diagnostics: readonly ({
+      readonly failureStage:
+        | "transport-parsing"
+        | "response-schema-validation"
+        | "artifact-schema-validation"
+        | "factual-invariant-rejection"
+        | "output-token-budget-exceeded"
+        | null;
+      readonly diagnostics: readonly {
         readonly code: string;
         readonly path: string;
-      })[];
-      readonly diagnosticCounts: readonly ({
+      }[];
+      readonly diagnosticCounts: readonly {
         readonly code: string;
         readonly count: number;
-      })[];
+      }[];
     } | null;
   };
-  "RunEstimate": {
+  RunEstimate: {
     readonly credits: number;
     readonly estimateVersion: number;
     readonly basis: {
@@ -1121,7 +1268,7 @@ export interface ApiSchemas {
       readonly draftReservesUsd: number;
     };
   };
-  "RunExport": {
+  RunExport: {
     readonly id: string;
     readonly runId: string;
     readonly format: string;
@@ -1133,20 +1280,20 @@ export interface ApiSchemas {
     readonly templateId?: string;
     readonly fileName: string;
   };
-  "RunExports": {
-    readonly exports: readonly (ApiSchemas["RunExport"])[];
+  RunExports: {
+    readonly exports: readonly ApiSchemas["RunExport"][];
   };
-  "RunRequirementEvidence": {
+  RunRequirementEvidence: {
     readonly runId: string;
     readonly mode: "semantic" | "keyword";
     readonly reason?: string;
     readonly modelId?: string;
     readonly chunkCount: number;
     readonly grading?: "graded" | "failed";
-    readonly requirements: readonly ({
+    readonly requirements: readonly {
       readonly requirementId: string;
       readonly text?: string;
-      readonly candidates: readonly ({
+      readonly candidates: readonly {
         readonly chunkId: string;
         readonly origin: "semantic" | "keyword" | "both";
         readonly score?: number;
@@ -1154,13 +1301,13 @@ export interface ApiSchemas {
         readonly lineStart?: number;
         readonly lineEnd?: number;
         readonly grade?: "supports" | "partly-supports" | "does-not-support";
-      })[];
-    })[];
+      }[];
+    }[];
   };
-  "RunReview": {
+  RunReview: {
     readonly run: ApiSchemas["Run"];
     readonly draft: ApiSchemas["ReviewDraft"] | null;
-    readonly findings: readonly (ApiSchemas["ReviewFinding"])[];
+    readonly findings: readonly ApiSchemas["ReviewFinding"][];
     readonly independentReview: {
       readonly authorLineage: string;
       readonly criticLineage: string;
@@ -1172,20 +1319,20 @@ export interface ApiSchemas {
       readonly status: string;
       readonly ready: boolean;
       readonly stopReason: string;
-      readonly scores: readonly ({
+      readonly scores: readonly {
         readonly dimension: string;
         readonly score: number;
         readonly threshold: number;
         readonly meets: boolean;
-      })[];
+      }[];
     } | null;
     readonly approvalCheck: {
       readonly applicationReady: boolean;
-      readonly blockers: readonly (string)[];
+      readonly blockers: readonly string[];
     } | null;
     readonly candidateDirection: string | null;
   };
-  "RunSpan": {
+  RunSpan: {
     readonly span_id: string;
     readonly parent_span_id: string | null;
     readonly name: "invoke_workflow" | "invoke_agent" | "retrieve_evidence";
@@ -1194,135 +1341,179 @@ export interface ApiSchemas {
     readonly status: "ok" | "error" | null;
     readonly attributes: Record<string, never>;
   };
-  "RunUsage": {
+  RunUsage: {
     readonly calls: number;
     readonly inputTokens: number;
     readonly outputTokens: number;
     readonly estimatedUsd: number;
     readonly unpricedCalls: number;
-    readonly lines: readonly (ApiSchemas["UsageLine"])[];
+    readonly lines: readonly ApiSchemas["UsageLine"][];
     readonly runId: string;
     readonly workspaceId: string;
   };
-  "ScreeningOutcome": {
+  ScreeningOutcome: {
     readonly resultId: string;
     readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+    readonly signals: readonly (
+      | "exfiltration-link"
+      | "hidden-text"
+      | "instruction-override"
+      | "role-change"
+      | "screener-unavailable"
+    )[];
   };
-  "ScreeningRelease": {
+  ScreeningRelease: {
     readonly resultId: string;
     readonly memberId: string;
     readonly reason: string;
     readonly releasedAt: string;
   };
-  "ScreeningStatus": {
-    readonly resultId: string;
-    readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
-    readonly kind: "job-source";
-    readonly briefId: string;
-    readonly sourceId: string;
-    readonly quarantined: boolean;
-    readonly release?: {
-      readonly memberId: string;
-      readonly releasedAt: string;
-      readonly reason?: string;
-    };
-  } | {
-    readonly resultId: string;
-    readonly verdict: "clear" | "flagged" | "unscreened";
-    readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
-    readonly kind: "knowledge-source-version";
-    readonly knowledgeBaseId: string;
-    readonly sourceId: string;
-    readonly sourceVersionId: string;
-    readonly quarantined: boolean;
-    readonly release?: {
-      readonly memberId: string;
-      readonly releasedAt: string;
-      readonly reason?: string;
-    };
+  ScreeningStatus:
+    | {
+        readonly resultId: string;
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
+        readonly kind: "job-source";
+        readonly briefId: string;
+        readonly sourceId: string;
+        readonly quarantined: boolean;
+        readonly release?: {
+          readonly memberId: string;
+          readonly releasedAt: string;
+          readonly reason?: string;
+        };
+      }
+    | {
+        readonly resultId: string;
+        readonly verdict: "clear" | "flagged" | "unscreened";
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
+        readonly kind: "knowledge-source-version";
+        readonly knowledgeBaseId: string;
+        readonly sourceId: string;
+        readonly sourceVersionId: string;
+        readonly quarantined: boolean;
+        readonly release?: {
+          readonly memberId: string;
+          readonly releasedAt: string;
+          readonly reason?: string;
+        };
+      };
+  ScreeningStatusList: {
+    readonly statuses: readonly ApiSchemas["ScreeningStatus"][];
   };
-  "ScreeningStatusList": {
-    readonly statuses: readonly (ApiSchemas["ScreeningStatus"])[];
-  };
-  "SensitivityRule": {
+  SensitivityRule: {
     readonly id: string;
     readonly tier: "normal" | "sensitive" | "never-share";
     readonly match: ApiSchemas["SensitivityRuleMatch"];
   };
-  "SensitivityRuleMatch": {
-    readonly kind: "heading-contains";
-    readonly text: string;
-  } | {
-    readonly kind: "heading-path";
-    readonly path: readonly (string)[];
-  };
-  "SensitivityRuleMatchInput": {
-    readonly kind: "heading-contains";
-    readonly text: string;
-  } | {
-    readonly kind: "heading-path";
-    readonly path: readonly (string)[];
-  };
-  "SensitivityRules": {
+  SensitivityRuleMatch:
+    | {
+        readonly kind: "heading-contains";
+        readonly text: string;
+      }
+    | {
+        readonly kind: "heading-path";
+        readonly path: readonly string[];
+      };
+  SensitivityRuleMatchInput:
+    | {
+        readonly kind: "heading-contains";
+        readonly text: string;
+      }
+    | {
+        readonly kind: "heading-path";
+        readonly path: readonly string[];
+      };
+  SensitivityRules: {
     readonly knowledgeBaseId: string;
     readonly version: number;
     readonly createdAt: string | null;
-    readonly rules: readonly (ApiSchemas["SensitivityRule"])[];
+    readonly rules: readonly ApiSchemas["SensitivityRule"][];
   };
-  "ServiceNotice": {
+  ServiceNotice: {
     readonly kind: "maintenance";
     readonly startsAt: string;
     readonly endsAt: string;
     readonly readOnly: boolean;
     readonly state: "upcoming" | "ongoing" | "overrunning";
   };
-  "ServiceNoticeResponse": {
+  ServiceNoticeResponse: {
     readonly notice: ApiSchemas["ServiceNotice"] | null;
   };
-  "SignedUp": {
+  SignedUp: {
     readonly organisationId: string;
     readonly memberId: string;
     readonly role: "owner";
   };
-  "SpeechModelManifest": {
+  SpeechModelManifest: {
     readonly available: boolean;
     readonly model: string;
     readonly revision: string;
     readonly dtype: string;
     readonly license: string;
     readonly base: string;
-    readonly files: readonly ({
+    readonly files: readonly {
       readonly path: string;
       readonly sizeBytes: number;
       readonly sha256: string;
-    })[];
+    }[];
   };
-  "SupportReply": {
+  SupportReply: {
     readonly conversation_id: string;
     readonly mode: "assistant" | "guide_search";
     readonly outcome: "answered" | "refused" | "needs_person" | null;
-    readonly reason: "disabled" | "member_rate" | "member_limit" | "cost_cap" | "question_too_long" | "model_failed" | "no_answer" | null;
+    readonly reason:
+      | "disabled"
+      | "member_rate"
+      | "member_limit"
+      | "cost_cap"
+      | "question_too_long"
+      | "model_failed"
+      | "no_answer"
+      | null;
     readonly text: string | null;
-    readonly sections: readonly ({
-      readonly id: "evidence" | "job" | "draft" | "review" | "prepare" | "display" | "agents" | "credits" | "privacy" | "problems";
+    readonly sections: readonly {
+      readonly id:
+        | "evidence"
+        | "job"
+        | "draft"
+        | "review"
+        | "prepare"
+        | "display"
+        | "agents"
+        | "credits"
+        | "privacy"
+        | "problems";
       readonly title: string;
-      readonly paragraphs: readonly (string)[];
-    })[];
+      readonly paragraphs: readonly string[];
+    }[];
     readonly ticket_id: string | null;
   };
-  "UnscreenedMaterial": {
-    readonly kind: "job-source";
-    readonly briefId: string;
-    readonly sourceId: string;
-  } | {
-    readonly kind: "knowledge-source-version";
-    readonly knowledgeBaseId: string;
-    readonly sourceId: string;
-    readonly sourceVersionId: string;
-  };
-  "UsageLine": {
+  UnscreenedMaterial:
+    | {
+        readonly kind: "job-source";
+        readonly briefId: string;
+        readonly sourceId: string;
+      }
+    | {
+        readonly kind: "knowledge-source-version";
+        readonly knowledgeBaseId: string;
+        readonly sourceId: string;
+        readonly sourceVersionId: string;
+      };
+  UsageLine: {
     readonly company: string;
     readonly model: string;
     readonly route: string | null;
@@ -1332,13 +1523,13 @@ export interface ApiSchemas {
     readonly estimatedUsd: number;
     readonly unpricedCalls: number;
   };
-  "WorkJournalIntake": {
+  WorkJournalIntake: {
     readonly enabled: boolean;
     readonly changed_at?: string;
     readonly agent_tokens: boolean;
   };
-  "WorkJournalNoteList": {
-    readonly notes?: readonly ({
+  WorkJournalNoteList: {
+    readonly notes?: readonly {
       readonly id: string;
       readonly title: string;
       readonly period: {
@@ -1346,13 +1537,25 @@ export interface ApiSchemas {
         readonly end?: string;
       };
       readonly project: string;
-      readonly technologies: readonly (string)[];
-      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+      readonly technologies: readonly string[];
+      readonly category:
+        | "feature"
+        | "integration"
+        | "payments"
+        | "infrastructure"
+        | "data"
+        | "security"
+        | "performance"
+        | "migration"
+        | "release"
+        | "incident"
+        | "design"
+        | "other";
       readonly status: "pending" | "approved" | "merged" | "discarded";
       readonly kind?: "note" | "project";
       readonly created_at: string;
-    })[];
-    readonly full?: readonly ({
+    }[];
+    readonly full?: readonly {
       readonly id: string;
       readonly tenant_id: string;
       readonly workspace_id: string;
@@ -1369,20 +1572,33 @@ export interface ApiSchemas {
           readonly visibility: "public" | "private" | "unknown";
           readonly repository?: string;
         };
-        readonly technologies: readonly (string)[];
-        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly technologies: readonly string[];
+        readonly category:
+          | "feature"
+          | "integration"
+          | "payments"
+          | "infrastructure"
+          | "data"
+          | "security"
+          | "performance"
+          | "migration"
+          | "release"
+          | "incident"
+          | "design"
+          | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
-        readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
+        readonly links: readonly {
+          readonly kind:
+            "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
-        })[];
-        readonly metrics: readonly ({
+        }[];
+        readonly metrics: readonly {
           readonly description: string;
           readonly how_measured?: string;
-        })[];
+        }[];
       };
       readonly dedupe_key: string;
-      readonly possible_duplicate_of: readonly (string)[];
+      readonly possible_duplicate_of: readonly string[];
       readonly merged_into?: string;
       readonly project_card?: {
         readonly purpose: string;
@@ -1401,10 +1617,10 @@ export interface ApiSchemas {
           readonly continuous_integration?: boolean;
           readonly automated_tests?: boolean;
         };
-        readonly highlights: readonly ({
+        readonly highlights: readonly {
           readonly text: string;
           readonly source: string;
-        })[];
+        }[];
       };
       readonly approval?: {
         readonly knowledge_base_id: string;
@@ -1414,66 +1630,97 @@ export interface ApiSchemas {
       };
       readonly screening: {
         readonly verdict: "clear" | "flagged" | "unscreened";
-        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
         readonly screened_at: string;
       };
       readonly edit_count: number;
       readonly agent_token_id?: string;
-      readonly amended_by_agent_token_ids?: readonly (string)[];
+      readonly amended_by_agent_token_ids?: readonly string[];
       readonly created_at: string;
       readonly updated_at: string;
-    })[];
+    }[];
   };
-  "WorkJournalRecordResult": {
+  WorkJournalRecordResult: {
     readonly note_id?: string;
     readonly status: "pending" | "amended" | "duplicate" | "previously_discarded" | "validated";
     readonly duplicate_of?: string;
-    readonly possible_duplicate_of: readonly (string)[];
+    readonly possible_duplicate_of: readonly string[];
     readonly screening?: "clear" | "flagged" | "unscreened";
     readonly review_url?: string;
     readonly message: string;
   };
-  "WorkJournalReviewInput": {
-    readonly action: "approve";
-    readonly knowledge_base_id: string;
-    readonly tier?: "normal" | "sensitive" | "never-share";
-  } | {
-    readonly action: "edit";
-    readonly content: {
-      readonly title: string;
-      readonly summary: string;
-      readonly period: {
-        readonly start: string;
-        readonly end?: string;
+  WorkJournalReviewInput:
+    | {
+        readonly action: "approve";
+        readonly knowledge_base_id: string;
+        readonly tier?: "normal" | "sensitive" | "never-share";
+      }
+    | {
+        readonly action: "edit";
+        readonly content: {
+          readonly title: string;
+          readonly summary: string;
+          readonly period: {
+            readonly start: string;
+            readonly end?: string;
+          };
+          readonly project: {
+            readonly name: string;
+            readonly visibility: "public" | "private" | "unknown";
+            readonly repository?: string;
+          };
+          readonly technologies: readonly string[];
+          readonly category:
+            | "feature"
+            | "integration"
+            | "payments"
+            | "infrastructure"
+            | "data"
+            | "security"
+            | "performance"
+            | "migration"
+            | "release"
+            | "incident"
+            | "design"
+            | "other";
+          readonly candidate_role: readonly (
+            "designed" | "implemented" | "directed" | "reviewed"
+          )[];
+          readonly links?: readonly {
+            readonly kind:
+              | "pull-request"
+              | "commit"
+              | "issue"
+              | "release"
+              | "document"
+              | "repository"
+              | "website";
+            readonly url: string;
+          }[];
+          readonly metrics?: readonly {
+            readonly description: string;
+            readonly how_measured?: string;
+          }[];
+        };
+      }
+    | {
+        readonly action: "merge";
+        readonly into: string;
+        readonly keep_summary?: "into" | "this";
+      }
+    | {
+        readonly action: "discard";
       };
-      readonly project: {
-        readonly name: string;
-        readonly visibility: "public" | "private" | "unknown";
-        readonly repository?: string;
-      };
-      readonly technologies: readonly (string)[];
-      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
-      readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
-      readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
-        readonly url: string;
-      })[];
-      readonly metrics?: readonly ({
-        readonly description: string;
-        readonly how_measured?: string;
-      })[];
-    };
-  } | {
-    readonly action: "merge";
-    readonly into: string;
-    readonly keep_summary?: "into" | "this";
-  } | {
-    readonly action: "discard";
-  };
-  "Workspace": {
+  Workspace: {
     readonly id: string;
     readonly language: string;
-    readonly requiredSections: readonly (string)[];
+    readonly requiredSections: readonly string[];
     readonly maxRounds: number;
     readonly maxCostUsd?: number;
     readonly maxDurationMs?: number;
@@ -1487,32 +1734,32 @@ export interface ApiSchemas {
     };
     readonly fixtureMode: boolean;
     readonly autopilot: boolean;
-    readonly knowledgeBaseIds: readonly (string)[];
+    readonly knowledgeBaseIds: readonly string[];
   };
-  "WorkspaceList": {
-    readonly workspaces: readonly ({
+  WorkspaceList: {
+    readonly workspaces: readonly {
       readonly id: string;
       readonly name?: string;
-    })[];
+    }[];
   };
-  "WritingPolicy": {
+  WritingPolicy: {
     readonly checksum: string;
     readonly version: string;
     readonly createdAt: string;
     readonly priorChecksum: string | null;
     readonly content: string;
   };
-  "WritingPolicyTemplate": {
+  WritingPolicyTemplate: {
     readonly content: string;
   };
-  "WritingPolicyVersion": {
+  WritingPolicyVersion: {
     readonly checksum: string;
     readonly version: string;
     readonly createdAt: string;
     readonly priorChecksum: string | null;
   };
-  "WritingSamples": {
-    readonly samples: readonly (string)[];
+  WritingSamples: {
+    readonly samples: readonly string[];
   };
 }
 
@@ -1530,7 +1777,7 @@ export interface ApiOperations {
     readonly body: {
       readonly kind: "error" | "unhandled_rejection";
       readonly message: string;
-      readonly stack?: readonly (string)[];
+      readonly stack?: readonly string[];
       readonly route: string;
       readonly build: string;
     };
@@ -1602,7 +1849,7 @@ export interface ApiOperations {
       readonly maxDurationMs?: number;
       readonly maxWords?: number;
       readonly maxCharacters?: number;
-      readonly requiredSections?: readonly (string)[];
+      readonly requiredSections?: readonly string[];
       readonly fixtureMode?: boolean;
       readonly autopilot?: boolean;
     };
@@ -1672,7 +1919,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly body: {
-      readonly knowledgeBaseIds: readonly (string)[];
+      readonly knowledgeBaseIds: readonly string[];
       readonly combinationApproved?: boolean;
     };
     readonly response: ApiSchemas["Workspace"];
@@ -1700,7 +1947,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: {
-      readonly versions: readonly (ApiSchemas["WritingPolicyVersion"])[];
+      readonly versions: readonly ApiSchemas["WritingPolicyVersion"][];
     };
   };
   "GET /v1/workspaces/{workspaceId}/writing-policy/versions/{checksum}": {
@@ -1715,7 +1962,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: {
-      readonly suggestions: readonly (ApiSchemas["PreferenceSuggestion"])[];
+      readonly suggestions: readonly ApiSchemas["PreferenceSuggestion"][];
     };
   };
   "POST /v1/workspaces/{workspaceId}/preference-suggestions/{suggestionId}/accept": {
@@ -1747,7 +1994,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly body: {
-      readonly samples: readonly (string)[];
+      readonly samples: readonly string[];
     };
     readonly response: ApiSchemas["WritingSamples"];
   };
@@ -1763,15 +2010,29 @@ export interface ApiOperations {
     readonly path: {
       readonly workspaceId: string;
     };
-    readonly body: {
-      readonly kind: "section";
-      readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
-      readonly level: "cv" | "interview-only" | "never-say" | null;
-    } | {
-      readonly kind: "fact";
-      readonly key: string;
-      readonly level: "cv" | "interview-only" | "never-say" | null;
-    };
+    readonly body:
+      | {
+          readonly kind: "section";
+          readonly category:
+            | "identity"
+            | "contact"
+            | "role"
+            | "employer"
+            | "date"
+            | "achievement"
+            | "project"
+            | "skill"
+            | "certification"
+            | "education"
+            | "language"
+            | "approved-link";
+          readonly level: "cv" | "interview-only" | "never-say" | null;
+        }
+      | {
+          readonly kind: "fact";
+          readonly key: string;
+          readonly level: "cv" | "interview-only" | "never-say" | null;
+        };
     readonly response: {
       readonly usage: ApiSchemas["FactUsage"];
     };
@@ -1797,32 +2058,36 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly body: {
-      readonly sources: readonly ({
-        readonly id: string;
-        readonly kind: "approved-url";
-        readonly classification: "job-posting";
-        readonly capturedAt?: string;
-        readonly url: string;
-        readonly approved: true;
-      } | {
-        readonly id: string;
-        readonly kind: "pasted-content";
-        readonly classification: "job-posting" | "social-announcement" | "company-context";
-        readonly capturedAt?: string;
-        readonly content: string;
-      } | {
-        readonly id: string;
-        readonly kind: "candidate-input";
-        readonly classification: "candidate-instruction";
-        readonly capturedAt?: string;
-        readonly content: string;
-        readonly instructions?: {
-          readonly tone?: string;
-          readonly applicationGoal?: string;
-          readonly forbiddenLanguage?: readonly (string)[];
-          readonly focusAreas?: readonly (string)[];
-        };
-      })[];
+      readonly sources: readonly (
+        | {
+            readonly id: string;
+            readonly kind: "approved-url";
+            readonly classification: "job-posting";
+            readonly capturedAt?: string;
+            readonly url: string;
+            readonly approved: true;
+          }
+        | {
+            readonly id: string;
+            readonly kind: "pasted-content";
+            readonly classification: "job-posting" | "social-announcement" | "company-context";
+            readonly capturedAt?: string;
+            readonly content: string;
+          }
+        | {
+            readonly id: string;
+            readonly kind: "candidate-input";
+            readonly classification: "candidate-instruction";
+            readonly capturedAt?: string;
+            readonly content: string;
+            readonly instructions?: {
+              readonly tone?: string;
+              readonly applicationGoal?: string;
+              readonly forbiddenLanguage?: readonly string[];
+              readonly focusAreas?: readonly string[];
+            };
+          }
+      )[];
       readonly applicationId?: string;
     };
     readonly response: ApiSchemas["Opportunity"];
@@ -1847,57 +2112,65 @@ export interface ApiOperations {
       readonly patch: {
         readonly role?: {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
         } | null;
         readonly employer?: {
           readonly value: string;
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
         } | null;
         readonly candidateEmployer?: string;
-        readonly responsibilities?: readonly ({
+        readonly responsibilities?: readonly {
           readonly id: string;
           readonly text: string;
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
           readonly excerpt?: string;
-        })[];
-        readonly requirements?: readonly ({
+        }[];
+        readonly requirements?: readonly {
           readonly id: string;
           readonly text: string;
           readonly priority: "critical" | "high" | "medium" | "low";
-          readonly sourceIds: readonly (string)[];
+          readonly sourceIds: readonly string[];
           readonly excerpt?: string;
-        })[];
-        readonly priorities?: readonly ({
+        }[];
+        readonly priorities?: readonly {
           readonly id: string;
           readonly text: string;
-          readonly sourceIds: readonly (string)[];
-        })[];
+          readonly sourceIds: readonly string[];
+        }[];
         readonly candidateInstructions?: {
           readonly tone: {
             readonly value: string;
-            readonly sourceIds: readonly (string)[];
+            readonly sourceIds: readonly string[];
           } | null;
           readonly applicationGoal: {
             readonly value: string;
-            readonly sourceIds: readonly (string)[];
+            readonly sourceIds: readonly string[];
           } | null;
-          readonly forbiddenLanguage: readonly ({
+          readonly forbiddenLanguage: readonly {
             readonly value: string;
-            readonly sourceIds: readonly (string)[];
-          })[];
-          readonly focusAreas: readonly ({
+            readonly sourceIds: readonly string[];
+          }[];
+          readonly focusAreas: readonly {
             readonly value: string;
-            readonly sourceIds: readonly (string)[];
-          })[];
+            readonly sourceIds: readonly string[];
+          }[];
         };
-        readonly issues?: readonly ({
+        readonly issues?: readonly {
           readonly id: string;
-          readonly code: "inaccessible-source" | "unsupported-source" | "fetch-failure" | "extraction-failure" | "duplicate-source" | "contradiction" | "stale-source" | "partial-fetch";
+          readonly code:
+            | "inaccessible-source"
+            | "unsupported-source"
+            | "fetch-failure"
+            | "extraction-failure"
+            | "duplicate-source"
+            | "contradiction"
+            | "stale-source"
+            | "partial-fetch";
           readonly status: "open" | "acknowledged" | "resolved";
           readonly severity: "error" | "warning";
           readonly message: string;
-          readonly sourceIds: readonly (string)[];
-        })[];
+          readonly sourceIds: readonly string[];
+        }[];
       };
     };
     readonly response: ApiSchemas["Opportunity"];
@@ -1924,7 +2197,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: {
-      readonly applications: readonly (ApiSchemas["Application"])[];
+      readonly applications: readonly ApiSchemas["Application"][];
     };
   };
   "POST /v1/workspaces/{workspaceId}/applications": {
@@ -2023,36 +2296,55 @@ export interface ApiOperations {
     readonly body: {
       readonly expectedVersion: number;
       readonly patch: {
-        readonly facts?: readonly ({
+        readonly facts?: readonly {
           readonly id: string;
-          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly category:
+            | "identity"
+            | "contact"
+            | "role"
+            | "employer"
+            | "date"
+            | "achievement"
+            | "project"
+            | "skill"
+            | "certification"
+            | "education"
+            | "language"
+            | "approved-link";
           readonly subjectId?: string;
           readonly field: string;
           readonly value: string;
-          readonly provenance: readonly ({
+          readonly provenance: readonly {
             readonly storeId: string;
             readonly knowledgeBaseId: string;
             readonly sourceId: string;
             readonly versionId: string;
             readonly kind: "candidate-provided" | "public-corroboration";
             readonly quote?: string;
-          })[];
-        })[];
-        readonly issues?: readonly ({
+          }[];
+        }[];
+        readonly issues?: readonly {
           readonly id: string;
-          readonly code: "conflict-date" | "conflict-title" | "conflict-duration" | "conflict-metric" | "conflict-value" | "duplicate" | "omission";
+          readonly code:
+            | "conflict-date"
+            | "conflict-title"
+            | "conflict-duration"
+            | "conflict-metric"
+            | "conflict-value"
+            | "duplicate"
+            | "omission";
           readonly severity: "error" | "warning";
           readonly status: "open" | "acknowledged" | "resolved";
           readonly message: string;
-          readonly factIds?: readonly (string)[];
-          readonly sourceRefs?: readonly ({
+          readonly factIds?: readonly string[];
+          readonly sourceRefs?: readonly {
             readonly storeId: string;
             readonly knowledgeBaseId: string;
             readonly sourceId: string;
             readonly versionId: string;
             readonly kind: "candidate-provided" | "public-corroboration";
-          })[];
-        })[];
+          }[];
+        }[];
       };
     };
     readonly response: ApiSchemas["CareerProfile"];
@@ -2211,35 +2503,35 @@ export interface ApiOperations {
       readonly sourceApplicationId: string;
       readonly name: string;
       readonly jobText: string;
-      readonly briefs: readonly ({
+      readonly briefs: readonly {
         readonly briefId: string;
-        readonly versions: readonly ({
+        readonly versions: readonly {
           readonly id: string;
-        })[];
-      })[];
-      readonly runs: readonly ({
+        }[];
+      }[];
+      readonly runs: readonly {
         readonly run: {
           readonly id: string;
         };
-        readonly contextSnapshots: readonly ({
+        readonly contextSnapshots: readonly {
           readonly id: string;
-        })[];
-        readonly artifacts: readonly ({
+        }[];
+        readonly artifacts: readonly {
           readonly id: string;
           readonly version: number;
-        })[];
-        readonly snapshots: readonly ({
+        }[];
+        readonly snapshots: readonly {
           readonly record: Record<string, never>;
           readonly payload: unknown;
           readonly slim: boolean;
-        })[];
-        readonly rounds: readonly (Record<string, never>)[];
-        readonly executions: readonly (Record<string, never>)[];
-        readonly findings: readonly (Record<string, never>)[];
-        readonly decisions: readonly (Record<string, never>)[];
+        }[];
+        readonly rounds: readonly Record<string, never>[];
+        readonly executions: readonly Record<string, never>[];
+        readonly findings: readonly Record<string, never>[];
+        readonly decisions: readonly Record<string, never>[];
         readonly state?: Record<string, never>;
-        readonly events: readonly (Record<string, never>)[];
-      })[];
+        readonly events: readonly Record<string, never>[];
+      }[];
     };
     readonly response: ApiSchemas["ApplicationImport"];
   };
@@ -2396,7 +2688,7 @@ export interface ApiOperations {
       readonly workspaceId?: string;
     };
     readonly response: {
-      readonly knowledgeBases: readonly (ApiSchemas["KnowledgeBase"])[];
+      readonly knowledgeBases: readonly ApiSchemas["KnowledgeBase"][];
     };
   };
   "GET /v1/knowledge-bases/{knowledgeBaseId}/sources": {
@@ -2404,7 +2696,7 @@ export interface ApiOperations {
       readonly knowledgeBaseId: string;
     };
     readonly response: {
-      readonly sources: readonly (ApiSchemas["KnowledgeSource"])[];
+      readonly sources: readonly ApiSchemas["KnowledgeSource"][];
     };
   };
   "POST /v1/knowledge-bases/{knowledgeBaseId}/sources": {
@@ -2415,7 +2707,13 @@ export interface ApiOperations {
       readonly name: string;
     };
     readonly body: Blob;
-    readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain" | "application/json" | "text/csv";
+    readonly contentType:
+      | "application/pdf"
+      | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      | "text/markdown"
+      | "text/plain"
+      | "application/json"
+      | "text/csv";
     readonly response: ApiSchemas["KnowledgeSource"];
   };
   "GET /v1/knowledge-bases/{knowledgeBaseId}/sources/{sourceId}/file": {
@@ -2487,17 +2785,30 @@ export interface ApiOperations {
         readonly visibility: "public" | "private" | "unknown";
         readonly repository?: string;
       };
-      readonly technologies: readonly (string)[];
-      readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+      readonly technologies: readonly string[];
+      readonly category:
+        | "feature"
+        | "integration"
+        | "payments"
+        | "infrastructure"
+        | "data"
+        | "security"
+        | "performance"
+        | "migration"
+        | "release"
+        | "incident"
+        | "design"
+        | "other";
       readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
-      readonly links?: readonly ({
-        readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
+      readonly links?: readonly {
+        readonly kind:
+          "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
         readonly url: string;
-      })[];
-      readonly metrics?: readonly ({
+      }[];
+      readonly metrics?: readonly {
         readonly description: string;
         readonly how_measured?: string;
-      })[];
+      }[];
       readonly dedupe_key?: string;
       readonly amends?: string;
       readonly dry_run?: boolean;
@@ -2531,7 +2842,7 @@ export interface ApiOperations {
       readonly summary: string;
       readonly role: "sole-author" | "lead" | "contributor";
       readonly visibility: "public" | "private";
-      readonly stack: readonly (string)[];
+      readonly stack: readonly string[];
       readonly contribution: {
         readonly own_commits: number;
         readonly total_commits: number;
@@ -2546,10 +2857,10 @@ export interface ApiOperations {
         readonly continuous_integration?: boolean;
         readonly automated_tests?: boolean;
       };
-      readonly highlights?: readonly ({
+      readonly highlights?: readonly {
         readonly text: string;
         readonly source: string;
-      })[];
+      }[];
       readonly repository_url?: string;
       readonly live_url?: string;
       readonly release_url?: string;
@@ -2580,20 +2891,33 @@ export interface ApiOperations {
           readonly visibility: "public" | "private" | "unknown";
           readonly repository?: string;
         };
-        readonly technologies: readonly (string)[];
-        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly technologies: readonly string[];
+        readonly category:
+          | "feature"
+          | "integration"
+          | "payments"
+          | "infrastructure"
+          | "data"
+          | "security"
+          | "performance"
+          | "migration"
+          | "release"
+          | "incident"
+          | "design"
+          | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
-        readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
+        readonly links: readonly {
+          readonly kind:
+            "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
-        })[];
-        readonly metrics: readonly ({
+        }[];
+        readonly metrics: readonly {
           readonly description: string;
           readonly how_measured?: string;
-        })[];
+        }[];
       };
       readonly dedupe_key: string;
-      readonly possible_duplicate_of: readonly (string)[];
+      readonly possible_duplicate_of: readonly string[];
       readonly merged_into?: string;
       readonly project_card?: {
         readonly purpose: string;
@@ -2612,10 +2936,10 @@ export interface ApiOperations {
           readonly continuous_integration?: boolean;
           readonly automated_tests?: boolean;
         };
-        readonly highlights: readonly ({
+        readonly highlights: readonly {
           readonly text: string;
           readonly source: string;
-        })[];
+        }[];
       };
       readonly approval?: {
         readonly knowledge_base_id: string;
@@ -2625,12 +2949,18 @@ export interface ApiOperations {
       };
       readonly screening: {
         readonly verdict: "clear" | "flagged" | "unscreened";
-        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
         readonly screened_at: string;
       };
       readonly edit_count: number;
       readonly agent_token_id?: string;
-      readonly amended_by_agent_token_ids?: readonly (string)[];
+      readonly amended_by_agent_token_ids?: readonly string[];
       readonly created_at: string;
       readonly updated_at: string;
     };
@@ -2658,20 +2988,33 @@ export interface ApiOperations {
           readonly visibility: "public" | "private" | "unknown";
           readonly repository?: string;
         };
-        readonly technologies: readonly (string)[];
-        readonly category: "feature" | "integration" | "payments" | "infrastructure" | "data" | "security" | "performance" | "migration" | "release" | "incident" | "design" | "other";
+        readonly technologies: readonly string[];
+        readonly category:
+          | "feature"
+          | "integration"
+          | "payments"
+          | "infrastructure"
+          | "data"
+          | "security"
+          | "performance"
+          | "migration"
+          | "release"
+          | "incident"
+          | "design"
+          | "other";
         readonly candidate_role: readonly ("designed" | "implemented" | "directed" | "reviewed")[];
-        readonly links: readonly ({
-          readonly kind: "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
+        readonly links: readonly {
+          readonly kind:
+            "pull-request" | "commit" | "issue" | "release" | "document" | "repository" | "website";
           readonly url: string;
-        })[];
-        readonly metrics: readonly ({
+        }[];
+        readonly metrics: readonly {
           readonly description: string;
           readonly how_measured?: string;
-        })[];
+        }[];
       };
       readonly dedupe_key: string;
-      readonly possible_duplicate_of: readonly (string)[];
+      readonly possible_duplicate_of: readonly string[];
       readonly merged_into?: string;
       readonly project_card?: {
         readonly purpose: string;
@@ -2690,10 +3033,10 @@ export interface ApiOperations {
           readonly continuous_integration?: boolean;
           readonly automated_tests?: boolean;
         };
-        readonly highlights: readonly ({
+        readonly highlights: readonly {
           readonly text: string;
           readonly source: string;
-        })[];
+        }[];
       };
       readonly approval?: {
         readonly knowledge_base_id: string;
@@ -2703,12 +3046,18 @@ export interface ApiOperations {
       };
       readonly screening: {
         readonly verdict: "clear" | "flagged" | "unscreened";
-        readonly signals: readonly ("exfiltration-link" | "hidden-text" | "instruction-override" | "role-change" | "screener-unavailable")[];
+        readonly signals: readonly (
+          | "exfiltration-link"
+          | "hidden-text"
+          | "instruction-override"
+          | "role-change"
+          | "screener-unavailable"
+        )[];
         readonly screened_at: string;
       };
       readonly edit_count: number;
       readonly agent_token_id?: string;
-      readonly amended_by_agent_token_ids?: readonly (string)[];
+      readonly amended_by_agent_token_ids?: readonly string[];
       readonly created_at: string;
       readonly updated_at: string;
     };
@@ -2829,7 +3178,8 @@ export interface ApiOperations {
       readonly applicationId: string;
     };
     readonly body: ApiSchemas["InterviewGuideRequestInput"];
-    readonly response: ApiSchemas["ApplicationMaterialDraft"] | ApiSchemas["InterviewGuideResearching"];
+    readonly response:
+      ApiSchemas["ApplicationMaterialDraft"] | ApiSchemas["InterviewGuideResearching"];
   };
   "POST /v1/workspaces/{workspaceId}/applications/{applicationId}/research": {
     readonly path: {
@@ -2876,7 +3226,14 @@ export interface ApiOperations {
     readonly body: {
       readonly label: string;
       readonly expires_in_days?: number;
-      readonly scopes?: readonly ("journal" | "applications:read" | "jobs:write" | "drafts:read" | "runs:start" | "evidence:write")[];
+      readonly scopes?: readonly (
+        | "journal"
+        | "applications:read"
+        | "jobs:write"
+        | "drafts:read"
+        | "runs:start"
+        | "evidence:write"
+      )[];
       readonly monthly_cap_usd?: number;
     };
     readonly response: ApiSchemas["IssuedAgentToken"];
@@ -2886,7 +3243,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: {
-      readonly tokens: readonly (ApiSchemas["AgentToken"])[];
+      readonly tokens: readonly ApiSchemas["AgentToken"][];
     };
   };
   "DELETE /v1/workspaces/{workspaceId}/agent-tokens/{tokenId}": {
@@ -2902,7 +3259,7 @@ export interface ApiOperations {
       readonly runId: string;
     };
     readonly response: {
-      readonly spans: readonly (ApiSchemas["RunSpan"])[];
+      readonly spans: readonly ApiSchemas["RunSpan"][];
     };
   };
   "GET /v1/workspaces/{workspaceId}/agent-connections": {
@@ -2910,7 +3267,7 @@ export interface ApiOperations {
       readonly workspaceId: string;
     };
     readonly response: {
-      readonly connections: readonly (ApiSchemas["AgentConnectionCap"])[];
+      readonly connections: readonly ApiSchemas["AgentConnectionCap"][];
     };
   };
   "PUT /v1/workspaces/{workspaceId}/agent-connections": {
@@ -3097,7 +3454,7 @@ export interface ApiOperations {
       readonly cap: number;
       readonly capSource: "operator" | "deployment";
       readonly deploymentCap: number;
-      readonly invites: readonly (ApiSchemas["BetaInvite"])[];
+      readonly invites: readonly ApiSchemas["BetaInvite"][];
       readonly total: number;
       readonly counts: {
         readonly open: number;
@@ -3151,7 +3508,7 @@ export interface ApiOperations {
       readonly q?: string;
     };
     readonly response: {
-      readonly entries: readonly (ApiSchemas["BetaWaitlistEntry"])[];
+      readonly entries: readonly ApiSchemas["BetaWaitlistEntry"][];
       readonly total: number;
     };
   };
@@ -3199,7 +3556,7 @@ export interface ApiOperations {
       readonly status?: "new" | "triaged" | "issue" | "closed";
     };
     readonly response: {
-      readonly notes: readonly (ApiSchemas["FeedbackNote"])[];
+      readonly notes: readonly ApiSchemas["FeedbackNote"][];
       readonly total: number;
       readonly counts: {
         readonly new: number;
@@ -3256,10 +3613,10 @@ export interface ApiOperations {
     readonly body: {
       readonly question: string;
       readonly language: "en" | "fr";
-      readonly history?: readonly ({
+      readonly history?: readonly {
         readonly role: "member" | "assistant";
         readonly text: string;
-      })[];
+      }[];
     };
     readonly response: ApiSchemas["SupportReply"];
   };
@@ -3270,10 +3627,10 @@ export interface ApiOperations {
     };
     readonly body: {
       readonly consent: true;
-      readonly transcript: readonly ({
+      readonly transcript: readonly {
         readonly role: "member" | "assistant";
         readonly text: string;
-      })[];
+      }[];
     };
     readonly response: {
       readonly ticket_id: string;
@@ -3291,7 +3648,11 @@ export interface ApiOperations {
       readonly fileName: string;
     };
     readonly body: Blob;
-    readonly contentType: "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document" | "text/markdown" | "text/plain";
+    readonly contentType:
+      | "application/pdf"
+      | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      | "text/markdown"
+      | "text/plain";
     readonly response: ApiSchemas["Application"];
   };
   "POST /v1/payments/events": {

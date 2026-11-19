@@ -92,6 +92,11 @@ export interface AuthorizationRequest {
   readonly codeChallenge: string;
   /** The screen's language, so the provider's pages and mail use it too. */
   readonly uiLocale?: string;
+  /**
+   * `none` asks the provider to answer at once from its own session, without showing a page: a
+   * code when the person is still signed in there, `login_required` when not.
+   */
+  readonly prompt?: "none";
 }
 
 /** The provider's sign-in page for one attempt. */
@@ -105,6 +110,7 @@ export function authorizationUrl(endpoint: string, request: AuthorizationRequest
   url.searchParams.set("code_challenge", request.codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
   if (request.uiLocale !== undefined) url.searchParams.set("ui_locales", request.uiLocale);
+  if (request.prompt !== undefined) url.searchParams.set("prompt", request.prompt);
   return url.toString();
 }
 

@@ -51,6 +51,11 @@ export interface OidcSessionOptions {
   readonly crypto: Pick<Crypto, "getRandomValues" | "subtle">;
   /** The tab's session storage; never local storage, so tokens end with the tab. */
   readonly storage: () => Storage | undefined;
+  /**
+   * The browser's lasting storage, holding only a marker that this browser signed in before, so a
+   * new tab can ask the provider whether its session is still open. Never tokens.
+   */
+  readonly lastingStorage?: () => Storage | undefined;
   readonly now: () => number;
   /** The screen's language when the person signs in (`en`, `fr`), passed as `ui_locales`. */
   readonly uiLocale?: () => string | undefined;
@@ -67,8 +72,16 @@ export interface OidcSession {
    * starts waking before the person presses Sign in. A failure is ignored and retried by `begin`.
    */
   prepare(): void;
-  /** Starts an attempt and returns the provider's sign-in page to go to. */
-  begin(): Promise<string>;
+  /**
+   * Whether a new tab should first ask the provider, without showing its page, if the person is
+   * still signed in there: true only when no tokens are stored and this browser signed in before.
+   */
+  canResume(): boolean;
+  /**
+   * Starts an attempt and returns the provider's sign-in page to go to. `silent` asks the provider
+   * to answer from its own session without showing a page; a refusal then ends quietly.
+   */
+  begin(options?: { readonly silent?: boolean }): Promise<string>;
   /**
    * Finishes the attempt the provider answered at the screen's address with `search`. Resolves
    * `false` when `search` is no answer; throws {@link SignInEndedError} when the answer is refused.
@@ -95,6 +108,7 @@ export interface OidcSession {
 const tokensKey = "draft-loop.sign-in";
 const attemptKey = "draft-loop.sign-in-attempt";
 const noticeKey = "draft-loop.sign-in-notice";
+const signedInBeforeKey = "draft-loop.signed-in-before";
 
 /**
  * Waits before each retry of a refresh the provider could not answer. The provider scales to zero
@@ -114,6 +128,8 @@ const refusesGrant = (status: number) => status === 400 || status === 401;
 interface Attempt {
   readonly state: string;
   readonly codeVerifier: string;
+  /** Asked the provider without showing its page. */
+  readonly silent?: true;
 }
 
 function parseAttempt(text: string | null): Attempt | undefined {
@@ -121,7 +137,11 @@ function parseAttempt(text: string | null): Attempt | undefined {
   try {
     const value = JSON.parse(text) as Partial<Attempt>;
     return typeof value.state === "string" && typeof value.codeVerifier === "string"
-      ? { state: value.state, codeVerifier: value.codeVerifier }
+      ? {
+          state: value.state,
+          codeVerifier: value.codeVerifier,
+          ...(value.silent === true ? { silent: true as const } : {}),
+        }
       : undefined;
   } catch {
     return undefined;
@@ -132,6 +152,10 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
   const tokenStore = createTokenStore(options.storage, tokensKey);
   const attemptStore = createTokenStore(options.storage, attemptKey);
   const noticeStore = createTokenStore(options.storage, noticeKey);
+  const signedInBefore = createTokenStore(
+    options.lastingStorage ?? (() => undefined),
+    signedInBeforeKey,
+  );
   let endpoints: Promise<ProviderEndpoints> | undefined;
   let refreshing: Promise<string> | undefined;
   let completing: { readonly search: string; readonly result: Promise<boolean> } | undefined;
@@ -191,7 +215,15 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
     const attempt = parseAttempt(attemptStore.read());
     // An attempt is answered once; a replayed address finds nothing to finish.
     attemptStore.clear();
-    if (answer.kind === "error") throw new SignInEndedError(signInNotices().refused);
+    if (answer.kind === "error") {
+      // The provider holds no session for a quiet attempt: the screen shows its usual sign-in, and
+      // the next tab does not ask again.
+      if (attempt?.silent === true) {
+        signedInBefore.clear();
+        return false;
+      }
+      throw new SignInEndedError(signInNotices().refused);
+    }
     if (attempt === undefined || !isExpectedState(attempt.state, answer.state))
       throw new SignInEndedError(signInNotices().mismatch);
     try {
@@ -206,6 +238,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
     } catch (error) {
       throw new SignInEndedError(signInNotices().failed, { cause: error });
     }
+    signedInBefore.write("1");
     return true;
   }
 
@@ -216,7 +249,10 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       providerEndpoints().catch(() => {});
     },
 
-    async begin() {
+    canResume: () => storedTokens() === undefined && signedInBefore.read() !== null,
+
+    async begin(beginOptions) {
+      const silent = beginOptions?.silent === true;
       let found: ProviderEndpoints;
       try {
         found = await providerEndpoints();
@@ -226,7 +262,9 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
       const state = randomValue(options.crypto);
       const codeVerifier = createCodeVerifier(options.crypto);
       const challenge = await codeChallenge(options.crypto.subtle, codeVerifier);
-      attemptStore.write(JSON.stringify({ state, codeVerifier } satisfies Attempt));
+      attemptStore.write(
+        JSON.stringify({ state, codeVerifier, ...(silent ? { silent } : {}) } satisfies Attempt),
+      );
       const uiLocale = options.uiLocale?.();
       return authorizationUrl(found.authorizationEndpoint, {
         clientId: options.clientId,
@@ -234,6 +272,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
         state,
         codeChallenge: challenge,
         ...(uiLocale === undefined ? {} : { uiLocale }),
+        ...(silent ? { prompt: "none" as const } : {}),
       });
     },
 
@@ -304,6 +343,7 @@ export function createOidcSession(options: OidcSessionOptions): OidcSession {
 
     async signOut(notice) {
       session.clear();
+      signedInBefore.clear();
       let found: ProviderEndpoints;
       try {
         found = await providerEndpoints();
