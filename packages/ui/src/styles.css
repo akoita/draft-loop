@@ -10596,6 +10596,92 @@ body:has(.workspace-activity) .review-column > .claims-panel {
   color: var(--red);
 }
 
+/* Suggested updates on the career profile (#3069): one card per suggestion. */
+.profile-suggestions {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.profile-suggestions h3 {
+  margin: 0;
+}
+
+.profile-suggestions-message:empty {
+  display: none;
+}
+
+.fact-suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fact-suggestion {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.fact-suggestion-title {
+  margin: 0;
+}
+
+.fact-suggestion-change {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+.fact-suggestion-change dt {
+  color: var(--text-3);
+}
+
+.fact-suggestion-change dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fact-suggestion-quote {
+  margin: 0;
+}
+
+.fact-suggestion-quote blockquote {
+  margin: 0;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fact-suggestion-quote figcaption {
+  margin-top: 0.25rem;
+  color: var(--text-3);
+  font-size: 0.85rem;
+}
+
+.fact-suggestion-edit {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.fact-suggestion-edit textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fact-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* The career interview as a conversation (#2338): topics beside one chat, bubbles per speaker,
    and a writing indicator while the interviewer replies. */
 .interview-layout {

@@ -623,6 +623,10 @@ msgstr ""
 msgid "{count} retired"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "{count} suggested profile updates wait for you."
+msgstr ""
+
 #: packages/ui/src/profile-freshness.ts
 msgid "{count} updated"
 msgstr ""
@@ -895,6 +899,10 @@ msgstr ""
 msgid "{when} You don't need to do anything: waiting is safe, and DraftLoop asks you only if the last attempt also fails."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "{where}, {day}"
+msgstr ""
+
 #: packages/ui/src/model-profile-budget.tsx
 msgid "/1M input · $"
 msgstr ""
@@ -909,6 +917,10 @@ msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "1 responsibility"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "1 suggested profile update waits for you."
 msgstr ""
 
 #: apps/web/src/records-model.ts
@@ -941,6 +953,10 @@ msgstr ""
 
 #: apps/web/src/account-deletion.tsx
 msgid "A draft is being written. Wait for it to finish or stop it, then delete your account."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "A fact you have not confirmed yet"
 msgstr ""
 
 #: packages/ui/src/compact-history.tsx
@@ -1004,6 +1020,10 @@ msgstr ""
 msgid "A PDF, DOCX, Markdown or plain text file. Only its text is kept, as if pasted."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "A question from the critic on an application"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "A requirement can be at most {maximumRequirementTextLength} characters."
 msgstr ""
@@ -1048,6 +1068,7 @@ msgid "accept"
 msgstr ""
 
 #: packages/ui/src/finding-decision-hint.tsx
+#: packages/ui/src/profile-fact-suggestions.tsx
 #: packages/ui/src/review.tsx
 msgid "Accept"
 msgstr ""
@@ -1068,8 +1089,20 @@ msgstr ""
 msgid "Accepted · revision required"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Accepted {applied} suggestions. Your profile now holds the changes."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Accepted {applied}. {stale} no longer applied because the fact changed first."
+msgstr ""
+
 #: packages/ui/src/finding-decision-help.ts
 msgid "Accepted, but no revision is left: change to Reject or Override to unblock approval"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Accepted. Your profile now holds the change."
 msgstr ""
 
 #: apps/web/src/account-page.tsx
@@ -1139,6 +1172,10 @@ msgstr ""
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add a CV, portfolio, or other source"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Add a fact"
 msgstr ""
 
 #: packages/ui/src/agent-setup-model.ts
@@ -1390,6 +1427,14 @@ msgstr ""
 
 #: apps/web/src/sensitivity-model.ts
 msgid "Always allow"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "An agent said"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "An agent you connected"
 msgstr ""
 
 #: packages/ui/src/help-ask.tsx
@@ -1946,6 +1991,7 @@ msgstr ""
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/new-application-form.tsx
 #: packages/ui/src/pasted-evidence-form.tsx
+#: packages/ui/src/profile-fact-suggestions.tsx
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-draft-choice.tsx
@@ -2087,6 +2133,10 @@ msgstr ""
 
 #: apps/web/src/plan-preset-choice.tsx
 msgid "Change the models in Settings, then start again."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Change where a fact may be used"
 msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx
@@ -2541,6 +2591,10 @@ msgstr ""
 msgid "Configured via env"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Confirm a fact"
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Confirm as evidence"
 msgstr ""
@@ -2555,6 +2609,10 @@ msgstr ""
 
 #: apps/web/src/consent-model.ts
 msgid "Confirm that the candidate agreed to send their material."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Confirmed as true, citing the quote"
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts
@@ -2655,6 +2713,10 @@ msgstr ""
 
 #: packages/ui/src/run-details.tsx
 msgid "core areas"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Correct a fact"
 msgstr ""
 
 #: packages/ui/src/semantic-retrieval-presentation.ts
@@ -3408,6 +3470,14 @@ msgstr ""
 msgid "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "DraftLoop noticed"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "DraftLoop noticed these from what was said. Nothing changes your profile until you accept it, and accepting counts as reviewing that change."
+msgstr ""
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr ""
@@ -3529,6 +3599,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "Edit {sectionTitle} text"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Edit and accept"
 msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx
@@ -6321,6 +6395,10 @@ msgstr ""
 msgid "not graded"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Not in your profile now"
+msgstr ""
+
 #: packages/ui/src/run-details.tsx
 msgid "not independent"
 msgstr ""
@@ -6444,6 +6522,10 @@ msgstr ""
 
 #: apps/web/src/microphone.ts
 msgid "Nothing was recorded. Try again."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Now"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -7618,12 +7700,17 @@ msgid "reject"
 msgstr ""
 
 #: packages/ui/src/finding-decision-hint.tsx
+#: packages/ui/src/profile-fact-suggestions.tsx
 #: packages/ui/src/review.tsx
 msgid "Reject"
 msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "Rejected"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Rejected. DraftLoop will not suggest that change again."
 msgstr ""
 
 #: apps/web/src/screening.tsx
@@ -7669,6 +7756,10 @@ msgstr ""
 msgid "Remove {name} from this list? It shows again if it asks to spend."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Remove a fact that no longer holds"
+msgstr ""
+
 #: apps/web/src/credits-model.ts
 msgid "Remove a member, or ask the owner for a bigger plan, before inviting someone."
 msgstr ""
@@ -7697,6 +7788,10 @@ msgstr ""
 #. placeholder {0}: ruleSentence(rule)
 #: apps/web/src/private-sections.tsx
 msgid "Remove rule: {0}"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Removed from your profile"
 msgstr ""
 
 #: packages/ui/src/recent-workspaces-ui.tsx
@@ -8089,6 +8184,7 @@ msgid "Reusable career evidence, kept separate from application material. Choosi
 msgstr ""
 
 #: packages/ui/src/application-steps-model.ts
+#: packages/ui/src/profile-fact-suggestions.tsx
 #: packages/ui/src/profile-freshness.ts
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Review"
@@ -8471,6 +8567,10 @@ msgstr ""
 msgid "Save a copy now"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Save and accept"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "Save as a new version"
 msgstr ""
@@ -8505,6 +8605,10 @@ msgstr ""
 
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Save new version"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Save or discard your edits first; accepting saves a new version."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -9379,11 +9483,20 @@ msgid "suggested"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
+#: packages/ui/src/profile-fact-suggestions.tsx
 msgid "Suggested"
 msgstr ""
 
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Suggested preferences"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Suggested updates"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Suggested updates could not be loaded."
 msgstr ""
 
 #: packages/ui/src/app.tsx
@@ -9532,6 +9645,10 @@ msgstr ""
 
 #: apps/web/src/waitlist-model.ts
 msgid "That does not look like an email address. Check it and try again."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "That fact changed first, so the suggestion no longer applies."
 msgstr ""
 
 #: apps/web/src/beta-sign-up-model.ts
@@ -10493,6 +10610,14 @@ msgstr ""
 msgid "The state of the field"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "The suggestion was not accepted. Nothing changed. Try again."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "The suggestion was not rejected. Try again."
+msgstr ""
+
 #: packages/ui/src/career-interview-panel.tsx
 msgid "The summary says"
 msgstr ""
@@ -10993,6 +11118,10 @@ msgstr ""
 msgid "This workspace has no writing policy yet. The text below is the starting template; saving creates the first version and applies it to future runs."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Those facts changed first, so the suggestions no longer apply."
+msgstr ""
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Tick the approval box to {verb}."
 msgstr ""
@@ -11294,6 +11423,11 @@ msgstr ""
 msgid "Usage says where a fact may appear: on your CV, only in interview answers, or never. It is separate from sensitivity, which decides what may be sent to a model provider."
 msgstr ""
 
+#. placeholder {0}: factUsageLevelLabels()[change.usage]
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Usage: {0}"
+msgstr ""
+
 #: packages/ui/src/application-name.tsx
 msgid "Use “"
 msgstr ""
@@ -11424,6 +11558,10 @@ msgstr ""
 #. placeholder {0}: fact.id
 #: packages/ui/src/profile.tsx
 msgid "Value for fact {0}"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Value to save"
 msgstr ""
 
 #: packages/ui/src/writing-policy-directives.ts
@@ -11964,6 +12102,10 @@ msgstr ""
 msgid "You have unsaved changes. Save them before marking the brief reviewed."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "You said"
+msgstr ""
+
 #: packages/ui/src/help-ask.tsx
 msgid "You're asking faster than I can keep up. Wait a minute, then ask again."
 msgstr ""
@@ -12009,6 +12151,10 @@ msgstr ""
 msgid "Your career evidence is the documents you provide: CVs, career-fact files, exports and links. DraftLoop searches them during reviews and builds your career profile from them."
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Your career interview"
+msgstr ""
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Your career profile"
 msgstr ""
@@ -12039,6 +12185,10 @@ msgstr ""
 
 #: apps/web/src/application-material-model.ts
 msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Your coach said"
 msgstr ""
 
 #: apps/web/src/account-page.tsx
@@ -12072,6 +12222,15 @@ msgstr ""
 
 #: packages/ui/src/career-flow.tsx
 msgid "Your documents: CVs, career-fact files, exports and links. DraftLoop searches them and builds your profile from them."
+msgstr ""
+
+#. placeholder {0}: origin.round
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Your edit in review round {0} of an application"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions-model.ts
+msgid "Your edit while reviewing an application"
 msgstr ""
 
 #: apps/web/src/waitlist-model.ts

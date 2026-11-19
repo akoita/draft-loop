@@ -120,6 +120,20 @@ import {
 import { normalizeEarlierRun } from "./earlier-run.js";
 import { exportTemplates } from "./export-template.js";
 import {
+  type FactSuggestionAcceptInput,
+  type FactSuggestionAcceptResult,
+  type FactSuggestionListInput,
+  type FactSuggestionListResult,
+  type FactSuggestionRejectInput,
+  type FactSuggestionRejectResult,
+  normalizeFactSuggestionAcceptResult,
+  normalizeFactSuggestionListResult,
+  normalizeFactSuggestionRejectResult,
+  validateFactSuggestionAcceptInput,
+  validateFactSuggestionListInput,
+  validateFactSuggestionRejectInput,
+} from "./fact-suggestions-contract.js";
+import {
   type FactUsageGetInput,
   type FactUsageResult,
   type FactUsageSetInput,
@@ -290,6 +304,16 @@ export type {
   CredentialTestProvider,
   CredentialTestResult,
 } from "./credential-test-contract.js";
+export type {
+  FactSuggestionAcceptInput,
+  FactSuggestionAcceptItem,
+  FactSuggestionAcceptResult,
+  FactSuggestionListInput,
+  FactSuggestionListResult,
+  FactSuggestionRejectInput,
+  FactSuggestionRejectResult,
+  FactSuggestionView,
+} from "./fact-suggestions-contract.js";
 export type {
   FactUsageChangeView,
   FactUsageGetInput,
@@ -3271,6 +3295,9 @@ export interface BridgeCommandInputMap {
   "application-folder.delete": ApplicationFolderDeleteInput;
   "fact-usage.get": FactUsageGetInput;
   "fact-usage.set": FactUsageSetInput;
+  "fact-suggestions.list": FactSuggestionListInput;
+  "fact-suggestions.accept": FactSuggestionAcceptInput;
+  "fact-suggestions.reject": FactSuggestionRejectInput;
   "run.trace": RunTraceInput;
   "run.requirement-evidence": RunRequirementEvidenceInput;
   "knowledge.create": KnowledgeStoreCreateInput;
@@ -3397,6 +3424,9 @@ export interface BridgeCommandOutputMap {
   "application-folder.delete": ApplicationFolderDeleteResult;
   "fact-usage.get": FactUsageResult;
   "fact-usage.set": FactUsageResult;
+  "fact-suggestions.list": FactSuggestionListResult;
+  "fact-suggestions.accept": FactSuggestionAcceptResult;
+  "fact-suggestions.reject": FactSuggestionRejectResult;
   "run.trace": RunTraceResult;
   "run.requirement-evidence": RunRequirementEvidenceResult;
   "knowledge.create": KnowledgeStoreResult;
@@ -6028,6 +6058,21 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "fact-usage.set",
         input: validateFactUsageSetInput(command.input) ?? invalidInput(),
+      };
+    case "fact-suggestions.list":
+      return {
+        type: "fact-suggestions.list",
+        input: validateFactSuggestionListInput(command.input) ?? invalidInput(),
+      };
+    case "fact-suggestions.accept":
+      return {
+        type: "fact-suggestions.accept",
+        input: validateFactSuggestionAcceptInput(command.input) ?? invalidInput(),
+      };
+    case "fact-suggestions.reject":
+      return {
+        type: "fact-suggestions.reject",
+        input: validateFactSuggestionRejectInput(command.input) ?? invalidInput(),
       };
     case "run.trace":
       return { type: "run.trace", input: validateRunTraceInput(command.input) ?? invalidInput() };
@@ -8716,6 +8761,12 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "fact-usage.get":
     case "fact-usage.set":
       return normalizeFactUsageResult(value) ?? invalidInput();
+    case "fact-suggestions.list":
+      return normalizeFactSuggestionListResult(value) ?? invalidInput();
+    case "fact-suggestions.accept":
+      return normalizeFactSuggestionAcceptResult(value) ?? invalidInput();
+    case "fact-suggestions.reject":
+      return normalizeFactSuggestionRejectResult(value) ?? invalidInput();
     case "run.trace":
       return normalizeRunTraceResult(value) ?? invalidInput();
     case "run.requirement-evidence":

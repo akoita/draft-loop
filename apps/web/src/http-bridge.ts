@@ -31,6 +31,11 @@ import {
 } from "./application-folder-bridge.js";
 import { Refusal, refuse } from "./bridge-refusal.js";
 import {
+  createFactSuggestionAnswers,
+  hostedFactSuggestionCapabilities,
+  isFactSuggestionCommand,
+} from "./fact-suggestions-bridge.js";
+import {
   createFactUsageAnswers,
   hostedFactUsageCapabilities,
   isFactUsageCommand,
@@ -83,6 +88,7 @@ export const hostedBridgeCapabilities = [
   "application.move",
   ...hostedApplicationFolderCapabilities,
   ...hostedFactUsageCapabilities,
+  ...hostedFactSuggestionCapabilities,
   ...hostedKnowledgeCapabilities,
   "opportunity.create",
   "opportunity.get",
@@ -254,6 +260,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
   const answerProfile = createProfileAnswers(client);
   const answerFolder = createApplicationFolderAnswers(client);
   const answerFactUsage = createFactUsageAnswers(client);
+  const answerFactSuggestions = createFactSuggestionAnswers(client);
   const answerRunTrace = createRunTraceAnswers(client);
   const answerRequirementEvidence = createRunRequirementEvidenceAnswers(client);
   const reviewAction = createReviewActions(client, idempotencyKey, options.download ?? saveFile);
@@ -303,6 +310,7 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
     if (isProfileCommand(command)) return answerProfile(command);
     if (isApplicationFolderCommand(command)) return answerFolder(command);
     if (isFactUsageCommand(command)) return answerFactUsage(command);
+    if (isFactSuggestionCommand(command)) return answerFactSuggestions(command);
     if (isRunTraceCommand(command)) return answerRunTrace(command);
     if (isRunRequirementEvidenceCommand(command)) return answerRequirementEvidence(command);
     switch (command.type) {
