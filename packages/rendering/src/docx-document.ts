@@ -127,6 +127,10 @@ function roleParagraph(
   return `<w:p><w:pPr><w:pStyle w:val="Role"/>${tabStop}${noSpace}</w:pPr>${runs}</w:p>`;
 }
 
+/** A letter's or an answer's list, such as a guide's sources, is never justified (#2850). */
+const proseAlign = (block: LayoutBlock): string =>
+  block.prose === true ? `<w:jc w:val="left"/>` : "";
+
 function blockParagraph(
   block: LayoutBlock,
   profile: RenderingLayoutProfile,
@@ -137,7 +141,7 @@ function blockParagraph(
   const context = look.italicContext && block.kind === "paragraph" && previous?.kind === "role";
   const labelled = labelledLayout(block, profile);
   if (labelled !== null) {
-    const numbering = `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${bulletNumberingId}"/></w:numPr>`;
+    const numbering = `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${bulletNumberingId}"/></w:numPr>${proseAlign(block)}`;
     if (block.kind === "bullet") {
       return labelledParagraph("ListBullet", labelled.label, block, numbering);
     }
@@ -160,7 +164,7 @@ function blockParagraph(
       return paragraph(
         "ListBullet",
         block.text,
-        `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${bulletNumberingId}"/></w:numPr>`,
+        `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${bulletNumberingId}"/></w:numPr>${proseAlign(block)}`,
       );
     default:
       return paragraph("Normal", block.text);

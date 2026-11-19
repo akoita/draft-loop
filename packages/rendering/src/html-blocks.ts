@@ -5,7 +5,7 @@ import {
   type LayoutMetricsProfile,
   layoutSectionBlocks,
 } from "./document-layout.js";
-import { splitInlineLabel } from "./inline-label.js";
+import { splitInlineLabel, splitProseInlineLabel } from "./inline-label.js";
 import { splitRoleHeader } from "./role-header.js";
 
 /** A role header: bold, with a date range right-aligned; the separator is kept for copy and paste. */
@@ -16,8 +16,9 @@ function roleHeader(text: string, escapeText: (value: string) => string): string
 }
 
 /** Text whose leading "Label:" is bold, as the PDF and DOCX draw it. */
-function labelled(text: string, escapeText: (value: string) => string): string {
-  const parts = splitInlineLabel(text);
+function labelled(block: LayoutBlock, escapeText: (value: string) => string): string {
+  const { text } = block;
+  const parts = block.prose === true ? splitProseInlineLabel(text) : splitInlineLabel(text);
   return parts === null
     ? escapeText(text)
     : `<strong>${escapeText(parts.label)}</strong>${escapeText(parts.rest)}`;
@@ -30,9 +31,9 @@ function blockHtml(block: LayoutBlock, escapeText: (value: string) => string): s
     case "compact":
       return `<p class="compact">${escapeText(block.text)}</p>`;
     case "bullet":
-      return `<li>${labelled(block.text, escapeText)}</li>`;
+      return `<li>${labelled(block, escapeText)}</li>`;
     default:
-      return `<p>${labelled(block.text, escapeText)}</p>`;
+      return `<p>${labelled(block, escapeText)}</p>`;
   }
 }
 
