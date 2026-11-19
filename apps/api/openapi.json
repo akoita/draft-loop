@@ -8094,7 +8094,9 @@
                     "agents",
                     "credits",
                     "privacy",
-                    "problems"
+                    "problems",
+                    "connect-agent",
+                    "agent-permissions"
                   ]
                 },
                 "title": {
@@ -17016,7 +17018,9 @@
                     "agents",
                     "credits",
                     "privacy",
-                    "problems"
+                    "problems",
+                    "connect-agent",
+                    "agent-permissions"
                   ]
                 },
                 "title": {

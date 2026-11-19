@@ -4,6 +4,12 @@ An agent here is any AI assistant that pairs a model with a harness able to
 call tools over MCP. Claude Code and Codex are the examples this page sets up;
 another MCP-capable agent uses the copied configuration.
 
+**For users:** the short setup steps, the permissions and how to revoke a
+token are in the user guide's
+[Advanced: connect an agent](../../packages/user-guide/src/guide-en.ts)
+section. The service serves it at `/guide/#connect-agent`, and Settings >
+Agents links to it. This page is the developer reference.
+
 The candidate's agent can record notable work it helped ship, such as a
 payments integration or a database migration, as a note in DraftLoop's work
 journal. A note is evidence for review, never a CV claim: it waits as pending
