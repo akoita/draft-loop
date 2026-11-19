@@ -732,6 +732,8 @@ describe("author prompt cli-author-v20", () => {
     expect(v20).toContain(projectCardInstructions);
     expect(v20).toContain("A card without a Project and links section gets no link");
     expect(v20).toContain("never round, combine or derive a new figure");
+    expect(v20).toContain("a project line that leaves out a listed URL is incomplete");
+    expect(v20).toContain("never write (public), (private) or (unknown) in the CV");
     expect(v19).not.toContain(projectCardInstructions);
     expect(v20.replace(projectCardInstructions, "")).toBe(v19);
   });
