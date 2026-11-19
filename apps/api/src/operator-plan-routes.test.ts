@@ -405,7 +405,7 @@ describe("the operator's plan and credit routes", () => {
     expect(tenants.grantsOf("org-north")).toEqual([]);
   });
 
-  it("logs one content-free audit line per write, with ids, the plan, numbers and the reason", async () => {
+  it("logs one content-free audit line per write and per read, with ids, the plan, numbers and the reason", async () => {
     const server = await api();
 
     await operator(
@@ -430,6 +430,7 @@ describe("the operator's plan and credit routes", () => {
         reason: "goodwill",
         sequence: 1,
       },
+      { action: "organisation_credits_read", actor: "owner-token", organisationId: "org-north" },
     ]);
     expect(logLines.join("\n")).not.toContain(ownerToken);
   });

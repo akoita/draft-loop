@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { logAccessRefusal } from "./access-refusal-log.js";
+import { writeAuditLine } from "./audit-line.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { reachesEveryRecord } from "./record-access.js";
 import { TenantContextMissingError, tenantIdOf } from "./tenant-context.js";
@@ -122,6 +123,11 @@ export function registerRecordErasureRoutes(
         },
         "candidate record erased",
       );
+      writeAuditLine(request, "record_erased", {
+        workspaceId,
+        objectsRemoved,
+        rowsRemoved: erased.rowsRemoved,
+      });
       return reply.code(204).send(null);
     },
   );

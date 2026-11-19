@@ -195,11 +195,14 @@ async function api(erasure: TenantErasure, mode: "owner" | "oidc" = "oidc") {
 
 async function as(person: string): Promise<string> {
   if (person === "owner-token") return `Bearer ${ownerToken}`;
-  const token = await new SignJWT({ email_verified: true })
+  // A second factor, since this organisation has several members (#2952); `:pwd` signs in without.
+  const [subject = person, method] = person.split(":");
+  const amr = method === "pwd" ? ["pwd"] : ["pwd", "otp"];
+  const token = await new SignJWT({ email_verified: true, amr })
     .setProtectedHeader({ alg: "ES256", kid: "key-1" })
     .setIssuer(issuer)
     .setAudience(audience)
-    .setSubject(person)
+    .setSubject(subject)
     .setExpirationTime("5m")
     .sign(signingKey.privateKey);
   return `Bearer ${token}`;
@@ -231,6 +234,11 @@ const erasureLines = () =>
   logLines
     .map((line) => JSON.parse(line) as Record<string, unknown>)
     .filter((entry) => entry.erasure !== undefined);
+
+const auditLines = () =>
+  logLines
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .flatMap((entry) => (entry.audit === undefined ? [] : [entry.audit]));
 
 describe("candidate record erasure route", () => {
   it("lets owners and admins erase a record they confirm, and nobody else", async () => {
@@ -293,6 +301,26 @@ describe("candidate record erasure route", () => {
       memberId: "owner-1",
       message: "candidate record erased",
     });
+    expect(auditLines()).toEqual([
+      {
+        action: "record_erased",
+        actor: "owner-1",
+        workspaceId: "r1",
+        objectsRemoved: 0,
+        rowsRemoved: 42,
+      },
+    ]);
+  });
+
+  it("asks an owner of this shared organisation for a second factor (#2952)", async () => {
+    const memory = memoryErasure();
+    const server = await api(memory.erasure);
+
+    expect(await erase(server, "owner-1:pwd", "r1")).toEqual({
+      status: 403,
+      code: "second_factor_required",
+    });
+    expect(memory.records.has("r1")).toBe(true);
   });
 
   it("serves the owner token in owner-token mode", async () => {

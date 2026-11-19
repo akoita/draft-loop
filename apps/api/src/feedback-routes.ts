@@ -18,7 +18,7 @@ import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { writeAuditLine } from "./audit-line.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { operatorPageQuery } from "./operator-page-query.js";
@@ -243,6 +243,10 @@ export function registerFeedbackRoutes(
         status === undefined
           ? Object.values(counts).reduce((sum, count) => sum + count, 0)
           : counts[status];
+      writeAuditLine(request, "feedback_listed", {
+        listed: notes.length,
+        searched: q !== undefined,
+      });
       return { notes: notes.map(toResponse), total, counts };
     },
   );
@@ -268,6 +272,10 @@ export function registerFeedbackRoutes(
       if (note === undefined) {
         return reply.code(404).send(apiError("not_found", "No such feedback note."));
       }
+      writeAuditLine(request, "feedback_read", {
+        noteId: note.noteId,
+        organisationId: note.organisationId,
+      });
       return reply.code(200).send(toResponse(note));
     },
   );

@@ -33,6 +33,8 @@ export type Caller =
       readonly operator?: true;
       /** Whether the sign-in carries the operator role, with or without a second factor. */
       readonly holdsOperatorRole?: true;
+      /** Whether the person used a second factor (`amr`) for this sign-in (#2952). */
+      readonly secondFactor?: true;
     } & SignedInMember);
 
 declare module "fastify" {
@@ -189,6 +191,9 @@ function signInAuthenticator(
           ? { operator: true as const }
           : {}),
         ...(verification.roles.includes(operatorRole) ? { holdsOperatorRole: true as const } : {}),
+        ...(verification.methods.some((method) => secondFactorMethods.has(method))
+          ? { secondFactor: true as const }
+          : {}),
       },
     };
   };

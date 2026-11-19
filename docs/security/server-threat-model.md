@@ -181,30 +181,37 @@ Second factors:
 
 - The owner token is a static bearer secret, so it cannot carry one.
 - A named operator's sign-in must carry one; the API reads `amr` for it.
-- The hosted realm offers TOTP but requires it of nobody else, so admin
-  actions still take a password-only sign-in (#2952).
+- An owner or admin of an organisation with other members erases an
+  organisation or a record, or downloads a record's archive or readable
+  export, only from a sign-in with a second factor in `amr`. Otherwise the
+  API answers 403 `second_factor_required` (`second-factor-gate.ts`, #2952).
+  A person alone in their organisation keeps the typed confirmation, so
+  erasing or exporting their own data never needs an authenticator.
 - The local realm (`compose/keycloak/draft-loop-local-realm.json`) has no OTP
   setting, so only the owner token reaches operator routes there.
 
-"Audit line" means a request log line with an `audit` field. These lines live
-only in the deployment's request logs.
+"Audit line" means a log line with an `audit` field that names the action;
+query `jsonPayload.audit.action` to find them all. Lines written through
+`apps/api/src/audit-line.ts` also name the actor. The worker's inactive-beta
+erasure writes one too, with actor `beta-retention`.
+These lines live only in the deployment's request logs.
 
 | Action | Route | Who may act, and where it is checked | Audit line | Test |
 | --- | --- | --- | --- | --- |
 | Create an organisation | `POST /v1/operator/organisations` | Owner token; repeated in the handler (`organisation-routes.ts:365`) | `organisation_created` (`organisation-routes.ts:372`) | `organisation-routes.test.ts` |
-| Delete any organisation | `DELETE /v1/operator/organisations/:organisationId` | Owner token; repeated in the handler (`organisation-erasure-routes.ts:129`) | None: an `erasure` line with ids and counts (`organisation-erasure-routes.ts:57`) | `organisation-erasure-routes.test.ts`, which does not check the line |
+| Delete any organisation | `DELETE /v1/operator/organisations/:organisationId` | Owner token; repeated in the handler (`organisation-erasure-routes.ts:129`) | `organisation_erased`, beside the `erasure` line (`organisation-erasure-routes.ts`) | `organisation-erasure-routes.test.ts` |
 | Assign a plan | `PUT /v1/operator/organisations/:organisationId/plan` | Owner token; `requireOperator` (`operator-plan-routes.ts:203`) | Yes (`operator-plan-routes.ts:257`) | `operator-plan-routes.test.ts` |
 | Grant credits | `POST /v1/operator/organisations/:organisationId/credit-grants` | Owner token; `requireOperator` | Yes (`operator-plan-routes.ts:301`) | `operator-plan-routes.test.ts` |
-| Read an organisation's credits | `GET /v1/operator/organisations/:organisationId/credits` | Owner token; `requireOperator` | None | `operator-plan-routes.test.ts` |
-| Read feedback and support tickets | `GET /v1/operator/feedback` | Owner token, by the request hook only | None | `feedback-routes.test.ts` |
-| Read the waitlist | `GET /v1/operator/waitlist` | Owner token, by the request hook only | None | `beta-waitlist-routes.test.ts` |
+| Read an organisation's credits | `GET /v1/operator/organisations/:organisationId/credits` | Owner token; `requireOperator` | `organisation_credits_read` | `operator-plan-routes.test.ts` |
+| Read feedback and support tickets | `GET /v1/operator/feedback`, `GET /v1/operator/feedback/:noteId` | Owner token, by the request hook only | `feedback_listed` (counts, never the search text), `feedback_read` | `feedback-routes.test.ts` |
+| Read the waitlist | `GET /v1/operator/waitlist` | Owner token, by the request hook only | `waitlist_listed` (counts, never the search text) | `beta-waitlist-routes.test.ts` |
 | Invite a waitlist entry | `POST /v1/operator/waitlist/:entryId/invite` | Owner token, by the request hook only | `beta_waitlist_invited` (`beta-waitlist-routes.ts:142`) | `beta-waitlist-routes.test.ts`, which does not check the line |
-| Create, list or revoke invites | `/v1/operator/beta-invites` | Owner token, by the request hook only | Create and revoke (`beta-sign-up-routes.ts:127`, `:173`); listing none | `beta-sign-up-routes.test.ts`, which does not check the lines |
+| Create, list or revoke invites | `/v1/operator/beta-invites` | Owner token, by the request hook only | `beta_invite_created`, `beta_invites_listed`, `beta_invite_revoked` | `beta-sign-up-routes.test.ts` |
 | Invite a member | `POST /v1/organisation/members` | Owners and admins (`organisation-routes.ts:158`); only an owner grants the owner role (`:253`) | `member_invited` (`organisation-routes.ts:261`) | `organisation-routes.test.ts` |
 | Change a member's role | `PATCH /v1/organisation/members/:memberId` | Owners and admins; the directory decides the owner role under its lock | `member_role_changed` (`organisation-routes.ts:302`) | `organisation-routes.test.ts` |
 | Remove a member | `DELETE /v1/organisation/members/:memberId` | Owners and admins; the last owner stays | `member_removed` (`organisation-routes.ts:337`) | `organisation-routes.test.ts` |
-| Delete the organisation | `DELETE /v1/organisation` | Owners only (`organisation-erasure-routes.ts:102`) | None: an `erasure` line (`organisation-erasure-routes.ts:57`) | `organisation-erasure-routes.test.ts` |
-| Erase a candidate record | `DELETE /v1/workspaces/:workspaceId` | Owners and admins (`record-erasure-routes.ts:84`) | None: an `erasure` line (`record-erasure-routes.ts:113`) | `record-erasure-routes.test.ts` |
+| Delete the organisation | `DELETE /v1/organisation` | Owners only (`organisation-erasure-routes.ts`) | `organisation_erased` | `organisation-erasure-routes.test.ts` |
+| Erase a candidate record | `DELETE /v1/workspaces/:workspaceId` | Owners and admins (`record-erasure-routes.ts`) | `record_erased` | `record-erasure-routes.test.ts` |
 | Assign or unassign record members | `/v1/workspaces/:workspaceId/members/:memberId` | Owners and admins (`record-member-routes.ts:122`) | Yes (`record-member-routes.ts:190`, `:221`) | `record-member-routes.test.ts` |
 | Download a record's archive | `GET /v1/workspaces/:workspaceId/archive` | Owners and admins (`record-archive-routes.ts:71`) | `record_archive_downloaded` (`record-archive-routes.ts:80`) | `record-archive-routes.test.ts` |
 | Release a screening result | `POST /v1/workspaces/:workspaceId/screening/:resultId/release` | Owners and admins (`content-screening-routes.ts:422`) | `content_screening_released` (`content-screening-routes.ts:447`) | `content-screening-routes.test.ts` |
@@ -223,9 +230,7 @@ issue (#2952 to #2958). Those still open:
 
 | Gap | Severity | Where it shows |
 | --- | --- | --- |
-| No second factor for organisation owners and admins, who can erase an organisation or download a record's archive | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 | Operator actions run on one shared static token, so no audit line names a person | Medium | S-004 |
-| Erasures write an `erasure` line, not an `audit` line, and operator reads of feedback, the waitlist and invites write none | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 | Audit lines live only in request logs, with no longer-lived store | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 
 The API trusts forwarding headers, since Cloud Run's front end terminates TLS.

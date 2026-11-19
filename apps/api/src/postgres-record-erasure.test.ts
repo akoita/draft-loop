@@ -256,7 +256,11 @@ describe.runIf(connectionString !== undefined)("candidate record erasure through
     const signingKey = await generateKeyPair("ES256");
     const publicJwk = { ...(await exportJWK(signingKey.publicKey)), kid: "key-1", alg: "ES256" };
     for (const person of people) {
-      tokens[person] = await new SignJWT({ email: email(person), email_verified: true })
+      tokens[person] = await new SignJWT({
+        email: email(person),
+        email_verified: true,
+        amr: ["pwd", "otp"],
+      })
         .setProtectedHeader({ alg: "ES256", kid: "key-1" })
         .setIssuer(issuer)
         .setAudience(audience)

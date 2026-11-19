@@ -6,7 +6,7 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { writeAuditLine } from "./audit-line.js";
 import { registerBetaInviteSignInRoutes } from "./beta-invite-sign-in-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { IdentityAccounts } from "./identity-accounts.js";
@@ -250,6 +250,11 @@ export function registerBetaSignUpRoutes(
       ]);
       const total =
         state === undefined ? counts.open + counts.revoked + counts.redeemed : counts[state];
+      // Never the search text, which may be an email.
+      writeAuditLine(request, "beta_invites_listed", {
+        listed: listed.length,
+        searched: q !== undefined,
+      });
       return { invites: [...listed], total, counts, ...seatsNow };
     },
   );

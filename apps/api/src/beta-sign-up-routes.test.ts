@@ -7,6 +7,7 @@ import { buildApi } from "./app.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
 import type { IdentityAccounts } from "./identity-accounts.js";
 import { legalVersion } from "./legal-pages.js";
+import { cloudLoggingOptions } from "./logging.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -18,6 +19,7 @@ let signIn: ApiAuthOptions;
 let app: FastifyInstance | undefined;
 let claimed: SignedInMember | undefined;
 let members: Map<string, SignedInMember>;
+let logLines: Record<string, unknown>[] = [];
 
 const redeem = vi.fn<BetaInvites["redeem"]>();
 const assignPlan = vi.fn(async () => ({}) as never);
@@ -74,8 +76,12 @@ afterEach(async () => {
 async function api(
   prepareInvitedAccount?: IdentityAccounts["prepareInvitedAccount"],
 ): Promise<FastifyInstance> {
+  logLines = [];
   app = await buildApi({
     ownerToken,
+    logger: cloudLoggingOptions({
+      write: (line) => logLines.push(JSON.parse(line) as Record<string, unknown>),
+    }),
     auth: signIn,
     directory: {} as TenantDirectory,
     betaInvites: {
@@ -299,6 +305,12 @@ describe("operator beta invite routes", () => {
       server.inject({ method: "DELETE", url: `/v1/operator/beta-invites/${id}`, headers: owner });
     expect((await revoke("invite-1")).statusCode).toBe(204);
     expect((await revoke("invite-2")).statusCode).toBe(404);
+    // Creating, listing and revoking each leave an audit line (#2954).
+    expect(
+      logLines.flatMap((line) =>
+        line.audit === undefined ? [] : [(line.audit as { action: string }).action],
+      ),
+    ).toEqual(["beta_invite_created", "beta_invites_listed", "beta_invite_revoked"]);
 
     const member = await server.inject({
       method: "GET",

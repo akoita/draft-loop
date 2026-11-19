@@ -11835,6 +11835,10 @@ msgstr "Vous fournissez les documents, DraftLoop en tire les faits, et chaque ca
 msgid "You have done every step. For your next job, start again at Add the job you want."
 msgstr "Vous avez fait toutes les étapes. Pour votre prochain poste, reprenez à Ajoutez le poste visé."
 
+#: apps/web/src/refusal-text.ts
+msgid "You have sent the most notes a member can send in 24 hours. Try again later."
+msgstr "Vous avez envoyé le nombre maximal de notes autorisé en 24 heures. Réessayez plus tard."
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "You have unsaved changes. Choose Discard changes to close without saving."
@@ -12005,6 +12009,10 @@ msgstr "Votre organisation n’a pas encore d’offre."
 #: apps/web/src/credits-model.ts
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
 msgstr "Votre organisation n’a pas encore d’offre. Demandez au propriétaire d’en choisir une."
+
+#: apps/web/src/refusal-text.ts
+msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
+msgstr "Votre organisation compte d’autres membres : cette action demande une connexion avec un second facteur. Configurez une application d’authentification dans votre compte, reconnectez-vous et réessayez."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Your pitch"

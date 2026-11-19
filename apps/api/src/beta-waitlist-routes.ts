@@ -3,7 +3,7 @@ import type { BetaWaitlist } from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
+import { writeAuditLine } from "./audit-line.js";
 import { emailInvite } from "./beta-sign-up-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { InviteMailer } from "./invite-mail.js";
@@ -211,6 +211,11 @@ export function registerBetaWaitlistRoutes(
         waitlist.list({ limit, offset, ...(q === undefined ? {} : { query: q }) }),
         waitlist.count(q),
       ]);
+      // Never the search text, which may be an email.
+      writeAuditLine(request, "waitlist_listed", {
+        listed: entries.length,
+        searched: q !== undefined,
+      });
       return { entries: [...entries], total };
     },
   );

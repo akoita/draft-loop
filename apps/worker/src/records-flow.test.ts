@@ -108,7 +108,7 @@ describe.runIf(connectionString !== undefined)("candidate records in the web scr
     const publicJwk = { ...(await exportJWK(signingKey.publicKey)), kid: "key-1", alg: "ES256" };
     for (const person of ["owner", "member"] as const) {
       const { subject, email } = people[person];
-      tokens[person] = await new SignJWT({ email, email_verified: true })
+      tokens[person] = await new SignJWT({ email, email_verified: true, amr: ["pwd", "otp"] })
         .setProtectedHeader({ alg: "ES256", kid: "key-1" })
         .setIssuer(issuer)
         .setAudience(audience)

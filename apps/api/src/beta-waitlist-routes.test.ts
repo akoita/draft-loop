@@ -173,6 +173,12 @@ describe("the beta waitlist (#2566)", () => {
     });
     expect(waitlist.list).toHaveBeenLastCalledWith({ limit: 20, offset: 40, query: "ada" });
     expect(waitlist.count).toHaveBeenLastCalledWith("ada");
+    // Each list read is audited without its search text (#2954).
+    expect(lines.flatMap((line) => (line.audit === undefined ? [] : [line.audit]))).toEqual([
+      { action: "waitlist_listed", actor: "owner-token", listed: 1, searched: false },
+      { action: "waitlist_listed", actor: "owner-token", listed: 1, searched: true },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain('"ada"');
 
     const invited = await app.inject({
       method: "POST",
