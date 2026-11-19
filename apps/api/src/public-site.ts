@@ -18,6 +18,7 @@ export const siteOriginToken = "__SITE_ORIGIN__";
 const pageGroups: readonly { readonly en: string; readonly fr?: string }[] = [
   { en: "/" },
   { en: "/about/", fr: "/about/fr/" },
+  { en: "/guide/", fr: "/guide/fr/" },
   { en: "/legal/en/terms", fr: "/legal/fr/terms" },
   { en: "/legal/en/privacy", fr: "/legal/fr/privacy" },
   { en: "/legal/en/notice", fr: "/legal/fr/notice" },
@@ -34,6 +35,10 @@ const tokenPages: ReadonlySet<string> = new Set([
   "/about/index.html",
   "/about/fr/",
   "/about/fr/index.html",
+  "/guide/",
+  "/guide/index.html",
+  "/guide/fr/",
+  "/guide/fr/index.html",
 ]);
 
 /**

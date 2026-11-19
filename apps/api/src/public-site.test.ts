@@ -68,6 +68,7 @@ describe("search engine files", () => {
     expect(xml).toContain(`<loc>${origin}/</loc>`);
     expect(xml).toContain(`<loc>${origin}/about/fr/</loc>`);
     expect(xml).toContain(`<loc>${origin}/legal/fr/privacy</loc>`);
+    expect(xml).toContain(`hreflang="fr" href="${origin}/guide/fr/"`);
     expect(xml).toContain(`hreflang="fr" href="${origin}/about/fr/"`);
     expect(xml).not.toContain("showcase");
   });

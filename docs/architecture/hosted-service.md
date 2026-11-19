@@ -97,8 +97,8 @@ the identity provider (authorization code with PKCE), and is kept in the tab.
 
 ### Public pages and search engines
 
-The landing page (`/`), `/about/`, `/about/fr/`, `/showcase/` and the legal
-pages need no sign-in. `public-site.ts` decides how search engines treat them.
+The landing page (`/`), `/about/`, `/guide/` (each with a `fr/` version),
+`/showcase/` and the legal pages need no sign-in. `public-site.ts` decides how search engines treat them.
 
 - **Indexing off (default).** With `DRAFT_LOOP_SEARCH_INDEXING` unset or
   `off`, `robots.txt` disallows everything, every response carries
