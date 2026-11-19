@@ -22,6 +22,9 @@ export const englishHelpGuide: HelpGuide = {
         "facts",
         "profile",
       ],
+      screenshot: {
+        alt: "Home, Your career: one document in Career evidence and a reviewed Career profile built from it.",
+      },
     },
     {
       id: "job",
@@ -43,6 +46,9 @@ export const englishHelpGuide: HelpGuide = {
         "sector",
         "non-tech",
       ],
+      screenshot: {
+        alt: "The New application dialog with a role name and a pasted job description.",
+      },
     },
     {
       id: "draft",
@@ -52,6 +58,9 @@ export const englishHelpGuide: HelpGuide = {
         "A run takes a few minutes, and you can leave the page while it works. If a run stops, the screen says whether it will recover by itself and how long to wait.",
       ],
       keywords: ["run", "start", "generate", "write", "model", "author", "critic"],
+      screenshot: {
+        alt: "An application's run header: draft, critique and revise are done, and approval is next.",
+      },
     },
     {
       id: "review",
@@ -61,6 +70,9 @@ export const englishHelpGuide: HelpGuide = {
         "Once it is approved, pick a template and select Export to save the file. You can export again later in another template.",
       ],
       keywords: ["finding", "approve", "download", "PDF", "Word", "template", "save"],
+      screenshot: {
+        alt: "The Findings panel: two blocking findings to accept, reject, defer or override, then Approve artifact.",
+      },
     },
     {
       id: "prepare",
@@ -70,6 +82,9 @@ export const englishHelpGuide: HelpGuide = {
         "Each paid application includes 20 Prepare drafts, guides and research runs.",
       ],
       keywords: ["cover letter", "letter", "interview", "questions", "preparation"],
+      screenshot: {
+        alt: "The Prepare panel of an application, with Cover letter and Interview preparation guide.",
+      },
     },
     {
       id: "display",
@@ -79,6 +94,7 @@ export const englishHelpGuide: HelpGuide = {
         "Technical choices, such as models, sit under Advanced options at the bottom of a card. You never need them for the basic path.",
       ],
       keywords: ["settings", "guided", "simple", "advanced", "options", "language", "theme"],
+      screenshot: { alt: "Settings, Display: Guide me step by step, Simple and Show everything." },
     },
     {
       id: "agents",
@@ -88,6 +104,9 @@ export const englishHelpGuide: HelpGuide = {
         "A connected agent can list your applications, add a job, start a CV run and draft cover letters. It can also note work you shipped in your Work journal; a note becomes career evidence only after you approve it.",
       ],
       keywords: ["MCP", "Claude", "Codex", "token", "work journal", "assistant", "automation"],
+      screenshot: {
+        alt: "Settings, Agents: notes from agents, connected agents and Connect an agent.",
+      },
     },
     {
       id: "credits",

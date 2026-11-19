@@ -4,7 +4,14 @@
  * engine can read it without signing in. The build writes them from the same source, so the guide
  * is never copied. No inline style or script, so the content security policy holds.
  */
-import { type HelpGuideLanguage, helpGuide, helpGuideLanguages } from "@draft-loop/user-guide";
+import {
+  type HelpGuideLanguage,
+  type HelpSection,
+  helpGuide,
+  helpGuideLanguages,
+} from "@draft-loop/user-guide";
+
+import { guideImageSizes } from "./guide-images.js";
 
 /** Where each language's guide page is served. */
 export const guidePagePaths: Readonly<Record<HelpGuideLanguage, string>> = {
@@ -77,6 +84,21 @@ export function escapeHtml(text: string): string {
     .replaceAll("'", "&#39;");
 }
 
+/** The file name of a section's screenshot in one language, under `/guide/images/`. */
+export function guideImageFile(section: HelpSection, language: HelpGuideLanguage): string {
+  return `${section.id}.${language}.webp`;
+}
+
+/** A section's screenshot as a figure, or nothing when the section has none. */
+function screenshotHtml(section: HelpSection, language: HelpGuideLanguage): string[] {
+  if (section.screenshot === undefined) return [];
+  const file = guideImageFile(section, language);
+  const [width, height] = guideImageSizes[file] ?? [0, 0];
+  return [
+    `<figure class="guide-shot"><a href="/guide/images/${file}"><img src="/guide/images/${file}" alt="${escapeHtml(section.screenshot.alt)}" width="${width}" height="${height}" loading="lazy" decoding="async" /></a></figure>`,
+  ];
+}
+
 /** The whole guide page in one language, as the build writes it. */
 export function guidePageHtml(language: HelpGuideLanguage): string {
   const words = chrome[language];
@@ -106,6 +128,7 @@ export function guidePageHtml(language: HelpGuideLanguage): string {
       `<p class="card-num">${String(index + 1).padStart(2, "0")}</p>`,
       `<h2>${e(section.title)}</h2>`,
       ...section.paragraphs.map((paragraph) => `<p>${e(paragraph)}</p>`),
+      ...screenshotHtml(section, language),
       `</article>`,
     ].join("\n"),
   );
