@@ -194,7 +194,8 @@ Second factors:
 query `jsonPayload.audit.action` to find them all. Lines written through
 `apps/api/src/audit-line.ts` also name the actor. The worker's inactive-beta
 erasure writes one too, with actor `beta-retention`.
-These lines live only in the deployment's request logs.
+A log sink copies them to a dedicated bucket that keeps each line for 400
+days, beyond the request logs' own retention (#2955).
 
 | Action | Route | Who may act, and where it is checked | Audit line | Test |
 | --- | --- | --- | --- | --- |
@@ -231,7 +232,6 @@ issue (#2952 to #2958). Those still open:
 | Gap | Severity | Where it shows |
 | --- | --- | --- |
 | Operator actions run on one shared static token, so no audit line names a person | Medium | S-004 |
-| Audit lines live only in request logs, with no longer-lived store | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 
 The API trusts forwarding headers, since Cloud Run's front end terminates TLS.
 On a self-hosted stack the API is reached directly on 127.0.0.1, so a caller
