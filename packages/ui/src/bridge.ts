@@ -172,6 +172,12 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
 import {
+  normalizeProfileDerivationEstimateResult,
+  type ProfileDerivationEstimateInput,
+  type ProfileDerivationEstimateResult,
+  validateProfileDerivationEstimateInput,
+} from "./profile-derivation-estimate-contract.js";
+import {
   normalizeProfileDerivationUsage,
   type ProfileDerivationUsage,
 } from "./profile-derivation-usage.js";
@@ -278,6 +284,10 @@ export type {
   ReviewedCanonicalCandidateProfileCatalogResult,
   SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
+export type {
+  ProfileDerivationEstimateInput,
+  ProfileDerivationEstimateResult,
+} from "./profile-derivation-estimate-contract.js";
 export type {
   ProfileFreshnessInput,
   ProfileFreshnessResult,
@@ -2610,6 +2620,7 @@ export interface BridgeCommandInputMap {
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.freshness": ProfileFreshnessInput;
+  "profile.estimate": ProfileDerivationEstimateInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
   "profile.review": CanonicalCandidateProfileReviewInput;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogInput;
@@ -2704,6 +2715,7 @@ export interface BridgeCommandOutputMap {
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.freshness": ProfileFreshnessResult;
+  "profile.estimate": ProfileDerivationEstimateResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
   "profile.review": CanonicalCandidateProfileRecordResult;
   "profile.catalog": ReviewedCanonicalCandidateProfileCatalogResult;
@@ -4953,6 +4965,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "profile.freshness",
         input: validateProfileFreshnessInput(command.input),
       };
+    case "profile.estimate":
+      return {
+        type: "profile.estimate",
+        input: validateProfileDerivationEstimateInput(command.input),
+      };
     case "profile.edit":
       return {
         type: "profile.edit",
@@ -6847,6 +6864,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeCanonicalCandidateProfileListResult(value);
     case "profile.freshness":
       return normalizeProfileFreshnessResult(value) ?? invalidInput();
+    case "profile.estimate":
+      return normalizeProfileDerivationEstimateResult(value) ?? invalidInput();
     case "profile.catalog":
       return parseReviewedCanonicalCandidateProfileCatalogResult(value, command.input.workspaceId);
     case "knowledge.readiness":

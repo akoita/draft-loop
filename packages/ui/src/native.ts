@@ -43,6 +43,8 @@ import {
   type OpportunityLatestResult,
   type OpportunityListResult,
   type OpportunityRecordResult,
+  type ProfileDerivationEstimateInput,
+  type ProfileDerivationEstimateResult,
   type ProfileFreshnessResult,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
@@ -210,6 +212,10 @@ export interface DesktopProfileCapabilities {
     workspaceId: string,
     profileId: string,
   ) => Promise<ProfileFreshnessResult>;
+  /** What an update would send and roughly cost, before it starts (#3183). */
+  readonly estimateCanonicalCandidateProfileDerivation?: (
+    input: Omit<ProfileDerivationEstimateInput, "workspaceId">,
+  ) => Promise<ProfileDerivationEstimateResult>;
   /** Where each fact may be used (#2259); absent on a host without usage levels. */
   readonly factUsage?: FactUsageCapabilities;
   /** Suggested profile updates (#3069); absent on a host without them. */
@@ -1161,6 +1167,21 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { workspaceId, profileId },
               }),
             ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.estimate")
+      ? {
+          estimateCanonicalCandidateProfileDerivation: async (
+            input: Omit<ProfileDerivationEstimateInput, "workspaceId">,
+          ) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.estimate",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
         }
       : {}),
     ...(capabilityPort.hasCapability("profile.catalog")

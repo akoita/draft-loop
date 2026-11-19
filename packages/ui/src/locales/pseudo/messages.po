@@ -250,6 +250,11 @@ msgstr ""
 msgid "{0, plural, one {# model call} other {# model calls}}"
 msgstr ""
 
+#. placeholder {0}: estimate.calls
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {# model call} other {about # model calls}}"
+msgstr ""
+
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #. placeholder {1}: state.setup.selectedEvidenceSourceCount
 #: packages/ui/src/review.tsx
@@ -266,6 +271,11 @@ msgstr ""
 msgid "{0, plural, one {# unresolved warning} other {# unresolved warnings}}"
 msgstr ""
 
+#. placeholder {0}: estimate.reusedSourceCount
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {and reuses #} other {and reuses #}}"
+msgstr ""
+
 #. placeholder {0}: warnings.length
 #: packages/ui/src/review.tsx
 msgid "{0, plural, one {Approval is available with # unresolved non-blocking warning. It remains visible after approval.} other {Approval is available with # unresolved non-blocking warnings. They remain visible after approval.}}"
@@ -279,6 +289,11 @@ msgstr ""
 #. placeholder {0}: state.setup.selectedEvidenceChunkCount
 #: packages/ui/src/review.tsx
 msgid "{0, plural, one {No lexical match; using # bounded fallback excerpt from career evidence} other {No lexical match; using # bounded fallback excerpts from career evidence}}"
+msgstr ""
+
+#. placeholder {0}: estimate.extractedSourceCount
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{0, plural, one {Reads # source again} other {Reads # sources again}}"
 msgstr ""
 
 #. placeholder {0}: entry.suggestedFromRunCount
@@ -635,6 +650,18 @@ msgstr ""
 msgid "{duration} s"
 msgstr ""
 
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}, {low} to {high}."
+msgstr ""
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}, about {low}."
+msgstr ""
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{extracted}{reused}: {calls}; the cost is unknown for this model."
+msgstr ""
+
 #: apps/web/src/sources-model.ts
 msgid "{fileName} is larger than this service accepts."
 msgstr ""
@@ -804,6 +831,10 @@ msgstr ""
 
 #: packages/ui/src/app.tsx
 msgid "{shown}, and the model you chose."
+msgstr ""
+
+#: packages/ui/src/profile-derivation-estimate.tsx
+msgid "{sources} ({characters} characters)"
 msgstr ""
 
 #: packages/ui/src/run-requirement-evidence.tsx

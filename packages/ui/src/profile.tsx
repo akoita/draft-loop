@@ -26,6 +26,10 @@ import {
   savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
 import {
+  ProfileDerivationEstimateNote,
+  useProfileDerivationEstimate,
+} from "./profile-derivation-estimate.js";
+import {
   type ProfileDerivationUsage,
   profileDerivationUsageSummary,
 } from "./profile-derivation-usage.js";
@@ -889,6 +893,12 @@ export function ProfileWorkspace({
       ? defaultCareerProfileName
       : normalizedProfileId;
   const recordKey = record === null ? "" : `${record.profileId}@${record.version}`;
+  const derivationEstimate = useProfileDerivationEstimate(
+    capabilities,
+    isCanonicalCandidateProfileId(generationProfileId) ? generationProfileId : null,
+    fullExtraction,
+    recordKey,
+  );
   const freshness = useProfileFreshness(
     capabilities,
     workspaceId,
@@ -1357,21 +1367,24 @@ export function ProfileWorkspace({
   const primaryLabel = profilePrimaryActionLabel(status);
   const sendsFromTop = status.primaryAction === "generate" || status.primaryAction === "update";
   const generationAction = (mode: "generate" | "update") => (
-    <ProfileGenerationAction
-      outcome={currentOutcome}
-      mode={mode}
-      profileIdValid={isCanonicalCandidateProfileId(generationProfileId)}
-      providerTransmissionApproved={providerTransmissionApproved}
-      busy={busy}
-      generating={generationStartedAt !== null}
-      sourceCount={evidenceSourceCount}
-      providerName={
-        providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
-      }
-      fixtureMode={fixtureMode}
-      onApprovalChange={setProviderTransmissionApproved}
-      onDerive={derive}
-    />
+    <>
+      {fixtureMode ? null : <ProfileDerivationEstimateNote estimate={derivationEstimate} />}
+      <ProfileGenerationAction
+        outcome={currentOutcome}
+        mode={mode}
+        profileIdValid={isCanonicalCandidateProfileId(generationProfileId)}
+        providerTransmissionApproved={providerTransmissionApproved}
+        busy={busy}
+        generating={generationStartedAt !== null}
+        sourceCount={evidenceSourceCount}
+        providerName={
+          providerCompany === undefined ? undefined : providerDisplayName(providerCompany)
+        }
+        fixtureMode={fixtureMode}
+        onApprovalChange={setProviderTransmissionApproved}
+        onDerive={derive}
+      />
+    </>
   );
   const openReview = (): void => {
     const target = document.getElementById(
