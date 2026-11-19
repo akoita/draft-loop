@@ -1759,6 +1759,39 @@ button.small:where(:not(.shared-screens *)) {
   font-weight: 400;
 }
 
+/* The run trace (#3111): two ids in, the run's steps as an indented list out. */
+.operator-trace-form {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 24rem;
+  margin-top: 0.75rem;
+}
+
+.operator-trace-form > input {
+  width: 100%;
+}
+
+.operator-trace-form > button {
+  justify-self: start;
+  margin-top: 0.5rem;
+}
+
+.operator-trace {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.operator-trace > li {
+  padding-block: 0.25rem;
+  border-block-end: 1px solid var(--border);
+}
+
+.operator-trace-error > strong {
+  color: var(--red);
+}
+
 .operator-search {
   display: grid;
   gap: 0.25rem;

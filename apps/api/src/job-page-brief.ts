@@ -86,23 +86,44 @@ export async function assertApprovedJobPage(input: {
  */
 export const jobPageHopTimeoutMs = 25_000;
 
+/** How long the API waits before fetching a timed-out job page again (#3113). */
+export const jobPageRetryDelayMs = 2_000;
+
+/** A fetch that timed out with no text: the page fetcher was likely still starting. */
+function timedOut(result: IngestionResult): boolean {
+  return (result.source?.text.trim() ?? "") === "" && result.issues[0]?.code === "fetch-timeout";
+}
+
 /**
  * One fetch of an approved job page through the pinned fetcher (#1811), whose result both the
- * brief's provenance and the application's kept text come from.
+ * brief's provenance and the application's kept text come from. A fetch that timed out is made
+ * once more after a short wait, since a scaled-to-zero fetcher can miss the first (#3113); any
+ * other refusal is final.
  */
-export function jobPageFetch(fetcher?: UrlFetcher): JobPageFetch {
+export function jobPageFetch(
+  fetcher?: UrlFetcher,
+  retryDelayMs: number = jobPageRetryDelayMs,
+): JobPageFetch {
   let fetched: Promise<IngestionResult> | undefined;
   let result: IngestionResult | undefined;
   const ingest: IngestUrl = (url, options) => {
-    fetched ??= ingestUrl(url, {
-      ...options,
-      ...(fetcher === undefined ? {} : { fetcher }),
-      timeoutMs: jobPageHopTimeoutMs,
-      maxExtractedCharacters: applicationPastedJobMaxLength,
-    }).then((value) => {
-      result = value;
-      return value;
-    });
+    const once = () =>
+      ingestUrl(url, {
+        ...options,
+        ...(fetcher === undefined ? {} : { fetcher }),
+        timeoutMs: jobPageHopTimeoutMs,
+        maxExtractedCharacters: applicationPastedJobMaxLength,
+      });
+    fetched ??= once()
+      .then(async (first) => {
+        if (!timedOut(first)) return first;
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        return once();
+      })
+      .then((value) => {
+        result = value;
+        return value;
+      });
     return fetched;
   };
   return {

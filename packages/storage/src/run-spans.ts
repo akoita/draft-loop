@@ -40,6 +40,11 @@ export interface RunSpanStore {
   put(span: RunSpanRecord): Promise<void>;
   /** One run's spans by start time, then span id. */
   list(workspaceId: string, runId: string): Promise<readonly RunSpanRecord[]>;
+  /**
+   * One run's spans by its id alone, in any workspace of the tenant, in the same order: for the
+   * operator, who knows a failed run's id from a feedback note but not its workspace (#3111).
+   */
+  listRun(runId: string): Promise<readonly RunSpanRecord[]>;
   /** Removes a run's spans and says how many it held. */
   removeRun(workspaceId: string, runId: string): Promise<number>;
 }
@@ -157,6 +162,11 @@ export function createMemoryRunSpanStore(): RunSpanStore {
     },
     list: async (workspaceId, runId) =>
       [...(runs.get(idOf(workspaceId, runId))?.values() ?? [])].sort(compareRunSpans),
+    listRun: async (runId) =>
+      [...runs.values()]
+        .flatMap((held) => [...held.values()])
+        .filter((span) => span.runId === runId)
+        .sort(compareRunSpans),
     removeRun: async (workspaceId, runId) => {
       const id = idOf(workspaceId, runId);
       const count = runs.get(id)?.size ?? 0;

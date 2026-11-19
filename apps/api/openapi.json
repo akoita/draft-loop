@@ -6800,6 +6800,134 @@
           "balance"
         ]
       },
+      "RunSpanInput": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.request.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.failure_reason",
+                "draftloop.retrieved_chunks",
+                "draftloop.retrieved_sources",
+                "draftloop.revision.mode",
+                "draftloop.revision.patch_rejection",
+                "draftloop.revision.dropped_edits"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ]
+      },
+      "OperatorRunTraceInput": {
+        "type": "object",
+        "properties": {
+          "organisation_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": "string",
+            "description": "The workspace the run belongs to."
+          },
+          "request_id": {
+            "description": "The API request that last queued the run, when its spans carry one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSpanInput"
+            }
+          }
+        },
+        "required": [
+          "organisation_id",
+          "run_id",
+          "workspace_id",
+          "request_id",
+          "spans"
+        ]
+      },
       "OrganisationMemberInput": {
         "type": "object",
         "properties": {
@@ -7697,99 +7825,6 @@
           "state"
         ],
         "additionalProperties": {}
-      },
-      "RunSpanInput": {
-        "type": "object",
-        "properties": {
-          "span_id": {
-            "type": "string"
-          },
-          "parent_span_id": {
-            "description": "The span this one ran inside; null for a root.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "enum": [
-              "invoke_workflow",
-              "invoke_agent",
-              "retrieve_evidence"
-            ]
-          },
-          "started_at": {
-            "type": "string"
-          },
-          "ended_at": {
-            "description": "Null when the step never finished.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "ok",
-                  "error"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "attributes": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "enum": [
-                "gen_ai.operation.name",
-                "gen_ai.provider.name",
-                "gen_ai.request.model",
-                "gen_ai.usage.input_tokens",
-                "gen_ai.usage.output_tokens",
-                "gen_ai.usage.cache_read.input_tokens",
-                "gen_ai.usage.cache_creation.input_tokens",
-                "error.type",
-                "draftloop.run.id",
-                "draftloop.request.id",
-                "draftloop.round",
-                "draftloop.step",
-                "draftloop.attempt",
-                "draftloop.estimated_usd",
-                "draftloop.failure_stage",
-                "draftloop.failure_reason",
-                "draftloop.retrieved_chunks",
-                "draftloop.retrieved_sources",
-                "draftloop.revision.mode",
-                "draftloop.revision.patch_rejection",
-                "draftloop.revision.dropped_edits"
-              ]
-            },
-            "additionalProperties": {
-              "type": [
-                "string",
-                "number",
-                "boolean"
-              ]
-            },
-            "description": "Numbers, booleans and short identifiers only. Never candidate material."
-          }
-        },
-        "required": [
-          "span_id",
-          "parent_span_id",
-          "name",
-          "started_at",
-          "ended_at",
-          "status",
-          "attributes"
-        ]
       },
       "SensitivityRuleMatchInput": {
         "oneOf": [
@@ -15618,6 +15653,136 @@
         ],
         "additionalProperties": false
       },
+      "RunSpan": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string"
+          },
+          "parent_span_id": {
+            "description": "The span this one ran inside; null for a root.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "invoke_workflow",
+              "invoke_agent",
+              "retrieve_evidence"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "description": "Null when the step never finished.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "gen_ai.operation.name",
+                "gen_ai.provider.name",
+                "gen_ai.request.model",
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.cache_read.input_tokens",
+                "gen_ai.usage.cache_creation.input_tokens",
+                "error.type",
+                "draftloop.run.id",
+                "draftloop.request.id",
+                "draftloop.round",
+                "draftloop.step",
+                "draftloop.attempt",
+                "draftloop.estimated_usd",
+                "draftloop.failure_stage",
+                "draftloop.failure_reason",
+                "draftloop.retrieved_chunks",
+                "draftloop.retrieved_sources",
+                "draftloop.revision.mode",
+                "draftloop.revision.patch_rejection",
+                "draftloop.revision.dropped_edits"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            },
+            "description": "Numbers, booleans and short identifiers only. Never candidate material."
+          }
+        },
+        "required": [
+          "span_id",
+          "parent_span_id",
+          "name",
+          "started_at",
+          "ended_at",
+          "status",
+          "attributes"
+        ],
+        "additionalProperties": false
+      },
+      "OperatorRunTrace": {
+        "type": "object",
+        "properties": {
+          "organisation_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": "string",
+            "description": "The workspace the run belongs to."
+          },
+          "request_id": {
+            "description": "The API request that last queued the run, when its spans carry one.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunSpan"
+            }
+          }
+        },
+        "required": [
+          "organisation_id",
+          "run_id",
+          "workspace_id",
+          "request_id",
+          "spans"
+        ],
+        "additionalProperties": false
+      },
       "OrganisationMember": {
         "type": "object",
         "properties": {
@@ -16543,100 +16708,6 @@
           "state"
         ],
         "additionalProperties": {}
-      },
-      "RunSpan": {
-        "type": "object",
-        "properties": {
-          "span_id": {
-            "type": "string"
-          },
-          "parent_span_id": {
-            "description": "The span this one ran inside; null for a root.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "enum": [
-              "invoke_workflow",
-              "invoke_agent",
-              "retrieve_evidence"
-            ]
-          },
-          "started_at": {
-            "type": "string"
-          },
-          "ended_at": {
-            "description": "Null when the step never finished.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "ok",
-                  "error"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "attributes": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string",
-              "enum": [
-                "gen_ai.operation.name",
-                "gen_ai.provider.name",
-                "gen_ai.request.model",
-                "gen_ai.usage.input_tokens",
-                "gen_ai.usage.output_tokens",
-                "gen_ai.usage.cache_read.input_tokens",
-                "gen_ai.usage.cache_creation.input_tokens",
-                "error.type",
-                "draftloop.run.id",
-                "draftloop.request.id",
-                "draftloop.round",
-                "draftloop.step",
-                "draftloop.attempt",
-                "draftloop.estimated_usd",
-                "draftloop.failure_stage",
-                "draftloop.failure_reason",
-                "draftloop.retrieved_chunks",
-                "draftloop.retrieved_sources",
-                "draftloop.revision.mode",
-                "draftloop.revision.patch_rejection",
-                "draftloop.revision.dropped_edits"
-              ]
-            },
-            "additionalProperties": {
-              "type": [
-                "string",
-                "number",
-                "boolean"
-              ]
-            },
-            "description": "Numbers, booleans and short identifiers only. Never candidate material."
-          }
-        },
-        "required": [
-          "span_id",
-          "parent_span_id",
-          "name",
-          "started_at",
-          "ended_at",
-          "status",
-          "attributes"
-        ],
-        "additionalProperties": false
       },
       "SensitivityRuleMatch": {
         "oneOf": [
@@ -31668,6 +31739,74 @@
             }
           },
           "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/organisations/{organisationId}/runs/{runId}/trace": {
+      "get": {
+        "summary": "Read a member's run trace as the operator",
+        "description": "Operator only. The run's spans in start order: each advance, each author, critic or revision attempt and each retrieval, with timing, status, model, provider error class, tokens, estimated cost and the request id. Content-free. Answers 404 `trace_not_found` when the organisation has no spans for the run.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "organisationId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRunTrace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

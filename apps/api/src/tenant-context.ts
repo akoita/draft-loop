@@ -120,7 +120,7 @@ export interface TenantApplications {
   /** A tenant's assistant connection caps (#2656); without it a grant never spends. */
   readonly agentConnectionCapsFor?: (tenantId: string) => AgentConnectionCapStore;
   /** A tenant's stored run spans (#1103); without it the run trace route is not served. */
-  readonly runSpansFor?: (tenantId: string) => Pick<RunSpanStore, "list">;
+  readonly runSpansFor?: (tenantId: string) => Pick<RunSpanStore, "list" | "listRun">;
   /** A tenant's candidate record names (#2737); without it records are shown by id only. */
   readonly recordNamesFor?: (tenantId: string) => RecordNames;
   /** A tenant's credit pack purchases (#2709); without it payment events grant nothing. */

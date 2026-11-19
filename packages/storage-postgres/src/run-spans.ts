@@ -61,6 +61,16 @@ export function createRunSpanStore(client: SqlSession): RunSpanStore {
       );
       return rows.map(spanOf);
     },
+    listRun: async (runId) => {
+      const rows = await client.query(
+        `SELECT workspace_id, run_id, span_id, parent_span_id, name, started_at, ended_at, status,
+                attributes
+           FROM run_spans WHERE run_id = $1
+          ORDER BY started_at COLLATE "C", span_id COLLATE "C"`,
+        [runId],
+      );
+      return rows.map(spanOf);
+    },
     removeRun: async (workspaceId, runId) => {
       const rows = await client.query(
         `DELETE FROM run_spans WHERE workspace_id = $1 AND run_id = $2 RETURNING 1`,

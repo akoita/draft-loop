@@ -668,6 +668,10 @@ msgstr ""
 msgid "{draftOpen} issues are still open. Acknowledge or resolve them, then save."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "{duration} s"
+msgstr ""
+
 #: apps/web/src/sources-model.ts
 msgid "{fileName} is larger than this service accepts."
 msgstr ""
@@ -682,6 +686,10 @@ msgstr ""
 
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "{inputCount} in / {outputTokens} out"
 msgstr ""
 
 #: apps/web/src/screening-model.ts
@@ -3075,6 +3083,10 @@ msgstr ""
 msgid "Development"
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "did not finish"
+msgstr ""
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Did not remember."
 msgstr ""
@@ -3875,6 +3887,10 @@ msgstr ""
 msgid "Facts:"
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "failed"
+msgstr ""
+
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/run-steps.tsx
 msgid "Failed"
@@ -3996,6 +4012,10 @@ msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
 msgid "Final round"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -6119,6 +6139,10 @@ msgstr ""
 msgid "No recent workspaces yet."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "No request id recorded."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "No required sections"
 msgstr ""
@@ -6198,6 +6222,10 @@ msgstr ""
 
 #: packages/ui/src/getting-started.tsx
 msgid "No thanks"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "No trace for that run in that organisation."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -6443,6 +6471,10 @@ msgstr ""
 msgid "Off: pauses after a round with a blocking finding"
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "ok"
+msgstr ""
+
 #: apps/web/src/operator.tsx
 msgid "Oldest first: the order people asked in."
 msgstr ""
@@ -6519,6 +6551,7 @@ msgstr ""
 msgid "Only the latest draft can be marked reviewed."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
 #: packages/ui/src/review.tsx
 msgid "open"
 msgstr ""
@@ -6708,6 +6741,10 @@ msgstr ""
 #. placeholder {0}: (suggestion.sectionOrder ?? []).join(", ")
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Order sections as {0}"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "Organisation id"
 msgstr ""
 
 #: packages/ui/src/home.tsx
@@ -7334,6 +7371,10 @@ msgstr ""
 msgid "Read the job"
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "Read trace"
+msgstr ""
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Read your exported CVs and saved cover letters and interview questions"
 msgstr ""
@@ -7408,6 +7449,7 @@ msgid "Reading your reviewed career profiles…"
 msgstr ""
 
 #: apps/web/src/operator-list.tsx
+#: apps/web/src/operator-trace.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr ""
@@ -7705,6 +7747,10 @@ msgstr ""
 #. placeholder {0}: countedNouns.acceptedBlockingFinding(acceptedBlockingFindings.length)
 #: packages/ui/src/review.tsx
 msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "Request id {requestId}."
 msgstr ""
 
 #: packages/ui/src/review-footer.tsx
@@ -8325,6 +8371,10 @@ msgstr ""
 msgid "Run history compacted: {0} before, {1} after. The previous history is kept as {2}. {3} runs were checked to read back the same."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "Run id"
+msgstr ""
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Run it in a terminal. It saves the server in your user settings."
 msgstr ""
@@ -8346,8 +8396,17 @@ msgstr ""
 msgid "Run settings"
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "Run steps"
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Run the author–critic loop again"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+#: apps/web/src/operator.tsx
+msgid "Run trace"
 msgstr ""
 
 #: packages/ui/src/home-applications-view.tsx
@@ -10432,6 +10491,10 @@ msgstr ""
 msgid "The total is a lower bound."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "The trace could not be read. Try again."
+msgstr ""
+
 #: packages/ui/src/app.tsx
 msgid "The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again."
 msgstr ""
@@ -10548,6 +10611,10 @@ msgstr ""
 msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
 msgstr ""
 
+#: packages/ui/src/bridge.ts
+msgid "This action is not available in this version of DraftLoop."
+msgstr ""
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr ""
@@ -10610,10 +10677,6 @@ msgstr ""
 
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
-msgstr ""
-
-#: packages/ui/src/bridge.ts
-msgid "This desktop capability is unavailable in the current host."
 msgstr ""
 
 #: packages/ui/src/review.tsx
@@ -11524,7 +11587,7 @@ msgid "What leads"
 msgstr ""
 
 #: apps/web/src/operator.tsx
-msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
+msgid "What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds."
 msgstr ""
 
 #: packages/ui/src/agent-setup.tsx
@@ -11663,6 +11726,10 @@ msgstr ""
 
 #: packages/ui/src/provider-key-test.tsx
 msgid "Works"
+msgstr ""
+
+#: apps/web/src/operator-trace.tsx
+msgid "Workspace {workspaceId}."
 msgstr ""
 
 #: packages/ui/src/workspace-activity.tsx

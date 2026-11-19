@@ -34,6 +34,7 @@ import {
   type WaitlistEntry,
   type WaitlistPage,
 } from "./operator-model.js";
+import { RunTraceSection } from "./operator-trace.js";
 
 function LoadProblem({ state }: { readonly state: Loaded<unknown> }) {
   if (state.kind === "loading") return <p role="status">{t`Reading…`}</p>;
@@ -683,7 +684,7 @@ export function FeedbackSection({
 }
 
 /** The operator page's parts; one shows at a time, so a long list never hides the others. */
-export type OperatorView = "feedback" | "waitlist" | "invites";
+export type OperatorView = "feedback" | "waitlist" | "invites" | "trace";
 
 export interface OperatorPageProps {
   readonly client: ApiClient;
@@ -868,8 +869,9 @@ export function OperatorPage({
     feedback: t`Feedback`,
     waitlist: t`Waitlist`,
     invites: t`Invites`,
+    trace: t`Run trace`,
   };
-  const countLabel: Record<OperatorView, (count: number) => string> = {
+  const countLabel: Record<Exclude<OperatorView, "trace">, (count: number) => string> = {
     feedback: (count) => t`${count} new`,
     waitlist: (count) => t`${count} waiting`,
     invites: (count) => t`${count} not used yet`,
@@ -896,11 +898,11 @@ export function OperatorPage({
         </div>
       </div>
       <p className="muted">
-        {t`What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds.`}
+        {t`What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds.`}
       </p>
       <nav className="operator-views" aria-label={t`Operator sections`}>
-        {(["feedback", "waitlist", "invites"] as const).map((part) => {
-          const count = counts[part];
+        {(["feedback", "waitlist", "invites", "trace"] as const).map((part) => {
+          const count = part === "trace" ? undefined : counts[part];
           return (
             <button
               key={part}
@@ -910,7 +912,7 @@ export function OperatorPage({
               onClick={() => setView(part)}
             >
               {viewLabel[part]}
-              {count === undefined ? null : (
+              {count === undefined || part === "trace" ? null : (
                 <span className="operator-view-count"> · {countLabel[part](count)}</span>
               )}
             </button>
@@ -933,6 +935,8 @@ export function OperatorPage({
           loadingMore={waitlist.loadingMore}
           moreProblem={waitlist.moreProblem}
         />
+      ) : view === "trace" ? (
+        <RunTraceSection client={client} />
       ) : view === "invites" ? (
         <InvitesSection
           state={invites.state}

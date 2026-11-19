@@ -69,6 +69,9 @@ until an owner or admin releases it
 ## Limits
 
 - Only public job pages are fetched, one approved address per application.
+- A page that times out is fetched once more after two seconds, since the
+  page fetcher may be starting up. A second timeout, or any other refusal,
+  asks you to try again or paste the job text.
 - A page is read from its schema.org `JobPosting` data first, then from the
   job post a JavaScript board embeds in its page state (Greenhouse boards do),
   then from its visible text. A page that gives fewer than 40 words is refused

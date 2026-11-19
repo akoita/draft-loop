@@ -3526,7 +3526,7 @@ export interface CapabilityPort {
 const errorMessages = (): Readonly<Record<BridgeErrorCode, string>> => ({
   "invalid-command": t`The desktop command is not supported.`,
   "invalid-input": t`The desktop command input is invalid.`,
-  "capability-unavailable": t`This desktop capability is unavailable in the current host.`,
+  "capability-unavailable": t`This action is not available in this version of DraftLoop.`,
   "permission-denied": t`The desktop host denied this operation.`,
   "not-found": t`The requested desktop resource was not found.`,
   "operation-failed": t`The desktop operation could not be completed.`,

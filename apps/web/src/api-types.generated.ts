@@ -710,6 +710,13 @@ export interface ApiSchemas {
     readonly lines: readonly (ApiSchemas["UsageLine"])[];
     readonly month: string;
   };
+  "OperatorRunTrace": {
+    readonly organisation_id: string;
+    readonly run_id: string;
+    readonly workspace_id: string;
+    readonly request_id: string | null;
+    readonly spans: readonly (ApiSchemas["RunSpan"])[];
+  };
   "Opportunity": {
     readonly workspaceId: string;
     readonly checksum: string;
@@ -3082,6 +3089,13 @@ export interface ApiOperations {
       readonly organisationId: string;
     };
     readonly response: ApiSchemas["OrganisationCredits"];
+  };
+  "GET /v1/operator/organisations/{organisationId}/runs/{runId}/trace": {
+    readonly path: {
+      readonly organisationId: string;
+      readonly runId: string;
+    };
+    readonly response: ApiSchemas["OperatorRunTrace"];
   };
   "POST /v1/operator/beta-invites/sign-ins": {
     readonly response: ApiSchemas["PreparedInviteSignIns"];

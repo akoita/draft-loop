@@ -662,6 +662,10 @@ msgstr "{doing} {until} L’approbation et l’export s’ouvrent ensuite."
 msgid "{draftOpen} issues are still open. Acknowledge or resolve them, then save."
 msgstr "{draftOpen} points restent ouverts. Prenez-en acte ou résolvez-les, puis enregistrez."
 
+#: apps/web/src/operator-trace.tsx
+msgid "{duration} s"
+msgstr "{duration} s"
+
 #: apps/web/src/sources-model.ts
 msgid "{fileName} is larger than this service accepts."
 msgstr "{fileName} dépasse la taille acceptée par ce service."
@@ -677,6 +681,10 @@ msgstr "{first}, {second} et {third}"
 #: packages/ui/src/review-panels.tsx
 msgid "{hiddenCount, plural, one {Show # earlier event} other {Show # earlier events}}"
 msgstr "{hiddenCount, plural, one {Afficher # événement antérieur} other {Afficher # événements antérieurs}}"
+
+#: apps/web/src/operator-trace.tsx
+msgid "{inputCount} in / {outputTokens} out"
+msgstr "{inputCount} en entrée / {outputTokens} en sortie"
 
 #: apps/web/src/screening-model.ts
 msgid "{knowledge, plural, one {# knowledge source} other {# knowledge sources}}"
@@ -3069,6 +3077,10 @@ msgstr "Détails"
 msgid "Development"
 msgstr "Développement"
 
+#: apps/web/src/operator-trace.tsx
+msgid "did not finish"
+msgstr "non terminée"
+
 #: packages/ui/src/career-interview-model.ts
 msgid "Did not remember."
 msgstr "Non mémorisé."
@@ -3869,6 +3881,10 @@ msgstr "Les faits que DraftLoop trouve dans ces documents sont relus et modifié
 msgid "Facts:"
 msgstr "Faits :"
 
+#: apps/web/src/operator-trace.tsx
+msgid "failed"
+msgstr "échec"
+
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/run-steps.tsx
 msgid "Failed"
@@ -3991,6 +4007,10 @@ msgstr "Les vérifications finales du CV sont refaites sur vos modifications"
 #: apps/web/src/interview-guide-model.ts
 msgid "Final round"
 msgstr "Dernier tour"
+
+#: apps/web/src/operator-trace.tsx
+msgid "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
+msgstr "Retrouvez l’exécution d’un membre grâce aux identifiants d’organisation et d’exécution que donne sa remarque. Étapes, modèles, erreurs, jetons et coût seulement : jamais ce que le membre a écrit. Chaque lecture est inscrite au journal d’audit."
 
 #: packages/ui/src/review.tsx
 msgid "finding"
@@ -6114,6 +6134,10 @@ msgstr "Aucun tarif public d’API n’est disponible pour ce rôle enregistré.
 msgid "No recent workspaces yet."
 msgstr "Aucun espace de travail récent pour l’instant."
 
+#: apps/web/src/operator-trace.tsx
+msgid "No request id recorded."
+msgstr "Aucun identifiant de requête enregistré."
+
 #: packages/ui/src/review.tsx
 msgid "No required sections"
 msgstr "Aucune section requise"
@@ -6194,6 +6218,10 @@ msgstr "Cet espace de travail n’existe pas."
 #: packages/ui/src/getting-started.tsx
 msgid "No thanks"
 msgstr "Non merci"
+
+#: apps/web/src/operator-trace.tsx
+msgid "No trace for that run in that organisation."
+msgstr "Aucune trace pour cette exécution dans cette organisation."
 
 #: packages/ui/src/review.tsx
 msgid "No unresolved blocking findings; provider recovery remains before approval."
@@ -6438,6 +6466,10 @@ msgstr "Désactivé"
 msgid "Off: pauses after a round with a blocking finding"
 msgstr "Désactivé : pause après un tour avec un constat bloquant"
 
+#: apps/web/src/operator-trace.tsx
+msgid "ok"
+msgstr "ok"
+
 #: apps/web/src/operator.tsx
 msgid "Oldest first: the order people asked in."
 msgstr "Les plus anciennes d'abord : l'ordre des demandes."
@@ -6514,6 +6546,7 @@ msgstr "Seule l’offre d’emploi est envoyée. Vos éléments de parcours ne l
 msgid "Only the latest draft can be marked reviewed."
 msgstr "Seul le dernier brouillon peut être marqué comme relu."
 
+#: apps/web/src/operator-trace.tsx
 #: packages/ui/src/review.tsx
 msgid "open"
 msgstr "ouvert"
@@ -6704,6 +6737,10 @@ msgstr "Ou un autre sujet dont vous aimeriez parler"
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Order sections as {0}"
 msgstr "Ordonner les sections ainsi : {0}"
+
+#: apps/web/src/operator-trace.tsx
+msgid "Organisation id"
+msgstr "Identifiant d’organisation"
 
 #: packages/ui/src/home.tsx
 msgid "Original workspace job"
@@ -7329,6 +7366,10 @@ msgstr "Lire l’ébauche complète"
 msgid "Read the job"
 msgstr "Lire l’offre"
 
+#: apps/web/src/operator-trace.tsx
+msgid "Read trace"
+msgstr "Lire la trace"
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Read your exported CVs and saved cover letters and interview questions"
 msgstr "Lire vos CV exportés et vos lettres de motivation et questions d'entretien enregistrées"
@@ -7403,6 +7444,7 @@ msgid "Reading your reviewed career profiles…"
 msgstr "Lecture de vos profils professionnels relus…"
 
 #: apps/web/src/operator-list.tsx
+#: apps/web/src/operator-trace.tsx
 #: apps/web/src/operator.tsx
 msgid "Reading…"
 msgstr "Lecture…"
@@ -7701,6 +7743,10 @@ msgstr "Remplacer l’offre d’emploi"
 #: packages/ui/src/review.tsx
 msgid "Request a revision for {0}, or reject or override the finding if it does not apply."
 msgstr "Demandez une révision pour {0}, ou rejetez ou levez le constat s’il ne s’applique pas."
+
+#: apps/web/src/operator-trace.tsx
+msgid "Request id {requestId}."
+msgstr "Identifiant de requête {requestId}."
 
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
@@ -8320,6 +8366,10 @@ msgstr "Historique des exécutions"
 msgid "Run history compacted: {0} before, {1} after. The previous history is kept as {2}. {3} runs were checked to read back the same."
 msgstr "Historique des exécutions compacté : {0} avant, {1} après. L’ancien historique est conservé sous {2}. {3} exécutions ont été vérifiées pour relire la même chose."
 
+#: apps/web/src/operator-trace.tsx
+msgid "Run id"
+msgstr "Identifiant d’exécution"
+
 #: packages/ui/src/agent-setup-model.ts
 msgid "Run it in a terminal. It saves the server in your user settings."
 msgstr "Exécutez-la dans un terminal. Elle enregistre le serveur dans vos paramètres utilisateur."
@@ -8341,9 +8391,18 @@ msgstr "reprise de l’exécution"
 msgid "Run settings"
 msgstr "Réglages de l’exécution"
 
+#: apps/web/src/operator-trace.tsx
+msgid "Run steps"
+msgstr "Étapes de l’exécution"
+
 #: packages/ui/src/review.tsx
 msgid "Run the author–critic loop again"
 msgstr "Relancer la boucle rédacteur–relecteur"
+
+#: apps/web/src/operator-trace.tsx
+#: apps/web/src/operator.tsx
+msgid "Run trace"
+msgstr "Trace d’exécution"
 
 #: packages/ui/src/home-applications-view.tsx
 msgid "Runs"
@@ -10427,6 +10486,10 @@ msgstr "Le point de terminaison des jetons est injoignable."
 msgid "The total is a lower bound."
 msgstr "Le total est une borne inférieure."
 
+#: apps/web/src/operator-trace.tsx
+msgid "The trace could not be read. Try again."
+msgstr "Impossible de lire la trace. Réessayez."
+
 #: packages/ui/src/app.tsx
 msgid "The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again."
 msgstr "Les modèles mis à jour exigent une nouvelle acceptation de la transmission aux fournisseurs. Rechargez l’espace de travail et réessayez."
@@ -10543,6 +10606,10 @@ msgstr "Ce compte n’est encore membre d’aucune organisation. Demandez une in
 msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
 msgstr "Ce compte gère DraftLoop en tant qu’opérateur : il ne peut pas être supprimé d’ici. Retirez d’abord son rôle d’opérateur."
 
+#: packages/ui/src/bridge.ts
+msgid "This action is not available in this version of DraftLoop."
+msgstr "Cette action n’est pas disponible dans cette version de DraftLoop."
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr "La recherche sur cette candidature n'a pas pu être faite."
@@ -10606,10 +10673,6 @@ msgstr "Cela supprime définitivement tous les documents, candidatures, brouillo
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
 msgstr "Cette démo découpe le texte de l’offre en exigences à relire avec des données locales. Rien n’est envoyé à un fournisseur."
-
-#: packages/ui/src/bridge.ts
-msgid "This desktop capability is unavailable in the current host."
-msgstr "Cette fonction de bureau n’est pas disponible dans l’hôte actuel."
 
 #: packages/ui/src/review.tsx
 msgid "This draft is approved and exported as it is."
@@ -11519,8 +11582,8 @@ msgid "What leads"
 msgstr "Ce qui vient en tête"
 
 #: apps/web/src/operator.tsx
-msgid "What members tell you, the beta's waitlist and its invites. Each invite is written to the audit log. The lists update every 30 seconds."
-msgstr "Ce que vous disent les membres, la liste d'attente de la bêta et ses invitations. Chaque invitation est inscrite au journal d'audit. Les listes se mettent à jour toutes les 30 secondes."
+msgid "What members tell you, the beta's waitlist, its invites and a run's trace. Each invite and trace read is written to the audit log. The lists update every 30 seconds."
+msgstr "Ce que les membres vous disent, la liste d’attente de la bêta, ses invitations et la trace d’une exécution. Chaque invitation et chaque lecture de trace sont inscrites au journal d’audit. Les listes se mettent à jour toutes les 30 secondes."
 
 #: packages/ui/src/agent-setup.tsx
 msgid "What the agent may do"
@@ -11659,6 +11722,10 @@ msgstr "Traitement…"
 #: packages/ui/src/provider-key-test.tsx
 msgid "Works"
 msgstr "Fonctionne"
+
+#: apps/web/src/operator-trace.tsx
+msgid "Workspace {workspaceId}."
+msgstr "Espace de travail {workspaceId}."
 
 #: packages/ui/src/workspace-activity.tsx
 msgid "Workspace activity"

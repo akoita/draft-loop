@@ -204,6 +204,7 @@ days, beyond the request logs' own retention (#2955).
 | Assign a plan | `PUT /v1/operator/organisations/:organisationId/plan` | Owner token; `requireOperator` (`operator-plan-routes.ts:203`) | Yes (`operator-plan-routes.ts:257`) | `operator-plan-routes.test.ts` |
 | Grant credits | `POST /v1/operator/organisations/:organisationId/credit-grants` | Owner token; `requireOperator` | Yes (`operator-plan-routes.ts:301`) | `operator-plan-routes.test.ts` |
 | Read an organisation's credits | `GET /v1/operator/organisations/:organisationId/credits` | Owner token; `requireOperator` | `organisation_credits_read` | `operator-plan-routes.test.ts` |
+| Read a member's run trace | `GET /v1/operator/organisations/:organisationId/runs/:runId/trace` | Owner token or operator role with a second factor; checked in the route | `run_trace_read` | `operator-run-trace-routes.test.ts` |
 | Read feedback and support tickets | `GET /v1/operator/feedback`, `GET /v1/operator/feedback/:noteId` | Owner token, by the request hook only | `feedback_listed` (counts, never the search text), `feedback_read` | `feedback-routes.test.ts` |
 | Read the waitlist | `GET /v1/operator/waitlist` | Owner token, by the request hook only | `waitlist_listed` (counts, never the search text) | `beta-waitlist-routes.test.ts` |
 | Invite a waitlist entry | `POST /v1/operator/waitlist/:entryId/invite` | Owner token, by the request hook only | `beta_waitlist_invited` (`beta-waitlist-routes.ts:142`) | `beta-waitlist-routes.test.ts`, which does not check the line |
