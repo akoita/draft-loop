@@ -45,6 +45,15 @@ describe("the public user guide pages", () => {
     expect(html).toContain("/legal/fr/privacy");
   });
 
+  it("links the public source code from the contact column in each language", () => {
+    expect(guidePageHtml("en")).toContain(
+      '<a href="https://github.com/akoita/draft-loop" rel="noopener">Source code (GitHub)</a>',
+    );
+    expect(guidePageHtml("fr")).toContain(
+      '<a href="https://github.com/akoita/draft-loop" rel="noopener">Code source (GitHub)</a>',
+    );
+  });
+
   it("has no inline script or style, so the content security policy holds", () => {
     for (const language of helpGuideLanguages) {
       const html = guidePageHtml(language);
