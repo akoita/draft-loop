@@ -102,6 +102,8 @@ describe.runIf(connectionString !== undefined)(
         tokens[organisationId as OrganisationId] = await new SignJWT({
           email: `${subject}@limits.example.test`,
           email_verified: true,
+          // A second factor, which deleting or exporting in a shared organisation needs (#2952).
+          amr: ["pwd", "otp"],
         })
           .setProtectedHeader({ alg: "ES256", kid: "key-1" })
           .setIssuer(issuer)
