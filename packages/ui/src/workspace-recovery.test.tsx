@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { DesktopBridgeError } from "./native.js";
 import {
@@ -52,16 +52,12 @@ describe("workspace recovery", () => {
     expect(isWorkspaceContextCurrent("workspace-1", 1, "workspace-1", 2)).toBe(false);
   });
 
-  it("offers only explicit workspace recovery controls", () => {
-    const onOpen = vi.fn();
-    const html = renderToStaticMarkup(
-      <WorkspaceRecovery busy={false} errorMessage={null} onOpen={onOpen} />,
-    );
+  it("says the workspace is gone and offers no other action", () => {
+    const html = renderToStaticMarkup(<WorkspaceRecovery errorMessage={null} />);
 
-    expect(html).toContain("Open workspace");
-    expect(html).toContain("Open a workspace to resume local review.");
-    expect(html.match(/<button\b/gu)).toHaveLength(1);
+    expect(html).toContain("This workspace could not be found");
+    expect(html).toContain("Reload the page to try again.");
+    expect(html).not.toMatch(/<button\b/u);
     expect(html).not.toMatch(/(?:Start review|Approve|Export|model discovery)/iu);
-    expect(onOpen).not.toHaveBeenCalled();
   });
 });

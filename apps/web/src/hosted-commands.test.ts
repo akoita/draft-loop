@@ -44,6 +44,5 @@ describe("the shared screens over the hosted bridge", () => {
     });
     expect(review.selectFiles).toBeUndefined();
     expect(review.addUrl).toBeUndefined();
-    expect(review.createDemoWorkspace).toBeUndefined();
   });
 });

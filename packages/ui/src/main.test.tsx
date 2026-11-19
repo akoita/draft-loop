@@ -36,7 +36,7 @@ import {
   roundLimitRecoveryRequired,
   unresolvedBlockingFindings,
 } from "./model.js";
-import { DesktopBridgeError, workspaceCreateInput } from "./native.js";
+import { DesktopBridgeError } from "./native.js";
 import {
   bulkFindingDecisionTargets,
   canExportReview,
@@ -1980,43 +1980,6 @@ describe("desktop workspace setup", () => {
     expect(workspaceSetupBlocker({ ...named, maxRounds: 0 }, { status: "idle" })).toBe(
       "Choose a maximum round count between 1 and 20.",
     );
-  });
-
-  it("sends only what a person actually chose", () => {
-    expect(workspaceCreateInput("  spaced-workspace  ", workspaceModelSelection(named))).toEqual({
-      name: "spaced-workspace",
-      mode: "real",
-      authorCompany: "anthropic",
-      authorModel: "claude-sonnet-4-5",
-      criticCompany: "openai",
-      criticModel: "gpt-5",
-      maxRounds: 3,
-    });
-    expect(
-      workspaceCreateInput(
-        "local-workspace",
-        workspaceModelSelection({
-          ...named,
-          authorCompany: "local",
-          authorModel: " qwen3-coder-30b ",
-          localEndpoint: " http://127.0.0.1:11434/v1 ",
-          independenceOverrideRationale: "  ",
-        }),
-      ),
-    ).toEqual({
-      name: "local-workspace",
-      mode: "real",
-      authorCompany: "local",
-      authorModel: "qwen3-coder-30b",
-      criticCompany: "openai",
-      criticModel: "gpt-5",
-      localEndpoint: "http://127.0.0.1:11434/v1",
-      maxRounds: 3,
-    });
-    expect(workspaceCreateInput("draft-loop-workspace")).toEqual({
-      name: "draft-loop-workspace",
-      mode: "real",
-    });
   });
 
   it("keeps edit mode focused on model settings", () => {

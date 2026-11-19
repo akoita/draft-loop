@@ -1,15 +1,8 @@
-/** Runtime capability names shared with the Electron preload. */
+/** Runtime capability names a host bridge may offer the shared screens. */
 export const bridgeCapabilities = [
-  "workspace.open",
-  "workspace.create",
   "workspace.configure-models",
   "writing-policy.read",
   "writing-policy.save",
-  "workspace.recent-list",
-  "workspace.recent-open",
-  "workspace.recent-remove",
-  "workspace.recent-clear",
-  "workspace.rename",
   "workspace.compact-history",
   "application.list",
   "application.get",

@@ -770,10 +770,6 @@ msgstr "{name} ({role}), environ {cost} par brouillon"
 msgid "{name} ({role}), under US$0.01 a draft"
 msgstr "{name} ({role}), moins de 0,01 US$ par brouillon"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "{name} was removed from recent workspaces. Its files are unchanged."
-msgstr "{name} a été retiré des espaces de travail récents. Ses fichiers sont inchangés."
-
 #. placeholder {0}: entry.lines
 #: packages/ui/src/run-requirement-evidence.tsx
 msgid "{name}, lines {0}"
@@ -1991,7 +1987,6 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: packages/ui/src/run-draft-choice.tsx
 #: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/start-confirmation.tsx
-#: packages/ui/src/workspace-navigation.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Cancel"
 msgstr "Annuler"
@@ -2388,10 +2383,6 @@ msgstr "Claude Sonnet 4.5"
 msgid "Claude Sonnet 5.5"
 msgstr "Claude Sonnet 5.5"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Clear recent workspaces"
-msgstr "Effacer les espaces de travail récents"
-
 #: packages/ui/src/home.tsx
 msgid "Clear search and filter"
 msgstr "Effacer la recherche et le filtre"
@@ -2435,18 +2426,6 @@ msgstr "Fermer l’aperçu"
 #: packages/ui/src/review.tsx
 msgid "Close the previous version beside the draft"
 msgstr "Fermer la version précédente à côté de l’ébauche"
-
-#: packages/ui/src/workspace-navigation.tsx
-msgid "Close this workspace?"
-msgstr "Fermer cet espace de travail ?"
-
-#: packages/ui/src/workspace-navigation.tsx
-msgid "Close workspace"
-msgstr "Fermer l’espace de travail"
-
-#: packages/ui/src/app.tsx
-msgid "Close workspace is available again once your career profile is generated."
-msgstr "Fermer l’espace de travail sera de nouveau possible une fois votre profil professionnel généré."
 
 #: apps/web/src/operator.tsx
 msgid "Close, it is fixed"
@@ -2673,10 +2652,6 @@ msgstr "Reprendre cette exécution depuis sa dernière étape enregistrée"
 msgid "Continue to Career profile"
 msgstr "Continuer vers le Profil professionnel"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Continue where you left off, or pick another workspace. "
-msgstr "Reprenez là où vous en étiez, ou choisissez un autre espace de travail. "
-
 #: packages/ui/src/project-card-facts.tsx
 msgid "Contributor"
 msgstr "Contributeur ou contributrice"
@@ -2765,11 +2740,6 @@ msgstr "Les verdicts de couverture vous informent ; ils ne bloquent jamais l’a
 msgid "Coverage-judgement instructions"
 msgstr "Consignes d’évaluation de la couverture"
 
-#: packages/ui/src/workspace-creation.tsx
-#: packages/ui/src/workspace-start.tsx
-msgid "Create a new workspace"
-msgstr "Créer un espace de travail"
-
 #: packages/ui/src/agent-setup.tsx
 msgid "Create agent token"
 msgstr "Créer un jeton d'agent"
@@ -2798,12 +2768,7 @@ msgstr "Créer mon compte"
 msgid "Create or choose a knowledge base"
 msgstr "Créer ou choisir une base de connaissances"
 
-#: packages/ui/src/workspace-creation.tsx
-msgid "Create or open a review workspace"
-msgstr "Créer ou ouvrir un espace de relecture"
-
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
 msgid "Create workspace"
 msgstr "Créer l’espace de travail"
 
@@ -4134,10 +4099,6 @@ msgstr "Terminez la configuration de l’espace de travail ci-dessus."
 msgid "Finished"
 msgstr "Terminé"
 
-#: packages/ui/src/workspace-start-intro.tsx
-msgid "First run"
-msgstr "Première exécution"
-
 #: packages/ui/src/workspace-setup.tsx
 msgid "First steps"
 msgstr "Premiers pas"
@@ -4752,10 +4713,6 @@ msgstr "Importer une politique propre à l’opportunité ne modifie pas la poli
 msgid "Importing…"
 msgstr "Import…"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "in"
-msgstr "dans"
-
 #: packages/ui/src/home-model.ts
 msgid "In progress"
 msgstr "En cours"
@@ -4853,30 +4810,6 @@ msgstr "Questions d’entretien"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Interviewer"
 msgstr "Intervieweur"
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid recent workspace data."
-msgstr "Données d’espace de travail récent non valides."
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid recent workspace id."
-msgstr "Identifiant d’espace de travail récent non valide."
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid recent workspace input."
-msgstr "Entrée d’espace de travail récent non valide."
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid recent workspace result."
-msgstr "Résultat d’espace de travail récent non valide."
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid timestamp."
-msgstr "Horodatage non valide."
-
-#: packages/ui/src/recent-workspaces.ts
-msgid "Invalid workspace name."
-msgstr "Nom d’espace de travail non valide."
 
 #: apps/web/src/operator.tsx
 msgid "Invite"
@@ -5163,14 +5096,6 @@ msgstr "Dernière activité inconnue"
 msgid "Last failed request"
 msgstr "Dernière requête en échec"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Last opened"
-msgstr "Dernière ouverture"
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Last used"
-msgstr "Dernière utilisation"
-
 #: packages/ui/src/run-comparison.tsx
 #: packages/ui/src/run-switcher.tsx
 msgid "latest"
@@ -5319,10 +5244,6 @@ msgstr "Chargement des candidatures…"
 #: packages/ui/src/app.tsx
 msgid "Loading local review workspace…"
 msgstr "Chargement de l’espace de relecture local…"
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Loading recent workspaces…"
-msgstr "Chargement des espaces de travail récents…"
 
 #: packages/ui/src/profile.tsx
 msgid "Loading reviewed profiles…"
@@ -5487,7 +5408,6 @@ msgid "Maximum of {maximumRounds} rounds reached. Create a workspace with a high
 msgstr "Maximum de {maximumRounds} tours atteint. Créez un espace de travail avec une limite plus élevée pour continuer."
 
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
 msgid "Maximum review rounds"
 msgstr "Nombre maximal de tours de relecture"
 
@@ -6208,10 +6128,6 @@ msgstr "Pas encore de profil"
 msgid "No public API rate is available for this registered role."
 msgstr "Aucun tarif public d’API n’est disponible pour ce rôle enregistré."
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "No recent workspaces yet."
-msgstr "Aucun espace de travail récent pour l’instant."
-
 #: apps/web/src/operator-trace.tsx
 msgid "No request id recorded."
 msgstr "Aucun identifiant de requête enregistré."
@@ -6650,10 +6566,6 @@ msgstr "Ouvrir"
 msgid "Open {0}"
 msgstr "Ouvrir {0}"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Open a local workspace again. "
-msgstr "Rouvrez un espace de travail local. "
-
 #: apps/web/src/operator-trace.tsx
 msgid "Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
 msgstr "Ouvrez une exécution depuis sa note avec Voir la trace de l’exécution, ou saisissez les identifiants du contexte de la note. Étapes, modèles, erreurs, jetons et coût seulement : jamais ce que le membre a écrit. Chaque lecture est inscrite au journal d’audit."
@@ -6661,10 +6573,6 @@ msgstr "Ouvrez une exécution depuis sa note avec Voir la trace de l’exécutio
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Open a workspace first."
 msgstr "Ouvrez d’abord un espace de travail."
-
-#: packages/ui/src/workspace-recovery.tsx
-msgid "Open a workspace to continue"
-msgstr "Ouvrez un espace de travail pour continuer"
 
 #: packages/ui/src/native.ts
 msgid "Open an application before choosing one of its runs."
@@ -6702,10 +6610,6 @@ msgstr "Ouvrir le stockage de connaissances"
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Open latest run"
 msgstr "Ouvrir la dernière exécution"
-
-#: packages/ui/src/workspace-start-intro.tsx
-msgid "Open or create a review workspace"
-msgstr "Ouvrir ou créer un espace de relecture"
 
 #: packages/ui/src/home-model.ts
 msgid "Open profile"
@@ -6756,8 +6660,6 @@ msgid "Open the previous version beside the draft"
 msgstr "Ouvrir la version précédente à côté de l’ébauche"
 
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
-#: packages/ui/src/workspace-recovery.tsx
 msgid "Open workspace"
 msgstr "Ouvrir l’espace de travail"
 
@@ -6778,17 +6680,9 @@ msgstr "Authentification OpenAI"
 msgid "Opening"
 msgstr "Ouverture"
 
-#: packages/ui/src/workspace-recovery.tsx
-msgid "Opening a workspace is unavailable in this host."
-msgstr "L’ouverture d’un espace de travail est indisponible dans cet hôte."
-
 #: apps/web/src/records.tsx
 msgid "Opening DraftLoop…"
 msgstr "Ouverture de DraftLoop…"
-
-#: packages/ui/src/workspace-recovery.tsx
-msgid "Opening workspace…"
-msgstr "Ouverture de l’espace de travail…"
 
 #: apps/web/src/workspace.tsx
 msgid "Opening your documents…"
@@ -7601,22 +7495,6 @@ msgstr "Erreurs récentes"
 msgid "recent news"
 msgstr "l’actualité récente"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Recent workspace history cleared. Workspace files are unchanged."
-msgstr "Historique des espaces de travail récents effacé. Les fichiers des espaces de travail sont inchangés."
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Recent workspace history could not be cleared."
-msgstr "L’historique des espaces de travail récents n’a pas pu être effacé."
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Recent workspaces"
-msgstr "Espaces de travail récents"
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Recent workspaces could not be loaded."
-msgstr "Les espaces de travail récents n’ont pas pu être chargés."
-
 #: apps/web/src/feedback.tsx
 #: apps/web/src/operator.tsx
 msgid "Record"
@@ -7733,6 +7611,11 @@ msgstr "Libération…"
 msgid "Reload"
 msgstr "Recharger"
 
+#: packages/ui/src/workspace-recovery.tsx
+#: packages/ui/src/workspace-start-intro.tsx
+msgid "Reload the page to try again."
+msgstr "Rechargez la page pour réessayer."
+
 #: apps/web/src/interview-guide-model.ts
 msgid "Remote work and travel"
 msgstr "Télétravail et déplacements"
@@ -7742,14 +7625,8 @@ msgstr "Télétravail et déplacements"
 #: packages/ui/src/connected-agents.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/provider-authentication.tsx
-#: packages/ui/src/recent-workspaces-ui.tsx
 msgid "Remove"
 msgstr "Retirer"
-
-#. placeholder {0}: workspace.name
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Remove {0} from recent workspaces"
-msgstr "Retirer {0} des espaces de travail récents"
 
 #: packages/ui/src/connected-agents.tsx
 msgid "Remove {name} from this list? It shows again if it asks to spend."
@@ -7776,10 +7653,6 @@ msgstr "Retirer le fait"
 msgid "Remove from folder"
 msgstr "Retirer du dossier"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Remove from this list. Workspace files are kept."
-msgstr "Retirer de cette liste. Les fichiers de l’espace de travail sont conservés."
-
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "Remove model"
 msgstr "Retirer le modèle"
@@ -7792,10 +7665,6 @@ msgstr "Retirer la règle : {0}"
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "Removed from your profile"
 msgstr "Retiré de votre profil"
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "Removing entries from this list never deletes workspace files."
-msgstr "Retirer des entrées de cette liste ne supprime jamais les fichiers de l’espace de travail."
 
 #: packages/ui/src/application-name.tsx
 #: packages/ui/src/home-folders.tsx
@@ -8666,10 +8535,6 @@ msgstr "Conseils enregistrés sur les problèmes du profil"
 msgid "Saved profiles"
 msgstr "Profils enregistrés"
 
-#: packages/ui/src/workspace-navigation.tsx
-msgid "Saved workspace files, run history, and profile versions stay on this device. Any unsaved setup or profile form edits will be discarded."
-msgstr "Les fichiers enregistrés de l’espace de travail, l’historique des exécutions et les versions du profil restent sur cet appareil. Les modifications non enregistrées de la configuration ou du profil seront perdues."
-
 #: packages/ui/src/review.tsx
 msgid "saved."
 msgstr "enregistré."
@@ -8967,10 +8832,6 @@ msgstr "Mettre ce sujet de côté"
 #: apps/web/src/account-menu.tsx
 msgid "Set up a passkey or an authenticator app for the step after your password"
 msgstr "Configurez une clé d’accès ou une application d’authentification pour l’étape après votre mot de passe"
-
-#: packages/ui/src/workspace-start-intro.tsx
-msgid "Set up a review workspace"
-msgstr "Configurer un espace de relecture"
 
 #: apps/web/src/consent-model.ts
 msgid "Set up the workspace's author and critic models first."
@@ -9421,10 +9282,6 @@ msgstr "Arrêter les dépenses de {name} ? Il ne lance plus d’exécution ni de
 msgid "Stop the review before changing models."
 msgstr "Arrêtez la relecture avant de changer de modèles."
 
-#: packages/ui/src/workspace-navigation.tsx
-msgid "Stop the review before closing the workspace."
-msgstr "Arrêtez la relecture avant de fermer l’espace de travail."
-
 #: apps/web/src/record-actions-model.ts
 msgid "Stop the run first. A run in this job search is queued or running: pause it or stop it for good in its review, then try again."
 msgstr "Arrêtez d’abord la génération. Une génération est en attente ou en cours : mettez-la en pause ou arrêtez-la définitivement depuis sa relecture, puis réessayez."
@@ -9748,7 +9605,6 @@ msgid "The assistant is resting until tomorrow."
 msgstr "L’assistant fait une pause jusqu’à demain."
 
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
 msgid "The author and critic stop after this many rounds and return the last fully reviewed draft to you. More rounds can improve convergence but use more time and provider budget."
 msgstr "Le rédacteur et le relecteur s’arrêtent après ce nombre de tours et vous rendent la dernière ébauche entièrement relue. Plus de tours peuvent améliorer la convergence mais demandent plus de temps et de budget fournisseur."
 
@@ -9936,10 +9792,6 @@ msgstr "La relecture du critique n'a pas abouti : votre lettre reste telle qu'el
 #: packages/ui/src/workspace-model-settings.ts
 msgid "The current model settings are unavailable."
 msgstr "Les réglages de modèles actuels sont indisponibles."
-
-#: packages/ui/src/workspace-recovery.tsx
-msgid "The current workspace could not be found. Open a workspace to resume local review."
-msgstr "L’espace de travail actuel est introuvable. Ouvrez un espace de travail pour reprendre la relecture locale."
 
 #: packages/ui/src/application-language.tsx
 msgid "The CV, cover letter and interview questions of new runs use this language."
@@ -10486,6 +10338,7 @@ msgid "The review stopped before the critic checked it. Start a new review to ge
 msgstr "La relecture s’est arrêtée avant la vérification par le relecteur. Démarrez une nouvelle relecture pour obtenir une ébauche critiquée à approuver ou exporter."
 
 #: packages/ui/src/app.tsx
+#: packages/ui/src/workspace-start-intro.tsx
 msgid "The review workspace could not load."
 msgstr "L’espace de relecture n’a pas pu se charger."
 
@@ -10676,10 +10529,6 @@ msgstr "La liste d'attente est injoignable. Réessayez dans quelques minutes."
 msgid "The work journal could not be read. {0}"
 msgstr "Le journal de travail n’a pas pu être lu. {0}"
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "The workspace"
-msgstr "L’espace de travail"
-
 #: packages/ui/src/app.tsx
 msgid "The workspace could not be created."
 msgstr "L’espace de travail n’a pas pu être créé."
@@ -10688,10 +10537,6 @@ msgstr "L’espace de travail n’a pas pu être créé."
 msgid "The workspace could not be imported. Try again, or choose a different workspace."
 msgstr "L’espace de travail n’a pas pu être importé. Réessayez, ou choisissez un autre espace de travail."
 
-#: packages/ui/src/app.tsx
-msgid "The workspace could not be opened."
-msgstr "L’espace de travail n’a pas pu être ouvert."
-
 #: packages/ui/src/workspace-title.tsx
 msgid "The workspace could not be renamed."
 msgstr "L’espace de travail n’a pas pu être renommé."
@@ -10699,10 +10544,6 @@ msgstr "L’espace de travail n’a pas pu être renommé."
 #: apps/web/src/http-bridge.ts
 msgid "The workspace has no default application."
 msgstr "L’espace de travail n’a pas de candidature par défaut."
-
-#: packages/ui/src/app.tsx
-msgid "The workspace was not opened. Choose a workspace and try again."
-msgstr "L’espace de travail n’a pas été ouvert. Choisissez un espace de travail et réessayez."
 
 #: packages/ui/src/local-writer-warning.tsx
 msgid "The writer is a local model. Local models have not passed DraftLoop's quality check yet, so expect the draft to need more edits."
@@ -10973,18 +10814,6 @@ msgstr "Cette version du profil n’a aucun fait à relire. Vérifiez les élém
 msgid "This profile version has no facts."
 msgstr "Cette version du profil ne contient aucun fait."
 
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "This recent workspace could not be opened. Choose a folder to open it."
-msgstr "Cet espace de travail récent n’a pas pu être ouvert. Choisissez un dossier pour l’ouvrir."
-
-#: packages/ui/src/app.tsx
-msgid "This recent workspace could not be opened. Choose another."
-msgstr "Cet espace de travail récent n’a pas pu être ouvert. Choisissez-en un autre."
-
-#: packages/ui/src/recent-workspaces-ui.tsx
-msgid "This recent workspace could not be removed from the list."
-msgstr "Cet espace de travail récent n’a pas pu être retiré de la liste."
-
 #: apps/web/src/review-actions.ts
 msgid "This recovery is not available on the hosted service yet. Stop the run and start a new one."
 msgstr "Cette reprise n’est pas encore disponible sur le service hébergé. Arrêtez l’exécution et lancez-en une nouvelle."
@@ -11117,6 +10946,10 @@ msgstr "Cette version de DraftLoop ne peut pas gérer de profil professionnel."
 msgid "This version records a failed generation; its cause is shown above."
 msgstr "Cette version enregistre une génération échouée ; sa cause est indiquée ci-dessus."
 
+#: packages/ui/src/workspace-recovery.tsx
+msgid "This workspace could not be found"
+msgstr "Cet espace de travail est introuvable"
+
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "This workspace has no writing policy yet. The text below is the starting template; saving creates the first version and applies it to future runs."
 msgstr "Cet espace de travail n’a pas encore de politique de rédaction. Le texte ci-dessous est le modèle de départ ; l’enregistrer crée la première version et l’applique aux prochaines exécutions."
@@ -11148,10 +10981,6 @@ msgstr "Titre"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Title (optional)"
 msgstr "Titre (facultatif)"
-
-#: packages/ui/src/workspace-start-intro.tsx
-msgid "To begin, create a workspace for your job search, open a recent one, or try the demo with sample material."
-msgstr "Pour commencer, créez un espace de travail pour votre recherche d’emploi, ouvrez-en un récent, ou essayez la démo avec des éléments d’exemple."
 
 #. placeholder {0}: formatDate(row.token.expires_at) ?? ""
 #: packages/ui/src/connected-agents.tsx
@@ -11233,7 +11062,6 @@ msgid "Try again"
 msgstr "Réessayer"
 
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
 msgid "Try demo workspace"
 msgstr "Essayer la démo"
 
@@ -11660,10 +11488,6 @@ msgstr "Attendez la fin de l’opération sur le profil candidat avant de lancer
 msgid "Wait for the current workspace operation to finish before changing models."
 msgstr "Attendez la fin de l’opération en cours sur l’espace de travail avant de changer de modèles."
 
-#: packages/ui/src/workspace-navigation.tsx
-msgid "Wait for the current workspace operation to finish before closing the workspace."
-msgstr "Attendez la fin de l’opération en cours sur l’espace de travail avant de le fermer."
-
 #: packages/ui/src/start-advanced-options.tsx
 msgid "Wait for the reviewed requirements"
 msgstr "Attendre les exigences relues"
@@ -11931,15 +11755,9 @@ msgid "workspace model selection"
 msgstr "sélection de modèles de l’espace de travail"
 
 #: packages/ui/src/app.tsx
-#: packages/ui/src/workspace-creation.tsx
 #: packages/ui/src/workspace-title.tsx
 msgid "Workspace name"
 msgstr "Nom de l’espace de travail"
-
-#: packages/ui/src/workspace-navigation.tsx
-#: packages/ui/src/workspace-start-intro.tsx
-msgid "Workspace navigation"
-msgstr "Navigation de l’espace de travail"
 
 #: packages/ui/src/run-details.tsx
 msgid "Workspace policy"

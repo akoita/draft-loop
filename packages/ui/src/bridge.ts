@@ -189,24 +189,6 @@ import {
   profileFreshnessInputKeys,
 } from "./profile-freshness-contract.js";
 import { normalizeProviderRoutes } from "./provider-routes.js";
-import type {
-  RecentWorkspaceOpenInput,
-  RecentWorkspaceRemoveInput,
-  RecentWorkspaceRemoveResult,
-  RecentWorkspacesClearInput,
-  RecentWorkspacesClearResult,
-  RecentWorkspacesListInput,
-  RecentWorkspacesListResult,
-} from "./recent-workspaces.js";
-import {
-  parseRecentWorkspaceOpenInput,
-  parseRecentWorkspaceRemoveInput,
-  parseRecentWorkspaceRemoveResult,
-  parseRecentWorkspacesClearInput,
-  parseRecentWorkspacesClearResult,
-  parseRecentWorkspacesListInput,
-  parseRecentWorkspacesListResult,
-} from "./recent-workspaces.js";
 import { maximumRevisionDirectionLength } from "./revision-direction.js";
 import { normalizeRunApplicationPlan } from "./run-application-plan.js";
 import { normalizeRunAuthorInput } from "./run-author-input.js";
@@ -874,81 +856,6 @@ const knowledgeBaseDeletionKeys = inputKeys<KnowledgeBaseDeletionInput>()([
 ]);
 
 /**
- * Everything a new workspace can be told about its models.
- *
- * Every field is optional and every omitted field keeps the workspace default,
- * so a host that is handed nothing still creates the same workspace it always
- * did. The names match `InitializeWorkspaceCommand` deliberately: this input
- * exists to fill that command in, and the desktop should be able to express
- * exactly what `draft-loop init` can.
- */
-export interface WorkspaceCreateInput {
-  /** A display name only. The native host owns the destination folder picker. */
-  readonly name: string;
-  /** Real workspaces are empty; demo mode is explicit and deterministic. */
-  readonly mode?: "real" | "demo";
-  /** Author provider company, matching the CLI's `--author-company`. */
-  readonly authorCompany?: ModelCompany;
-  /**
-   * Exact author model id. Omitted uses the workspace default, matching the
-   * CLI's `--author-model`.
-   */
-  readonly authorModel?: string;
-  /** Critic provider company, matching the CLI's `--critic-company`. */
-  readonly criticCompany?: ModelCompany;
-  /** Exact critic model id. Omitted uses the workspace default. */
-  readonly criticModel?: string;
-  /**
-   * The weights the author descends from, as claimed by the operator. Omitted
-   * lets the domain derive one; nothing here derives it.
-   */
-  readonly authorLineage?: string;
-  /** The weights the critic descends from, on the same terms. */
-  readonly criticLineage?: string;
-  /** Loopback base URL of the model server used when a company is `local`. */
-  readonly localEndpoint?: string;
-  /** Why one lineage on both sides is acceptable; recorded with every run. */
-  readonly independenceOverrideRationale?: string;
-  /**
-   * Sections the CV must contain, matching the CLI's `--required-sections`.
-   * Omitted uses the workspace default.
-   */
-  readonly requiredSections?: readonly string[];
-  /** Maximum author-critic rounds before the run returns to human review. */
-  readonly maxRounds?: number;
-}
-
-const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
-  "name",
-  "mode",
-  "authorCompany",
-  "authorModel",
-  "criticCompany",
-  "criticModel",
-  "authorLineage",
-  "criticLineage",
-  "localEndpoint",
-  "independenceOverrideRationale",
-  "requiredSections",
-  "maxRounds",
-]);
-
-/** Renames the open workspace. Only the display name changes, never the folder. */
-export interface WorkspaceRenameInput {
-  readonly workspaceId: string;
-  readonly name: string;
-}
-
-const workspaceRenameKeys = inputKeys<WorkspaceRenameInput>()(["workspaceId", "name"]);
-
-export interface WorkspaceRenameResult {
-  /** The trimmed name that was stored. */
-  readonly name: string;
-}
-
-const workspaceRenameResultKeys = resultKeys<WorkspaceRenameResult>()(["name"]);
-
-/**
  * Shrinks the open workspace's run history. The host keeps a verified backup beside the history
  * file and refuses while a run is working; only sizes and the backup's file name come back.
  */
@@ -1292,13 +1199,6 @@ export interface WorkspaceSummary {
   readonly id: string;
   readonly name: string;
 }
-
-export interface WorkspaceResult {
-  readonly workspace: WorkspaceSummary;
-}
-
-const workspaceResultKeys = resultKeys<WorkspaceResult>()(["workspace"]);
-const workspaceSummaryKeys = resultKeys<WorkspaceSummary>()(["id", "name"]);
 
 export interface KnowledgeBaseSummary {
   readonly id: string;
@@ -3266,16 +3166,9 @@ const modelsPreviewIndependenceResultKeys = resultKeys<ModelsPreviewIndependence
 const maximumDiscoveredModels = 200;
 
 export interface BridgeCommandInputMap {
-  "workspace.open": WorkspaceOpenInput;
-  "workspace.create": WorkspaceCreateInput;
   "workspace.configure-models": WorkspaceConfigureModelsInput;
   "writing-policy.read": WritingPolicyReadInput;
   "writing-policy.save": WritingPolicySaveInput;
-  "workspace.recent-list": RecentWorkspacesListInput;
-  "workspace.recent-open": RecentWorkspaceOpenInput;
-  "workspace.recent-remove": RecentWorkspaceRemoveInput;
-  "workspace.recent-clear": RecentWorkspacesClearInput;
-  "workspace.rename": WorkspaceRenameInput;
   "workspace.compact-history": WorkspaceCompactHistoryInput;
   "application.list": ApplicationListInput;
   "application.get": ApplicationGetInput;
@@ -3395,16 +3288,9 @@ export interface BridgeCommandInputMap {
 }
 
 export interface BridgeCommandOutputMap {
-  "workspace.open": WorkspaceResult;
-  "workspace.create": WorkspaceResult;
   "workspace.configure-models": WorkspaceModelsResult;
   "writing-policy.read": WritingPolicyReadResult;
   "writing-policy.save": WritingPolicySaveResult;
-  "workspace.recent-list": RecentWorkspacesListResult;
-  "workspace.recent-open": WorkspaceResult;
-  "workspace.recent-remove": RecentWorkspaceRemoveResult;
-  "workspace.recent-clear": RecentWorkspacesClearResult;
-  "workspace.rename": WorkspaceRenameResult;
   "workspace.compact-history": WorkspaceCompactHistoryResult;
   "application.list": ApplicationListResult;
   "application.get": ApplicationRecordResult;
@@ -3712,37 +3598,6 @@ function modelId(value: unknown): string {
   return result;
 }
 
-/**
- * A human-readable CV section title such as `Summary` or `Work Experience`.
- * Titles are compared against generated headings, so the charset stays close
- * to what a heading can hold.
- */
-function sectionTitle(value: unknown): string {
-  const result = stringValue(value, 64).trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$/u.test(result)) {
-    return invalidInput();
-  }
-  return result;
-}
-
-/**
- * An empty list is rejected rather than accepted as "no requirements": the
- * application-layer config check only rejects bad entries, so an empty list
- * would pass it and silently disable the completeness check. Duplicates fail
- * loudly instead of being de-duplicated, because a caller sending them has a
- * bug.
- */
-function sectionTitles(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
-    return invalidInput();
-  }
-  const titles = value.map((entry) => sectionTitle(entry));
-  if (new Set(titles).size !== titles.length) {
-    return invalidInput();
-  }
-  return titles;
-}
-
 function workspaceName(value: unknown): string {
   const result = stringValue(value, 120);
   if (
@@ -3823,22 +3678,6 @@ function optionalTimestampValue(value: unknown): string | undefined {
   return value === undefined ? undefined : timestampValue(value);
 }
 
-function optionalModelId(value: unknown): string | undefined {
-  return value === undefined ? undefined : modelId(value);
-}
-
-function optionalSectionTitles(value: unknown): readonly string[] | undefined {
-  return value === undefined ? undefined : sectionTitles(value);
-}
-
-function optionalMaxRounds(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 20) {
-    return invalidInput();
-  }
-  return value;
-}
-
 /**
  * A lineage label an operator declared, bounded the way the domain bounds one.
  *
@@ -3856,10 +3695,6 @@ function lineageLabel(value: unknown): string {
 
 function optionalLineageLabel(value: unknown): string | undefined {
   return value === undefined ? undefined : lineageLabel(value);
-}
-
-function optionalModelCompany(value: unknown): ModelCompany | undefined {
-  return value === undefined ? undefined : enumValue(value, modelCompanies);
 }
 
 function optionalOverrideRationale(value: unknown): string | undefined {
@@ -3912,14 +3747,6 @@ function requireRecord(value: unknown): Record<string, unknown> {
     return invalidInput();
   }
   return value;
-}
-
-function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceOpenKeys)) return invalidInput();
-  const selection = input.selection;
-  if (selection !== undefined && selection !== "native-dialog") return invalidInput();
-  return selection === undefined ? {} : { selection };
 }
 
 function nativeDialogSelection(value: unknown): "native-dialog" | undefined {
@@ -4403,18 +4230,6 @@ function workspaceDisplayName(value: unknown): string {
   return normalizeWorkspaceDisplayName(value) ?? invalidInput();
 }
 
-function validateWorkspaceRenameInput(value: unknown): WorkspaceRenameInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceRenameKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId), name: workspaceDisplayName(input.name) };
-}
-
-function normalizeWorkspaceRenameResult(value: unknown): WorkspaceRenameResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, workspaceRenameResultKeys)) return invalidInput();
-  return { name: workspaceDisplayName(result.name) };
-}
-
 function validateWorkspaceCompactHistoryInput(value: unknown): WorkspaceCompactHistoryInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCompactHistoryKeys)) return invalidInput();
@@ -4441,39 +4256,6 @@ function normalizeWorkspaceCompactHistoryResult(value: unknown): WorkspaceCompac
     afterBytes: byteCount(result.afterBytes),
     backupFileName,
     runsVerified: byteCount(result.runsVerified),
-  };
-}
-
-function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
-  const input = requireRecord(value);
-  if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
-  const mode =
-    input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
-  const authorCompany = optionalModelCompany(input.authorCompany);
-  const authorModel = optionalModelId(input.authorModel);
-  const criticCompany = optionalModelCompany(input.criticCompany);
-  const criticModel = optionalModelId(input.criticModel);
-  const authorLineage = optionalLineageLabel(input.authorLineage);
-  const criticLineage = optionalLineageLabel(input.criticLineage);
-  const localEndpoint = optionalLocalEndpointUrl(input.localEndpoint);
-  const independenceOverrideRationale = optionalOverrideRationale(
-    input.independenceOverrideRationale,
-  );
-  const requiredSections = optionalSectionTitles(input.requiredSections);
-  const maxRounds = optionalMaxRounds(input.maxRounds);
-  return {
-    name: workspaceDisplayName(input.name),
-    ...(mode === undefined ? {} : { mode }),
-    ...(authorCompany === undefined ? {} : { authorCompany }),
-    ...(authorModel === undefined ? {} : { authorModel }),
-    ...(criticCompany === undefined ? {} : { criticCompany }),
-    ...(criticModel === undefined ? {} : { criticModel }),
-    ...(authorLineage === undefined ? {} : { authorLineage }),
-    ...(criticLineage === undefined ? {} : { criticLineage }),
-    ...(localEndpoint === undefined ? {} : { localEndpoint }),
-    ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
-    ...(requiredSections === undefined ? {} : { requiredSections }),
-    ...(maxRounds === undefined ? {} : { maxRounds }),
   };
 }
 
@@ -5950,10 +5732,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
     return invalidCommand();
   }
   switch (command.type as BridgeCommandName) {
-    case "workspace.open":
-      return { type: "workspace.open", input: validateWorkspaceOpenInput(command.input) };
-    case "workspace.create":
-      return { type: "workspace.create", input: validateWorkspaceCreateInput(command.input) };
     case "workspace.configure-models":
       return {
         type: "workspace.configure-models",
@@ -5969,18 +5747,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "writing-policy.save",
         input: validateWritingPolicySaveInput(command.input),
       };
-    case "workspace.recent-list":
-      return {
-        type: "workspace.recent-list",
-        input: parseRecentWorkspacesListInput(command.input),
-      };
-    case "workspace.recent-open":
-      return {
-        type: "workspace.recent-open",
-        input: parseRecentWorkspaceOpenInput(command.input),
-      };
-    case "workspace.rename":
-      return { type: "workspace.rename", input: validateWorkspaceRenameInput(command.input) };
     case "workspace.compact-history":
       return {
         type: "workspace.compact-history",
@@ -6081,16 +5847,6 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "run.requirement-evidence",
         input: validateRunRequirementEvidenceInput(command.input) ?? invalidInput(),
-      };
-    case "workspace.recent-remove":
-      return {
-        type: "workspace.recent-remove",
-        input: parseRecentWorkspaceRemoveInput(command.input),
-      };
-    case "workspace.recent-clear":
-      return {
-        type: "workspace.recent-clear",
-        input: parseRecentWorkspacesClearInput(command.input),
       };
     case "knowledge.create":
       return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
@@ -6571,19 +6327,6 @@ function displayName(value: unknown): string {
     return invalidInput();
   }
   return result;
-}
-
-function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
-  const result = requireRecord(value);
-  if (!hasOnlyKeys(result, workspaceResultKeys)) return invalidInput();
-  const workspace = requireRecord(result.workspace);
-  if (!hasOnlyKeys(workspace, workspaceSummaryKeys)) return invalidInput();
-  return {
-    workspace: {
-      id: identifier(workspace.id),
-      name: displayName(workspace.name),
-    },
-  };
 }
 
 const knowledgeBlockerReasons = [
@@ -8745,18 +8488,6 @@ function normalizeModelsPreviewIndependenceResult(value: unknown): ModelsPreview
 
 function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
   switch (command.type) {
-    case "workspace.open":
-    case "workspace.create":
-    case "workspace.recent-open":
-      return normalizeWorkspaceResult(value);
-    case "workspace.recent-list":
-      return parseRecentWorkspacesListResult(value);
-    case "workspace.recent-remove":
-      return parseRecentWorkspaceRemoveResult(value);
-    case "workspace.recent-clear":
-      return parseRecentWorkspacesClearResult(value);
-    case "workspace.rename":
-      return normalizeWorkspaceRenameResult(value);
     case "workspace.compact-history":
       return normalizeWorkspaceCompactHistoryResult(value);
     case "application.list":

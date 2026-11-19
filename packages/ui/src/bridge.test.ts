@@ -496,111 +496,6 @@ describe("workspace model reconfiguration", () => {
   });
 });
 
-describe("recent workspace bridge contracts", () => {
-  it("validates opaque open identifiers and rejects renderer-supplied paths", () => {
-    expect(
-      validateBridgeCommand({
-        type: "workspace.recent-open",
-        input: { id: "123e4567-e89b-12d3-a456-426614174000" },
-      }),
-    ).toEqual({
-      type: "workspace.recent-open",
-      input: { id: "123e4567-e89b-12d3-a456-426614174000" },
-    });
-    expect(() =>
-      validateBridgeCommand({
-        type: "workspace.recent-open",
-        input: { id: "123e4567-e89b-12d3-a456-426614174000", path: "/private" },
-      }),
-    ).toThrow();
-    expect(() =>
-      validateBridgeCommand({ type: "workspace.recent-list", input: { path: "/private" } }),
-    ).toThrow();
-    expect(() =>
-      validateBridgeCommand({ type: "workspace.recent-clear", input: { path: "/private" } }),
-    ).toThrow();
-    expect(bridgeCapabilities).toContain("workspace.recent-remove");
-    expect(
-      validateBridgeCommand({
-        type: "workspace.recent-remove",
-        input: { id: "123e4567-e89b-12d3-a456-426614174000" },
-      }),
-    ).toEqual({
-      type: "workspace.recent-remove",
-      input: { id: "123e4567-e89b-12d3-a456-426614174000" },
-    });
-    expect(() =>
-      validateBridgeCommand({
-        type: "workspace.recent-remove",
-        input: { id: "123e4567-e89b-12d3-a456-426614174000", path: "/private" },
-      }),
-    ).toThrow();
-    expect(() =>
-      validateBridgeCommand({ type: "workspace.recent-remove", input: { id: "../../secret" } }),
-    ).toThrow();
-  });
-});
-
-describe("workspace rename bridge contract", () => {
-  it("is an advertised capability whose validator accepts exactly workspaceId and name", () => {
-    expect(bridgeCapabilities).toContain("workspace.rename");
-    expect(
-      validateBridgeCommand({
-        type: "workspace.rename",
-        input: { workspaceId: "workspace-1", name: "  Northwind — Staff Engineer " },
-      }),
-    ).toEqual({
-      type: "workspace.rename",
-      input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
-    });
-    for (const input of [
-      { workspaceId: "workspace-1" },
-      { workspaceId: "workspace-1", name: "x", path: "/private" },
-      { workspaceId: "workspace-1", name: "a/b" },
-      { workspaceId: "workspace-1", name: "a\\b" },
-      { workspaceId: "workspace-1", name: "bad\nname" },
-      { workspaceId: "workspace-1", name: "   " },
-      { workspaceId: "workspace-1", name: "x".repeat(81) },
-      { name: "No workspace" },
-    ]) {
-      expect(() => validateBridgeCommand({ type: "workspace.rename", input })).toThrow();
-    }
-  });
-
-  it("returns only the stored name and rejects drifted results", async () => {
-    const port = createCapabilityPort(
-      bridge(async () => ({ ok: true, value: { name: "Northwind — Staff Engineer" } })),
-    );
-    await expect(
-      port.execute({
-        type: "workspace.rename",
-        input: { workspaceId: "workspace-1", name: "Northwind — Staff Engineer" },
-      }),
-    ).resolves.toEqual({ ok: true, value: { name: "Northwind — Staff Engineer" } });
-    const drifted = createCapabilityPort(
-      bridge(async () => ({ ok: true, value: { name: "ok", path: "/private" } })),
-    );
-    await expect(
-      drifted.execute({
-        type: "workspace.rename",
-        input: { workspaceId: "workspace-1", name: "ok" },
-      }),
-    ).resolves.toMatchObject({ ok: false });
-  });
-
-  it("lets workspace.create take a display name but still refuses separators", () => {
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "Équipe Données — 2026", mode: "real" },
-      }),
-    ).toMatchObject({ input: { name: "Équipe Données — 2026" } });
-    expect(() =>
-      validateBridgeCommand({ type: "workspace.create", input: { name: "../escape" } }),
-    ).toThrow();
-  });
-});
-
 describe("desktop capability bridge", () => {
   it("accepts allowlisted commands and rejects unknown or extra fields", () => {
     expect(
@@ -636,12 +531,6 @@ describe("desktop capability bridge", () => {
     ).toMatchObject({ input: { target: "writing-policy", multiple: false } });
 
     expect(() => validateBridgeCommand({ type: "shell.exec", input: {} })).toThrow("not supported");
-    expect(() =>
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "candidate", path: "/tmp/escape" },
-      }),
-    ).toThrow("invalid");
 
     expect(
       validateBridgeCommand({
@@ -678,13 +567,6 @@ describe("desktop capability bridge", () => {
         }),
       ).toThrow("invalid");
     }
-
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "candidate", mode: "real" },
-      }),
-    ).toEqual({ type: "workspace.create", input: { name: "candidate", mode: "real" } });
 
     expect(
       validateBridgeCommand({
@@ -1144,179 +1026,6 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
-  it("accepts the workspace.create shape the live provider E2E gate sends", () => {
-    // Regression: `authorModel`/`criticModel` were added to WorkspaceCreateInput and
-    // to the host handler without being added to the validator allowlist, so the
-    // live gate failed at workspace creation before reaching any provider.
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: {
-          name: "draft-loop-live-e2e",
-          mode: "real",
-          authorModel: "claude-haiku-4-5",
-          criticModel: "gpt-5.6-luna",
-        },
-      }),
-    ).toEqual({
-      type: "workspace.create",
-      input: {
-        name: "draft-loop-live-e2e",
-        mode: "real",
-        authorModel: "claude-haiku-4-5",
-        criticModel: "gpt-5.6-luna",
-      },
-    });
-  });
-
-  it("accepts a bounded workspace round limit", () => {
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "candidate", mode: "real", maxRounds: 6 },
-      }),
-    ).toEqual({
-      type: "workspace.create",
-      input: { name: "candidate", mode: "real", maxRounds: 6 },
-    });
-    for (const maxRounds of [0, 21, 2.5, "3"]) {
-      expect(() =>
-        validateBridgeCommand({
-          type: "workspace.create",
-          input: { name: "candidate", maxRounds },
-        }),
-      ).toThrow("invalid");
-    }
-  });
-
-  it("accepts a namespaced local model id, which names weights rather than a path", () => {
-    // Ollama serves ids like these, and refusing them made real local models
-    // unreachable from a workspace. A model id reaches a provider only as the
-    // `model` field of a JSON body: never a URL path, never a filename.
-    for (const authorModel of ["hf.co/user/model:Q4", "library/llama3:8b"]) {
-      expect(
-        validateBridgeCommand({ type: "workspace.create", input: { name: "w", authorModel } }),
-      ).toEqual({ type: "workspace.create", input: { name: "w", authorModel } });
-    }
-  });
-
-  it("keeps workspace.create model ids optional, bounded, and trimmed", () => {
-    const withoutModels = validateBridgeCommand({
-      type: "workspace.create",
-      input: { name: "candidate", mode: "real" },
-    });
-    expect(withoutModels).toEqual({
-      type: "workspace.create",
-      input: { name: "candidate", mode: "real" },
-    });
-    expect(Object.keys(withoutModels.input)).toEqual(["name", "mode"]);
-
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: {
-          name: "candidate",
-          authorModel: "  us.anthropic.claude-sonnet-4-5  ",
-          criticModel: "gpt-5.6-luna",
-        },
-      }),
-    ).toEqual({
-      type: "workspace.create",
-      input: {
-        name: "candidate",
-        authorModel: "us.anthropic.claude-sonnet-4-5",
-        criticModel: "gpt-5.6-luna",
-      },
-    });
-
-    for (const authorModel of [
-      "",
-      "   ",
-      42,
-      null,
-      "a".repeat(129),
-      "gpt 5.6 luna",
-      "-leading-hyphen",
-      // Namespaced ids are valid now; only traversal shapes are refused.
-      "../../etc/passwd",
-      "a/../../b",
-      "a//b",
-      "trailing/",
-      "/leading",
-    ]) {
-      expect(() =>
-        validateBridgeCommand({
-          type: "workspace.create",
-          input: { name: "candidate", mode: "real", authorModel },
-        }),
-      ).toThrow("invalid");
-    }
-
-    expect(() =>
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "candidate", mode: "real", criticModel: "gpt$5" },
-      }),
-    ).toThrow("invalid");
-    expect(() =>
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "candidate", mode: "real", model: "gpt-5.6-luna" },
-      }),
-    ).toThrow("invalid");
-  });
-
-  it("accepts workspace.create required sections and rejects an empty list", () => {
-    // Regression: `requiredSections` was added to WorkspaceCreateInput and to the
-    // host handler without being added to the validator allowlist, so the path
-    // #190 built - bridge to service.initialize - rejected every call.
-    const accepted = validateBridgeCommand({
-      type: "workspace.create",
-      input: {
-        name: "candidate",
-        mode: "real",
-        requiredSections: ["  Summary  ", "Work Experience", "Education", "Skills"],
-      },
-    });
-    expect(accepted).toEqual({
-      type: "workspace.create",
-      input: {
-        name: "candidate",
-        mode: "real",
-        requiredSections: ["Summary", "Work Experience", "Education", "Skills"],
-      },
-    });
-
-    const omitted = validateBridgeCommand({
-      type: "workspace.create",
-      input: { name: "candidate", mode: "real" },
-    });
-    expect(Object.keys(omitted.input)).toEqual(["name", "mode"]);
-
-    for (const requiredSections of [
-      [],
-      "Summary",
-      {},
-      Array.from({ length: 13 }, (_, index) => `Section ${index}`),
-      ["Summary", ""],
-      ["Summary", "   "],
-      ["Summary", 42],
-      ["Summary", null],
-      ["Summary", "a".repeat(65)],
-      ["Summary", "Skills / Tools"],
-      ["Summary", "-leading-hyphen"],
-      ["Summary", "Summary"],
-      ["Summary", "  Summary  "],
-    ]) {
-      expect(() =>
-        validateBridgeCommand({
-          type: "workspace.create",
-          input: { name: "candidate", mode: "real", requiredSections },
-        }),
-      ).toThrow("invalid");
-    }
-  });
-
   it("rejects traversal and unbounded export paths before invoking the host", async () => {
     const invoke = vi.fn<NativeBridge["invoke"]>();
     const port = createCapabilityPort(bridge(invoke));
@@ -1329,19 +1038,6 @@ describe("desktop capability bridge", () => {
         format: "pdf",
         relativePath: "../outside.pdf",
       },
-    });
-
-    expect(result).toMatchObject({ ok: false, error: { code: "invalid-input" } });
-    expect(invoke).not.toHaveBeenCalled();
-  });
-
-  it("rejects workspace names that resolve outside the selected parent", async () => {
-    const invoke = vi.fn<NativeBridge["invoke"]>();
-    const port = createCapabilityPort(bridge(invoke, ["workspace.create"]));
-
-    const result = await port.execute({
-      type: "workspace.create",
-      input: { name: ".." },
     });
 
     expect(result).toMatchObject({ ok: false, error: { code: "invalid-input" } });
@@ -1596,12 +1292,6 @@ describe("desktop capability bridge", () => {
       type: "workspace.configure-models",
       input: { workspaceId: "ws-1", ...pair },
     });
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "mistral-development", mode: "real", ...pair },
-      }),
-    ).toMatchObject({ type: "workspace.create", input: pair });
     expect(() =>
       validateBridgeCommand({
         type: "workspace.configure-models",
@@ -1890,7 +1580,7 @@ describe("desktop capability bridge", () => {
           error: {
             code: "permission-denied" as const,
             message: "The workspace is read-only.",
-            capability: "workspace.open" as const,
+            capability: "application.list" as const,
           },
         }),
         ["run.status"],
@@ -2789,77 +2479,6 @@ describe("desktop capability bridge", () => {
     }
   });
 
-  it("carries a complete model choice into workspace creation", () => {
-    const input = {
-      name: "local-workspace",
-      mode: "real" as const,
-      authorCompany: "local" as const,
-      authorModel: "qwen3-coder-30b",
-      criticCompany: "anthropic" as const,
-      criticModel: "claude-sonnet-4-5",
-      authorLineage: "qwen3 base",
-      criticLineage: "claude sonnet 4.5",
-      localEndpoint: "http://127.0.0.1:11434/v1",
-      independenceOverrideRationale: "Both sides were checked against the same held-out set.",
-      requiredSections: ["Summary", "Experience"],
-    };
-
-    expect(validateBridgeCommand({ type: "workspace.create", input })).toEqual({
-      type: "workspace.create",
-      input,
-    });
-  });
-
-  it("refuses a model choice the workspace could not honour", () => {
-    for (const input of [
-      // A company no provider adapter exists for is invalid input, not an
-      // option this host happened not to offer.
-      { name: "w", authorCompany: "bedrock" },
-      { name: "w", criticCompany: "" },
-      // "local" is a promise that nothing leaves the machine.
-      { name: "w", authorCompany: "local", localEndpoint: "http://10.0.0.4:11434/v1" },
-      { name: "w", localEndpoint: "http://evil.example.com/v1" },
-      { name: "w", localEndpoint: "http://user:pass@127.0.0.1:11434/v1" },
-      { name: "w", localEndpoint: "file:///etc/passwd" },
-      { name: "w", localEndpoint: "http://127.0.0.1.evil.example.com/v1" },
-      { name: "w", localEndpoint: "not a url" },
-      // The domain keeps at most 200 characters of a declared lineage.
-      { name: "w", authorLineage: "x".repeat(201) },
-      { name: "w", criticLineage: "   " },
-      { name: "w", authorLineage: "" },
-      // A rationale is prose an auditor reads; an empty one claims nothing.
-      { name: "w", independenceOverrideRationale: "   " },
-      { name: "w", independenceOverrideRationale: "x".repeat(501) },
-      { name: "w", independenceOverrideRationale: 7 },
-      { name: "w", authorLineage: ["anthropic"] },
-    ]) {
-      expect(() => validateBridgeCommand({ type: "workspace.create", input })).toThrow("invalid");
-    }
-  });
-
-  it("keeps loopback endpoints and bounded lineages usable", () => {
-    for (const localEndpoint of [
-      "http://localhost:11434/v1",
-      "http://[::1]:1234/v1",
-      "http://127.10.20.30:8080/v1",
-      "https://127.0.0.1:8443/v1",
-    ]) {
-      expect(
-        validateBridgeCommand({
-          type: "workspace.create",
-          input: { name: "w", localEndpoint },
-        }),
-      ).toEqual({ type: "workspace.create", input: { name: "w", localEndpoint } });
-    }
-
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "w", authorLineage: `  ${"x".repeat(196)}  ` },
-      }),
-    ).toEqual({ type: "workspace.create", input: { name: "w", authorLineage: "x".repeat(196) } });
-  });
-
   it("asks the host about a candidate pairing without answering for itself", async () => {
     const answer = {
       authorLineage: "anthropic:claude-sonnet-4-5",
@@ -2949,16 +2568,17 @@ describe("desktop capability bridge", () => {
     });
     expect(
       validateBridgeCommand({
-        type: "workspace.create",
+        type: "workspace.configure-models",
         input: {
-          name: "glm-development",
-          mode: "real",
+          workspaceId: "ws-1",
           authorCompany: "zai",
           authorModel: "zai-org/GLM-5.3-Flash",
+          criticCompany: "openai",
+          criticModel: "gpt-6-luna",
         },
       }),
     ).toMatchObject({
-      type: "workspace.create",
+      type: "workspace.configure-models",
       input: {
         authorCompany: "zai",
         authorModel: "zai-org/GLM-5.3-Flash",
@@ -2989,12 +2609,6 @@ describe("desktop capability bridge", () => {
       type: "workspace.configure-models",
       input: { workspaceId: "ws-1", ...pair },
     });
-    expect(
-      validateBridgeCommand({
-        type: "workspace.create",
-        input: { name: "gemini-development", mode: "real", ...pair },
-      }),
-    ).toMatchObject({ type: "workspace.create", input: pair });
     expect(() =>
       validateBridgeCommand({ type: "provider-auth.status", input: { provider: "google" } }),
     ).toThrow("invalid");
