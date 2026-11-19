@@ -81,6 +81,22 @@ describe("the worker's logs", () => {
     });
   });
 
+  it("carry the run's active time when a draft awaits review, for the duration objective (#74)", () => {
+    const timed = {
+      ...run,
+      durationAccounting: { activeDurationMs: 312_400.6, activeSince: null },
+    } as RunSnapshot;
+    const fields = (outcome: "advanced" | "settled", snapshot: RunSnapshot) =>
+      runOutcomeFields(job, outcome, snapshot);
+
+    expect(fields("advanced", timed)).toMatchObject({ elapsedMs: 312_401 });
+    expect(fields("settled", timed)).not.toHaveProperty("elapsedMs");
+    expect(fields("advanced", { ...timed, state: "drafting" } as RunSnapshot)).not.toHaveProperty(
+      "elapsedMs",
+    );
+    expect(fields("advanced", run)).not.toHaveProperty("elapsedMs");
+  });
+
   it("never carry the run's content or an error's message", () => {
     const lines = [
       logLine("INFO", "run job finished", runOutcomeFields(job, "advanced", run)),

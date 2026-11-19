@@ -45,7 +45,7 @@ export function errorFields(error: unknown): Record<string, unknown> {
 export function runOutcomeFields(
   job: RunJob,
   outcome: RunJobOutcome,
-  run?: Pick<RunSnapshot, "state" | "executionHistory" | "applicationPlan">,
+  run?: Pick<RunSnapshot, "state" | "executionHistory" | "applicationPlan" | "durationAccounting">,
 ): Record<string, unknown> {
   const fields = {
     tenantId: job.tenantId,
@@ -55,8 +55,16 @@ export function runOutcomeFields(
   };
   if (run === undefined) return fields;
   const usage = runUsage(run);
+  const activeMs = run.durationAccounting?.activeDurationMs;
+  // The run's active time when a draft awaits review, for the run duration objective: time the
+  // run waited on the person is not active, so it is left out.
+  const elapsed =
+    outcome === "advanced" && run.state === "awaiting-approval" && typeof activeMs === "number"
+      ? { elapsedMs: Math.round(activeMs) }
+      : {};
   return {
     ...fields,
+    ...elapsed,
     state: run.state,
     usage: {
       calls: usage.calls,
