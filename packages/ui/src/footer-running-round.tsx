@@ -12,7 +12,7 @@ import { t } from "@lingui/core/macro";
 import type { JSX } from "react";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import { executionLimitText } from "./execution-limits.js";
-import type { ReviewScreenState, ReviewExecutionView } from "./model.js";
+import type { ReviewExecutionView, ReviewScreenState } from "./model.js";
 import { reviewInProgress, runActivity } from "./review-run-status.js";
 
 /** The directions the candidate sent with Request revision, and the round they steer. */

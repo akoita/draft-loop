@@ -38,10 +38,10 @@ import { ExportTemplatePreview } from "./export-template-picker.js";
 import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
 import { type FooterRunningRound, FooterRunningRoundStrip } from "./footer-running-round.js";
 import {
-  type ReviewScreenState,
   type ExportFormat,
   exportFormatLabels,
   exportFormats,
+  type ReviewScreenState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";

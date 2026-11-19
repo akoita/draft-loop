@@ -19,7 +19,7 @@ import { t } from "@lingui/core/macro";
 import { type JSX, useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { MarkdownFileSaveResult } from "./bridge.js";
 import { BlockRedline, pairDraftSections } from "./draft-redline.js";
-import type { ReviewScreenState, ReviewArtifact } from "./model.js";
+import type { ReviewArtifact, ReviewScreenState } from "./model.js";
 import {
   comparisonMarkdownFits,
   runComparisonFileName,

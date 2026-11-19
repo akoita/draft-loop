@@ -12,9 +12,9 @@ import {
 } from "./known-gaps.js";
 import {
   createFixtureReviewState,
-  type ReviewScreenState,
   type ReviewAction,
   type ReviewFinding,
+  type ReviewScreenState,
   reduceReviewState,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";

@@ -23,9 +23,9 @@ import { countedNouns } from "./counted-nouns.js";
 import { formatDateTime } from "./locale-format.js";
 import {
   type CriticFallbackView,
-  type ReviewScreenState,
   type IndependentReviewView,
   type ReviewEvent,
+  type ReviewScreenState,
   type RunWritingPolicyProjection,
   roundLimitRecoveryRequired,
 } from "./model.js";

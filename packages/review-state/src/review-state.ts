@@ -24,7 +24,6 @@ import { projectApprovalReadiness } from "@draft-loop/ui/approval-readiness";
 import type { RunWritingPolicyProjection } from "@draft-loop/ui/bridge";
 import { findingRequirement } from "@draft-loop/ui/finding-requirement";
 import type {
-  ReviewScreenState,
   FindingDecision,
   IndependentReviewView,
   ProviderFailureView,
@@ -34,6 +33,7 @@ import type {
   ReviewEvent,
   ReviewExecutionView,
   ReviewFinding,
+  ReviewScreenState,
   ReviewSection,
   WorkspaceReadiness,
 } from "@draft-loop/ui/model";

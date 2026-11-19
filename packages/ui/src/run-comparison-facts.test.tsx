@@ -4,9 +4,9 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import {
   createFixtureReviewState,
-  type ReviewScreenState,
   type ReviewArtifact,
   type ReviewFinding,
+  type ReviewScreenState,
   type RunWritingPolicyProjection,
 } from "./model.js";
 import { RunComparisonFactsTable, RunComparisonView } from "./run-comparison.js";

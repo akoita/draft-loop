@@ -51,9 +51,9 @@ import { KNOWN_GAP_RATIONALE } from "./known-gaps.js";
 import { LocalWriterWarning } from "./local-writer-warning.js";
 import type {
   CandidateProfileSelection,
-  ReviewScreenState,
   FindingDecision,
   ReviewAction,
+  ReviewScreenState,
 } from "./model.js";
 import { ModelEditorSummary } from "./model-editor-summary.js";
 import {

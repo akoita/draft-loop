@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { NativeBridge } from "./bridge.js";
 import { bridgeCapabilities } from "./bridge-capabilities.js";
-import { createFixtureReviewState, type ReviewScreenState, type ReviewArtifact } from "./model.js";
+import { createFixtureReviewState, type ReviewArtifact, type ReviewScreenState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { ReviewWorkspace } from "./review.js";
 import { RunComparisonView } from "./run-comparison.js";

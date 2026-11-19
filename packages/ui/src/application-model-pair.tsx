@@ -3,7 +3,7 @@ import { t } from "@lingui/core/macro";
 import { useState } from "react";
 import type { ApplicationModelProfilesView } from "./application-contract.js";
 import type { ModelProfileSupportResult } from "./bridge.js";
-import type { ReviewScreenState, ProviderTransmissionIdentity } from "./model.js";
+import type { ProviderTransmissionIdentity, ReviewScreenState } from "./model.js";
 import { ModelPresetCards } from "./model-preset-cards.js";
 import {
   modelProfileEntryForReference,

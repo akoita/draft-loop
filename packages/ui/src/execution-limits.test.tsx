@@ -4,8 +4,8 @@ import { createCapabilityPort, type NativeBridge } from "./bridge.js";
 import { executionLimitText, formatLimitDuration } from "./execution-limits.js";
 import {
   createFixtureReviewState,
-  type ReviewScreenState,
   type ReviewExecutionView,
+  type ReviewScreenState,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 

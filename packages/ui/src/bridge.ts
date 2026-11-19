@@ -137,7 +137,6 @@ import {
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   CriticFallbackView,
-  ReviewScreenState,
   IndependentReviewView,
   OpportunityBriefSelection,
   PendingWritingPolicyOverride,
@@ -145,6 +144,7 @@ import type {
   ProviderFailureView,
   ReviewAction,
   ReviewFinding,
+  ReviewScreenState,
   RunWritingPolicyProjection,
   UsageLimitView,
   WritingPolicyIdentity,

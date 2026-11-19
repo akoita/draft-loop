@@ -28,9 +28,9 @@ import {
 import type { ModelCompany } from "./bridge.js";
 import {
   createFixtureReviewState,
-  type ReviewScreenState,
   type IndependentReviewView,
   type ReviewAction,
+  type ReviewScreenState,
   reduceReviewState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,

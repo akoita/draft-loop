@@ -13,7 +13,7 @@ import { t } from "@lingui/core/macro";
 import { meanReadinessScore } from "./application-run-list.js";
 import { countedNouns } from "./counted-nouns.js";
 import { coverageKindsSummary, coverageKindTallies } from "./coverage-kinds.js";
-import { type ReviewScreenState, isUnresolvedFinding } from "./model.js";
+import { isUnresolvedFinding, type ReviewScreenState } from "./model.js";
 import { coverageTally } from "./review-work-tabs.js";
 import { costNotRecorded, runCostLabel } from "./run-cost.js";
 import { policyChecksumLabel, recordedRunModels } from "./run-details.js";

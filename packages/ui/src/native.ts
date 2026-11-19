@@ -68,9 +68,9 @@ import {
 } from "./fact-usage-capabilities.js";
 import {
   createFixtureReviewPort,
+  type ReviewAction,
   type ReviewScreenPort,
   type ReviewScreenState,
-  type ReviewAction,
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 import type { NewApplicationJob } from "./new-application-model.js";

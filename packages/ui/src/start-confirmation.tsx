@@ -4,7 +4,7 @@ import { countedNouns } from "./counted-nouns.js";
 import { formatLimitDuration } from "./execution-limits.js";
 import { HostStartDialog } from "./host-panels.js";
 import { localWriterWarningFor } from "./local-writer-warning.js";
-import type { CandidateProfileSelection, ReviewScreenState, ReviewAction } from "./model.js";
+import type { CandidateProfileSelection, ReviewAction, ReviewScreenState } from "./model.js";
 import {
   modelProfileEntryForReference,
   modelProfilePresets,

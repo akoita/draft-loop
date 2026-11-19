@@ -14,7 +14,7 @@ import type {
   SavedModelProfilesResult,
   WorkspaceConfigureModelsInput,
 } from "./bridge.js";
-import type { ReviewScreenState, ReviewAction } from "./model.js";
+import type { ReviewAction, ReviewScreenState } from "./model.js";
 import { effortDisplayName } from "./model-profile-presentation.js";
 
 export interface AppliedModelProfileSelection {

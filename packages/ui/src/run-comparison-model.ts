@@ -7,7 +7,7 @@ import { t } from "@lingui/core/macro";
  * comparison drops this state and the review shows the open run as it was.
  */
 import type { ApplicationRunRowView } from "./application-run-list.js";
-import type { ReviewScreenState, ReviewArtifact } from "./model.js";
+import type { ReviewArtifact, ReviewScreenState } from "./model.js";
 import type { FooterBlocker } from "./review-footer.js";
 import { runModelsLabel, runNumber } from "./run-switcher.js";
 

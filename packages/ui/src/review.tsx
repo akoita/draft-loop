@@ -84,7 +84,6 @@ import {
   pendingConfirmedGapIds,
 } from "./known-gaps.js";
 import {
-  type ReviewScreenState,
   type ExportFormat,
   exportFormatLabels,
   type FindingDecision,
@@ -94,6 +93,7 @@ import {
   type ReviewAction,
   type ReviewArtifact,
   type ReviewFinding,
+  type ReviewScreenState,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
