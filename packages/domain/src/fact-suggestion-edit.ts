@@ -73,14 +73,40 @@ interface Word {
   readonly start: boolean;
 }
 
+const letterOrDigit = /^[\p{L}\p{N}]$/u;
+const closing = new Set(['"', "'", ")", "]", "\u2019", "\u201d"]);
+const sentenceEnds = new Set([".", "!", "?", ":", ";"]);
+
+/** A raw word without the punctuation around it; a trailing % or + stays, as in "40%". */
+function trimWord(raw: string): string {
+  const characters = [...raw];
+  let first = 0;
+  let last = characters.length;
+  while (first < last && !letterOrDigit.test(characters[first] ?? "")) first += 1;
+  while (last > first) {
+    const character = characters[last - 1] ?? "";
+    if (letterOrDigit.test(character) || character === "%" || character === "+") break;
+    last -= 1;
+  }
+  return characters.slice(first, last).join("");
+}
+
+/** Whether a raw word ends its sentence, closing quotes and brackets aside. */
+function endsSentence(raw: string): boolean {
+  const characters = [...raw];
+  let index = characters.length - 1;
+  while (index >= 0 && closing.has(characters[index] ?? "")) index -= 1;
+  return sentenceEnds.has(characters[index] ?? "");
+}
+
 function words(text: string): Word[] {
   const found: Word[] = [];
   let start = true;
   for (const raw of text.normalize("NFKC").split(/\s+/u)) {
-    const trimmed = raw.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}%+]+$/gu, "");
+    const trimmed = trimWord(raw);
     if (trimmed.length === 0) continue;
     found.push({ text: trimmed, key: trimmed.toLowerCase(), start });
-    start = /[.!?:;]["')\]]*$/u.test(raw);
+    start = endsSentence(raw);
     if (found.length >= maximumWords) break;
   }
   return found;
