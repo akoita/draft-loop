@@ -78,7 +78,8 @@ What each kind holds:
   suggestion whose fact changed first becomes stale. The Career profile page
   offers them. An approval edit that changes a number, date or name is
   matched to the fact it contradicts by a word diff, with no model call
-  (`fact-suggestion-edit.ts`); filing those at approval is next (#3167).
+  (`fact-suggestion-edit.ts`), and approving the run files them against the
+  run's pinned profile version.
 - **`writing-policy`:** forbidden terms, section order and style preferences.
   Each run pins and enforces one version.
 - **`run-history`:** runs, rounds, findings, decisions and artifact versions,

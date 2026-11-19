@@ -55,8 +55,10 @@ sensitivity decides what may reach a model provider.
   `packages/ui/src/profile-fact-usage.test.tsx`,
   `packages/ui/src/profile-fact-suggestions.test.tsx`,
   `apps/web/src/fact-suggestions-bridge.test.ts`,
-  `apps/api/src/profile-routes.test.ts` and
-  `apps/api/src/fact-suggestion-routes.test.ts`.
+  `apps/api/src/profile-routes.test.ts`,
+  `apps/api/src/fact-suggestion-routes.test.ts`,
+  `packages/application/src/review-edit-suggestions.test.ts` and
+  `apps/api/src/review-routes.test.ts`.
 
 ## Surfaces
 
@@ -82,8 +84,10 @@ sensitivity decides what may reach a model provider.
   outcome and read through `GET .../derivation`. The worker also logs one
   content-free line per call. The page gives no estimate before a derivation
   starts yet.
-- Nothing files suggestions yet: capture from review edits comes next
-  (#3070). A card names the application's origin but not its name yet.
+- Approving a CV run files a suggestion when an edit changes a number, date
+  or name of a fact in the run's pinned profile, matched by a word diff with
+  no model call. Nothing else files them yet, and the review does not yet say
+  how many it filed (#3168). A card does not name the application yet.
 - Accepting and rejecting suggestions are people-only routes; an agent token
   cannot reach them or list suggestions yet. Every decision is recorded with
   the candidate role; coach decisions come with coach accounts.

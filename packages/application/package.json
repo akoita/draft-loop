@@ -59,6 +59,10 @@
       "types": "./src/fact-suggestion-decisions.ts",
       "import": "./src/fact-suggestion-decisions.ts"
     },
+    "./review-edit-suggestions": {
+      "types": "./src/review-edit-suggestions.ts",
+      "import": "./src/review-edit-suggestions.ts"
+    },
     "./work-journal-source": {
       "types": "./src/work-journal-source.ts",
       "import": "./src/work-journal-source.ts"
