@@ -86,9 +86,5 @@ export function ProfileDerivationEstimateNote({
   readonly estimate: ProfileDerivationEstimateResult | undefined;
 }) {
   if (estimate === undefined || !isLargeProfileDerivation(estimate)) return null;
-  return (
-    <p className="profile-derivation-estimate">
-      {profileDerivationEstimateText(estimate)}
-    </p>
-  );
+  return <p className="profile-derivation-estimate">{profileDerivationEstimateText(estimate)}</p>;
 }
