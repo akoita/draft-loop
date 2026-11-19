@@ -321,7 +321,7 @@ summary, experience, projects, skills, education, certifications and languages.
 It includes each section that retrieved evidence supports, and its section and
 entry order is kept through the artifact and every exporter.
 
-New runs use author template `cli-author-v19`. A resumed run keeps the exact
+New runs use author template `cli-author-v20`. A resumed run keeps the exact
 prompt and output ceiling it started with.
 
 ### Writing for the job
@@ -342,6 +342,9 @@ context, never candidate facts. The author:
   independent work, its own line and bullets, written once (`cli-author-v18`);
 - writes the summary as full sentences and keeps caveats such as "staging" or
   "not in production" out of a role's context line (`cli-author-v19`);
+- writes an approved project card as one Projects line with cited bullets,
+  with the card's link only when the card is public, and uses the card's
+  counts exactly (`cli-author-v20`);
 - lists the skills and certifications the job asks for first.
 
 A writing policy's section order or emphasis overrides this guidance.

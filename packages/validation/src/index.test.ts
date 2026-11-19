@@ -549,6 +549,23 @@ describe("deterministic artifact validation", () => {
     expect(matchingDate.issues).toEqual([]);
   });
 
+  it("holds a project card's counted numbers to the card exactly (#2897)", () => {
+    const card = "- Own commits: 412 of 520 (79%)\n- Merged pull requests: 37\n- Releases: 12";
+    const exact = validateDraftArtifact(
+      artifactWithClaim("Wrote 412 of 520 commits and shipped 12 releases.", [evidence(card)]),
+      context(),
+    );
+    expect(exact.issues).toEqual([]);
+
+    const rounded = validateDraftArtifact(
+      artifactWithClaim("Wrote over 450 commits across 40 merged pull requests.", [evidence(card)]),
+      context(),
+    );
+    expect(rounded.issues).toEqual([
+      expect.objectContaining({ code: "unsupported-quantification", claimId: "claim-1" }),
+    ]);
+  });
+
   it("orders and freezes identical results deterministically", () => {
     const artifact = artifactWithClaim("Built reliable systems.", []);
     const validationContext = context({

@@ -128,7 +128,7 @@ function request(context: ContextSnapshot, extra: Partial<AuthorRequest> = {}): 
 
 describe("author prompt cli-author-v9", () => {
   it("is superseded by v17 for new runs", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v19");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v20");
   });
 
   it("states the direction rule and sends the direction in its own section", () => {
