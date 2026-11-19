@@ -903,6 +903,11 @@ export interface ApiSchemas {
     readonly applications: number;
     readonly reason: string;
   };
+  "PreparedInviteSignIns": {
+    readonly passwordEmails: number;
+    readonly existing: number;
+    readonly failed: number;
+  };
   "ProjectCardResult": {
     readonly card_id?: string;
     readonly status: "pending" | "duplicate" | "previously_discarded" | "validated";
@@ -3077,6 +3082,9 @@ export interface ApiOperations {
       readonly organisationId: string;
     };
     readonly response: ApiSchemas["OrganisationCredits"];
+  };
+  "POST /v1/operator/beta-invites/sign-ins": {
+    readonly response: ApiSchemas["PreparedInviteSignIns"];
   };
   "POST /v1/operator/beta-invites": {
     readonly body: {

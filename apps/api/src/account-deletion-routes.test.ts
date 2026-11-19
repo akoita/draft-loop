@@ -172,6 +172,7 @@ let deletedAccounts: string[];
 let failIdentity: boolean;
 
 const identityAccounts: IdentityAccounts = {
+  prepareInvitedAccount: async () => "exists",
   deleteAccount: async (subject) => {
     if (failIdentity) throw new Error("identity provider down");
     deletedAccounts.push(subject);

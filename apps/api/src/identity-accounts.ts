@@ -6,7 +6,22 @@
 export interface IdentityAccounts {
   /** Deletes the account the sign-in names; an account already gone counts as deleted. */
   readonly deleteAccount: (subject: string) => Promise<void>;
+  /**
+   * Makes sure an invited email has a sign-in account, since the realm lets nobody register
+   * (#3082). A new account, or one without a password yet, gets the provider's own email with a
+   * link to choose a password: `password-email`. An account that has a password gets nothing:
+   * `exists`.
+   */
+  readonly prepareInvitedAccount: (input: {
+    readonly email: string;
+    readonly locale?: "en" | "fr";
+  }) => Promise<InvitedAccount>;
 }
+
+export type InvitedAccount = "password-email" | "exists";
+
+/** How long the provider's choose-a-password link works: 7 days, then Forgot password serves. */
+export const passwordLinkLifespanSeconds = 7 * 24 * 60 * 60;
 
 export class IdentityAccountsError extends Error {
   constructor(message: string, options?: { readonly cause?: unknown }) {
@@ -26,6 +41,12 @@ export interface KeycloakAccountsOptions {
    * the API cannot reach; the issuer's own host when unset.
    */
   readonly baseUrl?: string;
+  /**
+   * The web screen's client and address: the choose-a-password link returns there. Without them
+   * the API cannot prepare an invited person's sign-in.
+   */
+  readonly webClientId?: string;
+  readonly screenUrl?: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Each call's limit; 10 seconds when unset. */
   readonly timeoutMs?: number;
@@ -44,6 +65,7 @@ export function keycloakRealmOf(
 }
 
 const subjectPattern = /^[A-Za-z0-9-]{1,64}$/u;
+const emailPattern = /^[^@\s]{1,200}@[^@\s]{1,200}$/u;
 
 /**
  * Keycloak's admin interface: a client-credentials token from the realm's own token endpoint, then
@@ -88,7 +110,100 @@ export function keycloakAccounts(options: KeycloakAccountsOptions): IdentityAcco
     return token;
   }
 
+  const admin = `${base}/admin/realms/${realmName}`;
+
+  async function adminCall(
+    token: string,
+    path: string,
+    init: { readonly method?: string; readonly body?: unknown } = {},
+  ): Promise<Response> {
+    return call(`${admin}${path}`, {
+      method: init.method ?? "GET",
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(init.body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      signal: signal(),
+    });
+  }
+
+  function refused(what: string, response: Response): IdentityAccountsError {
+    return new IdentityAccountsError(`The identity provider did not ${what} (${response.status}).`);
+  }
+
+  /** The id of the account whose email is exactly `email`, or undefined. */
+  async function accountIdFor(token: string, email: string): Promise<string | undefined> {
+    const response = await adminCall(
+      token,
+      `/users?exact=true&briefRepresentation=true&email=${encodeURIComponent(email)}`,
+    );
+    if (!response.ok) throw refused("find the account", response);
+    const users: unknown = await response.json();
+    if (!Array.isArray(users)) return undefined;
+    const match = users.find(
+      (user: unknown) =>
+        typeof user === "object" &&
+        user !== null &&
+        String((user as { email?: unknown }).email ?? "").toLowerCase() === email,
+    ) as { id?: unknown } | undefined;
+    return typeof match?.id === "string" ? match.id : undefined;
+  }
+
   return {
+    prepareInvitedAccount: async ({ email: given, locale }) => {
+      const email = given.trim().toLowerCase();
+      if (!emailPattern.test(email)) {
+        throw new IdentityAccountsError("An invited account needs an email address.");
+      }
+      if (options.webClientId === undefined || options.screenUrl === undefined) {
+        throw new IdentityAccountsError("The web screen's client and address are not set.");
+      }
+      const token = await accessToken();
+      // Only the emailed link sets the password, so whoever signs in has opened this mailbox:
+      // the address counts as verified from the start.
+      const created = await adminCall(token, "/users", {
+        method: "POST",
+        body: {
+          username: email,
+          email,
+          enabled: true,
+          emailVerified: true,
+          ...(locale === undefined ? {} : { attributes: { locale: [locale] } }),
+        },
+      });
+      if (!created.ok && created.status !== 409) throw refused("create the account", created);
+      const id = await accountIdFor(token, email);
+      if (id === undefined || !subjectPattern.test(id)) {
+        throw new IdentityAccountsError("The identity provider has no account for that email.");
+      }
+      if (created.status === 409) {
+        const credentials = await adminCall(token, `/users/${id}/credentials`);
+        if (!credentials.ok) throw refused("list the account's credentials", credentials);
+        const list: unknown = await credentials.json();
+        const hasPassword =
+          Array.isArray(list) &&
+          list.some(
+            (item: unknown) =>
+              typeof item === "object" &&
+              item !== null &&
+              (item as { type?: unknown }).type === "password",
+          );
+        if (hasPassword) return "exists";
+      }
+      const query = new URLSearchParams({
+        client_id: options.webClientId,
+        redirect_uri: options.screenUrl,
+        lifespan: String(passwordLinkLifespanSeconds),
+      });
+      const sent = await adminCall(token, `/users/${id}/execute-actions-email?${query}`, {
+        method: "PUT",
+        body: ["UPDATE_PASSWORD"],
+      });
+      if (!sent.ok) throw refused("send the password email", sent);
+      return "password-email";
+    },
+
     deleteAccount: async (subject) => {
       if (!subjectPattern.test(subject)) {
         throw new IdentityAccountsError("The sign-in subject is not a Keycloak user id.");

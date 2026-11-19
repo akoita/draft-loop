@@ -7,7 +7,9 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { registerBetaInviteSignInRoutes } from "./beta-invite-sign-in-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
+import type { IdentityAccounts } from "./identity-accounts.js";
 import type { InviteMailer } from "./invite-mail.js";
 import { legalVersion } from "./legal-pages.js";
 import type { ResolveSignIn } from "./oidc-sign-in.js";
@@ -30,6 +32,8 @@ export interface BetaSignUpOptions {
   readonly recordActivity?: (organisationId: string) => Promise<void>;
   /** Emails each new invite's link; without it the operator sends the code themselves. */
   readonly inviteMailer?: InviteMailer;
+  /** Prepares an invited person's sign-in account (#3082); absent where people register. */
+  readonly prepareInvitedAccount?: IdentityAccounts["prepareInvitedAccount"];
   readonly now?: () => Date;
   /** Refused redemptions one sign-in may make in a window before it waits (default 5). */
   readonly refusedAttempts?: number;
@@ -147,6 +151,12 @@ export function registerBetaSignUpRoutes(
   const limit = options.refusedAttempts ?? 5;
   const windowMs = options.windowMs ?? 15 * 60_000;
   const attempts = new Map<string, Attempts>();
+  if (options.prepareInvitedAccount !== undefined) {
+    registerBetaInviteSignInRoutes(parent, {
+      invites,
+      prepareInvitedAccount: options.prepareInvitedAccount,
+    });
+  }
 
   const seats = async () => {
     const [operatorCap, redeemed, states] = await Promise.all([

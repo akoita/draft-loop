@@ -5,6 +5,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApi } from "./app.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
+import type { IdentityAccounts } from "./identity-accounts.js";
 import { legalVersion } from "./legal-pages.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 
@@ -70,12 +71,18 @@ afterEach(async () => {
   app = undefined;
 });
 
-async function api(): Promise<FastifyInstance> {
+async function api(
+  prepareInvitedAccount?: IdentityAccounts["prepareInvitedAccount"],
+): Promise<FastifyInstance> {
   app = await buildApi({
     ownerToken,
     auth: signIn,
     directory: {} as TenantDirectory,
-    betaInvites: { invites, cap: 25 },
+    betaInvites: {
+      invites,
+      cap: 25,
+      ...(prepareInvitedAccount === undefined ? {} : { prepareInvitedAccount }),
+    },
     organisationActivity: { touch },
     tenants: {
       budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
@@ -398,5 +405,46 @@ describe("the beta account cap setting", () => {
     expect(readBetaAccountCap({ DRAFT_LOOP_BETA_ACCOUNT_CAP: "25" })).toBe(25);
     expect(() => readBetaAccountCap({ DRAFT_LOOP_BETA_ACCOUNT_CAP: "-1" })).toThrow();
     expect(() => readBetaAccountCap({ DRAFT_LOOP_BETA_ACCOUNT_CAP: "2.5" })).toThrow();
+  });
+});
+
+describe("preparing sign-ins for open invites (#3082)", () => {
+  const openInvite = (n: number) => ({
+    inviteId: `invite-${n}`,
+    email: `person-${n}@example.test`,
+    createdAt: "2026-11-08T10:00:00.000Z",
+    state: "open" as const,
+  });
+  const prepare = (
+    url = "/v1/operator/beta-invites/sign-ins",
+    authorization = `Bearer ${ownerToken}`,
+  ) => app?.inject({ method: "POST", url, headers: { authorization } });
+
+  it("prepares each open invite's sign-in and counts the outcomes", async () => {
+    vi.mocked(invites.list).mockResolvedValueOnce([openInvite(1), openInvite(2), openInvite(3)]);
+    const prepareInvitedAccount = vi.fn<IdentityAccounts["prepareInvitedAccount"]>(
+      async ({ email }) => {
+        if (email === "person-2@example.test") return "exists";
+        if (email === "person-3@example.test") throw new Error("provider down");
+        return "password-email";
+      },
+    );
+    await api(prepareInvitedAccount);
+
+    const response = await prepare();
+
+    expect(response?.statusCode).toBe(200);
+    expect(response?.json()).toEqual({ passwordEmails: 1, existing: 1, failed: 1 });
+    expect(vi.mocked(invites.list)).toHaveBeenLastCalledWith({ state: "open", limit: 200 });
+    expect(prepareInvitedAccount).toHaveBeenCalledTimes(3);
+  });
+
+  it("refuses a member's sign-in, and is absent without the account client", async () => {
+    await api(vi.fn<IdentityAccounts["prepareInvitedAccount"]>(async () => "exists"));
+    expect((await prepare(undefined, `Bearer ${await token("member-1")}`))?.statusCode).toBe(401);
+    await app?.close();
+
+    await api();
+    expect((await prepare())?.statusCode).toBe(404);
   });
 });

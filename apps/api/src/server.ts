@@ -15,7 +15,7 @@ import { readScreeningConfig } from "./content-screening-config.js";
 import { contentScreeningSetup } from "./content-screening-service.js";
 import { openHostedTenants } from "./hosted-application.js";
 import { identityAdminClientFromEnv, keycloakAccounts } from "./identity-accounts.js";
-import { createInviteMailer } from "./invite-mail.js";
+import { createInviteMailer, withInvitedAccount } from "./invite-mail.js";
 import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
@@ -83,12 +83,28 @@ const auth: ApiAuthOptions =
     ? { ...config.auth, resolveSignIn: directory.resolveSignIn }
     : { mode: "owner" };
 // The identity provider's account client, which deletes a person's sign-in with their account
-// (#3033); without it the sign-in account stays and the operator removes it.
+// (#3033) and prepares an invited person's sign-in (#3082); without it the sign-in account stays
+// and the operator removes it, and invited people register at the provider themselves.
 const identityAdminClient = identityAdminClientFromEnv(process.env);
 const identityAccounts =
   config.auth.mode === "oidc" && identityAdminClient !== undefined
-    ? keycloakAccounts({ issuer: config.auth.issuer, ...identityAdminClient })
+    ? keycloakAccounts({
+        issuer: config.auth.issuer,
+        ...identityAdminClient,
+        webClientId: config.auth.webClientId,
+        ...(mail === undefined ? {} : { screenUrl: `${mail.serviceUrl}/` }),
+      })
     : undefined;
+const prepareInvitedAccount =
+  mail === undefined ? undefined : identityAccounts?.prepareInvitedAccount;
+const logInviteSignInError = (error: unknown) =>
+  console.error(
+    JSON.stringify({
+      severity: "WARNING",
+      message: "invite sign-in not prepared",
+      err: errorFields(error),
+    }),
+  );
 const serverRelease =
   process.env.DRAFT_LOOP_SERVER_RELEASE?.trim() || process.env.K_REVISION?.trim() || undefined;
 const app = await buildApi({
@@ -132,11 +148,22 @@ const app = await buildApi({
         ...(identityAccounts === undefined ? {} : { identityAccounts }),
         memberSettings: directory.memberSettings,
         feedback: directory.feedback,
-        betaInvites: { invites: directory.betaInvites, cap: betaAccountCap },
+        betaInvites: {
+          invites: directory.betaInvites,
+          cap: betaAccountCap,
+          ...(prepareInvitedAccount === undefined ? {} : { prepareInvitedAccount }),
+        },
         ...(mail === undefined
           ? {}
           : {
-              inviteMailer: createInviteMailer(mail),
+              inviteMailer:
+                prepareInvitedAccount === undefined
+                  ? createInviteMailer(mail)
+                  : withInvitedAccount(
+                      createInviteMailer(mail),
+                      prepareInvitedAccount,
+                      logInviteSignInError,
+                    ),
               waitlistConfirmMailer: createWaitlistConfirmMailer(mail),
             }),
         // The waitlist and the public landing page exist only while the beta is open (#2567).

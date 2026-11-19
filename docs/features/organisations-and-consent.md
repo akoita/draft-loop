@@ -58,8 +58,16 @@ organisation; it erases everything with `draft-loop-server`
 
 ## Who reaches what
 
-On the public beta, only an invite creates a DraftLoop account. Anyone can
-create a sign-in at the identity provider, but it reaches nothing alone.
+On the public beta, only an invite creates a DraftLoop account. Where the
+API holds the identity provider's account client, an invite also creates the
+person's sign-in: Keycloak emails them a link to choose a password, valid 7
+days, and the invite email says to open it first. The realm can then refuse
+registration. A sign-in made any other way reaches nothing alone.
+
+Before turning registration off, prepare the invites sent earlier with
+`POST /v1/operator/beta-invites/sign-ins` (owner token). It creates each open
+invite's missing sign-in and answers how many got a password email, already
+had a password, or failed; call it again for the failures.
 
 | Person                 | Joins the waitlist                                  | Signs in                                                                                |
 | ---------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
