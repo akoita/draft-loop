@@ -344,3 +344,32 @@ export function ProfileSuggestionsNote({
     </div>
   );
 }
+
+/**
+ * The end-of-review prompt (#3168): after an approval whose edits changed profile facts, it says
+ * how many and offers the Suggested updates box on the Career profile page.
+ */
+export function ReviewProfileSuggestionsPrompt({
+  pending,
+  onOpenProfile,
+}: {
+  readonly pending: number;
+  readonly onOpenProfile?: (() => void) | undefined;
+}) {
+  return (
+    <div className="review-profile-suggestions" role="status">
+      <p>
+        {pending === 1
+          ? t`You changed 1 fact in this CV. Save it to your profile?`
+          : t`You changed ${pending} facts in this CV. Save them to your profile?`}
+      </p>
+      {onOpenProfile === undefined ? (
+        <p className="muted">{t`Open Career profile to review the suggested updates.`}</p>
+      ) : (
+        <button className="button button-outline" type="button" onClick={onOpenProfile}>
+          {t`Review suggested updates`}
+        </button>
+      )}
+    </div>
+  );
+}

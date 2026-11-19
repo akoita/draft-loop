@@ -86,8 +86,9 @@ sensitivity decides what may reach a model provider.
   starts yet.
 - Approving a CV run files a suggestion when an edit changes a number, date
   or name of a fact in the run's pinned profile, matched by a word diff with
-  no model call. Nothing else files them yet, and the review does not yet say
-  how many it filed (#3168). A card does not name the application yet.
+  no model call, and the approved review says how many wait with a link to
+  them. Nothing else files them yet, and a card does not name the
+  application yet.
 - Accepting and rejecting suggestions are people-only routes; an agent token
   cannot reach them or list suggestions yet. Every decision is recorded with
   the candidate role; coach decisions come with coach accounts.

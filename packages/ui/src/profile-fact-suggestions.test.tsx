@@ -14,6 +14,7 @@ import {
   ProfileFactSuggestions,
   type ProfileFactSuggestionsState,
   ProfileSuggestionsNote,
+  ReviewProfileSuggestionsPrompt,
 } from "./profile-fact-suggestions.js";
 import {
   acceptOutcomeMessage,
@@ -245,5 +246,18 @@ describe("Home's suggested update count", () => {
     expect(
       renderToStaticMarkup(<ProfileSuggestionsNote count={3} onAction={() => undefined} />),
     ).toContain("3 suggested profile updates wait for you.");
+  });
+});
+
+describe("the end-of-review prompt", () => {
+  it("says how many facts changed and opens the profile", () => {
+    const html = renderToStaticMarkup(
+      <ReviewProfileSuggestionsPrompt pending={2} onOpenProfile={() => undefined} />,
+    );
+    expect(html).toContain("You changed 2 facts in this CV. Save them to your profile?");
+    expect(html).toContain("Review suggested updates");
+    expect(renderToStaticMarkup(<ReviewProfileSuggestionsPrompt pending={1} />)).toContain(
+      "Open Career profile to review the suggested updates.",
+    );
   });
 });

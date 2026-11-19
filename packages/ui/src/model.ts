@@ -380,7 +380,14 @@ export interface DesktopReviewState {
   readonly applicationPlan?: RunApplicationPlanView | null;
   /** Set when this is an earlier run of the application: it is shown read-only. */
   readonly earlierRun?: EarlierRunView | null;
+  /** Profile suggestions this run's approval edits filed that still wait (#3168); absent if none. */
+  readonly profileSuggestions?: ReviewProfileSuggestionsView | null;
   readonly setup: WorkspaceReadiness;
+}
+
+export interface ReviewProfileSuggestionsView {
+  /** Pending suggestions this run filed, at least one. */
+  readonly pending: number;
 }
 
 /** Exact reviewed canonical profile selected for the next new run. */
