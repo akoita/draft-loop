@@ -94,6 +94,7 @@ import {
 } from "./model-call-switch.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
+import { registerOperatorRunTraceRoutes } from "./operator-run-trace-routes.js";
 import {
   type OrganisationActivityRecorder,
   registerOrganisationActivity,
@@ -998,6 +999,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   }
   if (options.tenants?.operatorFor !== undefined) {
     registerOperatorPlanRoutes(app, { operatorFor: options.tenants.operatorFor });
+  }
+  if (tenantRunSpans !== undefined) {
+    registerOperatorRunTraceRoutes(app, { runSpansFor: tenantRunSpans });
   }
   if (options.betaInvites !== undefined) {
     const operatorFor = options.tenants?.operatorFor;

@@ -22,7 +22,7 @@ const identifier = z
 
 const params = z.strictObject({ workspaceId: identifier, runId: identifier });
 
-const spanSchema = z
+export const runSpanSchema = z
   .object({
     span_id: z.string(),
     parent_span_id: z
@@ -39,7 +39,7 @@ const spanSchema = z
   })
   .meta({ id: "RunSpan" });
 
-function view(span: RunSpanRecord) {
+export function runSpanView(span: RunSpanRecord) {
   return {
     span_id: span.spanId,
     parent_span_id: span.parentSpanId,
@@ -72,7 +72,7 @@ export function registerRunTraceRoutes(
           "The steps the worker executed for the run, in start order: each advance, each author, critic or revision attempt, and each evidence retrieval, with its timing, status, model, token counts and estimated cost. Content-free: no prompt, draft or candidate material. Empty for a run no worker has executed since traces were recorded.",
         params,
         response: {
-          200: z.object({ spans: z.array(spanSchema) }),
+          200: z.object({ spans: z.array(runSpanSchema) }),
           400: apiErrorSchema,
           404: apiErrorSchema,
         },
@@ -84,7 +84,7 @@ export function registerRunTraceRoutes(
       await options.service.readWorkspace(options.workspaceRoot(workspaceId));
       const spans = options.spansFor(request);
       if (spans === undefined) throw new Error("The request has no tenant to read a trace for.");
-      return { spans: (await spans.list(workspaceId, runId)).map(view) };
+      return { spans: (await spans.list(workspaceId, runId)).map(runSpanView) };
     },
   );
 }

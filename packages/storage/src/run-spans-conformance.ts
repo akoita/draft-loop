@@ -70,8 +70,20 @@ export async function expectRunSpanStore(store: RunSpanStore, other?: RunSpanSto
     { ...ended, children: [{ ...author, children: [{ ...retrieval, children: [] }] }] },
   ]);
 
+  // By run id alone: the run's spans in every workspace of the tenant, in start order.
+  const byRun = await store.listRun("run-1");
+  expect(byRun.map((span) => [span.workspaceId, span.spanId]).sort()).toEqual([
+    ["owner", "s1"],
+    ["owner", "s2"],
+    ["owner", "s3"],
+    ["second", "s1"],
+  ]);
+  expect(byRun.at(-1)).toEqual(retrieval);
+  expect(await store.listRun("run-unknown")).toEqual([]);
+
   if (other !== undefined) {
     expect(await other.list("owner", "run-1")).toEqual([]);
+    expect(await other.listRun("run-1")).toEqual([]);
     expect(await other.removeRun("owner", "run-1")).toBe(0);
   }
 
