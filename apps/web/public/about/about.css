@@ -146,6 +146,36 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lang {
+  display: flex;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lang a {
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.lang a:hover {
+  color: var(--text-1);
+}
+
+.lang a[aria-current="true"] {
+  color: var(--teal);
+  background: var(--teal-wash);
+}
+
 /* Shared type */
 
 .tag {
@@ -571,6 +601,14 @@ h3 {
     padding: 56px 16px;
   }
 
+  .top-row {
+    gap: 12px;
+  }
+
+  .top-actions {
+    gap: 8px;
+  }
+
   .top .button {
     padding: 8px 14px;
     font-size: 0.85rem;
@@ -582,6 +620,12 @@ h3 {
     border-radius: 0;
     border-width: 1px 0 0 3px;
     background: var(--desk);
+  }
+}
+
+@media (max-width: 400px) {
+  .brand span {
+    display: none;
   }
 }
 
