@@ -120,6 +120,7 @@ const logInviteSignInError = (error: unknown) =>
   );
 const serverRelease =
   process.env.DRAFT_LOOP_SERVER_RELEASE?.trim() || process.env.K_REVISION?.trim() || undefined;
+const serverReleasedOn = process.env.DRAFT_LOOP_SERVER_RELEASED_ON?.trim() || undefined;
 const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
@@ -146,6 +147,7 @@ const app = await buildApi({
   // The release a feedback note records (#2875): the deploy's own name for it, else Cloud Run's
   // revision.
   ...(serverRelease === undefined ? {} : { serverRelease }),
+  ...(serverReleasedOn === undefined ? {} : { serverReleasedOn }),
   tenants: {
     ...hosted.tenants,
     // Job pages go through the separate page fetcher where one is deployed (#1837): the API itself

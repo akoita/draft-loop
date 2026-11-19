@@ -42,7 +42,13 @@ RUN pnpm install --frozen-lockfile --filter "@draft-loop/web..." \
 
 FROM node:24.22.1-bookworm-slim
 
-ENV NODE_ENV=production \
+# The release tag the deploy builds, such as server-v0.26.46, and its build day (YYYY-MM-DD): the
+# Help menu shows both and feedback notes record the tag. Empty on a local build: no version shows.
+ARG DRAFT_LOOP_SERVER_RELEASE=""
+ARG DRAFT_LOOP_SERVER_RELEASED_ON=""
+ENV DRAFT_LOOP_SERVER_RELEASE=$DRAFT_LOOP_SERVER_RELEASE \
+    DRAFT_LOOP_SERVER_RELEASED_ON=$DRAFT_LOOP_SERVER_RELEASED_ON \
+    NODE_ENV=production \
     DRAFT_LOOP_WEB_ROOT=/app/apps/web/dist \
     DRAFT_LOOP_SPEECH_MODEL_DIR=/app/speech-models
 COPY --from=dependencies /app /app

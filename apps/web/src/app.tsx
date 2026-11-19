@@ -6,7 +6,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { useDisplayPreference } from "./display-preference.js";
-import { WebHelpMenu } from "./help-menu.js";
+import { type ServerRelease, WebHelpMenu } from "./help-menu.js";
 import { OperatorButton, OperatorPage } from "./operator.js";
 import { operatorTarget } from "./operator-model.js";
 import { RecordContext } from "./record-context.js";
@@ -117,6 +117,7 @@ export function Shell({
   memory = recordMemory,
 }: ShellProps) {
   const [health, setHealth] = useState<Health>("checking");
+  const [serverRelease, setServerRelease] = useState<ServerRelease>();
   const display = useDisplayPreference({ client, mode });
   // The operator page (#2829) covers the screens without closing them, so work in progress stays.
   // The alert email links to `#operator/feedback/<noteId>` (#3002), which opens it on that note.
@@ -145,7 +146,13 @@ export function Shell({
   useEffect(() => {
     let current = true;
     client.call("GET /v1/health", {}).then(
-      () => current && setHealth("serving"),
+      (served) => {
+        if (!current) return;
+        setHealth("serving");
+        if (served.version !== undefined) {
+          setServerRelease({ version: served.version, releasedOn: served.releasedOn });
+        }
+      },
       () => current && setHealth("unreachable"),
     );
     return () => {
@@ -158,7 +165,7 @@ export function Shell({
       <ServiceStatus health={health} />
       <ScreenLanguageMenu />
       {/* Send feedback sits in the Help menu, in sign-in mode only (#2828). */}
-      <WebHelpMenu client={client} mode={mode} />
+      <WebHelpMenu client={client} mode={mode} release={serverRelease} />
     </>
   );
   // Sign-in mode signs out from the account menu, which also says who is signed in. The owner

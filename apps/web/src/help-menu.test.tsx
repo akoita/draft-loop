@@ -29,6 +29,20 @@ describe("help menu", () => {
     expect(html).toContain("Quick help");
   });
 
+  it("ends with the server's version and release day when the server names them", () => {
+    const release = { version: "0.26.46", releasedOn: "2026-11-19" };
+    const html = render(<HelpMenuView onQuickHelp={() => {}} release={release} />);
+
+    expect(html).toMatch(
+      /Privacy policy[\s\S]*<p class="help-menu-version">Version 0.26.46 · Released/u,
+    );
+    expect(html).toContain("2026");
+    expect(
+      render(<HelpMenuView onQuickHelp={() => {}} release={{ version: "0.26.46" }} />),
+    ).toContain('<p class="help-menu-version">Version 0.26.46</p>');
+    expect(render(<HelpMenuView onQuickHelp={() => {}} />)).not.toContain("help-menu-version");
+  });
+
   it("speaks French and links the French pages when the screen does", () => {
     const html = render(<HelpMenuView onQuickHelp={() => {}} onFeedback={() => {}} />, "fr");
 

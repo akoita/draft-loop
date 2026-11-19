@@ -11604,6 +11604,14 @@ msgstr ""
 msgid "Version {0}."
 msgstr ""
 
+#: apps/web/src/help-menu.tsx
+msgid "Version {version}"
+msgstr ""
+
+#: apps/web/src/help-menu.tsx
+msgid "Version {version} · Released {day}"
+msgstr ""
+
 #: packages/ui/src/profile-status-view.tsx
 msgid "Version history"
 msgstr ""

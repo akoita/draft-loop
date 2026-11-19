@@ -38,6 +38,12 @@ click outside where the browser supports it.
 
 The guide follows the screen language: English or French.
 
+The Help menu's last line names the server's release and the day it was
+built, such as `Version 0.26.47 · Released 20 Nov 2026`. The deploy bakes
+both into the API image (`DRAFT_LOOP_SERVER_RELEASE`,
+`DRAFT_LOOP_SERVER_RELEASED_ON`), and `GET /v1/health` reports them. A local
+or self-hosted build without a `server-vX.Y.Z` tag shows no version line.
+
 When the server runs the support assistant, **Ask a question** sits above the
 search. Type a question in your own words and select **Ask**. The answer names
 the guide sections it used; select one to open it below. Answer **Did this

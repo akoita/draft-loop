@@ -637,6 +637,8 @@ export interface ApiSchemas {
   };
   "Health": {
     readonly status: "ok";
+    readonly version?: string;
+    readonly releasedOn?: string;
   };
   "HelpGuide": {
     readonly language: "en" | "fr";
