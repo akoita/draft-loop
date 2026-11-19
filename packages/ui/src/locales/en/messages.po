@@ -10612,6 +10612,10 @@ msgstr "This account is not a member of an organisation yet. Ask your organisati
 msgid "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
 msgstr "This account runs DraftLoop as an operator, so it cannot be deleted from here. Remove its operator role first."
 
+#: packages/ui/src/bridge.ts
+msgid "This action is not available in this version of DraftLoop."
+msgstr "This action is not available in this version of DraftLoop."
+
 #: apps/web/src/research-brief-model.ts
 msgid "This application could not be researched."
 msgstr "This application could not be researched."
@@ -10675,10 +10679,6 @@ msgstr "This deletes every document, job application, draft, profile and work jo
 #: packages/ui/src/job-requirements-extraction.tsx
 msgid "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
 msgstr "This demo splits the job text into reviewable requirements with local fixtures. Nothing is sent to a provider."
-
-#: packages/ui/src/bridge.ts
-msgid "This desktop capability is unavailable in the current host."
-msgstr "This desktop capability is unavailable in the current host."
 
 #: packages/ui/src/review.tsx
 msgid "This draft is approved and exported as it is."
