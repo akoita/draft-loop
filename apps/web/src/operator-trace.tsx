@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 
 import type { ApiClient, ApiSchemas } from "./api-client.js";
 import { ApiRequestError } from "./api-client.js";
@@ -122,13 +122,43 @@ export function RunTraceResult({ trace }: { readonly trace: OperatorRunTrace }) 
   );
 }
 
-/** The operator's run trace: an organisation and run id in, the run's steps as a timeline out. */
-export function RunTraceSection({ client }: { readonly client: ApiClient }) {
+/** A run to trace, as a feedback note names it (#3134). */
+export interface RunTraceTarget {
+  readonly organisationId: string;
+  readonly runId: string;
+}
+
+/**
+ * The operator's run trace: an organisation and run id in, the run's steps as a timeline out. A
+ * target, as from a feedback note's View trace, fills both fields and reads the trace at once.
+ */
+export function RunTraceSection({
+  client,
+  target,
+}: {
+  readonly client: ApiClient;
+  readonly target?: RunTraceTarget | undefined;
+}) {
   const organisationField = useId();
+  const organisationHint = useId();
   const runField = useId();
-  const [organisationId, setOrganisationId] = useState("");
-  const [runId, setRunId] = useState("");
+  const [organisationId, setOrganisationId] = useState(target?.organisationId ?? "");
+  const [runId, setRunId] = useState(target?.runId ?? "");
   const [state, setState] = useState<TraceState>({ kind: "idle" });
+
+  useEffect(() => {
+    if (target === undefined) return;
+    let current = true;
+    setOrganisationId(target.organisationId);
+    setRunId(target.runId);
+    setState({ kind: "loading" });
+    void readRunTrace(client, target.organisationId, target.runId).then((next) => {
+      if (current) setState(next);
+    });
+    return () => {
+      current = false;
+    };
+  }, [client, target]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -141,17 +171,21 @@ export function RunTraceSection({ client }: { readonly client: ApiClient }) {
     <section className="panel operator-section" aria-labelledby="operator-trace">
       <h2 id="operator-trace">{t`Run trace`}</h2>
       <p className="muted">
-        {t`Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log.`}
+        {t`Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log.`}
       </p>
       <form className="operator-trace-form" onSubmit={(event) => void submit(event)}>
         <label htmlFor={organisationField}>{t`Organisation id`}</label>
         <input
           id={organisationField}
           type="text"
+          aria-describedby={organisationHint}
           value={organisationId}
           onChange={(event) => setOrganisationId(event.target.value)}
           autoComplete="off"
         />
+        <p id={organisationHint} className="muted">
+          {t`The member's account space. Each feedback note shows it under Context, as Organisation.`}
+        </p>
         <label htmlFor={runField}>{t`Run id`}</label>
         <input
           id={runField}

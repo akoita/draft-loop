@@ -102,4 +102,16 @@ describe("the operator's run trace (#3111)", () => {
     expect(html).toContain("Run id");
     expect(html).toContain("Read trace");
   });
+
+  it("explains the organisation id, and fills both fields from a note's target (#3134)", () => {
+    const html = renderToStaticMarkup(
+      <RunTraceSection
+        client={fakeClient(trace)}
+        target={{ organisationId: "org-alder", runId: "run-7" }}
+      />,
+    );
+    expect(html).toContain("Each feedback note shows it under Context, as Organisation.");
+    expect(html).toContain('value="org-alder"');
+    expect(html).toContain('value="run-7"');
+  });
 });

@@ -34,7 +34,7 @@ import {
   type WaitlistEntry,
   type WaitlistPage,
 } from "./operator-model.js";
-import { RunTraceSection } from "./operator-trace.js";
+import { RunTraceSection, type RunTraceTarget } from "./operator-trace.js";
 
 function LoadProblem({ state }: { readonly state: Loaded<unknown> }) {
   if (state.kind === "loading") return <p role="status">{t`Reading…`}</p>;
@@ -295,11 +295,12 @@ export function InvitesSection({
 /** The note's context as label and value rows; empty parts are left out. */
 function contextRows(note: FeedbackNote): readonly (readonly [string, string])[] {
   const context = note.context;
-  if (context === null) return [];
   const rows: [string, string][] = [];
+  if (context === null) return [[t`Organisation`, note.organisationId]];
   const add = (label: string, value: string | undefined) => {
     if (value !== undefined && value !== "") rows.push([label, value]);
   };
+  add(t`Organisation`, note.organisationId);
   add(t`Source`, context.source);
   add(t`Page`, context.route);
   add(t`Web version`, context.webBuild);
@@ -385,6 +386,8 @@ interface FeedbackItemProps {
   readonly highlighted: boolean;
   readonly onSelect: (selected: boolean) => void;
   readonly onTriage?: ((note: FeedbackNote, triage: FeedbackTriage) => void) | undefined;
+  /** Opens the trace of the run the note names (#3134). */
+  readonly onViewTrace?: ((target: RunTraceTarget) => void) | undefined;
 }
 
 /** One note: its kind, text, context and, for the operator, what to do with it. */
@@ -396,11 +399,13 @@ function FeedbackItem({
   highlighted,
   onSelect,
   onTriage,
+  onViewTrace,
 }: FeedbackItemProps) {
   const [linking, setLinking] = useState(false);
   const rows = contextRows(note);
   const triage = (next: FeedbackTriage) => onTriage?.(note, next);
   const kind = feedbackKindLabel(note);
+  const runId = note.context?.ids?.runId;
   return (
     <article
       id={`feedback-${note.noteId}`}
@@ -424,6 +429,17 @@ function FeedbackItem({
           <a href={note.issueUrl} target="_blank" rel="noreferrer">
             {t`Open the issue`}
           </a>
+        </p>
+      )}
+      {runId === undefined || runId === "" || onViewTrace === undefined ? null : (
+        <p>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => onViewTrace({ organisationId: note.organisationId, runId })}
+          >
+            {t`View the run's trace`}
+          </button>
         </p>
       )}
       {rows.length === 0 ? null : (
@@ -523,6 +539,8 @@ export interface FeedbackSectionProps {
   readonly problem?: string | undefined;
   /** Sets a note's status; without it the section only reads. */
   readonly onTriage?: ((note: FeedbackNote, triage: FeedbackTriage) => void) | undefined;
+  /** Opens the trace of the run a note names (#3134). */
+  readonly onViewTrace?: ((target: RunTraceTarget) => void) | undefined;
   /** Closes the selected notes at once. */
   readonly onCloseMany?: ((notes: readonly FeedbackNote[]) => void) | undefined;
   readonly query?: string | undefined;
@@ -545,6 +563,7 @@ export function FeedbackSection({
   busy,
   problem,
   onTriage,
+  onViewTrace,
   onCloseMany,
   query = "",
   onSearch,
@@ -664,6 +683,7 @@ export function FeedbackSection({
                         })
                       }
                       onTriage={onTriage}
+                      onViewTrace={onViewTrace}
                     />
                   </li>
                 ))}
@@ -736,6 +756,7 @@ export function OperatorPage({
   const [feedbackQuery, setFeedbackQuery] = useState("");
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus>("new");
   const [focusNote, setFocusNote] = useState<FeedbackNote | undefined>(undefined);
+  const [traceTarget, setTraceTarget] = useState<RunTraceTarget | undefined>(undefined);
   const [inviting, setInviting] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState<string | undefined>(undefined);
   const [outcome, setOutcome] = useState<InviteOutcome | undefined>(undefined);
@@ -936,7 +957,7 @@ export function OperatorPage({
           moreProblem={waitlist.moreProblem}
         />
       ) : view === "trace" ? (
-        <RunTraceSection client={client} />
+        <RunTraceSection client={client} target={traceTarget} />
       ) : view === "invites" ? (
         <InvitesSection
           state={invites.state}
@@ -957,6 +978,10 @@ export function OperatorPage({
           busy={triaging}
           problem={triageProblem}
           onTriage={(note, next) => void triage([note], next)}
+          onViewTrace={(target) => {
+            setTraceTarget({ ...target });
+            setView("trace");
+          }}
           onCloseMany={(notes) => void triage(notes, { status: "closed" })}
           query={feedbackQuery}
           onSearch={setFeedbackQuery}

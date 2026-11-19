@@ -4016,10 +4016,6 @@ msgstr "Les vérifications finales du CV sont refaites sur vos modifications"
 msgid "Final round"
 msgstr "Dernier tour"
 
-#: apps/web/src/operator-trace.tsx
-msgid "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
-msgstr "Retrouvez l’exécution d’un membre grâce aux identifiants d’organisation et d’exécution que donne sa remarque. Étapes, modèles, erreurs, jetons et coût seulement : jamais ce que le membre a écrit. Chaque lecture est inscrite au journal d’audit."
-
 #: packages/ui/src/review.tsx
 msgid "finding"
 msgstr "constat"
@@ -6576,6 +6572,10 @@ msgstr "Ouvrir {0}"
 msgid "Open a local workspace again. "
 msgstr "Rouvrez un espace de travail local. "
 
+#: apps/web/src/operator-trace.tsx
+msgid "Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
+msgstr "Ouvrez une exécution depuis sa note avec Voir la trace de l’exécution, ou saisissez les identifiants du contexte de la note. Étapes, modèles, erreurs, jetons et coût seulement : jamais ce que le membre a écrit. Chaque lecture est inscrite au journal d’audit."
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Open a workspace first."
 msgstr "Ouvrez d’abord un espace de travail."
@@ -6745,6 +6745,10 @@ msgstr "Ou un autre sujet dont vous aimeriez parler"
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Order sections as {0}"
 msgstr "Ordonner les sections ainsi : {0}"
+
+#: apps/web/src/operator.tsx
+msgid "Organisation"
+msgstr "Organisation"
 
 #: apps/web/src/operator-trace.tsx
 msgid "Organisation id"
@@ -10087,6 +10091,10 @@ msgstr "Le modèle local est encore en téléchargement : les exécutions se rab
 msgid "The local model was removed."
 msgstr "Le modèle local a été supprimé."
 
+#: apps/web/src/operator-trace.tsx
+msgid "The member's account space. Each feedback note shows it under Context, as Organisation."
+msgstr "L’espace de compte du membre. Chaque note l’affiche dans Contexte, sous Organisation."
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "The model could not be installed."
 msgstr "Le modèle n’a pas pu être installé."
@@ -11453,6 +11461,10 @@ msgstr "Voir la progression"
 #: packages/ui/src/review.tsx
 msgid "View requirements"
 msgstr "Voir les exigences"
+
+#: apps/web/src/operator.tsx
+msgid "View the run's trace"
+msgstr "Voir la trace de l’exécution"
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Viewing an earlier run."
