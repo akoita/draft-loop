@@ -564,26 +564,37 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       ? {}
       : { workspaceClosable: false }),
     ...(capabilityPort.hasCapability("export.write") ? {} : { exportsDownload: true }),
-    openWorkspace: async () => {
-      unwrap(
-        await capabilityPort.execute({
-          type: "workspace.open",
-          input: { selection: "native-dialog" },
-        }),
-      );
-      scopeTo(undefined);
-      return refresh();
-    },
-    createWorkspace: async (name, selection) => {
-      unwrap(
-        await capabilityPort.execute({
-          type: "workspace.create",
-          input: workspaceCreateInput(name, selection),
-        }),
-      );
-      scopeTo(undefined);
-      return refresh();
-    },
+    ...(capabilityPort.hasCapability("workspace.open")
+      ? {
+          openWorkspace: async () => {
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.open",
+                input: { selection: "native-dialog" },
+              }),
+            );
+            scopeTo(undefined);
+            return refresh();
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.create")
+      ? {
+          createWorkspace: async (
+            name: string,
+            selection?: Parameters<typeof workspaceCreateInput>[1],
+          ) => {
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.create",
+                input: workspaceCreateInput(name, selection),
+              }),
+            );
+            scopeTo(undefined);
+            return refresh();
+          },
+        }
+      : {}),
     ...(capabilityPort.hasCapability("file.save-markdown")
       ? {
           saveMarkdownFile: async (suggestedName: string, content: string) =>
@@ -853,44 +864,59 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ).name,
         }
       : {}),
-    createDemoWorkspace: async (name) => {
-      const result = unwrap(
-        await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "demo" } }),
-      );
-      scopeTo(undefined);
-      return ensureRun(result.workspace.id);
-    },
-    selectFiles: async (target) => {
-      const state = await load();
-      unwrap(
-        await capabilityPort.execute({
-          type: "file.select",
-          input: {
-            workspaceId: state.workspaceId,
-            target,
-            ...(target === "job-description" ||
-            target === "writing-policy" ||
-            target === "writing-policy-override"
-              ? { multiple: false }
-              : {}),
-            ...(target === "writing-policy" || target === "writing-policy-override"
-              ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
-              : {}),
+    ...(capabilityPort.hasCapability("workspace.create")
+      ? {
+          createDemoWorkspace: async (name) => {
+            const result = unwrap(
+              await capabilityPort.execute({
+                type: "workspace.create",
+                input: { name, mode: "demo" },
+              }),
+            );
+            scopeTo(undefined);
+            return ensureRun(result.workspace.id);
           },
-        }),
-      );
-      return refresh();
-    },
-    addUrl: async (target, url) => {
-      const state = await load();
-      unwrap(
-        await capabilityPort.execute({
-          type: "source.add-url",
-          input: { workspaceId: state.workspaceId, target, url, approved: true },
-        }),
-      );
-      return refresh();
-    },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("file.select")
+      ? {
+          selectFiles: async (target) => {
+            const state = await load();
+            unwrap(
+              await capabilityPort.execute({
+                type: "file.select",
+                input: {
+                  workspaceId: state.workspaceId,
+                  target,
+                  ...(target === "job-description" ||
+                  target === "writing-policy" ||
+                  target === "writing-policy-override"
+                    ? { multiple: false }
+                    : {}),
+                  ...(target === "writing-policy" || target === "writing-policy-override"
+                    ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
+                    : {}),
+                },
+              }),
+            );
+            return refresh();
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("source.add-url")
+      ? {
+          addUrl: async (target, url) => {
+            const state = await load();
+            unwrap(
+              await capabilityPort.execute({
+                type: "source.add-url",
+                input: { workspaceId: state.workspaceId, target, url, approved: true },
+              }),
+            );
+            return refresh();
+          },
+        }
+      : {}),
     dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
       const result = await capabilityPort.execute({
         type: "review.dispatch",
