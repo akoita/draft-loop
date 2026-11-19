@@ -87,6 +87,12 @@ import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCallGate } from "./model-call-gate.js";
+import {
+  type ModelCallSwitch,
+  modelCallsRunning,
+  pausableBriefExtraction,
+  registerModelCallSwitch,
+} from "./model-call-switch.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import {
@@ -277,6 +283,8 @@ export interface ApiOptions {
   readonly legalPublisher?: LegalPublisher;
   /** The planned-maintenance notice (#2965); without it there is never a notice. */
   readonly serviceNotice?: ServiceNoticeSource;
+  /** The global model call switch (#3112); unset, model calls always run. */
+  readonly modelCallSwitch?: ModelCallSwitch;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
@@ -406,6 +414,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     options.organisationActivity === undefined
       ? undefined
       : registerOrganisationActivity(app, { activity: options.organisationActivity });
+  // Before the model call gate, so a paused call is refused before it is counted.
+  const modelCallSwitch = options.modelCallSwitch ?? modelCallsRunning;
+  registerModelCallSwitch(app, modelCallSwitch);
   // Before any route, so every route registered below is counted where it calls a model.
   if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
     registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
@@ -654,16 +665,17 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(application.briefExtractions === undefined
         ? {}
         : { briefExtractions: application.briefExtractions }),
-      ...(auth.mode === "oidc" && entitlementsFor !== undefined
-        ? {
-            briefExtractionAllowance: createBriefExtractionAllowance({
+      briefExtractionAllowance: pausableBriefExtraction(
+        auth.mode === "oidc" && entitlementsFor !== undefined
+          ? createBriefExtractionAllowance({
               entitlementsFor,
               ...(options.briefExtractionsPerDay === undefined
                 ? {}
                 : { unlimitedPlanPerDay: options.briefExtractionsPerDay }),
-            }),
-          }
-        : {}),
+            })
+          : undefined,
+        modelCallSwitch,
+      ),
       ...(application.jobPageFetcher === undefined
         ? {}
         : { jobPageFetcher: application.jobPageFetcher }),

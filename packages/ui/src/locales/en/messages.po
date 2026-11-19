@@ -1301,6 +1301,10 @@ msgstr "Agents cannot add notes to your Work journal. When they can, nothing bec
 msgid "Agents cannot add notes yet."
 msgstr "Agents cannot add notes yet."
 
+#: apps/web/src/refusal-text.ts
+msgid "AI features are paused for a short while. They come back on their own; your work is saved."
+msgstr "AI features are paused for a short while. They come back on their own; your work is saved."
+
 #: packages/ui/src/review.tsx
 msgid "all"
 msgstr "all"

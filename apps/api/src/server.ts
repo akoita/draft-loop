@@ -20,6 +20,7 @@ import { readLegalPublisher } from "./legal-pages.js";
 import { liveSpeechFrom, readLiveSpeechConfig } from "./live-speech-config.js";
 import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
+import { readModelCallSwitch } from "./model-call-switch.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
 import { readPublicSite } from "./public-site.js";
@@ -43,6 +44,16 @@ const mail = readApiMail(process.env);
 const legalPublisher = readLegalPublisher(process.env);
 const publicSite = readPublicSite(process.env);
 const serviceNoticeSecret = readServiceNoticeSecret(process.env);
+const modelCallSwitch = readModelCallSwitch(process.env, {
+  onReadError: (error) =>
+    console.error(
+      JSON.stringify({
+        severity: "WARNING",
+        message: "model call switch read failed",
+        err: errorFields(error),
+      }),
+    ),
+});
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const coverLetterWriter = readCoverLetterWriter(process.env);
 const payments = paymentsFrom(readPaymentsConfig(process.env));
@@ -176,6 +187,7 @@ const app = await buildApi({
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),
   publicSite,
+  modelCallSwitch,
   ...(serviceNoticeSecret === undefined
     ? {}
     : {
