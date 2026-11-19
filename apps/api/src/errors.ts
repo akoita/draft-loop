@@ -7,6 +7,7 @@ import {
   opportunityBriefVersionStaleErrorMessage,
   RunActionError,
   type RunActionErrorCode,
+  RunHistoryNotReadyError,
   RunModelProfileError,
   WorkspaceNotFoundError,
 } from "@draft-loop/application";
@@ -397,6 +398,15 @@ export function sendError(error: FastifyError, request: FastifyRequest, reply: F
   // model profile pair that the registry or the workspace's models refuse.
   if (error instanceof CliUserError || error instanceof RunModelProfileError) {
     void reply.code(422).send(apiError("rejected", error.message));
+    return;
+  }
+  // An approval or revision asked before the run's round and draft reach its history: refused
+  // before the run changes, so a retry with the same key succeeds.
+  if (error instanceof RunHistoryNotReadyError) {
+    void reply
+      .code(409)
+      .header("retry-after", "1")
+      .send(apiError("not_ready", "The run is still being saved; retry in a moment."));
     return;
   }
   // A row whose parent is not saved yet, such as a finding decided in the moment between a run

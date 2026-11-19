@@ -89,7 +89,7 @@ import {
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
 import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
-import { type LifecycleOptions, saveLifecycleDecision } from "./lifecycle-decision.js";
+import { type LifecycleOptions, runContext, saveLifecycleDecision } from "./lifecycle-decision.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import {
@@ -1679,7 +1679,7 @@ export async function lifecycleRun(
   if (runId === undefined) throw new CliUserError("No run is configured. Start a run first.");
   const storage = await openStorage(root);
   try {
-    const context = await contextForRun(storage, runId);
+    const context = await runContext(storage, action, runId);
     if (action === "revision") {
       assertRevisionDirection(context, options.candidateDirection);
       await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);

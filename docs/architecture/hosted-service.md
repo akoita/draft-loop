@@ -233,6 +233,10 @@ API instance replays a key's first result for a day.
 - **A row whose parent is still being saved**, such as a finding decided as a
   run reaches review, answers a retryable 409 `not_ready` with `Retry-After: 1`.
   The log names the database constraint, never a value.
+- **An approval or revision asked before the round is saved** answers the same
+  retryable 409 `not_ready`, before the run changes, so a retry with the same
+  key succeeds. Past 30 seconds after the run's last change, a missing round is
+  no longer waited for.
 
 ## Plans and credits for a run
 
