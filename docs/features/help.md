@@ -15,6 +15,11 @@ Every server's web screen, in owner-token and sign-in mode, and the desktop
 client over it. Phones get the same guide at full width. Agents read the same
 guide through the MCP server.
 
+Visitors who are not signed in read the same guide as a public page at
+`/guide/` (English) and `/guide/fr/` (French). The web build writes both pages
+from `packages/user-guide`, so the text is never copied. The about page and
+the landing page link to it.
+
 ## How to use it
 
 Select **Help** in the header. A side sheet opens with one section per topic;
@@ -66,13 +71,15 @@ guide from `draftloop://help/guide/en` or `/fr` as Markdown.
 ## How to test it
 
 ```sh
-pnpm vitest run packages/ui/src/help-panel.test.tsx packages/user-guide packages/support apps/api/src/help-routes.test.ts apps/api/src/support-routes.test.ts apps/mcp/src/help.test.ts
+pnpm vitest run packages/ui/src/help-panel.test.tsx packages/user-guide packages/support apps/api/src/help-routes.test.ts apps/api/src/support-routes.test.ts apps/mcp/src/help.test.ts apps/web/src/guide-page.test.ts
 ```
 
 The tests check that each language has every section, in order, that the
 dialog renders them in English and French, and that common words in either
 language find the right section, and that the API route and the MCP tool
-return the guide to a signed-in member or an agent token. The support tests
+return the guide to a signed-in member or an agent token. The public page
+tests check that each language's page holds every section and no inline
+script or style. The support tests
 play a fake model: each tool, each limit, the switch, refusals, and the
 40-question golden set reaching the right section.
 
@@ -92,6 +99,7 @@ pnpm test:support:live
 | Surface | What it does |
 | --- | --- |
 | Web header: **Help** | Opens the guide in a modal side sheet |
+| Public pages `/guide/`, `/guide/fr/` | The whole guide for visitors, with an EN and FR switch; written by the web build (`apps/web/src/guide-page.ts`) |
 | `GET /v1/help`, `GET /v1/workspaces/:workspaceId/help` | The guide or a search of it, `language` `en` or `fr`, `q` up to 200 characters |
 | MCP `search_help` (scope `journal`) | Searches the guide for an agent |
 | MCP resources `draftloop://help/guide/en`, `/fr` | The whole guide as Markdown |
@@ -107,7 +115,8 @@ pnpm test:support:live
 - Search matches words, not meaning. **Ask a question** answers in your own words, but only where the server sets `DRAFT_LOOP_SUPPORT_ASSISTANT=on`; elsewhere the panel shows the guide alone.
 - Answers to **Did this solve it?** are not recorded.
 - The per-minute limit is counted in each API instance's memory, like the request rate limits.
-- Not on the sign-in and sign-up screens, which come before any record.
+- Not on the sign-in and sign-up screens, which come before any record; the landing page links the public guide instead.
+- The public page has no search box; the browser's find works on it.
 
 ## Keeping it current
 

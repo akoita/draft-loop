@@ -11238,6 +11238,10 @@ msgstr "Used for applications"
 msgid "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 msgstr "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 
+#: apps/web/src/landing.tsx
+msgid "User guide"
+msgstr "User guide"
+
 #. placeholder {0}: selection.version
 #. placeholder {1}: countedNouns.requirement(selection.requirementCount)
 #. placeholder {2}: selection.criticalCount

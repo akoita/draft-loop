@@ -10,14 +10,15 @@
     }
   },
   "scripts": {
-    "build": "vite build && node scripts/precompress.mjs dist",
-    "dev": "vite",
+    "build": "vite build --configLoader runner && node scripts/precompress.mjs dist",
+    "dev": "vite --configLoader runner",
     "typecheck": "tsc -p tsconfig.json",
     "api-types": "tsx src/write-api-types.ts"
   },
   "dependencies": {
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/ui": "workspace:*",
+    "@draft-loop/user-guide": "workspace:*",
     "@huggingface/transformers": "4.3.1",
     "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
     "react": "19.3.1",
