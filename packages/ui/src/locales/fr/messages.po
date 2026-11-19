@@ -3355,6 +3355,11 @@ msgstr "DraftLoop récupère la page de l’offre que vous avez approuvée. Son 
 msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
 msgstr "DraftLoop réessaie encore. Arrêter met fin à cette relecture pour de bon ; il faudrait en démarrer une nouvelle."
 
+#: apps/web/src/beta-sign-up.tsx
+#: packages/ui/src/new-application-form.tsx
+msgid "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
+msgstr "Pour l’instant, DraftLoop est réglé et testé sur les métiers du logiciel et de la tech. Il fonctionne aussi pour d’autres métiers : relisez ces brouillons un peu plus attentivement. La prise en charge de plus de métiers est prévue dans notre feuille de route."
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr "DraftLoop a repéré ces habitudes dans vos choix de relecture. Vous décidez : en accepter une l’ajoute à votre politique de rédaction pour les nouvelles exécutions."

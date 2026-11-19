@@ -29,8 +29,20 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "Sur l’accueil, choisissez Nouvelle candidature. Donnez un nom à l’offre, collez sa description ou son lien, puis choisissez Créer la candidature.",
         "DraftLoop liste les exigences de l’offre. Relisez-les et corrigez celles qui semblent fausses, car le brouillon est écrit en fonction d’elles.",
+        "Pour l’instant, DraftLoop est réglé et testé sur les métiers du logiciel et de la tech. Il fonctionne aussi pour d’autres métiers, dans les soins, la vente, l’enseignement ou l’artisanat : relisez ces brouillons un peu plus attentivement. La prise en charge de plus de métiers est prévue dans notre feuille de route.",
       ],
-      keywords: ["candidature", "offre d’emploi", "annonce", "lien", "URL", "exigences", "poste"],
+      keywords: [
+        "candidature",
+        "offre d’emploi",
+        "annonce",
+        "lien",
+        "URL",
+        "exigences",
+        "poste",
+        "métier",
+        "profession",
+        "secteur",
+      ],
     },
     {
       id: "draft",

@@ -98,6 +98,7 @@ export function NewApplicationFormView({
             className="modal-copy"
             id="new-application-copy"
           >{t`Name the role and give its job posting. The application then opens on its three steps, starting with extracting and reviewing the requirements.`}</p>
+          <p className="subtle">{t`DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
           <label className="new-application-field">
             <span>{t`Name`}</span>
             <input
