@@ -14,6 +14,7 @@ import type { UrlFetcher } from "@draft-loop/ingestion";
 import type { AgentConnectionCapStore } from "@draft-loop/storage/agent-connection-caps";
 import type { AgentTokenStore } from "@draft-loop/storage/agent-tokens";
 import type { ConsentLedger } from "@draft-loop/storage/consent-ledger";
+import type { FactSuggestionStore } from "@draft-loop/storage/fact-suggestions";
 import type { MemberSettingsStore } from "@draft-loop/storage/member-settings";
 import type { ReadableRecordExports, RecordArchives } from "@draft-loop/storage/record-archive";
 import type { ResearchBriefStore } from "@draft-loop/storage/research-briefs";
@@ -71,6 +72,7 @@ import { createEntitlementGate, type EntitlementGate } from "./entitlement-gate.
 import { sendError, sendNotFound } from "./errors.js";
 import { registerExportPreviewRoutes } from "./export-preview-routes.js";
 import { registerExportRoutes } from "./export-routes.js";
+import { registerFactSuggestionRoutes } from "./fact-suggestion-routes.js";
 import { registerFactUsageRoutes } from "./fact-usage-routes.js";
 import { type FeedbackRoutesOptions, registerFeedbackRoutes } from "./feedback-routes.js";
 import { registerHelpRoutes } from "./help-routes.js";
@@ -223,6 +225,8 @@ export interface ApiOptions {
     readonly factUsage?: FactUsageService;
     /** The candidate's writing samples (#2513); without them those routes are not served. */
     readonly writingSamples?: WritingSamplesService;
+    /** Suggested career profile updates (#3069); without them those routes are not served. */
+    readonly factSuggestions?: FactSuggestionStore;
   };
   /**
    * The owner's agent tokens with one fixed `application` (#2159); with `tenants`, the owner
@@ -645,6 +649,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       registerFactUsageRoutes(app, {
         factUsage: application.factUsage,
         workspaceRoot: application.workspaceRoot,
+      });
+    }
+    if (application.factSuggestions !== undefined) {
+      registerFactSuggestionRoutes(app, {
+        service: application.service,
+        workspaceRoot: application.workspaceRoot,
+        store: application.factSuggestions,
+        ...(application.knowledgeIntake === undefined
+          ? {}
+          : { intake: application.knowledgeIntake }),
+        ...(application.factUsage === undefined ? {} : { factUsage: application.factUsage }),
+        ...(screening === undefined ? {} : { screening }),
       });
     }
     registerRunRequirementEvidenceRoutes(app, {

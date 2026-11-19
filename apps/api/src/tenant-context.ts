@@ -53,6 +53,7 @@ export type TenantApplication = Required<
     | "preferenceSuggestions"
     | "factUsage"
     | "writingSamples"
+    | "factSuggestions"
     | "readableExports"
   >
 > &
@@ -73,6 +74,7 @@ export type TenantApplication = Required<
     | "preferenceSuggestions"
     | "factUsage"
     | "writingSamples"
+    | "factSuggestions"
   >;
 
 /** How the API serves many tenants over shared pools (ADR 0011, D3 and D6). */
@@ -332,6 +334,11 @@ export function registerTenantApplications(
       const factUsage = current().factUsage;
       if (factUsage === undefined) throw new TenantContextMissingError();
       return factUsage;
+    }),
+    factSuggestions: forwarding(() => {
+      const suggestions = current().factSuggestions;
+      if (suggestions === undefined) throw new TenantContextMissingError();
+      return suggestions;
     }),
     ...(tenants.jobPageFetcher === undefined ? {} : { jobPageFetcher: tenants.jobPageFetcher }),
   };

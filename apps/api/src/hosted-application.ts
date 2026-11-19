@@ -125,6 +125,7 @@ export function composeHostedApplication(
       service,
     }),
     factUsage: createFactUsageService(settings),
+    factSuggestions: storage.factSuggestions,
     writingSamples: createWritingSamplesService(settings),
     sourceEvidenceKinds: storage,
     applicationMaterialDrafts: storage.savedApplicationMaterial,

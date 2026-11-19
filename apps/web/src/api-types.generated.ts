@@ -475,6 +475,80 @@ export interface ApiSchemas {
     readonly folderId: string;
     readonly movedApplications: number;
   };
+  "FactSuggestionAcceptResult": {
+    readonly applied: readonly (string)[];
+    readonly stale: readonly (string)[];
+    readonly profile?: {
+      readonly version: number;
+      readonly status: "draft" | "reviewed";
+    };
+  };
+  "FactSuggestionList": {
+    readonly suggestions: readonly ({
+      readonly schemaVersion: 1;
+      readonly id: string;
+      readonly profileId: string;
+      readonly baseVersionId: string;
+      readonly change: {
+        readonly kind: "add";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly subjectId?: string;
+        readonly field: string;
+        readonly value: string;
+      } | {
+        readonly kind: "correct";
+        readonly value: string;
+      } | {
+        readonly kind: "retire";
+      } | {
+        readonly kind: "set-usage";
+        readonly usage: "cv" | "interview-only" | "never-say";
+      } | {
+        readonly kind: "confirm";
+      };
+      readonly target?: {
+        readonly factId: string;
+        readonly factKey: string;
+      };
+      readonly quote: string;
+      readonly speaker: "candidate" | "coach" | "agent" | "system";
+      readonly origin: {
+        readonly kind: "review-edit" | "critic-question" | "unconfirmed-fact" | "agent" | "career-interview";
+        readonly applicationId?: string;
+        readonly runId?: string;
+        readonly round?: number;
+        readonly blockId?: string;
+        readonly agentClientId?: string;
+        readonly careerInterviewId?: string;
+      };
+      readonly dedupeKey: string;
+      readonly status: "pending" | "accepted" | "edited" | "rejected" | "stale";
+      readonly createdAt: string;
+      readonly decision?: {
+        readonly role: "candidate" | "coach";
+        readonly memberId: string;
+        readonly decidedAt: string;
+      };
+      readonly appliedChange?: {
+        readonly kind: "add";
+        readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+        readonly subjectId?: string;
+        readonly field: string;
+        readonly value: string;
+      } | {
+        readonly kind: "correct";
+        readonly value: string;
+      } | {
+        readonly kind: "retire";
+      } | {
+        readonly kind: "set-usage";
+        readonly usage: "cv" | "interview-only" | "never-say";
+      } | {
+        readonly kind: "confirm";
+      };
+    })[];
+    readonly pending: number;
+  };
   "FactUsage": {
     readonly sections: Record<string, never>;
     readonly facts: Record<string, never>;
@@ -1792,6 +1866,54 @@ export interface ApiOperations {
     readonly response: {
       readonly usage: ApiSchemas["FactUsage"];
     };
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly query?: {
+      readonly status?: "pending" | "accepted" | "edited" | "rejected" | "stale";
+      readonly limit?: number;
+    };
+    readonly response: ApiSchemas["FactSuggestionList"];
+  };
+  "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions/accept": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly body: {
+      readonly items: readonly ({
+        readonly id: string;
+        readonly edit?: {
+          readonly kind: "add";
+          readonly category: "identity" | "contact" | "role" | "employer" | "date" | "achievement" | "project" | "skill" | "certification" | "education" | "language" | "approved-link";
+          readonly subjectId?: string;
+          readonly field: string;
+          readonly value: string;
+        } | {
+          readonly kind: "correct";
+          readonly value: string;
+        } | {
+          readonly kind: "retire";
+        } | {
+          readonly kind: "set-usage";
+          readonly usage: "cv" | "interview-only" | "never-say";
+        } | {
+          readonly kind: "confirm";
+        };
+      })[];
+    };
+    readonly response: ApiSchemas["FactSuggestionAcceptResult"];
+  };
+  "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions/{suggestionId}/reject": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+      readonly suggestionId: string;
+    };
+    readonly response: void;
   };
   "GET /v1/workspaces/{workspaceId}/runs/{runId}/requirement-evidence": {
     readonly path: {
