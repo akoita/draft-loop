@@ -1,8 +1,9 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 import { AccountPageButton } from "./account-page.js";
 import type { ApiSchemas } from "./api-client.js";
 import { LegalLinks } from "./landing.js";
+import { useFoldingMenu } from "./menu-fold.js";
 import { OperatorButton } from "./operator.js";
 import { canOperate } from "./operator-model.js";
 import { accountLabel } from "./records-model.js";
@@ -38,26 +39,7 @@ export function AccountMenu({
   onOperator,
   newNotes,
 }: AccountMenuProps) {
-  const menu = useRef<HTMLDetailsElement>(null);
-  // A click outside the open menu, or Escape, folds it, as menus elsewhere do.
-  useEffect(() => {
-    const fold = (event: Event) => {
-      const element = menu.current;
-      if (element === null || !element.open) return;
-      if (
-        event instanceof KeyboardEvent
-          ? event.key === "Escape"
-          : !element.contains(event.target as Node)
-      )
-        element.open = false;
-    };
-    document.addEventListener("pointerdown", fold);
-    document.addEventListener("keydown", fold);
-    return () => {
-      document.removeEventListener("pointerdown", fold);
-      document.removeEventListener("keydown", fold);
-    };
-  }, []);
+  const { menu, fold } = useFoldingMenu();
   return (
     <details ref={menu} className="account-menu">
       <summary>
@@ -73,7 +55,7 @@ export function AccountMenu({
         {onAccount === undefined ? null : (
           <AccountPageButton
             onOpen={() => {
-              if (menu.current !== null) menu.current.open = false;
+              fold();
               onAccount();
             }}
           />
@@ -82,7 +64,7 @@ export function AccountMenu({
           <OperatorButton
             newNotes={newNotes}
             onOpen={() => {
-              if (menu.current !== null) menu.current.open = false;
+              fold();
               onOperator();
             }}
           />

@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 
 import { type ApiClient, describeError } from "./api-client.js";
 import {
@@ -217,13 +217,18 @@ export async function sendFeedback(
   });
 }
 
-/** The shell's Send feedback action: a toolbar button that opens the dialog. Sign-in mode only. */
-export function FeedbackButton({ client }: { readonly client: ApiClient }) {
+/**
+ * The Send feedback dialog and its sending, for whichever control opens it: `open` takes the
+ * context then, so what the dialog lists is exactly what is sent. Sign-in mode only.
+ */
+export function useFeedbackDialog(client: ApiClient): {
+  readonly open: () => void;
+  readonly dialog: ReactNode;
+} {
   const [isOpen, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [problem, setProblem] = useState<string>();
-  // Taken when the dialog opens, so what it lists is exactly what is sent.
   const [context, setContext] = useState<FeedbackClientContext>();
 
   function open() {
@@ -254,21 +259,17 @@ export function FeedbackButton({ client }: { readonly client: ApiClient }) {
     }
   }
 
-  return (
-    <>
-      <button type="button" className="button button-toolbar" onClick={open}>
-        {t`Send feedback`}
-      </button>
-      {isOpen ? (
-        <FeedbackDialog
-          busy={busy}
-          problem={problem}
-          sent={sent}
-          context={context}
-          onSubmit={(note) => void submit(note)}
-          onClose={close}
-        />
-      ) : null}
-    </>
-  );
+  return {
+    open,
+    dialog: isOpen ? (
+      <FeedbackDialog
+        busy={busy}
+        problem={problem}
+        sent={sent}
+        context={context}
+        onSubmit={(note) => void submit(note)}
+        onClose={close}
+      />
+    ) : null,
+  };
 }

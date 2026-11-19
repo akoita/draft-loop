@@ -9,6 +9,8 @@ export interface HelpDialogProps {
   readonly onClose: () => void;
   /** The host's support assistant (#2883); without it the panel is the guide alone. */
   readonly support?: HelpSupport | undefined;
+  /** The host's public guide page in each language; the panel links the one for its language. */
+  readonly fullGuide?: Readonly<Record<"en" | "fr", string>> | undefined;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface HelpDialogProps {
  * the sections that match, open and best first. Escape, a click outside where the browser supports
  * `closedby`, and the Close button all close it.
  */
-export function HelpDialog({ onClose, support }: HelpDialogProps) {
+export function HelpDialog({ onClose, support, fullGuide }: HelpDialogProps) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const { locale } = useScreenLocale();
@@ -60,6 +62,13 @@ export function HelpDialog({ onClose, support }: HelpDialogProps) {
         </button>
       </div>
       <p className="help-intro">{guide.intro}</p>
+      {fullGuide === undefined ? null : (
+        <p className="help-full-guide">
+          <a href={fullGuide[locale === "fr" ? "fr" : "en"]} target="_blank" rel="noopener">
+            {t`Open the full guide in a new tab`}
+          </a>
+        </p>
+      )}
       {support === undefined ? null : (
         <HelpAsk
           support={support}
@@ -105,8 +114,27 @@ export function HelpDialog({ onClose, support }: HelpDialogProps) {
   );
 }
 
+/** The question-mark icon the Help control carries. */
+export function HelpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="16.9" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** The header's Help button (#2830): opens the guide on every screen. */
-export function HelpButton({ support }: { readonly support?: HelpSupport | undefined } = {}) {
+export function HelpButton({
+  support,
+  fullGuide,
+}: Pick<HelpDialogProps, "support" | "fullGuide"> = {}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -116,19 +144,12 @@ export function HelpButton({ support }: { readonly support?: HelpSupport | undef
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.6" />
-          <path
-            d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.7"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-          <circle cx="12" cy="16.9" r="0.9" fill="currentColor" />
-        </svg>
+        <HelpIcon />
         {t`Help`}
       </button>
-      {open ? <HelpDialog onClose={() => setOpen(false)} support={support} /> : null}
+      {open ? (
+        <HelpDialog onClose={() => setOpen(false)} support={support} fullGuide={fullGuide} />
+      ) : null}
     </>
   );
 }
