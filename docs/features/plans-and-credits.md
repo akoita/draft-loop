@@ -89,7 +89,8 @@ A plan sets these entitlements:
   research runs for its application, outside the daily count; past that, those
   routes answer `429 prepare_fair_use_reached`. An application without a credit
   counts them against the day.
-- An organisation with no plan answers `403 plan_required`.
+- An organisation with no plan answers `403 plan_required`, on runs and on
+  every model call outside runs.
 - A deployment can set a monthly spend pool across organisations; when it is
   used, run starts answer `503 spend_pool_exhausted` until the next month.
 

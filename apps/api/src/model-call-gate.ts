@@ -59,7 +59,8 @@ export interface ModelCallGateOptions {
 /**
  * Counts a member's model calls outside runs against the plan's `modelCallsPerDay` and refuses
  * past it with 429 `model_call_cap_reached` until the next UTC day. An organisation with no
- * plan, an unlimited plan and the owner token are not counted. The count is taken before the
+ * plan is refused with 403 `plan_required`, as runs are, so a failed plan assignment never leaves
+ * its calls uncounted (#2957). An unlimited plan and the owner token are not counted. The count is taken before the
  * route runs, so a call the route then refuses for another reason still counts.
  *
  * A Prepare call for an application whose run kept a credit is covered by that credit instead
@@ -76,10 +77,22 @@ export function registerModelCallGate(app: FastifyInstance, options: ModelCallGa
     if (route === undefined) return;
     const tenant = options.entitlementsFor(caller.tenantId);
     const entitlements = await tenant.entitlements();
+    if (entitlements === undefined) {
+      request.log.warn(
+        { event: "plan_required", organisationId: caller.tenantId },
+        "metered model call without a plan",
+      );
+      await reply.code(403).send({
+        error: {
+          code: "plan_required",
+          message: "The organisation has no plan yet; the operator assigns one.",
+        },
+      });
+      return;
+    }
     if (
       route.prepare === true &&
       tenant.prepareCalls !== undefined &&
-      entitlements !== undefined &&
       entitlements.creditsPerPeriod !== null
     ) {
       const { workspaceId, applicationId } = request.params as Record<string, string>;
@@ -106,7 +119,7 @@ export function registerModelCallGate(app: FastifyInstance, options: ModelCallGa
       }
     }
     if (tenant.modelCalls === undefined) return;
-    const limit = entitlements?.modelCallsPerDay;
+    const limit = entitlements.modelCallsPerDay;
     if (limit === undefined || limit === null) return;
     const at = now();
     const taken = await tenant.modelCalls.take({ limit, now: at });

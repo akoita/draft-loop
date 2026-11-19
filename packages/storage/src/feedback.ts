@@ -23,6 +23,12 @@ export const maximumFeedbackCharacters = 2_000;
 /** The longest screen name a note carries, such as `review` or `agent`. */
 export const maximumFeedbackScreenCharacters = 80;
 
+/**
+ * The most notes one member sends in 24 hours (#2958), so a scripted member or an injected agent
+ * cannot flood the operator's inbox. Support tickets have their own limits.
+ */
+export const maximumFeedbackNotesPerDay = 20;
+
 /** A note the member wrote, or a support ticket the assistant opened for them (#2883). */
 export const feedbackKinds = ["note", "support"] as const;
 
@@ -129,6 +135,12 @@ export interface FeedbackStore {
    * Throws `TenantDirectoryError` `invalid_input` for status `issue` without a link.
    */
   readonly triage: (input: TriageFeedbackInput) => Promise<FeedbackNote | undefined>;
+  /** How many notes (not support tickets) one member of one organisation sent at or after `since`. */
+  readonly notesSentSince: (input: {
+    readonly organisationId: string;
+    readonly memberId: string;
+    readonly since: Date;
+  }) => Promise<number>;
   /** Deletes support tickets sent before `cutoff` in every organisation; resolves the count. */
   readonly deleteSupportTicketsBefore: (cutoff: Date) => Promise<number>;
 }

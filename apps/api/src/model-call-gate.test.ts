@@ -16,7 +16,7 @@ afterEach(async () => {
 
 /** The gate before four stand-in routes, with a fixed caller and a counter of `limit` calls. */
 async function server(
-  planId: "beta" | "pro" | "free" | "internal",
+  planId: "beta" | "pro" | "free" | "internal" | undefined,
   caller: Caller,
   used = 0,
   prepared?: { readonly used: number },
@@ -40,7 +40,7 @@ async function server(
     },
   );
   const tenant = {
-    entitlements: async () => resolveEntitlements(planId),
+    entitlements: async () => (planId === undefined ? undefined : resolveEntitlements(planId)),
     modelCalls: { take },
     ...(prepared === undefined ? {} : { prepareCalls: { take: takePrepare } }),
   } as unknown as TenantEntitlements;
@@ -117,6 +117,23 @@ describe("model calls outside runs", () => {
     expect(response.statusCode).toBe(200);
     expect(take).not.toHaveBeenCalled();
   });
+
+  it.each(routes)(
+    "refuses %s %s with plan_required for an organisation without a plan",
+    async (method, url, body) => {
+      const { app: api, take } = await server(undefined, member);
+
+      const response = await api.inject({
+        method,
+        url,
+        ...(body === undefined ? {} : { payload: body }),
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error).toMatchObject({ code: "plan_required" });
+      expect(take).not.toHaveBeenCalled();
+    },
+  );
 
   it("counts interview actions only when they ask the interviewer, and never brief extraction", async () => {
     const { app: api, take } = await server("beta", member, 20);

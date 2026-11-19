@@ -54,6 +54,14 @@ function memoryFeedback() {
       notes.push(note);
       return note;
     },
+    notesSentSince: async ({ organisationId, memberId, since }) =>
+      notes.filter(
+        (note) =>
+          note.kind === "note" &&
+          note.organisationId === organisationId &&
+          note.memberId === memberId &&
+          note.sentAt >= since.toISOString(),
+      ).length,
     openSupportTicket: async (input) => {
       const note: FeedbackNote = {
         noteId: `note-${notes.length + 1}`,
@@ -156,6 +164,29 @@ async function api(feedback: FeedbackStore, mode: "owner" | "oidc" = "oidc") {
 }
 
 describe("feedback notes (#2828)", () => {
+  it("refuses a member's note past 20 in 24 hours with 429, and counts each member apart (#2958)", async () => {
+    const { store, notes } = memoryFeedback();
+    const server = await api(store);
+    const send = async (subject: string) =>
+      server.inject({
+        method: "POST",
+        url: "/v1/feedback",
+        headers: { authorization: await signIn(subject) },
+        payload: { text: "Another note.", screen: "home" },
+      });
+
+    for (let index = 0; index < 20; index += 1) {
+      expect((await send("member-north")).statusCode).toBe(201);
+    }
+    const refused = await send("member-north");
+
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json().error.code).toBe("feedback_cap_reached");
+    expect(refused.headers["retry-after"]).toBe("3600");
+    expect(notes).toHaveLength(20);
+    expect((await send("member-south")).statusCode).toBe(201);
+  });
+
   it("stores a member's note in their own organisation and lists it to the operator", async () => {
     const { store, notes } = memoryFeedback();
     const server = await api(store);

@@ -132,6 +132,9 @@ Postgres store, its triage policy and its erasure are tested in
 
 ## Limits
 
+- A member sends at most 20 notes in 24 hours. Past that, the route answers
+  `429 feedback_cap_reached` with `Retry-After`. Support tickets are not
+  counted.
 - Support tickets are deleted 90 days after they were sent, by the worker's
   sweep at each start. Notes stay until their organisation is erased.
 - The operator triages notes on the
