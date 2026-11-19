@@ -78,6 +78,22 @@ describe("run estimate", () => {
     expect(html).not.toContain("notice");
   });
 
+  it("notes that the day's runs are used (#3126)", () => {
+    const html = renderToStaticMarkup(
+      <RunEstimatePanel
+        state={{
+          kind: "ready",
+          estimate: {
+            ...syntheticEstimate,
+            runsToday: { used: 2, limit: 2, resetsAt: "2026-11-20T00:00:00.000Z" },
+          },
+        }}
+      />,
+    );
+    expect(html).toContain("Your plan allows 2 runs a day, and today&#x27;s are used.");
+    expect(html).toContain("Runs come back at");
+  });
+
   it("notes a tier the plan does not allow", () => {
     const html = renderToStaticMarkup(
       <RunEstimatePanel

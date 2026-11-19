@@ -729,6 +729,10 @@ msgid "{limit, plural, one {Your plan allows # run a day, and today's is used. T
 msgstr ""
 
 #: apps/web/src/credits-model.ts
+msgid "{limit, plural, one {Your plan allows # run a day, and today's is used.} other {Your plan allows # runs a day, and today's are used.}}"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
 msgid "{limit, plural, one {Your plan allows # run at the same time, and it is running. Wait for it to finish, then try again.} other {Your plan allows # runs at the same time, and they are running. Wait for one to finish, then try again.}}"
 msgstr ""
 
@@ -865,6 +869,10 @@ msgstr ""
 
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
+msgstr ""
+
+#: apps/web/src/credits-model.ts
+msgid "{used} Runs come back at {time}."
 msgstr ""
 
 #: apps/web/src/credits-model.ts

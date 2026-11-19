@@ -25,7 +25,8 @@ export interface TenantEntitlements {
   readonly entitlements: OrganisationPlans["currentEntitlements"];
   /** The plan assignment, whose plan id a member's credit view names. */
   readonly assignment: OrganisationPlans["currentPlanAssignment"];
-  readonly ledger: Pick<CreditLedger, "reserve" | "refund" | "balance">;
+  readonly ledger: Pick<CreditLedger, "reserve" | "refund" | "balance"> &
+    Partial<Pick<CreditLedger, "reservationsSince">>;
   /**
    * The deployment's monthly spend pool and its ceiling in US dollars (#2459), shared by every
    * organisation; absent when the deployment sets none.

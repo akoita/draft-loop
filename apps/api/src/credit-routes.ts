@@ -122,6 +122,20 @@ const runEstimateSchema = z
       })
       .optional()
       .describe("Sign-in mode, for a member: whether the plan allows these tiers."),
+    runsToday: z
+      .object({
+        used: z.number().int().describe("Runs started since UTC midnight and not refunded."),
+        limit: z
+          .number()
+          .int()
+          .nullable()
+          .describe("The plan's runs per UTC day; null is unlimited."),
+        resetsAt: z.string().describe("The next UTC midnight, when the count starts again."),
+      })
+      .optional()
+      .describe(
+        "Sign-in mode, for a member: the day's runs against the plan's daily limit (#3126).",
+      ),
     balance: z
       .object({
         unlimited: z.boolean(),
@@ -265,7 +279,7 @@ export function registerRunEstimateRoute(
       schema: {
         summary: "Estimate the credits a run on the workspace's settings would reserve",
         description:
-          "Prices the workspace as it is now, the way starting a run does: the application's own model pair when `applicationId` names one with a pair, otherwise the workspace's configured models, at its round limit. Refuses nothing. In sign-in mode a member also gets `plan` (whether the plan allows the tiers, with the code and the role and tier the run start would refuse with) and `balance` (whether `remaining` covers the estimate). A model whose tier cannot be determined cannot be priced and answers 422 `model_tier_unknown`.",
+          "Prices the workspace as it is now, the way starting a run does: the application's own model pair when `applicationId` names one with a pair, otherwise the workspace's configured models, at its round limit. Refuses nothing. In sign-in mode a member also gets `plan` (whether the plan allows the tiers, with the code and the role and tier the run start would refuse with), `runsToday` (the day's started runs against the plan's daily limit, and when it resets) and `balance` (whether `remaining` covers the estimate). A model whose tier cannot be determined cannot be priced and answers 422 `model_tier_unknown`.",
         params: estimateParams,
         querystring: estimateQuery,
         response: { 200: runEstimateSchema, 404: apiErrorSchema, 422: apiErrorSchema },
@@ -303,7 +317,9 @@ export function registerRunEstimateRoute(
       if (entitlements === undefined) {
         return { ...view, plan: { allowed: false, code: "plan_required" as const } };
       }
-      const balance = await tenant.ledger.balance(now());
+      const at = now();
+      const balance = await tenant.ledger.balance(at);
+      const runsToday = await dailyRuns(tenant, entitlements.runsPerDay, at);
       const refused = (
         [
           ["author", authorTier],
@@ -321,6 +337,7 @@ export function registerRunEstimateRoute(
                 role: refused[0],
                 tier: refused[1],
               },
+        ...(runsToday === undefined ? {} : { runsToday }),
         balance: {
           unlimited: balance.unlimited,
           remaining: balance.unlimited ? null : balance.remaining,
@@ -329,4 +346,17 @@ export function registerRunEstimateRoute(
       };
     },
   );
+}
+
+/** The day's started runs against the plan's limit, when the ledger can count them. */
+async function dailyRuns(
+  tenant: ReturnType<TenantEntitlementsFor>,
+  limit: number | null,
+  at: Date,
+): Promise<{ used: number; limit: number | null; resetsAt: string } | undefined> {
+  const count = tenant.ledger.reservationsSince;
+  if (count === undefined) return undefined;
+  const dayStart = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
+  const used = await count(new Date(dayStart).toISOString());
+  return { used, limit, resetsAt: new Date(dayStart + 86_400_000).toISOString() };
 }

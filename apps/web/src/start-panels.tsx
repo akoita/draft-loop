@@ -68,9 +68,10 @@ export function StartPanel({
 
   const consent = useConsents(client, "provider-transmission", workspace);
   const consentReason = transmissionBlockedReason(consent.consents, consent.providers);
+  const [runsReason, setRunsReason] = useState<string | undefined>(undefined);
   const reason =
     planChoice === undefined
-      ? consentReason
+      ? (runsReason ?? consentReason)
       : t`Your plan does not include these models. Choose one of its presets to start.`;
   useEffect(() => {
     setBlockedReason(reason);
@@ -104,6 +105,7 @@ export function StartPanel({
           workspace === undefined ? "" : `${workspace.author.model}|${workspace.critic.model}`
         }
         refresh={0}
+        onBlocked={setRunsReason}
       />
       {planChoice === undefined ? null : (
         <PlanPresetChoiceView

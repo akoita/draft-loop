@@ -15,6 +15,7 @@ import {
   purchaseReturnText,
   readCredits,
   readEstimate,
+  runsUsedUp,
   startPurchase,
 } from "./credits-model.js";
 
@@ -181,11 +182,13 @@ export interface RunEstimateProps {
   readonly modelsKey: string;
   /** Changes when the balance may have changed, such as after a run starts. */
   readonly refresh: number;
+  /** Told why Start would be refused once the estimate is read, such as the day's runs used. */
+  readonly onBlocked?: (reason: string | undefined) => void;
 }
 
 /** Reads the credits the next run would use; read again when the workspace or application changes. */
 export function RunEstimateLine(props: RunEstimateProps) {
-  const { client, workspaceId, applicationId, modelsKey, refresh } = props;
+  const { client, workspaceId, applicationId, modelsKey, refresh, onBlocked } = props;
   const [state, setState] = useState<EstimateState>({ kind: "loading" });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: modelsKey and refresh re-read the estimate
@@ -198,6 +201,11 @@ export function RunEstimateLine(props: RunEstimateProps) {
       current = false;
     };
   }, [client, workspaceId, applicationId, modelsKey, refresh]);
+
+  const blocked = state.kind === "ready" ? runsUsedUp(state.estimate) : undefined;
+  useEffect(() => {
+    onBlocked?.(blocked);
+  }, [blocked, onBlocked]);
 
   return <RunEstimatePanel state={state} />;
 }

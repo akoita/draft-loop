@@ -22,6 +22,8 @@ owner token, has no organisation and answers `404` on these routes.
   allowance is used.
 - Before a run starts, DraftLoop estimates the credits it would reserve; a
   started run counts at once.
+- Once the day's runs are used, the Start dialog says so, gives the local time
+  the limit resets (UTC midnight) and keeps Start disabled.
 
 The catalog's plans are Free, Beta, Individual, Job-search pass, Pro, Team,
 Business and Internal.

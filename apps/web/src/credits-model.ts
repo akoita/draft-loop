@@ -1,4 +1,4 @@
-import { formatDate, formatEuros } from "@draft-loop/ui/locale-format";
+import { formatDate, formatEuros, formatLocale } from "@draft-loop/ui/locale-format";
 import { plural, t } from "@lingui/core/macro";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { describeActionError } from "./consent-model.js";
@@ -104,9 +104,40 @@ export function estimateLine(estimate: RunEstimate): string {
   return t`This run uses ${creditCount(estimate.credits)}.`;
 }
 
+/** Where and how a reset time is shown; the person's own locale and time zone by default. */
+export interface ClockOptions {
+  readonly locale?: string;
+  readonly timeZone?: string;
+}
+
+/**
+ * Why Start would be refused because the day's runs are used (#3126), with the local time the
+ * daily limit resets; `undefined` while runs are left or the plan has no daily limit.
+ */
+export function runsUsedUp(estimate: RunEstimate, clock: ClockOptions = {}): string | undefined {
+  const day = estimate.runsToday;
+  if (day === undefined || day.limit === null || day.used < day.limit) return undefined;
+  const limit = day.limit;
+  const at = new Date(day.resetsAt);
+  const time = Number.isNaN(at.getTime())
+    ? undefined
+    : new Intl.DateTimeFormat(formatLocale(clock.locale), {
+        hour: "2-digit",
+        minute: "2-digit",
+        ...(clock.timeZone === undefined ? {} : { timeZone: clock.timeZone }),
+      }).format(at);
+  const used = plural(limit, {
+    one: "Your plan allows # run a day, and today's is used.",
+    other: "Your plan allows # runs a day, and today's are used.",
+  });
+  return time === undefined ? used : t`${used} Runs come back at ${time}.`;
+}
+
 /** Notes on a run the plan or the balance would refuse, in plain words. */
-export function estimateNotes(estimate: RunEstimate): string[] {
+export function estimateNotes(estimate: RunEstimate, clock: ClockOptions = {}): string[] {
   const notes: string[] = [];
+  const usedUp = runsUsedUp(estimate, clock);
+  if (usedUp !== undefined) notes.push(usedUp);
   const plan = estimate.plan;
   if (plan !== undefined && !plan.allowed) {
     notes.push(

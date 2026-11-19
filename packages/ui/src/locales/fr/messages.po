@@ -723,6 +723,10 @@ msgid "{limit, plural, one {Your plan allows # run a day, and today's is used. T
 msgstr "{limit, plural, one {Votre offre permet # exécution par jour, et celle d’aujourd’hui est utilisée. Réessayez plus tard.} other {Votre offre permet # exécutions par jour, et celles d’aujourd’hui sont utilisées. Réessayez plus tard.}}"
 
 #: apps/web/src/credits-model.ts
+msgid "{limit, plural, one {Your plan allows # run a day, and today's is used.} other {Your plan allows # runs a day, and today's are used.}}"
+msgstr "{limit, plural, one {Votre offre permet # exécution par jour, et celle d’aujourd’hui est utilisée.} other {Votre offre permet # exécutions par jour, et celles d’aujourd’hui sont utilisées.}}"
+
+#: apps/web/src/credits-model.ts
 msgid "{limit, plural, one {Your plan allows # run at the same time, and it is running. Wait for it to finish, then try again.} other {Your plan allows # runs at the same time, and they are running. Wait for one to finish, then try again.}}"
 msgstr "{limit, plural, one {Votre offre permet # exécution à la fois, et elle est en cours. Attendez qu’elle se termine, puis réessayez.} other {Votre offre permet # exécutions à la fois, et elles sont en cours. Attendez que l’une se termine, puis réessayez.}}"
 
@@ -860,6 +864,10 @@ msgstr "{total, plural, one {# règle de section privée} other {# règles de se
 #: packages/ui/src/run-cost.ts
 msgid "{unpriced, plural, one {# model call has no recorded price, from a subscription session or a model without catalog rates.} other {# model calls have no recorded price, from a subscription session or a model without catalog rates.}}"
 msgstr "{unpriced, plural, one {# appel de modèle n’a pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.} other {# appels de modèle n’ont pas de prix enregistré : session d’abonnement ou modèle sans tarif au catalogue.}}"
+
+#: apps/web/src/credits-model.ts
+msgid "{used} Runs come back at {time}."
+msgstr "{used} Les exécutions reviennent à {time}."
 
 #: apps/web/src/credits-model.ts
 msgid "{value, plural, one {Your plan allows # candidate, and it is in use.} other {Your plan allows # candidates, and all are in use.}}"
