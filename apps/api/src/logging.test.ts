@@ -8,27 +8,64 @@ const ownerToken = "owner-token-for-tests-0123456789abcdef";
 /** Synthetic text standing in for anything a person might send. */
 const marker = "SYNTHETIC-CANDIDATE-TEXT";
 
-async function loggedLines(requests: readonly InjectOptions[]) {
+async function loggedLines(requests: readonly InjectOptions[], project?: string) {
   const lines: Record<string, unknown>[] = [];
   const raw: string[] = [];
+  const headers: Record<string, unknown>[] = [];
   const app = await buildApi({
     ownerToken,
-    logger: cloudLoggingOptions({
-      write: (line) => {
-        raw.push(line);
-        lines.push(JSON.parse(line) as Record<string, unknown>);
+    logger: cloudLoggingOptions(
+      {
+        write: (line) => {
+          raw.push(line);
+          lines.push(JSON.parse(line) as Record<string, unknown>);
+        },
       },
-    }),
+      project,
+    ),
   });
   try {
-    for (const request of requests) await app.inject(request);
+    for (const request of requests) headers.push((await app.inject(request)).headers);
   } finally {
     await app.close();
   }
-  return { lines, raw };
+  return { lines, raw, headers };
 }
 
 describe("the API's logs", () => {
+  it("carry the trace id of Cloud Run's traceparent, which the response echoes (#3110)", async () => {
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const { lines, headers } = await loggedLines(
+      [
+        {
+          method: "GET",
+          url: "/v1/health",
+          headers: { traceparent: `00-${traceId}-00f067aa0ba902b7-01` },
+        },
+      ],
+      "example-project",
+    );
+
+    expect(headers[0]?.["x-request-id"]).toBe(traceId);
+    const requestLines = lines.filter((line) => line.reqId === traceId);
+    expect(requestLines.length).toBeGreaterThanOrEqual(2);
+    for (const line of requestLines) {
+      expect(line["logging.googleapis.com/trace"]).toBe(
+        `projects/example-project/traces/${traceId}`,
+      );
+    }
+  });
+
+  it("give a request without traceparent a new 32-character id, and no trace field without a project", async () => {
+    const { lines, headers } = await loggedLines([{ method: "GET", url: "/v1/health" }]);
+
+    const id = headers[0]?.["x-request-id"];
+    expect(id).toMatch(/^[\da-f]{32}$/u);
+    const completed = lines.find((line) => line.message === "request completed");
+    expect(completed?.reqId).toBe(id);
+    expect(completed).not.toHaveProperty("logging.googleapis.com/trace");
+  });
+
   it("are Cloud Logging lines with a severity, the route pattern and the status", async () => {
     const { lines } = await loggedLines([{ method: "GET", url: "/v1/health" }]);
 

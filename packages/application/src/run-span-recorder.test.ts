@@ -78,6 +78,24 @@ describe("the run span recorder", () => {
     ]);
   });
 
+  it("records the queuing request's id on every span (#3110)", async () => {
+    const store = createMemoryRunSpanStore();
+    const requestId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const recorder = createRunSpanRecorder({
+      store,
+      workspaceId: "owner",
+      runId: "run-1",
+      requestId,
+    });
+    const workflow = recorder.tracer.startSpan("invoke_workflow", {});
+    recorder.tracer.startSpan("invoke_agent", { "draftloop.step": "author" }, workflow).end("ok");
+    workflow.end("ok");
+    await recorder.flush();
+    const spans = await store.list("owner", "run-1");
+    expect(spans).toHaveLength(2);
+    for (const span of spans) expect(span.attributes["draftloop.request.id"]).toBe(requestId);
+  });
+
   it("reports a failed save once, stops recording and never throws", async () => {
     const errors: unknown[] = [];
     let puts = 0;

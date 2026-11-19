@@ -20,6 +20,8 @@ export interface RunSpanRecorderOptions {
   readonly store: Pick<RunSpanStore, "put">;
   readonly workspaceId: string;
   readonly runId: string;
+  /** The API request that queued the run's job (#3110), recorded on every span. */
+  readonly requestId?: string;
   readonly now?: () => Date;
   /** A span id unique within the run across resumes. Defaults to a random one. */
   readonly newSpanId?: () => string;
@@ -62,7 +64,12 @@ export function createRunSpanRecorder(options: RunSpanRecorderOptions): RunSpanR
           startedAt: now().toISOString(),
           endedAt: null,
           status: null,
-          attributes: contentFreeSpanAttributes(attributes),
+          attributes: contentFreeSpanAttributes({
+            ...attributes,
+            ...(options.requestId === undefined
+              ? {}
+              : { "draftloop.request.id": options.requestId }),
+          }),
         };
         save(record);
         const span: RunSpan = {

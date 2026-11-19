@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   type ApplicationService,
   defaultHostedKnowledgeSourceMaxBytes,
@@ -121,6 +120,7 @@ import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { registerRecordNameRoutes } from "./record-name-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
+import { registerRequestTrace, requestIdFrom } from "./request-trace.js";
 import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
@@ -327,10 +327,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     bodyLimit: apiBodyLimitBytes,
     // Cloud Run's front end terminates TLS; the API is never reached directly.
     trustProxy: true,
-    // A random id per request, unique across instances, so a member's feedback can name the
-    // request that failed and the operator can find its log line (#2875).
-    genReqId: () => randomUUID(),
+    // The trace id of Cloud Run's `traceparent`, or a random one: unique across instances, so a
+    // member's feedback can name the request that failed (#2875) and the operator can find every
+    // API and worker line of it (#3110).
+    genReqId: (request) => requestIdFrom(request.headers.traceparent),
   }).withTypeProvider<ZodTypeProvider>();
+  registerRequestTrace(app);
   app.addHook("onSend", async (request, reply) => {
     reply.header("x-request-id", request.id);
   });

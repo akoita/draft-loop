@@ -123,7 +123,7 @@ const serverRelease =
 const app = await buildApi({
   ownerToken: config.ownerToken,
   auth,
-  logger: cloudLoggingOptions(),
+  logger: cloudLoggingOptions(undefined, process.env.GOOGLE_CLOUD_PROJECT?.trim()),
   rateLimits: config.rateLimits,
   support: supportSettings,
   ...(briefExtractionsPerDay === undefined ? {} : { briefExtractionsPerDay }),

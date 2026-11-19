@@ -2,6 +2,7 @@ import type { ExecutionRecord, RunSnapshot } from "@draft-loop/orchestrator";
 import { describe, expect, it } from "vitest";
 
 import { errorFields, logLine, quarantineFields, runOutcomeFields } from "./logging.js";
+import { requestFields, withRequestId } from "./request-trace.js";
 
 /** Synthetic text standing in for anything a person might send or a model might write. */
 const marker = "SYNTHETIC-CANDIDATE-TEXT";
@@ -36,6 +37,25 @@ const run = {
 } as unknown as RunSnapshot;
 
 describe("the worker's logs", () => {
+  it("carry the id of the request that queued the job, and its trace with a project (#3110)", async () => {
+    const requestId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    expect(JSON.parse(logLine("INFO", "outside a job"))).not.toHaveProperty("requestId");
+    const line = await withRequestId(requestId, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      return JSON.parse(logLine("INFO", "in a job", { runId: "run-1" }));
+    });
+    expect(line).toMatchObject({ requestId, runId: "run-1" });
+    await withRequestId(requestId, async () => {
+      expect(requestFields("example-project")).toEqual({
+        requestId,
+        "logging.googleapis.com/trace": `projects/example-project/traces/${requestId}`,
+      });
+    });
+    await withRequestId(undefined, async () => {
+      expect(requestFields("example-project")).toEqual({});
+    });
+  });
+
   it("log one line per job with ids, state and usage by company, model and route", () => {
     const line = JSON.parse(
       logLine("INFO", "run job finished", runOutcomeFields(job, "advanced", run)),

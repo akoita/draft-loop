@@ -18,6 +18,7 @@ import {
   createProfileDerivationHandler,
   type ProfileDerivationHandlerOptions,
 } from "./profile-derivation-handler.js";
+import { withRequestId } from "./request-trace.js";
 import { createResearchHandler, type ResearchHandlerOptions } from "./research-handler.js";
 import { createRunJobHandler, type RunJobHandlerOptions } from "./run-job-handler.js";
 
@@ -69,7 +70,7 @@ export async function startWorker(
   };
   const worker = await startRunWorker(
     options.queue,
-    (job, control) => tracked(() => handle(job, control)),
+    (job, control) => tracked(() => withRequestId(job.requestId, () => handle(job, control))),
     {
       ...(extract === undefined
         ? {}

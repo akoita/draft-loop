@@ -93,7 +93,7 @@ flowchart LR
 | `webBuild` | Client | The web screen's build id, from its entry script |
 | `ids` | Client | The record, application and run the screen last called the API for |
 | `recentErrors` | Client | The last 5 API errors: code, message and time, never a body |
-| `lastFailedRequestId` | Client | The `x-request-id` of the last failed call, to find its log line |
+| `lastFailedRequestId` | Client | The `x-request-id` of the last failed call: the trace id of its API lines and, for a run, the worker's lines and spans |
 | `browser` | Client | Browser family, OS family, viewport, language and theme |
 | `source` | Server | `web` from `POST /v1/feedback`, `agent` from the workspace route |
 | `serverRelease` | Server | `DRAFT_LOOP_SERVER_RELEASE`, else Cloud Run's `K_REVISION`, else null |
