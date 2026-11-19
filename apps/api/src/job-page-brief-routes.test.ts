@@ -27,6 +27,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApi } from "./app.js";
 import type { BriefExtractions } from "./brief-extraction.js";
 import type { HostedContentScreening } from "./content-screening-service.js";
+import { jobPageRetryDelayMs } from "./job-page-brief.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
@@ -396,6 +397,67 @@ describe("an application from an approved job page", () => {
       const created = await pending;
 
       expect(created.status, JSON.stringify(created.body)).toBe(201);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("fetches a timed-out page once more, so a cold page fetcher shows no error (#3113)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let calls = 0;
+      const { extract, recordApplicationJobPage } = await api({
+        jobPageFetcher: hostedJobPageFetcher({
+          endpoint: "http://page-fetcher:8080",
+          fetch: async () => {
+            calls += 1;
+            if (calls === 1) return Response.json({ code: "fetch-timeout" }, { status: 504 });
+            return new Response(fixturePage, {
+              headers: {
+                "draft-loop-upstream-status": "200",
+                "draft-loop-upstream-content-type": "text/html; charset=utf-8",
+              },
+            });
+          },
+        }),
+      });
+
+      const pending = extract();
+      await vi.waitFor(() => expect(calls).toBe(1));
+      await vi.advanceTimersByTimeAsync(jobPageRetryDelayMs);
+      const created = await pending;
+
+      expect(created.status, JSON.stringify(created.body)).toBe(201);
+      expect(calls).toBe(2);
+      expect(recordApplicationJobPage).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("refuses a page that times out twice, and never retries another refusal (#3113)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let calls = 0;
+      const { extract, recordApplicationJobPage } = await api({
+        jobPageFetcher: hostedJobPageFetcher({
+          endpoint: "http://page-fetcher:8080",
+          fetch: async () => {
+            calls += 1;
+            return Response.json({ code: "fetch-timeout" }, { status: 504 });
+          },
+        }),
+      });
+
+      const pending = extract();
+      await vi.waitFor(() => expect(calls).toBe(1));
+      await vi.advanceTimersByTimeAsync(jobPageRetryDelayMs);
+      const refused = await pending;
+
+      expect(refused.status).toBe(422);
+      expect(refused.body.error.message).toMatch(/took too long to answer/u);
+      expect(calls).toBe(2);
+      expect(recordApplicationJobPage).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
