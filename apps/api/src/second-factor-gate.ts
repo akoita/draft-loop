@@ -47,7 +47,7 @@ export function registerSecondFactorGate(
       .send(
         apiError(
           "second_factor_required",
-          "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again, and retry.",
+          "Your organisation has other members, so this needs a sign-in with a second factor. Set up a passkey or an authenticator app under Sign-in security in the account menu, sign in again, and retry.",
         ),
       );
   });

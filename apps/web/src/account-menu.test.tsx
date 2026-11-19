@@ -66,4 +66,21 @@ describe("account menu (#2861)", () => {
     }
     expect(html).toMatch(/Sign out<\/button>[\s\S]*account-menu-legal/u);
   });
+
+  it("links the provider's sign-in security page in a new tab, to set up a passkey", () => {
+    const page = "https://id.example.test/realms/draft-loop/account/account-security/signing-in";
+    const html = renderToStaticMarkup(
+      <AccountMenu me={coach} onePerson={false} signInSecurity={page} onSignOut={() => {}} />,
+    );
+
+    expect(html).toMatch(
+      new RegExp(
+        `<a class="button button-toolbar" href="${page}" target="_blank" rel="noopener noreferrer"[^>]*>Sign-in security</a>[\\s\\S]*Sign out`,
+        "u",
+      ),
+    );
+    expect(
+      renderToStaticMarkup(<AccountMenu me={coach} onePerson={false} onSignOut={() => {}} />),
+    ).not.toContain("Sign-in security");
+  });
 });

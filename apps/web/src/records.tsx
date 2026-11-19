@@ -56,6 +56,8 @@ export interface RecordsProps {
   readonly onSignOut?: () => void;
   /** Leaves the signed-in screen with this notice once the person deleted their account (#3033). */
   readonly onAccountDeleted?: (notice: string) => void;
+  /** The provider's page where a person sets up a passkey or an authenticator app. */
+  readonly signInSecurity?: string;
   /** Opens the operator page from the account menu, for a caller who may operate (#2829). */
   readonly onOperator?: () => void;
   /**
@@ -81,6 +83,7 @@ export function Records({
   shellActions,
   onSignOut,
   onAccountDeleted,
+  signInSecurity,
   onOperator,
   children,
 }: RecordsProps) {
@@ -249,6 +252,7 @@ export function Records({
             yourData={yourData}
             onAccount={hasAccountPage ? () => setOnAccountPage(true) : undefined}
             onSignOut={onSignOut}
+            signInSecurity={signInSecurity}
             onOperator={onOperator}
             newNotes={newNotes}
           />

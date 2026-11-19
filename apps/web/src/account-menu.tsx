@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { ReactNode } from "react";
 
 import { AccountPageButton } from "./account-page.js";
@@ -20,6 +21,11 @@ export interface AccountMenuProps {
   /** Opens the account page, whose danger zone holds the deletes. */
   readonly onAccount?: (() => void) | undefined;
   readonly onSignOut: () => void;
+  /**
+   * The provider's page where the person sets up a passkey or an authenticator app, the second
+   * step after their password. Opens in a new tab.
+   */
+  readonly signInSecurity?: string | undefined;
   /** Opens the operator page; offered only when `/v1/me` says the caller may operate (#2829). */
   readonly onOperator?: (() => void) | undefined;
   /** Feedback notes waiting in New, shown on the Operator entry and the menu (#3002). */
@@ -36,6 +42,7 @@ export function AccountMenu({
   yourData,
   onAccount,
   onSignOut,
+  signInSecurity,
   onOperator,
   newNotes,
 }: AccountMenuProps) {
@@ -59,6 +66,18 @@ export function AccountMenu({
               onAccount();
             }}
           />
+        )}
+        {signInSecurity === undefined ? null : (
+          <a
+            className="button button-toolbar"
+            href={signInSecurity}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t`Set up a passkey or an authenticator app for the step after your password`}
+            onClick={fold}
+          >
+            {t`Sign-in security`}
+          </a>
         )}
         {onOperator !== undefined && canOperate(me) ? (
           <OperatorButton

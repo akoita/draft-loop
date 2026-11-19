@@ -99,6 +99,14 @@ export interface AuthorizationRequest {
   readonly prompt?: "none";
 }
 
+/**
+ * The provider's own page where a person sets up how they sign in: a passkey or an authenticator
+ * app as the second step, and their password. Keycloak serves it under the realm's issuer.
+ */
+export function signInSecurityUrl(issuer: string): string {
+  return `${issuer.replace(/\/+$/, "")}/account/account-security/signing-in`;
+}
+
 /** The provider's sign-in page for one attempt. */
 export function authorizationUrl(endpoint: string, request: AuthorizationRequest): string {
   const url = new URL(endpoint);

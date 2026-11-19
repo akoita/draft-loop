@@ -158,6 +158,7 @@ export const frenchHelpGuide: HelpGuide = {
       paragraphs: [
         "DraftLoop n’enregistre votre contenu qu’après votre consentement, et le garde dans l’UE. Il n’envoie aux fournisseurs de modèles que le contenu dont une étape a besoin.",
         "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Depuis le menu du compte, vous pouvez tout télécharger. Pour supprimer tous vos documents et candidatures, ou votre compte, ouvrez Paramètres du compte dans ce menu : les deux se trouvent dans sa Zone dangereuse et vous demandent d’abord de saisir une confirmation.",
+        "Pour vous connecter plus vite, ouvrez Sécurité de connexion dans le menu du compte et configurez une clé d’accès. Après votre mot de passe, votre empreinte, votre visage, votre code PIN ou votre téléphone remplace alors le code à six chiffres. Gardez votre application d’authentification en secours : Essayer une autre méthode passe de l’une à l’autre. Cochez Se souvenir de moi pour rester connecté sur cet appareil jusqu’à 30 jours.",
       ],
       keywords: [
         "consentement",
@@ -168,6 +169,10 @@ export const frenchHelpGuide: HelpGuide = {
         "privé",
         "sensible",
         "sécurité",
+        "clé d’accès",
+        "passkey",
+        "connexion",
+        "authentification",
       ],
     },
     {

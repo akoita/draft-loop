@@ -14,6 +14,7 @@ import {
   waitlistConfirmTokenFromHash,
 } from "./invite-link.js";
 import { NewReleaseWatch } from "./new-release.js";
+import { signInSecurityUrl } from "./oidc-model.js";
 import { createOidcSession } from "./oidc-session.js";
 import { OidcApp, type ScreenNavigation } from "./oidc-sign-in.js";
 import {
@@ -114,6 +115,7 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
       session={session}
       createClient={createClient}
       navigation={navigation}
+      signInSecurity={signInSecurityUrl(config.issuer)}
       waitlist={config.waitlist === true}
       {...(inviteCode === undefined ? {} : { inviteCode })}
       onInviteUsed={() => forgetInviteCode(globalThis.sessionStorage)}

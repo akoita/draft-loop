@@ -123,6 +123,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "DraftLoop stores your material only after you give consent, and keeps it in the EU. It sends model providers only the material a step needs.",
         "Mark a section as private to keep it out of drafts and away from model providers. From the account menu you can download everything. To delete all your documents and applications, or your account, open Account settings in that menu: both sit in its Danger zone and ask you to type a confirmation first.",
+        "To sign in faster, open Sign-in security in the account menu and set up a passkey. After your password, your fingerprint, face, PIN or phone then replaces the six-digit code. Keep your authenticator app as a backup: Try another way switches between them. Tick Remember me to stay signed in on that device for up to 30 days.",
       ],
       keywords: [
         "consent",
@@ -133,6 +134,10 @@ export const englishHelpGuide: HelpGuide = {
         "private",
         "sensitive",
         "security",
+        "passkey",
+        "sign in",
+        "authenticator",
+        "two-factor",
       ],
     },
     {

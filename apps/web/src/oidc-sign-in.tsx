@@ -110,6 +110,8 @@ export interface OidcAppProps {
   readonly session: OidcSession;
   readonly createClient: (token: string) => ApiClient;
   readonly navigation: ScreenNavigation;
+  /** The provider's page where a person sets up a passkey or an authenticator app. */
+  readonly signInSecurity?: string;
   /** The public beta is open: a signed-out visitor sees the landing page and waitlist. */
   readonly waitlist?: boolean;
   /** The code an invite email's link carried: sign-in comes first and sign-up fills it in. */
@@ -128,6 +130,7 @@ export function OidcApp({
   session,
   createClient,
   navigation,
+  signInSecurity,
   waitlist = false,
   inviteCode,
   onInviteUsed,
@@ -268,6 +271,7 @@ export function OidcApp({
         mode="sign-in"
         client={client.api}
         onSignOut={() => client.end(undefined, true)}
+        {...(signInSecurity === undefined ? {} : { signInSecurity })}
         // The provider deleted the account and its sessions: leave without its sign-out page.
         onAccountDeleted={(notice) => client.end(notice, false)}
       />

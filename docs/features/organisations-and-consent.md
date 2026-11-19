@@ -51,7 +51,8 @@ organisation; it erases everything with `draft-loop-server`
 5. Owners download a [readable copy](../reference/readable-export.md) of a
    record or its complete [archive](../reference/record-archive.md), erase
    one record, or delete the whole organisation. In an organisation with other
-   members, these need a sign-in with a second factor (an authenticator app);
+   members, these need a sign-in with a second factor (a passkey or an
+   authenticator app, set up under **Sign-in security** in the account menu);
    otherwise the API answers `403 second_factor_required`.
 6. A person alone in their organisation deletes their own account with
    `DELETE /v1/account`, typing their email address to confirm. It erases the
@@ -127,12 +128,12 @@ The lists read again every 30 seconds while the tab is visible, and when it
 comes back into view; **Refresh** reads them at once. A list grown with
 **Show more** waits for **Refresh**, so the operator keeps their place.
 
-| Section  | What it shows                                                                                                                                                                                                                                                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first                                                                                                                                                                                                     |
-| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that holds an open or redeemed invite is left out, so nobody is invited twice. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
-| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from                                                                                                                                                                                                |
-| Run trace | One member's run by organisation and run id, as a feedback note gives them: each step nested under its parent, with status, duration, provider, model, error class, tokens, cost and the request id. Content-free; each read is written to the audit log (`GET /v1/operator/organisations/:organisationId/runs/:runId/trace`) |
+| Section   | What it shows                                                                                                                                                                                                                                                                                                                                             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feedback  | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first                                                                                                                                                                                                     |
+| Waitlist  | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that holds an open or redeemed invite is left out, so nobody is invited twice. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
+| Invites   | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from                                                                                                                                                                                                |
+| Run trace | One member's run by organisation and run id, as a feedback note gives them: each step nested under its parent, with status, duration, provider, model, error class, tokens, cost and the request id. Content-free; each read is written to the audit log (`GET /v1/operator/organisations/:organisationId/runs/:runId/trace`)                             |
 
 Where the server sends mail, each new invite emails its person a link,
 `/#invite=<code>`, in French and English. The link opens sign-in, and sign-up
