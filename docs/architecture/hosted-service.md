@@ -838,6 +838,9 @@ plans have no cap.
 - **Free.** Owner-token calls are not counted.
 - **Refusal.** 429 `model_call_cap_reached` with `limit`, and `Retry-After`
   until midnight UTC. The API logs `model call cap reached`.
+- **No plan.** An organisation without a plan gets 403 `plan_required` on
+  these routes, so a failed plan assignment never leaves calls uncounted. The
+  API logs `metered model call without a plan`.
 - **Counting.** `model_call_counts` holds one counter per organisation and
   day. The check and the increment are one statement, so racing calls cannot
   pass the cap. A call the route then refuses for another reason still counts.

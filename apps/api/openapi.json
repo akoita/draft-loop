@@ -32455,7 +32455,7 @@
     "/v1/feedback": {
       "post": {
         "summary": "Send feedback about DraftLoop to the operator",
-        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source `web`, the server release and the plan. 400 invalid_input for an empty note, one over 2000 characters or a context over its bounds.",
+        "description": "Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source `web`, the server release and the plan. 400 invalid_input for an empty note, one over 2000 characters or a context over its bounds. 429 feedback_cap_reached, with Retry-After, once the member has sent 20 notes in 24 hours.",
         "requestBody": {
           "required": true,
           "content": {
@@ -32539,6 +32539,16 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -32650,6 +32660,16 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "Default Response",
             "content": {
               "application/json": {

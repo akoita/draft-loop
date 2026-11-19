@@ -44,6 +44,7 @@ beforeEach(async () => {
         throw new Error("stub: owner mode stores no ticket");
       },
       deleteSupportTicketsBefore: async () => 0,
+      notesSentSince: async () => 0,
       listNewest: async () => [],
       get: async () => undefined,
       statusCounts: async () => ({ new: 0, triaged: 0, issue: 0, closed: 0 }),

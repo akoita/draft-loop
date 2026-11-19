@@ -31,6 +31,40 @@ describe.runIf(connectionString !== undefined)("Postgres feedback notes (#2828)"
     }
   }
 
+  it("counts one member's notes since a time, leaving out tickets and other members (#2958)", async () => {
+    await withDirectory(async ({ feedback }) => {
+      const send = (memberId: string, at: Date) =>
+        feedback.send({
+          organisationId: "org-north",
+          memberId,
+          category: null,
+          screen: "home",
+          text: "A note.",
+          now: at,
+        });
+      await send("member-1", new Date(now.getTime() - 25 * 60 * 60 * 1000));
+      await send("member-1", now);
+      await send("member-1", new Date(now.getTime() + 1_000));
+      await send("member-2", now);
+      await feedback.openSupportTicket({
+        organisationId: "org-north",
+        memberId: "member-1",
+        summary: "Export fails.",
+        transcript: [],
+        now,
+      });
+
+      const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      expect(
+        await feedback.notesSentSince({ organisationId: "org-north", memberId: "member-1", since }),
+      ).toBe(2);
+      expect(
+        await feedback.notesSentSince({ organisationId: "org-south", memberId: "member-1", since }),
+      ).toBe(0);
+    });
+  });
+
   it("stores a trimmed note in the member's organisation and lists the newest first", async () => {
     await withDirectory(async ({ feedback }) => {
       await feedback.send({

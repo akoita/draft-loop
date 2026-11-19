@@ -180,6 +180,19 @@ export function createPostgresFeedback(client: SqlClient): FeedbackStore {
       return row === undefined ? undefined : noteRecord(row);
     },
 
+    notesSentSince: async ({ organisationId, memberId, since }) => {
+      const tenantId = requireOrganisationId(organisationId);
+      return client.transaction(async (executor) => {
+        await executor.query("SELECT set_config('draft_loop.tenant_id', $1, true)", [tenantId]);
+        const [row] = await executor.query(
+          `SELECT count(*) AS total FROM feedback_notes
+            WHERE tenant_id = $1 AND member_id = $2 AND kind = 'note' AND sent_at >= $3`,
+          [tenantId, memberId, since.toISOString()],
+        );
+        return Number(row?.total ?? 0);
+      });
+    },
+
     statusCounts: async (query) => {
       const rows = await client.query(
         `SELECT status, count(*) AS total FROM feedback_notes

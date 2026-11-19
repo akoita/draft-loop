@@ -11,6 +11,7 @@ import {
   type FeedbackStore,
   feedbackCategories,
   maximumFeedbackCharacters,
+  maximumFeedbackNotesPerDay,
   maximumFeedbackScreenCharacters,
 } from "@draft-loop/storage/feedback";
 import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
@@ -86,6 +87,8 @@ const listQuery = operatorPageQuery.extend({
   status: z.enum(feedbackStatuses).optional().describe("Only notes with this status."),
 });
 
+const dayMs = 24 * 60 * 60 * 1000;
+
 const toResponse = (note: FeedbackNote) => ({
   ...note,
   transcript: note.transcript === null ? null : [...note.transcript],
@@ -122,6 +125,24 @@ export function registerFeedbackRoutes(
       if (caller.kind !== "member") {
         return reply.code(404).send(apiError("not_found", "No such route."));
       }
+      const at = now();
+      const sent = await feedback.notesSentSince({
+        organisationId: caller.tenantId,
+        memberId: caller.memberId,
+        since: new Date(at.getTime() - dayMs),
+      });
+      if (sent >= maximumFeedbackNotesPerDay) {
+        request.log.warn({ event: "feedback_cap_reached" }, "feedback cap reached");
+        return reply
+          .code(429)
+          .header("retry-after", String(60 * 60))
+          .send(
+            apiError(
+              "feedback_cap_reached",
+              `You have sent ${maximumFeedbackNotesPerDay} notes in the last 24 hours, the most a member can send. Try again later.`,
+            ),
+          );
+      }
       try {
         const context: FeedbackContext = {
           ...request.body.context,
@@ -136,7 +157,7 @@ export function registerFeedbackRoutes(
           screen: request.body.screen,
           text: request.body.text,
           context,
-          now: now(),
+          now: at,
         });
         // The log names the note, never its text.
         request.log.info({ event: "feedback_sent", noteId: note.noteId }, "feedback sent");
@@ -153,6 +174,7 @@ export function registerFeedbackRoutes(
     401: apiErrorSchema,
     403: apiErrorSchema,
     404: apiErrorSchema,
+    429: apiErrorSchema,
   };
 
   app.post(
@@ -161,7 +183,7 @@ export function registerFeedbackRoutes(
       bodyLimit: 16 * 1024,
       schema: {
         summary: "Send feedback about DraftLoop to the operator",
-        description: `Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source \`web\`, the server release and the plan. 400 invalid_input for an empty note, one over ${maximumFeedbackCharacters} characters or a context over its bounds.`,
+        description: `Members only: owner-token mode has no members and answers 404. Stores the trimmed note in the caller's organisation for the operator to read, with its context and the server's own facts: source \`web\`, the server release and the plan. 400 invalid_input for an empty note, one over ${maximumFeedbackCharacters} characters or a context over its bounds. 429 feedback_cap_reached, with Retry-After, once the member has sent ${maximumFeedbackNotesPerDay} notes in 24 hours.`,
         body: sendBody,
         response: sendResponses,
       },
