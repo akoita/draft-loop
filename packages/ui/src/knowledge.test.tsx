@@ -40,7 +40,6 @@ const workspaceCapabilities = {
 };
 
 function renderList(options: {
-  intake: boolean;
   bases?: typeof store.knowledgeBases;
   selected?: readonly string[];
 }) {
@@ -49,10 +48,8 @@ function renderList(options: {
       storeId="store-1"
       knowledgeBases={options.bases ?? activeKnowledgeBases(store)}
       disabled={false}
-      intakeSupported={options.intake}
       selectedKnowledgeBaseIds={options.selected ?? []}
       onSelect={noop}
-      onImport={noop}
     />,
   );
 }
@@ -220,28 +217,8 @@ describe("desktop candidate knowledge workspace", () => {
     expect(desktop).not.toContain("Create knowledge base<");
   });
 
-  it("leaves adding to the card: an embedded list has no Add file or Add directory", () => {
-    const html = renderToStaticMarkup(
-      <KnowledgeBaseList
-        storeId="store-1"
-        knowledgeBases={activeKnowledgeBases(store)}
-        disabled={false}
-        intakeSupported
-        showIntake={false}
-        onSelect={noop}
-        onImport={noop}
-      />,
-    );
-    expect(html).toContain(">Use this knowledge base<");
-    expect(html).not.toContain("legacy");
-    expect(html).not.toContain(">Add file<");
-    expect(html).not.toContain(">Add directory<");
-    expect(html).not.toContain("intake is unavailable");
-  });
-
   it("renders each knowledge base as a card with a Default chip and styled actions", () => {
     const html = renderList({
-      intake: true,
       bases: [
         ...activeKnowledgeBases(store),
         {
@@ -258,8 +235,8 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html.match(/>Default</g)).toHaveLength(1);
     expect(html).toContain("<strong>Engineering</strong>");
     expect(html).toMatch(/class="button button-primary"[^>]*>Use this knowledge base</);
-    expect(html).toMatch(/class="button button-outline"[^>]*>Add file</);
-    expect(html).toMatch(/class="button button-outline"[^>]*>Add directory</);
+    expect(html).not.toContain(">Add file<");
+    expect(html).not.toContain(">Add directory<");
     expect(html).not.toContain("legacy");
   });
 
@@ -274,12 +251,12 @@ describe("desktop candidate knowledge workspace", () => {
         isDefault: false,
       },
     ];
-    const html = renderList({ intake: true, bases, selected: ["active-2"] });
+    const html = renderList({ bases, selected: ["active-2"] });
     expect(html.match(/>In use</g)).toHaveLength(1);
     expect(html.match(/<span class="meta-chip">In use<\/span>/g)).toHaveLength(1);
     expect(html.match(/>Use this knowledge base</g)).toHaveLength(1);
 
-    const none = renderList({ intake: true, bases });
+    const none = renderList({ bases });
     expect(none).not.toContain("In use");
     expect(none.match(/>Use this knowledge base</g)).toHaveLength(2);
   });
@@ -325,18 +302,8 @@ describe("desktop candidate knowledge workspace", () => {
     );
   });
 
-  it("explains when file and directory intake is unsupported", () => {
-    const supported = renderList({ intake: true });
-    expect(supported).not.toContain("File and directory intake is unavailable");
-
-    const unsupported = renderList({ intake: false });
-    expect(unsupported).toContain("File and directory intake is unavailable");
-    expect(unsupported).not.toContain("Add file");
-    expect(unsupported).toContain("Use this knowledge base");
-  });
-
   it("keeps the empty message as a hint", () => {
-    const html = renderList({ intake: true, bases: [] });
+    const html = renderList({ bases: [] });
     expect(html).toContain("No active knowledge bases are available.");
     expect(html).not.toContain("knowledge-base-card");
   });

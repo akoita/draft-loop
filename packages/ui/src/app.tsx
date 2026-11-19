@@ -110,7 +110,6 @@ import {
   saveAppliedModelProfiles,
 } from "./saved-model-profiles.js";
 import { ScreenLanguageSetting } from "./screen-language.js";
-import { hasAnySemanticRetrievalCapability, SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import {
   candidateProfilePendingBlockerMessage,
   candidateProfileStartBlockerMessage,
@@ -2272,20 +2271,6 @@ export function App({
   );
   const knowledgePanel = knowledgePanelFor(false);
 
-  const retrievalPanel = hasAnySemanticRetrievalCapability(activePort) ? (
-    <SemanticRetrievalPanel
-      key={`semantic-retrieval-${state.workspaceId}`}
-      workspaceId={state.workspaceId}
-      capabilities={activePort}
-      disabled={
-        busy ||
-        profilePendingForActiveWorkspace ||
-        pendingReviewAction !== null ||
-        state.execution.status === "running"
-      }
-    />
-  ) : null;
-
   const profilePanel =
     profileCapabilities === null ? null : (
       <fieldset
@@ -2316,7 +2301,6 @@ export function App({
   const profileAndEvidencePanels = (
     <>
       {knowledgePanel}
-      {retrievalPanel}
       {runPairSummary(state)}
       {profilePanel}
     </>
@@ -2375,32 +2359,7 @@ export function App({
       state.execution.status === "running",
   };
 
-  // File and URL intake are shared by the application screen and the Career evidence card.
-  const selectFiles =
-    activePort.selectFiles === undefined
-      ? undefined
-      : (target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override") => {
-          const workspaceId = state.workspaceId;
-          if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-          setImportError(null);
-          void activePort
-            .selectFiles?.(target)
-            .then((loaded) => {
-              if (
-                isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
-                loaded.workspaceId === workspaceId
-              ) {
-                setState(loaded);
-              }
-            })
-            .catch((reason: unknown) => {
-              if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
-              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
-              setImportError(
-                reason instanceof Error ? reason.message : t`The files could not be imported.`,
-              );
-            });
-        };
+  // URL intake is shared by the application screen and the Career evidence card.
   const addUrl =
     activePort.addUrl === undefined
       ? undefined
@@ -2563,7 +2522,6 @@ export function App({
           ? profileAndEvidencePanels
           : undefined
       }
-      {...(selectFiles === undefined ? {} : { onSelectFiles: selectFiles })}
       {...(addUrl === undefined ? {} : { onAddUrl: addUrl })}
       jobRequirements={jobRequirementsBinding}
       {...(activePort.getApplicationJob === undefined
@@ -2733,13 +2691,9 @@ export function App({
                 onPendingChange: (workspaceId, pending) =>
                   onKnowledgePendingChange(workspaceId, workspaceGeneration, pending),
               }}
-              onSelectLegacyFiles={
-                selectFiles === undefined ? undefined : () => selectFiles("evidence")
-              }
               onAddLegacyUrl={addUrl === undefined ? undefined : (url) => addUrl("evidence", url)}
               knowledgeBase={knowledgePanelFor(true)}
               onOpenProfile={flowStepHandlers.profile}
-              advanced={retrievalPanel}
             />
           }
         />

@@ -142,7 +142,7 @@ describe("the shared screens' commands over HTTP", () => {
     const { port, calls } = portOver({});
 
     expect(port.capabilities).toEqual([...hostedBridgeCapabilities]);
-    for (const desktopOnly of ["knowledge.import-directory", "knowledge.list"]) {
+    for (const desktopOnly of ["knowledge.list", "knowledge.open"]) {
       expect(port.hasCapability(desktopOnly as never)).toBe(false);
     }
     const result = await port.execute({ type: "knowledge.list", input: { storeId: "store-1" } });

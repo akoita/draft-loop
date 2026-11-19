@@ -19,10 +19,6 @@ import {
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
-  type EmbeddingModelCancelResult,
-  type EmbeddingModelPlanResult,
-  type EmbeddingModelProgressResult,
-  type EmbeddingModelStatusResult,
   type KnowledgeCurrentResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeFileImportResult,
@@ -56,7 +52,6 @@ import {
   type SourceEvidenceKindsResult,
   type WorkspaceCompactHistoryResult,
   type WorkspaceConfigureModelsInput,
-  type WorkspaceRetrievalModeResult,
   type WritingPolicyReadResult,
 } from "./bridge.js";
 import type {
@@ -85,7 +80,6 @@ import {
   type RunRequirementEvidenceCapabilities,
 } from "./run-requirement-evidence-capabilities.js";
 import { createRunTraceCapabilities, type RunTraceCapabilities } from "./run-trace-capabilities.js";
-import type { EmbeddingModelTier, RetrievalMode } from "./semantic-retrieval-contract.js";
 
 export type { NativeBridge } from "./bridge.js";
 
@@ -242,10 +236,6 @@ export interface DesktopKnowledgeCapabilities {
     knowledgeBaseId: string,
     pasted: { readonly title: string; readonly text: string },
   ) => Promise<KnowledgeFileImportResult>;
-  readonly importCandidateKnowledgeDirectory?: (
-    storeId: string,
-    knowledgeBaseId: string,
-  ) => Promise<KnowledgeDirectoryImportResult>;
   /** Fetches one public URL into the base; the call is the person's explicit approval. */
   readonly importCandidateKnowledgeUrl?: (
     storeId: string,
@@ -285,42 +275,7 @@ export interface DesktopKnowledgeCapabilities {
   ) => Promise<WorkspaceEvidenceMigrationResult>;
 }
 
-/**
- * The local embedding model and the workspace retrieval mode, through the same application
- * contracts as the CLI. Each member is present only when the host offers the capability, so an
- * absent one is a fact the panel can report rather than a call that fails later.
- */
-export interface DesktopSemanticRetrievalCapabilities {
-  readonly getEmbeddingModelStatus?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelStatusResult>;
-  /** What an install would download, shown at the approval step; it downloads nothing. */
-  readonly planEmbeddingModelInstall?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelPlanResult>;
-  /** Downloads the model; the call is the explicit approval, so it carries `approved: true`. */
-  readonly installEmbeddingModel?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelStatusResult>;
-  /** Reports a pending install's byte progress; answerable while it runs. */
-  readonly getEmbeddingModelProgress?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelProgressResult>;
-  /** Stops a pending install; nothing is kept. */
-  readonly cancelEmbeddingModelInstall?: (
-    tier: EmbeddingModelTier,
-  ) => Promise<EmbeddingModelCancelResult>;
-  readonly removeEmbeddingModel?: (tier: EmbeddingModelTier) => Promise<EmbeddingModelStatusResult>;
-  readonly getRetrievalMode?: (workspaceId: string) => Promise<WorkspaceRetrievalModeResult>;
-  readonly setRetrievalMode?: (
-    workspaceId: string,
-    mode: RetrievalMode,
-    modelTier: EmbeddingModelTier,
-  ) => Promise<WorkspaceRetrievalModeResult>;
-}
-
 export type DesktopSetupPort = DesktopReviewPort &
-  DesktopSemanticRetrievalCapabilities &
   WorkspaceSetupCapabilities &
   DesktopOpportunityCapabilities &
   DesktopProfileCapabilities &
@@ -717,31 +672,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ),
         }
       : {}),
-    ...(capabilityPort.hasCapability("file.select")
-      ? {
-          selectFiles: async (target) => {
-            const state = await load();
-            unwrap(
-              await capabilityPort.execute({
-                type: "file.select",
-                input: {
-                  workspaceId: state.workspaceId,
-                  target,
-                  ...(target === "job-description" ||
-                  target === "writing-policy" ||
-                  target === "writing-policy-override"
-                    ? { multiple: false }
-                    : {}),
-                  ...(target === "writing-policy" || target === "writing-policy-override"
-                    ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
-                    : {}),
-                },
-              }),
-            );
-            return refresh();
-          },
-        }
-      : {}),
     ...(capabilityPort.hasCapability("source.add-url")
       ? {
           addUrl: async (target, url) => {
@@ -829,71 +759,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ),
         }
       : {}),
-    ...(capabilityPort.hasCapability("embedding-model.status")
-      ? {
-          getEmbeddingModelStatus: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.status", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.plan-install")
-      ? {
-          planEmbeddingModelInstall: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "embedding-model.plan-install",
-                input: { tier },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.install")
-      ? {
-          installEmbeddingModel: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "embedding-model.install",
-                input: { tier, approved: true },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.progress")
-      ? {
-          getEmbeddingModelProgress: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.progress", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.cancel")
-      ? {
-          cancelEmbeddingModelInstall: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.cancel", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("embedding-model.remove")
-      ? {
-          removeEmbeddingModel: async (tier: EmbeddingModelTier) =>
-            unwrap(
-              await capabilityPort.execute({ type: "embedding-model.remove", input: { tier } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.retrieval-mode.get")
-      ? {
-          getRetrievalMode: async (workspaceId: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.retrieval-mode.get",
-                input: { workspaceId },
-              }),
-            ),
-        }
-      : {}),
     ...(capabilityPort.hasCapability("models.saved-profiles.save")
       ? {
           saveModelProfiles: async (
@@ -904,21 +769,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "models.saved-profiles.save",
                 input: { workspaceId, modelProfiles },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.retrieval-mode.set")
-      ? {
-          setRetrievalMode: async (
-            workspaceId: string,
-            mode: RetrievalMode,
-            modelTier: EmbeddingModelTier,
-          ) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.retrieval-mode.set",
-                input: { workspaceId, mode, modelTier },
               }),
             ),
         }
@@ -994,17 +844,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.import-text",
                 input: { storeId, knowledgeBaseId, title: pasted.title, text: pasted.text },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("knowledge.import-directory")
-      ? {
-          importCandidateKnowledgeDirectory: async (storeId: string, knowledgeBaseId: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "knowledge.import-directory",
-                input: { storeId, knowledgeBaseId, selection: "native-dialog" },
               }),
             ),
         }

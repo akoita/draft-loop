@@ -168,10 +168,6 @@ msgstr " a un niveau de raisonnement supérieur à sa valeur par défaut : il é
 msgid "(default)"
 msgstr "(par défaut)"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "(pinned revision"
-msgstr "(révision épinglée"
-
 #: packages/ui/src/review.tsx
 msgid "(reviewer), for at most"
 msgstr "(relecteur), pour au plus"
@@ -376,11 +372,6 @@ msgstr "{0} sur {requirementTotal} couvertes · {1} sur {responsibilityTotal} co
 #: packages/ui/src/model-profile-picker.tsx
 msgid "{0} profile"
 msgstr "Profil {0}"
-
-#. placeholder {0}: knowledgeIntakeSummary(outcome.result)
-#: packages/ui/src/knowledge.tsx
-msgid "{0} Readiness could not be checked; some sources may not be ready."
-msgstr "{0} L’état de préparation n’a pas pu être vérifié ; certaines sources ne sont peut-être pas prêtes."
 
 #. placeholder {0}: phase.summary.responsibilityCount
 #: packages/ui/src/job-requirements-extraction.tsx
@@ -626,10 +617,6 @@ msgstr "{counts} Un brouillon ne peut pas lancer d’exécution tant que vous ne
 msgid "{counts} Runs start from these requirements."
 msgstr "{counts} Les exécutions partent de ces exigences."
 
-#: packages/ui/src/knowledge-intake.ts
-msgid "{directoryText} Some content may not be available."
-msgstr "{directoryText} Une partie du contenu n’est peut-être pas disponible."
-
 #: packages/ui/src/review-run-status.ts
 msgid "{doing} {until} Approval and export open after that."
 msgstr "{doing} {until} L’approbation et l’export s’ouvrent ensuite."
@@ -685,10 +672,6 @@ msgstr "{label} non enregistré pour {missing}, la comparaison est donc impossib
 #: packages/ui/src/run-comparison-facts.ts
 msgid "{label} not recorded for either run, so it cannot be compared"
 msgstr "{label} non enregistré pour aucune des deux exécutions, la comparaison est donc impossible"
-
-#: packages/ui/src/career-evidence.ts
-msgid "{lead} Some files could not be imported."
-msgstr "{lead} Certains fichiers n’ont pas pu être importés."
 
 #: packages/ui/src/career-evidence-card.tsx
 msgid "{legacyCount, plural, one {# source ready} other {# sources ready}}"
@@ -1144,10 +1127,6 @@ msgstr "Ajouter une candidature à partir d’une offre d’emploi collée"
 msgid "Add a target job description."
 msgstr "Ajoutez une description de poste cible."
 
-#: packages/ui/src/career-evidence-card.tsx
-msgid "Add a whole folder"
-msgstr "Ajouter un dossier entier"
-
 #: apps/web/src/records.tsx
 msgid "Add candidate"
 msgstr "Ajouter le candidat"
@@ -1160,10 +1139,6 @@ msgstr "Ajouter des éléments de parcours"
 msgid "Add career evidence from the Career evidence card above to create your knowledge base."
 msgstr "Ajoutez des éléments de parcours depuis la carte Éléments de parcours ci-dessus pour créer votre base de connaissances."
 
-#: packages/ui/src/knowledge.tsx
-msgid "Add directory"
-msgstr "Ajouter un répertoire"
-
 #: packages/ui/src/career-conversation-start.tsx
 #: packages/ui/src/career-evidence-card.tsx
 msgid "Add documents"
@@ -1172,14 +1147,6 @@ msgstr "Ajouter des documents"
 #: packages/ui/src/review.tsx
 msgid "Add explicit rules for both author and critic"
 msgstr "Ajouter des règles explicites pour le rédacteur et le relecteur"
-
-#: packages/ui/src/knowledge.tsx
-msgid "Add file"
-msgstr "Ajouter un fichier"
-
-#: packages/ui/src/career-evidence-card.tsx
-msgid "Add folder"
-msgstr "Ajouter un dossier"
 
 #: packages/ui/src/agent-setup-model.ts
 msgid "Add it to ~/.codex/config.toml."
@@ -1250,11 +1217,6 @@ msgstr "Ajoutez vos documents de parcours"
 msgid "Add your CV or other documents here. When they are in, go to Career profile."
 msgstr "Ajoutez ici votre CV ou d’autres documents. Une fois ajoutés, passez au Profil professionnel."
 
-#. placeholder {0}: countedNouns.document(result.sourceCount)
-#: packages/ui/src/career-evidence.ts
-msgid "Added {0} from the folder to {displayName}."
-msgstr "{0} du dossier ajouté(s) à {displayName}."
-
 #: apps/web/src/evidence-file-model.ts
 msgid "Added {when}"
 msgstr "Ajouté le {when}"
@@ -1270,10 +1232,6 @@ msgstr "Ajouté à {displayName}."
 #: apps/web/src/application-material.tsx
 msgid "Address it to"
 msgstr "Destinataire"
-
-#: packages/ui/src/career-evidence-card.tsx
-msgid "Adds every supported document in a folder at once."
-msgstr "Ajoute en une fois tous les documents pris en charge d’un dossier."
 
 #: packages/ui/src/advanced-options.tsx
 msgid "Advanced options"
@@ -1547,10 +1505,6 @@ msgstr "Approuver le document (Alt+A)"
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Approve as career evidence"
 msgstr "Approuver comme élément de parcours"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Approve model download"
-msgstr "Approuver le téléchargement du modèle"
 
 #: packages/ui/src/review-footer.tsx
 msgid "Approve past final CV checks"
@@ -1917,15 +1871,10 @@ msgstr "Impossible de commencer pour l’instant : {0}"
 #: packages/ui/src/review-footer.tsx
 #: packages/ui/src/review.tsx
 #: packages/ui/src/run-draft-choice.tsx
-#: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/start-confirmation.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "Cancel"
 msgstr "Annuler"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Cancel download"
-msgstr "Annuler le téléchargement"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Cancel editing"
@@ -1940,7 +1889,6 @@ msgid "Cancel generation"
 msgstr "Annuler la génération"
 
 #: packages/ui/src/profile-generation-progress.tsx
-#: packages/ui/src/semantic-retrieval.tsx
 msgid "Cancelling…"
 msgstr "Annulation…"
 
@@ -1976,7 +1924,6 @@ msgstr "Cartes"
 #: packages/ui/src/home.tsx
 #: packages/ui/src/knowledge.tsx
 #: packages/ui/src/page-navigation.ts
-#: packages/ui/src/semantic-retrieval.tsx
 msgid "Career evidence"
 msgstr "Éléments de parcours"
 
@@ -2130,7 +2077,6 @@ msgstr "Vérification que les filiations du rédacteur et du relecteur diffèren
 msgid "Checking your documents…"
 msgstr "Vérification de vos documents…"
 
-#: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/start-confirmation.tsx
 msgid "Checking…"
 msgstr "Vérification…"
@@ -2198,10 +2144,6 @@ msgstr "Choisissez un autre nom"
 #: apps/web/src/sources-model.ts
 msgid "Choose at least one knowledge base."
 msgstr "Choisissez au moins une base de connaissances."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Choose how this workspace searches your candidate knowledge. Semantic and hybrid modes use a small model that runs on this computer; the model is downloaded only after you approve it."
-msgstr "Choisissez comment cet espace de travail recherche dans vos connaissances candidat. Les modes sémantique et hybride utilisent un petit modèle qui tourne sur cet ordinateur ; il n’est téléchargé qu’après votre accord."
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "Choose how your CVs are written"
@@ -2371,10 +2313,6 @@ msgstr "Collecte des entrées"
 msgid "Combined scenario estimate"
 msgstr "Estimation combinée du scénario"
 
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Combines keyword and meaning-based results."
-msgstr "Combine les résultats par mots-clés et par sens."
-
 #: packages/ui/src/review.tsx
 msgid "commands"
 msgstr "commandes"
@@ -2464,10 +2402,6 @@ msgstr "Confirmer un fait"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Confirm as evidence"
 msgstr "Confirmer comme élément de parcours"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Confirm download"
-msgstr "Confirmer le téléchargement"
 
 #: apps/web/src/sources-model.ts
 msgid "Confirm that runs may combine these knowledge bases."
@@ -2580,10 +2514,6 @@ msgstr "domaines clés"
 #: packages/ui/src/profile-fact-suggestions-model.ts
 msgid "Correct a fact"
 msgstr "Corriger un fait"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Corrupt"
-msgstr "Corrompu"
 
 #: packages/ui/src/run-comparison-facts.ts
 msgid "Cost"
@@ -2972,10 +2902,6 @@ msgstr "Démo, sans appel au fournisseur"
 msgid "Designed"
 msgstr "Conçu"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Destination"
-msgstr "Destination"
-
 #: packages/ui/src/model-editor-summary.tsx
 #: packages/ui/src/model-profile-picker.tsx
 #: packages/ui/src/profile.tsx
@@ -3021,12 +2947,6 @@ msgstr "Dirigé"
 #: packages/ui/src/review-footer.tsx
 msgid "Directions for the author (optional)"
 msgstr "Consignes pour le rédacteur (facultatif)"
-
-#. placeholder {0}: result.status
-#. placeholder {1}: result.scannedEntryCount
-#: packages/ui/src/knowledge-intake.ts
-msgid "Directory import {0}: scanned {1} entries, "
-msgstr "Import de dossier {0} : {1} entrées parcourues, "
 
 #: packages/ui/src/review.tsx
 msgid "Disagreement ·"
@@ -3108,10 +3028,6 @@ msgstr "J’ai fini de parler"
 msgid "Download"
 msgstr "Télécharger"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Download cancelled. Nothing was installed."
-msgstr "Téléchargement annulé. Rien n’a été installé."
-
 #: apps/web/src/record-actions.tsx
 msgid "Download everything"
 msgstr "Tout télécharger"
@@ -3132,21 +3048,9 @@ msgstr "Télécharger ou supprimer les données de ce candidat"
 msgid "Download PDF"
 msgstr "Télécharger en PDF"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Download size"
-msgstr "Taille du téléchargement"
-
 #: apps/web/src/application-material.tsx
 msgid "Download Word"
 msgstr "Télécharger en Word"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Downloading model…"
-msgstr "Téléchargement du modèle…"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Downloading the local model."
-msgstr "Téléchargement du modèle local."
 
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/review.tsx
@@ -3272,7 +3176,6 @@ msgid "DraftLoop / Writing policy"
 msgstr "DraftLoop / Politique de rédaction"
 
 #: packages/ui/src/career-evidence-contract.ts
-#: packages/ui/src/semantic-retrieval-contract.ts
 msgid "DraftLoop application data"
 msgstr "Données de candidature DraftLoop"
 
@@ -3330,10 +3233,6 @@ msgstr "DraftLoop conserve dans l’UE les CV, notes et dossiers que vous import
 #: apps/web/src/sources-model.ts
 msgid "DraftLoop takes PDF, DOCX, Markdown and text files, and pull request lists as JSON or CSV."
 msgstr "DraftLoop accepte les fichiers PDF, DOCX, Markdown et texte, ainsi que les listes de pull requests en JSON ou CSV."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "DraftLoop will download this model once and keep it on this computer. Nothing is downloaded until you confirm, and your candidate material is never uploaded."
-msgstr "DraftLoop téléchargera ce modèle une fois et le gardera sur cet ordinateur. Rien n’est téléchargé avant votre confirmation, et votre contenu de candidat n’est jamais envoyé."
 
 #: apps/web/src/credits-model.ts
 msgid "DraftLoop's model budget for this month is used up, so new runs cannot start. They open again on the 1st of next month."
@@ -3485,10 +3384,6 @@ msgstr "Écoulé"
 #: apps/web/src/landing.tsx
 msgid "Email address"
 msgstr "Adresse e-mail"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "EmbeddingGemma 2 (text, experimental)"
-msgstr "EmbeddingGemma 2 (texte, expérimental)"
 
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Employer"
@@ -3814,18 +3709,6 @@ msgstr "Avis"
 msgid "Field"
 msgstr "Champ"
 
-#: packages/ui/src/knowledge.tsx
-msgid "File and directory intake is unavailable in this desktop host."
-msgstr "L’ajout de fichiers et de répertoires est indisponible dans cet hôte de bureau."
-
-#: packages/ui/src/knowledge-intake.ts
-msgid "File import complete. A career-evidence source was added."
-msgstr "Import terminé. Une source d’éléments de parcours a été ajoutée."
-
-#: packages/ui/src/knowledge-intake.ts
-msgid "File import complete. An existing career-evidence source was reused."
-msgstr "Import terminé. Une source d’éléments de parcours existante a été réutilisée."
-
 #: packages/ui/src/agent-setup-model.ts
 msgid "File project cards"
 msgstr "Déposer des fiches projet"
@@ -3846,10 +3729,6 @@ msgstr "Déposée par le jeton d’agent {0}"
 #: packages/ui/src/work-journal-model.ts
 msgid "Filed without an agent token"
 msgstr "Déposée sans jeton d’agent"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Files to download"
-msgstr "Fichiers à télécharger"
 
 #: packages/ui/src/app.tsx
 msgid "Filter"
@@ -3934,10 +3813,6 @@ msgstr "Constats dans la marge de l’ébauche"
 #: packages/ui/src/review.tsx
 msgid "Findings queue"
 msgstr "File des constats"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Finds passages by meaning with the local model, even without shared keywords."
-msgstr "Trouve des passages par leur sens avec le modèle local, même sans mots-clés communs."
 
 #: packages/ui/src/review.tsx
 msgid "Finish the three steps in order."
@@ -4456,14 +4331,6 @@ msgid "https://github.com/…\n"
 msgstr "https://github.com/…\n"
 "https://www.linkedin.com/in/…"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Hugging Face,"
-msgstr "Hugging Face,"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Hybrid"
-msgstr "Hybride"
-
 #: apps/web/src/beta-sign-up.tsx
 msgid "I accept the terms of use and the privacy policy."
 msgstr "J'accepte les conditions d'utilisation et la politique de confidentialité."
@@ -4536,7 +4403,6 @@ msgid "Imported {0}."
 msgstr "Importé : {0}."
 
 #: packages/ui/src/career-evidence.ts
-#: packages/ui/src/knowledge-intake.ts
 msgid "Imported source result did not match the selected knowledge base"
 msgstr "La source importée ne correspond pas à la base de connaissances choisie"
 
@@ -4607,18 +4473,6 @@ msgstr "Entrées"
 #: packages/ui/src/agent-setup.tsx
 msgid "Install draftloop-mcp once on this computer."
 msgstr "Installez draftloop-mcp une fois sur cet ordinateur."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Install model"
-msgstr "Installer le modèle"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Installed"
-msgstr "Installé"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Installing"
-msgstr "Installation"
 
 #: packages/ui/src/agent-setup-model.ts
 msgid "Installs the DraftLoop tools, the /log-work and /tailor-cv skills and a reminder to record notable work. The token goes in your user folder, never in a project."
@@ -4843,10 +4697,6 @@ msgstr "Continuer d’attendre"
 msgid "Kept"
 msgstr "Gardées"
 
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Keyword search over your candidate knowledge. Needs no model."
-msgstr "Recherche par mots-clés dans vos connaissances candidat. Aucun modèle requis."
-
 #: packages/ui/src/run-requirement-evidence.tsx
 msgid "keywords"
 msgstr "mots-clés"
@@ -4977,14 +4827,6 @@ msgstr "Laissez Claude Code, Codex ou un autre agent travailler avec DraftLoop p
 #: packages/ui/src/career-interview-model.ts
 msgid "Let's go on with the basics. Which would you like to talk about next?"
 msgstr "Continuons avec l’essentiel. De quoi voulez-vous parler ensuite ?"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Lexical (default)"
-msgstr "Lexicale (par défaut)"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "License"
-msgstr "Licence"
 
 #: packages/ui/src/theme.tsx
 msgid "Light"
@@ -5124,10 +4966,6 @@ msgstr "Les modèles locaux tournent sur le point d’accès propre à ce servic
 msgid "Local only"
 msgstr "Local uniquement"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Local semantic retrieval is unavailable in this desktop host. Runs use keyword retrieval."
-msgstr "La recherche sémantique locale n’est pas disponible dans cet hôte de bureau. Les exécutions utilisent la recherche par mots-clés."
-
 #: apps/web/src/application-material-model.ts
 msgid "Long"
 msgstr "Long"
@@ -5156,10 +4994,6 @@ msgstr "Vous voulez ajouter ou remplacer un CV ?"
 #: packages/ui/src/opportunity-brief-review-model.ts
 msgid "Low"
 msgstr "Faible"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Low resource (97M parameters)"
-msgstr "Ressources réduites (97 M de paramètres)"
 
 #: apps/web/src/service-notice-model.ts
 msgid "Maintenance is taking longer than planned. Changes are still paused and come back on their own; reading and downloading stay available."
@@ -5325,10 +5159,6 @@ msgstr "La découverte de modèles ne peut interroger que le serveur local par d
 msgid "Model discovery uses the default local server, not this workspace address. Type the model id served at the local address below."
 msgstr "La découverte de modèles utilise le serveur local par défaut, pas l’adresse de cet espace de travail. Saisissez l’identifiant du modèle servi à l’adresse locale ci-dessous."
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Model download progress"
-msgstr "Progression du téléchargement du modèle"
-
 #: packages/ui/src/app.tsx
 msgid "model id"
 msgstr "identifiant du modèle"
@@ -5349,14 +5179,6 @@ msgstr "Les réglages de modèles n’ont pas pu être enregistrés. Vérifiez l
 #: packages/ui/src/app.tsx
 msgid "Model settings could not be saved. Check both model ids and try again."
 msgstr "Les réglages de modèles n’ont pas pu être enregistrés. Vérifiez les deux identifiants de modèle et réessayez."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Model size"
-msgstr "Taille du modèle"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Model status"
-msgstr "État du modèle"
 
 #: packages/ui/src/model-profile-budget.tsx
 msgid "model/pricing documentation"
@@ -6103,10 +5925,6 @@ msgstr "Absent de votre profil actuellement"
 msgid "not independent"
 msgstr "non indépendante"
 
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Not installed"
-msgstr "Non installé"
-
 #: apps/web/src/interview-guide.tsx
 msgid "Not known"
 msgstr "Inconnu"
@@ -6231,7 +6049,6 @@ msgstr "Actuellement"
 #: packages/ui/src/career-interview-panel.tsx
 #: packages/ui/src/profile.tsx
 #: packages/ui/src/review.tsx
-#: packages/ui/src/semantic-retrieval.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "of"
 msgstr "sur"
@@ -7119,16 +6936,8 @@ msgid "Read your exported CVs and saved cover letters and interview questions"
 msgstr "Lire vos CV exportés et vos lettres de motivation et questions d'entretien enregistrées"
 
 #: packages/ui/src/career-evidence.ts
-#: packages/ui/src/knowledge.tsx
 msgid "Readiness could not be checked."
 msgstr "L’état de préparation n’a pas pu être vérifié."
-
-#. placeholder {0}: result.readyCount
-#. placeholder {1}: result.blockedCount
-#. placeholder {2}: result.sourceCount
-#: packages/ui/src/knowledge-intake.ts
-msgid "Readiness: {0} ready, {1} blocked of {2} sources.{stateNote}"
-msgstr "Préparation : {0} prêtes, {1} bloquées sur {2} sources.{stateNote}"
 
 #: packages/ui/src/home-model.ts
 msgid "Reading career evidence…"
@@ -7320,10 +7129,6 @@ msgstr "Actualisation…"
 msgid "registered for {roleName}"
 msgstr "enregistré pour {roleName}"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Reinstall model"
-msgstr "Réinstaller le modèle"
-
 #: packages/ui/src/review.tsx
 msgid "reject"
 msgstr "rejeter"
@@ -7399,10 +7204,6 @@ msgstr "Retirer le fait"
 #: packages/ui/src/home-folder-model.ts
 msgid "Remove from folder"
 msgstr "Retirer du dossier"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Remove model"
-msgstr "Retirer le modèle"
 
 #. placeholder {0}: ruleSentence(rule)
 #: apps/web/src/private-sections.tsx
@@ -7713,18 +7514,10 @@ msgstr "recherche (la source complète de {chunks} dépassait le plafond de coû
 msgid "retrieval (no full-source chunks)"
 msgstr "recherche (aucun fragment de source complète)"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Retrieval mode"
-msgstr "Mode de recherche"
-
 #: packages/ui/src/career-evidence-card.tsx
 #: packages/ui/src/review.tsx
 msgid "Retrieval readiness is unavailable"
 msgstr "L’état de préparation de la recherche est indisponible"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Retrieval setting saved for this workspace."
-msgstr "Réglage de recherche enregistré pour cet espace de travail."
 
 #: packages/ui/src/run-comparison-facts.ts
 msgid "retrieval, {chunks}"
@@ -8426,34 +8219,6 @@ msgstr "Sélectionné"
 msgid "Selected override"
 msgstr "Politique propre sélectionnée"
 
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Semantic"
-msgstr "Sémantique"
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Semantic retrieval"
-msgstr "Recherche sémantique"
-
-#: packages/ui/src/career-evidence.ts
-msgid "Semantic search: model installing"
-msgstr "Recherche sémantique : installation du modèle"
-
-#: packages/ui/src/career-evidence.ts
-msgid "Semantic search: model needs reinstalling"
-msgstr "Recherche sémantique : le modèle doit être réinstallé"
-
-#: packages/ui/src/career-evidence.ts
-msgid "Semantic search: model not installed"
-msgstr "Recherche sémantique : modèle non installé"
-
-#: packages/ui/src/career-evidence.ts
-msgid "Semantic search: not supported on this computer"
-msgstr "Recherche sémantique : non prise en charge sur cet ordinateur"
-
-#: packages/ui/src/career-evidence.ts
-msgid "Semantic search: ready"
-msgstr "Recherche sémantique : prête"
-
 #: apps/web/src/feedback.tsx
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Send"
@@ -8788,7 +8553,6 @@ msgstr "Trier"
 #: apps/web/src/operator.tsx
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/profile.tsx
-#: packages/ui/src/semantic-retrieval.tsx
 msgid "Source"
 msgstr "Source"
 
@@ -8844,10 +8608,6 @@ msgstr "Découpage du texte de l’offre avec les données d’exemple locales. 
 #: packages/ui/src/start-confirmation.tsx
 msgid "Standard"
 msgstr "Standard"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Standard (311M parameters, recommended)"
-msgstr "Standard (311 M de paramètres, recommandé)"
 
 #: packages/ui/src/project-card-facts.tsx
 msgid "Stars: {stars}"
@@ -9596,10 +9356,6 @@ msgstr "Le fichier se télécharge quand il est prêt."
 msgid "The file is larger than 10 MB."
 msgstr "Le fichier dépasse 10 Mo."
 
-#: packages/ui/src/app.tsx
-msgid "The files could not be imported."
-msgstr "Les fichiers n’ont pas pu être importés."
-
 #: packages/ui/src/review.tsx
 msgid "The final CV checks fail only on the gaps you marked as known. Approving records your reasons as the override."
 msgstr "Les vérifications finales du CV n’échouent que sur les lacunes que vous avez marquées comme connues. Approuver enregistre vos motifs comme dérogation."
@@ -9619,10 +9375,6 @@ msgstr "Le dossier n’a pas pu être supprimé. Réessayez."
 #: packages/ui/src/home-folders.tsx
 msgid "The folder could not be renamed. Try again."
 msgstr "Le dossier n’a pas pu être renommé. Réessayez."
-
-#: packages/ui/src/career-evidence.ts
-msgid "The folder has no supported files to add."
-msgstr "Le dossier ne contient aucun fichier pris en charge à ajouter."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "the hiring process"
@@ -9675,10 +9427,6 @@ msgstr "Le fournisseur d’identité n’a envoyé aucun jeton d’accès."
 #: packages/ui/src/app.tsx
 msgid "The independence check could not be completed."
 msgstr "La vérification d’indépendance n’a pas pu aboutir."
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "The installed model files failed verification, so runs fall back to keyword retrieval until the model is reinstalled."
-msgstr "Les fichiers du modèle installé n’ont pas passé la vérification : les exécutions se rabattent sur la recherche par mots-clés jusqu’à sa réinstallation."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "The interview"
@@ -9786,45 +9534,9 @@ msgstr "La conversation en direct est terminée."
 msgid "The live conversation stopped. Try again, or keep writing your answers."
 msgstr "La conversation en direct s’est arrêtée. Réessayez, ou continuez à écrire vos réponses."
 
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "The local model cannot run on this computer, so runs use keyword retrieval."
-msgstr "Le modèle local ne peut pas tourner sur cet ordinateur : les exécutions utilisent la recherche par mots-clés."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The local model is installed."
-msgstr "Le modèle local est installé."
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "The local model is not installed, so runs fall back to keyword retrieval until it is installed."
-msgstr "Le modèle local n’est pas installé : les exécutions se rabattent sur la recherche par mots-clés jusqu’à son installation."
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "The local model is still downloading, so runs fall back to keyword retrieval until it is installed."
-msgstr "Le modèle local est encore en téléchargement : les exécutions se rabattent sur la recherche par mots-clés jusqu’à son installation."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The local model was removed."
-msgstr "Le modèle local a été supprimé."
-
 #: apps/web/src/operator-trace.tsx
 msgid "The member's account space. Each feedback note shows it under Context, as Organisation."
 msgstr "L’espace de compte du membre. Chaque note l’affiche dans Contexte, sous Organisation."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The model could not be installed."
-msgstr "Le modèle n’a pas pu être installé."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The model could not be removed."
-msgstr "Le modèle n’a pas pu être supprimé."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The model download could not be prepared."
-msgstr "Le téléchargement du modèle n’a pas pu être préparé."
-
-#: packages/ui/src/semantic-retrieval-contract.ts
-msgid "The model download was cancelled. Nothing was installed."
-msgstr "Le téléchargement du modèle a été annulé. Rien n’a été installé."
 
 #: packages/ui/src/application-model-pair.tsx
 msgid "The model pair could not be saved."
@@ -9833,10 +9545,6 @@ msgstr "La paire de modèles n’a pas pu être enregistrée."
 #: packages/ui/src/model-profile-bridge.ts
 msgid "The model profile bridge payload is invalid."
 msgstr "Les données de profil de modèle transmises sont invalides."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The model status could not be read."
-msgstr "L’état du modèle n’a pas pu être lu."
 
 #: apps/web/src/application-material-model.ts
 msgid "The model's answer could not be used, so nothing was drafted. Try again."
@@ -9988,14 +9696,6 @@ msgstr "Les exigences n’ont pas été lues automatiquement : la limite du jour
 #: apps/web/src/research-brief-model.ts
 msgid "The research failed and nothing was saved. Try again later."
 msgstr "La recherche a échoué et rien n'a été enregistré. Réessayez plus tard."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The retrieval mode could not be read."
-msgstr "Le mode de recherche n’a pas pu être lu."
-
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "The retrieval setting could not be saved."
-msgstr "Le réglage de recherche n’a pas pu être enregistré."
 
 #: packages/ui/src/app.tsx
 msgid "The review action could not be completed."
@@ -10832,10 +10532,6 @@ msgstr "Annuler un tour vide ouvert après la limite configurée"
 msgid "unknown"
 msgstr "inconnu"
 
-#: packages/ui/src/semantic-retrieval.tsx
-msgid "Unknown"
-msgstr "Inconnu"
-
 #: packages/ui/src/work-journal-panel.tsx
 msgid "Unknown: treated as private"
 msgstr "Inconnu : traité comme privé"
@@ -10855,10 +10551,6 @@ msgstr "source sans nom"
 #: apps/web/src/application-material-model.ts
 msgid "Unsaved draft"
 msgstr "Brouillon non enregistré"
-
-#: packages/ui/src/semantic-retrieval-presentation.ts
-msgid "Unsupported"
-msgstr "Non pris en charge"
 
 #: packages/ui/src/model-profile-details.tsx
 msgid "Unsupported with the configured authentication route"
@@ -11434,10 +11126,6 @@ msgstr "Nom de l’espace de travail"
 #: packages/ui/src/run-details.tsx
 msgid "Workspace policy"
 msgstr "Politique de l’espace de travail"
-
-#: packages/ui/src/knowledge.tsx
-msgid "Workspace review could not be refreshed. Reopen the workspace before continuing."
-msgstr "La relecture de l’espace de travail n’a pas pu être actualisée. Rouvrez l’espace de travail avant de continuer."
 
 #: packages/ui/src/review.tsx
 msgid "Workspace sections"

@@ -19,7 +19,6 @@ import { KnowledgeWorkspace } from "./knowledge.js";
 import { createFixtureReviewState } from "./model.js";
 import { ProfileWorkspace } from "./profile.js";
 import { ReviewWorkspace } from "./review.js";
-import { SemanticRetrievalPanel } from "./semantic-retrieval.js";
 import { untranslatedRuns } from "./untranslated-text.test-support.js";
 
 const noop = () => undefined;
@@ -32,9 +31,6 @@ const knowledge = (
     onPendingChange={noop}
     onSelectionSaved={async () => true}
   />
-);
-const retrieval = (
-  <SemanticRetrievalPanel workspaceId="workspace-1" capabilities={{}} disabled={false} />
 );
 const workflow = (
   <ProfileWorkspace
@@ -66,7 +62,7 @@ function evidencePage(
   } = {},
 ): string {
   return renderToStaticMarkup(
-    <CareerEvidencePage {...frame} knowledge={knowledge} retrieval={retrieval} {...overrides} />,
+    <CareerEvidencePage {...frame} knowledge={knowledge} {...overrides} />,
   );
 }
 
@@ -89,11 +85,10 @@ describe("Career page header", () => {
 });
 
 describe("Career evidence page", () => {
-  it("holds the knowledge and retrieval panels and no profile workflow", () => {
+  it("holds the knowledge panel and no profile workflow", () => {
     const html = evidencePage();
     expect(html).toContain('id="candidate-knowledge-heading"');
     expect(html).toContain("Knowledge-store selection is unavailable");
-    expect(html).toContain('id="semantic-retrieval-heading"');
     expect(html).not.toContain("canonical-profile-title");
     expect(html).not.toContain("Configured model pair");
   });
@@ -161,13 +156,12 @@ describe("Career evidence page", () => {
           {...frame}
           revision={3}
           card={<p>Evidence card</p>}
-          knowledge={knowledge}
-          retrieval={<p>Retrieval panel</p>}
+          knowledge={<p>Knowledge panel</p>}
         />
       </HostPanelsContext.Provider>,
     );
     expect(withPanels.indexOf("Host before")).toBeLessThan(withPanels.indexOf("Evidence card"));
-    expect(withPanels.indexOf("Retrieval panel")).toBeLessThan(withPanels.indexOf("Host after"));
+    expect(withPanels.indexOf("Knowledge panel")).toBeLessThan(withPanels.indexOf("Host after"));
     expect(withPanels).toContain("Host before");
     expect(withPanels).toContain("Host after 3");
     expect(seen).toEqual([3]);
@@ -194,11 +188,10 @@ describe("Career evidence page", () => {
 });
 
 describe("Career profile page", () => {
-  it("holds the profile workflow and no knowledge or retrieval panel", () => {
+  it("holds the profile workflow and no knowledge panel", () => {
     const html = profilePage();
     expect(html).not.toContain("candidate-knowledge-heading");
     expect(html).not.toContain("Knowledge-store selection");
-    expect(html).not.toContain("semantic-retrieval-heading");
     expect(html).not.toContain("Configured model pair");
     expect(html).toContain('id="canonical-profile-title"');
   });
@@ -328,7 +321,6 @@ describe("career navigation", () => {
           displayName: "Engineering",
           sourceCount: 5,
           blockedCount: 0,
-          semanticLine: null,
         }}
         legacyEvidenceSourceCount={0}
         applications={{ status: "loading" }}

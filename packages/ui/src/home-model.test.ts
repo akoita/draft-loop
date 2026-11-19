@@ -172,7 +172,6 @@ describe("career evidence presentation", () => {
     displayName: "Engineering",
     sourceCount,
     blockedCount,
-    semanticLine: null,
   });
 
   it("shows the knowledge base name and source readiness", () => {
