@@ -35,6 +35,7 @@ import {
   hostedFactUsageCapabilities,
   isFactUsageCommand,
 } from "./fact-usage-bridge.js";
+import { existingJobPageApplication } from "./job-page-duplicate.js";
 import {
   createKnowledgeAnswers,
   hostedKnowledgeCapabilities,
@@ -340,6 +341,9 @@ export function createHttpBridge(options: HttpBridgeOptions): NativeBridge {
       case "application.create": {
         const { workspaceId, name, jobText, jobFile, jobUrl } = command.input;
         if (jobUrl !== undefined) {
+          // The same address again opens the application already kept for it (#2942).
+          const existing = await existingJobPageApplication(client, workspaceId, jobUrl);
+          if (existing !== undefined) return record(workspaceId, existing);
           // The address and the person's approval are kept; the page is fetched at extraction.
           const created = await client.call("POST /v1/workspaces/{workspaceId}/applications", {
             path: { workspaceId },

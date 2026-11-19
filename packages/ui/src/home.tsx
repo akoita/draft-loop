@@ -78,6 +78,7 @@ import {
 import {
   applicationActivityText,
   applicationChosenRunText,
+  applicationRequirementsText,
   applicationRunningLabel,
   applicationRunText,
   applicationStatusLabel,
@@ -272,6 +273,7 @@ export function ApplicationCard({
   });
   const nudge = onRename !== undefined && !rename.editing && needsApplicationName(application);
   const chosenRunText = applicationChosenRunText(application);
+  const requirementsText = applicationRequirementsText(application);
   return (
     <li className={archived ? "application-card application-card-archived" : "application-card"}>
       <div className="application-card-head">
@@ -341,6 +343,12 @@ export function ApplicationCard({
         </span>
         <span aria-hidden="true"> · </span>
         <span>{applicationRunText(application.runCount)}</span>
+        {requirementsText === null ? null : (
+          <>
+            <span aria-hidden="true"> · </span>
+            <span className="application-card-requirements">{requirementsText}</span>
+          </>
+        )}
         {chosenRunText === null ? null : (
           <>
             <span aria-hidden="true"> · </span>

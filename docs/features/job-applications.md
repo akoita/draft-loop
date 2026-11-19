@@ -23,6 +23,9 @@ web servers.
    **opportunity brief**. The application keeps a copy of the page's text,
    dated, so the job stays readable after the page expires.
    The review's **Job** tab shows it with the page's address.
+   If the page cannot be read, the step says why and offers **Paste text or
+   attach a file** in place. Creating an application again with the same
+   address opens the one you already have instead of a second one.
 3. Check the brief, edit it, and mark the version reviewed. A run pins one
    reviewed version. On the hosted service a run starts only from a reviewed
    brief, so the start checklist keeps the requirements step open until one
@@ -31,7 +34,8 @@ web servers.
    rarely needed choices: starting from the raw job description while the
    brief is still a draft, and a writing policy override for this job only.
 4. Home lists every application with search, a status filter, sort and a
-   **List** view. Group applications in one-level **folders**; deleting a
+   **List** view. A card says **No requirements yet** until the application
+   has a brief or a run. Group applications in one-level **folders**; deleting a
    folder keeps its applications.
 
 Each job source is screened for hidden instructions; a flagged source is held

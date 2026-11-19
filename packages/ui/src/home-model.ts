@@ -305,6 +305,17 @@ export function applicationStatusTone(status: ApplicationStatus): HomeTone {
   }
 }
 
+/**
+ * "No requirements yet" on the card of an application that never got requirements, such as one
+ * whose job page could not be read (#2942); null once a brief or a run exists.
+ */
+export function applicationRequirementsText(
+  application: Pick<ApplicationSummaryView, "briefCount" | "runCount" | "isDefault">,
+): string | null {
+  if (application.isDefault || application.briefCount > 0 || application.runCount > 0) return null;
+  return t`No requirements yet`;
+}
+
 export function applicationRunText(runCount: number): string {
   return runCount === 0 ? t`No runs yet` : countedNouns.run(runCount);
 }

@@ -6,6 +6,7 @@ import {
 import type { CareerEvidenceStatus } from "./career-evidence.js";
 import {
   applicationActivityText,
+  applicationRequirementsText,
   applicationRunText,
   applicationStatusLabel,
   applicationsByActivity,
@@ -237,6 +238,11 @@ describe("application list wording", () => {
 
   it("words run counts and statuses", () => {
     expect(applicationRunText(0)).toBe("No runs yet");
+    const created = { briefCount: 0, runCount: 0, isDefault: false };
+    expect(applicationRequirementsText(created)).toBe("No requirements yet");
+    expect(applicationRequirementsText({ ...created, briefCount: 1 })).toBeNull();
+    expect(applicationRequirementsText({ ...created, runCount: 1 })).toBeNull();
+    expect(applicationRequirementsText({ ...created, isDefault: true })).toBeNull();
     expect(applicationRunText(1)).toBe("1 run");
     expect(applicationRunText(4)).toBe("4 runs");
     expect(applicationStatusLabel("in-review")).toBe("In review");

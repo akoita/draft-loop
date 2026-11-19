@@ -10,6 +10,7 @@ import {
   opportunityExtractionCancelledMessage,
 } from "./bridge.js";
 import { countedNouns } from "./counted-nouns.js";
+import { useOpenJobReplacement } from "./job-replacement.js";
 import { modelDisplayName, providerDisplayName } from "./model-profile-presentation.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
 import type { BriefOperations } from "./opportunity-brief-review-model.js";
@@ -198,6 +199,7 @@ export function JobRequirementsExtractionView({
   onCancel,
   onCancelExtraction,
 }: JobRequirementsExtractionViewProps) {
+  const openReplacement = useOpenJobReplacement();
   const providerName = providerDisplayName(writingModel.company);
   const modelName = modelDisplayName(writingModel.model);
   switch (phase.kind) {
@@ -363,12 +365,22 @@ export function JobRequirementsExtractionView({
         <div className="job-extraction" role="alert">
           <p className="job-extraction-title">{t`Requirements were not extracted`}</p>
           <p className="setup-note">{phase.message}</p>
-          <button
-            className="button button-outline"
-            type="button"
-            disabled={disabled}
-            onClick={onOpen}
-          >{t`Try again`}</button>
+          <div className="job-extraction-actions">
+            {openReplacement === null ? null : (
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={disabled}
+                onClick={openReplacement}
+              >{t`Paste text or attach a file`}</button>
+            )}
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={disabled}
+              onClick={onOpen}
+            >{t`Try again`}</button>
+          </div>
         </div>
       );
   }
