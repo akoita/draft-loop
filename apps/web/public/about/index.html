@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DraftLoop: a CV for every job, checked by a second AI</title>
+    <meta
+      name="description"
+      content="DraftLoop drafts a CV and a cover letter for each job from your own documents. One AI writes, an AI from another company checks every claim, and you approve what goes out."
+    />
+    <meta name="theme-color" content="#0f7d6e" />
+    <meta property="og:title" content="DraftLoop" />
+    <meta
+      property="og:description"
+      content="A CV for every job, built only from what you have really done."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="../showcase/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="about.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-row">
+        <a class="brand" href="#top" aria-label="DraftLoop">
+          <img src="../showcase/mark.svg" alt="" width="32" height="32" />
+          <span>DraftLoop</span>
+        </a>
+        <nav class="top-nav" aria-label="Sections">
+          <a href="#loop">Two AIs</a>
+          <a href="#tools">What it does</a>
+          <a href="#principles">Principles</a>
+          <a href="#evidence">Evidence</a>
+        </nav>
+        <a class="button" href="/#landing-waitlist">Request access</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <p class="tag">[ Job applications, checked twice ]</p>
+            <h1>A CV for every job, built only from what you have really done.</h1>
+            <p class="lead-teal">
+              DraftLoop drafts a tailored CV and cover letter for each job from your own career
+              documents.
+            </p>
+            <p class="lead">
+              One AI model writes. A model from another company checks each claim against your
+              sources. You approve what goes out.
+            </p>
+            <dl class="meta">
+              <div><dt>Engine</dt><dd>Writer and critic</dd></div>
+              <div><dt>Every claim</dt><dd>Linked to a source</dd></div>
+              <div><dt>Your data</dt><dd>Hosted in the EU</dd></div>
+            </dl>
+          </div>
+
+          <figure class="visual visual-loop">
+            <svg viewBox="0 25 480 400" role="img" aria-label="Two models joined in a loop around a document">
+              <title>Two models joined in a loop around a document</title>
+              <defs>
+                <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <path d="M24 0H0V24" fill="none" stroke="#1f2a33" stroke-width="1" />
+                </pattern>
+              </defs>
+              <rect y="0" width="480" height="460" fill="#0f1319" />
+              <rect y="0" width="480" height="460" fill="url(#grid)" />
+              <path d="M40 90H150M40 270H150M330 90H440M330 270H440M90 40V90M390 270V320" fill="none" stroke="#24434a" stroke-width="2" />
+              <path d="M150 180C150 110 330 110 330 180" fill="none" stroke="#2fd0b8" stroke-width="3" stroke-linecap="round" />
+              <path d="M330 180C330 250 150 250 150 180" fill="none" stroke="#2fd0b8" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 8" />
+              <path d="M314 132l18 10-4-20" fill="none" stroke="#2fd0b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M166 228l-18-10 4 20" fill="none" stroke="#2fd0b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              <rect x="100" y="150" width="100" height="60" rx="6" fill="#161a21" stroke="#2fd0b8" stroke-width="2" />
+              <text x="150" y="178" text-anchor="middle" fill="#f5f7fa" font-family="ui-monospace, monospace" font-size="12">WRITER</text>
+              <text x="150" y="196" text-anchor="middle" fill="#93a0ab" font-family="ui-monospace, monospace" font-size="10">model 01</text>
+              <rect x="280" y="150" width="100" height="60" rx="6" fill="#161a21" stroke="#2fd0b8" stroke-width="2" />
+              <text x="330" y="178" text-anchor="middle" fill="#f5f7fa" font-family="ui-monospace, monospace" font-size="12">CRITIC</text>
+              <text x="330" y="196" text-anchor="middle" fill="#93a0ab" font-family="ui-monospace, monospace" font-size="10">model 02</text>
+              <rect x="218" y="146" width="44" height="58" rx="3" fill="#fbfaf7" />
+              <path d="M226 160h28M226 170h28M226 180h20M226 190h24" stroke="#0f7d6e" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <figcaption class="badge">
+              <strong>Critic check</strong>
+              Every claim is checked against your sources before you see the draft.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="loop" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="tag">[ How the loop works ]</p>
+            <h2>Two AIs from two companies</h2>
+            <p>
+              Many AI tools pad a CV to sound impressive. DraftLoop gives the draft to a second
+              model from another company, whose only job is to find claims your documents do not
+              support.
+            </p>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <p class="card-num">Model 01 // The writer</p>
+              <h3>Drafts for the role</h3>
+              <p>
+                Reads the job and your career documents, then drafts a CV and a cover letter in the
+                language and tone the role asks for.
+              </p>
+            </article>
+            <article class="card">
+              <p class="card-num">Model 02 // The critic</p>
+              <h3>Checks every claim</h3>
+              <p>
+                Compares each claim, number and date with your sources. Anything it cannot trace is
+                flagged and sent back for another draft.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="tools" class="section dark">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="tag">[ What it does ]</p>
+            <h2>Everything for one application, in one place</h2>
+            <p>For people who want their applications tailored, true and private.</p>
+          </div>
+          <div class="grid-3">
+            <article class="tool">
+              <p class="tool-num">01</p>
+              <h3>Tailored CVs</h3>
+              <p>
+                A CV for each job, drafted from your evidence, with every claim linked to the
+                document it comes from.
+              </p>
+            </article>
+            <article class="tool">
+              <p class="tool-num">02</p>
+              <h3>Cover letters</h3>
+              <p>
+                Letters written for the job and in your own voice, checked by the critic for
+                claims you cannot back up.
+              </p>
+            </article>
+            <article class="tool">
+              <p class="tool-num">03</p>
+              <h3>Interview preparation</h3>
+              <p>
+                A preparation guide with likely questions, drawn from the job and your own
+                experience.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="principles" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="tag">[ Principles ]</p>
+            <h2>Trust comes from the truth</h2>
+            <p>Four rules every draft follows.</p>
+          </div>
+          <div class="grid-4">
+            <article class="value">
+              <h3>Honest</h3>
+              <p>Every line traces back to your real, documented experience. Nothing is invented.</p>
+            </article>
+            <article class="value">
+              <h3>Precise</h3>
+              <p>Drafts match what the job asks for, without padding or empty buzzwords.</p>
+            </article>
+            <article class="value">
+              <h3>Private</h3>
+              <p>Hosted in the EU. Your documents are encrypted, and you can delete them any time.</p>
+            </article>
+            <article class="value">
+              <h3>Yours to decide</h3>
+              <p>You review, edit and approve every document. DraftLoop never sends anything to an employer.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence" class="banner">
+        <div class="banner-text">
+          <p class="tag">[ Built on evidence ]</p>
+          <h2>Your documents are the source of truth</h2>
+          <p class="banner-lead">
+            DraftLoop keeps the screen calm so you can focus on what matters: the job, your
+            evidence and the claims that link them.
+          </p>
+          <ul class="spec">
+            <li>Nothing added that your documents do not say</li>
+            <li>Every claim linked to its source</li>
+            <li>Writer and critic from two different companies</li>
+            <li>Model names shown on every run</li>
+          </ul>
+        </div>
+        <div class="banner-visual" aria-hidden="true">
+          <svg viewBox="0 0 480 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="480" height="320" fill="#161a21" />
+            <g fill="none" stroke="#2e3742" stroke-width="1.5">
+              <path d="M0 40H480M0 120H480M0 200H480M0 280H480M60 0V320M180 0V320M300 0V320M420 0V320" />
+            </g>
+            <g fill="none" stroke="#24434a" stroke-width="2">
+              <path d="M60 120H180V200H300V40H420M180 280V200M300 200H420V280" />
+            </g>
+            <g fill="#2fd0b8">
+              <rect x="174" y="114" width="12" height="12" rx="2" />
+              <rect x="294" y="194" width="12" height="12" rx="2" />
+              <rect x="414" y="34" width="12" height="12" rx="2" />
+              <rect x="174" y="274" width="12" height="12" rx="2" />
+            </g>
+            <g fill="#212832" stroke="#2e3742">
+              <rect x="40" y="220" width="60" height="78" rx="3" />
+              <rect x="330" y="230" width="60" height="78" rx="3" />
+            </g>
+            <path d="M50 236h40M50 248h40M50 260h28M340 246h40M340 258h40M340 270h28" stroke="#0f7d6e" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap hero-grid">
+          <figure class="visual visual-blocks" aria-hidden="true">
+            <svg viewBox="0 0 480 480" aria-hidden="true">
+              <rect width="480" height="480" fill="#212832" />
+              <g stroke="#0f1319" stroke-width="1">
+                <path d="M120 250l80-46 80 46-80 46z" fill="#e9edf1" />
+                <path d="M120 250v60l80 46v-60z" fill="#b8c2cc" />
+                <path d="M280 250v60l-80 46v-60z" fill="#d5dbe1" />
+                <path d="M200 160l80-46 80 46-80 46z" fill="#3a4450" />
+                <path d="M200 160v90l80 46v-90z" fill="#161a21" />
+                <path d="M360 160v90l-80 46v-90z" fill="#262e38" />
+                <path d="M60 180l60-34 60 34-60 34z" fill="#3a4450" />
+                <path d="M60 180v70l60 34v-70z" fill="#161a21" />
+                <path d="M180 180v70l-60 34v-70z" fill="#262e38" />
+                <path d="M280 330l60-34 60 34-60 34z" fill="#e9edf1" />
+                <path d="M280 330v40l60 34v-40z" fill="#b8c2cc" />
+                <path d="M400 330v40l-60 34v-40z" fill="#d5dbe1" />
+              </g>
+              <path d="M280 206v90M200 250v46" stroke="#2fd0b8" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </figure>
+          <div>
+            <p class="tag">[ You stay in control ]</p>
+            <h2>Your story, told your way</h2>
+            <p class="lead">
+              DraftLoop does the tailoring and the checking. You keep the final word on every line,
+              and your material stays yours.
+            </p>
+            <blockquote class="quote">“A CV for every job, built only from what you have really done.”</blockquote>
+            <div class="actions">
+              <a class="button" href="/#landing-waitlist">Join the waitlist</a>
+              <a class="button secondary" href="/showcase/">See the screens</a>
+            </div>
+            <p class="small">DraftLoop is in a free test, open by invitation. Join the waitlist and we will email you when your place is ready.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot-grid">
+        <div>
+          <p class="foot-brand">DraftLoop</p>
+          <p>
+            Tailored CVs and cover letters from your own career documents, checked by a second AI
+            before you approve them.
+          </p>
+        </div>
+        <div>
+          <p class="foot-title">On this page</p>
+          <ul>
+            <li><a href="#loop">Two AIs</a></li>
+            <li><a href="#tools">What it does</a></li>
+            <li><a href="#principles">Principles</a></li>
+            <li><a href="#evidence">Evidence</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="foot-title">Contact and legal</p>
+          <ul>
+            <li><a href="mailto:contact@maya-labs.xyz">contact@maya-labs.xyz</a></li>
+            <li><a href="/showcase/">Sample screens</a></li>
+            <li><a href="/legal/privacy">Privacy policy</a></li>
+            <li><a href="/legal/terms">Terms of use</a></li>
+            <li><a href="/legal/notice">Legal notice</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="wrap foot-bottom">
+        <span>DraftLoop. All rights reserved.</span>
+      </div>
+    </footer>
+  </body>
+</html>
