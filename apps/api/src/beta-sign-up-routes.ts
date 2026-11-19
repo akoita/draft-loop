@@ -6,9 +6,8 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
-import { registerBetaInviteSignInRoutes } from "./beta-invite-sign-in-routes.js";
 import { writeAuditLine } from "./audit-line.js";
+import { registerBetaInviteSignInRoutes } from "./beta-invite-sign-in-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { IdentityAccounts } from "./identity-accounts.js";
 import type { InviteMailer } from "./invite-mail.js";

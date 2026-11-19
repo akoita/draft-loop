@@ -3,9 +3,8 @@ import type { BetaWaitlist } from "@draft-loop/storage-postgres";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
-import { emailInvite } from "./beta-sign-up-routes.js";
 import { writeAuditLine } from "./audit-line.js";
+import { emailInvite } from "./beta-sign-up-routes.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { InviteMailer } from "./invite-mail.js";
 import { operatorPageQuery } from "./operator-page-query.js";

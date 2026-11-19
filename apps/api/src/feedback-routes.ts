@@ -18,9 +18,8 @@ import { TenantDirectoryError } from "@draft-loop/storage/tenant-directory";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
-import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { writeAuditLine } from "./audit-line.js";
+import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import { operatorPageQuery } from "./operator-page-query.js";
 

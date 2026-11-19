@@ -4,10 +4,10 @@ import type { FastifyInstance } from "fastify";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApi } from "./app.js";
-import { cloudLoggingOptions } from "./logging.js";
 import { readBetaAccountCap } from "./beta-sign-up-routes.js";
 import type { IdentityAccounts } from "./identity-accounts.js";
 import { legalVersion } from "./legal-pages.js";
+import { cloudLoggingOptions } from "./logging.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
