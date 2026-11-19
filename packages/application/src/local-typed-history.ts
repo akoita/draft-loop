@@ -123,6 +123,9 @@ export async function saveTypedHistory(
         ...(executionRecord.routeFallback === undefined
           ? {}
           : { routeFallback: { ...executionRecord.routeFallback } }),
+        ...(executionRecord.criticFallback === undefined
+          ? {}
+          : { criticFallback: { ...executionRecord.criticFallback } }),
       },
     });
   }
