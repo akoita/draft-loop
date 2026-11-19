@@ -1,8 +1,6 @@
-import { HelpButton, type HelpSupport } from "@draft-loop/ui/help-panel";
-import { useContext, useMemo } from "react";
+import type { HelpSupport } from "@draft-loop/ui/help-panel";
 
 import type { ApiClient } from "./api-client.js";
-import { RecordContext } from "./record-context.js";
 
 /**
  * The support assistant's routes for the Help panel (#2883), on the record the screen shows.
@@ -54,17 +52,4 @@ export function webHelpSupport(
         }
       : {}),
   };
-}
-
-/** The header's Help button, with the support assistant on the record in view. */
-export function WebHelpButton({
-  client,
-  mode,
-}: {
-  readonly client: ApiClient;
-  readonly mode: "owner" | "sign-in";
-}) {
-  const recordId = useContext(RecordContext);
-  const support = useMemo(() => webHelpSupport(client, recordId, mode), [client, recordId, mode]);
-  return <HelpButton support={support} />;
 }

@@ -11801,8 +11801,12 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 }
 
 .help-intro {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-2);
   color: var(--text-2);
+}
+
+.help-full-guide {
+  margin: 0 0 var(--space-4);
 }
 
 .help-section {

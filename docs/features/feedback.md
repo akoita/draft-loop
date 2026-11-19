@@ -5,8 +5,7 @@ status: partial
 # Feedback
 
 A signed-in member sends a short note about DraftLoop to the operator: a bug,
-an idea or anything else, from the **Send feedback** button in the web
-header, through the API or through their agent's `send_feedback` tool. Each
+an idea or anything else, from **Send feedback** in the web header's Help menu, through the API or through their agent's `send_feedback` tool. Each
 note carries a bounded technical context, so the operator can tell what broke
 without asking. The operator reads every organisation's notes, newest first,
 triages them and links each to a GitHub issue.
@@ -18,7 +17,7 @@ members, so it takes no notes.
 
 ## How to use it
 
-In the web screen, select **Send feedback** in the header, pick a kind of
+In the web screen, open **Help** in the header and select **Send feedback**, pick a kind of
 note if you know it, write it and select **Send**. Open **What we include**
 in the dialog to see every technical value the note carries.
 
@@ -119,7 +118,7 @@ Postgres store, its triage policy and its erasure are tested in
 
 | Surface | What it does |
 | --- | --- |
-| Web header: **Send feedback** | A dialog for the note, its kind and a **What we include** fold listing the context, in sign-in mode only |
+| Web header: **Help** menu, **Send feedback** | A dialog for the note, its kind and a **What we include** fold listing the context, in sign-in mode only |
 | `POST /v1/feedback` | A member sends a note: text up to 2,000 characters, an optional category (`bug`, `idea`, `other`), the screen it came from and an optional `context` |
 | `POST /v1/workspaces/:workspaceId/feedback` | The same, for a member's agent token with the `journal` scope; its source is `agent` |
 | `send_feedback` (MCP) | An agent passes on the candidate's note; its screen is `agent` |

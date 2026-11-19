@@ -17,8 +17,8 @@ guide through the MCP server.
 
 Visitors who are not signed in read the same guide as a public page at
 `/guide/` (English) and `/guide/fr/` (French). The web build writes both pages
-from `packages/user-guide`, so the text is never copied. The about page and
-the landing page link to it.
+from `packages/user-guide`, so the text is never copied. The about page,
+the landing page, the web header's Help menu and the Help panel link to it.
 
 ## How to use it
 
@@ -98,7 +98,7 @@ pnpm test:support:live
 
 | Surface | What it does |
 | --- | --- |
-| Web header: **Help** | Opens the guide in a modal side sheet |
+| Web header: **Help** menu | **Quick help** opens the guide in a modal side sheet. The menu also opens the public **User guide** and **About DraftLoop** pages in a new tab, **Send feedback** in sign-in mode, and the legal pages |
 | Public pages `/guide/`, `/guide/fr/` | The whole guide for visitors, with an EN and FR switch; written by the web build (`apps/web/src/guide-page.ts`) |
 | `GET /v1/help`, `GET /v1/workspaces/:workspaceId/help` | The guide or a search of it, `language` `en` or `fr`, `q` up to 200 characters |
 | MCP `search_help` (scope `journal`) | Searches the guide for an agent |

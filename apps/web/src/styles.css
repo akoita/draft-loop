@@ -352,6 +352,81 @@ button.danger-link:where(:not(.shared-screens *)):hover {
   font-size: 0.8125rem;
 }
 
+/* The header's Help menu: quick help, the guide, About, feedback and the legal pages. */
+.help-menu {
+  position: relative;
+}
+
+.help-menu > summary {
+  list-style: none;
+}
+
+.help-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-menu > summary::after {
+  content: "▾";
+  margin-left: 0.25rem;
+  color: var(--text-2);
+}
+
+.help-menu-body {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.375rem);
+  right: 0;
+  display: grid;
+  gap: 0.125rem;
+  width: max-content;
+  min-width: 13rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.375rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(15, 20, 26, 0.16);
+  text-align: start;
+}
+
+.help-menu .help-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.help-menu .help-menu-item:hover {
+  background: var(--teal-wash);
+  color: var(--teal-bright);
+}
+
+a.help-menu-item[target="_blank"]::after {
+  content: " ↗";
+  color: var(--text-3);
+}
+
+.help-menu-legal {
+  margin: 0.25rem 0 0;
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0.625rem 0.25rem;
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
+.help-menu-legal a {
+  color: var(--text-2);
+}
+
 /* The theme and language above sign-in and sign-up (#2772). */
 .preferences-bar {
   padding-inline: 1rem;

@@ -81,4 +81,16 @@ describe("the Help button and its guide (#2830)", () => {
     expect(html).toContain("Ajouter vos éléments de parcours");
     expect(html).not.toContain("Add your career evidence");
   });
+
+  it("links the host's full guide page in the screen's language, in a new tab", () => {
+    const fullGuide = { en: "/guide/", fr: "/guide/fr/" };
+
+    expect(render(<HelpDialog onClose={() => {}} fullGuide={fullGuide} />)).toContain(
+      '<a href="/guide/" target="_blank" rel="noopener">Open the full guide in a new tab</a>',
+    );
+    expect(render(<HelpDialog onClose={() => {}} fullGuide={fullGuide} />, "fr")).toContain(
+      '<a href="/guide/fr/" target="_blank" rel="noopener">',
+    );
+    expect(render(<HelpDialog onClose={() => {}} />)).not.toContain("help-full-guide");
+  });
 });
