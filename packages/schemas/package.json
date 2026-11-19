@@ -39,6 +39,10 @@
       "types": "./src/fact-usage.ts",
       "import": "./src/fact-usage.ts"
     },
+    "./fact-suggestion": {
+      "types": "./src/fact-suggestion.ts",
+      "import": "./src/fact-suggestion.ts"
+    },
     "./application-bundle": {
       "types": "./src/application-bundle.ts",
       "import": "./src/application-bundle.ts"

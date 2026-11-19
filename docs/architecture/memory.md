@@ -47,6 +47,7 @@ person approves).
 | `evidence-retrieval` | run | system | yes | `packages/application/src/candidate-knowledge-retrieval.ts` |
 | `candidate-facts` | candidate | person-confirmed | yes | `packages/domain/src/canonical-candidate-profile.ts` |
 | `pending-evidence` | candidate | system | yes | `packages/application/src/work-journal.ts` |
+| `fact-suggestion` | candidate | person-confirmed | yes | `packages/domain/src/fact-suggestion.ts` |
 | `writing-policy` | workspace | person | yes | `packages/application/src/writing-policy-file.ts` |
 | `run-history` | workspace | system | yes | `packages/storage-postgres/src/run-history.ts` |
 
@@ -68,6 +69,10 @@ What each kind holds:
 - **`pending-evidence`:** work journal notes from an agent, waiting in
   an inbox until the person approves them as evidence. Confirmed career
   interview topics take the same path.
+- **`fact-suggestion`:** a proposed change to one profile fact (add, correct,
+  retire, set usage or confirm), quoting who said it and where. Only a
+  person's acceptance changes the profile, and the dedupe key stops a
+  rejected suggestion from coming back. The accept flow is planned (#3065).
 - **`writing-policy`:** forbidden terms, section order and style preferences.
   Each run pins and enforces one version.
 - **`run-history`:** runs, rounds, findings, decisions and artifact versions,
@@ -83,6 +88,7 @@ these kinds.
 ```mermaid
 flowchart LR
   pending["pending-evidence"] -->|person approves| facts["candidate-facts"]
+  suggestion["fact-suggestion"] -->|person accepts| facts
   facts --> retrieval["evidence-retrieval"]
   policy["writing-policy"] --> snapshot["Run context snapshot"]
   retrieval --> snapshot

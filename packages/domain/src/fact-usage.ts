@@ -62,7 +62,8 @@ export interface FactUsageSubject {
   readonly value: string;
 }
 
-function normalized(text: string): string {
+/** Text compared by content: Unicode-normalized, trimmed, single-spaced and lowercased. */
+export function normalizedFactText(text: string): string {
   return text.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
 }
 
@@ -71,7 +72,7 @@ const fnvPrime = 0x100000001b3n;
 const mask64 = 0xffffffffffffffffn;
 
 /** 64-bit FNV-1a over UTF-16 code units: stable, dependency-free, and the same in the browser. */
-function fnv1a64(text: string): string {
+export function fnv1a64(text: string): string {
   let hash = fnvOffset;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= BigInt(text.charCodeAt(index));
@@ -85,7 +86,7 @@ function fnv1a64(text: string): string {
  * the same content share a key, and the key holds no fact text.
  */
 export function factUsageKey(fact: FactUsageSubject): string {
-  return `fu1-${fact.category}-${fnv1a64(`${normalized(fact.field)}\u0000${normalized(fact.value)}`)}`;
+  return `fu1-${fact.category}-${fnv1a64(`${normalizedFactText(fact.field)}\u0000${normalizedFactText(fact.value)}`)}`;
 }
 
 export function isFactUsageLevel(value: unknown): value is FactUsageLevel {
