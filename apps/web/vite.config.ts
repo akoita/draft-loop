@@ -6,6 +6,7 @@ import { linguiMacro } from "@draft-loop/ui/lingui-macro";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 
+import { guidePageFiles } from "./src/guide-page.js";
 import { ortRuntimeFile } from "./src/ort-runtime.js";
 
 const require = createRequire(import.meta.url);
@@ -41,10 +42,36 @@ function ortRuntime(): Plugin {
   };
 }
 
+/**
+ * Writes the public user guide pages, `/guide/` and `/guide/fr/`, from `@draft-loop/user-guide`
+ * into the build, and serves them from the dev server, so the guide text lives in one place.
+ */
+function publicGuidePages(): Plugin {
+  return {
+    name: "draft-loop-public-guide",
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const path = (request.url?.split(/[?#]/u)[0] ?? "").replace(/index\.html$/u, "");
+        const page = guidePageFiles().find(
+          ({ fileName }) => `/${fileName}` === `${path}index.html`,
+        );
+        if (page === undefined) return next();
+        response.setHeader("content-type", "text/html; charset=utf-8");
+        response.end(page.html);
+      });
+    },
+    generateBundle() {
+      for (const { fileName, html } of guidePageFiles()) {
+        this.emitFile({ type: "asset", fileName, source: html });
+      }
+    },
+  };
+}
+
 // `pnpm dev` proxies the API so the screen and `/v1` share an origin, as they do when the API
 // serves the built screen.
 export default defineConfig({
-  plugins: [linguiMacro(), react(), ortRuntime()],
+  plugins: [linguiMacro(), react(), ortRuntime(), publicGuidePages()],
   // The runtime's extern-wasm build loads its files from `/ort/` alone, instead of also bundling
   // a hashed copy of the 27 MB WebAssembly file into the assets.
   resolve: { conditions: ["onnxruntime-web-use-extern-wasm", ...defaultClientConditions] },

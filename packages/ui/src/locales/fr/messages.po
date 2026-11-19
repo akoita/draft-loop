@@ -11211,6 +11211,10 @@ msgstr "Utilisé pour les candidatures"
 msgid "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 msgstr "Vous utilisiez un espace de travail par offre ? Choisissez le dossier de cet espace de travail, pas une candidature, pour importer son offre, ses briefs, ses exécutions et ses exports comme nouvelle candidature ici. L’autre espace de travail n’est pas modifié, et les profils ne sont pas fusionnés."
 
+#: apps/web/src/landing.tsx
+msgid "User guide"
+msgstr "Guide d’utilisation"
+
 #. placeholder {0}: selection.version
 #. placeholder {1}: countedNouns.requirement(selection.requirementCount)
 #. placeholder {2}: selection.criticalCount

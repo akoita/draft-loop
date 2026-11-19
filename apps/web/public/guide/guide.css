@@ -1,0 +1,100 @@
+/* DraftLoop public user guide: the about page's styles (../about/about.css) plus a contents
+   column beside the guide's sections. The page itself is written by the web build from
+   @draft-loop/user-guide (apps/web/src/guide-page.ts). */
+
+.guide-hero {
+  padding-bottom: 24px;
+}
+
+.guide-hero .lead {
+  max-width: 720px;
+}
+
+.guide-body {
+  padding-top: 24px;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.guide-contents {
+  position: sticky;
+  top: calc(var(--header) + 24px);
+}
+
+.guide-contents-title {
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.guide-contents ol {
+  margin: 0;
+  padding-left: 1.4em;
+  color: var(--text-2);
+}
+
+.guide-contents li {
+  margin: 6px 0;
+}
+
+.guide-contents a {
+  color: var(--text-1);
+  text-decoration: none;
+}
+
+.guide-contents a:hover {
+  color: var(--teal);
+}
+
+.guide-sections {
+  display: grid;
+  gap: 20px;
+  max-width: 760px;
+}
+
+.guide-section {
+  padding: 32px 40px;
+}
+
+.guide-section h2 {
+  font-size: 1.5rem;
+  margin: 12px 0;
+}
+
+/* Every paragraph is guide text, so none is muted like the about page's card captions. */
+.guide-section p:not(.card-num),
+.guide-section p:not(.card-num):last-child {
+  color: var(--text-1);
+  margin: 0 0 12px;
+}
+
+.guide-section p:last-child {
+  margin-bottom: 0;
+}
+
+.top-nav a[aria-current="page"] {
+  color: var(--teal);
+}
+
+@media (max-width: 960px) {
+  .guide-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .guide-contents {
+    position: static;
+  }
+
+  .guide-section {
+    padding: 24px 20px;
+  }
+}

@@ -199,6 +199,8 @@ export function Landing({
             {t`About DraftLoop`}
           </a>
           {" · "}
+          <a href={currentScreenLanguage() === "fr" ? "/guide/fr/" : "/guide/"}>{t`User guide`}</a>
+          {" · "}
           <LegalLinks />
         </footer>
       </main>
