@@ -850,6 +850,18 @@ it started with.
 | v10 | Check over every retrieved chunk; every omission blocks | #2046 |
 | v11 | Each finding names its claim, section or requirement in its own fields, so a revision can target it | #2232 |
 
+### Fallback critic
+
+A server can name a fallback critic with `DRAFT_LOOP_CRITIC_FALLBACK=<company>:<model>`
+([local server stack](../operations/local-server-stack.md)). After a provider error the
+run cannot wait out (authentication, permission, quota, policy, or a transient error the
+adapter already retried), the critic switches once to the fallback for the rest of the
+job. It switches only when the candidate's consent covers the fallback's company.
+
+Run details then says which critic replaced which, the error class and the round. It
+warns when the fallback comes from the author's company, because the review is no
+longer cross-company.
+
 ## Deterministic quality warnings
 
 Validators that need no model add these findings. They never block approval

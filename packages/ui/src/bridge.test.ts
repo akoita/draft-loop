@@ -2660,6 +2660,38 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("accepts a critic fallback from the host and rejects a malformed one (#3123)", async () => {
+    const fixture = createFixtureReviewState();
+    const fallback = {
+      fromProvider: "openai",
+      fromModel: "gpt-6.1-terra",
+      toProvider: "anthropic",
+      toModel: "claude-haiku-5-5",
+      errorClass: "quota-exhausted",
+      round: 2,
+      sameCompanyAsAuthor: true,
+    };
+    const load = (criticFallback: unknown) =>
+      createCapabilityPort(
+        bridge(async () => ({ ok: true, value: { ...fixture, criticFallback } }), ["review.load"]),
+      ).execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } });
+
+    await expect(load(fallback)).resolves.toMatchObject({ ok: true });
+    await expect(load(null)).resolves.toMatchObject({ ok: true });
+    for (const bad of [
+      { ...fallback, extra: 1 },
+      { ...fallback, errorClass: "<b>quota</b>" },
+      { ...fallback, round: -1 },
+      { ...fallback, toModel: "has spaces" },
+      { ...fallback, sameCompanyAsAuthor: "yes" },
+    ]) {
+      await expect(load(bad)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("rejects inconsistent provider failure projections from the host", async () => {
     const baseFailure = {
       code: "timeout",

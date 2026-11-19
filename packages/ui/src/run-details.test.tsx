@@ -467,3 +467,32 @@ describe("what stays outside the drawer", () => {
     expect(sidePanelOf(render(fixture))).not.toContain("trust-badge-");
   });
 });
+
+describe("the critic fallback on Run details (#3123)", () => {
+  const fallback = {
+    fromProvider: "openai",
+    fromModel: "gpt-6.1-terra",
+    toProvider: "mistral",
+    toModel: "mistral-large-3",
+    errorClass: "quota-exhausted",
+    round: 2,
+    sameCompanyAsAuthor: false,
+  };
+
+  it("names the switch in the drawer, and says nothing for a run that kept its critic", () => {
+    const html = drawerOf(render({ ...fixture, criticFallback: fallback }));
+    expect(html).toContain(
+      "The critic switched from gpt-6.1-terra to mistral-large-3 in round 2, after a provider error (quota-exhausted).",
+    );
+    expect(html).not.toContain("Same company as the author.");
+    expect(drawerOf(render(fixture))).not.toContain("The critic switched");
+  });
+
+  it("warns when the fallback critic shares the author's company", () => {
+    const html = drawerOf(
+      render({ ...fixture, criticFallback: { ...fallback, sameCompanyAsAuthor: true } }),
+    );
+    expect(html).toContain("Same company as the author.");
+    expect(html).toContain("critic-fallback-warning");
+  });
+});

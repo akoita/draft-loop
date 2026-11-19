@@ -43,6 +43,7 @@ import type { RunAuthorInputView } from "@draft-loop/ui/run-author-input";
 import type { RunEvidenceModeView } from "@draft-loop/ui/run-evidence-mode";
 
 import { withAutopilotPause } from "./autopilot-pause.js";
+import { criticFallbackView } from "./critic-fallback-view.js";
 import { executionCallLimitMs } from "./execution-call-limit.js";
 import { groupRepeatedWarnings } from "./finding-groups.js";
 import { readableFindingMessage } from "./finding-message.js";
@@ -437,6 +438,7 @@ export function reviewState(
     providerRoutes: providerRoutesView(providerAuthModeConfiguration),
     providerFailure: providerFailure(snapshot, background.retriedByHost === true),
     usageLimit: usageLimitView(snapshot),
+    criticFallback: criticFallbackView(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
     findings: groupRepeatedWarnings(

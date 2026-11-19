@@ -7535,6 +7535,14 @@ input[type="text"].workspace-title-input {
   max-width: 66ch;
 }
 
+.setup-note.critic-fallback-warning {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--amber-line);
+  border-radius: 6px;
+  background: var(--amber-wash);
+  color: var(--text-1);
+}
+
 /* How far a filter has narrowed a provider's list, sat directly under the
    field that did the narrowing rather than a gap away from it. It is a live
    region, so it is always in the markup and simply has nothing to say while

@@ -284,6 +284,20 @@ export interface ReviewEvent {
   readonly createdAt: string;
 }
 
+/** The run's switch to a fallback critic after a provider error it could not wait out (#3123). */
+export interface CriticFallbackView {
+  readonly fromProvider: string;
+  readonly fromModel: string;
+  readonly toProvider: string;
+  readonly toModel: string;
+  /** The provider error class of the first failure, such as `quota-exhausted`. */
+  readonly errorClass: string;
+  /** The round whose critic call failed first. */
+  readonly round: number;
+  /** True when the fallback critic is from the author's company. */
+  readonly sameCompanyAsAuthor: boolean;
+}
+
 /** Why a paused run waits: the provider's subscription usage limit, with when it resets. */
 export interface UsageLimitView {
   readonly provider: string;
@@ -337,6 +351,8 @@ export interface DesktopReviewState {
   readonly providerFailure: ProviderFailureView | null;
   /** Set while the run is paused on a subscription usage limit; absent otherwise. */
   readonly usageLimit?: UsageLimitView | null;
+  /** Set when the run's critic switched to the deployment's fallback critic; absent otherwise. */
+  readonly criticFallback?: CriticFallbackView | null;
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;
   readonly findings: readonly ReviewFinding[];

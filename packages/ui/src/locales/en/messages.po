@@ -8452,6 +8452,10 @@ msgstr "Salary"
 msgid "Same {noun}"
 msgstr "Same {noun}"
 
+#: packages/ui/src/run-details.tsx
+msgid "Same company as the author."
+msgstr "Same company as the author."
+
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Same text as the active version."
 msgstr "Same text as the active version."
@@ -9801,6 +9805,10 @@ msgstr "The critic is checking version {version}."
 msgid "The critic model graded each source; sources it found unsupportive are left out above."
 msgstr "The critic model graded each source; sources it found unsupportive are left out above."
 
+#: packages/ui/src/run-details.tsx
+msgid "The critic switched from {fromModel} to {toModel} in round {round}, after a provider error ({errorClass})."
+msgstr "The critic switched from {fromModel} to {toModel} in round {round}, after a provider error ({errorClass})."
+
 #: apps/web/src/application-material-model.ts
 msgid "The critic's check did not finish, so your letter stands as drafted."
 msgstr "The critic's check did not finish, so your letter stands as drafted."
@@ -9869,6 +9877,10 @@ msgstr "The evidence kind could not be saved."
 #: packages/ui/src/career-flow.tsx
 msgid "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
 msgstr "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
+
+#: packages/ui/src/run-details.tsx
+msgid "The fallback critic comes from the author's company, so this review is not cross-company."
+msgstr "The fallback critic comes from the author's company, so this review is not cross-company."
 
 #: apps/web/src/interview-guide-model.ts
 msgid "the field"
