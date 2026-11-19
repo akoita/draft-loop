@@ -17,7 +17,11 @@ guide through the MCP server.
 
 Visitors who are not signed in read the same guide as a public page at
 `/guide/` (English) and `/guide/fr/` (French). The web build writes both pages
-from `packages/user-guide`, so the text is never copied. The about page,
+from `packages/user-guide`, so the text is never copied. Seven sections
+show a screenshot under their text, taken on a local demo workspace with
+fictional data; the in-app panel shows the text only. To refresh one, replace
+`apps/web/public/guide/images/<section>.<en|fr>.webp` and its size in
+`apps/web/src/guide-images.ts`. The about page,
 the landing page, the web header's Help menu and the Help panel link to it.
 
 ## How to use it

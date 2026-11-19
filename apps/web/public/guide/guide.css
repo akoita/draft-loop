@@ -80,6 +80,21 @@
   margin-bottom: 0;
 }
 
+.guide-shot {
+  margin: 20px 0 0;
+}
+
+.guide-shot img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 560px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(20, 24, 29, 0.08);
+}
+
 .top-nav a[aria-current="page"] {
   color: var(--teal);
 }

@@ -1,7 +1,18 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { helpGuide, helpGuideLanguages } from "@draft-loop/user-guide";
 import { describe, expect, it } from "vitest";
 
-import { escapeHtml, guidePageFiles, guidePageHtml, guidePagePaths } from "./guide-page.js";
+import { guideImageSizes } from "./guide-images.js";
+import {
+  escapeHtml,
+  guideImageFile,
+  guidePageFiles,
+  guidePageHtml,
+  guidePagePaths,
+} from "./guide-page.js";
 
 describe("the public user guide pages", () => {
   it.each(helpGuideLanguages)(
@@ -52,5 +63,32 @@ describe("the public user guide pages", () => {
     expect(guidePageFiles().map(({ fileName }) => `/${fileName}`)).toEqual(
       helpGuideLanguages.map((language) => `${guidePagePaths[language]}index.html`),
     );
+  });
+});
+
+describe("the public user guide screenshots", () => {
+  const imageDirectory = join(dirname(fileURLToPath(import.meta.url)), "../public/guide/images");
+
+  it.each(helpGuideLanguages)(
+    "has a sized %s picture for each section that names one",
+    (language) => {
+      const html = guidePageHtml(language);
+      for (const section of helpGuide(language).sections) {
+        if (section.screenshot === undefined) continue;
+        const file = guideImageFile(section, language);
+        expect(existsSync(join(imageDirectory, file)), file).toBe(true);
+        expect(guideImageSizes[file], file).toBeDefined();
+        expect(html).toContain(
+          `src="/guide/images/${file}" alt="${escapeHtml(section.screenshot.alt)}"`,
+        );
+      }
+    },
+  );
+
+  it("names a screenshot in both languages or in neither", () => {
+    const [english, french] = helpGuideLanguages.map((language) =>
+      helpGuide(language).sections.map((section) => section.screenshot !== undefined),
+    );
+    expect(french).toEqual(english);
   });
 });

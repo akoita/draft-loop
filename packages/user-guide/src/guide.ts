@@ -31,6 +31,12 @@ export interface HelpSection {
   readonly paragraphs: readonly string[];
   /** Other words a member may search with, such as "CV" or "price"; never shown. */
   readonly keywords: readonly string[];
+  /**
+   * The screenshot the public guide page shows under the section, described for people who
+   * cannot see it. The picture is `apps/web/public/guide/images/<id>.<language>.webp`; the
+   * in-app panel shows the text only.
+   */
+  readonly screenshot?: { readonly alt: string };
 }
 
 export interface HelpGuide {

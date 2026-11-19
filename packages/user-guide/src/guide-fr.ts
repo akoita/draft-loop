@@ -22,6 +22,9 @@ export const frenchHelpGuide: HelpGuide = {
         "faits",
         "profil",
       ],
+      screenshot: {
+        alt: "Accueil, Votre parcours : un document dans Éléments de parcours et le Profil professionnel relu qui en est tiré.",
+      },
     },
     {
       id: "job",
@@ -43,6 +46,9 @@ export const frenchHelpGuide: HelpGuide = {
         "profession",
         "secteur",
       ],
+      screenshot: {
+        alt: "La fenêtre Nouvelle candidature avec le nom du poste et l’annonce collée.",
+      },
     },
     {
       id: "draft",
@@ -52,6 +58,9 @@ export const frenchHelpGuide: HelpGuide = {
         "Une exécution dure quelques minutes, et vous pouvez quitter la page pendant ce temps. Si elle s’arrête, l’écran indique si elle reprendra seule et combien de temps attendre.",
       ],
       keywords: ["exécution", "lancer", "générer", "rédiger", "modèle", "auteur", "critique"],
+      screenshot: {
+        alt: "L’en-tête d’une rédaction : brouillon, critique et révision sont faits, l’approbation suit.",
+      },
     },
     {
       id: "review",
@@ -69,6 +78,9 @@ export const frenchHelpGuide: HelpGuide = {
         "mise en page",
         "enregistrer",
       ],
+      screenshot: {
+        alt: "Le panneau Constats : deux constats bloquants à accepter, rejeter, reporter ou passer outre, puis Approuver le document.",
+      },
     },
     {
       id: "prepare",
@@ -78,6 +90,9 @@ export const frenchHelpGuide: HelpGuide = {
         "Chaque candidature payée comprend 20 brouillons, guides et recherches dans Préparer.",
       ],
       keywords: ["lettre de motivation", "lettre", "entretien", "questions", "préparation"],
+      screenshot: {
+        alt: "Le panneau Préparer d’une candidature, avec Lettre de motivation et Guide de préparation d’entretien.",
+      },
     },
     {
       id: "display",
@@ -96,6 +111,7 @@ export const frenchHelpGuide: HelpGuide = {
         "langue",
         "thème",
       ],
+      screenshot: { alt: "Réglages, Affichage : Guidez-moi pas à pas, Simple et Tout afficher." },
     },
     {
       id: "agents",
@@ -113,6 +129,9 @@ export const frenchHelpGuide: HelpGuide = {
         "assistant",
         "automatisation",
       ],
+      screenshot: {
+        alt: "Réglages, Agents : notes des agents, agents connectés et Connecter un agent.",
+      },
     },
     {
       id: "credits",
