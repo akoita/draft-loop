@@ -34,8 +34,8 @@ flowchart LR
    with the generated API client, and register it in `http-bridge.ts`. The
    desktop client shows the server's web screen, so it needs no change.
 6. **Run review.** A view model for the run review screens belongs in
-   `packages/review-state`, which fills it on the host side for both the
-   desktop host and the hosted API.
+   `packages/review-state`, which fills it on the server side for the
+   hosted API.
 
 ## Advanced options
 
