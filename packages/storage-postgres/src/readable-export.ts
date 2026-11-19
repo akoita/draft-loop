@@ -180,10 +180,20 @@ function draftText(row: SqlRow): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** When a row was made, as a file name can hold it: `2026-11-17 14.05` in UTC. */
+function stamp(value: unknown): string {
+  const at = text(value);
+  if (at === undefined || at.length < 16) return day(value);
+  return `${at.slice(0, 10)} ${at.slice(11, 13)}.${at.slice(14, 16)}`;
+}
+
+/** An exported CV as `CV 2026-11-17 14.05.pdf`: the stored name is an internal id. */
 function exportName(row: SqlRow): string {
   const location = String(row.output_path);
   const base = location.slice(location.lastIndexOf("/") + 1);
-  return readableName(`${day(row.created_at)} ${base}`, `${day(row.created_at)} document`);
+  const dot = base.lastIndexOf(".");
+  const extension = dot > 0 ? base.slice(dot).toLowerCase() : "";
+  return readableName(`CV ${stamp(row.created_at)}${extension}`, "CV");
 }
 
 function applicationFiles(
@@ -260,7 +270,25 @@ function consentHistory(rows: RecordArchiveRows): unknown[] {
   }));
 }
 
-function profiles(rows: RecordArchiveRows): unknown[] {
+interface ProfileFact {
+  readonly category: string;
+  readonly field: string;
+  readonly value: string;
+  readonly quotes: readonly string[];
+}
+
+interface ReadableProfile {
+  readonly status: unknown;
+  readonly updatedAt: unknown;
+  readonly reviewedAt?: unknown;
+  readonly facts: readonly ProfileFact[];
+}
+
+/**
+ * The latest version of each career profile, as its facts: category, field, value and the quotes
+ * they rest on. Fact, subject and source ids, the model and its prompt version are left out.
+ */
+function profiles(rows: RecordArchiveRows): ReadableProfile[] {
   const latest = new Map<string, SqlRow>();
   for (const row of rows.get("canonical_candidate_profile_versions") ?? []) {
     const current = latest.get(String(row.profile_id));
@@ -268,12 +296,71 @@ function profiles(rows: RecordArchiveRows): unknown[] {
       latest.set(String(row.profile_id), row);
     }
   }
-  return [...latest.values()].map((row) => ({
-    status: row.status,
-    updatedAt: row.updated_at,
-    ...(text(row.reviewed_at) === undefined ? {} : { reviewedAt: row.reviewed_at }),
-    profile: json(row.payload_json),
-  }));
+  return [...latest.values()].map((row) => {
+    const payload = record(json(row.payload_json));
+    const facts: ProfileFact[] = [];
+    for (const item of Array.isArray(payload?.facts) ? payload.facts : []) {
+      const fact = record(item);
+      const value = text(fact?.value);
+      if (fact === undefined || value === undefined) continue;
+      const quotes = (Array.isArray(fact.provenance) ? fact.provenance : [])
+        .map((source) => text(record(source)?.quote))
+        .filter((quote): quote is string => quote !== undefined && quote !== value);
+      facts.push({
+        category: text(fact.category) ?? "other",
+        field: text(fact.field) ?? "",
+        value,
+        quotes: [...new Set(quotes)],
+      });
+    }
+    return {
+      status: row.status,
+      updatedAt: row.updated_at,
+      ...(text(row.reviewed_at) === undefined ? {} : { reviewedAt: row.reviewed_at }),
+      facts,
+    };
+  });
+}
+
+const profileSections: readonly (readonly [string, string])[] = [
+  ["employer", "Employers"],
+  ["role", "Roles"],
+  ["date", "Dates"],
+  ["project", "Projects"],
+  ["achievement", "Achievements"],
+  ["skill", "Skills"],
+  ["education", "Education"],
+  ["certification", "Certifications"],
+  ["language", "Languages"],
+  ["approved-link", "Links"],
+];
+
+/** The career profile as Markdown: one section per kind of fact, each with its quotes. */
+function profileText(profile: ReadableProfile): string {
+  const known = new Set(profileSections.map(([category]) => category));
+  const sections: (readonly [string, string])[] = [...profileSections];
+  for (const fact of profile.facts) {
+    if (!known.has(fact.category)) {
+      known.add(fact.category);
+      sections.push([fact.category, fact.category]);
+    }
+  }
+  const lines = [
+    "# Career profile",
+    "",
+    `Updated ${day(profile.updatedAt)}${profile.status === "reviewed" ? ", reviewed" : ", not yet reviewed"}.`,
+  ];
+  for (const [category, title] of sections) {
+    const facts = profile.facts.filter((fact) => fact.category === category);
+    if (facts.length === 0) continue;
+    lines.push("", `## ${title}`, "");
+    for (const fact of facts) {
+      const label = fact.field === "" || fact.field === category ? "" : `${fact.field}: `;
+      lines.push(`- ${label}${fact.value.replace(/\s+/gu, " ")}`);
+      for (const quote of fact.quotes) lines.push(`  > ${quote.replace(/\s+/gu, " ")}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
 }
 
 /** The journal's kept notes, content fields only: no token ids, screening or tenant. */
@@ -323,8 +410,11 @@ function readme(createdAt: string, paths: readonly string[]): string {
     ["account.json", "When this copy was made and when the job search started."],
     ["consent-history.json", "Every consent you gave or withdrew, and when."],
   ];
-  if (has("profile.json"))
-    rows.push(["profile.json", "Your career profile as DraftLoop holds it."]);
+  if (has("profile.md"))
+    rows.push([
+      "profile.md, profile.json",
+      "Your career profile: each fact and the words it comes from.",
+    ]);
   if (has("documents/"))
     rows.push(["documents/", "The files you added, under the names you gave them."]);
   if (has("applications/")) {
@@ -394,7 +484,13 @@ export function openPostgresReadableExports(
         jsonFile("consent-history.json", consentHistory(rows)),
       ];
       const profileList = profiles(rows);
-      if (profileList.length > 0) planned.push(jsonFile("profile.json", profileList));
+      if (profileList.length > 0) {
+        planned.push({
+          path: "profile.md",
+          text: profileList.map(profileText).join("\n"),
+        });
+        planned.push(jsonFile("profile.json", profileList));
+      }
       planned.push(...documentFiles(rows, blobs));
       planned.push(...applicationFiles(rows, exportBlobs, workspaceReference));
       const notes = journalNotes(rows);

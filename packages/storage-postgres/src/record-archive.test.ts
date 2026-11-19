@@ -635,11 +635,12 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
         "README.md",
         "account.json",
         "consent-history.json",
+        "profile.md",
         "profile.json",
         "documents/notes-alder-quill.md",
         "applications/Role at alder-quill/job.md",
         "other drafts/cover letter 2026-10-24.md",
-        "applications/Role at alder-quill/exports/2026-10-24 document.md",
+        "applications/Role at alder-quill/exports/CV 2026-10-24 10.00.md",
       ]);
       const text = (path: string) =>
         decoder.decode(files.find((file) => file.path === path)?.content);
@@ -678,6 +679,67 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
         "cedar-wren",
       ]) {
         expect(everything.filter((file) => file.includes(leak))).toEqual([]);
+      }
+    });
+
+    it("writes the profile as its facts and quotes, without ids, model or prompt version", async () => {
+      const payload = JSON.stringify({
+        id: "career-profile",
+        extraction: { modelId: "model-x", promptTemplateVersion: "extraction-v8" },
+        facts: [
+          {
+            id: "profile-fact-0123",
+            subjectId: "profile-subject-0123",
+            category: "employer",
+            field: "employer",
+            value: "Alder Quill Ltd",
+            provenance: [{ sourceId: "source-0123", quote: "worked at Alder Quill Ltd" }],
+          },
+          {
+            id: "profile-fact-4567",
+            subjectId: "profile-subject-0123",
+            category: "skill",
+            field: "level",
+            value: "TypeScript",
+            provenance: [],
+          },
+        ],
+      });
+      await schema.admin.transaction(async (executor) => {
+        await executor.query("SELECT set_config('draft_loop.tenant_id', 'org-north', true)");
+        await executor.query(
+          `INSERT INTO canonical_candidate_profile_versions
+             (workspace_id, profile_id, version, schema_version, parent_version, status, created_at,
+              updated_at, payload_json, payload_checksum)
+           VALUES ($1, 'profile', 2, 1, 1, 'draft', $2, $2, $3, $4)`,
+          [first.historyId, at, payload, sha(payload)],
+        );
+      });
+      const files = await collect((await readable().prepare(request)).files());
+      const text = (path: string) =>
+        decoder.decode(files.find((file) => file.path === path)?.content);
+      expect(text("profile.md")).toContain(
+        "## Employers\n\n- Alder Quill Ltd\n  > worked at Alder Quill Ltd",
+      );
+      expect(text("profile.md")).toContain("## Skills\n\n- level: TypeScript");
+      expect(JSON.parse(text("profile.json"))[0].facts).toEqual([
+        {
+          category: "employer",
+          field: "employer",
+          value: "Alder Quill Ltd",
+          quotes: ["worked at Alder Quill Ltd"],
+        },
+        { category: "skill", field: "level", value: "TypeScript", quotes: [] },
+      ]);
+      for (const leak of [
+        "profile-fact",
+        "profile-subject",
+        "source-0123",
+        "model-x",
+        "extraction-v8",
+      ]) {
+        expect(text("profile.json")).not.toContain(leak);
+        expect(text("profile.md")).not.toContain(leak);
       }
     });
 
