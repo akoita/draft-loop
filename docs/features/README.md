@@ -32,7 +32,7 @@ through the [agent channel](../reference/agent-channel.md), or says `none`.
 | [Self-hosted server](../operations/self-hosted.md)                                  | `available` | self-hosted   | `none`           | Runs the whole client-server stack on your own machine with Docker Compose.                            |
 | [Desktop client](../reference/cli-and-desktop.md)                                   | `available` | server        | `none`           | An Electron window over a DraftLoop server's web screen; alpha.                                        |
 | [Source-only CLI](../reference/cli-and-desktop.md)                                  | `available` | CLI           | `none`           | Runs a local workspace from a source checkout; in maintenance mode.                                    |
-| [Hosted service](../architecture/hosted-service.md)                                 | `partial`   | hosted        | `none`           | The same server on Google Cloud in the EU; on staging only, production held.                           |
+| [Hosted service](../architecture/hosted-service.md)                                 | `partial`   | hosted        | `none`           | The same server on Google Cloud in the EU; an invite-only beta in production.                          |
 | [Planned-maintenance notice](../architecture/hosted-service.md#planned-maintenance) | `available` | server        | `service_notice` | Shows the operator's planned maintenance on every screen and pauses changes during a read-only window. |
 
 ## Career evidence

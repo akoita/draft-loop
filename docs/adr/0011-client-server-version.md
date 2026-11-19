@@ -68,15 +68,14 @@ is the natural shape of the server API.
 
 ## Decisions
 
-The diagram shows where these decisions lead. Most of it is built: the API
-with the web screen, the worker, the page fetcher, the model gateway, and the
-Postgres and Cloud Storage adapters run on staging, and the same images run
-self-hosted. The local MCP server (`draftloop-mcp`) calls the self-hosted
-API. Keycloak is not hosted yet, so staging signs in with the owner token, and
-production is not open. The [architecture overview](../architecture/overview.md#ways-to-run)
-describes what runs now.
+The diagram shows the hosted service as built in November 2026. Production
+runs as an invite-only beta in sign-in mode, with Keycloak self-hosted on
+Cloud Run (D14). The same images run self-hosted, and the local MCP server
+(`draftloop-mcp`) calls either API. The dashed strip is still planned. The
+[architecture overview](../architecture/overview.md#ways-to-run) describes
+what runs now.
 
-![Planned client-server architecture: a web app and AI agents reach a Fastify API on Cloud Run in europe-west1; the API queues runs for workers, which call a model gateway that sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic in an EU data-residency project; data lives in Cloud SQL Postgres with pgvector, already built, and Cloud Storage; sign-in uses Keycloak on Clever Cloud; every service uses the desktop app's packages, and the local-first desktop app, CLI, a planned local MCP server and SQLite keep running on the user's machine.](../assets/client-server-target-architecture.svg)
+![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp and the desktop client reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a load balancer with Cloud Armor, tracing and Business SSO are planned; the self-hosted server runs the same images on your machine.](../assets/hosted-service-architecture.svg)
 
 ### D1. Topology: a modular monolith with background workers
 
@@ -253,8 +252,8 @@ The owner decided (2026-10-16) to serve every profile through tiered plans
 **Built in phase 2a (sprint 1j, 2026-10-24):**
 
 - The API verifies the identity provider's tokens when
-  `DRAFT_LOOP_AUTH_MODE` is `oidc`; staging keeps the owner token until
-  Keycloak is hosted.
+  `DRAFT_LOOP_AUTH_MODE` is `oidc`. Since Keycloak is hosted (2026-11-17),
+  production runs in sign-in mode.
 - Organisations and members live in a tenant directory on Postgres. The
   operator creates an organisation with its first owner, owners and admins
   invite members by email, and an invitation becomes active on the first
@@ -594,7 +593,8 @@ services in that region:
 | Queue (D4) | Postgres-backed, in the same Cloud SQL instance, so run state and jobs commit together; Cloud Tasks or Pub/Sub only for fan-out that needs it |
 | Objects (D3) | Cloud Storage, with CMEK through Cloud KMS and per-tenant prefixes |
 | Secrets and BYOK keys (D5) | Secret Manager for platform secrets; Cloud KMS envelope encryption for customer keys |
-| Identity (D6) | Keycloak managed by Clever Cloud in France, outside Google Cloud: OIDC sign-in, organisations as tenants, SAML for Business SSO. Identity Platform is excluded because its Firebase Authentication base runs only in US data centres |
+| Identity (D6) | Keycloak, self-hosted on Cloud Run with scale to zero and its own database on the Cloud SQL instance (revised 2026-11-12, see open decision 4): OIDC sign-in, organisations as tenants, SAML for Business SSO later. Identity Platform is excluded because its Firebase Authentication base runs only in US data centres |
+| Email | Brevo, a French provider processing in the EU: beta invites, waitlist confirmation, inactivity warnings, maintenance notices and Keycloak's sign-in mail. A message holds no candidate material |
 | URL fetching (D11) | A fetcher service with egress only through Cloud NAT and Secure Web Proxy rules |
 | Observability | Cloud Logging, Monitoring and Trace through the OpenTelemetry instrumentation the packages already have, with content-free attributes only |
 | Infrastructure | Terraform, Artifact Registry, and GitHub Actions deploying through Workload Identity Federation (no long-lived service account keys), all in a private infrastructure repository (D2) |
@@ -630,6 +630,9 @@ services in that region:
     from Secret Manager.
   - **Staging and production** are separate projects, and production
     receives the image digest staging tested.
+  - **Backups.** Each deploy takes a database backup before it migrates,
+    beside the automated backups and point-in-time recovery. A production
+    restore drill passed on 2026-11-18.
   - **Egress.** The worker reaches only Google APIs and the OpenAI EU
     endpoint; the API has no internet egress.
 - **European exit: Scaleway.** Scaleway is the planned move if Google Cloud
@@ -730,6 +733,11 @@ The existing offline fixture mode keeps local runs free of provider calls.
   - Phase 1 starts with structured logs, log-based metrics and alerts.
     Tracing waits for phase 2, when more than one person uses the service
     (decided 2026-10-22).
+  - **Built (November 2026):** log-based metrics, a dashboard per
+    environment, an uptime check on `/v1/health`, and alerts on failed runs,
+    spend, credit margin, error spikes, security lines and feedback notes.
+    A daily content-free quality digest feeds the
+    [outer loop](../architecture/outer-loop.md).
 - **Offline evaluation is the change gate.** The `evaluations` package and
   the manual-parity rubric run before any prompt, model or orchestration
   change, against synthetic cases and consented references kept outside the
@@ -852,6 +860,10 @@ Notes on phase 4:
    their password hashes can be exported, so any other Keycloak host is an
    exit. The cost is about €0.05 per active user beyond the first 100.
    Confirm the data processing agreement and SAML support before phase 2.
+   **Revised 2026-11-12:** a managed Keycloak waits until the service has
+   real usage. Keycloak runs self-hosted on Cloud Run, scaling to zero, with
+   its database on the existing Cloud SQL instance. The same export path
+   keeps a later move to a managed host open.
 5. ~~**The desktop app's future.**~~ **Decided 2026-10-17:** it stays a
    local-first product that can keep evolving in parallel (D15). Making it
    a thin client of the service remains a later option.
