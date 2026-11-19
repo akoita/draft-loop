@@ -1771,6 +1771,11 @@ button.small:where(:not(.shared-screens *)) {
   width: 100%;
 }
 
+.operator-trace-form > p {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
 .operator-trace-form > button {
   justify-self: start;
   margin-top: 0.5rem;
