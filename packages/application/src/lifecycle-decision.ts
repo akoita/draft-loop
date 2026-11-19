@@ -1,9 +1,66 @@
+import type { ContextSnapshot } from "@draft-loop/domain";
 import { activeCandidateDirection, type RunSnapshot } from "@draft-loop/orchestrator";
-
-import type { HistoryStoragePort } from "@draft-loop/storage";
+import type {
+  ArtifactHistoryStoragePort,
+  HistoryStoragePort,
+  RunHistoryStorage,
+} from "@draft-loop/storage";
 
 import type { LifecycleAction } from "./index.js";
+import { contextForRun, requireRun } from "./local-history-records.js";
 import { timestamp } from "./response-execution.js";
+
+/**
+ * A run shows it awaits approval a moment before its round and draft are saved to its history.
+ * An approval or revision asked in that moment would change the run and then fail to record its
+ * decision, leaving the run changed but unqueued; it is refused first, and the caller retries.
+ */
+export class RunHistoryNotReadyError extends Error {
+  constructor(runId: string) {
+    super(`Run ${runId} is still being saved; retry in a moment.`);
+    this.name = "RunHistoryNotReadyError";
+  }
+}
+
+/** The actions whose decision record points at the run's current round and draft. */
+const decidedOnSavedRound: ReadonlySet<LifecycleAction> = new Set(["approve", "revision"]);
+
+/**
+ * How long after a run changes its history may still be on its way. Past it, a missing round is
+ * not waited for, so a run saved before typed history existed can still be approved.
+ */
+export const historySaveWindowMs = 30_000;
+
+/**
+ * Throws `RunHistoryNotReadyError` when an approval or revision would record its decision against
+ * a round or draft that is not saved yet. Other actions record nothing that must exist first.
+ */
+export async function assertLifecycleHistoryReady(
+  storage: Pick<HistoryStoragePort, "getRound"> &
+    Pick<ArtifactHistoryStoragePort, "getArtifactVersion">,
+  action: LifecycleAction,
+  snapshot: RunSnapshot,
+  now: number = Date.now(),
+): Promise<void> {
+  if (!decidedOnSavedRound.has(action) || snapshot.state !== "awaiting-approval") return;
+  if (now - Date.parse(snapshot.updatedAt) > historySaveWindowMs) return;
+  const round = await storage.getRound(`${snapshot.runId}:round:${snapshot.round}`);
+  const artifactId = snapshot.artifact?.id;
+  const artifact = artifactId === undefined ? true : await storage.getArtifactVersion(artifactId);
+  if (round === undefined || artifact === undefined) {
+    throw new RunHistoryNotReadyError(snapshot.runId);
+  }
+}
+
+/** The run's context for a lifecycle command, once its history can take the command's decision. */
+export async function runContext(
+  storage: RunHistoryStorage,
+  action: LifecycleAction,
+  runId: string,
+): Promise<ContextSnapshot> {
+  await assertLifecycleHistoryReady(storage, action, await requireRun(storage, runId));
+  return contextForRun(storage, runId);
+}
 
 /** Options a lifecycle command passes through to the run engine. */
 export interface LifecycleOptions {
