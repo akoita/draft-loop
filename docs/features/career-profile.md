@@ -33,6 +33,14 @@ draft is used once you review it, and a new draft says when one waits. Before
 any version is reviewed, they use the newest draft and say so. CV runs pin a
 reviewed profile.
 
+Suggested updates wait for you to decide. Each one proposes adding,
+correcting, retiring, setting the usage of or confirming one fact, and quotes
+who said it and where. Accepting saves the quotes as a dated candidate
+statement in your career evidence and a new profile version citing it, with
+no model call; a reviewed profile stays reviewed. Rejecting keeps the same
+change from being suggested again. Today this works through the API; the
+page's Suggested updates box is planned (#3069).
+
 Usage is separate from sensitivity: usage decides where a fact may appear,
 sensitivity decides what may reach a model provider.
 
@@ -41,8 +49,9 @@ sensitivity decides what may reach a model provider.
 - The [local server stack](../operations/local-server-stack.md) derives a
   profile in demo mode with no provider call.
 - Focused tests: `packages/domain/src/fact-usage.test.ts`,
-  `packages/ui/src/profile-fact-usage.test.tsx` and
-  `apps/api/src/profile-routes.test.ts`.
+  `packages/ui/src/profile-fact-usage.test.tsx`,
+  `apps/api/src/profile-routes.test.ts` and
+  `apps/api/src/fact-suggestion-routes.test.ts`.
 
 ## Surfaces
 
@@ -53,6 +62,8 @@ sensitivity decides what may reach a model provider.
 | API    | `POST`/`GET`/`DELETE .../profiles/{profileId}/derivation`, `.../freshness` |
 | API    | `POST .../profiles/{profileId}/review`                                     |
 | API    | `GET`/`PUT /v1/workspaces/{id}/fact-usage`                                 |
+| API    | `GET .../profiles/{profileId}/suggestions`, `POST .../suggestions/accept`  |
+| API    | `POST .../suggestions/{suggestionId}/reject`                               |
 | MCP    | none                                                                       |
 
 ## Limits
@@ -65,6 +76,9 @@ sensitivity decides what may reach a model provider.
   outcome and read through `GET .../derivation`. The worker also logs one
   content-free line per call. The page gives no estimate before a derivation
   starts yet.
+- Accepting and rejecting suggestions are people-only routes; an agent token
+  cannot reach them or list suggestions yet. Every decision is recorded with
+  the candidate role; coach decisions come with coach accounts.
 - One derivation runs per profile at a time; a second answers
   `409 derivation_running`.
 - Derivation calls the writer's model, so in sign-in mode it needs the

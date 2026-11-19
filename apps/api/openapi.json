@@ -5589,6 +5589,468 @@
         ],
         "description": "Where the document is stored is never shown."
       },
+      "FactSuggestionListInput": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "type": "number",
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "pattern": "^fsg_[A-Za-z0-9_-]{8,64}$"
+                },
+                "profileId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "baseVersionId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "change": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "factId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "factKey": {
+                      "type": "string",
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                    }
+                  },
+                  "required": [
+                    "factId",
+                    "factKey"
+                  ],
+                  "additionalProperties": false
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "candidate",
+                    "coach",
+                    "agent",
+                    "system"
+                  ]
+                },
+                "origin": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "review-edit",
+                        "critic-question",
+                        "unconfirmed-fact",
+                        "agent",
+                        "career-interview"
+                      ]
+                    },
+                    "applicationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "runId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "round": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "blockId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "agentClientId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "careerInterviewId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "dedupeKey": {
+                  "type": "string",
+                  "pattern": "^fsk1-(?:add|correct|retire|set-usage|confirm)-[0-9a-f]{16}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "edited",
+                    "rejected",
+                    "stale"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "decision": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "candidate",
+                        "coach"
+                      ]
+                    },
+                    "memberId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "decidedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "memberId",
+                    "decidedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "appliedChange": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "schemaVersion",
+                "id",
+                "profileId",
+                "baseVersionId",
+                "change",
+                "quote",
+                "speaker",
+                "origin",
+                "dedupeKey",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Pending suggestions of the profile, whatever the filter."
+          }
+        },
+        "required": [
+          "suggestions",
+          "pending"
+        ]
+      },
+      "FactSuggestionAcceptResultInput": {
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stale": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggestions whose fact changed first; they were not applied."
+          },
+          "profile": {
+            "description": "The saved profile version, when an accepted change touched its facts.",
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "reviewed"
+                ]
+              }
+            },
+            "required": [
+              "version",
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "applied",
+          "stale"
+        ]
+      },
       "FactUsageInput": {
         "type": "object",
         "properties": {
@@ -14462,6 +14924,471 @@
         "additionalProperties": false,
         "description": "Where the document is stored is never shown."
       },
+      "FactSuggestionList": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "type": "number",
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "pattern": "^fsg_[A-Za-z0-9_-]{8,64}$"
+                },
+                "profileId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "baseVersionId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "change": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "factId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "factKey": {
+                      "type": "string",
+                      "pattern": "^fu1-(?:identity|contact|role|employer|date|achievement|project|skill|certification|education|language|approved-link)-[0-9a-f]{16}$"
+                    }
+                  },
+                  "required": [
+                    "factId",
+                    "factKey"
+                  ],
+                  "additionalProperties": false
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "speaker": {
+                  "type": "string",
+                  "enum": [
+                    "candidate",
+                    "coach",
+                    "agent",
+                    "system"
+                  ]
+                },
+                "origin": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "review-edit",
+                        "critic-question",
+                        "unconfirmed-fact",
+                        "agent",
+                        "career-interview"
+                      ]
+                    },
+                    "applicationId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "runId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "round": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "blockId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "agentClientId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "careerInterviewId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "dedupeKey": {
+                  "type": "string",
+                  "pattern": "^fsk1-(?:add|correct|retire|set-usage|confirm)-[0-9a-f]{16}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "edited",
+                    "rejected",
+                    "stale"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "decision": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "candidate",
+                        "coach"
+                      ]
+                    },
+                    "memberId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "decidedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "memberId",
+                    "decidedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "appliedChange": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "add"
+                        },
+                        "category": {
+                          "type": "string",
+                          "enum": [
+                            "identity",
+                            "contact",
+                            "role",
+                            "employer",
+                            "date",
+                            "achievement",
+                            "project",
+                            "skill",
+                            "certification",
+                            "education",
+                            "language",
+                            "approved-link"
+                          ]
+                        },
+                        "subjectId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "category",
+                        "field",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "correct"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "retire"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "set-usage"
+                        },
+                        "usage": {
+                          "type": "string",
+                          "enum": [
+                            "cv",
+                            "interview-only",
+                            "never-say"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "usage"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "confirm"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "schemaVersion",
+                "id",
+                "profileId",
+                "baseVersionId",
+                "change",
+                "quote",
+                "speaker",
+                "origin",
+                "dedupeKey",
+                "status",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Pending suggestions of the profile, whatever the filter."
+          }
+        },
+        "required": [
+          "suggestions",
+          "pending"
+        ],
+        "additionalProperties": false
+      },
+      "FactSuggestionAcceptResult": {
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stale": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggestions whose fact changed first; they were not applied."
+          },
+          "profile": {
+            "description": "The saved profile version, when an accepted change touched its facts.",
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "reviewed"
+                ]
+              }
+            },
+            "required": [
+              "version",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "applied",
+          "stale"
+        ],
+        "additionalProperties": false
+      },
       "FactUsage": {
         "type": "object",
         "properties": {
@@ -20480,6 +21407,432 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions": {
+      "get": {
+        "summary": "List a career profile's suggested updates",
+        "description": "Newest first. Each suggestion quotes what was said, who said it and where; pending ones wait for the person.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "edited",
+                "rejected",
+                "stale"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "profileId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactSuggestionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions/accept": {
+      "post": {
+        "summary": "Accept suggested career profile updates",
+        "description": "Saves the quotes as a dated candidate-statement source and one new profile version whose changed facts cite it, with no model call. A reviewed profile stays reviewed. A suggestion whose fact changed first is marked stale instead. People only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^fsg_[A-Za-z0-9_-]{8,64}$"
+                        },
+                        "edit": {
+                          "description": "The change as the person edited it; it keeps the suggestion's kind.",
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "add"
+                                  ]
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "identity",
+                                    "contact",
+                                    "role",
+                                    "employer",
+                                    "date",
+                                    "achievement",
+                                    "project",
+                                    "skill",
+                                    "certification",
+                                    "education",
+                                    "language",
+                                    "approved-link"
+                                  ]
+                                },
+                                "subjectId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 120
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 120
+                                },
+                                "value": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 2000
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "category",
+                                "field",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "correct"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 2000
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "retire"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "set-usage"
+                                  ]
+                                },
+                                "usage": {
+                                  "type": "string",
+                                  "enum": [
+                                    "cv",
+                                    "interview-only",
+                                    "never-say"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "usage"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "confirm"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "profileId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactSuggestionAcceptResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/profiles/{profileId}/suggestions/{suggestionId}/reject": {
+      "post": {
+        "summary": "Reject a suggested career profile update",
+        "description": "Records the decision; the same change is not suggested again. People only.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "workspaceId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "in": "path",
+            "name": "profileId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fsg_[A-Za-z0-9_-]{8,64}$"
+            },
+            "in": "path",
+            "name": "suggestionId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Default Response",
             "content": {
               "application/json": {
