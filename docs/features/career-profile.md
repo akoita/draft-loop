@@ -68,6 +68,7 @@ sensitivity decides what may reach a model provider.
 | Screen | Suggested updates box on the profile page, its count on Home               |
 | API    | `GET`/`PATCH /v1/workspaces/{id}/profiles/{profileId}`, `.../versions`     |
 | API    | `POST`/`GET`/`DELETE .../profiles/{profileId}/derivation`, `.../freshness` |
+| API    | `GET .../profiles/{profileId}/derivation-estimate`                         |
 | API    | `POST .../profiles/{profileId}/review`                                     |
 | API    | `GET`/`PUT /v1/workspaces/{id}/fact-usage`                                 |
 | API    | `GET .../profiles/{profileId}/suggestions`, `POST .../suggestions/accept`  |

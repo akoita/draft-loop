@@ -159,6 +159,27 @@ export const profileDerivationViewSchema = z
   )
   .meta({ id: "CareerProfileDerivation" });
 
+const estimateQuery = z.strictObject({
+  fullExtraction: z
+    .enum(["true", "false"])
+    .optional()
+    .describe("Estimate extracting every source again instead of only new or changed ones."),
+});
+
+const derivationEstimateSchema = z
+  .object({
+    reusedSourceCount: z.number().int(),
+    extractedSourceCount: z.number().int(),
+    extractedCharacters: z.number().int(),
+    calls: z.number().int(),
+    estimatedUsd: z
+      .object({ low: z.number(), high: z.number() })
+      .nullable()
+      .describe("A cost range in US dollars; null when the extraction model has no price."),
+  })
+  .describe("What a derivation would send now, counts only; no model is called.")
+  .meta({ id: "CareerProfileDerivationEstimate" });
+
 const freshnessSchema = z
   .discriminatedUnion("state", [
     z.object({ state: z.literal("not-generated") }),
@@ -327,6 +348,29 @@ export function registerProfileRoutes(
       return freshness({
         root: workspaceRoot(request.params.workspaceId),
         profileId: request.params.profileId,
+      });
+    },
+  );
+
+  app.get(
+    "/v1/workspaces/:workspaceId/profiles/:profileId/derivation-estimate",
+    {
+      schema: {
+        summary: "Estimate what deriving a career profile would send and cost",
+        description:
+          "Reads the selected evidence as a derivation would and plans its model calls, without calling a model: sources reused from the latest version and extracted again, their characters, the expected calls and a cost range.",
+        params: profileParams,
+        querystring: estimateQuery,
+        response: { 200: derivationEstimateSchema, ...errorResponses },
+      },
+    },
+    async (request) => {
+      const estimate = service.estimateCanonicalCandidateProfileDerivation;
+      if (estimate === undefined) throw new Error("The service cannot estimate a derivation.");
+      return estimate({
+        root: workspaceRoot(request.params.workspaceId),
+        profileId: request.params.profileId,
+        ...(request.query.fullExtraction === "true" ? { fullExtraction: true } : {}),
       });
     },
   );
