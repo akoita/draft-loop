@@ -470,9 +470,6 @@ export interface DesktopReviewPort {
    * downloaded by the browser instead of saved through a Save As dialog.
    */
   readonly exportsDownload?: boolean;
-  readonly selectFiles?: (
-    target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
-  ) => Promise<DesktopReviewState>;
   readonly addUrl?: (
     target: "evidence" | "job-description",
     url: string,

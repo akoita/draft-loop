@@ -35,14 +35,13 @@ describe("the shared screens over the hosted bridge", () => {
     expect([...sent].filter((type) => !declared.has(type))).toEqual([]);
   });
 
-  it("offer no file picker, URL source or demo workspace", () => {
+  it("offer no URL source", () => {
     const declared = new Set<string>(hostedBridgeCapabilities);
     const review = createBridgeReviewPort({
       capabilities: hostedBridgeCapabilities,
       hasCapability: (capability) => declared.has(capability),
       execute: (async () => ({ ok: false })) as unknown as CapabilityPort["execute"],
     });
-    expect(review.selectFiles).toBeUndefined();
     expect(review.addUrl).toBeUndefined();
   });
 });

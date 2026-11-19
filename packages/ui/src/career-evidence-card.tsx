@@ -1,6 +1,6 @@
 import { plural, t } from "@lingui/core/macro";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { AdvancedOption, AdvancedOptions } from "./advanced-options.js";
+import { AdvancedOptions } from "./advanced-options.js";
 import { CareerStartChoice, useCareerConversationOffered } from "./career-conversation-start.js";
 import {
   addCareerEvidence,
@@ -105,8 +105,6 @@ export interface CareerEvidenceCardViewProps {
   readonly url: string;
   readonly onUrlChange: (url: string) => void;
   readonly onAddFile: () => void;
-  /** Imports a whole folder into the base; shown only when evidence goes into a knowledge base. */
-  readonly onAddFolder?: () => void;
   readonly onAddUrl: () => void;
   readonly onChooseKnowledgeBase: () => void;
   /** False when the host offers no way to add files or a URL in the current mode. */
@@ -170,7 +168,6 @@ export function CareerEvidenceCardView({
   url,
   onUrlChange,
   onAddFile,
-  onAddFolder,
   onAddUrl,
   onChooseKnowledgeBase,
   canAddFile,
@@ -216,12 +213,11 @@ export function CareerEvidenceCardView({
         : t`Review and fetch source URL`;
   // Nothing added yet and the host makes the base itself: the card is the person's first step.
   const firstDocument = mode === "first-add" && legacyCount === 0;
-  const showFolder = showAdd && inKnowledgeBase && onAddFolder !== undefined;
   const showKinds = status.kind === "selected" && evidenceKinds !== undefined;
   const hasKnowledgeBase =
     knowledgeBase !== null && knowledgeBase !== undefined && status.kind !== "unsupported";
   const hasExtra = advancedExtra !== null && advancedExtra !== undefined;
-  const showAdvanced = showFolder || showKinds || hasKnowledgeBase || hasExtra;
+  const showAdvanced = showKinds || hasKnowledgeBase || hasExtra;
   // The next step is inside the section when the base cannot be opened or none can be made here.
   const advancedNeeded = status.kind === "unavailable" || mode === "legacy";
   // Show everything (#2789) opens the section too, until the person folds it.
@@ -249,9 +245,6 @@ export function CareerEvidenceCardView({
           <span className="setup-retrieval-status setup-card-line" role="status">
             {careerEvidenceReadinessText(status)}
           </span>
-          {status.semanticLine === null ? null : (
-            <span className="setup-card-line">{status.semanticLine}</span>
-          )}
         </>
       ) : status.kind === "unavailable" ? (
         <span role="status">{t`Your documents could not be opened. Open their store under Advanced options below.`}</span>
@@ -374,19 +367,6 @@ https://www.linkedin.com/in/…`}
           note={advancedNote}
           {...(onAdvancedToggle === undefined ? {} : { onToggle: onAdvancedToggle })}
         >
-          {showFolder ? (
-            <AdvancedOption
-              title={t`Add a whole folder`}
-              effect={t`Adds every supported document in a folder at once.`}
-            >
-              <button
-                className="button button-outline"
-                type="button"
-                disabled={addDisabled}
-                onClick={onAddFolder}
-              >{t`Add folder`}</button>
-            </AdvancedOption>
-          ) : null}
           {showKinds ? <SourceEvidenceKindList {...evidenceKinds} disabled={blocked} /> : null}
           {knowledgeBase}
           {advancedExtra}
@@ -655,9 +635,6 @@ export function CareerEvidenceCard({
       }}
       {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeUrl === undefined
         ? { urlsOffered: false }
-        : {})}
-      {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeDirectory !== undefined
-        ? { onAddFolder: () => void addToKnowledgeBase({ kind: "directory" }) }
         : {})}
       {...(inKnowledgeBase && capabilities?.importCandidateKnowledgeText !== undefined
         ? {

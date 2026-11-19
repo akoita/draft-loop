@@ -43,7 +43,6 @@ const documents = (sourceCount: number): CareerEvidenceStatus => ({
   displayName: "Documents",
   sourceCount,
   blockedCount: 0,
-  semanticLine: null,
 });
 
 const empty: GettingStartedInputs = {

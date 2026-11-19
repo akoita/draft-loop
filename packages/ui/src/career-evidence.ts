@@ -1,19 +1,13 @@
 import { t } from "@lingui/core/macro";
 import type {
-  KnowledgeDirectoryImportResult,
+  KnowledgeFileImportResult,
   KnowledgeReadinessResult,
   KnowledgeUrlImportResult,
 } from "./bridge.js";
 import { countedNouns } from "./counted-nouns.js";
-import type { KnowledgeIntakeResult } from "./knowledge-intake.js";
-import type {
-  DesktopKnowledgeCapabilities,
-  DesktopSemanticRetrievalCapabilities,
-} from "./native.js";
-import type { EmbeddingModelState } from "./semantic-retrieval-contract.js";
+import type { DesktopKnowledgeCapabilities } from "./native.js";
 
-export type CareerEvidenceCapabilities = DesktopKnowledgeCapabilities &
-  DesktopSemanticRetrievalCapabilities;
+export type CareerEvidenceCapabilities = DesktopKnowledgeCapabilities;
 
 /** What the Career evidence setup card shows about the knowledge base the run will use. */
 export type CareerEvidenceStatus =
@@ -30,8 +24,6 @@ export type CareerEvidenceStatus =
       readonly displayName: string;
       readonly sourceCount: number;
       readonly blockedCount: number;
-      /** Null in lexical mode, where no model is involved. */
-      readonly semanticLine: string | null;
     };
 
 export function supportsCareerEvidence(capabilities: CareerEvidenceCapabilities): boolean {
@@ -39,37 +31,6 @@ export function supportsCareerEvidence(capabilities: CareerEvidenceCapabilities)
     capabilities.getCurrentCandidateKnowledge !== undefined &&
     capabilities.getCandidateKnowledgeReadiness !== undefined
   );
-}
-
-export function semanticStatusLine(state: EmbeddingModelState): string {
-  switch (state) {
-    case "ready":
-      return t`Semantic search: ready`;
-    case "absent":
-      return t`Semantic search: model not installed`;
-    case "installing":
-      return t`Semantic search: model installing`;
-    case "corrupt":
-      return t`Semantic search: model needs reinstalling`;
-    case "unsupported-platform":
-      return t`Semantic search: not supported on this computer`;
-  }
-}
-
-async function readSemanticLine(
-  capabilities: CareerEvidenceCapabilities,
-  workspaceId: string,
-): Promise<string | null> {
-  const readMode = capabilities.getRetrievalMode;
-  const readModel = capabilities.getEmbeddingModelStatus;
-  if (readMode === undefined || readModel === undefined) return null;
-  try {
-    const record = await readMode(workspaceId);
-    if (record.mode === "lexical") return null;
-    return semanticStatusLine((await readModel(record.modelTier)).state);
-  } catch {
-    return null;
-  }
 }
 
 /** Reads the workspace's selected knowledge base and its readiness through the host port. */
@@ -102,7 +63,6 @@ export async function loadCareerEvidenceStatus(
       displayName: safeName(base.displayName),
       sourceCount: readiness.sourceCount,
       blockedCount: readiness.blockedCount,
-      semanticLine: await readSemanticLine(capabilities, workspaceId),
     };
   } catch {
     return { kind: "unavailable" };
@@ -146,28 +106,20 @@ export function careerEvidenceReadinessText(
 
 export type CareerEvidenceSource =
   | { readonly kind: "file" }
-  | { readonly kind: "directory" }
   | { readonly kind: "url"; readonly url: string }
   /** Typed or pasted text, saved as one plain-text source (#2417). */
   | { readonly kind: "text"; readonly title: string; readonly text: string };
 
 /** Says what adding the source did: new source, new version of one, or already there. */
 function careerEvidenceAddLead(
-  result: KnowledgeIntakeResult | KnowledgeUrlImportResult,
+  result: KnowledgeFileImportResult | KnowledgeUrlImportResult,
   displayName: string,
 ): string {
-  if ("status" in result) return folderAddLead(result, displayName);
   const outcome = "outcome" in result ? result.outcome : undefined;
   if (outcome === "new-version") return t`Added a new version of that file to ${displayName}.`;
   const created =
     outcome !== undefined ? outcome === "added" : !("created" in result) || result.created;
   return created ? t`Added to ${displayName}.` : t`Already in ${displayName}.`;
-}
-
-/** Says how many of the folder's files reached the base, and when the import stopped early. */
-function folderAddLead(result: KnowledgeDirectoryImportResult, displayName: string): string {
-  const lead = t`Added ${countedNouns.document(result.sourceCount)} from the folder to ${displayName}.`;
-  return result.status === "partial" ? t`${lead} Some files could not be imported.` : lead;
 }
 
 export type CareerEvidenceAddOutcome =
@@ -193,18 +145,14 @@ export async function addCareerEvidence(input: {
 }): Promise<CareerEvidenceAddOutcome> {
   const { capabilities, target } = input;
   const importFile = capabilities.importCandidateKnowledgeFile;
-  const importDirectory = capabilities.importCandidateKnowledgeDirectory;
   const importUrl = capabilities.importCandidateKnowledgeUrl;
   const importText = capabilities.importCandidateKnowledgeText;
   const readReadiness = capabilities.getCandidateKnowledgeReadiness;
   if (readReadiness === undefined) throw new Error(t`Career evidence intake is unavailable`);
-  let result: KnowledgeIntakeResult | KnowledgeUrlImportResult;
+  let result: KnowledgeFileImportResult | KnowledgeUrlImportResult;
   if (input.source.kind === "file") {
     if (importFile === undefined) throw new Error(t`Career evidence intake is unavailable`);
     result = await importFile(target.storeId, target.knowledgeBaseId);
-  } else if (input.source.kind === "directory") {
-    if (importDirectory === undefined) throw new Error(t`Career evidence intake is unavailable`);
-    result = await importDirectory(target.storeId, target.knowledgeBaseId);
   } else if (input.source.kind === "text") {
     if (importText === undefined) throw new Error(t`Career evidence intake is unavailable`);
     const { title, text } = input.source;
@@ -215,10 +163,6 @@ export async function addCareerEvidence(input: {
   }
   if (result.storeId !== target.storeId || result.knowledgeBaseId !== target.knowledgeBaseId) {
     throw new Error(t`Imported source result did not match the selected knowledge base`);
-  }
-  // An empty folder adds nothing, so a first add must not go on to select an empty base.
-  if ("status" in result && result.sourceCount === 0) {
-    throw new Error(t`The folder has no supported files to add.`);
   }
   await input.afterImport?.();
   if (!input.isCurrent()) return { status: "stale" };

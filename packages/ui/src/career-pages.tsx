@@ -84,8 +84,6 @@ export interface CareerEvidencePageProps extends CareerPageProps {
   readonly card?: ReactNode;
   /** A separate knowledge panel, for hosts that show one outside the card. */
   readonly knowledge?: ReactNode;
-  /** The retrieval mode and embedding model panel, when the host offers it. */
-  readonly retrieval?: ReactNode;
   /** Why changes to the evidence wait for now, such as a profile generation running. */
   readonly lockedReason?: string | null;
   /** Changes whenever the knowledge selection or its files change; the host's panels read again. */
@@ -98,7 +96,6 @@ export interface CareerEvidencePageProps extends CareerPageProps {
 export function CareerEvidencePage({
   card = null,
   knowledge = null,
-  retrieval = null,
   lockedReason = null,
   revision = 0,
   onEvidenceChanged,
@@ -122,7 +119,6 @@ export function CareerEvidencePage({
       <HostEvidenceBefore />
       {card}
       {knowledge}
-      {retrieval}
       <HostEvidenceAfter
         revision={revision}
         openHome={frame.onOpenStep.applications}

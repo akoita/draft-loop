@@ -14,12 +14,6 @@ import {
   reloadStillValid,
   showAutoCreateHint,
 } from "./knowledge-current.js";
-import {
-  hasDesktopKnowledgeIntakeCapabilities,
-  knowledgeIntakeSummary,
-  knowledgeReadinessSummary,
-  runKnowledgeIntake,
-} from "./knowledge-intake.js";
 import type { DesktopKnowledgeCapabilities } from "./native.js";
 import { submitOnEnter } from "./submit-on-enter.js";
 
@@ -114,24 +108,17 @@ export interface KnowledgeBaseListProps {
   readonly storeId: string;
   readonly knowledgeBases: readonly KnowledgeBaseSummary[];
   readonly disabled: boolean;
-  readonly intakeSupported: boolean;
-  /** False when the add actions live elsewhere, such as the Career evidence card. */
-  readonly showIntake?: boolean;
   /** Bases of this store the workspace already uses; marked "In use". */
   readonly selectedKnowledgeBaseIds?: readonly string[];
   readonly onSelect: (storeId: string, knowledgeBaseId: string) => void;
-  readonly onImport: (storeId: string, knowledgeBaseId: string, kind: "file" | "directory") => void;
 }
 
 export function KnowledgeBaseList({
   storeId,
   knowledgeBases,
   disabled,
-  intakeSupported,
-  showIntake = true,
   selectedKnowledgeBaseIds = [],
   onSelect,
-  onImport,
 }: KnowledgeBaseListProps) {
   return (
     <ul className="knowledge-base-list" aria-label={t`Available candidate knowledge bases`}>
@@ -153,26 +140,7 @@ export function KnowledgeBaseList({
                   onClick={() => onSelect(storeId, knowledgeBase.id)}
                 >{t`Use this knowledge base`}</button>
               )}
-              {showIntake && intakeSupported ? (
-                <>
-                  <button
-                    type="button"
-                    className="button button-outline"
-                    disabled={disabled}
-                    onClick={() => onImport(storeId, knowledgeBase.id, "file")}
-                  >{t`Add file`}</button>
-                  <button
-                    type="button"
-                    className="button button-outline"
-                    disabled={disabled}
-                    onClick={() => onImport(storeId, knowledgeBase.id, "directory")}
-                  >{t`Add directory`}</button>
-                </>
-              ) : null}
             </div>
-            {!showIntake || intakeSupported ? null : (
-              <p className="knowledge-hint">{t`File and directory intake is unavailable in this desktop host.`}</p>
-            )}
           </li>
         );
       })}
@@ -500,64 +468,6 @@ export function KnowledgeWorkspace({
     });
   };
 
-  const importIntoKnowledgeBase = (
-    storeId: string,
-    knowledgeBaseId: string,
-    kind: "file" | "directory",
-  ) => {
-    const importFile = capabilities.importCandidateKnowledgeFile;
-    const importDirectory = capabilities.importCandidateKnowledgeDirectory;
-    const readReadiness = capabilities.getCandidateKnowledgeReadiness;
-    if (
-      readReadiness === undefined ||
-      (kind === "file" && importFile === undefined) ||
-      (kind === "directory" && importDirectory === undefined)
-    ) {
-      return;
-    }
-    void perform(async (generation) => {
-      const outcome = await runKnowledgeIntake({
-        workspaceId,
-        target: { storeId, knowledgeBaseId },
-        isCurrent: () => operationGeneration.current === generation,
-        importSource: () => {
-          if (kind === "file" && importFile !== undefined) {
-            return importFile(storeId, knowledgeBaseId);
-          }
-          if (kind === "directory" && importDirectory !== undefined) {
-            return importDirectory(storeId, knowledgeBaseId);
-          }
-          throw new Error("Candidate knowledge intake is unavailable");
-        },
-        readReadiness: () => readReadiness(storeId, knowledgeBaseId),
-        refreshWorkspace: onSelectionSaved,
-      });
-      if (outcome.status === "stale" || operationGeneration.current !== generation) return;
-      if (outcome.status === "readiness-unavailable") {
-        setMessage(
-          t`${knowledgeIntakeSummary(outcome.result)} Readiness could not be checked; some sources may not be ready.`,
-        );
-        return;
-      }
-      if (outcome.status === "refresh-unavailable") {
-        setMessage(
-          [
-            knowledgeIntakeSummary(outcome.result),
-            outcome.readiness === null ? t`Readiness could not be checked.` : null,
-            t`Workspace review could not be refreshed. Reopen the workspace before continuing.`,
-            outcome.readiness === null ? null : knowledgeReadinessSummary(outcome.readiness),
-          ]
-            .filter((part) => part !== null)
-            .join(" "),
-        );
-        return;
-      }
-      setMessage(
-        `${knowledgeIntakeSummary(outcome.result)} ${knowledgeReadinessSummary(outcome.readiness)}`,
-      );
-    });
-  };
-
   if (!supported) {
     if (embedded) return null;
     return (
@@ -570,7 +480,6 @@ export function KnowledgeWorkspace({
 
   const knowledgeBases = store === null ? [] : activeKnowledgeBases(store);
   const controlsDisabled = disabled || pending;
-  const intakeSupported = hasDesktopKnowledgeIntakeCapabilities(capabilities);
   const autoCreateSupported = supportsAutomaticKnowledgeBase(capabilities);
   const formPresentation = knowledgeStoreFormPresentation({
     hasStore: store !== null,
@@ -691,13 +600,10 @@ export function KnowledgeWorkspace({
               storeId={store.storeId}
               knowledgeBases={knowledgeBases}
               disabled={controlsDisabled}
-              intakeSupported={intakeSupported}
-              showIntake={!embedded}
               selectedKnowledgeBaseIds={
                 selection !== null && selection.storeId === store.storeId ? selection.ids : []
               }
               onSelect={selectKnowledgeBase}
-              onImport={importIntoKnowledgeBase}
             />
           )}
           {ensureNamedBase === undefined ? null : knowledgeBases.length === 0 ? (

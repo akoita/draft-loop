@@ -428,17 +428,6 @@ describe("desktop native profile capabilities", () => {
       created: true,
       outcome: "added" as const,
     };
-    const directoryResult = {
-      storeId: "store-1",
-      knowledgeBaseId: "knowledge-1",
-      status: "partial" as const,
-      scannedEntryCount: 5,
-      discoveredFileCount: 3,
-      skippedEntryCount: 2,
-      sourceCount: 3,
-      sources: [],
-      sourcesTruncated: true,
-    };
     const readinessResult = {
       storeId: "store-1",
       knowledgeBaseId: "knowledge-1",
@@ -450,18 +439,11 @@ describe("desktop native profile capabilities", () => {
     };
     const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
       if (command.type === "knowledge.import-file") return { ok: true, value: fileResult };
-      if (command.type === "knowledge.import-directory") {
-        return { ok: true, value: directoryResult };
-      }
       return { ok: true, value: readinessResult };
     });
     const port = createBridgeReviewPort(
       createNativeCapabilityPort({
-        capabilities: [
-          "knowledge.import-file",
-          "knowledge.import-directory",
-          "knowledge.readiness",
-        ],
+        capabilities: ["knowledge.import-file", "knowledge.readiness"],
         invoke,
       }),
     );
@@ -469,19 +451,12 @@ describe("desktop native profile capabilities", () => {
     await expect(port.importCandidateKnowledgeFile?.("store-1", "knowledge-1")).resolves.toEqual(
       fileResult,
     );
-    await expect(
-      port.importCandidateKnowledgeDirectory?.("store-1", "knowledge-1"),
-    ).resolves.toEqual(directoryResult);
     await expect(port.getCandidateKnowledgeReadiness?.("store-1", "knowledge-1")).resolves.toEqual(
       readinessResult,
     );
     expect(invoke.mock.calls.map(([command]) => command)).toEqual([
       {
         type: "knowledge.import-file",
-        input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
-      },
-      {
-        type: "knowledge.import-directory",
         input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
       },
       {
