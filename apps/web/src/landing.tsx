@@ -195,6 +195,10 @@ export function Landing({
           <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
         </section>
         <footer>
+          <a href={currentScreenLanguage() === "fr" ? "/about/fr/" : "/about/"}>
+            {t`About DraftLoop`}
+          </a>
+          {" · "}
           <LegalLinks />
         </footer>
       </main>

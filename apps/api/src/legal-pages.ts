@@ -21,6 +21,8 @@ export interface LegalSection {
 
 export interface LegalDocument {
   readonly title: string;
+  /** One sentence for search results, under about 160 characters. */
+  readonly description: string;
   readonly intro: readonly LegalBlock[];
   readonly sections: readonly LegalSection[];
 }
@@ -216,6 +218,8 @@ export function renderLegalPage(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(document.title)} · DraftLoop</title>
+<meta name="description" content="${escapeHtml(document.description)}">
+<link rel="icon" href="/showcase/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/legal/legal.css">
 </head>
 <body>

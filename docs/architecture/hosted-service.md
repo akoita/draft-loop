@@ -95,6 +95,28 @@ the identity provider (authorization code with PKCE), and is kept in the tab.
   (`@draft-loop/ui/export-file-name`), Modern unless another template is
   chosen.
 
+### Public pages and search engines
+
+The landing page (`/`), `/about/`, `/about/fr/`, `/showcase/` and the legal
+pages need no sign-in. `public-site.ts` decides how search engines treat them.
+
+- **Indexing off (default).** With `DRAFT_LOOP_SEARCH_INDEXING` unset or
+  `off`, `robots.txt` disallows everything, every response carries
+  `X-Robots-Tag: noindex, nofollow`, and `/sitemap.xml` is 404. Staging and
+  self-hosted servers stay out of search results.
+- **Indexing on.** `DRAFT_LOOP_SEARCH_INDEXING=on` needs an https
+  `DRAFT_LOOP_PUBLIC_URL`, or the API stops at start. `robots.txt` allows the
+  pages, blocks `/v1/` and names the sitemap. Public pages get a `Link` header
+  with their canonical address and language versions.
+- **Origin in the pages.** The public pages' HTML writes `__SITE_ORIGIN__`
+  where an absolute address belongs: canonical, language links, share image
+  and structured data. The API replaces it with the public URL's origin, or
+  with nothing, which leaves relative links.
+- **Sample pages.** `/showcase/` holds fictional data and is always `noindex`.
+- **Compression.** The web build writes a Brotli and a gzip copy beside each
+  text asset over 1 KB (`apps/web/scripts/precompress.mjs`); the API sends the
+  one the browser accepts.
+
 ## Run queue
 
 The service starts runs through a queue, never inside the request (ADR 0011,

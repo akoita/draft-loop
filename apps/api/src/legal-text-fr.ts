@@ -10,6 +10,8 @@ export const legalTextsFr: LegalTexts = {
   pages: {
     terms: {
       title: "Conditions d'utilisation",
+      description:
+        "Les conditions d'utilisation de DraftLoop, un test public gratuit qui rédige CV et lettres de motivation à partir de vos propres documents.",
       intro: [
         "Ces conditions régissent votre utilisation du service de test DraftLoop. Vous les acceptez en créant votre compte. Elles vont avec la [politique de confidentialité](/legal/privacy) et les [mentions légales](/legal/notice).",
       ],
@@ -88,6 +90,8 @@ export const legalTextsFr: LegalTexts = {
     },
     privacy: {
       title: "Politique de confidentialité",
+      description:
+        "Ce que DraftLoop conserve sur vous, pourquoi, où, quels fournisseurs d'IA y accèdent, et comment l'exporter ou le supprimer.",
       intro: [
         "DraftLoop conserve les éléments de carrière que vous choisissez de téléverser, en envoie des extraits choisis à des fournisseurs de modèles d'IA pour rédiger et relire vos brouillons, et garde une trace de chaque brouillon pour que vous voyiez d'où vient chaque affirmation. Cette politique dit ce qui est traité, pourquoi, où, combien de temps, et ce que vous pouvez faire.",
       ],
@@ -187,6 +191,7 @@ export const legalTextsFr: LegalTexts = {
     },
     notice: {
       title: "Mentions légales",
+      description: "Qui publie DraftLoop et comment le contacter.",
       intro: [
         "Informations requises par la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN), article 6-III.",
       ],

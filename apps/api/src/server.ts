@@ -22,6 +22,7 @@ import { readLocalModels } from "./local-models-config.js";
 import { cloudLoggingOptions, errorFields } from "./logging.js";
 import { hostedJobPageFetcher } from "./page-fetcher-client.js";
 import { paymentsFrom, readPaymentsConfig } from "./payments-config.js";
+import { readPublicSite } from "./public-site.js";
 import type { ApiAuthOptions } from "./request-auth.js";
 import { readScreeningShadowConfig, screeningShadowFrom } from "./screening-shadow-config.js";
 import { readServiceNoticeSecret, secretServiceNotice } from "./service-notice.js";
@@ -40,6 +41,7 @@ const betaAccountCap = readBetaAccountCap(process.env);
 // partial setting stops here.
 const mail = readApiMail(process.env);
 const legalPublisher = readLegalPublisher(process.env);
+const publicSite = readPublicSite(process.env);
 const serviceNoticeSecret = readServiceNoticeSecret(process.env);
 const liveSpeech = liveSpeechFrom(readLiveSpeechConfig(process.env));
 const coverLetterWriter = readCoverLetterWriter(process.env);
@@ -173,6 +175,7 @@ const app = await buildApi({
       }),
   ...(config.webRoot === undefined ? {} : { webRoot: config.webRoot }),
   ...(legalPublisher === undefined ? {} : { legalPublisher }),
+  publicSite,
   ...(serviceNoticeSecret === undefined
     ? {}
     : {
