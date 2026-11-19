@@ -65,7 +65,7 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
     });
   });
 
-  it("hides an entry whose email already redeemed an invite, and counts the same way", async () => {
+  it("hides an entry whose email holds an invite, and counts the same way", async () => {
     await withDirectory(async ({ betaWaitlist, betaInvites }) => {
       await betaWaitlist.join({ email: "ada@example.test", consentVersion, now });
       // A minute later, so the oldest-first order does not fall back to the random entry id.
@@ -74,10 +74,10 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
         consentVersion,
         now: new Date(now.getTime() + 60_000),
       });
-      // Invited outside the waitlist, so the entry stays; then the invite is redeemed.
+      // Invited outside the waitlist: the entry stays but leaves the list, then the invite is used.
       const { code } = await betaInvites.create({ email: "ada@example.test", now });
       const open = await betaWaitlist.list();
-      expect(open.map((entry) => entry.email)).toEqual(["ada@example.test", "bob@example.test"]);
+      expect(open.map((entry) => entry.email)).toEqual(["bob@example.test"]);
 
       const result = await betaInvites.redeem({
         code,
@@ -218,6 +218,118 @@ describe.runIf(connectionString !== undefined)("Postgres beta waitlist", () => {
       await betaWaitlist.join({ email: "bob@example.test", consentVersion, now });
       await expect(join("e".repeat(64), later(60), "bob@example.test")).resolves.toBe("skip");
       await expect(betaWaitlist.count()).resolves.toBe(2);
+    });
+  });
+
+  describe("an email that already has a place", () => {
+    const redeem = (betaInvites: PostgresTenantDirectory["betaInvites"], code: string) =>
+      betaInvites.redeem({
+        code,
+        verifiedEmail: "ada@example.test",
+        cap: 10,
+        organisationName: "My applications",
+        termsVersion: "2026-11-17",
+        now,
+      });
+
+    it("stores nothing and sends no link for an account's email, however it is written", async () => {
+      await withDirectory(async ({ betaWaitlist, betaInvites }) => {
+        const { code } = await betaInvites.create({ email: "ada@example.test", now });
+        expect((await redeem(betaInvites, code)).redeemed).toBe(true);
+
+        await expect(
+          betaWaitlist.joinUnconfirmed({
+            email: " ADA@Example.Test ",
+            consentVersion,
+            tokenHash: hashA,
+            now: later(1),
+            ...spacing,
+          }),
+        ).resolves.toBe("skip");
+        await expect(
+          betaWaitlist.join({ email: "ada@example.test", consentVersion, now: later(2) }),
+        ).resolves.toBe(false);
+        // Nothing was stored: the link's token confirms nothing, and no entry waits.
+        await expect(
+          betaWaitlist.confirm({ tokenHash: hashA, now: later(3), validMs: 48 * 3_600_000 }),
+        ).resolves.toBe(false);
+        await expect(betaWaitlist.deleteJoinedBefore(later(60))).resolves.toBe(0);
+      });
+    });
+
+    it("stores nothing for an email holding an open invite, which it keeps", async () => {
+      await withDirectory(async ({ betaWaitlist, betaInvites }) => {
+        await betaInvites.create({ email: "ada@example.test", now });
+
+        await expect(
+          betaWaitlist.joinUnconfirmed({
+            email: "ada@example.test",
+            consentVersion,
+            tokenHash: hashA,
+            now: later(1),
+            ...spacing,
+          }),
+        ).resolves.toBe("skip");
+        await expect(betaWaitlist.deleteJoinedBefore(later(60))).resolves.toBe(0);
+        await expect(betaInvites.stateCounts()).resolves.toMatchObject({ open: 1 });
+      });
+    });
+
+    it("lets the email join again once its invite is withdrawn", async () => {
+      await withDirectory(async ({ betaWaitlist, betaInvites }) => {
+        const { invite } = await betaInvites.create({ email: "ada@example.test", now });
+        await expect(betaInvites.revoke({ inviteId: invite.inviteId, now })).resolves.toBe(true);
+
+        await expect(
+          betaWaitlist.joinUnconfirmed({
+            email: "ada@example.test",
+            consentVersion,
+            tokenHash: hashA,
+            now: later(1),
+            ...spacing,
+          }),
+        ).resolves.toBe("send");
+        await betaWaitlist.confirm({ tokenHash: hashA, now: later(2), validMs: 48 * 3_600_000 });
+        await expect(betaWaitlist.count()).resolves.toBe(1);
+      });
+    });
+
+    it("hides a waiting entry once its email is invited outside the waitlist", async () => {
+      await withDirectory(async ({ betaWaitlist, betaInvites }) => {
+        await betaWaitlist.join({ email: "ada@example.test", consentVersion, now });
+        await betaInvites.create({ email: "ada@example.test", now: later(1) });
+
+        // The entry leaves the list, so the operator cannot invite the person twice; joining again
+        // changes nothing.
+        await expect(betaWaitlist.count()).resolves.toBe(0);
+        await expect(
+          betaWaitlist.join({ email: "ada@example.test", consentVersion, now: later(2) }),
+        ).resolves.toBe(false);
+        await expect(betaWaitlist.count()).resolves.toBe(0);
+      });
+    });
+  });
+
+  it("sends a waiting, confirmed entry no new link and keeps it listed once", async () => {
+    await withDirectory(async ({ betaWaitlist }) => {
+      const join = (tokenHash: string, at: Date) =>
+        betaWaitlist.joinUnconfirmed({
+          email: "ada@example.test",
+          consentVersion,
+          tokenHash,
+          now: at,
+          ...spacing,
+        });
+      await expect(join(hashA, now)).resolves.toBe("send");
+      await betaWaitlist.confirm({ tokenHash: hashA, now: later(1), validMs: 48 * 3_600_000 });
+
+      await expect(join(hashB, later(30))).resolves.toBe("skip");
+
+      await expect(betaWaitlist.count()).resolves.toBe(1);
+      // The first link still confirms: a later join did not replace it.
+      await expect(
+        betaWaitlist.confirm({ tokenHash: hashA, now: later(31), validMs: 48 * 3_600_000 }),
+      ).resolves.toBe(true);
     });
   });
 });

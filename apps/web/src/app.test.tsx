@@ -123,6 +123,7 @@ function stubSession(overrides: Partial<OidcSession> = {}): OidcSession {
   };
   return {
     isSignedIn: () => false,
+    canResume: () => false,
     prepare: () => {},
     begin: unused,
     complete: unused,
@@ -151,7 +152,7 @@ describe("web screen in sign-in mode", () => {
       />,
     );
 
-    expect(html).toContain("Sign in with your organisation account.");
+    expect(html).toContain("Sign in with the email address your invitation was sent to.");
     expect(html).toContain('<button type="button">Sign in</button>');
     expect(html).not.toContain("owner-token");
   });
@@ -180,6 +181,20 @@ describe("web screen in sign-in mode", () => {
     );
 
     expect(html).toContain('<button type="button" disabled="">Signing in</button>');
+  });
+
+  it("skips the landing page for a browser still signed in at the provider", () => {
+    const html = renderToStaticMarkup(
+      <OidcApp
+        session={stubSession({ canResume: () => true })}
+        createClient={() => unusedClient}
+        navigation={navigation()}
+        waitlist
+      />,
+    );
+
+    expect(html).toContain('<button type="button" disabled="">Signing in</button>');
+    expect(html).not.toContain("waitlist");
   });
 
   it("opens the shell, with sign-out, for a stored sign-in", () => {

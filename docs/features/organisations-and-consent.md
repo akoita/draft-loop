@@ -25,7 +25,7 @@ organisation; it erases everything with `draft-loop-server`
    A visitor without a code can join the waitlist. Where the server sends
    mail, they confirm the address from an emailed link within 48 hours, and
    only then wait for a place. The operator turns a waiting entry into an
-   invite. Owners
+   invite. See [Who reaches what](#who-reaches-what) for each case. Owners
    and admins invite people by email; each active member or pending invitation
    takes a seat.
 2. Assign members to the candidate records they work on. A member reaches only
@@ -56,6 +56,24 @@ organisation; it erases everything with `draft-loop-server`
    organisation, which frees its beta place, then deletes their sign-in account
    at the identity provider. Agents cannot reach it.
 
+## Who reaches what
+
+On the public beta, only an invite creates a DraftLoop account. Anyone can
+create a sign-in at the identity provider, but it reaches nothing alone.
+
+| Person                 | Joins the waitlist                                  | Signs in                                                                                |
+| ---------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| New visitor            | Gets a confirmation link, then waits once confirmed | Sees "Join the DraftLoop beta" and needs a code; every other route answers `no_account` |
+| Waiting, not confirmed | A fresh link, at most 3, 10 minutes apart           | Same as a new visitor                                                                   |
+| Waiting, confirmed     | Nothing changes and no mail is sent                 | Same as a new visitor                                                                   |
+| Holds an open invite   | Nothing is stored and no mail is sent               | Enters the code, or opens the invite link, with the invited email                       |
+| Has an account         | Nothing is stored and no mail is sent               | Goes into the app; a new tab opens it directly while the provider's session lasts       |
+| Invite withdrawn       | Joins like a new visitor                            | Same as a new visitor                                                                   |
+
+The waitlist answers every case the same way, so it reveals nobody. A wrong
+code, another email's code or a used code is refused, and five refusals make
+the sign-in wait 15 minutes.
+
 ## What the screen shows
 
 The screen reads the plan's limits from `GET /v1/me`, never its name.
@@ -63,11 +81,11 @@ The screen reads the plan's limits from `GET /v1/me`, never its name.
 The web calls each record a **candidate**: one person, their documents and
 their applications. A one-person plan never shows the word.
 
-| Plan allows                  | Account menu                        | Above Home                                                    |
-| ---------------------------- | ----------------------------------- | ------------------------------------------------------------- |
-| One candidate and one seat   | Email; Your data (download, delete) | Nothing: the record opens, or is created with the defaults    |
-| Several candidates, one seat | Email                               | **Candidates · 2 of 3** picker and **Add a candidate**        |
-| Several seats                | Email and team name                 | Picker, plus **Who can open this candidate's file**           |
+| Plan allows                  | Account menu                        | Above Home                                                 |
+| ---------------------------- | ----------------------------------- | ---------------------------------------------------------- |
+| One candidate and one seat   | Email; Your data (download, delete) | Nothing: the record opens, or is created with the defaults |
+| Several candidates, one seat | Email                               | **Candidates · 2 of 3** picker and **Add a candidate**     |
+| Several seats                | Email and team name                 | Picker, plus **Who can open this candidate's file**        |
 
 An organisation that already holds two candidates keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own
@@ -93,11 +111,11 @@ The lists read again every 30 seconds while the tab is visible, and when it
 comes back into view; **Refresh** reads them at once. A list grown with
 **Show more** waits for **Refresh**, so the operator keeps their place.
 
-| Section  | What it shows                                                                  |
-| -------- | ------------------------------------------------------------------------------ |
-| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first |
-| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that already redeemed an invite has an account and is left out. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
-| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from |
+| Section  | What it shows                                                                                                                                                                                                                                                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feedback | Members' [notes and support tickets](feedback.md) as an inbox: New, Kept, Linked to an issue and Closed, with Close first and bulk close. Opens first                                                                                                                                                                                                     |
+| Waitlist | The seats used, then one row per person still waiting, oldest first, searched by email. A sign-up that has not confirmed its email yet is left out. An email that holds an open or redeemed invite is left out, so nobody is invited twice. **Invite** turns one into an invite, emails it and shows its code once; past the cap it asks to confirm first |
+| Invites  | One row per invite, newest first, filtered by state (sent, redeemed, revoked) and searched by email; the seats used and left, and where the cap comes from                                                                                                                                                                                                |
 
 Where the server sends mail, each new invite emails its person a link,
 `/#invite=<code>`, in French and English. The link opens sign-in, and sign-up
@@ -125,15 +143,15 @@ The cap starts small and rises in steps, with no redeploy:
 
 ## Surfaces
 
-| Kind   | Surface                                                                                       |
-| ------ | --------------------------------------------------------------------------------------------- |
-| Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up           |
-| Screen | Operator: waitlist, invites and feedback                                                      |
-| API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                      |
+| Kind   | Surface                                                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Screen | Account menu, job search picker, who can open it, Credits and consent, beta sign-up                                        |
+| Screen | Operator: waitlist, invites and feedback                                                                                   |
+| API    | `/v1/organisation`, `/v1/organisation/members`, `/v1/me`                                                                   |
 | API    | `POST /v1/sign-up`, `/v1/operator/beta-invites`, `POST /v1/waitlist`, `POST /v1/waitlist/confirm`, `/v1/operator/waitlist` |
-| API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                 |
-| API    | `/v1/workspaces/{id}/export`, `/v1/workspaces/{id}/archive`, record and organisation erasure, `DELETE /v1/account`          |
-| MCP    | none                                                                                          |
+| API    | `/v1/workspaces/{id}/members`, `/v1/workspaces/{id}/consents`                                                              |
+| API    | `/v1/workspaces/{id}/export`, `/v1/workspaces/{id}/archive`, record and organisation erasure, `DELETE /v1/account`         |
+| MCP    | none                                                                                                                       |
 
 ## Limits
 

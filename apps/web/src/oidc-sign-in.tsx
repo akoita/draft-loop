@@ -46,7 +46,7 @@ function SignInBlock({ notice, busy = false, onSignIn, onPrepare }: OidcSignInPr
   const slow = useSlow(busy);
   return (
     <>
-      <p>{t`Sign in with your organisation account. You stay signed in until you close this tab.`}</p>
+      <p>{t`Sign in with the email address your invitation was sent to.`}</p>
       {notice === undefined ? null : (
         <p className="notice" role="status">
           {notice}
@@ -120,7 +120,8 @@ export interface OidcAppProps {
   readonly waitlistConfirmToken?: string;
 }
 
-type Phase = "completing" | "signed-out" | "signed-in";
+/** `resuming`: a new tab asks the provider, without its page, whether the person is still signed in. */
+type Phase = "resuming" | "completing" | "signed-out" | "signed-in";
 
 /** The web screen when the API signs people in through the identity provider (ADR 0011, D6). */
 export function OidcApp({
@@ -137,7 +138,9 @@ export function OidcApp({
       ? "completing"
       : session.isSignedIn()
         ? "signed-in"
-        : "signed-out",
+        : session.canResume()
+          ? "resuming"
+          : "signed-out",
   );
   const [notice, setNotice] = useState<string | undefined>(
     () =>
@@ -156,6 +159,24 @@ export function OidcApp({
   useEffect(() => {
     if (phase === "signed-out" && !waitlist) session.prepare();
   }, [phase, waitlist, session]);
+
+  // Someone already signed in at the provider opens the app in a new tab without the landing page
+  // or a second press of Sign in; with no session there, the provider sends them straight back.
+  useEffect(() => {
+    if (phase !== "resuming") return;
+    let current = true;
+    session.begin({ silent: true }).then(
+      (url) => {
+        if (current) navigation.assign(url);
+      },
+      () => {
+        if (current) setPhase("signed-out");
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [phase, session, navigation]);
 
   useEffect(() => {
     if (phase !== "completing") return;
@@ -210,7 +231,7 @@ export function OidcApp({
         waitlist={waitlist && inviteCode === undefined}
         {...(waitlistConfirmToken === undefined ? {} : { waitlistConfirmToken })}
         {...(notice === undefined ? {} : { notice })}
-        busy={phase === "completing" || leaving}
+        busy={phase === "completing" || phase === "resuming" || leaving}
         onPrepare={() => session.prepare()}
         onSignIn={() => {
           setLeaving(true);

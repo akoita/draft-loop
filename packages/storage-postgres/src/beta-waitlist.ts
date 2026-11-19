@@ -26,7 +26,7 @@ export interface BetaWaitlistEntry {
 export interface BetaWaitlist {
   /**
    * Adds the email as confirmed, where the deployment sends no mail; false when it was already
-   * listed, which keeps the first consent.
+   * listed, which keeps the first consent, or when it {@link hasPlace already has a place}.
    */
   readonly join: (input: {
     readonly email: string;
@@ -36,7 +36,8 @@ export interface BetaWaitlist {
   /**
    * Adds the email unconfirmed with a new confirmation token's hash, or renews the token of an
    * unconfirmed entry. Resolves `send` when the caller should email the link: never for a
-   * confirmed entry, nor sooner than `resendAfterMs` after the last email, nor past `maxSends`.
+   * confirmed entry, nor sooner than `resendAfterMs` after the last email, nor past `maxSends`,
+   * nor for an email that {@link hasPlace already has a place}, which stores nothing.
    */
   readonly joinUnconfirmed: (input: {
     readonly email: string;
@@ -59,7 +60,7 @@ export interface BetaWaitlist {
   }) => Promise<boolean>;
   /**
    * One page of entries still waiting, oldest first (the order people asked in): 50 when no limit
-   * is given. An email that already redeemed an invite has an account and is left out.
+   * is given. An email holding an open or redeemed invite is left out.
    */
   readonly list: (page?: OperatorListPage) => Promise<readonly BetaWaitlistEntry[]>;
   /** How many waiting entries match the search, counted as `list` filters them. */
@@ -90,12 +91,22 @@ function clock(now: Date): string {
 }
 
 /**
- * Entries whose email already redeemed an invite are hidden: that person has an account, and the
- * entry stays only until retention deletes it (an invite made outside the waitlist, or a join after
- * the account existed). Hiding them keeps the operator from inviting an existing account again.
+ * Entries whose email holds an open or redeemed invite are hidden: that person has an invite to
+ * use or an account, and the entry stays only until retention deletes it (an entry made before an
+ * invite sent outside the waitlist). Hiding them keeps the operator from inviting them twice; an
+ * entry shows again if its invite is withdrawn.
  */
 const notRedeemed = `NOT EXISTS (SELECT 1 FROM beta_invites AS invite
-  WHERE invite.email = beta_waitlist.email AND invite.redeemed_at IS NOT NULL)`;
+  WHERE invite.email = beta_waitlist.email AND invite.revoked_at IS NULL)`;
+
+/**
+ * An email already has a place when a beta invite for it is open or redeemed: its person has an
+ * invite to use, or an account to sign in to. Joining the waitlist then stores nothing and sends
+ * no mail; the route's answer stays the same, revealing nobody. Erasing an account deletes its
+ * redeemed invite, so its person may join again. `$2` is the normalized email.
+ */
+const hasPlace = `EXISTS (SELECT 1 FROM beta_invites AS invite
+  WHERE invite.email = $2 AND invite.revoked_at IS NULL)`;
 
 /** Only confirmed entries wait for a place; the rest wait for their person to open the link. */
 const confirmed = "confirmed_at IS NOT NULL";
@@ -115,7 +126,8 @@ export function createBetaWaitlist(client: SqlSession): BetaWaitlist {
   return {
     join: async ({ email, consentVersion, now }) => {
       const rows = await client.query(
-        `INSERT INTO beta_waitlist (id, email, consent_version, joined_at) VALUES ($1, $2, $3, $4)
+        `INSERT INTO beta_waitlist (id, email, consent_version, joined_at)
+         SELECT $1, $2, $3, $4 WHERE NOT ${hasPlace}
          ON CONFLICT (email) DO NOTHING RETURNING id`,
         [randomUUID(), normalizeMemberEmail(email), consentVersion, clock(now)],
       );
@@ -129,7 +141,8 @@ export function createBetaWaitlist(client: SqlSession): BetaWaitlist {
       const rows = await client.query(
         `INSERT INTO beta_waitlist (id, email, consent_version, joined_at, confirmed_at,
            confirm_token_hash, confirm_sent_at, confirm_sends, locale)
-         VALUES ($1, $2, $3, $4, NULL, $5, $4, 1, $6)
+         SELECT $1, $2, $3, $4::timestamptz, NULL, $5, $4::timestamptz, 1, $6
+          WHERE NOT ${hasPlace}
          ON CONFLICT (email) DO UPDATE SET
            confirm_token_hash = EXCLUDED.confirm_token_hash,
            confirm_sent_at = EXCLUDED.confirm_sent_at,

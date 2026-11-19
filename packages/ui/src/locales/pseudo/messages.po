@@ -8858,12 +8858,12 @@ msgstr ""
 msgid "Sign in on Home, under Settings."
 msgstr ""
 
-#: apps/web/src/sign-in.tsx
-msgid "Sign in with the owner token of this deployment. It stays in this tab until you close it."
+#: apps/web/src/oidc-sign-in.tsx
+msgid "Sign in with the email address your invitation was sent to."
 msgstr ""
 
-#: apps/web/src/oidc-sign-in.tsx
-msgid "Sign in with your organisation account. You stay signed in until you close this tab."
+#: apps/web/src/sign-in.tsx
+msgid "Sign in with the owner token of this deployment. It stays in this tab until you close it."
 msgstr ""
 
 #: apps/web/src/beta-sign-up.tsx

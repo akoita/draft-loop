@@ -105,6 +105,7 @@ function screenFor(config: ApiSchemas["AuthConfig"]) {
     fetch: globalThis.fetch.bind(globalThis),
     crypto: globalThis.crypto,
     storage: () => globalThis.sessionStorage,
+    lastingStorage: localStorage,
     now: () => Date.now(),
     uiLocale: currentScreenLanguage,
   });

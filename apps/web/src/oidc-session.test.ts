@@ -67,6 +67,7 @@ function provider(answers: Array<Response | (() => Response)>) {
 
 function setup(answers: Array<Response | (() => Response)> = []) {
   const storage = memoryStorage();
+  const lasting = memoryStorage();
   const stub = provider(answers);
   const clock = { now: start };
   const make = () =>
@@ -77,11 +78,12 @@ function setup(answers: Array<Response | (() => Response)> = []) {
       fetch: stub.fetch,
       crypto: globalThis.crypto,
       storage: () => storage,
+      lastingStorage: () => lasting,
       now: () => clock.now,
       wait: async (ms) => void waits.push(ms),
     });
   const waits: number[] = [];
-  return { storage, stub, clock, waits, session: make(), make };
+  return { storage, lasting, stub, clock, waits, session: make(), make };
 }
 
 const tokens = (access: string, refresh?: string, expiresIn = 300) =>
@@ -213,6 +215,55 @@ describe("sign-in through the identity provider", () => {
 
     await expect(session.begin()).resolves.toContain("/protocol/openid-connect/auth");
     expect(calls).toBe(2);
+  });
+});
+
+describe("a new tab of a browser that signed in before", () => {
+  it("does not ask the provider for a browser that never signed in", () => {
+    expect(setup().session.canResume()).toBe(false);
+  });
+
+  it("asks the provider quietly and signs in from its session", async () => {
+    const context = setup([tokens("access-1", "refresh-1"), tokens("access-2", "refresh-2")]);
+    await signIn(context);
+    // A new tab: its session storage is empty, the browser's lasting marker stays.
+    context.storage.clear();
+    const tab = context.make();
+    expect(tab.canResume()).toBe(true);
+
+    const url = new URL(await tab.begin({ silent: true }));
+    expect(url.searchParams.get("prompt")).toBe("none");
+    const returned = context.make();
+
+    expect(await returned.complete(`?code=code-2&state=${url.searchParams.get("state")}`)).toBe(
+      true,
+    );
+    expect(await returned.accessToken()).toBe("access-2");
+    expect(context.lasting.getItem("draft-loop.signed-in-before")).toBe("1");
+  });
+
+  it("ends quietly when the provider holds no session, and does not ask the next tab", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    await signIn(context);
+    context.storage.clear();
+    const url = new URL(await context.make().begin({ silent: true }));
+
+    const returned = context.make();
+    expect(
+      await returned.complete(`?error=login_required&state=${url.searchParams.get("state")}`),
+    ).toBe(false);
+    expect(returned.takeNotice()).toBeUndefined();
+    expect(returned.canResume()).toBe(false);
+  });
+
+  it("keeps no tokens in lasting storage, and forgets the marker on sign-out", async () => {
+    const context = setup([tokens("access-1", "refresh-1")]);
+    const session = await signIn(context);
+    expect(context.lasting.length).toBe(1);
+
+    await session.signOut();
+
+    expect(context.lasting.length).toBe(0);
   });
 });
 

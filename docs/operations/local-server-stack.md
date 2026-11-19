@@ -127,8 +127,11 @@ sequenceDiagram
     A->>A: Resolve token to an organisation member
 ```
 
-Tokens stay in the tab's session storage and refresh before they expire. An
-account that belongs to no organisation is told so and signed out.
+Tokens stay in the tab's session storage and refresh before they expire. A new
+tab of a browser that signed in before asks Keycloak with `prompt=none` first:
+while Keycloak's session is open, the app opens without the landing page or a
+second press of Sign in. The browser keeps only a marker of that, never a token.
+An account that belongs to no organisation is told so and signed out.
 
 ### Fictional accounts
 
