@@ -1,3 +1,4 @@
+/* global document, navigator, window */
 // Keeps the about page in the visitor's language, using the same saved choice as the app
 // (see apps/web/src/screen-language-choice.ts). A file of its own because the CSP forbids
 // inline scripts.
