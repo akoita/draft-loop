@@ -80,6 +80,9 @@ export const factSuggestionLimits = Object.freeze({
 
 export const factSuggestionSchemaVersion = 1 as const;
 
+/** The most suggestions one accept decides together. */
+export const maximumFactSuggestionBatch = 50;
+
 /** `fsk1-`, the kind, `-` and 16 lowercase hex digits. */
 export const factSuggestionDedupeKeyPattern = new RegExp(
   `^fsk1-(?:${factSuggestionKinds.join("|")})-[0-9a-f]{16}$`,

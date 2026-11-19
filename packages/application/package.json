@@ -55,6 +55,10 @@
       "types": "./src/work-journal.ts",
       "import": "./src/work-journal.ts"
     },
+    "./fact-suggestion-decisions": {
+      "types": "./src/fact-suggestion-decisions.ts",
+      "import": "./src/fact-suggestion-decisions.ts"
+    },
     "./work-journal-source": {
       "types": "./src/work-journal-source.ts",
       "import": "./src/work-journal-source.ts"
