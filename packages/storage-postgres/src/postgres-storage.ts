@@ -12,6 +12,7 @@ import { contentScreeningGrants } from "./content-screening-migration.js";
 import { createCreditLedger } from "./credit-ledger.js";
 import { creditLedgerGrants } from "./credit-ledger-migration.js";
 import { createCreditPurchases } from "./credit-purchases.js";
+import { createFactSuggestionStore } from "./fact-suggestions.js";
 import { createIdempotencyKeys } from "./idempotency-keys.js";
 import { createKnowledgeBaseOwners } from "./knowledge-base-owners.js";
 import { createKnowledgeBaseRecords } from "./knowledge-bases.js";
@@ -159,6 +160,7 @@ function tenantStorage(client: SqlSession) {
     agentTokens: createAgentTokenStore(client),
     agentConnectionCaps: createAgentConnectionCapStore(client),
     careerInterviewSessions: createCareerInterviewSessionStore(client),
+    factSuggestions: createFactSuggestionStore(client),
     savedApplicationMaterial: createSavedApplicationMaterialStore(client),
     researchBriefs: createResearchBriefStore(client),
     runSpans: createRunSpanStore(client),

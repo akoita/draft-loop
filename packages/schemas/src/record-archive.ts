@@ -58,6 +58,7 @@ export const recordArchiveTables = [
   "work_journal_notes",
   "work_journal_forgotten_keys",
   "career_interview_sessions",
+  "fact_suggestions",
   "application_material_drafts",
   "application_research_briefs",
 ] as const;

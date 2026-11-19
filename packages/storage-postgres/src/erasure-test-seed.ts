@@ -335,6 +335,11 @@ export async function seedRecord(
       [tenant, record, at],
     ],
     [
+      `INSERT INTO fact_suggestions (tenant_id, id, workspace_id, profile_id, status, dedupe_key, suggestion, created_at)
+       VALUES ($1, 'fsg_' || md5($1 || $2), $2, 'profile-1', 'pending', 'fsk1-correct-0123456789abcdef', '{}', $3)`,
+      [tenant, record, at],
+    ],
+    [
       `INSERT INTO application_material_drafts (tenant_id, id, workspace_id, application_id, kind, draft, created_at)
        VALUES ($1, 'amd_' || md5($1 || $2), $2, 'application-1', 'cover-letter', '{}', $3)`,
       [tenant, record, at],

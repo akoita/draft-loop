@@ -55,6 +55,7 @@ export {
   type CreditPurchases,
   createCreditPurchases,
 } from "./credit-purchases.js";
+export { createFactSuggestionStore } from "./fact-suggestions.js";
 export {
   type HostedApplicationPorts,
   type HostedApplicationPortsOptions,

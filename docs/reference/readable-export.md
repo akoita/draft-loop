@@ -22,6 +22,7 @@ archive to move or audit a record.
 | `applications/<name>/exports/CV <date> <time>.<ext>` | Each exported CV, as it was exported, named by when it was made (UTC)                                          |
 | `other drafts/`                                      | Saved drafts and exports whose application no longer exists                                                    |
 | `journal.md`, `journal.json`                         | The work journal's pending and approved notes                                                                  |
+| `profile-suggestions.json`                           | Suggested career profile changes: the change, the quote, who said it, where it was found and the outcome       |
 
 Names are made safe as file names on Windows, macOS and Linux, and a repeated
 name gets a number in brackets, such as `(2)`, before its extension. A file or folder the record has

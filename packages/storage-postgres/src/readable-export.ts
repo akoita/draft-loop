@@ -404,6 +404,26 @@ function journalText(notes: readonly Readonly<Record<string, unknown>>[]): strin
   return `${lines.join("\n")}\n`;
 }
 
+/** Suggested profile changes and their outcome: what was proposed, the words and who said them. */
+function profileSuggestions(rows: RecordArchiveRows): Readonly<Record<string, unknown>>[] {
+  const suggestions: Readonly<Record<string, unknown>>[] = [];
+  for (const row of rows.get("fact_suggestions") ?? []) {
+    const suggestion = record(json(row.suggestion));
+    if (suggestion === undefined) continue;
+    suggestions.push({
+      status: row.status,
+      createdAt: row.created_at,
+      change: suggestion.change,
+      quote: suggestion.quote,
+      speaker: suggestion.speaker,
+      foundIn: record(suggestion.origin)?.kind,
+      decidedAt: record(suggestion.decision)?.decidedAt,
+      appliedChange: suggestion.appliedChange,
+    });
+  }
+  return suggestions;
+}
+
 function readme(createdAt: string, paths: readonly string[]): string {
   const has = (prefix: string) => paths.some((path) => path.startsWith(prefix));
   const rows: [string, string][] = [
@@ -424,6 +444,12 @@ function readme(createdAt: string, paths: readonly string[]): string {
     ]);
   }
   if (has("journal.md")) rows.push(["journal.md, journal.json", "Your work journal's notes."]);
+  if (has("profile-suggestions.json")) {
+    rows.push([
+      "profile-suggestions.json",
+      "Suggested changes to your career profile, the words behind each one and what you decided.",
+    ]);
+  }
   return [
     "# Your DraftLoop data",
     "",
@@ -497,6 +523,10 @@ export function openPostgresReadableExports(
       if (notes.length > 0) {
         planned.push({ path: "journal.md", text: scrub(journalText(notes)) });
         planned.push(jsonFile("journal.json", notes));
+      }
+      const suggestions = profileSuggestions(rows);
+      if (suggestions.length > 0) {
+        planned.push(jsonFile("profile-suggestions.json", suggestions));
       }
       for (const file of planned) {
         if ("object" in file && !(await file.object.blobs.exists(file.object.reference))) {

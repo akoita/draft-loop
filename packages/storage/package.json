@@ -147,6 +147,14 @@
       "types": "./src/run-spans-conformance.ts",
       "import": "./src/run-spans-conformance.ts"
     },
+    "./fact-suggestions": {
+      "types": "./src/fact-suggestions.ts",
+      "import": "./src/fact-suggestions.ts"
+    },
+    "./fact-suggestions-conformance": {
+      "types": "./src/fact-suggestions-conformance.ts",
+      "import": "./src/fact-suggestions-conformance.ts"
+    },
     "./agent-connection-caps": {
       "types": "./src/agent-connection-caps.ts",
       "import": "./src/agent-connection-caps.ts"
