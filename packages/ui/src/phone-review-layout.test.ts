@@ -3,11 +3,20 @@ import { describe, expect, it } from "vitest";
 
 const styles = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
-/** The body of the last `@media (max-width: 640px)` block, where the phone layout lives. */
+/** The bodies of every `@media (max-width: 640px)` block, where the phone layout lives. */
 function phoneRules(): string {
-  const start = styles.lastIndexOf("@media (max-width: 640px) {");
-  expect(start).toBeGreaterThan(-1);
-  return styles.slice(start);
+  const opening = "@media (max-width: 640px) {";
+  const blocks: string[] = [];
+  for (
+    let start = styles.indexOf(opening);
+    start !== -1;
+    start = styles.indexOf(opening, start + 1)
+  ) {
+    const end = styles.indexOf("\n}\n", start);
+    blocks.push(styles.slice(start, end === -1 ? undefined : end));
+  }
+  expect(blocks.length).toBeGreaterThan(0);
+  return blocks.join("\n");
 }
 
 function ruleIn(css: string, selector: string): string {
