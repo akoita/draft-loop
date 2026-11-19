@@ -18,7 +18,6 @@ import { ApplicationNameNudge, ApplicationTitle } from "./application-name.js";
 import { needsApplicationName } from "./application-name-model.js";
 import { ApplicationSetupSummary } from "./application-setup-summary.js";
 import {
-  type CredentialProvider,
   type ModelCompany,
   type ModelsPreviewIndependenceResult,
   modelCompanies,
@@ -101,12 +100,7 @@ import {
 } from "./page-navigation.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import type { ProfileGenerationActivity } from "./profile-generation-progress.js";
-import { ProviderAuthentication } from "./provider-authentication.js";
-import {
-  credentialProvidersForRoute,
-  serverHeldProviderSignIn,
-  useProviderSignInReadiness,
-} from "./provider-sign-in-readiness.js";
+import { serverHeldProviderSignIn } from "./provider-sign-in-readiness.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import {
@@ -2049,27 +2043,6 @@ export function App({
     criticModel,
   ]);
 
-  // The application screen's sign-in row reads the same statuses as Home, for the run's pair.
-  // It reads when the screen opens, when returning from Home and when the workspace, application
-  // or pair changes; it never polls.
-  const signInAuthorCompany = state?.providerTransmissionPreflight.author.company as
-    | ModelCompany
-    | undefined;
-  const signInCriticCompany = state?.providerTransmissionPreflight.critic.company as
-    | ModelCompany
-    | undefined;
-  const { readiness: providerSignInReadiness } = useProviderSignInReadiness({
-    getCredentialStatus: activePort.getCredentialStatus,
-    getProviderAuthModeStatus: activePort.getProviderAuthModeStatus,
-    fixtureMode: state?.setup.fixtureMode ?? false,
-    authorCompany: signInAuthorCompany,
-    criticCompany: signInCriticCompany,
-    providers: credentialProvidersForRoute(signInAuthorCompany, signInCriticCompany),
-    enabled:
-      state !== null && (view.kind === "application" || activePort.listApplications === undefined),
-    refreshKey: `${state?.workspaceId ?? ""}:${view.kind === "application" ? view.applicationId : ""}`,
-  });
-
   if (workspaceRecoveryRequired) {
     return <WorkspaceRecovery errorMessage={workspaceRecoveryError} />;
   }
@@ -2167,7 +2140,7 @@ export function App({
             generation={workspaceGeneration}
             applied={selectedModelProfiles?.refs ?? null}
             matching={presetReferencesMatchingPreflight(state.providerTransmissionPreflight)}
-            signInFixed={activePort.setProviderAuthMode === undefined}
+            signInFixed
             savedPairNotice={modelProfileNotice}
             {...(modelEditorFromCreation
               ? {
@@ -2456,50 +2429,6 @@ export function App({
 
   // Provider authentication is workspace-level, so it is offered on Home. Changing the OpenAI mode
   // also invalidates the model-profile support read, as it did when the application screen owned it.
-  const providerAuthenticationProps = {
-    fixtureMode: state.setup.fixtureMode,
-    getCredentialStatus: activePort.getCredentialStatus,
-    getProviderAuthModeStatus: activePort.getProviderAuthModeStatus,
-    onSetCredential:
-      activePort.setCredential === undefined
-        ? undefined
-        : async (provider: CredentialProvider, apiKey: string) => {
-            await activePort.setCredential?.(provider, apiKey);
-          },
-    onRemoveCredential:
-      activePort.removeCredential === undefined
-        ? undefined
-        : async (provider: CredentialProvider) => {
-            await activePort.removeCredential?.(provider);
-          },
-    onTestCredential: activePort.testCredential,
-    onSetProviderAuthMode:
-      activePort.setProviderAuthMode === undefined
-        ? undefined
-        : async (provider: "anthropic" | "openai", mode: "api-key" | "user-session") => {
-            if (activePort.setProviderAuthMode === undefined) {
-              throw new Error("Provider authentication mode changes are unavailable.");
-            }
-            const workspaceId = state.workspaceId;
-            const generation = workspaceGeneration;
-            setModelProfileSupport({ status: "loading", workspaceId, generation });
-            try {
-              return await activePort.setProviderAuthMode(provider, mode);
-            } finally {
-              if (isCurrentWorkspaceContext(workspaceId, generation)) {
-                setModelProfileSupportEpoch((current) => current + 1);
-              }
-            }
-          },
-  };
-  const providerAuthentication = (
-    <ProviderAuthentication
-      {...providerAuthenticationProps}
-      authorCompany={state.providerTransmissionPreflight.author.company as ModelCompany}
-      criticCompany={state.providerTransmissionPreflight.critic.company as ModelCompany}
-    />
-  );
-
   /** Asks for a name while the default application still has the one DraftLoop derived. */
   const applicationNameNudge = (
     application: Extract<WorkspaceView, { kind: "application" }>,
@@ -2649,12 +2578,8 @@ export function App({
         : { onLoadRunRequirementEvidence: loadRunRequirementEvidence })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
       {...(profileCapabilities === null ? {} : { onOpenProfile: openProfileScreen })}
-      providerSignInReadiness={
-        // A host without credential reads holds the provider keys itself (#2866).
-        activePort.getCredentialStatus === undefined
-          ? serverHeldProviderSignIn()
-          : providerSignInReadiness
-      }
+      // The server holds the provider keys (#2866).
+      providerSignInReadiness={serverHeldProviderSignIn()}
       {...(homeAvailable && (state.state === "collecting" || state.state === "stopped")
         ? {
             setupSummary: (
@@ -2745,7 +2670,6 @@ export function App({
               <HostWorkspaceSettings openEvidence={openEvidenceScreen} />
               <ScreenLanguageSetting />
               <DisplaySetting />
-              {providerAuthentication}
               {activePort.compactHistory === undefined ? null : (
                 <AdvancedOptions>
                   <AdvancedOption

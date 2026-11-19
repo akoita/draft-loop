@@ -2,7 +2,6 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ApprovalReadiness } from "./approval-readiness.js";
-import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import type { EarlierRunView } from "./earlier-run.js";
 import type { ExportTemplate } from "./export-template.js";
@@ -478,12 +477,6 @@ export interface DesktopReviewPort {
     target: "evidence" | "job-description",
     url: string,
   ) => Promise<DesktopReviewState>;
-  readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
-  readonly setCredential?: (
-    provider: CredentialProvider,
-    apiKey: string,
-  ) => Promise<CredentialStatus>;
-  readonly removeCredential?: (provider: CredentialProvider) => Promise<CredentialStatus>;
 }
 
 export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
@@ -855,23 +848,8 @@ export function createFixtureReviewState(): DesktopReviewState {
 }
 
 export function createFixtureReviewPort(): DesktopReviewPort {
-  const credentials = new Map<CredentialProvider, string>();
   return {
     load: async () => createFixtureReviewState(),
     dispatch: async (state, action) => reduceReviewState(state, action),
-    getCredentialStatus: async (provider) => ({
-      provider,
-      configured: credentials.has(provider),
-      source: credentials.has(provider) ? "app" : "none",
-      protection: credentials.has(provider) ? "session-memory" : "none",
-    }),
-    setCredential: async (provider, apiKey) => {
-      credentials.set(provider, apiKey);
-      return { provider, configured: true, source: "app", protection: "session-memory" };
-    },
-    removeCredential: async (provider) => {
-      credentials.delete(provider);
-      return { provider, configured: false, source: "none", protection: "none" };
-    },
   };
 }

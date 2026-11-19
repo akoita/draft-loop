@@ -142,10 +142,10 @@ describe("the shared screens' commands over HTTP", () => {
     const { port, calls } = portOver({});
 
     expect(port.capabilities).toEqual([...hostedBridgeCapabilities]);
-    for (const desktopOnly of ["knowledge.import-directory", "credential.set"]) {
+    for (const desktopOnly of ["knowledge.import-directory", "knowledge.list"]) {
       expect(port.hasCapability(desktopOnly as never)).toBe(false);
     }
-    const result = await port.execute({ type: "credential.status", input: { provider: "openai" } });
+    const result = await port.execute({ type: "knowledge.list", input: { storeId: "store-1" } });
 
     expect(result).toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
     expect(calls).toEqual([]);

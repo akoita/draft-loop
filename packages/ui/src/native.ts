@@ -18,9 +18,6 @@ import {
   type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
-  type CredentialProvider,
-  type CredentialTestProvider,
-  type CredentialTestResult,
   createCapabilityPort,
   type EmbeddingModelCancelResult,
   type EmbeddingModelPlanResult,
@@ -51,9 +48,6 @@ import {
   type OpportunityListResult,
   type OpportunityRecordResult,
   type ProfileFreshnessResult,
-  type ProviderAuthMode,
-  type ProviderAuthModeResult,
-  type ProviderAuthModeStatus,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type SavedCanonicalCandidateProfileSummary,
   type SavedModelProfilesResult,
@@ -331,15 +325,6 @@ export type DesktopSetupPort = DesktopReviewPort &
   DesktopOpportunityCapabilities &
   DesktopProfileCapabilities &
   DesktopKnowledgeCapabilities & {
-    readonly getProviderAuthModeStatus?: (
-      provider: "anthropic" | "openai",
-    ) => Promise<ProviderAuthModeStatus>;
-    readonly setProviderAuthMode?: (
-      provider: "anthropic" | "openai",
-      mode: ProviderAuthMode,
-    ) => Promise<ProviderAuthModeResult>;
-    /** Tests the saved API key with a model lookup; the key itself never comes back. */
-    readonly testCredential?: (provider: CredentialTestProvider) => Promise<CredentialTestResult>;
     /**
      * Shrinks the workspace's run history behind a verified backup the host keeps beside it.
      * Resolves with the sizes and the backup's file name; refuses while a run is working.
@@ -787,58 +772,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       return next;
     },
     // A host that keeps no provider keys, such as the hosted service, offers none of these.
-    ...(capabilityPort.hasCapability("credential.status")
-      ? {
-          getCredentialStatus: async (provider: CredentialProvider) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.status", input: { provider } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.set")
-      ? {
-          setCredential: async (provider: CredentialProvider, apiKey: string) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.set", input: { provider, apiKey } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.remove")
-      ? {
-          removeCredential: async (provider: CredentialProvider) =>
-            unwrap(
-              await capabilityPort.execute({ type: "credential.remove", input: { provider } }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("credential.test")
-      ? {
-          testCredential: async (provider: CredentialTestProvider) =>
-            unwrap(await capabilityPort.execute({ type: "credential.test", input: { provider } })),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("provider-auth.status")
-      ? {
-          getProviderAuthModeStatus: async (provider: "anthropic" | "openai") =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "provider-auth.status",
-                input: { provider },
-              }),
-            ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("provider-auth.set")
-      ? {
-          setProviderAuthMode: async (provider: "anthropic" | "openai", mode: ProviderAuthMode) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "provider-auth.set",
-                input: { provider, mode },
-              }),
-            ),
-        }
-      : {}),
     ...(capabilityPort.hasCapability("models.list")
       ? {
           listModels: async (provider: ModelDiscoveryProvider) =>
