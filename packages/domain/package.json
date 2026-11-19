@@ -43,6 +43,10 @@
       "types": "./src/fact-suggestion.ts",
       "import": "./src/fact-suggestion.ts"
     },
+    "./fact-suggestion-edit": {
+      "types": "./src/fact-suggestion-edit.ts",
+      "import": "./src/fact-suggestion-edit.ts"
+    },
     "./candidate-evidence-kind": {
       "types": "./src/candidate-evidence-kind.ts",
       "import": "./src/candidate-evidence-kind.ts"
