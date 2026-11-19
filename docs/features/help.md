@@ -7,7 +7,9 @@ status: partial
 A member opens and searches a user guide from the **Help** button in the
 header of every screen. The guide walks the first journey (career evidence, a
 job, a draft, review and export, Prepare), then covers Display, agents, plans
-and credits, privacy, and what to do when something goes wrong.
+and credits, privacy, and what to do when something goes wrong. Its Advanced
+sections, at the end, give the steps to connect an agent and what each agent
+permission allows; Settings > Agents links to them.
 
 ## Where it runs
 
@@ -17,7 +19,7 @@ guide through the MCP server.
 
 Visitors who are not signed in read the same guide as a public page at
 `/guide/` (English) and `/guide/fr/` (French). The web build writes both pages
-from `packages/user-guide`, so the text is never copied. Seven sections
+from `packages/user-guide`, so the text is never copied. Eight sections
 show a screenshot under their text, taken on a local demo workspace with
 fictional data; the in-app panel shows the text only. To refresh one, replace
 `apps/web/public/guide/images/<section>.<en|fr>.webp` and its size in

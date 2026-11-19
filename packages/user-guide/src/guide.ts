@@ -21,6 +21,8 @@ export const helpSectionIds = [
   "credits",
   "privacy",
   "problems",
+  "connect-agent",
+  "agent-permissions",
 ] as const;
 export type HelpSectionId = (typeof helpSectionIds)[number];
 
@@ -60,6 +62,8 @@ export const helpSectionFeatures: Readonly<Record<HelpSectionId, readonly string
   credits: ["plans-and-credits.md"],
   privacy: ["organisations-and-consent.md", "sensitivity-and-screening.md"],
   problems: ["feedback.md"],
+  "connect-agent": [],
+  "agent-permissions": [],
 };
 
 /** The languages the guide is written in. */

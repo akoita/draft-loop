@@ -17,9 +17,14 @@ export function agentConfigurationHoldsToken(host: AgentHost): boolean {
 
 const defaultServerUrl = "http://127.0.0.1:8080";
 
-/** The public setup guide; it holds no address or identifier of any deployment. */
-export const agentChannelGuideUrl =
-  "https://github.com/akoita/draft-loop/blob/main/docs/reference/agent-channel.md";
+/**
+ * The user guide's setup steps on the server the screen is served from, in the screen's language
+ * (`packages/user-guide`, section `connect-agent`). Developers' reference stays in
+ * `docs/reference/agent-channel.md`.
+ */
+export function agentSetupGuideUrl(language: "en" | "fr"): string {
+  return `${language === "fr" ? "/guide/fr/" : "/guide/"}#connect-agent`;
+}
 
 /** Shown in place of the secret until a token is created. */
 export const agentTokenPlaceholder = "<agent-token>";

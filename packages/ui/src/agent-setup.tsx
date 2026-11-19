@@ -6,7 +6,6 @@ import {
   type AgentScope,
   type AgentTokenView,
   activeAgentTokens,
-  agentChannelGuideUrl,
   agentConfiguration,
   agentConfigurationHoldsToken,
   agentHostHint,
@@ -15,11 +14,13 @@ import {
   agentScopeLabel,
   agentScopeName,
   agentScopes,
+  agentSetupGuideUrl,
   defaultAgentMonthlyCapUsd,
   defaultAgentScopes,
   parseAgentMonthlyCap,
 } from "./agent-setup-model.js";
 import { type AssistantConnectionView, ConnectedAgents } from "./connected-agents.js";
+import { currentScreenLanguage } from "./i18n.js";
 import { formatDate } from "./locale-format.js";
 import { codingAgentsSectionId } from "./shared-link.js";
 
@@ -72,7 +73,7 @@ export interface AgentSetupProps {
 
 function GuideLink({ children }: { readonly children: string }) {
   return (
-    <a href={agentChannelGuideUrl} rel="noreferrer noopener" target="_blank">
+    <a href={agentSetupGuideUrl(currentScreenLanguage())} rel="noreferrer noopener" target="_blank">
       {children}
     </a>
   );
