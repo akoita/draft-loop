@@ -2111,6 +2111,7 @@ const desktopReviewStateKeys = [
   "runInputs",
   "applicationPlan",
   "earlierRun",
+  "profileSuggestions",
   "setup",
 ] as const;
 
@@ -7530,6 +7531,22 @@ function normalizeRunStatus(value: unknown): RunStatus {
   };
 }
 
+/** The run's waiting profile suggestions (#3168): a count only, never their content. */
+function normalizeReviewProfileSuggestions(
+  value: unknown,
+): { readonly pending: number } | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Readonly<Record<string, unknown>>;
+  if (!Object.keys(record).every((key) => key === "pending")) return undefined;
+  const { pending } = record;
+  return typeof pending === "number" &&
+    Number.isSafeInteger(pending) &&
+    pending >= 1 &&
+    pending <= 200
+    ? { pending }
+    : undefined;
+}
+
 function normalizeReviewState(value: unknown): ReviewStateResult {
   if (!isRecord(value)) return invalidInput();
   if (!hasOnlyKeys(value, desktopReviewStateKeys)) return invalidInput();
@@ -7676,6 +7693,10 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.earlierRun === undefined || value.earlierRun === null
       ? value.earlierRun
       : (normalizeEarlierRun(value.earlierRun) ?? invalidInput());
+  const profileSuggestions =
+    value.profileSuggestions === undefined || value.profileSuggestions === null
+      ? value.profileSuggestions
+      : (normalizeReviewProfileSuggestions(value.profileSuggestions) ?? invalidInput());
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -7792,6 +7813,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(applicationPlan === undefined ? {} : { applicationPlan }),
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
+    ...(profileSuggestions === undefined ? {} : { profileSuggestions }),
   } as unknown as DesktopReviewState;
 }
 

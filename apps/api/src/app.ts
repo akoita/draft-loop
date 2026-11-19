@@ -741,10 +741,16 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       workspaceRoot: application.workspaceRoot,
       idempotency,
       enqueueRun: application.enqueueRun,
+      ...(application.factSuggestions === undefined
+        ? {}
+        : { factSuggestions: application.factSuggestions }),
     });
     registerReviewStateRoutes(app, {
       service: application.service,
       workspaceRoot: application.workspaceRoot,
+      ...(application.factSuggestions === undefined
+        ? {}
+        : { factSuggestions: application.factSuggestions }),
       ...(knowledgeIntake === undefined ? {} : { knowledgeIntake }),
       ...(application.preferenceSuggestions === undefined
         ? {}

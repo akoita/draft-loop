@@ -57,15 +57,15 @@
     <text x="285" y="252" font-size="21" fill="#9aa7b4"><tspan fill="#6ae3cf" font-weight="700">One AI drafts.</tspan> <tspan fill="#f0b53c" font-weight="700">Another critiques.</tspan> <tspan fill="#f2fbf8" font-weight="700">You decide.</tspan></text>
 
     <g font-size="16" font-weight="600">
-      <rect x="285" y="284" width="122" height="36" rx="18" fill="#05231e" stroke="#0c7261"/>
+      <rect x="285" y="284" width="172" height="36" rx="18" fill="#05231e" stroke="#0c7261"/>
       <circle cx="306" cy="302" r="5" fill="#2fd0b8"/>
-      <text x="318" y="308" fill="#6ae3cf">Local-first</text>
-      <rect x="419" y="284" width="226" height="36" rx="18" fill="#261c08" stroke="#7f5205"/>
-      <circle cx="440" cy="302" r="5" fill="#f0b53c"/>
-      <text x="452" y="308" fill="#f0b53c">Cross-company critique</text>
-      <rect x="657" y="284" width="200" height="36" rx="18" fill="#1d232c" stroke="#3b4652"/>
-      <circle cx="678" cy="302" r="5" fill="#f2fbf8"/>
-      <text x="690" y="308" fill="#e6ebf0">You approve export</text>
+      <text x="318" y="308" fill="#6ae3cf">EU or self-hosted</text>
+      <rect x="469" y="284" width="226" height="36" rx="18" fill="#261c08" stroke="#7f5205"/>
+      <circle cx="490" cy="302" r="5" fill="#f0b53c"/>
+      <text x="502" y="308" fill="#f0b53c">Cross-company critique</text>
+      <rect x="707" y="284" width="140" height="36" rx="18" fill="#1d232c" stroke="#3b4652"/>
+      <circle cx="728" cy="302" r="5" fill="#f2fbf8"/>
+      <text x="740" y="308" fill="#e6ebf0">You approve</text>
     </g>
   </g>
 

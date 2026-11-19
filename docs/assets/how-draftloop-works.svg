@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
   <title id="title">How DraftLoop works</title>
-  <desc id="desc">Inside a local workspace, the job description and candidate sources pass a visible transmission approval, then a grounded author drafts and an independent critic evaluates in bounded rounds. Anthropic is the default author and OpenAI the default critic; each receives only approved context. The candidate reviews every claim and exports the CV locally.</desc>
+  <desc id="desc">Inside your workspace, on your own server or the hosted service in the EU, the job description and candidate sources pass a visible transmission approval, then a grounded author drafts and an independent critic evaluates in bounded rounds. Anthropic is the default author and OpenAI the default critic; each receives only approved context. The candidate reviews every claim and exports the approved CV.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1319"/>
@@ -31,7 +31,7 @@
   <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
     <!-- Header -->
     <text x="40" y="54" font-size="14" font-weight="700" letter-spacing="2.5" fill="#f0b53c">HOW DRAFTLOOP WORKS</text>
-    <text x="40" y="88" font-size="26" font-weight="700" fill="#f2fbf8">An evidence-grounded author–critic loop that runs on your machine</text>
+    <text x="40" y="88" font-size="26" font-weight="700" fill="#f2fbf8">An evidence-grounded author–critic loop, under your control</text>
 
     <!-- Model providers, outside the local boundary -->
     <g>
@@ -61,8 +61,8 @@
     <g transform="translate(56 240)">
       <rect x="0" y="4" width="16" height="12" rx="2" fill="#2fd0b8"/>
       <path d="M3 4 v-4 a5 5 0 0 1 10 0 v4" fill="none" stroke="#2fd0b8" stroke-width="2.2"/>
-      <text x="26" y="16" font-size="14" font-weight="700" letter-spacing="2" fill="#6ae3cf">LOCAL WORKSPACE</text>
-      <text x="212" y="16" font-size="15" fill="#9aa7b4">· Sources, run history and exports stay on your machine</text>
+      <text x="26" y="16" font-size="14" font-weight="700" letter-spacing="2" fill="#6ae3cf">YOUR WORKSPACE</text>
+      <text x="212" y="16" font-size="15" fill="#9aa7b4">· On your own server, or the hosted service in the EU</text>
     </g>
 
     <!-- Approval locks where the provider lines cross the boundary -->
@@ -176,7 +176,7 @@
       <circle cx="66" cy="86" r="17" fill="#2fd0b8" stroke="#11151b" stroke-width="4"/>
       <path d="M58 86 l6 6 l10 -11" fill="none" stroke="#05231e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="1090" y="500" font-size="15" font-weight="600" fill="#e6ebf0" text-anchor="middle">Saved locally</text>
+    <text x="1090" y="500" font-size="15" font-weight="600" fill="#e6ebf0" text-anchor="middle">Exported</text>
     <text x="1090" y="521" font-size="15" fill="#9aa7b4" text-anchor="middle">Markdown, PDF</text>
     <text x="1090" y="542" font-size="15" fill="#9aa7b4" text-anchor="middle">or DOCX</text>
 

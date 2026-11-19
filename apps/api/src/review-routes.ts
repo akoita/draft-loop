@@ -1,11 +1,16 @@
 import type { ApplicationService, RunReview } from "@draft-loop/application";
 import { maximumCandidateDirectionCharacters, type RunSnapshot } from "@draft-loop/orchestrator";
+import type { FactSuggestionStore } from "@draft-loop/storage/fact-suggestions";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import { apiError, apiErrorSchema, RunQueueUnavailableError } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
+import {
+  editedReviewBlocks,
+  fileApprovalEditSuggestions,
+} from "./review-edit-suggestion-filing.js";
 import { runView, runViewSchema } from "./views.js";
 
 export interface ReviewRoutesOptions {
@@ -14,6 +19,8 @@ export interface ReviewRoutesOptions {
   readonly idempotency: IdempotencyStore;
   /** Hands a run with work to do to the workers; safe to repeat, as for a begun run. */
   readonly enqueueRun: (workspaceId: string, runId: string) => Promise<void>;
+  /** Where approval edits that change a profile fact file suggestions (#3167). */
+  readonly factSuggestions?: FactSuggestionStore;
 }
 
 const identifierSchema = z
@@ -189,7 +196,7 @@ const decisionResponses = { 200: runReviewSchema, 409: apiErrorSchema, ...errorR
  */
 export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRoutesOptions): void {
   const app = parent.withTypeProvider<ZodTypeProvider>();
-  const { service, workspaceRoot, idempotency, enqueueRun } = options;
+  const { service, workspaceRoot, idempotency, enqueueRun, factSuggestions } = options;
 
   /**
    * Runs a state change once per Idempotency-Key, then queues the run. Queueing stays outside the
@@ -340,6 +347,18 @@ export function registerReviewRoutes(parent: FastifyInstance, options: ReviewRou
         action: "approve",
         ...(rationale === undefined ? {} : { readinessOverrideRationale: rationale }),
       });
+      if (factSuggestions !== undefined && snapshot.approval === "approved") {
+        await fileApprovalEditSuggestions({
+          service,
+          store: factSuggestions,
+          root: workspaceRoot(workspaceId),
+          workspaceId,
+          runId,
+          round: snapshot.round,
+          blocks: editedReviewBlocks(review),
+          log: request.log,
+        });
+      }
       return runView(snapshot);
     },
   );

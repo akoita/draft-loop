@@ -43,10 +43,12 @@ The legal and privacy texts are out of scope.
 flowchart LR
     B[Browser or<br/>desktop client] -->|bearer token| API
     A[Agent<br/>draftloop-mcp] -->|agent token or grant,<br/>scoped routes only| API
-    O[Operator] -->|owner token| API
+    O[Operator] -->|operator sign-in with<br/>second factor, or owner token| API
     V[Visitor] -->|no credential:<br/>waitlist, crash report| API
     ST[Stripe] -->|signed event| API
     IdP[Identity provider] -.->|signing keys| API
+    API -->|invited accounts,<br/>account deletion| IdP
+    API -->|invites, waitlist| ML
     API[API] --> DB[(Postgres<br/>forced row-level security)]
     API --> BL[(Blobs under<br/>tenants/&lt;id&gt;/)]
     API --> Q[(Run queue<br/>ids only)]

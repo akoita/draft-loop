@@ -6587,6 +6587,10 @@ msgstr "Ouvrez les éléments de parcours pour les choisir ou les réparer."
 msgid "Open Career profile"
 msgstr "Ouvrir Profil professionnel"
 
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Open Career profile to review the suggested updates."
+msgstr "Ouvrez Profil professionnel pour relire les mises à jour suggérées."
+
 #: packages/ui/src/review.tsx
 msgid "Open claim traceability"
 msgstr "Ouvrir la traçabilité des affirmations"
@@ -8126,6 +8130,10 @@ msgstr "Relire les exigences"
 #: packages/ui/src/workspace-activity.tsx
 msgid "Review running"
 msgstr "Relecture en cours"
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Review suggested updates"
+msgstr "Relire les mises à jour suggérées"
 
 #: apps/web/src/run-model.ts
 msgid "Review the job requirements first."
@@ -11889,6 +11897,14 @@ msgstr "Vous pourrez modifier l’ébauche une fois ce tour terminé."
 #: apps/web/src/records.tsx
 msgid "You can share this candidate's file once it is set up."
 msgstr "Vous pourrez partager le dossier de ce candidat une fois qu’il sera créé."
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "You changed {pending} facts in this CV. Save them to your profile?"
+msgstr "Vous avez modifié {pending} faits dans ce CV. Les enregistrer dans votre profil ?"
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "You changed 1 fact in this CV. Save it to your profile?"
+msgstr "Vous avez modifié 1 fait dans ce CV. L’enregistrer dans votre profil ?"
 
 #: packages/ui/src/career-interview-model.ts
 msgid "You chose to talk about: {title}"
