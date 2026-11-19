@@ -20,6 +20,7 @@ import { plural, t } from "@lingui/core/macro";
 
 import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } from "react";
 import { countedNouns } from "./counted-nouns.js";
+import { DisplayFold } from "./display-fold.js";
 import { formatDateTime } from "./locale-format.js";
 import {
   type CriticFallbackView,
@@ -404,14 +405,14 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           <strong className="numeric">{authorInput.value}</strong>
           <span>{authorInput.detail}</span>
           {authorInput.gapSummary !== undefined && (
-            <details className="author-input-gap">
+            <DisplayFold className="author-input-gap">
               <summary>{authorInput.gapSummary}</summary>
               <ul>
                 {authorInput.unmatchedRequirements.map((text) => (
                   <li key={text}>{text}</li>
                 ))}
               </ul>
-            </details>
+            </DisplayFold>
           )}
           {authorInput.direction !== undefined && (
             <p className="author-input-direction">
@@ -475,14 +476,14 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
             </div>
           )}
           {applicationPlan.reviewPoints.length > 0 && (
-            <details className="application-plan-review">
+            <DisplayFold className="application-plan-review">
               <summary>{t`What the critic asked to change`}</summary>
               <ul>
                 {applicationPlan.reviewPoints.map((point) => (
                   <li key={point}>{point}</li>
                 ))}
               </ul>
-            </details>
+            </DisplayFold>
           )}
         </div>
       )}

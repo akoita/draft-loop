@@ -3734,10 +3734,6 @@ msgstr "Essentiel"
 msgid "Estimated public API cost"
 msgstr "Coût estimé au tarif public de l’API"
 
-#: packages/ui/src/display-preference.tsx
-msgid "Every Advanced options section starts open, so nothing is a click away."
-msgstr "Chaque section Options avancées s’ouvre d’emblée : rien n’est caché derrière un clic."
-
 #: packages/ui/src/home.tsx
 msgid "Every application is archived. Start a new application, or restore one below."
 msgstr "Toutes les candidatures sont archivées. Commencez-en une nouvelle, ou restaurez-en une ci-dessous."
@@ -3745,6 +3741,10 @@ msgstr "Toutes les candidatures sont archivées. Commencez-en une nouvelle, ou r
 #: packages/ui/src/profile-status.ts
 msgid "Every fact was removed from this draft. Restore at least one before saving."
 msgstr "Tous les faits ont été retirés de ce brouillon. Restaurez-en au moins un avant d’enregistrer."
+
+#: packages/ui/src/display-preference.tsx
+msgid "Every folded section starts open, so nothing is a click away."
+msgstr "Chaque section repliée s’ouvre d’emblée : rien n’est caché derrière un clic."
 
 #: apps/web/src/records.tsx
 msgid "Everyone in your team can already open it."
@@ -6669,6 +6669,10 @@ msgstr "Ouvrez un espace de travail pour continuer"
 #: packages/ui/src/native.ts
 msgid "Open an application before choosing one of its runs."
 msgstr "Ouvrez une candidature avant de choisir l’une de ses exécutions."
+
+#: packages/ui/src/screen-hint.tsx
+msgid "Open an application to review or download its CV, or select New application for your next job."
+msgstr "Ouvrez une candidature pour relire ou télécharger son CV, ou choisissez Nouvelle candidature pour votre prochain poste."
 
 #: packages/ui/src/home-model.ts
 msgid "Open career evidence to choose or repair it."
@@ -10835,6 +10839,10 @@ msgstr "Cette affirmation n’est pas liée aux contenus du candidat fournis à 
 msgid "This conversation could not be found. Start a new one."
 msgstr "Cette conversation est introuvable. Commencez-en une nouvelle."
 
+#: packages/ui/src/screen-hint.tsx
+msgid "This CV is approved. Pick a template, then export it to download your CV."
+msgstr "Ce CV est approuvé. Choisissez un modèle, puis exportez-le pour télécharger votre CV."
+
 #: apps/web/src/record-actions.tsx
 msgid "This deletes every document, job application, draft, profile and work journal note stored here, for good. The account stays, so you can start again. It cannot be undone. Download everything first if you need a copy."
 msgstr "Cela supprime définitivement tous les documents, candidatures, brouillons, le profil et les notes du journal de travail enregistrés ici. Le compte est conservé, vous pouvez donc recommencer. C’est irréversible. Téléchargez tout d’abord si vous voulez en garder une copie."
@@ -11836,16 +11844,16 @@ msgid "Where the agreement is kept"
 msgstr "Où l’accord est conservé"
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is folded, and Home offers the step-by-step guide until you decline it."
-msgstr "Où le voir : chaque section Options avancées est repliée, et l’accueil propose le guide pas à pas tant que vous ne l’avez pas refusé."
+msgid "Where you see it: every folded section is closed, and Home offers the step-by-step guide until you decline it."
+msgstr "Où le voir : chaque section repliable est fermée, et l’accueil propose le guide pas à pas tant que vous ne l’avez pas refusé."
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: every Advanced options section is open, on this screen too, and so is the Prepare panel under each draft."
-msgstr "Où le voir : chaque section Options avancées est ouverte, sur cet écran aussi, comme le panneau Préparer sous chaque brouillon."
+msgid "Where you see it: every folded section is open, on this screen too: Advanced options, the Prepare panel, and on the review the approval Details, Traceability and what is sent."
+msgstr "Où le voir : chaque section repliable est ouverte, sur cet écran aussi : Options avancées, le panneau Préparer et, sur la relecture, les Détails de l’approbation, la Traçabilité et ce qui est envoyé."
 
 #: packages/ui/src/display-preference.tsx
-msgid "Where you see it: the Getting started list on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
-msgstr "Où le voir : la liste Premiers pas sur l’accueil, et une indication d’une ligne en haut des écrans Éléments de parcours, Profil professionnel, Nouvelle candidature et de la relecture."
+msgid "Where you see it: the Getting started list or a one-line hint on Home, and a one-line hint at the top of Career evidence, Career profile, New application and the review."
+msgstr "Où le voir : la liste Premiers pas ou une indication d’une ligne sur l’accueil, et une indication d’une ligne en haut des écrans Éléments de parcours, Profil professionnel, Nouvelle candidature et de la relecture."
 
 #: packages/ui/src/knowledge.tsx
 msgid "Where your evidence is kept. Most people need only one; choosing a different base replaces the one this workspace uses."

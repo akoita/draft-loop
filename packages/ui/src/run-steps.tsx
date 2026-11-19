@@ -5,6 +5,7 @@
  */
 import { plural, t } from "@lingui/core/macro";
 import { type JSX, useEffect, useState } from "react";
+import { DisplayFold } from "./display-fold.js";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import { formatDateTime } from "./locale-format.js";
 import { modelDisplayName } from "./model-profile-presentation.js";
@@ -72,7 +73,7 @@ export function RunStepsList({
   const total = runStepsEstimatedUsd(advances);
   const failed = advances.some((advance) => advance.failed);
   return (
-    <details className="run-steps">
+    <DisplayFold className="run-steps">
       <summary>
         <span className="run-steps-title">{t`Steps`}</span>{" "}
         <span className="run-steps-summary">
@@ -101,7 +102,7 @@ export function RunStepsList({
           </li>
         ))}
       </ol>
-    </details>
+    </DisplayFold>
   );
 }
 
