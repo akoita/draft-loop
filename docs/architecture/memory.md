@@ -72,7 +72,11 @@ What each kind holds:
 - **`fact-suggestion`:** a proposed change to one profile fact (add, correct,
   retire, set usage or confirm), quoting who said it and where. Only a
   person's acceptance changes the profile, and the dedupe key stops a
-  rejected suggestion from coming back. The accept flow is planned (#3065).
+  rejected suggestion from coming back. Accepting writes a dated
+  candidate-statement source with the quotes and saves one profile version
+  citing it, without a model call; a reviewed profile stays reviewed. A
+  suggestion whose fact changed first becomes stale. The screen that offers
+  suggestions is planned (#3069).
 - **`writing-policy`:** forbidden terms, section order and style preferences.
   Each run pins and enforces one version.
 - **`run-history`:** runs, rounds, findings, decisions and artifact versions,
