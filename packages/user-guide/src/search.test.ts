@@ -24,7 +24,7 @@ describe("searching the user guide (#2880)", () => {
     expect(ids("fr", "credits")[0]).toBe("credits");
     expect(ids("fr", "exporter")[0]).toBe("review");
     expect(ids("fr", "lettre de motivation")[0]).toBe("prepare");
-    expect(ids("fr", "RGPD")).toEqual(["privacy"]);
+    expect(ids("fr", "RGPD")[0]).toBe("privacy");
   });
 
   it("needs every word to match and lists nothing for an unknown word", () => {

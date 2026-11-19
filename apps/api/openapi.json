@@ -8096,7 +8096,11 @@
                     "privacy",
                     "problems",
                     "connect-agent",
-                    "agent-permissions"
+                    "agent-permissions",
+                    "how-it-works",
+                    "private-sections",
+                    "data-download",
+                    "self-hosted"
                   ]
                 },
                 "title": {
@@ -17020,7 +17024,11 @@
                     "privacy",
                     "problems",
                     "connect-agent",
-                    "agent-permissions"
+                    "agent-permissions",
+                    "how-it-works",
+                    "private-sections",
+                    "data-download",
+                    "self-hosted"
                   ]
                 },
                 "title": {

@@ -8,8 +8,10 @@ A member opens and searches a user guide from the **Help** button in the
 header of every screen. The guide walks the first journey (career evidence, a
 job, a draft, review and export, Prepare), then covers Display, agents, plans
 and credits, privacy, and what to do when something goes wrong. Its Advanced
-sections, at the end, give the steps to connect an agent and what each agent
-permission allows; Settings > Agents links to them.
+sections, at the end, cover connecting an agent and its permissions, how a
+draft is written and checked, private sections and screening, the data
+download, and running DraftLoop on your own computer. Settings > Agents links
+to the agent steps.
 
 ## Where it runs
 

@@ -23,6 +23,10 @@ export const helpSectionIds = [
   "problems",
   "connect-agent",
   "agent-permissions",
+  "how-it-works",
+  "private-sections",
+  "data-download",
+  "self-hosted",
 ] as const;
 export type HelpSectionId = (typeof helpSectionIds)[number];
 
@@ -64,6 +68,10 @@ export const helpSectionFeatures: Readonly<Record<HelpSectionId, readonly string
   problems: ["feedback.md"],
   "connect-agent": [],
   "agent-permissions": [],
+  "how-it-works": [],
+  "private-sections": [],
+  "data-download": [],
+  "self-hosted": [],
 };
 
 /** The languages the guide is written in. */
