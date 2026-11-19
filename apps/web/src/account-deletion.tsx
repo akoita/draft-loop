@@ -14,6 +14,11 @@ export interface AccountDeletionProps {
 
 const mismatch = () => t`Type the email address you sign in with to confirm.`;
 
+/** Whether the person typed back their sign-in address, in any case. */
+export function isAccountDeletionConfirmed(typed: string, email: string): boolean {
+  return typed.trim().toLowerCase() === email.trim().toLowerCase();
+}
+
 /** Why the API kept the account, in the person's words. */
 export function accountDeletionRefusal(error: unknown): string {
   if (error instanceof ApiRequestError) {
@@ -49,7 +54,7 @@ export function AccountDeletion({ client, email, onDeleted }: AccountDeletionPro
       busy={busy}
       problem={problem}
       onDelete={(typed) => {
-        if (typed.trim().toLowerCase() !== email.trim().toLowerCase()) {
+        if (!isAccountDeletionConfirmed(typed, email)) {
           setProblem(mismatch());
           return;
         }
@@ -75,7 +80,10 @@ export interface AccountDeletionPanelProps {
   readonly onDelete: (typed: string) => void;
 }
 
-/** The account's delete form, which asks for the sign-in address typed back. */
+/**
+ * The account's delete form, which asks for the sign-in address typed back; the final button stays
+ * disabled until it matches, so no single click deletes the account.
+ */
 export function AccountDeletionPanel({
   email,
   busy,
@@ -104,7 +112,11 @@ export function AccountDeletionPanel({
           autoComplete="off"
           onChange={(event) => setTyped(event.target.value)}
         />
-        <button type="submit" className="danger" disabled={busy}>
+        <button
+          type="submit"
+          className="danger"
+          disabled={busy || !isAccountDeletionConfirmed(typed, email)}
+        >
           {busy ? t`Deleting your account…` : t`Delete my account`}
         </button>
         {problem === undefined ? null : (

@@ -1055,6 +1055,14 @@ msgstr "Accepted · revision required"
 msgid "Accepted, but no revision is left: change to Reject or Override to unblock approval"
 msgstr "Accepted, but no revision is left: change to Reject or Override to unblock approval"
 
+#: apps/web/src/account-page.tsx
+msgid "Account"
+msgstr "Account"
+
+#: apps/web/src/account-page.tsx
+msgid "Account settings"
+msgstr "Account settings"
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Acknowledge"
 msgstr "Acknowledge"
@@ -1776,6 +1784,7 @@ msgstr "Awards"
 msgid "Back to {0}"
 msgstr "Back to {0}"
 
+#: apps/web/src/account-page.tsx
 #: apps/web/src/operator.tsx
 msgid "Back to DraftLoop"
 msgstr "Back to DraftLoop"
@@ -2851,6 +2860,10 @@ msgstr "CV and interview"
 #: packages/ui/src/workspace-setup.tsx
 msgid "CV language"
 msgstr "CV language"
+
+#: apps/web/src/account-page.tsx
+msgid "Danger zone"
+msgstr "Danger zone"
 
 #: packages/ui/src/theme.tsx
 msgid "Dark"
@@ -8893,6 +8906,10 @@ msgstr "Sign-in is on Home, under Settings."
 msgid "Signed in"
 msgstr "Signed in"
 
+#: apps/web/src/account-page.tsx
+msgid "Signed in as {email}"
+msgstr "Signed in as {email}"
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Signed in from the assistant"
 msgstr "Signed in from the assistant"
@@ -10465,6 +10482,10 @@ msgstr "There is no consent to withdraw."
 msgid "There is no previous version to compare with."
 msgstr "There is no previous version to compare with."
 
+#: apps/web/src/account-page.tsx
+msgid "These actions delete data for good and cannot be undone. Each one asks you to type a confirmation first."
+msgstr "These actions delete data for good and cannot be undone. Each one asks you to type a confirmation first."
+
 #: packages/ui/src/export-preview.tsx
 msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
 msgstr "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
@@ -11870,7 +11891,7 @@ msgstr "Your career record holds no employer and no dates, so this letter names 
 msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
 msgstr "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
 
-#: apps/web/src/records.tsx
+#: apps/web/src/account-page.tsx
 msgid "Your data"
 msgstr "Your data"
 

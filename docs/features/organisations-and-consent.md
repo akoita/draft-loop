@@ -89,11 +89,17 @@ The screen reads the plan's limits from `GET /v1/me`, never its name.
 The web calls each record a **candidate**: one person, their documents and
 their applications. A one-person plan never shows the word.
 
-| Plan allows                  | Account menu                        | Above Home                                                 |
-| ---------------------------- | ----------------------------------- | ---------------------------------------------------------- |
-| One candidate and one seat   | Email; Your data (download, delete) | Nothing: the record opens, or is created with the defaults |
-| Several candidates, one seat | Email                               | **Candidates · 2 of 3** picker and **Add a candidate**     |
-| Several seats                | Email and team name                 | Picker, plus **Who can open this candidate's file**        |
+| Plan allows                  | Account menu                                 | Above Home                                                 |
+| ---------------------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| One candidate and one seat   | Email; Download everything; Account settings | Nothing: the record opens, or is created with the defaults |
+| Several candidates, one seat | Email                                        | **Candidates · 2 of 3** picker and **Add a candidate**     |
+| Several seats                | Email and team name                          | Picker, plus **Who can open this candidate's file**        |
+
+On a one-person plan the menu never holds a delete. **Account settings** opens
+the account page: **Your data** with the download, then a red **Danger zone**
+with **Delete all documents and applications** and **Delete my account**. Each
+delete opens a dialog whose final button stays disabled until the person types
+`DELETE` (or its translation) or their sign-in email.
 
 An organisation that already holds two candidates keeps the picker after a
 change to a one-person plan, so none is hidden. Nobody can remove their own

@@ -1,72 +1,63 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { RecordActionsPanel } from "./record-actions.js";
+import { DeleteRecordPanel, DownloadPanel } from "./record-actions.js";
+import { isDeleteConfirmed } from "./record-actions-model.js";
 
-const panelProps = {
-  title: "Download or delete this candidate's data",
-  busy: false,
-  messages: [],
-  onExport: () => {},
-  onDelete: () => {},
-};
+const download = { busy: false, messages: [], onExport: () => {} };
+const remove = { busy: false, messages: [], onDelete: () => {} };
 
-describe("record export and deletion panel", () => {
-  it("offers the archive and a delete form that asks for the id and warns it is final", () => {
-    const html = renderToStaticMarkup(<RecordActionsPanel {...panelProps} />);
+describe("record export and deletion", () => {
+  it("offers the download with what it holds, and no delete", () => {
+    const html = renderToStaticMarkup(<DownloadPanel {...download} />);
 
-    expect(html).toContain("<summary>Download or delete this candidate&#x27;s data</summary>");
     expect(html).toContain('<button type="button">Download everything</button>');
-    expect(html).toContain("It cannot be undone.");
-    expect(html).toContain('<label for="delete-record-confirm">Type DELETE to confirm</label>');
-    expect(html).toContain(
-      '<button type="submit" class="danger">Delete all documents and applications</button>',
-    );
-    expect(html).toContain("The account stays");
-    expect(html).not.toContain("candidate-ana");
+    expect(html).toContain("The download holds your documents");
+    expect(html).not.toContain("Delete");
     expect(html).not.toContain('role="alert"');
   });
 
-  it("shows one line per action and keeps the warning and confirm in a dialog", () => {
+  it("shows why the download failed and disables it while busy", () => {
     const html = renderToStaticMarkup(
-      <RecordActionsPanel {...panelProps} title="Your data" folded={false} />,
+      <DownloadPanel {...download} busy={true} messages={["The service is unreachable."]} />,
     );
 
-    expect(html).not.toContain("<summary>");
-    expect(html).toContain('<h3 class="eyebrow">Your data</h3>');
-    expect(html).toContain(
+    expect(html).toContain('<button type="button" disabled="">Download everything</button>');
+    expect(html).toContain('role="alert">The service is unreachable.</p>');
+  });
+
+  it("shows one line and keeps the warning and typed confirm in a dialog", () => {
+    const html = renderToStaticMarkup(<DeleteRecordPanel {...remove} />);
+    const [line = "", dialog = ""] = html.split("<dialog");
+
+    expect(line).toContain(
       '<button type="button" class="danger-link">Delete all documents and applications…</button>',
     );
-    const [menu = "", dialog = ""] = html.split("<dialog");
-    expect(menu).not.toContain("It cannot be undone.");
-    expect(menu).not.toContain("delete-record-confirm");
+    expect(line).not.toContain("It cannot be undone.");
     expect(dialog).toContain("It cannot be undone.");
+    expect(dialog).toContain("The account stays");
     expect(dialog).toContain('<label for="delete-record-confirm">Type DELETE to confirm</label>');
     expect(dialog).toContain(">Cancel</button>");
   });
 
-  it("shows a refused delete in its dialog, not under the download", () => {
-    const html = renderToStaticMarkup(
-      <RecordActionsPanel {...panelProps} deleteMessages={["Type DELETE exactly to delete it."]} />,
+  it("keeps the final delete disabled until the confirm word is typed", () => {
+    const html = renderToStaticMarkup(<DeleteRecordPanel {...remove} />);
+
+    expect(html).toContain(
+      '<button type="submit" class="danger" disabled="">Delete all documents and applications</button>',
     );
-    const [menu = "", dialog = ""] = html.split("<dialog");
-    expect(menu).not.toContain('role="alert"');
-    expect(dialog).toContain('role="alert">Type DELETE exactly to delete it.</p>');
+    expect(isDeleteConfirmed("")).toBe(false);
+    expect(isDeleteConfirmed("DELET")).toBe(false);
+    expect(isDeleteConfirmed(" delete ")).toBe(true);
   });
 
-  it("disables both actions while one is under way, and shows refusals", () => {
+  it("shows a refused delete in its dialog", () => {
     const html = renderToStaticMarkup(
-      <RecordActionsPanel
-        {...panelProps}
-        busy={true}
-        messages={["Stop the run first. A run on this record is queued or running."]}
-      />,
+      <DeleteRecordPanel {...remove} messages={["Type DELETE to confirm."]} />,
     );
+    const [line = "", dialog = ""] = html.split("<dialog");
 
-    expect(html).toContain('<button type="button" disabled="">Download everything</button>');
-    expect(html).toContain(
-      'class="danger" disabled="">Delete all documents and applications</button>',
-    );
-    expect(html).toContain('role="alert">Stop the run first.');
+    expect(line).not.toContain('role="alert"');
+    expect(dialog).toContain('role="alert">Type DELETE to confirm.</p>');
   });
 });

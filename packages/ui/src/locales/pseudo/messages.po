@@ -1055,6 +1055,14 @@ msgstr ""
 msgid "Accepted, but no revision is left: change to Reject or Override to unblock approval"
 msgstr ""
 
+#: apps/web/src/account-page.tsx
+msgid "Account"
+msgstr ""
+
+#: apps/web/src/account-page.tsx
+msgid "Account settings"
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 msgid "Acknowledge"
 msgstr ""
@@ -1776,6 +1784,7 @@ msgstr ""
 msgid "Back to {0}"
 msgstr ""
 
+#: apps/web/src/account-page.tsx
 #: apps/web/src/operator.tsx
 msgid "Back to DraftLoop"
 msgstr ""
@@ -2850,6 +2859,10 @@ msgstr ""
 
 #: packages/ui/src/workspace-setup.tsx
 msgid "CV language"
+msgstr ""
+
+#: apps/web/src/account-page.tsx
+msgid "Danger zone"
 msgstr ""
 
 #: packages/ui/src/theme.tsx
@@ -8892,6 +8905,10 @@ msgstr ""
 msgid "Signed in"
 msgstr ""
 
+#: apps/web/src/account-page.tsx
+msgid "Signed in as {email}"
+msgstr ""
+
 #: packages/ui/src/connected-agents.tsx
 msgid "Signed in from the assistant"
 msgstr ""
@@ -10464,6 +10481,10 @@ msgstr ""
 msgid "There is no previous version to compare with."
 msgstr ""
 
+#: apps/web/src/account-page.tsx
+msgid "These actions delete data for good and cannot be undone. Each one asks you to type a confirmation first."
+msgstr ""
+
 #: packages/ui/src/export-preview.tsx
 msgid "These are the template's pages as a PDF. Word lays out the same text, but its line breaks can differ slightly."
 msgstr ""
@@ -11869,7 +11890,7 @@ msgstr ""
 msgid "Your career record holds no employer, so this letter names none. Add your CV in Career evidence, or rebuild your profile if the CV is already there, then draft again."
 msgstr ""
 
-#: apps/web/src/records.tsx
+#: apps/web/src/account-page.tsx
 msgid "Your data"
 msgstr ""
 

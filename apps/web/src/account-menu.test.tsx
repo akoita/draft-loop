@@ -40,6 +40,22 @@ describe("account menu (#2861)", () => {
     expect(html).toContain("<p>your data here</p>");
   });
 
+  it("opens the account page from the menu, and holds no delete itself", () => {
+    const html = renderToStaticMarkup(
+      <AccountMenu
+        me={{ ...coach, plan: { candidateRecords: 1, seats: 1 } }}
+        onePerson={true}
+        yourData={<p>your data here</p>}
+        onAccount={() => {}}
+        onSignOut={() => {}}
+      />,
+    );
+
+    expect(html).toMatch(/your data here[\s\S]*>Account settings<\/button>[\s\S]*Sign out/u);
+    expect(html).not.toContain("Delete");
+    expect(html).not.toContain("<dialog");
+  });
+
   it("links the privacy policy, terms and legal notice in a new tab (#2462)", () => {
     const html = renderToStaticMarkup(
       <AccountMenu me={coach} onePerson={false} onSignOut={() => {}} />,
