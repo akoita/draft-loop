@@ -62,7 +62,6 @@ import {
   type SourceEvidenceKindsResult,
   type WorkspaceCompactHistoryResult,
   type WorkspaceConfigureModelsInput,
-  type WorkspaceCreateInput,
   type WorkspaceRetrievalModeResult,
   type WritingPolicyReadResult,
 } from "./bridge.js";
@@ -86,10 +85,6 @@ import {
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 import type { NewApplicationJob } from "./new-application-model.js";
-import {
-  parseRecentWorkspacesListResult,
-  type RecentWorkspaceSummary,
-} from "./recent-workspaces.js";
 import type { RunEvidenceModeView } from "./run-evidence-mode.js";
 import {
   createRunRequirementEvidenceCapabilities,
@@ -121,18 +116,11 @@ export interface WorkspaceModelSelection {
 /**
  * The setup form's own view of a port: choosing models, and asking about them.
  *
- * `createWorkspace` is widened here rather than in `DesktopReviewPort` so that
- * a fixture port written against the narrower signature stays assignable; a
- * function that ignores the second argument satisfies one that offers it.
  * `listModels` and `previewIndependence` are present only when the host
  * actually offers the capability, so an absent one is a fact the form can
  * report rather than a call that fails later.
  */
 export interface WorkspaceSetupCapabilities {
-  readonly createWorkspace?: (
-    name: string,
-    selection?: WorkspaceModelSelection,
-  ) => Promise<DesktopReviewState>;
   readonly configureModels?: (
     workspaceId: string,
     selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
@@ -337,7 +325,7 @@ export interface DesktopSemanticRetrievalCapabilities {
   ) => Promise<WorkspaceRetrievalModeResult>;
 }
 
-export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
+export type DesktopSetupPort = DesktopReviewPort &
   DesktopSemanticRetrievalCapabilities &
   WorkspaceSetupCapabilities &
   DesktopOpportunityCapabilities &
@@ -352,13 +340,6 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
     ) => Promise<ProviderAuthModeResult>;
     /** Tests the saved API key with a model lookup; the key itself never comes back. */
     readonly testCredential?: (provider: CredentialTestProvider) => Promise<CredentialTestResult>;
-    readonly listRecentWorkspaces?: () => Promise<readonly RecentWorkspaceSummary[]>;
-    readonly openRecentWorkspace?: (id: string) => Promise<DesktopReviewState>;
-    /** Forgets one recent workspace entry without touching its files. */
-    readonly removeRecentWorkspace?: (id: string) => Promise<void>;
-    readonly clearRecentWorkspaces?: () => Promise<void>;
-    /** Renames the open workspace and resolves with the stored name. */
-    readonly renameWorkspace?: (workspaceId: string, name: string) => Promise<string>;
     /**
      * Shrinks the workspace's run history behind a verified backup the host keeps beside it.
      * Resolves with the sizes and the backup's file name; refuses while a run is working.
@@ -460,39 +441,6 @@ export interface DesktopApplicationCapabilities {
 }
 
 /**
- * Fills `workspace.create` in from a form's strings.
- *
- * A field left blank means "keep the workspace default", so a blank is dropped
- * rather than sent as an empty string the boundary would refuse. Trimming
- * happens here because a person typing a model id into a form leaves spaces
- * behind and the boundary's `modelId` rule does not forgive them.
- */
-export function workspaceCreateInput(
-  name: string,
-  selection?: WorkspaceModelSelection,
-): WorkspaceCreateInput {
-  const named = (value: string | undefined): string | undefined => {
-    const trimmed = value?.trim() ?? "";
-    return trimmed === "" ? undefined : trimmed;
-  };
-  const authorModel = named(selection?.authorModel);
-  const criticModel = named(selection?.criticModel);
-  const localEndpoint = named(selection?.localEndpoint);
-  const rationale = named(selection?.independenceOverrideRationale);
-  return {
-    name: name.trim(),
-    mode: "real",
-    ...(selection?.authorCompany === undefined ? {} : { authorCompany: selection.authorCompany }),
-    ...(authorModel === undefined ? {} : { authorModel }),
-    ...(selection?.criticCompany === undefined ? {} : { criticCompany: selection.criticCompany }),
-    ...(criticModel === undefined ? {} : { criticModel }),
-    ...(localEndpoint === undefined ? {} : { localEndpoint }),
-    ...(rationale === undefined ? {} : { independenceOverrideRationale: rationale }),
-    ...(selection?.maxRounds === undefined ? {} : { maxRounds: selection.maxRounds }),
-  };
-}
-
-/**
  * Browser mode is intentionally capability-empty. It does not emulate a file
  * picker with browser filesystem APIs and it never accepts arbitrary paths.
  */
@@ -549,15 +497,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
     });
     return unwrap(result);
   };
-  const ensureRun = async (workspaceId: string): Promise<DesktopReviewState> => {
-    const status = unwrap(
-      await capabilityPort.execute({ type: "run.status", input: { workspaceId } }),
-    );
-    if (status.runId === null) {
-      unwrap(await capabilityPort.execute({ type: "run.start", input: { workspaceId } }));
-    }
-    return load();
-  };
   const refresh = async (): Promise<DesktopReviewState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
@@ -566,42 +505,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const runRequirementEvidence = createRunRequirementEvidenceCapabilities(capabilityPort, unwrap);
   return {
     load,
-    ...(capabilityPort.hasCapability("workspace.open") ||
-    capabilityPort.hasCapability("workspace.create")
-      ? {}
-      : { workspaceClosable: false }),
     ...(capabilityPort.hasCapability("export.write") ? {} : { exportsDownload: true }),
-    ...(capabilityPort.hasCapability("workspace.open")
-      ? {
-          openWorkspace: async () => {
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.open",
-                input: { selection: "native-dialog" },
-              }),
-            );
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.create")
-      ? {
-          createWorkspace: async (
-            name: string,
-            selection?: Parameters<typeof workspaceCreateInput>[1],
-          ) => {
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.create",
-                input: workspaceCreateInput(name, selection),
-              }),
-            );
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
     ...(capabilityPort.hasCapability("file.save-markdown")
       ? {
           saveMarkdownFile: async (suggestedName: string, content: string) =>
@@ -817,39 +721,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           },
         }
       : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-list")
-      ? {
-          listRecentWorkspaces: async () =>
-            parseRecentWorkspacesListResult(
-              unwrap(await capabilityPort.execute({ type: "workspace.recent-list", input: {} })),
-            ).workspaces,
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-open")
-      ? {
-          openRecentWorkspace: async (id: string) => {
-            unwrap(await capabilityPort.execute({ type: "workspace.recent-open", input: { id } }));
-            scopeTo(undefined);
-            return refresh();
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-remove")
-      ? {
-          removeRecentWorkspace: async (id: string) => {
-            unwrap(
-              await capabilityPort.execute({ type: "workspace.recent-remove", input: { id } }),
-            );
-          },
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.recent-clear")
-      ? {
-          clearRecentWorkspaces: async () => {
-            unwrap(await capabilityPort.execute({ type: "workspace.recent-clear", input: {} }));
-          },
-        }
-      : {}),
     ...(capabilityPort.hasCapability("workspace.compact-history")
       ? {
           compactHistory: async (workspaceId: string) =>
@@ -859,31 +730,6 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { workspaceId },
               }),
             ),
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.rename")
-      ? {
-          renameWorkspace: async (workspaceId: string, name: string) =>
-            unwrap(
-              await capabilityPort.execute({
-                type: "workspace.rename",
-                input: { workspaceId, name },
-              }),
-            ).name,
-        }
-      : {}),
-    ...(capabilityPort.hasCapability("workspace.create")
-      ? {
-          createDemoWorkspace: async (name) => {
-            const result = unwrap(
-              await capabilityPort.execute({
-                type: "workspace.create",
-                input: { name, mode: "demo" },
-              }),
-            );
-            scopeTo(undefined);
-            return ensureRun(result.workspace.id);
-          },
         }
       : {}),
     ...(capabilityPort.hasCapability("file.select")

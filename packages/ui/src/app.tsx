@@ -124,7 +124,6 @@ import {
 import { ThemeToggle } from "./theme.js";
 import { ModelsIcon } from "./workspace-action-icons.js";
 import { type WorkspaceActivity, WorkspaceActivityBar } from "./workspace-activity.js";
-import { workspaceCreationSubmission } from "./workspace-creation.js";
 import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 import {
   workspaceModelSettingsBlocker,
@@ -135,16 +134,10 @@ import {
 } from "./workspace-model-settings.js";
 import { WorkspaceModelSummary } from "./workspace-model-summary.js";
 import {
-  runWorkspaceCloseIfAllowed,
-  WorkspaceNavigation,
-  workspaceCloseDisabledReason,
-} from "./workspace-navigation.js";
-import {
   isWorkspaceContextCurrent,
   isWorkspaceContextLost,
   WorkspaceRecovery,
 } from "./workspace-recovery.js";
-import { WorkspaceStart } from "./workspace-start.js";
 import { isNoWorkspaceRefusal, WorkspaceStartIntro } from "./workspace-start-intro.js";
 import { WorkspaceTitle } from "./workspace-title.js";
 import { WritingPolicyEditAction } from "./writing-policy-editor.js";
@@ -964,7 +957,6 @@ export function App({
   const [error, setError] = useState<string | null>(null);
   // The startup load found no open workspace: show the start page without an error.
   const [noWorkspaceOpen, setNoWorkspaceOpen] = useState(false);
-  const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
   // Opening a workspace lands on Home; an application's review is one screen inside it.
   const [navigation, setNavigation] = useState<PageNavigation>(() =>
     initialPageNavigation(startView),
@@ -988,7 +980,6 @@ export function App({
     setApplicationPairs((current) => ({ ...current, [application.id]: application.modelProfiles }));
     setApplicationSummaries((current) => ({ ...current, [application.id]: application }));
   };
-  const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -1153,8 +1144,6 @@ export function App({
       activeWorkspaceIdRef.current = null;
       setState(null);
       setError(null);
-      setWorkspaceSetupVisible(false);
-      setWorkspaceCloseConfirmationOpen(false);
       setImportError(null);
       setPendingReviewAction(null);
       setPendingBulkFindingCount(null);
@@ -1332,14 +1321,6 @@ export function App({
       );
     },
     [state],
-  );
-  const nativeActions = useMemo(
-    () => ({
-      open: activePort.openWorkspace,
-      create: activePort.createWorkspace,
-      createDemo: activePort.createDemoWorkspace,
-    }),
-    [activePort],
   );
 
   useEffect(() => {
@@ -1615,81 +1596,6 @@ export function App({
     return () => window.clearInterval(interval);
   }, [pendingReviewAction, reviewActionDispatcher]);
 
-  const setup = async (
-    action: (() => Promise<DesktopReviewState>) | undefined,
-    describeFailure: (reason: unknown) => string = (reason) =>
-      messageOf(reason, t`The workspace could not be opened.`),
-    openModelEditor = false,
-  ): Promise<boolean> => {
-    if (action === undefined) return false;
-    setBusy(true);
-    setError(null);
-    setImportError(null);
-    try {
-      const loaded = await action();
-      contextGenerationRef.current += 1;
-      activeWorkspaceIdRef.current = loaded.workspaceId;
-      setWorkspaceRecoveryRequired(false);
-      setWorkspaceRecoveryError(null);
-      setWorkspaceSetupVisible(false);
-      setWorkspaceCloseConfirmationOpen(false);
-      profilePendingScopeRef.current = null;
-      setProfilePendingScope(null);
-      setProfileGenerationScope(null);
-      setNavigation(initialPageNavigation());
-      setLoadedApplicationId(null);
-      setState(loaded);
-      if (openModelEditor && activePort.configureModels !== undefined) {
-        try {
-          prepareModelEditorDraft(loaded);
-          setModelEditorFromCreation(true);
-          setEditingModels(true);
-        } catch {
-          setImportError(t`The current model settings are unavailable.`);
-          setModelEditorFromCreation(false);
-          setEditingModels(false);
-        }
-      } else {
-        setModelEditorFromCreation(false);
-        setEditingModels(false);
-      }
-      return true;
-    } catch (reason: unknown) {
-      setError(describeFailure(reason));
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const openWorkspaceFromRecovery = async () => {
-    const openWorkspace = nativeActions.open;
-    if (openWorkspace === undefined || busy) return;
-    setBusy(true);
-    setWorkspaceRecoveryError(null);
-    try {
-      const loaded = await openWorkspace();
-      contextGenerationRef.current += 1;
-      activeWorkspaceIdRef.current = loaded.workspaceId;
-      setWorkspaceRecoveryRequired(false);
-      setWorkspaceRecoveryError(null);
-      setWorkspaceSetupVisible(false);
-      setWorkspaceCloseConfirmationOpen(false);
-      profilePendingScopeRef.current = null;
-      setProfilePendingScope(null);
-      setProfileGenerationScope(null);
-      setError(null);
-      setImportError(null);
-      setNavigation(initialPageNavigation());
-      setLoadedApplicationId(null);
-      setState(loaded);
-    } catch {
-      setWorkspaceRecoveryError(t`The workspace was not opened. Choose a workspace and try again.`);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const setupFormVisible = editingModels;
   const listModels = activePort.listModels;
   const previewIndependence = activePort.previewIndependence;
@@ -1709,85 +1615,6 @@ export function App({
     state?.execution.status === "running"
       ? t`Stop the review before changing models.`
       : t`Wait for the current workspace operation to finish before changing models.`;
-
-  const currentWorkspaceCloseGuard = () => {
-    const profilePendingForActiveWorkspace =
-      state !== null &&
-      profilePendingScopeRef.current?.workspaceId === state.workspaceId &&
-      profilePendingScopeRef.current.generation === workspaceGeneration;
-    return {
-      busy,
-      knowledgePending: knowledgePending || knowledgePendingRef.current,
-      pendingReviewAction: pendingReviewAction !== null,
-      profilePending: profilePendingForActiveWorkspace,
-      running: state?.execution.status === "running",
-    };
-  };
-  const closeGuardReason =
-    state === null ? null : workspaceCloseDisabledReason(currentWorkspaceCloseGuard());
-  // Name the operation when it is the profile generation, which the activity bar also shows.
-  const closeDisabledReason =
-    closeGuardReason !== null && profileGenerationForActiveWorkspace !== null
-      ? t`Close workspace is available again once your career profile is generated.`
-      : closeGuardReason;
-
-  const requestWorkspaceClose = () => {
-    if (state === null) return;
-    runWorkspaceCloseIfAllowed(currentWorkspaceCloseGuard(), () =>
-      setWorkspaceCloseConfirmationOpen(true),
-    );
-  };
-
-  const closeWorkspace = () => {
-    if (state === null) return;
-    runWorkspaceCloseIfAllowed(currentWorkspaceCloseGuard(), () => {
-      contextGenerationRef.current += 1;
-      activeWorkspaceIdRef.current = null;
-      knowledgePendingRef.current = false;
-      profilePendingScopeRef.current = null;
-      requestedCompanies.current.clear();
-
-      setNavigation(initialPageNavigation());
-      setLoadedApplicationId(null);
-      setState(null);
-      setWorkspaceSetupVisible(true);
-      setWorkspaceCloseConfirmationOpen(false);
-      setError(null);
-      setImportError(null);
-      setWorkspaceRecoveryRequired(false);
-      setWorkspaceRecoveryError(null);
-      setPendingReviewAction(null);
-      setPendingBulkFindingCount(null);
-      setKnowledgePending(false);
-      setProfilePendingScope(null);
-      setProfileGenerationScope(null);
-      setCandidateProfileSelection(null);
-      setAppliedModelProfiles(null);
-      setSavedModelProfiles({ status: "idle" });
-      setModelProfileSupport({ status: "idle" });
-      setModelProfileSupportEpoch((current) => current + 1);
-      setProfileResetEpoch((current) => current + 1);
-      setDraft(initialWorkspaceSetupDraft);
-      setModelFilters({
-        author: { company: initialWorkspaceSetupDraft.authorCompany, text: "" },
-        critic: { company: initialWorkspaceSetupDraft.criticCompany, text: "" },
-      });
-      setTypingOwnModel({ author: false, critic: false });
-      setDiscovery({
-        anthropic: { status: "idle" },
-        openai: { status: "idle" },
-        zai: { status: "idle" },
-        google: { status: "idle" },
-        mistral: { status: "idle" },
-        local: { status: "idle" },
-      });
-      setPreview({ status: "idle" });
-      setEditingModels(false);
-      setModelEditorFromCreation(false);
-      setModelEditorMode("profiles");
-      setModelSettingsError(null);
-    });
-  };
 
   const leaveFor = (to: WorkspaceView) => {
     const from = navigationRef.current.view;
@@ -2244,28 +2071,10 @@ export function App({
   });
 
   if (workspaceRecoveryRequired) {
-    return (
-      <WorkspaceRecovery
-        busy={busy}
-        errorMessage={workspaceRecoveryError}
-        {...(nativeActions.open === undefined
-          ? {}
-          : { onOpen: () => void openWorkspaceFromRecovery() })}
-      />
-    );
+    return <WorkspaceRecovery errorMessage={workspaceRecoveryError} />;
   }
 
-  if (
-    (error !== null || workspaceSetupVisible || (state === null && noWorkspaceOpen)) &&
-    !editingModels
-  ) {
-    const openWorkspace = nativeActions.open;
-    const createWorkspace = nativeActions.create;
-    const createDemoWorkspace = nativeActions.createDemo;
-    const listRecentWorkspaces = activePort.listRecentWorkspaces;
-    const openRecentWorkspace = activePort.openRecentWorkspace;
-    const removeRecentWorkspace = activePort.removeRecentWorkspace;
-    const clearRecentWorkspaces = activePort.clearRecentWorkspaces;
+  if ((error !== null || (state === null && noWorkspaceOpen)) && !editingModels) {
     return (
       <main className="boot-shell">
         <section className="panel boot-panel boot-panel-setup">
@@ -2274,64 +2083,7 @@ export function App({
             <span className="brand-name">{t`DraftLoop`}</span>
             <ThemeToggle />
           </div>
-          <WorkspaceStartIntro navigation={workspaceSetupVisible} error={error} />
-          <WorkspaceStart
-            busy={busy}
-            {...(openWorkspace === undefined &&
-            createWorkspace === undefined &&
-            createDemoWorkspace === undefined
-              ? {}
-              : {
-                  form: {
-                    draft,
-                    busy,
-                    onDraftChange: (next) => setDraft((current) => ({ ...current, ...next })),
-                    ...(createWorkspace === undefined
-                      ? {}
-                      : {
-                          onCreate: (name: string, maxRounds: number) =>
-                            void setup(
-                              () => {
-                                const submission = workspaceCreationSubmission(name, maxRounds);
-                                return createWorkspace(submission.name, submission.selection);
-                              },
-                              (reason) => messageOf(reason, t`The workspace could not be created.`),
-                              true,
-                            ),
-                        }),
-                    ...(createDemoWorkspace === undefined
-                      ? {}
-                      : {
-                          onCreateDemo: () =>
-                            void setup(() => createDemoWorkspace("draft-loop-demo")),
-                        }),
-                    ...(openWorkspace === undefined
-                      ? {}
-                      : { onOpen: () => void setup(openWorkspace) }),
-                  },
-                })}
-            {...(listRecentWorkspaces === undefined ||
-            openRecentWorkspace === undefined ||
-            clearRecentWorkspaces === undefined
-              ? {}
-              : {
-                  recentActions: {
-                    busy,
-                    listRecentWorkspaces,
-                    openRecentWorkspace: (id: string) =>
-                      setup(
-                        () => openRecentWorkspace(id),
-                        (reason) =>
-                          messageOf(
-                            reason,
-                            t`This recent workspace could not be opened. Choose another.`,
-                          ),
-                      ),
-                    ...(removeRecentWorkspace === undefined ? {} : { removeRecentWorkspace }),
-                    clearRecentWorkspaces,
-                  },
-                })}
-          />
+          <WorkspaceStartIntro error={error} />
         </section>
       </main>
     );
@@ -2473,24 +2225,8 @@ export function App({
     </main>
   );
 
-  const renameWorkspace = activePort.renameWorkspace;
   const workspaceTitleNode = (
-    <WorkspaceTitle
-      key={state.workspaceId}
-      name={state.workspaceName ?? state.workspaceId}
-      {...(renameWorkspace === undefined
-        ? {}
-        : {
-            onRename: async (name: string) => {
-              const stored = await renameWorkspace(state.workspaceId, name);
-              setState((current) =>
-                current === null || current.workspaceId !== state.workspaceId
-                  ? current
-                  : { ...current, workspaceName: stored },
-              );
-            },
-          })}
-    />
+    <WorkspaceTitle key={state.workspaceId} name={state.workspaceName ?? state.workspaceId} />
   );
 
   const modelSettingsButton =
@@ -2537,25 +2273,7 @@ export function App({
       />
     );
 
-  const closeWorkspaceNode =
-    activePort.workspaceClosable === false ? null : (
-      <WorkspaceNavigation
-        closeDisabledReason={closeDisabledReason}
-        confirmationOpen={workspaceCloseConfirmationOpen}
-        onRequestClose={requestWorkspaceClose}
-        onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
-        onConfirmClose={closeWorkspace}
-      />
-    );
-  const workspaceNavigationNode =
-    hostActions === undefined ? (
-      closeWorkspaceNode
-    ) : (
-      <>
-        {hostActions}
-        {closeWorkspaceNode}
-      </>
-    );
+  const workspaceNavigationNode = hostActions;
 
   const knowledgePanelFor = (embedded: boolean) => (
     <KnowledgeWorkspace
