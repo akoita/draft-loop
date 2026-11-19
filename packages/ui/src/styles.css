@@ -4520,6 +4520,23 @@ input[type="text"].workspace-title-input {
   padding: 0;
 }
 
+/* The blocker line and, docked on a narrow screen, the toggle that folds the footer to it. */
+.gate-bar-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.gate-bar-head .gate-blocker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The two-column desk has room for the whole footer, so the fold only exists docked. */
+.gate-bar-toggle {
+  display: none;
+}
+
 /* The gate's one-line answer to "why can't I approve?", stated where the reviewer clicks. */
 .gate-blocker {
   margin: 0 0 var(--space-3);
@@ -7671,6 +7688,60 @@ input[type="text"].workspace-title-input {
 
   .side-column:has(> .gate-action-bar) {
     padding-bottom: var(--gate-bar-height, 12rem);
+  }
+
+  /* Docked, the footer folds to its one-line status so the draft above keeps the screen. */
+  .gate-action-bar .gate-bar-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0;
+    background: var(--surface);
+    color: var(--text-2);
+    cursor: pointer;
+  }
+
+  .gate-action-bar .gate-bar-toggle:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  .gate-action-bar .gate-bar-toggle svg {
+    transform: rotate(180deg);
+    transition: transform var(--dur-fast) ease;
+  }
+
+  .gate-action-bar[data-collapsed] .gate-bar-toggle svg {
+    transform: none;
+  }
+
+  .gate-action-bar[data-collapsed] {
+    padding-block: var(--space-2);
+  }
+
+  .gate-action-bar[data-collapsed] .gate-bar-head {
+    align-items: center;
+  }
+
+  .gate-action-bar[data-collapsed] .gate-bar-toggle {
+    margin-top: 0;
+  }
+
+  .gate-action-bar[data-collapsed] .gate-blocker {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gate-action-bar[data-collapsed] .gate-bar-body {
+    display: none;
   }
 
   /* Scrolling a target into view, the tabs included, stops above the fixed bar, not under it. */

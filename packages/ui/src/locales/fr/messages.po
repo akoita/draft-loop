@@ -4460,9 +4460,17 @@ msgstr "Masquer"
 msgid "Hide {0}"
 msgstr "Masquer {0}"
 
+#: packages/ui/src/review-footer.tsx
+msgid "Hide approval and export controls"
+msgstr "Masquer les commandes d’approbation et d’export"
+
 #: packages/ui/src/home.tsx
 msgid "Hide archived"
 msgstr "Masquer les archives"
+
+#: packages/ui/src/review-footer.tsx
+msgid "Hide controls"
+msgstr "Masquer les commandes"
 
 #: packages/ui/src/side-panel-width.tsx
 msgid "Hide side panel"
@@ -8803,10 +8811,18 @@ msgstr "Afficher {0}"
 msgid "show all"
 msgstr "tout afficher"
 
+#: packages/ui/src/review-footer.tsx
+msgid "Show approval and export controls"
+msgstr "Afficher les commandes d’approbation et d’export"
+
 #. placeholder {0}: shownArchived.length
 #: packages/ui/src/home.tsx
 msgid "Show archived ({0})"
 msgstr "Afficher les archives ({0})"
+
+#: packages/ui/src/review-footer.tsx
+msgid "Show controls"
+msgstr "Afficher les commandes"
 
 #: packages/ui/src/display-preference.tsx
 msgid "Show everything"

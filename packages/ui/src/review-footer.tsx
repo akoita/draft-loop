@@ -10,7 +10,15 @@ import { plural, t } from "@lingui/core/macro";
  * disclosure that scrolls on its own and never pushes the buttons off screen.
  */
 
-import { type JSX, type ReactNode, type RefObject, useEffect, useRef } from "react";
+import {
+  type JSX,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { approvalBlockerId } from "./approval-gate-focus.js";
 import {
   type ApprovalReadiness,
@@ -278,6 +286,36 @@ export interface GateCondition {
 export const approvalOverrideFormId = "approval-override-form";
 export const approvalDetailsId = "approval-details";
 
+/**
+ * Whether the docked footer starts folded to its one-line status. An exported run needs nothing
+ * more from the reviewer, so on a phone the draft above keeps the screen; every other stage opens.
+ */
+export function footerStartsCollapsed(kind: FooterBlockerKind): boolean {
+  return kind === "exported";
+}
+
+/**
+ * The docked footer's folded state: it follows the stage, folding once a run is exported and
+ * opening when the stage changes again, and it opens to show an error. The toggle overrides it
+ * until the next change.
+ */
+function useFooterCollapsed(
+  kind: FooterBlockerKind,
+  errorMessage: string | null,
+): [boolean, (collapsed: boolean) => void] {
+  const [collapsed, setCollapsed] = useState(() => footerStartsCollapsed(kind));
+  const shownKind = useRef(kind);
+  useEffect(() => {
+    if (shownKind.current === kind) return;
+    shownKind.current = kind;
+    setCollapsed(footerStartsCollapsed(kind));
+  }, [kind]);
+  useEffect(() => {
+    if (errorMessage !== null) setCollapsed(false);
+  }, [errorMessage]);
+  return [collapsed, setCollapsed];
+}
+
 export interface ReviewFooterProps {
   readonly blocker: FooterBlocker;
   readonly readOnly: boolean;
@@ -453,6 +491,8 @@ export function ReviewFooter({
       : exportAction.pathLabel;
   const barRef = useRef<HTMLElement>(null);
   usePublishedHeight(barRef);
+  const [collapsed, setCollapsed] = useFooterCollapsed(blocker.kind, errorMessage);
+  const bodyId = useId();
   const errorBanner =
     errorMessage === null ? null : (
       <div className="error-banner approval-action-error" role="alert">
@@ -460,245 +500,279 @@ export function ReviewFooter({
       </div>
     );
   return (
-    <section className="gate-action-bar" aria-label={t`approval and export`} ref={barRef}>
-      <p
-        id={approvalBlockerId}
-        className={`gate-blocker gate-blocker-${blocker.tone}`}
-        tabIndex={-1}
-        role="status"
-        // While a round runs, its strip says what runs; the page's status already says the rest.
-        hidden={!readOnly && runningRound != null && runningRound.activity !== null}
-      >
-        {blocker.text}
-      </p>
-      {recovery === null ? null : (
-        <div className="round-limit-recovery-action">
-          <button
-            className="button button-primary"
-            type="button"
-            disabled={readOnly || recovery.disabled}
-            onClick={recovery.onRecover}
-          >
-            {t`Return to reviewed Round`} {recovery.round}
-          </button>
-        </div>
-      )}
-      {readOnly || runningRound === null ? null : (
-        <>
-          {errorBanner}
-          <FooterRunningRoundStrip round={runningRound} />
-        </>
-      )}
-      <fieldset
-        className="gate-actions"
-        aria-label={t`approval actions`}
-        hidden={readOnly || runningRound !== null}
-      >
-        {runningRound === null ? errorBanner : null}
-        {exportStage ? null : (
+    <section
+      className="gate-action-bar"
+      aria-label={t`approval and export`}
+      ref={barRef}
+      data-collapsed={collapsed ? "" : undefined}
+    >
+      {/* Docked on a narrow screen, the toggle folds the footer to this one line so the draft
+          above keeps the screen; the two-column desk hides the toggle and ignores the fold. */}
+      <div className="gate-bar-head">
+        <p
+          id={approvalBlockerId}
+          className={`gate-blocker gate-blocker-${blocker.tone}`}
+          tabIndex={-1}
+          role="status"
+          // While a round runs, its strip says what runs; the page's status already says the
+          // rest. Folded, the strip is out of view, so the line stays.
+          hidden={!collapsed && !readOnly && runningRound != null && runningRound.activity !== null}
+        >
+          {blocker.text}
+        </p>
+        <button
+          className="gate-bar-toggle"
+          type="button"
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+          aria-label={
+            collapsed ? t`Show approval and export controls` : t`Hide approval and export controls`
+          }
+          title={collapsed ? t`Show controls` : t`Hide controls`}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" focusable="false">
+            <path
+              d="M4 10l4-4 4 4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <div className="gate-bar-body" id={bodyId}>
+        {recovery === null ? null : (
+          <div className="round-limit-recovery-action">
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={readOnly || recovery.disabled}
+              onClick={recovery.onRecover}
+            >
+              {t`Return to reviewed Round`} {recovery.round}
+            </button>
+          </div>
+        )}
+        {readOnly || runningRound === null ? null : (
           <>
-            <div className="approval-actions">
-              <button
-                className="button button-primary"
-                type="button"
-                aria-keyshortcuts="Alt+A"
-                title={t`Approve artifact (Alt+A)`}
-                disabled={approve.disabled}
-                onClick={approve.onApprove}
-              >
-                {t`Approve artifact`}
-                <kbd>Alt+A</kbd>
-              </button>
-              {override === null ? null : (
+            {errorBanner}
+            <FooterRunningRoundStrip round={runningRound} />
+          </>
+        )}
+        <fieldset
+          className="gate-actions"
+          aria-label={t`approval actions`}
+          hidden={readOnly || runningRound !== null}
+        >
+          {runningRound === null ? errorBanner : null}
+          {exportStage ? null : (
+            <>
+              <div className="approval-actions">
                 <button
-                  className="button button-outline"
+                  className="button button-primary"
                   type="button"
-                  aria-expanded={override.open}
-                  aria-controls={approvalOverrideFormId}
-                  disabled={override.disabled}
-                  onClick={() => override.onOpenChange(!override.open)}
-                >{t`Approve with override…`}</button>
-              )}
-            </div>
-            {override === null || !override.open ? null : (
-              <ApprovalOverrideEditor override={override} />
-            )}
-            <div className="revision-request">
-              {revision.unavailableReason == null ? (
-                <label className="revision-direction">
-                  <span>{t`Directions for the author (optional)`}</span>
-                  <textarea
-                    className="revision-direction-input"
-                    rows={2}
-                    maxLength={maximumRevisionDirectionLength}
-                    value={revision.direction}
-                    disabled={revision.disabled || revision.directionsUnavailable === true}
-                    placeholder={t`e.g. lead with tokenisation; drop certification dates`}
-                    onChange={(event) => revision.onDirectionChange(event.target.value)}
-                  />
-                </label>
-              ) : null}
-              <div className="revision-request-row">
-                <span className="revision-direction-note">
-                  {revision.unavailableReason != null
-                    ? revision.unavailableReason
-                    : revision.directionsUnavailable === true
-                      ? revisionDirectionsUnavailableNote
-                      : t`Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
-                          revision.direction.length === 0
-                            ? ""
-                            : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
-                        }`}
-                </span>
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  aria-keyshortcuts="Alt+R"
-                  title={t`Request revision (Alt+R)`}
-                  disabled={revision.disabled}
-                  onClick={revision.onRequest}
+                  aria-keyshortcuts="Alt+A"
+                  title={t`Approve artifact (Alt+A)`}
+                  disabled={approve.disabled}
+                  onClick={approve.onApprove}
                 >
-                  {t`Request revision`}
-                  <kbd>Alt+R</kbd>
+                  {t`Approve artifact`}
+                  <kbd>Alt+A</kbd>
+                </button>
+                {override === null ? null : (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    aria-expanded={override.open}
+                    aria-controls={approvalOverrideFormId}
+                    disabled={override.disabled}
+                    onClick={() => override.onOpenChange(!override.open)}
+                  >{t`Approve with override…`}</button>
+                )}
+              </div>
+              {override === null || !override.open ? null : (
+                <ApprovalOverrideEditor override={override} />
+              )}
+              <div className="revision-request">
+                {revision.unavailableReason == null ? (
+                  <label className="revision-direction">
+                    <span>{t`Directions for the author (optional)`}</span>
+                    <textarea
+                      className="revision-direction-input"
+                      rows={2}
+                      maxLength={maximumRevisionDirectionLength}
+                      value={revision.direction}
+                      disabled={revision.disabled || revision.directionsUnavailable === true}
+                      placeholder={t`e.g. lead with tokenisation; drop certification dates`}
+                      onChange={(event) => revision.onDirectionChange(event.target.value)}
+                    />
+                  </label>
+                ) : null}
+                <div className="revision-request-row">
+                  <span className="revision-direction-note">
+                    {revision.unavailableReason != null
+                      ? revision.unavailableReason
+                      : revision.directionsUnavailable === true
+                        ? revisionDirectionsUnavailableNote
+                        : t`Steers selection and framing for the next round. It is not evidence: the author still uses only your approved sources.${
+                            revision.direction.length === 0
+                              ? ""
+                              : ` ${revision.direction.length}/${maximumRevisionDirectionLength}`
+                          }`}
+                  </span>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    aria-keyshortcuts="Alt+R"
+                    title={t`Request revision (Alt+R)`}
+                    disabled={revision.disabled}
+                    onClick={revision.onRequest}
+                  >
+                    {t`Request revision`}
+                    <kbd>Alt+R</kbd>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          {exportStage ? (
+            <>
+              <fieldset className="export-templates" disabled={exportAction.disabled}>
+                <legend>{t`Template`}</legend>
+                {exportTemplates.map((template) => (
+                  <label className="export-template-option" key={template}>
+                    <input
+                      type="radio"
+                      name="export-template"
+                      value={template}
+                      checked={exportAction.template === template}
+                      onChange={() => exportAction.onTemplateChange(template)}
+                    />
+                    <ExportTemplatePreview template={template} />
+                    <span className="export-template-text">
+                      <strong>{exportTemplateLabels()[template]}</strong>
+                      <span>{exportTemplateDescriptions()[template]}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="export-action">
+                <label className="export-format">
+                  <span className="sr-only">{t`Export format`}</span>
+                  <select
+                    value={exportAction.format}
+                    disabled={exportAction.disabled}
+                    aria-label={t`Export format`}
+                    onChange={(event) => {
+                      const chosen = exportFormats.find((format) => format === event.target.value);
+                      if (chosen !== undefined) exportAction.onFormatChange(chosen);
+                    }}
+                  >
+                    {exportFormats.map((format) => (
+                      <option key={format} value={format}>
+                        {exportFormatLabels[format]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {exportAction.onPreview === undefined ? null : (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    aria-keyshortcuts="Alt+P"
+                    title={t`Preview the ${exportFormatLabels[exportAction.format]} file before exporting (Alt+P)`}
+                    disabled={exportAction.disabled}
+                    onClick={exportAction.onPreview}
+                  >
+                    {t`Preview`}
+                    <kbd>Alt+P</kbd>
+                  </button>
+                )}
+                <button
+                  className="button button-primary"
+                  type="button"
+                  aria-keyshortcuts="Alt+E"
+                  title={
+                    exportAction.again
+                      ? t`Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
+                      : t`Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
+                  }
+                  disabled={exportAction.disabled}
+                  onClick={exportAction.onExport}
+                >
+                  {exportPending ? (
+                    t`Exporting ${exportFormatLabels[exportAction.format]}…`
+                  ) : (
+                    <>
+                      {exportAction.again ? t`Export again…` : t`Export…`}
+                      <kbd>Alt+E</kbd>
+                    </>
+                  )}
                 </button>
               </div>
-            </div>
-          </>
-        )}
-        {exportStage ? (
-          <>
-            <fieldset className="export-templates" disabled={exportAction.disabled}>
-              <legend>{t`Template`}</legend>
-              {exportTemplates.map((template) => (
-                <label className="export-template-option" key={template}>
-                  <input
-                    type="radio"
-                    name="export-template"
-                    value={template}
-                    checked={exportAction.template === template}
-                    onChange={() => exportAction.onTemplateChange(template)}
-                  />
-                  <ExportTemplatePreview template={template} />
-                  <span className="export-template-text">
-                    <strong>{exportTemplateLabels()[template]}</strong>
-                    <span>{exportTemplateDescriptions()[template]}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-            <div className="export-action">
-              <label className="export-format">
-                <span className="sr-only">{t`Export format`}</span>
-                <select
-                  value={exportAction.format}
-                  disabled={exportAction.disabled}
-                  aria-label={t`Export format`}
-                  onChange={(event) => {
-                    const chosen = exportFormats.find((format) => format === event.target.value);
-                    if (chosen !== undefined) exportAction.onFormatChange(chosen);
-                  }}
-                >
-                  {exportFormats.map((format) => (
-                    <option key={format} value={format}>
-                      {exportFormatLabels[format]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {exportAction.onPreview === undefined ? null : (
-                <button
-                  className="button button-outline"
-                  type="button"
-                  aria-keyshortcuts="Alt+P"
-                  title={t`Preview the ${exportFormatLabels[exportAction.format]} file before exporting (Alt+P)`}
-                  disabled={exportAction.disabled}
-                  onClick={exportAction.onPreview}
-                >
-                  {t`Preview`}
-                  <kbd>Alt+P</kbd>
-                </button>
+              {exportPathNote === null ? null : (
+                <p className="export-path" aria-live="polite">
+                  {exportPathNote}
+                </p>
               )}
-              <button
-                className="button button-primary"
-                type="button"
-                aria-keyshortcuts="Alt+E"
-                title={
-                  exportAction.again
-                    ? t`Export as ${exportFormatLabels[exportAction.format]} again (Alt+E)`
-                    : t`Export as ${exportFormatLabels[exportAction.format]} (Alt+E)`
-                }
-                disabled={exportAction.disabled}
-                onClick={exportAction.onExport}
-              >
-                {exportPending ? (
-                  t`Exporting ${exportFormatLabels[exportAction.format]}…`
-                ) : (
-                  <>
-                    {exportAction.again ? t`Export again…` : t`Export…`}
-                    <kbd>Alt+E</kbd>
-                  </>
-                )}
-              </button>
-            </div>
-            {exportPathNote === null ? null : (
-              <p className="export-path" aria-live="polite">
-                {exportPathNote}
-              </p>
-            )}
-            {exportAction.note === null ? null : (
-              <p className="export-note" role="status">
-                {exportAction.note}
-              </p>
-            )}
-            {exportAction.pendingSeconds === null ? null : (
-              <p className="pending-action-status" role="status" aria-live="polite">
-                {t`Exporting`} {exportFormatLabels[exportAction.format]}
-                {t`… Elapsed`} {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}.{" "}
-                {exportAction.downloads === true
-                  ? t`The file downloads when it is ready.`
-                  : t`Choose a destination in the Save As dialog; the approved artifact will be written after you confirm.`}
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="export-later">
-            <strong>{exportAction.downloads === true ? t`Export` : t`Export locally`}</strong>
-            <span>{exportAction.pathLabel}</span>
-          </p>
-        )}
-      </fieldset>
-      <details
-        className="gate-details"
-        id={approvalDetailsId}
-        open={detailsOpen}
-        onToggle={(event) => {
-          const open = event.currentTarget.open;
-          if (open !== detailsOpen) onDetailsOpenChange(open);
-        }}
-      >
-        <summary>{t`Details`}</summary>
-        <div className="gate-details-body">
-          <p className="subtle approval-status">{statusLine}</p>
-          {detail}
-          <ul className="gate-checklist">
-            {conditions.map((condition) => (
-              <li
-                className={`gate-item ${condition.met ? "gate-met" : "gate-blocked"}`}
-                key={condition.id}
-              >
-                <span className="gate-mark" aria-hidden="true">
-                  {condition.met ? "✓" : "!"}
-                </span>
-                <span>
-                  {condition.label}
-                  <span className="sr-only">{condition.met ? t` — met` : t` — not met`}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          {editNote === null ? null : <p className="gate-edit-note">{editNote}</p>}
-        </div>
-      </details>
+              {exportAction.note === null ? null : (
+                <p className="export-note" role="status">
+                  {exportAction.note}
+                </p>
+              )}
+              {exportAction.pendingSeconds === null ? null : (
+                <p className="pending-action-status" role="status" aria-live="polite">
+                  {t`Exporting`} {exportFormatLabels[exportAction.format]}
+                  {t`… Elapsed`} {formatElapsedDuration(exportAction.pendingSeconds * 1_000)}.{" "}
+                  {exportAction.downloads === true
+                    ? t`The file downloads when it is ready.`
+                    : t`Choose a destination in the Save As dialog; the approved artifact will be written after you confirm.`}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="export-later">
+              <strong>{exportAction.downloads === true ? t`Export` : t`Export locally`}</strong>
+              <span>{exportAction.pathLabel}</span>
+            </p>
+          )}
+        </fieldset>
+        <details
+          className="gate-details"
+          id={approvalDetailsId}
+          open={detailsOpen}
+          onToggle={(event) => {
+            const open = event.currentTarget.open;
+            if (open !== detailsOpen) onDetailsOpenChange(open);
+          }}
+        >
+          <summary>{t`Details`}</summary>
+          <div className="gate-details-body">
+            <p className="subtle approval-status">{statusLine}</p>
+            {detail}
+            <ul className="gate-checklist">
+              {conditions.map((condition) => (
+                <li
+                  className={`gate-item ${condition.met ? "gate-met" : "gate-blocked"}`}
+                  key={condition.id}
+                >
+                  <span className="gate-mark" aria-hidden="true">
+                    {condition.met ? "✓" : "!"}
+                  </span>
+                  <span>
+                    {condition.label}
+                    <span className="sr-only">{condition.met ? t` — met` : t` — not met`}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {editNote === null ? null : <p className="gate-edit-note">{editNote}</p>}
+          </div>
+        </details>
+      </div>
     </section>
   );
 }

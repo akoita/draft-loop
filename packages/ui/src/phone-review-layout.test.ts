@@ -60,6 +60,19 @@ describe("the docked export footer on a phone-narrow screen", () => {
     expect(ruleIn(docked, ".gate-action-bar")).toContain("container: gate-bar / inline-size;");
   });
 
+  it("folds to its one-line status only when docked", () => {
+    // The two-column desk shows the whole footer, so the toggle exists only docked.
+    expect(styles).toMatch(/\n\.gate-bar-toggle \{\n {2}display: none;\n\}/u);
+    const docked = styles.slice(styles.indexOf("@media (max-width: 1024px) {"));
+    expect(ruleIn(docked, ".gate-action-bar .gate-bar-toggle")).toContain("display: inline-flex;");
+    expect(ruleIn(docked, ".gate-action-bar[data-collapsed] .gate-bar-body")).toContain(
+      "display: none;",
+    );
+    expect(ruleIn(docked, ".gate-action-bar[data-collapsed] .gate-blocker")).toContain(
+      "text-overflow: ellipsis;",
+    );
+  });
+
   it("puts the three templates in one row and keeps their descriptions for screen readers", () => {
     const compact = containerRules("inline-size < 36rem");
     expect(ruleIn(compact, ".gate-action-bar .export-templates")).toContain(
