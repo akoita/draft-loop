@@ -54,6 +54,7 @@ export function runEngineTail(
       runRequirementEvidenceGradeHook(retrieval, storage, workspaceId),
       preferredEvidenceFromMap(retrieval?.requirementEvidenceMap),
       criticEvidenceFromMap(retrieval?.requirementEvidenceMap),
+      options.criticFallback,
     ),
   ];
 }
@@ -63,9 +64,11 @@ function withEvidenceGrade(
   evidenceGrade: RequirementEvidenceGradeHook | undefined,
   preferredEvidence: RunRecorders["preferredEvidence"],
   criticMapEvidence: RunRecorders["criticMapEvidence"],
+  criticFallback: RunRecorders["criticFallback"],
 ): RunRecorders {
   return {
     ...recorders,
+    ...(criticFallback === undefined ? {} : { criticFallback }),
     ...(evidenceGrade === undefined ? {} : { evidenceGrade }),
     ...(preferredEvidence === undefined ? {} : { preferredEvidence }),
     ...(criticMapEvidence === undefined ? {} : { criticMapEvidence }),

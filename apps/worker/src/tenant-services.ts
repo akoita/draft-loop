@@ -81,6 +81,22 @@ export function tenantAuthorConsent<Job extends WorkspaceJob>(
   };
 }
 
+/**
+ * Whether a job's candidate record's current consent names one company, such as the fallback
+ * critic's (#3131), read the same way as `tenantRunConsent`.
+ */
+export function tenantCompanyConsent<Job extends WorkspaceJob>(
+  options: TenantConsentOptions<Job>,
+): (job: Job, company: string) => Promise<boolean> {
+  return async (job, company) => {
+    const workspace = await options
+      .serviceFor(job.tenantId)
+      .readWorkspace(options.workspaceRoot(job));
+    const state = await options.tenancy.forTenant(job.tenantId).consentLedger.current(workspace.id);
+    return permitsTransmission(state, { author: { company }, critic: { company } });
+  };
+}
+
 export interface TenantRecordErasureOptions<Job extends WorkspaceJob = WorkspaceJob> {
   readonly tenancy: Pick<PostgresTenancy, "forTenant">;
   readonly serviceFor: (tenantId: string) => Pick<ApplicationService, "readWorkspace">;

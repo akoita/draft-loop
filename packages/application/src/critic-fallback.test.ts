@@ -6,7 +6,7 @@ import type {
 } from "@draft-loop/orchestrator";
 import { describe, expect, it } from "vitest";
 
-import { withCriticFallback } from "./critic-fallback.js";
+import { runCriticWithFallback, withCriticFallback } from "./critic-fallback.js";
 
 function request(round: number): CriticRequest {
   return { runId: "run-1", round } as unknown as CriticRequest;
@@ -125,5 +125,38 @@ describe("the critic fallback (#3122)", () => {
     const result = await critic.execute(request(1));
     expect(result.criticFallback).toBeUndefined();
     expect(result.provider).toBe("openai");
+  });
+
+  it("builds no wrapper without a fallback, or for one naming the run's own critic (#3131)", () => {
+    const built: string[] = [];
+    const criticFor = (company: string, modelId: string) => {
+      built.push(`${company}:${modelId}`);
+      return answering(company, modelId, []);
+    };
+    const identity = { company: "openai", modelId: "gpt-6.1-terra" };
+    const permitted = async () => true;
+
+    runCriticWithFallback(identity, undefined, criticFor);
+    runCriticWithFallback(identity, { ...identity, permitted }, criticFor);
+    expect(built).toEqual(["openai:gpt-6.1-terra", "openai:gpt-6.1-terra"]);
+  });
+
+  it("switches to the deployment's fallback only when consent covers its company (#3131)", async () => {
+    const identity = { company: "openai", modelId: "gpt-6.1-terra" };
+    const criticFor = (company: string, modelId: string) =>
+      company === "openai" ? failing("quota-exhausted", []) : answering(company, modelId, []);
+    const fallback = (allowed: boolean) => ({
+      company: "anthropic",
+      modelId: "claude-haiku-5-5",
+      permitted: async () => allowed,
+    });
+
+    const allowed = runCriticWithFallback(identity, fallback(true), criticFor);
+    const result = await allowed.execute(request(1));
+    expect(result.provider).toBe("anthropic");
+    expect(result.criticFallback).toMatchObject({ errorClass: "quota-exhausted" });
+
+    const refused = runCriticWithFallback(identity, fallback(false), criticFor);
+    await expect(refused.execute(request(1))).rejects.toMatchObject({ code: "quota-exhausted" });
   });
 });

@@ -112,7 +112,6 @@ import { noopAgents } from "./noop-agents.js";
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
 import { modelFacingContext } from "./provider-context.js";
-import { createProviderCriticAgent } from "./provider-critic-agent.js";
 import { timestamp } from "./response-execution.js";
 import {
   reviewedOpportunityContext,
@@ -125,6 +124,7 @@ import {
 } from "./run-application-plan.js";
 import { agentRecorderDependencies, createRecordedAuthorAgent } from "./run-author-input.js";
 import { readRunContext, runRequirementTexts } from "./run-context-read.js";
+import { createRecordedCriticAgent } from "./run-critic-agent.js";
 import { runEngineTail } from "./run-engine-tail.js";
 import { announceRunEvidenceMode, withRunHistoryReaders } from "./run-evidence-mode.js";
 import { openRunCandidateRetrieval } from "./run-evidence-retrieval.js";
@@ -1299,15 +1299,10 @@ function providerAgents(
     authorProposalCaptureDirectory,
     ...agentRecorderDependencies(recorders).author,
   });
-  const critic = createProviderCriticAgent({
-    context,
+  const critic = createRecordedCriticAgent(context, criticIdentity, recorders, {
     promptContext,
     dataPolicy,
     createAdapter,
-    criticCompany: criticIdentity.company,
-    criticModel: criticIdentity.modelId,
-    userError: (message) => new CliUserError(message),
-    ...agentRecorderDependencies(recorders).critic,
   });
   const planner = recordedApplicationPlanner(recorders, {
     promptContext,

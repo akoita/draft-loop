@@ -44,6 +44,7 @@ import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persist
 import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import type { ChooseApplicationRunCommand } from "./chosen-run.js";
 import { CliUserError } from "./cli-user-error.js";
+import type { RunCriticFallback } from "./critic-fallback.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { ExportPreview, ExportPreviewCommand } from "./export-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
@@ -331,6 +332,8 @@ export interface ResumeRunCommand {
   readonly signal?: AbortSignal;
   /** Receives the run's content-free spans (#2686); absent records none. */
   readonly tracer?: RunTracer;
+  /** The deployment's fallback critic for provider errors the run cannot wait out (#3131). */
+  readonly criticFallback?: RunCriticFallback;
 }
 
 export type LifecycleAction =

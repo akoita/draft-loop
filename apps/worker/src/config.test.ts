@@ -124,6 +124,18 @@ describe("readWorkerConfig", () => {
     ).toEqual({ kind: "drain", idleMs: 5_000 });
   });
 
+  it("reads the fallback critic as company:model, and refuses any other shape (#3131)", () => {
+    expect(readWorkerConfig(env).criticFallback).toBeUndefined();
+    expect(
+      readWorkerConfig({ ...env, DRAFT_LOOP_CRITIC_FALLBACK: "anthropic:claude-haiku-5-5" })
+        .criticFallback,
+    ).toEqual({ company: "anthropic", modelId: "claude-haiku-5-5" });
+    for (const value of ["anthropic", ":model", "Anthropic:x", "anthropic:x y"])
+      expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_CRITIC_FALLBACK: value })).toThrow(
+        WorkerConfigError,
+      );
+  });
+
   it("refuses to start without a run ceiling", () => {
     expect(() => readWorkerConfig({ ...env, DRAFT_LOOP_RUN_MAX_COST_USD: "" })).toThrow(
       RunBudgetCeilingConfigError,
