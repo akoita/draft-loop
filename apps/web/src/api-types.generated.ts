@@ -1323,7 +1323,7 @@ export interface ApiSchemas {
     readonly reason: "disabled" | "member_rate" | "member_limit" | "cost_cap" | "question_too_long" | "model_failed" | "no_answer" | null;
     readonly text: string | null;
     readonly sections: readonly ({
-      readonly id: "evidence" | "job" | "draft" | "review" | "prepare" | "display" | "agents" | "credits" | "privacy" | "problems";
+      readonly id: "evidence" | "job" | "draft" | "review" | "prepare" | "display" | "agents" | "credits" | "privacy" | "problems" | "connect-agent" | "agent-permissions";
       readonly title: string;
       readonly paragraphs: readonly (string)[];
     })[];
