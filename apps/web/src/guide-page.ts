@@ -44,6 +44,7 @@ const chrome = {
     privacy: "Privacy policy",
     terms: "Terms of use",
     notice: "Legal notice",
+    source: "Source code (GitHub)",
     rights: "DraftLoop. All rights reserved.",
     locale: "en_GB",
   },
@@ -67,10 +68,14 @@ const chrome = {
     privacy: "Politique de confidentialité",
     terms: "Conditions d’utilisation",
     notice: "Mentions légales",
+    source: "Code source (GitHub)",
     rights: "DraftLoop. Tous droits réservés.",
     locale: "fr_FR",
   },
 } as const satisfies Record<HelpGuideLanguage, Record<string, string>>;
+
+/** The public repository the footer links to as the source code. */
+const sourceCodeUrl = "https://github.com/akoita/draft-loop";
 
 const aboutPaths: Readonly<Record<HelpGuideLanguage, string>> = { en: "/about/", fr: "/about/fr/" };
 
@@ -215,6 +220,7 @@ ${sections.join("\n")}
 <li><a href="/legal/${language}/privacy">${e(words.privacy)}</a></li>
 <li><a href="/legal/${language}/terms">${e(words.terms)}</a></li>
 <li><a href="/legal/${language}/notice">${e(words.notice)}</a></li>
+<li><a href="${sourceCodeUrl}" rel="noopener">${e(words.source)}</a></li>
 </ul>
 </div>
 </div>
