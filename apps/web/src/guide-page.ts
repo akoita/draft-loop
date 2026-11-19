@@ -12,6 +12,9 @@ export const guidePagePaths: Readonly<Record<HelpGuideLanguage, string>> = {
   fr: "/guide/fr/",
 };
 
+/** Where the API writes the site's public origin into a public page. */
+export const siteOriginToken = "__SITE_ORIGIN__";
+
 /** The page's own words around the guide, in each language. */
 const chrome = {
   en: {
@@ -80,9 +83,16 @@ export function guidePageHtml(language: HelpGuideLanguage): string {
   const guide = helpGuide(language);
   const e = escapeHtml;
 
+  // The API replaces the origin token with the public origin, or with nothing where search
+  // indexing is off, so search engines get absolute addresses (apps/api/src/public-site.ts).
   const alternates = helpGuideLanguages
-    .map((tag) => `<link rel="alternate" hreflang="${tag}" href="${guidePagePaths[tag]}" />`)
-    .concat(`<link rel="alternate" hreflang="x-default" href="${guidePagePaths.en}" />`);
+    .map(
+      (tag) =>
+        `<link rel="alternate" hreflang="${tag}" href="${siteOriginToken}${guidePagePaths[tag]}" />`,
+    )
+    .concat(
+      `<link rel="alternate" hreflang="x-default" href="${siteOriginToken}${guidePagePaths.en}" />`,
+    );
   const switcher = helpGuideLanguages.map((tag) => {
     const current = tag === language ? ` aria-current="true"` : "";
     return `<a href="${guidePagePaths[tag]}" lang="${tag}"${current} data-lang="${tag}">${tag.toUpperCase()}</a>`;
@@ -112,6 +122,7 @@ export function guidePageHtml(language: HelpGuideLanguage): string {
 <meta property="og:description" content="${e(words.description)}" />
 <meta property="og:type" content="article" />
 <meta property="og:locale" content="${words.locale}" />
+<link rel="canonical" href="${siteOriginToken}${guidePagePaths[language]}" />
 <link rel="icon" href="/showcase/mark.svg" type="image/svg+xml" />
 ${alternates.join("\n")}
 <link rel="stylesheet" href="/about/about.css" />

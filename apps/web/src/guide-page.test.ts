@@ -20,11 +20,14 @@ describe("the public user guide pages", () => {
     },
   );
 
-  it("marks the current language and links both, so the switch and hreflang agree", () => {
+  it("marks the current language and links both, with absolute addresses for search engines", () => {
     const html = guidePageHtml("fr");
 
-    expect(html).toContain('<link rel="alternate" hreflang="en" href="/guide/" />');
-    expect(html).toContain('<link rel="alternate" hreflang="fr" href="/guide/fr/" />');
+    expect(html).toContain('<link rel="alternate" hreflang="en" href="__SITE_ORIGIN__/guide/" />');
+    expect(html).toContain(
+      '<link rel="alternate" hreflang="fr" href="__SITE_ORIGIN__/guide/fr/" />',
+    );
+    expect(html).toContain('<link rel="canonical" href="__SITE_ORIGIN__/guide/fr/" />');
     expect(html).toContain(
       '<a href="/guide/fr/" lang="fr" aria-current="true" data-lang="fr">FR</a>',
     );
