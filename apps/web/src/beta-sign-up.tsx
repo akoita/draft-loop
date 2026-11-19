@@ -58,6 +58,7 @@ export function BetaSignUpView({
             onChange={(event) => onCodeChange(event.target.value)}
           />
           <p>{t`This is a free test version: it can stop at any time, and we will make an effort to let you download your data first. To write and review your drafts, DraftLoop sends the parts of your material you select to Anthropic and OpenAI, which process them outside the European Union.`}</p>
+          <p>{t`DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap.`}</p>
           <div className="terms-acceptance">
             <input
               id="accept-terms"

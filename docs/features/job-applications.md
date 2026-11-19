@@ -77,6 +77,10 @@ until an owner or admin releases it
   **Job** tab offers **Save a copy now**, which reads the approved page once
   more, and **Paste the description** for a page that is already gone.
 - Folders are one level deep; an application sits in at most one folder.
+- Drafting is tuned and evaluated on software and tech roles so far. Other
+  roles work, and the sign-up screen, the New application form and the user
+  guide say so; [#3086](https://github.com/akoita/draft-loop/issues/3086)
+  extends tuning and evaluation to more professions.
 
 ## Related
 

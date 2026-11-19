@@ -29,8 +29,20 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "On Home, select New application. Give the job a name, paste its description or its link, then select Create application.",
         "DraftLoop lists the job's requirements. Read them and fix any that look wrong, since the draft is written against them.",
+        "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, such as nursing, sales, teaching or a trade, so check those drafts a little more closely. Support for more professions is on our roadmap.",
       ],
-      keywords: ["application", "job offer", "posting", "link", "URL", "requirements"],
+      keywords: [
+        "application",
+        "job offer",
+        "posting",
+        "link",
+        "URL",
+        "requirements",
+        "role",
+        "profession",
+        "sector",
+        "non-tech",
+      ],
     },
     {
       id: "draft",

@@ -3361,6 +3361,11 @@ msgstr ""
 msgid "DraftLoop is still retrying. Stopping ends this review for good; you would start a new one."
 msgstr ""
 
+#: apps/web/src/beta-sign-up.tsx
+#: packages/ui/src/new-application-form.tsx
+msgid "DraftLoop is tuned and tested on software and tech roles so far. It works for other jobs too, so check those drafts a little more closely. Support for more professions is on our roadmap."
+msgstr ""
+
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "DraftLoop noticed these patterns in your review choices. You decide: accepting one adds it to your writing policy for new runs."
 msgstr ""
