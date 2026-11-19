@@ -14,7 +14,7 @@ and the decisions behind this page are in
 
 ```mermaid
 flowchart LR
-  client["Web screen, desktop client<br/>or agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
+  client["Web screen<br/>or agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
   client -->|sign in| idp["Keycloak<br/>OIDC, invite only"]
   api -->|verify tokens, manage accounts| idp
   api -->|screen untrusted text| screen["Intake screening"]
