@@ -102,6 +102,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "An AI agent such as Claude Code or Codex can use DraftLoop for you through MCP. In Settings, open Agents, create a token for the agent and follow the setup steps shown there.",
         "A connected agent can list your applications, add a job, start a CV run and draft cover letters. It can also note work you shipped in your Work journal; a note becomes career evidence only after you approve it.",
+        "Advanced: connect an agent, at the end of this guide, gives each setup step.",
       ],
       keywords: ["MCP", "Claude", "Codex", "token", "work journal", "assistant", "automation"],
       screenshot: {
@@ -123,6 +124,7 @@ export const englishHelpGuide: HelpGuide = {
       paragraphs: [
         "DraftLoop stores your material only after you give consent, and keeps it in the EU. It sends model providers only the material a step needs.",
         "Mark a section as private to keep it out of drafts and away from model providers. From the account menu you can download everything. To delete all your documents and applications, or your account, open Account settings in that menu: both sit in its Danger zone and ask you to type a confirmation first.",
+        "To sign in faster, open Sign-in security in the account menu and set up a passkey. After your password, your fingerprint, face, PIN or phone then replaces the six-digit code. Keep your authenticator app as a backup: Try another way switches between them. Tick Remember me to stay signed in on that device for up to 30 days.",
       ],
       keywords: [
         "consent",
@@ -133,6 +135,10 @@ export const englishHelpGuide: HelpGuide = {
         "private",
         "sensitive",
         "security",
+        "passkey",
+        "sign in",
+        "authenticator",
+        "two-factor",
       ],
     },
     {
@@ -144,6 +150,57 @@ export const englishHelpGuide: HelpGuide = {
         "A note goes with technical details: the page, the version, the last error codes and your browser family. Open What we include in the dialog to see each value. Your CV, job descriptions, page text and screenshots are never sent.",
       ],
       keywords: ["error", "bug", "failed", "stuck", "broken", "support", "contact", "feedback"],
+    },
+    {
+      id: "connect-agent",
+      title: "Advanced: connect an agent",
+      paragraphs: [
+        "Your agent reaches DraftLoop through a small program, draftloop-mcp, that runs on your computer. You need git, Node.js 24 and pnpm.",
+        "1. Install draftloop-mcp once. It is not on npm yet, so install it from the source code in a terminal: git clone https://github.com/akoita/draft-loop, then cd draft-loop, pnpm install, cd apps/mcp and pnpm link --global. Check it with draftloop-mcp --help, which prints its usage. If pnpm refuses the link, run npm link in the same folder.",
+        "2. In Settings, open Agents, then Connect an agent. Tick what the agent may do and select Create agent token. The token is shown only once.",
+        "3. Pick your agent's tab and copy what it shows. It already holds this server's address and, once created, the token.",
+        "Claude Code plugin: run the two /plugin lines in Claude Code, then run draftloop-mcp save-token in a terminal, paste the token and press Enter, then Ctrl-D. If the tab shows an export line, add it to your shell profile. The plugin adds the DraftLoop tools, the /draftloop: commands and a reminder to record notable work.",
+        "Claude Code: run the claude mcp add command in a terminal. Codex: add the table to ~/.codex/config.toml. Any other MCP agent: add the JSON entry to the agent's MCP settings file.",
+        '4. Restart your agent and ask in plain words, such as "list my DraftLoop applications". In Claude Code, /mcp lists the DraftLoop tools. For notes about work you shipped, also turn on Accept notes from agents in Agents.',
+      ],
+      keywords: [
+        "MCP",
+        "setup",
+        "install",
+        "draftloop-mcp",
+        "plugin",
+        "Claude Code",
+        "Codex",
+        "token",
+        "configuration",
+        "terminal",
+      ],
+      screenshot: {
+        alt: "Settings, Agents, Connect an agent: the permissions to tick, Create agent token and the Claude Code plugin tab.",
+      },
+    },
+    {
+      id: "agent-permissions",
+      title: "Advanced: agent permissions and tokens",
+      paragraphs: [
+        "Each token holds only the permissions you tick. Work journal, Read applications and Add jobs are ticked by default, since the plugin uses them.",
+        "Work journal: record work you shipped as notes you review. Read applications: list your applications, read their job text and follow a run. Add jobs: add an application from a pasted job description, never from a link.",
+        "Read CVs and drafts: read the CVs you exported and your saved cover letters and interview questions. Start runs and drafts: start CV runs and drafts within the monthly spend limit you set on the token. File project cards: summarise one of your code repositories as a card that waits for your approval.",
+        "Whatever you tick, an agent can never approve a draft, decide a finding, export, change a setting or read your career evidence. Those stay with you in DraftLoop. What a tool returns is read by your agent's model provider.",
+        "Treat a token like a password. Keep it in your user settings or the plugin's token file, never in a project file you commit or share. It stops working after 90 days; create a new one then.",
+        "To revoke a token, open Agents, find its row under Connected agents, select Disconnect and confirm. The agent is refused at once, and your other tokens keep working.",
+      ],
+      keywords: [
+        "permission",
+        "scope",
+        "token",
+        "revoke",
+        "disconnect",
+        "security",
+        "spend limit",
+        "expire",
+        "agent",
+      ],
     },
   ],
 };

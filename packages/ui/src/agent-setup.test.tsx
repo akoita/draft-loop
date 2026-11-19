@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { AgentSetup, type AgentSetupProps } from "./agent-setup.js";
 import {
   activeAgentTokens,
-  agentChannelGuideUrl,
   agentConfiguration,
   agentConfigurationHoldsToken,
   agentTokenPlaceholder,
@@ -131,7 +130,7 @@ describe("AgentSetup", () => {
     expect(html).not.toContain("&lt;agent-token&gt;");
     expect(html).toMatch(/<button type="button">Copy<\/button>/u);
     expect(html).toContain("No agent is connected yet");
-    expect(html).toContain(agentChannelGuideUrl);
+    expect(html).toContain("/guide/#connect-agent");
   });
 
   it("offers each scope with the journal ticked, and lists a token's scopes", () => {
@@ -207,7 +206,7 @@ describe("AgentSetup", () => {
   it("says the hosted service cannot connect an agent yet, with only the guide", () => {
     const html = renderToStaticMarkup(<AgentSetup {...props} available={false} />);
     expect(html).toContain("is not available yet");
-    expect(html).toContain(agentChannelGuideUrl);
+    expect(html).toContain("/guide/#connect-agent");
     expect(html).not.toContain("Create agent token");
     expect(html).not.toContain("draftloop-mcp");
     expect(html).toContain("<h3>Agents</h3>");

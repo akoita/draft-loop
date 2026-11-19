@@ -51,7 +51,8 @@ organisation; it erases everything with `draft-loop-server`
 5. Owners download a [readable copy](../reference/readable-export.md) of a
    record or its complete [archive](../reference/record-archive.md), erase
    one record, or delete the whole organisation. In an organisation with other
-   members, these need a sign-in with a second factor (an authenticator app);
+   members, these need a sign-in with a second factor (a passkey or an
+   authenticator app, set up under **Sign-in security** in the account menu);
    otherwise the API answers `403 second_factor_required`.
 6. A person alone in their organisation deletes their own account with
    `DELETE /v1/account`, typing their email address to confirm. It erases the

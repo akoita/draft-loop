@@ -6,6 +6,8 @@
 export const guideImageSizes: Readonly<Record<string, readonly [number, number]>> = {
   "agents.en.webp": [1400, 363],
   "agents.fr.webp": [1400, 392],
+  "connect-agent.en.webp": [1440, 1396],
+  "connect-agent.fr.webp": [1440, 1396],
   "display.en.webp": [1400, 217],
   "display.fr.webp": [1400, 217],
   "draft.en.webp": [1400, 217],
