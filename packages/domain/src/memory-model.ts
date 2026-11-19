@@ -69,6 +69,13 @@ export const memoryKinds = [
     owningModule: "packages/application/src/work-journal.ts",
   },
   {
+    id: "fact-suggestion",
+    lifetime: "candidate",
+    writer: "person-confirmed",
+    mayHoldCandidateContent: true,
+    owningModule: "packages/domain/src/fact-suggestion.ts",
+  },
+  {
     id: "writing-policy",
     lifetime: "workspace",
     writer: "person",
