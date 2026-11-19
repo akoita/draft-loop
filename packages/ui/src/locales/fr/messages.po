@@ -1004,6 +1004,10 @@ msgstr "Une technologie que je n’ai pas utilisée"
 msgid "about {0}"
 msgstr "environ {0}"
 
+#: apps/web/src/landing.tsx
+msgid "About DraftLoop"
+msgstr "À propos de DraftLoop"
+
 #: apps/web/src/application-material.tsx
 msgid "About the company"
 msgstr "Sur l'entreprise"

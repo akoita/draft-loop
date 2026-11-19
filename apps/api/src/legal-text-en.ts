@@ -13,6 +13,8 @@ export const legalTextsEn: LegalTexts = {
   pages: {
     terms: {
       title: "Terms of use",
+      description:
+        "The terms for using DraftLoop, a free public test that drafts CVs and cover letters from your own documents.",
       intro: [
         "These terms govern your use of the DraftLoop test service. You accept them when you create your account. They come with the [privacy policy](/legal/privacy) and the [legal notice](/legal/notice).",
       ],
@@ -91,6 +93,8 @@ export const legalTextsEn: LegalTexts = {
     },
     privacy: {
       title: "Privacy policy",
+      description:
+        "What DraftLoop keeps about you, why, where it is stored, which AI providers see it, and how to export or delete it.",
       intro: [
         "DraftLoop stores the career material you choose to upload, sends selected parts of it to AI model providers to write and review your drafts, and keeps a record of each draft so you can see where every statement came from. This policy says what is processed, why, where, for how long, and what you can do about it.",
       ],
@@ -190,6 +194,7 @@ export const legalTextsEn: LegalTexts = {
     },
     notice: {
       title: "Legal notice",
+      description: "Who publishes DraftLoop and how to contact them.",
       intro: ["Information required by French law 2004-575 of 21 June 2004 (LCEN), Article 6-III."],
       sections: [
         {

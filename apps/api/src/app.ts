@@ -107,6 +107,7 @@ import {
   type ProfileDerivations,
   registerProfileRoutes,
 } from "./profile-routes.js";
+import { type PublicSiteOptions, registerPublicSite } from "./public-site.js";
 import { type RateLimits, registerRateLimit } from "./rate-limit.js";
 import { registerRecordAccess } from "./record-access.js";
 import { registerRecordArchiveRoutes } from "./record-archive-routes.js";
@@ -269,6 +270,8 @@ export interface ApiOptions {
   readonly memberSettings?: MemberSettingsStore;
   /** The built web screen's directory, served at `/`; without it no page is served. */
   readonly webRoot?: string;
+  /** How search engines may treat the public pages; unset, nothing is indexed. */
+  readonly publicSite?: PublicSiteOptions;
   /** The publisher details the legal pages show (#2462); without them they show placeholders. */
   readonly legalPublisher?: LegalPublisher;
   /** The planned-maintenance notice (#2965); without it there is never a notice. */
@@ -329,6 +332,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
 
   const auth: ApiAuthOptions = options.auth ?? { mode: "owner" };
   await app.register(helmet, { contentSecurityPolicy: contentSecurityPolicy(auth) });
+  registerPublicSite(app, options.publicSite ?? { indexing: false });
   // The live career interview streams audio both ways over one WebSocket per conversation.
   if (options.liveSpeech !== undefined) {
     await app.register(websocket, { options: { maxPayload: 1_048_576 } });

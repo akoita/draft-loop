@@ -1010,6 +1010,10 @@ msgstr ""
 msgid "about {0}"
 msgstr ""
 
+#: apps/web/src/landing.tsx
+msgid "About DraftLoop"
+msgstr ""
+
 #: apps/web/src/application-material.tsx
 msgid "About the company"
 msgstr ""

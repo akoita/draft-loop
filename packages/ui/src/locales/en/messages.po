@@ -1010,6 +1010,10 @@ msgstr "A technology I have not used"
 msgid "about {0}"
 msgstr "about {0}"
 
+#: apps/web/src/landing.tsx
+msgid "About DraftLoop"
+msgstr "About DraftLoop"
+
 #: apps/web/src/application-material.tsx
 msgid "About the company"
 msgstr "About the company"

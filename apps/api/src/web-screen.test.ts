@@ -1,11 +1,12 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { brotliCompressSync } from "node:zlib";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApi } from "./app.js";
-import { isPublicRequest } from "./web-screen.js";
+import { cacheControl, isPublicRequest } from "./web-screen.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const page =
@@ -19,6 +20,10 @@ beforeAll(async () => {
   await mkdir(join(webRoot, "assets"));
   await writeFile(join(webRoot, "index.html"), page);
   await writeFile(join(webRoot, "assets", "index-abc.js"), "console.log('screen');");
+  await writeFile(
+    join(webRoot, "assets", "index-abc.js.br"),
+    brotliCompressSync("console.log('screen');"),
+  );
   app = await buildApi({ ownerToken, webRoot });
 });
 
@@ -90,5 +95,22 @@ describe("public requests", () => {
     ["/v1/knowledge-bases", "/v1/knowledge-bases", false],
   ])("route %s at %s is public: %s", (route, path, expected) => {
     expect(isPublicRequest(route, path)).toBe(expected);
+  });
+
+  it("sends a prebuilt Brotli copy to browsers that accept it", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/assets/index-abc.js",
+      headers: { "accept-encoding": "br, gzip" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-encoding"]).toBe("br");
+    expect(response.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  });
+
+  it("keeps public images for an hour and pages never", () => {
+    expect(cacheControl("/srv/web/about/circuit.webp")).toBe("public, max-age=3600");
+    expect(cacheControl("/srv/web/about/index.html")).toBe("no-cache");
   });
 });
