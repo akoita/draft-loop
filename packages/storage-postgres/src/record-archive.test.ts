@@ -334,6 +334,17 @@ async function seedRecord(
       at,
     ],
   );
+  // A fact suggestion, keyed by the API's workspace id like the sessions.
+  await q(
+    `INSERT INTO fact_suggestions (id, workspace_id, profile_id, status, dedupe_key, suggestion, created_at)
+     VALUES ($1, $2, 'profile-1', 'pending', 'fsk1-correct-0123456789abcdef', $3::jsonb, $4)`,
+    [
+      `fsg_suggest-${run}`,
+      workspaceId,
+      JSON.stringify({ quote: `A fictional quote for ${marker}.` }),
+      at,
+    ],
+  );
   // A saved cover letter, keyed by the API's workspace id like the sessions.
   await q(
     `INSERT INTO application_material_drafts (id, workspace_id, application_id, kind, draft, created_at)
@@ -641,6 +652,7 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
         "applications/Role at alder-quill/job.md",
         "other drafts/cover letter 2026-10-24.md",
         "applications/Role at alder-quill/exports/CV 2026-10-24 10.00.md",
+        "profile-suggestions.json",
       ]);
       const text = (path: string) =>
         decoder.decode(files.find((file) => file.path === path)?.content);
@@ -662,6 +674,9 @@ describe.runIf(connectionString !== undefined)("Postgres record archives", () =>
         "A fictional paragraph for alder-quill.",
       );
       expect(text("README.md")).toContain("| documents/ |");
+      expect(JSON.parse(text("profile-suggestions.json"))).toEqual([
+        { status: "pending", createdAt: at, quote: "A fictional quote for alder-quill." },
+      ]);
     });
 
     it("shows nothing of how the service stores the record, nor another record or tenant", async () => {
