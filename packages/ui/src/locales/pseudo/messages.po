@@ -8451,6 +8451,10 @@ msgstr ""
 msgid "Same {noun}"
 msgstr ""
 
+#: packages/ui/src/run-details.tsx
+msgid "Same company as the author."
+msgstr ""
+
 #: packages/ui/src/writing-policy-history.tsx
 msgid "Same text as the active version."
 msgstr ""
@@ -9792,6 +9796,10 @@ msgstr ""
 msgid "The critic model graded each source; sources it found unsupportive are left out above."
 msgstr ""
 
+#: packages/ui/src/run-details.tsx
+msgid "The critic switched from {fromModel} to {toModel} in round {round}, after a provider error ({errorClass})."
+msgstr ""
+
 #: apps/web/src/application-material-model.ts
 msgid "The critic's check did not finish, so your letter stands as drafted."
 msgstr ""
@@ -9859,6 +9867,10 @@ msgstr ""
 
 #: packages/ui/src/career-flow.tsx
 msgid "The facts DraftLoop extracts from your documents, each with its exact quote. You review them once; every application reuses them."
+msgstr ""
+
+#: packages/ui/src/run-details.tsx
+msgid "The fallback critic comes from the author's company, so this review is not cross-company."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts

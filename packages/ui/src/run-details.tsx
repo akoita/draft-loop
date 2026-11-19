@@ -22,6 +22,7 @@ import { type JSX, type ReactNode, type RefObject, useEffect, useId, useRef } fr
 import { countedNouns } from "./counted-nouns.js";
 import { formatDateTime } from "./locale-format.js";
 import {
+  type CriticFallbackView,
   type DesktopReviewState,
   type IndependentReviewView,
   type ReviewEvent,
@@ -265,6 +266,32 @@ export function RunTrustWarning({
   );
 }
 
+/**
+ * The run's switch to its fallback critic (#3123), and a warning when the fallback shares the
+ * author's company, since the review is then no longer cross-company.
+ */
+export function CriticFallbackNote({
+  fallback,
+}: {
+  readonly fallback: CriticFallbackView | null;
+}): JSX.Element | null {
+  if (fallback === null) return null;
+  const { fromModel, toModel, errorClass, round } = fallback;
+  return (
+    <>
+      <p className="setup-note">
+        {t`The critic switched from ${fromModel} to ${toModel} in round ${round}, after a provider error (${errorClass}).`}
+      </p>
+      {fallback.sameCompanyAsAuthor ? (
+        <p className="setup-note critic-fallback-warning">
+          <strong>{t`Same company as the author.`}</strong>{" "}
+          {t`The fallback critic comes from the author's company, so this review is not cross-company.`}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 /** The trust and policy facts: identities with lineage, data and writing policy, evidence. */
 function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.Element {
   const evidenceMode = runEvidenceModeDisplay(state.evidenceMode);
@@ -315,6 +342,7 @@ function RunTrustFacts({ state }: { readonly state: DesktopReviewState }): JSX.E
           </span>
         )}
       </div>
+      <CriticFallbackNote fallback={state.criticFallback ?? null} />
       {configuredDiffers ? (
         <p className="setup-note">
           {t`New runs use:`} {configuredAuthor.model} → {configuredCritic.model}

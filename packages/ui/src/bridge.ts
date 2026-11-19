@@ -129,6 +129,7 @@ import {
 } from "./fact-usage-contract.js";
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
+  CriticFallbackView,
   DesktopReviewState,
   IndependentReviewView,
   OpportunityBriefSelection,
@@ -2170,6 +2171,7 @@ const desktopReviewStateKeys = [
   "providerRoutes",
   "providerFailure",
   "usageLimit",
+  "criticFallback",
   "previousArtifact",
   "artifact",
   "findings",
@@ -2217,6 +2219,16 @@ const usageLimitResultKeys = resultKeys<UsageLimitView>()([
   "model",
   "step",
   "resetsAt",
+]);
+
+const criticFallbackResultKeys = resultKeys<CriticFallbackView>()([
+  "fromProvider",
+  "fromModel",
+  "toProvider",
+  "toModel",
+  "errorClass",
+  "round",
+  "sameCompanyAsAuthor",
 ]);
 
 const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
@@ -7966,6 +7978,17 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ) {
       return invalidInput();
     }
+  }
+  const criticFallback = value.criticFallback;
+  if (criticFallback !== null && criticFallback !== undefined) {
+    const record = requireRecord(criticFallback);
+    if (!hasOnlyKeys(record, criticFallbackResultKeys)) return invalidInput();
+    for (const key of ["fromProvider", "fromModel", "toProvider", "toModel"] as const) {
+      identifier(record[key]);
+    }
+    if (!/^[a-z][a-z-]{0,39}$/u.test(stringValue(record.errorClass, 40))) return invalidInput();
+    if (!Number.isInteger(record.round) || (record.round as number) < 0) return invalidInput();
+    if (typeof record.sameCompanyAsAuthor !== "boolean") return invalidInput();
   }
   return {
     ...value,
