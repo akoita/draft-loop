@@ -6114,6 +6114,10 @@ msgstr "Aucune exigence évaluée"
 msgid "No requirements were found in this job text"
 msgstr "Aucune exigence n’a été trouvée dans ce texte d’offre"
 
+#: packages/ui/src/home-model.ts
+msgid "No requirements yet"
+msgstr "Pas encore d’exigences"
+
 #: packages/ui/src/new-application-model.ts
 msgid "No reviewed career profile yet. Generate and review one once, and every application reuses it."
 msgstr "Pas encore de profil professionnel relu. Générez-en un et relisez-le une fois : chaque candidature le réutilise."
@@ -6828,6 +6832,10 @@ msgstr "Coller le texte"
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste text as career evidence"
 msgstr "Coller du texte comme élément de parcours"
+
+#: packages/ui/src/job-requirements-extraction.tsx
+msgid "Paste text or attach a file"
+msgstr "Coller le texte ou joindre un fichier"
 
 #: packages/ui/src/job-description-panel.tsx
 msgid "Paste the description"

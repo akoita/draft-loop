@@ -6119,6 +6119,10 @@ msgstr ""
 msgid "No requirements were found in this job text"
 msgstr ""
 
+#: packages/ui/src/home-model.ts
+msgid "No requirements yet"
+msgstr ""
+
 #: packages/ui/src/new-application-model.ts
 msgid "No reviewed career profile yet. Generate and review one once, and every application reuses it."
 msgstr ""
@@ -6832,6 +6836,10 @@ msgstr ""
 
 #: packages/ui/src/pasted-evidence-form.tsx
 msgid "Paste text as career evidence"
+msgstr ""
+
+#: packages/ui/src/job-requirements-extraction.tsx
+msgid "Paste text or attach a file"
 msgstr ""
 
 #: packages/ui/src/job-description-panel.tsx

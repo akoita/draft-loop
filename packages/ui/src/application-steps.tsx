@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type ApplicationJobSource,
@@ -9,6 +9,7 @@ import {
   applicationStepIds,
   applicationStepStatusText,
 } from "./application-steps-model.js";
+import { OpenJobReplacement } from "./job-replacement.js";
 
 export interface ApplicationStepsViewProps {
   readonly steps: readonly ApplicationStepState[];
@@ -153,13 +154,31 @@ export function ApplicationJobStep({
   children: [inputs, requirements],
 }: ApplicationJobStepProps) {
   const sourceSet = ready || source === "approved-page";
+  const [replacing, setReplacing] = useState(false);
+  const replacement = useRef<HTMLDetailsElement>(null);
+  const openReplacement = useCallback(() => {
+    setReplacing(true);
+    // After the inputs show, bring them into view and put the focus on their summary.
+    requestAnimationFrame(() => {
+      const summary = replacement.current?.querySelector("summary");
+      summary?.scrollIntoView({ block: "nearest" });
+      summary?.focus();
+    });
+  }, []);
   return (
     <div id={id} className="application-step-job">
       <p className="setup-note">{applicationJobStepNote(source, ready)}</p>
       {sourceSet ? (
         <>
-          {requirements}
-          <details className="setup-details">
+          <OpenJobReplacement.Provider value={openReplacement}>
+            {requirements}
+          </OpenJobReplacement.Provider>
+          <details
+            ref={replacement}
+            className="setup-details"
+            open={replacing}
+            onToggle={(event) => setReplacing(event.currentTarget.open)}
+          >
             <summary>{t`Replace the job description`}</summary>
             {inputs}
           </details>

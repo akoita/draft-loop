@@ -171,6 +171,7 @@ describe("the shared screens' commands over HTTP", () => {
 
   it("creates an application from pasted text, or from a job page address with its approval", async () => {
     const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications": listed,
       "POST /v1/workspaces/{workspaceId}/applications": () => ledgerApplication,
     });
 
@@ -192,14 +193,71 @@ describe("the shared screens' commands over HTTP", () => {
       ok: true,
       value: { workspaceId, application: { id: "app-ledger" } },
     });
-    expect(calls).toHaveLength(2);
+    // The address is first looked up among the kept applications, then created.
+    expect(calls.map(({ operation }) => operation)).toEqual([
+      "POST /v1/workspaces/{workspaceId}/applications",
+      "GET /v1/workspaces/{workspaceId}/applications",
+      "POST /v1/workspaces/{workspaceId}/applications",
+    ]);
     expect(calls[0]?.input).toMatchObject({
       body: { name: "Example Ledger", jobText: "Platform Engineer" },
     });
     expect(address).toMatchObject({ ok: true, value: { application: { id: "app-ledger" } } });
-    expect(calls[1]?.input).toMatchObject({
+    expect(calls[2]?.input).toMatchObject({
       body: { name: "Example", jobUrl: "https://jobs.example.test/1", jobUrlApproved: true },
     });
+  });
+
+  it("opens the application already kept for the same job page instead of creating one (#2942)", async () => {
+    const kept: ApiSchemas["Application"] = {
+      ...ledgerApplication,
+      id: "app-kept",
+      jobSourceKind: "approved-url",
+      briefs: [],
+      runs: [],
+      chosenRunId: null,
+    };
+    const archived = { ...kept, id: "app-archived", archivedAt: "2026-11-01T00:00:00Z" };
+    const { port, calls } = portOver({
+      "GET /v1/workspaces/{workspaceId}/applications": () => ({
+        applications: [defaultApplication, ledgerApplication, archived, kept],
+      }),
+      "GET /v1/workspaces/{workspaceId}/applications/{applicationId}/job": () => ({
+        origin: "url",
+        text: null,
+        url: "https://Jobs.example.test/1/",
+      }),
+      "POST /v1/workspaces/{workspaceId}/applications": () => ledgerApplication,
+    });
+
+    const again = await port.execute({
+      type: "application.create",
+      input: {
+        workspaceId,
+        name: "Example again",
+        jobUrl: "https://jobs.example.test/1#apply",
+        jobUrlApproved: true,
+      },
+    });
+    const other = await port.execute({
+      type: "application.create",
+      input: {
+        workspaceId,
+        name: "Another",
+        jobUrl: "https://jobs.example.test/2",
+        jobUrlApproved: true,
+      },
+    });
+
+    expect(again).toMatchObject({ ok: true, value: { application: { id: "app-kept" } } });
+    expect(other).toMatchObject({ ok: true, value: { application: { id: "app-ledger" } } });
+    // Only the kept page's job is read: pasted-text and archived applications are skipped.
+    const jobReads = calls.filter(({ operation }) => operation.endsWith("/job"));
+    expect(jobReads.map(({ input }) => input.path)).toEqual([
+      { workspaceId, applicationId: "app-kept" },
+      { workspaceId, applicationId: "app-kept" },
+    ]);
+    expect(calls.filter(({ operation }) => operation.startsWith("POST"))).toHaveLength(1);
   });
 
   it("extracts an application's job page by its kept approval, never by an address it names", async () => {

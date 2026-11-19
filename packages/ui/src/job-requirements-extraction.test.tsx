@@ -6,6 +6,7 @@ import {
   opportunityExtractionCancelledMessage,
   validateBridgeCommand,
 } from "./bridge.js";
+import { OpenJobReplacement } from "./job-replacement.js";
 import {
   JobRequirementsExtractionView,
   type JobRequirementsPhase,
@@ -238,6 +239,24 @@ describe("Extract requirements card states", () => {
     });
     expect(html).toContain('role="alert"');
     expect(html).toContain("The job description is larger than the limit.");
+    expect(html).toContain(">Try again<");
+    expect(html).not.toContain("Paste text or attach a file");
+  });
+
+  it("offers Paste text or Attach file in place inside a job step (#2942)", () => {
+    const html = renderToStaticMarkup(
+      <OpenJobReplacement.Provider value={() => undefined}>
+        <JobRequirementsExtractionView
+          phase={{ kind: "failed", message: "DraftLoop could not read this page." }}
+          writingModel={writingModel}
+          disabled={false}
+          onOpen={() => undefined}
+          onConfirm={() => undefined}
+          onCancel={() => undefined}
+        />
+      </OpenJobReplacement.Provider>,
+    );
+    expect(html).toContain(">Paste text or attach a file<");
     expect(html).toContain(">Try again<");
   });
 });
