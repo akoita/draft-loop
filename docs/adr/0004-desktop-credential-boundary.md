@@ -1,6 +1,8 @@
 # ADR 0004: Desktop credential input, storage, and provider preflight
 
-- Status: Accepted
+- Status: Superseded by [ADR 0011, D9](0011-client-server-version.md#d9-clients).
+  The desktop credential store was retired with the v0.8 desktop on
+  2026-11-04; the desktop client holds no provider keys
 - Date: 2026-08-15
 - Decision owners: DraftLoop maintainers
 - Supersedes: The credential-handling statements in

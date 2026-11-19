@@ -178,7 +178,7 @@ To restore, for example on a new machine:
 Restore refuses a stack that already holds data, and an archive from a newer
 server version than the one installed.
 
-## Coming from the desktop app
+## Coming from the v0.8 desktop alpha
 
 The v0.8 desktop alpha ran its own local engine and is retired. Its installed
 copies keep their files on disk, so you can still move them. The `draft-loop` CLI copies its career evidence, applications and

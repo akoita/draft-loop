@@ -32,8 +32,8 @@ pilot; a public beta after that. Volume: `[estimate]` records per month.
 
 **Context.** The candidate controls what is uploaded, can mark sections as
 sensitive or never-share, and consents to each provider by name. The
-providers process under zero-retention terms. The desktop version keeps
-everything on the user's machine and is outside this assessment.
+providers process under zero-retention terms. A self-hosted server
+keeps everything on the user's machine and is outside this assessment.
 
 **Purposes.** Produce a truthful, source-traceable CV draft for one job
 application; let the candidate see where each statement came from.

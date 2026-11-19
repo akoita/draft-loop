@@ -25,8 +25,8 @@ source-only CLI takes files into a local workspace instead
    its file count, and a long list scrolls inside its own box.
 4. **Advanced options**, folded at the bottom of the card, holds what most
    people never need: adding a whole folder, correcting what each source is,
-   choosing or creating a knowledge base, the private-section rules and, on
-   the local desktop, how documents are searched. The folded line names what
+   choosing or creating a knowledge base and the private-section rules. The
+   folded line names what
    is not at its default, such as "2 private-section rules". DraftLoop creates one knowledge
    base for you on the first add, so you can leave this closed.
 

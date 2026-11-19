@@ -482,7 +482,7 @@ is explicit, and the local copy is unchanged. This is optional for the
 first release.
 
 Built 2026-11-03 as the CLI's `draft-loop server import`, a client of the
-HTTP API ([self-hosted guide](../operations/self-hosted.md#coming-from-the-desktop-app)).
+HTTP API ([self-hosted guide](../operations/self-hosted.md#coming-from-the-v08-desktop-alpha)).
 Evidence goes through the ordinary upload route, so screening applies. The
 application import route is offered in owner-token mode only, until sign-in
 mode has its own review.
