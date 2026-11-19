@@ -6684,6 +6684,10 @@ msgstr ""
 msgid "Open Career profile"
 msgstr ""
 
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Open Career profile to review the suggested updates."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "Open claim traceability"
 msgstr ""
@@ -8261,6 +8265,10 @@ msgstr ""
 #: packages/ui/src/home-model.ts
 #: packages/ui/src/workspace-activity.tsx
 msgid "Review running"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "Review suggested updates"
 msgstr ""
 
 #: apps/web/src/run-model.ts
@@ -12075,6 +12083,14 @@ msgstr ""
 
 #: apps/web/src/records.tsx
 msgid "You can share this candidate's file once it is set up."
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "You changed {pending} facts in this CV. Save them to your profile?"
+msgstr ""
+
+#: packages/ui/src/profile-fact-suggestions.tsx
+msgid "You changed 1 fact in this CV. Save it to your profile?"
 msgstr ""
 
 #: packages/ui/src/career-interview-model.ts

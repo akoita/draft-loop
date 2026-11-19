@@ -23,6 +23,7 @@ import { createApplicationRunRowsReader } from "@draft-loop/review-state/applica
 import { withCoverageKinds } from "@draft-loop/review-state/review-coverage";
 import { workspaceReadinessFrom } from "@draft-loop/review-state/workspace-readiness";
 import { applicationIdSchema } from "@draft-loop/schemas/application";
+import type { FactSuggestionStore } from "@draft-loop/storage/fact-suggestions";
 import { newestApplicationRunId } from "@draft-loop/ui/application-run-order";
 import { exportFileName } from "@draft-loop/ui/export-file-name";
 import type {
@@ -42,7 +43,6 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-
 import { apiError, apiErrorSchema } from "./errors.js";
 import { runApplicationName } from "./export-routes.js";
 
@@ -53,6 +53,21 @@ export interface ReviewStateRoutesOptions {
   readonly knowledgeIntake?: HostedKnowledgeIntake;
   /** The accepted preference suggestions and their runs (#2670); none marks no version. */
   readonly preferenceSources?: PreferenceSuggestions["sources"];
+  /** Profile suggestions, so an approved run says how many of its edits wait there (#3168). */
+  readonly factSuggestions?: Pick<FactSuggestionStore, "list">;
+}
+
+/** Pending profile suggestions an approved run's edits filed, as a count only. */
+async function runProfileSuggestions(
+  store: Pick<FactSuggestionStore, "list"> | undefined,
+  workspaceId: string,
+  snapshot: RunSnapshot,
+): Promise<{ readonly profileSuggestions?: { readonly pending: number } }> {
+  if (store === undefined || snapshot.approval !== "approved") return {};
+  const pending = (await store.list(workspaceId, { status: "pending", limit: 200 })).filter(
+    (suggestion) => suggestion.origin.runId === snapshot.runId,
+  ).length;
+  return pending === 0 ? {} : { profileSuggestions: { pending } };
 }
 
 const identifierSchema = z
@@ -366,8 +381,13 @@ export function registerReviewStateRoutes(
       const requirements = await service.readRunRequirements?.({ root, runId: snapshot.runId });
       const requirementTexts = new Map((requirements ?? []).map(({ id, text }) => [id, text]));
       const details = await runDetails(root, snapshot.runId, requirementTexts);
-      return reviewStateView(
-        withCoverageKinds(
+      const suggestions = await runProfileSuggestions(
+        options.factSuggestions,
+        workspaceId,
+        snapshot,
+      );
+      return reviewStateView({
+        ...withCoverageKinds(
           reviewState(
             descriptor,
             snapshot,
@@ -393,7 +413,8 @@ export function registerReviewStateRoutes(
           ),
           requirements,
         ),
-      );
+        ...suggestions,
+      });
     },
   );
 }

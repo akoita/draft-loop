@@ -98,6 +98,7 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import { OpportunityBriefReviewAction } from "./opportunity-brief-review.js";
+import { ReviewProfileSuggestionsPrompt } from "./profile-fact-suggestions.js";
 import {
   automaticRetryLine,
   ProviderFailureStopButton,
@@ -262,6 +263,8 @@ interface ReviewWorkspaceProps {
   readonly writingPolicyAction?: ReactNode;
   /** Opens Home, where workspace-level setup (provider authentication) lives. */
   readonly onOpenHome?: () => void;
+  /** Opens the Career profile page, where suggested updates wait (#3168). */
+  readonly onOpenProfile?: () => void;
   /** The run pair's provider sign-in as the host's status reads report it, for the checklist. */
   readonly providerSignInReadiness?: ProviderSignInReadiness;
   /**
@@ -1015,6 +1018,7 @@ export function ReviewWorkspace({
   profilePanel,
   writingPolicyAction,
   onOpenHome,
+  onOpenProfile,
   providerSignInReadiness,
   setupSummary,
   modelPairChoice,
@@ -3997,6 +4001,13 @@ export function ReviewWorkspace({
               />
             )}
           </div>
+
+          {state.profileSuggestions === undefined || state.profileSuggestions === null ? null : (
+            <ReviewProfileSuggestionsPrompt
+              pending={state.profileSuggestions.pending}
+              onOpenProfile={onOpenProfile}
+            />
+          )}
 
           {/* The gate lives in the footer: its blocker line, actions and Details stay on screen
               however long the queue above them grows. */}

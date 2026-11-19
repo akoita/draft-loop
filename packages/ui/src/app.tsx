@@ -2930,6 +2930,7 @@ export function App({
         ? {}
         : { onLoadRunRequirementEvidence: loadRunRequirementEvidence })}
       {...(homeAvailable ? { onOpenHome: goHome } : {})}
+      {...(profileCapabilities === null ? {} : { onOpenProfile: openProfileScreen })}
       providerSignInReadiness={
         // A host without credential reads holds the provider keys itself (#2866).
         activePort.getCredentialStatus === undefined
