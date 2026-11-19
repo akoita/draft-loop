@@ -65,6 +65,16 @@ export function isPublicRequest(routeUrl: string | undefined, path: string): boo
 }
 
 /**
+ * Vite names assets by their content hash, so they never change. Pages must be revalidated, and
+ * the public pages' images and styles may change with a release, so they keep for an hour.
+ */
+export function cacheControl(path: string): string {
+  if (path.includes("/assets/")) return "public, max-age=31536000, immutable";
+  if (/\.(?:webp|png|svg|ico|css|js)$/u.test(path)) return "public, max-age=3600";
+  return "no-cache";
+}
+
+/**
  * Serves the built web screen (`apps/web`) at `/`, on the same origin as the API (ADR 0011, D9).
  * Its files hold no data; everything the owner sees comes from `/v1` with the owner token.
  */
@@ -73,12 +83,10 @@ export async function registerWebScreen(app: FastifyInstance, root: string): Pro
     root,
     prefix: "/",
     index: ["index.html"],
+    // The build writes a Brotli and a gzip copy beside each large asset; others go uncompressed.
+    preCompressed: true,
     setHeaders(reply, path) {
-      // Vite names assets by their content hash, so only the page itself must be revalidated.
-      reply.header(
-        "cache-control",
-        path.includes("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
-      );
+      reply.header("cache-control", cacheControl(path));
     },
   });
 }
