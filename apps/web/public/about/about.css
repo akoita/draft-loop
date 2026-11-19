@@ -244,10 +244,15 @@ h3 {
   box-shadow: 0 24px 50px -28px rgba(15, 19, 25, 0.5);
 }
 
-.visual svg {
+.visual img {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.visual-loop img {
+  aspect-ratio: 6 / 5;
+  object-fit: cover;
 }
 
 .badge {
