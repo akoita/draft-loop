@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
   <title id="title">DraftLoop hosted service architecture (as built)</title>
-  <desc id="desc">The hosted service as it runs in November 2026, from ADR 0011. The web screen with the public pages, AI agents through draftloop-mcp and the desktop client reach a Fastify API on Cloud Run in Google Cloud europe-west1. The API also runs intake screening and the support assistant, and signs people in through a self-hosted Keycloak on Cloud Run that scales to zero. It queues run ids for the worker, a Cloud Run job that a scheduler sweep also starts, which drafts and reviews through the model gateway. The gateway sends only approved context to the Anthropic author on Vertex AI in the EU, with a recorded fallback, and to the OpenAI critic. Data lives in Cloud SQL Postgres with pgvector, row-level security per tenant, the run queue, backups and point-in-time recovery, and in Cloud Storage with a customer-managed key. The page fetcher is the only part that reaches public job pages. Monitoring raises alerts and an uptime check. Brevo sends invites, waitlist confirmations and sign-in mail, and Stripe sells credit packs. A load balancer with Cloud Armor, tracing and Business single sign-on are planned. On your machine, the self-hosted server runs the same images with Docker Compose, and the CLI imports old desktop workspaces.</desc>
+  <desc id="desc">The hosted service as it runs in November 2026, from ADR 0011. The web screen with the public pages, AI agents through draftloop-mcp reach a Fastify API on Cloud Run in Google Cloud europe-west1. The API also serves the operator screen, runs intake screening and the support assistant, and signs people in through a self-hosted Keycloak on Cloud Run that scales to zero, with a passkey or one-time code as second factor where required. It queues run ids for the worker, a Cloud Run job that a scheduler sweep also starts, which drafts and reviews through the model gateway. The gateway sends only approved context to the Anthropic author on Vertex AI in the EU, with a recorded fallback, and to the OpenAI critic, which can switch once to a recorded fallback critic. Data lives in Cloud SQL Postgres with pgvector, row-level security per tenant, the run queue, backups and point-in-time recovery, and in Cloud Storage with a customer-managed key. The page fetcher is the only part that reaches public job pages. Monitoring raises alerts and an uptime check. Brevo sends invites, waitlist confirmations and sign-in mail, and Stripe sells credit packs. A separate operator app, a load balancer with Cloud Armor and Business single sign-on are planned. On your machine, the self-hosted server runs the same images with Docker Compose, and the CLI imports old desktop workspaces.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1319"/>
@@ -35,23 +35,19 @@
 <text x="48" y="304" font-size="17" font-weight="700" fill="#f2fbf8">AI agents</text>
 <text x="48" y="326" font-size="14" fill="#9aa7b4">draftloop-mcp over /v1</text>
 <text x="48" y="345" font-size="14" fill="#9aa7b4">Claude Code, Codex</text>
-<rect x="30" y="372" width="210" height="80" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
-<text x="48" y="400" font-size="17" font-weight="700" fill="#f2fbf8">Desktop client</text>
-<text x="48" y="422" font-size="14" fill="#9aa7b4">Electron window over</text>
-<text x="48" y="441" font-size="14" fill="#9aa7b4">the web screen</text>
 <rect x="262" y="120" width="640" height="512" rx="22" fill="none" stroke="#2fd0b8" stroke-width="1.5" stroke-dasharray="10 6" opacity="0.7"/>
 <text x="298" y="148" font-size="14" fill="#6ae3cf" font-weight="700" letter-spacing="2">GOOGLE CLOUD</text>
 <text x="440" y="148" font-size="14" fill="#c6d1dc">· europe-west1</text>
 <rect x="282" y="160" width="290" height="100" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
 <text x="300" y="188" font-size="17" font-weight="700" fill="#f2fbf8">API</text>
 <text x="300" y="210" font-size="14" fill="#9aa7b4">Fastify /v1 · Cloud Run</text>
-<text x="300" y="229" font-size="14" fill="#9aa7b4">Web screen and public pages</text>
+<text x="300" y="229" font-size="14" fill="#9aa7b4">Web screen, operator screen</text>
 <text x="300" y="248" font-size="14" fill="#9aa7b4">Screening, support assistant</text>
 <rect x="592" y="160" width="290" height="100" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
 <text x="610" y="188" font-size="17" font-weight="700" fill="#f2fbf8">Sign-in (OIDC)</text>
 <text x="610" y="210" font-size="14" fill="#9aa7b4">Keycloak on Cloud Run</text>
-<text x="610" y="229" font-size="14" fill="#9aa7b4">Invite only, scales to zero</text>
-<text x="610" y="248" font-size="14" fill="#9aa7b4">Its own database on Cloud SQL</text>
+<text x="610" y="229" font-size="14" fill="#9aa7b4">Invite only, passkey or OTP</text>
+<text x="610" y="248" font-size="14" fill="#9aa7b4">Scales to zero, own database</text>
 <rect x="282" y="280" width="290" height="100" rx="12" fill="#1d232c" stroke="#2fd0b8" stroke-width="1.5"/>
 <text x="300" y="308" font-size="17" font-weight="700" fill="#f2fbf8">Worker</text>
 <text x="300" y="330" font-size="14" fill="#9aa7b4">Cloud Run job, 10-minute sweep</text>
@@ -79,7 +75,7 @@
 <text x="610" y="548" font-size="17" font-weight="700" fill="#f2fbf8">Page fetcher</text>
 <text x="722" y="548" font-size="14" fill="#9aa7b4">one approved hop</text>
 <rect x="282" y="578" width="600" height="40" rx="10" fill="#1d232c" stroke="#f0b53c" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="300" y="603" font-size="14" fill="#c6d1dc"><tspan font-weight="700" fill="#f2fbf8">Planned:</tspan> load balancer with Cloud Armor, tracing, Business SSO</text>
+<text x="300" y="603" font-size="14" fill="#c6d1dc"><tspan font-weight="700" fill="#f2fbf8">Planned:</tspan> separate operator app, load balancer with Cloud Armor, Business SSO</text>
 <text x="940" y="148" font-size="14" fill="#9aa7b4" font-weight="700" letter-spacing="2">EXTERNAL</text>
 <rect x="930" y="160" width="240" height="80" rx="12" fill="#1d232c" stroke="#3b4652" stroke-width="1.5"/>
 <text x="948" y="188" font-size="17" font-weight="700" fill="#f0b53c">Anthropic author</text>
@@ -87,7 +83,7 @@
 <text x="948" y="229" font-size="14" fill="#9aa7b4">Fallback route recorded</text>
 <rect x="930" y="256" width="240" height="64" rx="12" fill="#1d232c" stroke="#3b4652" stroke-width="1.5"/>
 <text x="948" y="284" font-size="17" font-weight="700" fill="#6ae3cf">OpenAI critic</text>
-<text x="948" y="306" font-size="14" fill="#9aa7b4">Route recorded per call</text>
+<text x="948" y="306" font-size="14" fill="#9aa7b4">Fallback critic recorded</text>
 <rect x="930" y="336" width="240" height="80" rx="12" fill="#1d232c" stroke="#3b4652" stroke-width="1.5"/>
 <text x="948" y="364" font-size="17" font-weight="700" fill="#f2fbf8">Brevo email</text>
 <text x="948" y="386" font-size="14" fill="#9aa7b4">Invites, waitlist confirmation</text>
@@ -101,7 +97,6 @@
 <g stroke="#6f7d8e" stroke-width="2" fill="none" marker-end="url(#arrow)">
   <path d="M240 210 L278 210"/>
   <path d="M240 316 L278 240"/>
-  <path d="M240 412 L300 262"/>
   <path d="M572 210 L588 210"/>
   <path d="M427 260 L427 276"/>
   <path d="M572 330 L588 330"/>

@@ -57,7 +57,7 @@ sections or source locators where possible.
 A critic can find a problem but cannot establish truth. The candidate's
 evidence and decisions stay authoritative.
 
-![Evaluator–optimizer loop: canonical inputs feed the author draft, a structured artifact with evidence links is evaluated by an independent critic and deterministic checks against a visible rubric, accepted findings drive a bounded revision, and the loop stops when stable, on budget exhaustion, or on early user review before human approval and local export.](../assets/evaluator-optimizer-loop.svg)
+![Evaluator–optimizer loop: canonical inputs feed the author draft, a structured artifact with evidence links is evaluated by an independent critic and deterministic checks against a visible rubric, accepted findings drive a bounded revision, and the loop stops when stable, on budget exhaustion, or on early user review before human approval and export.](../assets/evaluator-optimizer-loop.svg)
 
 ## Planning the application
 

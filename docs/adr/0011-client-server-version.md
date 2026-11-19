@@ -75,7 +75,7 @@ Cloud Run (D14). The same images run self-hosted, and the local MCP server
 [architecture overview](../architecture/overview.md#ways-to-run) describes
 what runs now.
 
-![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp and the desktop client reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a load balancer with Cloud Armor, tracing and Business SSO are planned; the self-hosted server runs the same images on your machine.](../assets/hosted-service-architecture.svg)
+![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a separate operator app, a load balancer with Cloud Armor and Business SSO are planned; the self-hosted server runs the same images on your machine.](../assets/hosted-service-architecture.svg)
 
 ### D1. Topology: a modular monolith with background workers
 
@@ -736,7 +736,8 @@ The existing offline fixture mode keeps local runs free of provider calls.
   - **Built (November 2026):** log-based metrics, a dashboard per
     environment, an uptime check on `/v1/health`, and alerts on failed runs,
     spend, credit margin, error spikes, security lines and feedback notes.
-    A daily content-free quality digest feeds the
+    Content-free run traces, which the operator can open per run, and a
+    daily quality digest feed the
     [outer loop](../architecture/outer-loop.md).
 - **Offline evaluation is the change gate.** The `evaluations` package and
   the manual-parity rubric run before any prompt, model or orchestration

@@ -30,9 +30,9 @@ One set of packages runs in four ways, which differ only at their adapters
 | Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
 | Desktop client ([guide](../reference/cli-and-desktop.md#desktop-client)) | Alpha (v0.9.0) | An Electron window over a self-hosted server's own web screen, and the hosted service's once it opens | None of its own: the server's storage and keys; the owner token is remembered in the system keychain | The server's |
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
-| Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp`, the desktop client | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
+| Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp` | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), agents through draftloop-mcp over the server's API, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service run the same images. Only their
 adapters differ: keys from local files or Secret Manager, files on disk or
@@ -50,7 +50,6 @@ flowchart LR
 
   subgraph clients [Clients]
     web["Web screen<br/>apps/web"]
-    desk["Desktop client<br/>apps/desktop-client"]
     agent["Agent<br/>apps/mcp"]
     cli["CLI<br/>apps/cli"]
   end
@@ -79,8 +78,8 @@ flowchart LR
   idp["Sign-in<br/>Keycloak (OIDC)"]
   mail["Email<br/>packages/mail"]
 
-  person --> web & desk & agent & cli
-  web & desk & agent -->|HTTPS /v1| api
+  person --> web & agent & cli
+  web & agent -->|HTTPS /v1| api
   web -->|sign in| idp
   api -->|verify tokens, manage accounts| idp
   api --> support
@@ -197,7 +196,7 @@ engine and on adapters behind ports, which depend on the domain.
 
 ```mermaid
 flowchart TB
-  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · desktop-client · cli"]
+  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · cli"]
   usecases["<b>Use cases</b><br/>application · ui · review-state · support"]
   engine["<b>Engine</b><br/>orchestrator · ingestion · evidence<br/>validation · evaluations · artifacts · rendering"]
   adapters["<b>Adapters behind ports</b><br/>providers · model-gateway · storage<br/>storage-postgres · storage-gcs · run-queue · embeddings · mail"]
@@ -298,8 +297,9 @@ the [threat model](../security/threat-model.md) and
 
 ## Current limitations
 
-- The hosted service is an invite-only beta. It has no load balancer, Cloud
-  Armor or tracing yet (ADR 0011, D14 and D16).
+- The hosted service is an invite-only beta. It has no load balancer or Cloud
+  Armor yet (ADR 0011, D14), and operator work still runs inside the member
+  app until the separate operator app ships (#3142).
 - Runs send full source by default. The requirement-evidence map ranks
   evidence with a local embedding model and keywords, and picks the evidence
   a capped run adds ([requirement-evidence map](drafting-and-review.md#requirement-evidence-map)).
