@@ -72,19 +72,25 @@ Latest, so it never takes that place from a desktop release.
 
 ## What runs where
 
-| Part         | Runs as                                     | Notes                                                                             |
-| ------------ | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| API          | Cloud Run service                           | Scales to zero; serves the `/v1` API and the web screen at `/`                    |
-| Page fetcher | Cloud Run service, internal ingress         | Fetches approved job pages for the API; no database, secret or candidate material |
-| Worker       | Cloud Run job                               | Drains the queue, then exits (D4)                                                 |
-| Migrations   | Cloud Run job, from the worker image        | Runs before each deploy as the schema owner                                       |
-| Database     | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only, backups and point-in-time recovery                               |
-| Objects      | One Cloud Storage bucket per environment    | Encrypted with a customer-managed key                                             |
-| Secrets      | Secret Manager in `europe-west1`            | Owner token, the critic's OpenAI EU key, migration login                          |
+![Hosted service as built: clients reach the API on Cloud Run, which signs people in through a self-hosted Keycloak, screens intake, answers the support assistant and queues ids for the worker; the worker runs through the model gateway; data lives in Cloud SQL Postgres with pgvector and Cloud Storage; Brevo sends email and Stripe sells credit packs.](../assets/hosted-service-architecture.svg)
 
-Until the hosted identity provider is running, staging uses owner-token mode.
-The owner opens the web screen at the API's address and signs in with the
-owner token from Secret Manager. The tab keeps the token until it closes.
+| Part | Runs as | Notes |
+| --- | --- | --- |
+| API | Cloud Run service | Scales to zero; serves the `/v1` API, the web screen at `/` and the public pages |
+| Sign-in | Keycloak on a Cloud Run service | Scales to zero; its own database on the same Cloud SQL instance; self-registration closed, so only invited people get an account |
+| Page fetcher | Cloud Run service, internal ingress | Fetches approved job pages for the API; no database, secret or candidate material |
+| Worker | Cloud Run job | Drains the queue, then exits (D4). The API starts it after each queued run, and a Cloud Scheduler sweep every 10 minutes |
+| Migrations | Cloud Run job, from the worker image | Runs before each deploy as the schema owner |
+| Database | Cloud SQL for PostgreSQL 16 with `pgvector` | Private IP only; automated backups, point-in-time recovery and a backup before each deploy |
+| Objects | One Cloud Storage bucket per environment | Encrypted with a customer-managed key |
+| Secrets | Secret Manager in `europe-west1` | Owner token, provider keys, the mail key, Keycloak's secrets, migration login |
+| Monitoring | Cloud Logging and Monitoring | A dashboard, an uptime check on `/v1/health`, and the alerts in [Alert lines](#alert-lines) |
+| Email | Brevo, in the EU | Invites, waitlist confirmation, inactivity warnings, maintenance notices, and Keycloak's sign-in mail over SMTP |
+
+Staging and production run in sign-in mode
+([smoke in sign-in mode](#smoke-in-sign-in-mode)). In owner-token mode, the
+owner opens the web screen at the API's address and signs in with the owner
+token from Secret Manager. The tab keeps the token until it closes.
 
 To replace the owner token on a deployment, add a new version of its secret
 in Secret Manager, then deploy the API again. Cloud Run sends traffic to the new
@@ -92,12 +98,14 @@ revision only once it is ready, so no request is refused for downtime. Disable
 the old version afterwards, and sign in again as the
 [self-hosted guide](self-hosted.md#replace-the-owner-token) lists.
 
-Each part has its own service account with only the access it needs:
+Each part has its own service account with only the access it needs. A
+firewall policy drops and logs everything else:
 
-| Part         | Network reach                                                                                                                                             |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Worker       | Google APIs and the OpenAI EU endpoint, nothing else                                                                                                      |
-| API          | No internet egress: Google APIs, the page fetcher, and Vertex AI when the model screener is on                                                            |
+| Part | Network reach |
+| --- | --- |
+| Worker | Google APIs, the critic's OpenAI endpoint and Brevo's API; the direct Claude API only where its fallback is on |
+| API | Google APIs, the page fetcher, Keycloak, and Vertex AI for screening and the support assistant. Brevo's API where a sender is set, Stripe where payments are on, and the direct Claude API only where its fallback is on |
+| Sign-in | Its database through a Cloud SQL Auth Proxy sidecar, and Brevo's SMTP relay for sign-in mail |
 | Page fetcher | The only part that reaches public web servers: port 443 only, never a private address. Its account holds no role, and only the API's identity may call it |
 
 ## Settings

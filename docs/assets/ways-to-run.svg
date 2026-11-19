@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
   <title id="title">Ways to run DraftLoop</title>
-  <desc id="desc">On your machine, three ways to run share one set of packages. The self-hosted server, recommended, runs the web screen and API, the worker, the page fetcher, and Postgres with files on disk under Docker Compose. The desktop client alpha is an Electron window over a server's own web screen, with a remembered sign-in and no engine or provider keys of its own. The source-only CLI keeps a local SQLite workspace store and can import a v0.8 desktop workspace into the server. The server and the CLI run the shared packages: application contracts, orchestrator, domain and schemas, evidence and retrieval, checks and rendering, and the shared screens. Only approved context crosses to the model routes: Claude as author, OpenAI or another Claude model as critic, or a local model. The hosted service, in development and on staging only, runs the same server images in the EU.</desc>
+  <desc id="desc">On your machine, three ways to run share one set of packages. The self-hosted server, recommended, runs the web screen and API, the worker, the page fetcher, and Postgres with files on disk under Docker Compose. The desktop client alpha is an Electron window over a server's own web screen, with a remembered sign-in and no engine or provider keys of its own. The source-only CLI keeps a local SQLite workspace store and can import a v0.8 desktop workspace into the server. The server and the CLI run the shared packages: application contracts, orchestrator, domain and schemas, evidence and retrieval, checks and rendering, and the shared screens. Only approved context crosses to the model routes: Claude as author, OpenAI or another Claude model as critic, or a local model. The hosted service, an invite-only beta, runs the same server images in the EU.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1319"/>
@@ -145,8 +145,8 @@
 
     <!-- Hosted service -->
     <rect x="30" y="554" width="1140" height="96" rx="20" fill="#11151b" fill-opacity="0.75" stroke="#f0b53c" stroke-width="1.5" stroke-dasharray="6 6"/>
-    <text x="56" y="586" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">HOSTED SERVICE · IN DEVELOPMENT</text>
+    <text x="56" y="586" font-size="14" font-weight="700" letter-spacing="2" fill="#f0b53c">HOSTED SERVICE · INVITE-ONLY BETA</text>
     <text x="56" y="614" font-size="15" fill="#e6ebf0">The same server images in the EU, with sign-in, recorded consent and per-tenant encryption.</text>
-    <text x="56" y="636" font-size="15" fill="#9aa7b4">Staging only: it is not offered yet. On your machine, agents already reach the self-hosted server through draftloop-mcp.</text>
+    <text x="56" y="636" font-size="15" fill="#9aa7b4">Open by invitation, with a waitlist. Agents reach it, or your own server, through draftloop-mcp.</text>
   </g>
 </svg>

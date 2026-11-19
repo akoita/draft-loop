@@ -464,7 +464,14 @@ run without a profile.
 **Not the default yet.** Vector and hybrid retrieval are opt-in (see
 [retrieval mode](../reference/cli-and-desktop.md#retrieval-mode)). They remain
 evaluation components until deletion, retention, isolation, provenance and
-quality are validated.
+quality are validated. On the server their vectors live in pgvector
+([storage and tenancy](storage-and-tenancy.md)).
+
+**On by default: the requirement-evidence map.** Before the writer starts, a
+run maps each job requirement to its best evidence with a local embedding
+model, then keywords. A run over its budget or cost cap adds the map's picks
+instead of shared-word picks. A local cross-encoder can rerank the map. See
+[Requirement-evidence map](drafting-and-review.md#requirement-evidence-map).
 
 [adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md
 

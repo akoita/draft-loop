@@ -15,15 +15,25 @@ and the decisions behind this page are in
 ```mermaid
 flowchart LR
   client["Web screen, desktop client<br/>or agent"] -->|HTTPS /v1| api["API<br/>apps/api"]
+  client -->|sign in| idp["Keycloak<br/>OIDC, invite only"]
+  api -->|verify tokens, manage accounts| idp
   api -->|screen untrusted text| screen["Intake screening"]
+  api -->|guide and own account| support["Support assistant<br/>packages/support"]
   api -->|ids only| queue[("Run queue<br/>packages/run-queue")]
   api -->|one approved hop| fetcher["Page fetcher<br/>apps/page-fetcher"]
   queue --> worker["Worker<br/>apps/worker"]
   worker --> gateway["Model routes<br/>packages/model-gateway"]
+  screen & support --> gateway
   gateway -->|approved context only| models{"Claude on Vertex AI EU<br/>critic route"}
+  api & worker -->|invites and notices| mail["Email<br/>packages/mail"]
   api & worker --> pg[("Postgres<br/>row-level security")]
   api & worker --> gcs[("Cloud Storage<br/>tenant prefixes")]
 ```
+
+![Hosted service as built: clients reach the API on Cloud Run, which signs people in through a self-hosted Keycloak, screens intake, answers the support assistant and queues ids for the worker; the worker runs through the model gateway; data lives in Cloud SQL Postgres with pgvector and Cloud Storage; Brevo sends email and Stripe sells credit packs.](../assets/hosted-service-architecture.svg)
+
+How the deployment maps onto Google Cloud, with what runs where and each
+part's network reach, is in [Deploying the hosted service](../operations/server-deploy.md#what-runs-where).
 
 The service runs in one of two **auth modes**. **Owner-token mode** has one
 operator token and no organisation. **Sign-in mode** (`oidc`) resolves
@@ -48,7 +58,7 @@ the repository's `AGENTS.md`.
 
 | App                                | Owns                                                                                                                                                                                                                                                                                                                    | Never owns                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| API (`apps/api`)                   | Zod-typed `/v1` routes over `ApplicationService`, the committed OpenAPI document, request authentication, serving each request from its caller's tenant, membership and operator routes, idempotent run starts that queue the run, and the error shape                                                                  | Domain logic, storage engines, provider calls                                           |
+| API (`apps/api`)                   | Zod-typed `/v1` routes over `ApplicationService`, the committed OpenAPI document, request authentication, serving each request from its caller's tenant, membership and operator routes, idempotent run starts that queue the run, the error shape, the public pages, the support assistant and transactional email                                                                  | Domain logic, storage engines, provider calls                                           |
 | Worker (`apps/worker`)             | Claiming queued runs and resuming each from its last saved step. Requeuing a run paused by a usage or rate limit. Extracting queued briefs and deriving queued profiles. Stopping within Cloud Run's shutdown notice.                                                                                                   | Domain logic, provider calls outside the application service, job payloads with content |
 | Page fetcher (`apps/page-fetcher`) | The only runtime that reaches public web servers: one `POST /v1/fetch` hop of an approved job page per request, through the pinned fetcher. It answers the hop's status, content type, redirect target and at most one byte past intake's limit, and logs the host only. Cloud Run's IAM check decides who may call it. | A database, secrets, candidate material, text extraction, following redirects           |
 | Web screen (`apps/web`)            | The browser screen over `/v1`, served by the API on the same origin, with a client typed from the OpenAPI document                                                                                                                                                                                                      | Domain logic, imports of `apps/api` or server packages, provider calls                  |
@@ -413,8 +423,9 @@ deployment names for each key.
   runs work.
 - **The API** never drafts or reviews. Its driver resolves no key and refuses
   to build a provider client (`apiProviderOptions`), whatever its environment
-  holds. Its only model call is the opt-in screener in
-  [Intake screening](#intake-screening).
+  holds. Its own model calls are the opt-in screener in
+  [Intake screening](#intake-screening) and the support assistant
+  ([help](../features/help.md)), both on Claude Haiku.
 
 ## Run limits and usage
 
@@ -1014,6 +1025,15 @@ format. The manifest's SHA-256 is in `X-Archive-Manifest-SHA256`.
 - **Streaming.** The zip streams one file at a time, and each download logs one
   content-free line.
 
+**Readable copy.** `GET /v1/workspaces/:workspaceId/export` downloads what a
+person reads rather than how the service stores it, as `draftloop-data.zip`
+(**Download everything** on the screen). It holds a README, their documents
+under their own names, a folder per application with its job text, letters
+and exported drafts, their profile, work journal and consent history. Each
+file is built from an allow list of fields, so no storage key, checksum or
+token id appears. The same owners and admins may download it, and the same
+integrity check applies.
+
 ### Deleting a record or an organisation
 
 |                   | Delete a record                                                                                              | Delete an organisation                                                                                                                                                                                                                  |
@@ -1027,8 +1047,24 @@ format. The manifest's SHA-256 is in `X-Archive-Manifest-SHA256`.
 | Interrupted       | Calling again finishes it. A record already gone answers 404.                                                | The next call finishes it                                                                                                                                                                                                               |
 | Log               | One content-free line with the ids and counts removed                                                        | As for each change                                                                                                                                                                                                                      |
 
-Accounts at the identity provider are not deleted. A person's sign-in simply no
-longer resolves to an organisation.
+Deleting a record or an organisation leaves accounts at the identity provider,
+whose sign-in simply no longer resolves to an organisation. Deleting one's own
+account removes it too, as the next section describes.
+
+### Deleting one's own account
+
+`DELETE /v1/account` lets a person alone in their organisation delete
+everything, sign-in included (`account-deletion-routes.ts`).
+
+- **Who.** Only the person, signed in themselves. An agent token answers 403.
+  An operator answers 409 `operator_account`, and an organisation with other
+  members answers 409 `organisation_has_members`.
+- **Confirmation.** Their email address, typed back as `confirm`.
+- **Order.** The organisation is erased as above, which frees its beta place.
+  The API then deletes the Keycloak account through a client that holds only
+  `manage-users` in the sign-in realm (`identity-accounts.ts`).
+- **Partial failure.** If the sign-in cannot be deleted, the answer says
+  `kept` and the operator is told. Signing in again finds no account.
 
 Record erasure has two storage steps (`@draft-loop/storage/record-erasure`):
 

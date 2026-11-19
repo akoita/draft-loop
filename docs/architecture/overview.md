@@ -30,9 +30,9 @@ One set of packages runs in four ways, which differ only at their adapters
 | Self-hosted server ([guide](../operations/self-hosted.md)) | Main local option | The web screen in a browser, the CLI's `server import`, agents through `draftloop-mcp` ([agent channel](../reference/agent-channel.md)) | Postgres with pgvector and files in Docker volumes; keys from local files | `direct` Claude and OpenAI routes, or an OpenAI-compatible local model |
 | Desktop client ([guide](../reference/cli-and-desktop.md#desktop-client)) | Alpha (v0.9.0) | An Electron window over a self-hosted server's own web screen, and the hosted service's once it opens | None of its own: the server's storage and keys; the owner token is remembered in the system keychain | The server's |
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
-| Hosted service | In development, staging only | The web screen | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and OpenAI's EU endpoint through the model gateway |
+| Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp`, the desktop client | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service run the same images. Only their
 adapters differ: keys from local files or Secret Manager, files on disk or
@@ -57,6 +57,7 @@ flowchart LR
 
   subgraph server [DraftLoop server]
     api["API<br/>apps/api"]
+    support["Support assistant<br/>packages/support"]
     queue[("Run queue<br/>packages/run-queue")]
     worker["Worker<br/>apps/worker"]
     fetcher["Page fetcher<br/>apps/page-fetcher"]
@@ -75,9 +76,16 @@ flowchart LR
 
   models{{"Author: Claude<br/>Critic: another model"}}
   jobpage[(Public job page)]
+  idp["Sign-in<br/>Keycloak (OIDC)"]
+  mail["Email<br/>packages/mail"]
 
   person --> web & desk & agent & cli
   web & desk & agent -->|HTTPS /v1| api
+  web -->|sign in| idp
+  api -->|verify tokens, manage accounts| idp
+  api --> support
+  support -->|guide and own account only| gw
+  api & worker -->|invites and notices| mail
   cli -->|server import| api
   api --> app
   api -->|ids only| queue
@@ -95,6 +103,11 @@ flowchart LR
   screens (`packages/ui`), the desktop client is an Electron shell over the
   server's own web screen, and agents reach the API through the
   `draftloop-mcp` server ([agent channel](../reference/agent-channel.md)).
+  The API also serves the public pages: the landing page, `/about/`,
+  `/guide/` (each with a French version) and `/showcase/`.
+- **Sign-in** is Keycloak over OIDC in sign-in mode, invite only on the
+  hosted service. The API holds a narrow admin client that may only prepare an
+  invited person's account and delete a person's own account.
 - **The API** is a Fastify adapter over the application contracts, with
   Zod-typed `/v1` routes and a committed OpenAPI document. It saves a run and
   queues only its ids.
@@ -105,6 +118,12 @@ flowchart LR
   candidate material.
 - **Model routes** are the only way out to a model provider, and every call
   records its company, model and route.
+- **The support assistant** answers from the user guide and the caller's own
+  account, under per-member and daily cost limits with a runtime switch
+  ([help](../features/help.md)).
+- **Email** goes through `packages/mail` (Brevo on the hosted service):
+  beta invites, waitlist confirmation, inactivity warnings and planned
+  maintenance notices.
 
 Detail: [Hosted service](hosted-service.md).
 
@@ -179,10 +198,10 @@ engine and on adapters behind ports, which depend on the domain.
 ```mermaid
 flowchart TB
   apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · desktop-client · cli"]
-  usecases["<b>Use cases</b><br/>application · ui · review-state"]
+  usecases["<b>Use cases</b><br/>application · ui · review-state · support"]
   engine["<b>Engine</b><br/>orchestrator · ingestion · evidence<br/>validation · evaluations · artifacts · rendering"]
-  adapters["<b>Adapters behind ports</b><br/>providers · model-gateway · storage<br/>storage-postgres · storage-gcs · run-queue · embeddings"]
-  core["<b>Domain</b><br/>domain · schemas · security"]
+  adapters["<b>Adapters behind ports</b><br/>providers · model-gateway · storage<br/>storage-postgres · storage-gcs · run-queue · embeddings · mail"]
+  core["<b>Domain</b><br/>domain · schemas · security · user-guide"]
   apps --> usecases
   usecases --> engine
   usecases --> adapters
@@ -204,7 +223,10 @@ flowchart TB
 | `storage` | Storage ports, the SQLite workspace store and the portable candidate knowledge base (CKB) |
 | `storage-postgres`, `storage-gcs` | The server's implementations of those ports on Postgres and Cloud Storage |
 | `run-queue` | The durable run, brief and profile queues on Postgres (pg-boss), with ids-only payloads |
-| `embeddings` | Local text-embedding runtimes and the pinned model manifest |
+| `embeddings` | Local text-embedding and cross-encoder runtimes and their pinned model manifests |
+| `mail` | The transactional email port, its Brevo adapter and the sender settings |
+| `support` | The support assistant: its answering loop over a model port, its read tools, limits and golden set |
+| `user-guide` | The user guide's text in each language, its word search and its Markdown form |
 | `ui` | The screens the desktop and the web share, and the capability port they reach their host through |
 | `review-state` | The host-side projection of a run into the shared screens' review state |
 
@@ -248,6 +270,11 @@ Detail: [Storage and tenancy](storage-and-tenancy.md).
   time.
 - **Nothing leaves without approval.** Exports need an approved run, and
   DraftLoop never submits applications, sends messages or publishes documents.
+- **The API never drafts or reviews.** Its only model calls are intake
+  screening and the support assistant; runs, briefs and profiles go to the
+  worker.
+- **Deleting an account deletes its sign-in.** A person alone in their
+  organisation erases it, and the API then deletes their Keycloak account.
 - **The desktop client holds no engine or keys.** It loads only its server's
   origin, sends other links to the system browser, and runs the page sandboxed
   without Node.js access.
@@ -266,12 +293,17 @@ the [threat model](../security/threat-model.md) and
 | [Drafting and review](drafting-and-review.md) | The evaluator–optimizer loop, grounding checks, critique, stopping decisions and rendering |
 | [Memory model](memory.md) | Every kind of memory a run uses, who writes and reads it, and the rules they follow |
 | [Runtime and trust](runtime-and-trust.md) | The author–critic loop, model profiles, workflow states, provider and export controls |
+| [Outer loop](outer-loop.md) | How production runs are digested daily into quality patterns and proposed fixes |
 | [Client-server delivery plan](client-server-delivery-plan.md) | How the hosted service is being delivered |
 
 ## Current limitations
 
-- The hosted service runs on staging only, and production is not open.
-- Local vector and hybrid retrieval remain evaluation components; runs use
-  lexical retrieval over the selected source versions.
+- The hosted service is an invite-only beta. It has no load balancer, Cloud
+  Armor or tracing yet (ADR 0011, D14 and D16).
+- Runs send full source by default. The requirement-evidence map ranks
+  evidence with a local embedding model and keywords, and picks the evidence
+  a capped run adds ([requirement-evidence map](drafting-and-review.md#requirement-evidence-map)).
+  Its use by the writer and the critic, reranking and the opt-in vector and
+  hybrid retrieval modes stay off by default.
 - Rendering QA is bounded: OOXML cannot establish true office pagination or
   visual clipping, and the artifact model has no structured links or images.

@@ -29,12 +29,12 @@ candidate decides what to approve and export.
 | [Self-hosted server](#quick-install-with-docker) | Recommended    | The web screen, API, worker and database on your own machine with Docker. Your files stay on your disk.                                                                                          |
 | [Desktop app](#desktop-app)                      | Alpha (v0.9.0) | DraftLoop's desktop version beside the web screen, for your self-hosted server and the hosted service once it opens. Workspaces from the retired v0.8 alpha move to the server with one command. |
 | [CLI](#developer-quick-start)                    | Source only    | Every workflow step from a terminal, over the same packages.                                                                                                                                     |
-| Hosted service                                   | In development | The same server in the EU with sign-in and consent ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet.                                                                  |
+| Hosted service | Invite-only beta | The same server in the EU with sign-in and consent ([architecture](docs/architecture/hosted-service.md)). It opens by invitation, with a waitlist. |
 
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
 
-[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service in development runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
+[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the desktop client alpha over the server's web screen and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
 ## How DraftLoop works
 
@@ -277,7 +277,8 @@ Runs read only the source versions a workspace selects; see
 - The hosted service is designed to store material only with recorded
   consent, in the EU with per-tenant encryption, and to send providers only
   approved material under zero-retention terms
-  ([ADR 0011](docs/adr/0011-client-server-version.md)). It is not offered yet.
+  ([ADR 0011](docs/adr/0011-client-server-version.md)). It is open as an
+  invite-only beta.
 - DraftLoop prepares artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

@@ -362,7 +362,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
 
 **Where it stands:**
 
-- **Staging runs** every server release; production is held by the owner.
+- **Releases** go to staging, then to production, which runs as an
+  invite-only beta with a waitlist.
 - **Cost:** hosted parity runs matched on quality and failed on cost. With the
   prompt cache working, two rounds cost US$3.64 (#1357); a complete run on the
   cost fixes is still to measure (#1597).
@@ -370,8 +371,8 @@ cost per run recorded (#1357). Phase 0 (#1347) merged the same day.
   references. The default Balanced draft is not sendable and the Standard
   draft is close, so a quality sprint followed (see
   [manual parity](evaluation/manual-parity.md)).
-- **Sign-in:** staging still uses the owner token until Keycloak is hosted;
-  consent and entitlements are enforced in sign-in mode only.
+- **Sign-in:** staging and production run in sign-in mode on a self-hosted
+  Keycloak, where consent and entitlements are enforced.
 - **Coach and HR use** (#3040, under #1360): several candidates per account
   already work, with assignment, a consent ledger, export and erasure per
   candidate. Before a coach stores real candidates' material, the rollup's P0
