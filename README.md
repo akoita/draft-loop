@@ -34,7 +34,7 @@ candidate decides what to approve and export.
 All of them run the same packages and the same author–critic loop, and differ
 only at their adapters; see the [architecture overview](docs/architecture/overview.md#ways-to-run).
 
-[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), agents through draftloop-mcp over the server's API, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
+[![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](docs/assets/ways-to-run.svg)](https://raw.githubusercontent.com/akoita/draft-loop/main/docs/assets/ways-to-run.svg)
 
 ## How DraftLoop works
 

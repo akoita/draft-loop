@@ -41,7 +41,7 @@ The legal and privacy texts are out of scope.
 
 ```mermaid
 flowchart LR
-    B[Browser] -->|bearer token| API
+    B[Browser or<br/>desktop client] -->|bearer token| API
     A[Agent<br/>draftloop-mcp] -->|agent token or grant,<br/>scoped routes only| API
     O[Operator] -->|operator sign-in with<br/>second factor, or owner token| API
     V[Visitor] -->|no credential:<br/>waitlist, crash report| API

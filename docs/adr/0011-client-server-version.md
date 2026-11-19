@@ -75,7 +75,7 @@ Cloud Run (D14). The same images run self-hosted, and the local MCP server
 [architecture overview](../architecture/overview.md#ways-to-run) describes
 what runs now.
 
-![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a separate operator app, a load balancer with Cloud Armor and Business SSO are planned; the self-hosted server runs the same images on your machine.](../assets/hosted-service-architecture.svg)
+![Hosted service as built: the web screen with the public pages, agents through draftloop-mcp reach a Fastify API on Cloud Run in europe-west1; the API screens intake, answers the support assistant and signs people in through a self-hosted Keycloak on Cloud Run; the worker, a Cloud Run job, runs queued work through the model gateway, which sends approved context to the Anthropic author on Vertex AI in the EU and the OpenAI critic; data lives in Cloud SQL Postgres with pgvector and in Cloud Storage; Brevo sends email and Stripe sells credit packs; a separate operator app, a load balancer with Cloud Armor and Business SSO are planned; the self-hosted server runs the same images on your machine, with the Electron desktop client over it.](../assets/hosted-service-architecture.svg)
 
 ### D1. Topology: a modular monolith with background workers
 

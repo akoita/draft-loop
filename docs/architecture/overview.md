@@ -32,7 +32,7 @@ One set of packages runs in four ways, which differ only at their adapters
 | CLI | Source only | Terminal commands | A local SQLite workspace store and portable CKB | Anthropic and OpenAI SDK adapters, plus opt-in development authors |
 | Hosted service ([architecture](hosted-service.md)) | Invite-only beta in production | The web screen, agents through `draftloop-mcp` | Cloud SQL Postgres and Cloud Storage in the EU, per-tenant encryption | Claude on Vertex AI in the EU and the OpenAI critic through the model gateway, each route recorded |
 
-![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), agents through draftloop-mcp over the server's API, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
+![Ways to run DraftLoop: on your machine, the self-hosted server (web screen and API, worker, page fetcher, Postgres and files on disk), the Electron desktop client over the server's web screen, and the source-only CLI over the same shared packages; only approved context crosses to the model routes, Claude as author and OpenAI or another Claude model as critic, or a local model; the hosted service, an invite-only beta, runs the same server images in the EU.](../assets/ways-to-run.svg)
 
 The self-hosted server and the hosted service run the same images. Only their
 adapters differ: keys from local files or Secret Manager, files on disk or
@@ -50,6 +50,7 @@ flowchart LR
 
   subgraph clients [Clients]
     web["Web screen<br/>apps/web"]
+    desk["Desktop client<br/>apps/desktop-client"]
     agent["Agent<br/>apps/mcp"]
     cli["CLI<br/>apps/cli"]
   end
@@ -78,8 +79,8 @@ flowchart LR
   idp["Sign-in<br/>Keycloak (OIDC)"]
   mail["Email<br/>packages/mail"]
 
-  person --> web & agent & cli
-  web & agent -->|HTTPS /v1| api
+  person --> web & desk & agent & cli
+  web & desk & agent -->|HTTPS /v1| api
   web -->|sign in| idp
   api -->|verify tokens, manage accounts| idp
   api --> support
@@ -196,7 +197,7 @@ engine and on adapters behind ports, which depend on the domain.
 
 ```mermaid
 flowchart TB
-  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · cli"]
+  apps["<b>Apps: adapters only</b><br/>api · worker · web · page-fetcher<br/>mcp · desktop-client · cli"]
   usecases["<b>Use cases</b><br/>application · ui · review-state · support"]
   engine["<b>Engine</b><br/>orchestrator · ingestion · evidence<br/>validation · evaluations · artifacts · rendering"]
   adapters["<b>Adapters behind ports</b><br/>providers · model-gateway · storage<br/>storage-postgres · storage-gcs · run-queue · embeddings · mail"]
