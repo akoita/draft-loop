@@ -38,8 +38,11 @@ correcting, retiring, setting the usage of or confirming one fact, and quotes
 who said it and where. Accepting saves the quotes as a dated candidate
 statement in your career evidence and a new profile version citing it, with
 no model call; a reviewed profile stays reviewed. Rejecting keeps the same
-change from being suggested again. Today this works through the API; the
-page's Suggested updates box is planned (#3069).
+change from being suggested again. The page's **Suggested updates** box
+shows one card per suggestion, with the fact now and as suggested, the quote,
+who said it and where; Home's career card counts the ones waiting. Accept,
+edit the value and accept, or reject each one. The box waits while the page
+has unsaved edits, because accepting saves a new version.
 
 Usage is separate from sensitivity: usage decides where a fact may appear,
 sensitivity decides what may reach a model provider.
@@ -50,6 +53,8 @@ sensitivity decides what may reach a model provider.
   profile in demo mode with no provider call.
 - Focused tests: `packages/domain/src/fact-usage.test.ts`,
   `packages/ui/src/profile-fact-usage.test.tsx`,
+  `packages/ui/src/profile-fact-suggestions.test.tsx`,
+  `apps/web/src/fact-suggestions-bridge.test.ts`,
   `apps/api/src/profile-routes.test.ts` and
   `apps/api/src/fact-suggestion-routes.test.ts`.
 
@@ -58,6 +63,7 @@ sensitivity decides what may reach a model provider.
 | Kind   | Surface                                                                    |
 | ------ | -------------------------------------------------------------------------- |
 | Screen | Career profile page, the next-step box on the Career evidence card         |
+| Screen | Suggested updates box on the profile page, its count on Home               |
 | API    | `GET`/`PATCH /v1/workspaces/{id}/profiles/{profileId}`, `.../versions`     |
 | API    | `POST`/`GET`/`DELETE .../profiles/{profileId}/derivation`, `.../freshness` |
 | API    | `POST .../profiles/{profileId}/review`                                     |
@@ -76,6 +82,8 @@ sensitivity decides what may reach a model provider.
   outcome and read through `GET .../derivation`. The worker also logs one
   content-free line per call. The page gives no estimate before a derivation
   starts yet.
+- Nothing files suggestions yet: capture from review edits comes next
+  (#3070). A card names the application's origin but not its name yet.
 - Accepting and rejecting suggestions are people-only routes; an agent token
   cannot reach them or list suggestions yet. Every decision is recorded with
   the candidate role; coach decisions come with coach accounts.

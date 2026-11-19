@@ -71,6 +71,10 @@ import type {
   WorkspaceEvidenceMigrationResult,
 } from "./career-evidence-contract.js";
 import {
+  createFactSuggestionCapabilities,
+  type FactSuggestionCapabilities,
+} from "./fact-suggestions-capabilities.js";
+import {
   createFactUsageCapabilities,
   type FactUsageCapabilities,
 } from "./fact-usage-capabilities.js";
@@ -232,6 +236,8 @@ export interface DesktopProfileCapabilities {
   ) => Promise<ProfileFreshnessResult>;
   /** Where each fact may be used (#2259); absent on a host without usage levels. */
   readonly factUsage?: FactUsageCapabilities;
+  /** Suggested profile updates (#3069); absent on a host without them. */
+  readonly factSuggestions?: FactSuggestionCapabilities;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -555,6 +561,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   const refresh = async (): Promise<DesktopReviewState> => load();
   const applicationFolders = createApplicationFolderCapabilities(capabilityPort, unwrap);
   const factUsage = createFactUsageCapabilities(capabilityPort, unwrap);
+  const factSuggestions = createFactSuggestionCapabilities(capabilityPort, unwrap);
   const runTrace = createRunTraceCapabilities(capabilityPort, unwrap);
   const runRequirementEvidence = createRunRequirementEvidenceCapabilities(capabilityPort, unwrap);
   return {
@@ -755,6 +762,7 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       : {}),
     ...(applicationFolders === undefined ? {} : { applicationFolders }),
     ...(factUsage === undefined ? {} : { factUsage }),
+    ...(factSuggestions === undefined ? {} : { factSuggestions }),
     ...(runTrace === undefined ? {} : { runTrace }),
     ...(runRequirementEvidence === undefined ? {} : { runRequirementEvidence }),
     ...(capabilityPort.hasCapability("application.delete")

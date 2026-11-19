@@ -5,7 +5,7 @@ import type {
 } from "@draft-loop/domain";
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
 import { plural, t } from "@lingui/core/macro";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
@@ -29,6 +29,7 @@ import {
   type ProfileDerivationUsage,
   profileDerivationUsageSummary,
 } from "./profile-derivation-usage.js";
+import { ProfileFactSuggestions, useProfileFactSuggestions } from "./profile-fact-suggestions.js";
 import {
   FactUsageSelect,
   factUsageExplanation,
@@ -788,6 +789,14 @@ export function ProfileWorkspace({
   );
   const [providerTransmissionApproved, setProviderTransmissionApproved] = useState(false);
   const factUsage = useProfileFactUsage(workspaceId, capabilities.factUsage);
+  const suggestionSavedRef = useRef<() => void>(() => undefined);
+  const onSuggestionSaved = useCallback(() => suggestionSavedRef.current(), []);
+  const factSuggestions = useProfileFactSuggestions(
+    workspaceId,
+    loadedProfileId,
+    capabilities.factSuggestions,
+    onSuggestionSaved,
+  );
   const [fullExtraction, setFullExtraction] = useState(false);
   const [sourceReuse, setSourceReuse] = useState<{
     readonly profileId: string;
@@ -1303,6 +1312,17 @@ export function ProfileWorkspace({
     });
   };
 
+  // An accepted suggestion saved a new version: show it, as a save does.
+  suggestionSavedRef.current = () => {
+    if (loadedProfileId === null) return;
+    const id = loadedProfileId;
+    void withBusy(async () => {
+      const refreshed = await refresh(id);
+      refreshCatalog();
+      return refreshed;
+    });
+  };
+
   const save = (): void => {
     if (!editable || record === null) return;
     void withBusy(async () => {
@@ -1430,6 +1450,13 @@ export function ProfileWorkspace({
         <p className="profile-usage-error" role="alert">
           {factUsage.error}
         </p>
+      )}
+      {record === null ? null : (
+        <ProfileFactSuggestions
+          state={factSuggestions}
+          facts={record.facts}
+          disabled={busy || draftFacts !== record.facts || draftIssues !== record.issues}
+        />
       )}
       {record === null ? null : (
         <ProfileDetails

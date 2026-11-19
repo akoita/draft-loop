@@ -100,6 +100,10 @@ import { safeKnowledgeBaseDisplayName } from "./knowledge.js";
 import type { DesktopApplicationCapabilities, DesktopProfileCapabilities } from "./native.js";
 import { NewApplicationDialog } from "./new-application-form.js";
 import {
+  ProfileSuggestionsNote,
+  usePendingFactSuggestionCount,
+} from "./profile-fact-suggestions.js";
+import {
   loadProfileFreshness,
   type ProfileFreshnessPresentation,
   profileFreshnessPresentation,
@@ -711,6 +715,8 @@ export interface HomeViewProps {
   readonly runningApplicationId?: string | null;
   /** The profile freshness line (up to date, update available, review pending, not generated). */
   readonly profileFreshness?: ReactNode;
+  /** The count of suggested profile updates waiting for the person (#3069). */
+  readonly profileSuggestions?: ReactNode;
   /** The workspace-level settings: model pair, writing policy. */
   readonly settings?: ReactNode;
   /** Present when the host can create applications. */
@@ -764,6 +770,7 @@ export function HomeView({
   profileGeneration = null,
   runningApplicationId = null,
   profileFreshness,
+  profileSuggestions,
   settings,
   onNewApplication,
   onImportApplication,
@@ -873,6 +880,7 @@ export function HomeView({
               children: (
                 <>
                   <p className="home-card-copy">{profilePresentation.description}</p>
+                  {profileSuggestions}
                   {profileGeneration === null ? (
                     profileFreshness
                   ) : (
@@ -1036,6 +1044,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const [profile, setProfile] = useState<HomeProfileStatus>({ kind: "loading" });
   const [reviewedProfileId, setReviewedProfileId] = useState<string | undefined>(undefined);
+  const [homeProfileId, setHomeProfileId] = useState<string | undefined>(undefined);
   const [freshness, setFreshness] = useState<ProfileFreshnessResult | undefined>(undefined);
   const [evidence, setEvidence] = useState<CareerEvidenceStatus>({ kind: "loading" });
   const [applications, setApplications] = useState<HomeApplicationsState>({ status: "loading" });
@@ -1161,6 +1170,7 @@ export function HomeScreen({
       if (!active) return;
       setProfile(loaded.status);
       setReviewedProfileId(loaded.status.kind === "reviewed" ? loaded.profileId : undefined);
+      setHomeProfileId(loaded.profileId);
     });
     return () => {
       active = false;
@@ -1181,6 +1191,12 @@ export function HomeScreen({
       active = false;
     };
   }, [workspaceId, reviewedProfileId, evidenceRevision]);
+
+  const suggestionCount = usePendingFactSuggestionCount(
+    profileRef.current.factSuggestions,
+    workspaceId,
+    homeProfileId,
+  );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `evidenceRevision` re-reads the base after the knowledge changes; the capabilities go through a ref so a new object never refetches.
   useEffect(() => {
@@ -1308,6 +1324,13 @@ export function HomeScreen({
         : {
             profileFreshness: (
               <ProfileFreshnessNote presentation={freshnessLine} onAction={onManageProfile} />
+            ),
+          })}
+      {...(suggestionCount === 0
+        ? {}
+        : {
+            profileSuggestions: (
+              <ProfileSuggestionsNote count={suggestionCount} onAction={onManageProfile} />
             ),
           })}
       {...(settings === undefined ? {} : { settings })}
