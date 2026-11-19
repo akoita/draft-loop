@@ -121,6 +121,7 @@ import { registerReviewRoutes } from "./review-routes.js";
 import { registerReviewStateRoutes } from "./review-state-routes.js";
 import { registerRunRequirementEvidenceRoutes } from "./run-requirement-evidence-routes.js";
 import { type RunSpansFor, registerRunTraceRoutes } from "./run-trace-routes.js";
+import { registerSecondFactorGate } from "./second-factor-gate.js";
 import { registerSensitivityRulesRoutes } from "./sensitivity-rules-routes.js";
 import { registerServiceNotice, type ServiceNoticeSource } from "./service-notice.js";
 import { registerSpeechModelRoutes } from "./speech-model-routes.js";
@@ -408,6 +409,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
   // Before any route, so every route registered below is counted where it calls a model.
   if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
     registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
+  }
+  if (auth.mode === "oidc" && options.directory !== undefined) {
+    const directory = options.directory;
+    registerSecondFactorGate(app, {
+      memberCount: async (organisationId) => (await directory.listMembers(organisationId)).length,
+    });
   }
 
   app.get(

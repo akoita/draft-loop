@@ -181,8 +181,12 @@ Second factors:
 
 - The owner token is a static bearer secret, so it cannot carry one.
 - A named operator's sign-in must carry one; the API reads `amr` for it.
-- The hosted realm offers TOTP but requires it of nobody else, so admin
-  actions still take a password-only sign-in (#2952).
+- An owner or admin of an organisation with other members erases an
+  organisation or a record, or downloads a record's archive or readable
+  export, only from a sign-in with a second factor in `amr`. Otherwise the
+  API answers 403 `second_factor_required` (`second-factor-gate.ts`, #2952).
+  A person alone in their organisation keeps the typed confirmation, so
+  erasing or exporting their own data never needs an authenticator.
 - The local realm (`compose/keycloak/draft-loop-local-realm.json`) has no OTP
   setting, so only the owner token reaches operator routes there.
 
@@ -226,7 +230,6 @@ issue (#2952 to #2958). Those still open:
 
 | Gap | Severity | Where it shows |
 | --- | --- | --- |
-| No second factor for organisation owners and admins, who can erase an organisation or download a record's archive | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 | Operator actions run on one shared static token, so no audit line names a person | Medium | S-004 |
 | Audit lines live only in request logs, with no longer-lived store | Medium | [Operator and admin actions](#operator-and-admin-actions) |
 

@@ -446,6 +446,7 @@ describe("operator routes", () => {
         ...member,
         operator: true,
         holdsOperatorRole: true,
+        secondFactor: true,
       });
       // Without the second factor the role still shows, so the account cannot be deleted.
       expect(passwordOnly.json().caller).toEqual({

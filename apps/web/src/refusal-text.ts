@@ -46,6 +46,10 @@ function knownText(refusal: Refusal): string | undefined {
         ? t`This application has used the ${limit} drafts, guides and research runs its credit covers.`
         : t`This application has used the drafts, guides and research runs its credit covers.`;
     }
+    case "second_factor_required":
+      return t`Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry.`;
+    case "feedback_cap_reached":
+      return t`You have sent the most notes a member can send in 24 hours. Try again later.`;
     case "service_maintenance":
       return t`Changes are paused for planned maintenance. They come back on their own; reading and downloading still work.`;
     case "not_ready":

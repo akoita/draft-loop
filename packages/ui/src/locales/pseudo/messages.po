@@ -11840,6 +11840,10 @@ msgstr ""
 msgid "You have done every step. For your next job, start again at Add the job you want."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "You have sent the most notes a member can send in 24 hours. Try again later."
+msgstr ""
+
 #: packages/ui/src/opportunity-brief-review.tsx
 #: packages/ui/src/writing-policy-editor.tsx
 msgid "You have unsaved changes. Choose Discard changes to close without saving."
@@ -12009,6 +12013,10 @@ msgstr ""
 
 #: apps/web/src/credits-model.ts
 msgid "Your organisation has no plan yet. Ask the owner to choose one."
+msgstr ""
+
+#: apps/web/src/refusal-text.ts
+msgid "Your organisation has other members, so this needs a sign-in with a second factor. Set up an authenticator in your account, sign in again and retry."
 msgstr ""
 
 #: apps/web/src/interview-guide-model.ts
