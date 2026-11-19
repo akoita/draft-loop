@@ -223,6 +223,15 @@ export interface RouteFallbackRecord {
   readonly cause: string;
 }
 
+/** The critic the run switched away from after a provider error it could not wait out (#3122). */
+export interface CriticFallbackRecord {
+  readonly fromProvider: string;
+  readonly fromModel: string;
+  readonly errorClass: string;
+  /** The round whose critic call failed first. */
+  readonly round: number;
+}
+
 export interface AgentExecution<T> {
   readonly output: T;
   readonly provider: string;
@@ -230,6 +239,8 @@ export interface AgentExecution<T> {
   readonly route?: string;
   /** Where the call came from when it fell back from its primary route, and why. */
   readonly routeFallback?: RouteFallbackRecord;
+  /** Present when a fallback critic served the call in place of the configured one. */
+  readonly criticFallback?: CriticFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum: string;
@@ -325,6 +336,8 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly route?: string;
   /** Present when the completed call fell back from its primary route. */
   readonly routeFallback?: RouteFallbackRecord;
+  /** Present when a fallback critic served the call in place of the configured one (#3122). */
+  readonly criticFallback?: CriticFallbackRecord;
   readonly modelId: string;
   readonly providerRequestId: string | null;
   readonly outputChecksum?: string;
@@ -2116,6 +2129,9 @@ export function createOrchestrationEngine(
         ...(execution.routeFallback === undefined
           ? {}
           : { routeFallback: execution.routeFallback }),
+        ...(execution.criticFallback === undefined
+          ? {}
+          : { criticFallback: execution.criticFallback }),
         modelId: execution.modelId,
         providerRequestId: execution.providerRequestId,
         outputChecksum: execution.outputChecksum,
