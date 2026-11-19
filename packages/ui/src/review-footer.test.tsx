@@ -7,6 +7,7 @@ import { ReviewWorkspace } from "./review.js";
 import {
   compactReadinessBlocker,
   footerBlocker,
+  footerStartsCollapsed,
   ReviewFooter,
   type ReviewFooterProps,
   revisionUnavailableReason,
@@ -351,6 +352,27 @@ describe("ReviewFooter", () => {
     expect(exported).toContain(">Exported to /tmp/cv.md</p>");
     expect(exported).not.toContain('class="export-path"');
     expect(exported).toMatch(/title="Export as Markdown again \(Alt\+E\)">Export again…<kbd>/u);
+  });
+
+  it("folds an exported run's docked footer to its status line, with a toggle to open it", () => {
+    const exported = render({
+      blocker: { kind: "exported", text: "Exported to /tmp/cv.md", tone: "safe" },
+    });
+    expect(exported).toContain('aria-label="approval and export" data-collapsed=""');
+    expect(exported).toMatch(
+      /<button class="gate-bar-toggle" type="button" aria-expanded="false" aria-controls="[^"]+" aria-label="Show approval and export controls"/u,
+    );
+    const bodyId = /aria-controls="([^"]+)"/u.exec(exported)?.[1];
+    expect(exported).toContain(`<div class="gate-bar-body" id="${bodyId}">`);
+
+    // Every other stage opens: the reviewer still has something to decide or export.
+    const approved = render({
+      blocker: { kind: "approved", text: "Approved · ready to export", tone: "safe" },
+    });
+    expect(approved).not.toContain("data-collapsed");
+    expect(approved).toContain('aria-expanded="true"');
+    expect(approved).toContain('aria-label="Hide approval and export controls"');
+    expect(footerStartsCollapsed("findings")).toBe(false);
   });
 
   it("names the chosen format and shows an estimated-length note after an export", () => {
