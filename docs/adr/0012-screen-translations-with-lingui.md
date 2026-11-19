@@ -30,7 +30,7 @@ flowchart LR
   code["Screen code: t`...`"] -->|pnpm i18n:extract| po["messages.po per locale"]
   po -->|pnpm i18n:compile| ts["messages.ts (committed)"]
   ts --> provider["ScreensI18nProvider"]
-  host["Host: web screen"] -->|locale| provider
+  host["Host: web, desktop client"] -->|locale| provider
 ```
 
 The `pseudo` locale accents every message. A development web build shows it
