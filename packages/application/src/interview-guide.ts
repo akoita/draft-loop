@@ -30,6 +30,7 @@ import {
   interviewGuideClaimSources,
   interviewGuideSentenceProblems,
 } from "./interview-guide-claims.js";
+import { closeGuidePart, keepsItsPromise } from "./interview-guide-holes.js";
 import {
   type InterviewGuideMatrix,
   type InterviewGuideNeverSayEntry,
@@ -278,20 +279,32 @@ export async function writeInterviewGuidePart(
   written.forEach((item, index) => {
     const part = (paragraph: number) =>
       checked.filter((sentence) => sentence.paragraph === paragraph);
+    // Sentences that lean on a dropped one go with it, and ordinals are renumbered (#2849).
     const keep = (parts: CheckedCoverLetterSentence[]) => {
-      const kept = parts.filter((sentence) => holds(sentence, sources.facts, neverSay));
-      dropped.push(...parts.filter((sentence) => !kept.includes(sentence)).map((s) => s.text));
-      return kept;
+      const closed = closeGuidePart(
+        parts.map((sentence) => ({
+          sentence,
+          text: sentence.text,
+          holds: holds(sentence, sources.facts, neverSay),
+        })),
+      );
+      dropped.push(...closed.dropped);
+      return closed;
     };
-    const text = keep(part(2 * index));
-    const trap = keep(part(2 * index + 1));
-    if (text.length === 0) return;
-    const cited = [...text, ...trap];
+    const written = part(2 * index);
+    const closedText = keep(written);
+    const closedTrap = keep(part(2 * index + 1));
+    // An item that lost most of its text no longer holds what its heading promises.
+    if (!keepsItsPromise(written.length, closedText.kept.length)) {
+      dropped.push(...closedText.texts, ...closedTrap.texts);
+      return;
+    }
+    const cited = [...closedText.kept, ...closedTrap.kept];
     items.push({
       section: item.section as InterviewGuideSection,
       heading: item.heading,
-      text: text.map((sentence) => sentence.text).join(" "),
-      ...(trap.length === 0 ? {} : { trap: trap.map((sentence) => sentence.text).join(" ") }),
+      text: closedText.texts.join(" "),
+      ...(closedTrap.texts.length === 0 ? {} : { trap: closedTrap.texts.join(" ") }),
       factIds: [
         ...new Set(
           cited.flatMap((sentence) => sentence.factIds).filter((id) => !id.startsWith("gap_")),
