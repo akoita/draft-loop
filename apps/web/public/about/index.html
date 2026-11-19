@@ -16,7 +16,11 @@
     />
     <meta property="og:type" content="website" />
     <link rel="icon" href="../showcase/mark.svg" type="image/svg+xml" />
+    <link rel="alternate" hreflang="en" href="/about/" />
+    <link rel="alternate" hreflang="fr" href="/about/fr/" />
+    <link rel="alternate" hreflang="x-default" href="/about/" />
     <link rel="stylesheet" href="about.css" />
+    <script src="about.js" defer></script>
   </head>
   <body>
     <header class="top">
@@ -31,7 +35,13 @@
           <a href="#principles">Principles</a>
           <a href="#evidence">Evidence</a>
         </nav>
-        <a class="button" href="/#landing-waitlist">Request access</a>
+        <div class="top-actions">
+          <nav class="lang" aria-label="Language">
+            <a href="/about/" lang="en" aria-current="true" data-lang="en">EN</a>
+            <a href="/about/fr/" lang="fr" data-lang="fr">FR</a>
+          </nav>
+          <a class="button" href="/#landing-waitlist">Request access</a>
+        </div>
       </div>
     </header>
 
@@ -241,9 +251,9 @@
           <ul>
             <li><a href="mailto:contact@maya-labs.xyz">contact@maya-labs.xyz</a></li>
             <li><a href="/showcase/">Sample screens</a></li>
-            <li><a href="/legal/privacy">Privacy policy</a></li>
-            <li><a href="/legal/terms">Terms of use</a></li>
-            <li><a href="/legal/notice">Legal notice</a></li>
+            <li><a href="/legal/en/privacy">Privacy policy</a></li>
+            <li><a href="/legal/en/terms">Terms of use</a></li>
+            <li><a href="/legal/en/notice">Legal notice</a></li>
           </ul>
         </div>
       </div>
