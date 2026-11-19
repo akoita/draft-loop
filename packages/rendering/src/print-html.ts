@@ -5,7 +5,7 @@ import type { RenderingTemplate } from "@draft-loop/schemas/rendering-template";
 import { carlitoBold, carlitoRegular } from "./carlito-font-data.js";
 import { isTitleBlockSection } from "./document-layout.js";
 import { headerLines } from "./header-lines.js";
-import { splitInlineLabel } from "./inline-label.js";
+import { isProseSection, splitSectionInlineLabel } from "./inline-label.js";
 import { typesetArtifact } from "./language-conventions.js";
 import { embeddedFontFlateBytes } from "./pdf-fonts.js";
 import { isRoleContextLine, isRoleHeaderBlock, splitRoleHeader } from "./role-header.js";
@@ -81,8 +81,8 @@ function unit(tag: string, kind: "heading" | "body", className: string, inner: s
 }
 
 /** Text whose leading "Label:" is bold; the space after the colon stays in the text. */
-function labelled(text: string): string {
-  const parts = splitInlineLabel(text);
+function labelled(sectionKind: string, text: string): string {
+  const parts = splitSectionInlineLabel(sectionKind, text);
   return parts === null
     ? escapeHtml(text)
     : `<strong>${escapeHtml(parts.label)}</strong>${escapeHtml(parts.rest)}`;
@@ -100,7 +100,7 @@ function roleHeader(text: string): string {
 function paragraphClass(section: DraftArtifact["sections"][number], index: number): string {
   if (isRoleContextLine(section.kind, section.blocks, index)) return "context";
   const text = section.blocks[index]?.text ?? "";
-  return splitInlineLabel(text) === null ? "" : "labelled";
+  return splitSectionInlineLabel(section.kind, text) === null ? "" : "labelled";
 }
 
 function sectionHtml(section: DraftArtifact["sections"][number]): string {
@@ -121,14 +121,17 @@ function sectionHtml(section: DraftArtifact["sections"][number]): string {
   };
   section.blocks.forEach((block, index) => {
     if (block.type === "bullet") {
-      bullets.push(unit("li", "body", "", `<span class="bullet">• </span>${labelled(block.text)}`));
+      // A letter's or an answer's list, such as a guide's sources, is never justified (#2850).
+      const className = isProseSection(section.kind) ? "plain" : "";
+      const inner = `<span class="bullet">• </span>${labelled(section.kind, block.text)}`;
+      bullets.push(unit("li", "body", className, inner));
       return;
     }
     closeList();
     parts.push(
       isRoleHeaderBlock(section.kind, section.blocks, index)
         ? roleHeader(block.text)
-        : unit("p", "body", paragraphClass(section, index), labelled(block.text)),
+        : unit("p", "body", paragraphClass(section, index), labelled(section.kind, block.text)),
     );
   });
   closeList();
@@ -170,7 +173,7 @@ function printCss(template: RenderingTemplate): string {
     // A justified template also hangs a labelled paragraph's lines under its label.
     ...(body.align === "justify"
       ? [
-          "p:not(.role):not(.contact),li{text-align:justify;}",
+          "p:not(.role):not(.contact),li:not(.plain){text-align:justify;}",
           `p.labelled{margin-bottom:${spacing.blockAfterPt + 1}pt;padding-left:${bulletIndent}pt;text-indent:-${bulletIndent}pt;}`,
         ]
       : []),

@@ -41,6 +41,39 @@ export function splitInlineLabel(text: string): InlineLabel | null {
   return { label: `${name}:`, rest };
 }
 
+/**
+ * Section kinds of a letter or an application answer: prose a person reads, not a CV's labelled
+ * lines. Their text before a colon is not a label, and their bullets are not justified (#2850).
+ */
+const proseSectionKinds: ReadonlySet<string> = new Set([
+  "salutation",
+  "hook",
+  "alignment",
+  "closing",
+  "question",
+  "answer",
+]);
+
+/** The only labels the renderer writes into prose: an interview guide's trap line. */
+export const guideTrapLabels = { en: "Avoid:", fr: "\u00c0 \u00e9viter :" } as const;
+const proseLabels: ReadonlySet<string> = new Set(Object.values(guideTrapLabels));
+
+/** Whether a section holds prose rather than a CV's labelled lines. */
+export function isProseSection(kind: string): boolean {
+  return proseSectionKinds.has(kind);
+}
+
+/** The bold label of a prose block: only a label the renderer wrote, never a sentence's opening. */
+export function splitProseInlineLabel(text: string): InlineLabel | null {
+  const parts = splitInlineLabel(text);
+  return parts !== null && proseLabels.has(parts.label) ? parts : null;
+}
+
+/** The bold label of a block in a section of this kind. */
+export function splitSectionInlineLabel(sectionKind: string, text: string): InlineLabel | null {
+  return isProseSection(sectionKind) ? splitProseInlineLabel(text) : splitInlineLabel(text);
+}
+
 /** The wrapped lines of a labelled block: the label then the first line of text, then the rest. */
 export interface LabelledLines {
   readonly label: string;
