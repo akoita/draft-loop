@@ -13,6 +13,7 @@ import {
   purchaseReturnText,
   readCredits,
   readEstimate,
+  runsUsedUp,
   startPurchase,
 } from "./credits-model.js";
 import { syntheticCredits, syntheticEstimate } from "./test-fixtures.js";
@@ -113,6 +114,22 @@ describe("run estimate", () => {
     ).toEqual([
       "Your plan does not include premium models for the author. Choose another preset or model.",
     ]);
+  });
+
+  it("says the day's runs are used and when they come back, in local time (#3126)", () => {
+    const capped: ApiSchemas["RunEstimate"] = {
+      ...syntheticEstimate,
+      runsToday: { used: 2, limit: 2, resetsAt: "2026-11-20T00:00:00.000Z" },
+    };
+    const paris = { locale: "en-GB", timeZone: "Europe/Paris" };
+    expect(runsUsedUp(capped, paris)).toBe(
+      "Your plan allows 2 runs a day, and today's are used. Runs come back at 01:00.",
+    );
+    expect(estimateNotes(capped, paris)).toEqual([runsUsedUp(capped, paris)]);
+    const left = { ...capped, runsToday: { ...capped.runsToday!, used: 1 } };
+    expect(runsUsedUp(left, paris)).toBeUndefined();
+    const unlimited = { ...capped, runsToday: { ...capped.runsToday!, limit: null } };
+    expect(runsUsedUp(unlimited, paris)).toBeUndefined();
   });
 
   it("notes a missing plan", () => {

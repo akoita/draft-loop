@@ -1120,6 +1120,11 @@ export interface ApiSchemas {
       readonly role?: "author" | "critic";
       readonly tier?: "premium" | "standard" | "economy";
     };
+    readonly runsToday?: {
+      readonly used: number;
+      readonly limit: number | null;
+      readonly resetsAt: string;
+    };
     readonly balance?: {
       readonly unlimited: boolean;
       readonly remaining: number | null;

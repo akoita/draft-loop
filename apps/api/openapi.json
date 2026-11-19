@@ -5432,6 +5432,40 @@
               "code"
             ]
           },
+          "runsToday": {
+            "description": "Sign-in mode, for a member: the day's runs against the plan's daily limit (#3126).",
+            "type": "object",
+            "properties": {
+              "used": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Runs started since UTC midnight and not refunded."
+              },
+              "limit": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The plan's runs per UTC day; null is unlimited."
+              },
+              "resetsAt": {
+                "type": "string",
+                "description": "The next UTC midnight, when the count starts again."
+              }
+            },
+            "required": [
+              "used",
+              "limit",
+              "resetsAt"
+            ]
+          },
           "balance": {
             "description": "Sign-in mode, for a member.",
             "type": "object",
@@ -14260,6 +14294,41 @@
             ],
             "additionalProperties": false
           },
+          "runsToday": {
+            "description": "Sign-in mode, for a member: the day's runs against the plan's daily limit (#3126).",
+            "type": "object",
+            "properties": {
+              "used": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Runs started since UTC midnight and not refunded."
+              },
+              "limit": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The plan's runs per UTC day; null is unlimited."
+              },
+              "resetsAt": {
+                "type": "string",
+                "description": "The next UTC midnight, when the count starts again."
+              }
+            },
+            "required": [
+              "used",
+              "limit",
+              "resetsAt"
+            ],
+            "additionalProperties": false
+          },
           "balance": {
             "description": "Sign-in mode, for a member.",
             "type": "object",
@@ -20482,7 +20551,7 @@
     "/v1/workspaces/{workspaceId}/runs/estimate": {
       "get": {
         "summary": "Estimate the credits a run on the workspace's settings would reserve",
-        "description": "Prices the workspace as it is now, the way starting a run does: the application's own model pair when `applicationId` names one with a pair, otherwise the workspace's configured models, at its round limit. Refuses nothing. In sign-in mode a member also gets `plan` (whether the plan allows the tiers, with the code and the role and tier the run start would refuse with) and `balance` (whether `remaining` covers the estimate). A model whose tier cannot be determined cannot be priced and answers 422 `model_tier_unknown`.",
+        "description": "Prices the workspace as it is now, the way starting a run does: the application's own model pair when `applicationId` names one with a pair, otherwise the workspace's configured models, at its round limit. Refuses nothing. In sign-in mode a member also gets `plan` (whether the plan allows the tiers, with the code and the role and tier the run start would refuse with), `runsToday` (the day's started runs against the plan's daily limit, and when it resets) and `balance` (whether `remaining` covers the estimate). A model whose tier cannot be determined cannot be priced and answers 422 `model_tier_unknown`.",
         "parameters": [
           {
             "schema": {

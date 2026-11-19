@@ -88,6 +88,7 @@ let app: FastifyInstance | undefined;
 const assignmentRead = vi.fn();
 const entitlementsRead = vi.fn();
 const balanceRead = vi.fn();
+let reservationsSince: ((since: string | Date) => Promise<number>) | undefined;
 
 beforeAll(async () => {
   signingKey = await generateKeyPair("ES256");
@@ -124,6 +125,7 @@ beforeEach(() => {
   );
   balanceRead.mockReset();
   balanceRead.mockImplementation(async () => scenario.balance);
+  reservationsSince = undefined;
 });
 
 afterEach(async () => {
@@ -172,7 +174,12 @@ async function api(
       entitlementsFor: () => ({
         entitlements: entitlementsRead,
         assignment: assignmentRead,
-        ledger: { reserve: vi.fn(), refund: vi.fn(), balance: balanceRead },
+        ledger: {
+          reserve: vi.fn(),
+          refund: vi.fn(),
+          balance: balanceRead,
+          ...(reservationsSince === undefined ? {} : { reservationsSince }),
+        },
       }),
     },
   });
@@ -411,6 +418,24 @@ describe("GET /v1/workspaces/:workspaceId/runs/estimate", () => {
     const { body } = await get(server, "/v1/workspaces/r1/runs/estimate");
 
     expect(body.credits).toBe(2);
+  });
+
+  it("counts the day's runs against the plan's daily limit, from UTC midnight (#3126)", async () => {
+    scenario.assignment = { ...assignment(), overrides: { runsPerDay: 2 } };
+    const since: unknown[] = [];
+    reservationsSince = async (from) => {
+      since.push(from);
+      return 2;
+    };
+    const server = await api();
+
+    const response = await get(server, "/v1/workspaces/r1/runs/estimate");
+
+    expect(response.status).toBe(200);
+    expect(since).toEqual([expect.stringMatching(/T00:00:00\.000Z$/u)]);
+    const resetsAt = Date.parse(response.body.runsToday.resetsAt);
+    expect(resetsAt - Date.parse(String(since[0]))).toBe(86_400_000);
+    expect(response.body.runsToday).toMatchObject({ used: 2, limit: 2 });
   });
 
   it("reports a balance that is short without refusing", async () => {
