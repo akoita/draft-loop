@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   type ApplicationService,
   defaultHostedKnowledgeSourceMaxBytes,
@@ -87,6 +86,12 @@ import type { MaterialReviews } from "./material-reviews.js";
 import { agentTokenIssuer, memberAgentTokens, requestAgentTokens } from "./member-agent-tokens.js";
 import { registerMemberSettingsRoutes } from "./member-settings-routes.js";
 import { registerModelCallGate } from "./model-call-gate.js";
+import {
+  type ModelCallSwitch,
+  modelCallsRunning,
+  pausableBriefExtraction,
+  registerModelCallSwitch,
+} from "./model-call-switch.js";
 import { registerModelCatalogRoutes } from "./model-catalog-routes.js";
 import { registerOperatorPlanRoutes } from "./operator-plan-routes.js";
 import {
@@ -115,6 +120,7 @@ import { registerRecordErasureRoutes } from "./record-erasure-routes.js";
 import { registerRecordMemberRoutes } from "./record-member-routes.js";
 import { registerRecordNameRoutes } from "./record-name-routes.js";
 import { type ApiAuthOptions, registerRequestAuthentication } from "./request-auth.js";
+import { registerRequestTrace, requestIdFrom } from "./request-trace.js";
 import { registerResearchBriefRoutes } from "./research-brief-routes.js";
 import type { ResearchRuns } from "./research-runs.js";
 import { registerReviewRoutes } from "./review-routes.js";
@@ -277,6 +283,8 @@ export interface ApiOptions {
   readonly legalPublisher?: LegalPublisher;
   /** The planned-maintenance notice (#2965); without it there is never a notice. */
   readonly serviceNotice?: ServiceNoticeSource;
+  /** The global model call switch (#3112); unset, model calls always run. */
+  readonly modelCallSwitch?: ModelCallSwitch;
   /** Where the pinned speech model's files are (#2199); unset, its manifest says unavailable. */
   readonly speechModelRoot?: string;
   /** The models the deployment's local endpoint serves (ADR 0011, D5); none when unset. */
@@ -319,10 +327,12 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     bodyLimit: apiBodyLimitBytes,
     // Cloud Run's front end terminates TLS; the API is never reached directly.
     trustProxy: true,
-    // A random id per request, unique across instances, so a member's feedback can name the
-    // request that failed and the operator can find its log line (#2875).
-    genReqId: () => randomUUID(),
+    // The trace id of Cloud Run's `traceparent`, or a random one: unique across instances, so a
+    // member's feedback can name the request that failed (#2875) and the operator can find every
+    // API and worker line of it (#3110).
+    genReqId: (request) => requestIdFrom(request.headers.traceparent),
   }).withTypeProvider<ZodTypeProvider>();
+  registerRequestTrace(app);
   app.addHook("onSend", async (request, reply) => {
     reply.header("x-request-id", request.id);
   });
@@ -406,6 +416,9 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
     options.organisationActivity === undefined
       ? undefined
       : registerOrganisationActivity(app, { activity: options.organisationActivity });
+  // Before the model call gate, so a paused call is refused before it is counted.
+  const modelCallSwitch = options.modelCallSwitch ?? modelCallsRunning;
+  registerModelCallSwitch(app, modelCallSwitch);
   // Before any route, so every route registered below is counted where it calls a model.
   if (auth.mode === "oidc" && options.tenants?.entitlementsFor !== undefined) {
     registerModelCallGate(app, { entitlementsFor: options.tenants.entitlementsFor });
@@ -654,16 +667,17 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance> {
       ...(application.briefExtractions === undefined
         ? {}
         : { briefExtractions: application.briefExtractions }),
-      ...(auth.mode === "oidc" && entitlementsFor !== undefined
-        ? {
-            briefExtractionAllowance: createBriefExtractionAllowance({
+      briefExtractionAllowance: pausableBriefExtraction(
+        auth.mode === "oidc" && entitlementsFor !== undefined
+          ? createBriefExtractionAllowance({
               entitlementsFor,
               ...(options.briefExtractionsPerDay === undefined
                 ? {}
                 : { unlimitedPlanPerDay: options.briefExtractionsPerDay }),
-            }),
-          }
-        : {}),
+            })
+          : undefined,
+        modelCallSwitch,
+      ),
       ...(application.jobPageFetcher === undefined
         ? {}
         : { jobPageFetcher: application.jobPageFetcher }),

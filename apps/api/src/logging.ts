@@ -1,5 +1,7 @@
 import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
 
+import { traceFields } from "./request-trace.js";
+
 /**
  * The API's logs, as Cloud Logging reads them: one JSON object a line with a `severity` and a
  * `message`. They stay content-free (ADR 0011, D16): a request is logged by its method, route
@@ -53,12 +55,26 @@ type LoggerOptions = Exclude<
   boolean | FastifyBaseLogger | undefined
 >;
 
-/** Fastify's logger options for Cloud Logging; `stream` lets tests read the lines. */
-export function cloudLoggingOptions(stream?: { write: (line: string) => void }): LoggerOptions {
+/**
+ * Fastify's logger options for Cloud Logging; `stream` lets tests read the lines. With the
+ * deployment's project, each request's lines carry Cloud Logging's trace field (#3110), so the
+ * log viewer groups them with the worker's lines for the same request.
+ */
+export function cloudLoggingOptions(
+  stream?: { write: (line: string) => void },
+  project?: string,
+): LoggerOptions {
   return {
     messageKey: "message",
     base: null,
-    formatters: { level: (label) => ({ severity: severities[label] ?? "DEFAULT" }) },
+    formatters: {
+      level: (label) => ({ severity: severities[label] ?? "DEFAULT" }),
+    },
+    // A request's child logger is bound to its id; each of its lines gets the trace field.
+    mixin: (_merge: object, _level: number, logger: { bindings: () => { reqId?: unknown } }) => {
+      const requestId = logger.bindings().reqId;
+      return typeof requestId === "string" ? traceFields(requestId, project) : {};
+    },
     // Fastify types each serializer's output for its default fields; these keep fewer on purpose.
     serializers: {
       req: (request: LoggedRequest) => ({

@@ -10,6 +10,14 @@ export const runJobSchema = z.strictObject({
   tenantId: identifierSchema,
   workspaceId: identifierSchema,
   runId: identifierSchema,
+  /**
+   * The id of the API request that queued the job (#3110), so the worker's lines and spans for it
+   * share the API's id. Optional: a job queued before it existed, or by a requeue, may lack one.
+   */
+  requestId: z
+    .string()
+    .regex(/^[\da-f]{32}$/u)
+    .optional(),
 });
 
 export type RunJob = z.infer<typeof runJobSchema>;

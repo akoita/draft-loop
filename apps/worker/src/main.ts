@@ -117,6 +117,7 @@ const worker = await startWorker({
         store: tenancy.forTenant(job.tenantId).runSpans,
         workspaceId: job.workspaceId,
         runId: job.runId,
+        ...(job.requestId === undefined ? {} : { requestId: job.requestId }),
         onError: (error) =>
           console.error(logLine("ERROR", "run span not saved", { err: errorFields(error) })),
       }),

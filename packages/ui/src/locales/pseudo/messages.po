@@ -1301,6 +1301,10 @@ msgstr ""
 msgid "Agents cannot add notes yet."
 msgstr ""
 
+#: apps/web/src/refusal-text.ts
+msgid "AI features are paused for a short while. They come back on their own; your work is saved."
+msgstr ""
+
 #: packages/ui/src/review.tsx
 msgid "all"
 msgstr ""

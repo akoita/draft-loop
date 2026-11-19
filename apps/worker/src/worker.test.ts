@@ -12,6 +12,7 @@ import {
 import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { logLine } from "./logging.js";
 import {
   startWorker,
   stopOnSignals,
@@ -71,7 +72,11 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       )
     ).rows as { state: string; start_after: Date; retry_count: number }[];
 
-  const start = async (service: Service, more: Pick<WorkerOptions, "briefs" | "profiles"> = {}) => {
+  const start = async (
+    service: Service,
+    more: Pick<WorkerOptions, "briefs" | "profiles"> = {},
+    onOutcome?: NonNullable<WorkerOptions["runs"]["onOutcome"]>,
+  ) => {
     worker = await startWorker({
       ...more,
       queue: {
@@ -85,6 +90,7 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
         workspaceRoot: (job) => `/tenants/${job.tenantId}/workspaces/${job.workspaceId}`,
         allowProviderData: true,
         budgetCeiling: { maxRounds: 5, maxCostUsd: 3, maxDurationMs: 1_800_000 },
+        ...(onOutcome === undefined ? {} : { onOutcome }),
       },
     });
   };
@@ -132,6 +138,29 @@ describe.runIf(connectionString !== undefined)("worker on the Postgres run queue
       runId: "run-1",
       allowProviderData: true,
     });
+  });
+
+  it("logs a run job's lines with the id of the request that queued it (#3110)", async () => {
+    const requestId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const lines: string[] = [];
+    await start(
+      {
+        status: async () => snapshot("run-traced", "drafting"),
+        resume: async () => snapshot("run-traced", "awaiting-approval"),
+      },
+      {},
+      () => lines.push(logLine("INFO", "run job finished")),
+    );
+
+    await queue.enqueue({
+      tenantId: "tenant-a",
+      workspaceId: "workspace-1",
+      runId: "run-traced",
+      requestId,
+    });
+
+    await eventually(() => expect(lines).toHaveLength(1));
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({ requestId });
   });
 
   it("extracts a queued brief through the service, then completes the job", async () => {

@@ -1,7 +1,7 @@
 import { runUsage } from "@draft-loop/application";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { RunJob } from "@draft-loop/run-queue";
-
+import { requestFields } from "./request-trace.js";
 import type { RunCreditsClosed } from "./run-credit-settlement.js";
 import type { QuarantinedRunInput, RunJobOutcome } from "./run-job-handler.js";
 
@@ -18,7 +18,7 @@ export function logLine(
   message: string,
   fields: Record<string, unknown> = {},
 ): string {
-  return JSON.stringify({ severity, message, ...fields });
+  return JSON.stringify({ severity, message, ...requestFields(), ...fields });
 }
 
 /** An error's type, code and stack frames; its message is left out. */

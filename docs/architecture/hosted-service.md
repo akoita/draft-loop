@@ -220,6 +220,12 @@ between jobs or carried between tenants.
 | A job fails or stops sending heartbeats, as after a crash                                             | Retried with backoff, resuming from the last saved step                                                                                                                               |
 | SIGTERM                                                                                               | Stops claiming and gives the job in flight 8 seconds. It never cancels a step, which would record the run as cancelled. A step still running fails back to the queue and is repeated. |
 
+A run job carries the id of the API request that queued it (#3110). The API
+takes it from Cloud Run's `traceparent`, or makes one, and returns it as
+`x-request-id`. The API's lines, the worker's lines for that job and the run's
+spans all carry it. With `GOOGLE_CLOUD_PROJECT` set, both write Cloud Logging's
+trace field, so the log viewer groups one request's lines.
+
 ### Idempotency keys
 
 Keys live in Postgres (`idempotency_keys`, under row-level security), so every
@@ -844,6 +850,10 @@ plans have no cap.
 - **Counting.** `model_call_counts` holds one counter per organisation and
   day. The check and the increment are one statement, so racing calls cannot
   pass the cap. A call the route then refuses for another reason still counts.
+- **Registry and pause.** Every model-calling path, runs and support included,
+  is in `model-call-registry.ts` with its limit, cost cap and kill switch. One
+  switch pauses them all with 503 `model_calls_paused`
+  ([guide](../engineering/model-call.md)).
 
 ### Prepare calls under an application's credit
 

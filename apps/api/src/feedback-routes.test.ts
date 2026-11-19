@@ -357,7 +357,7 @@ describe("a note's context (#2875)", () => {
 
     expect(sent.statusCode).toBe(201);
     // Every answer names its request, so a later note can cite the one that failed.
-    expect(sent.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(sent.headers["x-request-id"]).toMatch(/^[0-9a-f]{32}$/u);
     expect(sent.json().context).toEqual({
       ...clientContext,
       source: "web",

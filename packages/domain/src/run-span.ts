@@ -19,6 +19,7 @@ export const runSpanAttributeNames = [
   "gen_ai.usage.cache_creation.input_tokens",
   "error.type",
   "draftloop.run.id",
+  "draftloop.request.id",
   "draftloop.round",
   "draftloop.step",
   "draftloop.attempt",

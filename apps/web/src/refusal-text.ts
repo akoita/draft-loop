@@ -52,6 +52,8 @@ function knownText(refusal: Refusal): string | undefined {
       return t`You have sent the most notes a member can send in 24 hours. Try again later.`;
     case "service_maintenance":
       return t`Changes are paused for planned maintenance. They come back on their own; reading and downloading still work.`;
+    case "model_calls_paused":
+      return t`AI features are paused for a short while. They come back on their own; your work is saved.`;
     case "not_ready":
       return t`The run is still being saved; retry in a moment.`;
     case "brief_version_stale":
