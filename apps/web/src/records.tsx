@@ -2,10 +2,11 @@ import { t } from "@lingui/core/macro";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { AccountDeletion } from "./account-deletion.js";
 import { AccountMenu } from "./account-menu.js";
+import { AccountPage } from "./account-page.js";
 import { type ApiClient, ApiRequestError, type ApiSchemas, describeError } from "./api-client.js";
 import { describeStartError } from "./credits-model.js";
 import { useNewFeedbackCount } from "./operator-count.js";
-import { RecordActions } from "./record-actions.js";
+import { DeleteRecord, DownloadEverything, RecordActions } from "./record-actions.js";
 import { canExportAndDelete, withoutRecord } from "./record-actions-model.js";
 import {
   assignableMembers,
@@ -86,6 +87,8 @@ export function Records({
   const [state, setState] = useState<RecordsState>({ kind: "loading" });
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [deleted, setDeleted] = useState<string | undefined>(undefined);
+  /** The account page covers the screens without closing them, so work in progress stays. */
+  const [onAccountPage, setOnAccountPage] = useState(false);
   /** New records whose name waits for the record to exist, by id. */
   const unsavedNames = useRef(new Map<string, string>());
   const newNotes = useNewFeedbackCount(client, state.kind === "ready" ? state.me : undefined);
@@ -197,6 +200,7 @@ export function Records({
     setState({ ...state, ids, names });
     setDeleted(recordLabel(recordId, state.names));
     setChosen(next);
+    setOnAccountPage(false);
   };
   const exists = chosen !== undefined && state.ids.includes(chosen);
   const onePerson = isOnePersonPlan(state.me, state.ids);
@@ -210,19 +214,30 @@ export function Records({
     onePerson && onAccountDeleted !== undefined && accountEmail !== undefined ? (
       <AccountDeletion client={client} email={accountEmail} onDeleted={onAccountDeleted} />
     ) : null;
-  const yourData =
-    onePerson && exists && canExportAndDelete(state.me) ? (
-      <RecordActions
-        key={chosen}
-        client={client}
-        recordId={chosen}
-        title={t`Your data`}
-        onDeleted={onDeleted}
-        folded={false}
-      >
-        {accountDeletion}
-      </RecordActions>
-    ) : undefined;
+  // The menu holds only the safe download; the deletes wait on the account page's danger zone,
+  // so a stray click in the menu can never reach them.
+  const mayHandleRecord = onePerson && exists && canExportAndDelete(state.me);
+  const yourData = mayHandleRecord ? (
+    <DownloadEverything key={chosen} client={client} recordId={chosen} />
+  ) : undefined;
+  const deleteRecord = mayHandleRecord ? (
+    <DeleteRecord key={chosen} client={client} recordId={chosen} onDeleted={onDeleted} />
+  ) : null;
+  const hasAccountPage = onePerson && (deleteRecord !== null || accountDeletion !== null);
+  const accountPage =
+    hasAccountPage && onAccountPage ? (
+      <AccountPage
+        email={state.me.kind === "member" ? state.me.email : undefined}
+        yourData={yourData}
+        dangerZone={
+          <>
+            {deleteRecord}
+            {accountDeletion}
+          </>
+        }
+        onClose={() => setOnAccountPage(false)}
+      />
+    ) : null;
 
   return (
     <>
@@ -232,62 +247,69 @@ export function Records({
             me={state.me}
             onePerson={onePerson}
             yourData={yourData}
+            onAccount={hasAccountPage ? () => setOnAccountPage(true) : undefined}
             onSignOut={onSignOut}
             onOperator={onOperator}
             newNotes={newNotes}
           />
         ),
       )}
-      {onePerson ? (
-        deleted === undefined ? null : (
-          <JobSearchDeleted onStartAgain={() => create(firstJobSearchName())} onSignOut={onSignOut}>
-            {accountDeletion}
-          </JobSearchDeleted>
-        )
-      ) : (
-        <div className="record-rail">
-          <div className="record-area">
-            <RecordPicker
-              ids={state.ids}
-              names={state.names}
-              chosen={chosen}
-              notice={noRecordNotice(state.me)}
-              limit={state.me.kind === "member" ? state.me.plan?.candidateRecords : undefined}
-              onChoose={choose}
-              onCreate={create}
-            />
-            {deleted === undefined ? null : (
-              <p className="notice" role="status">
-                {t`Everything stored for ${deleted} was deleted.`}
-              </p>
-            )}
-            {chosen === undefined || !sharesAccess(state.me) ? null : (
-              <MembersPanel
-                key={`${chosen}:${exists}`}
-                client={client}
-                recordId={chosen}
-                exists={exists}
-                manage={canManageMembers(state.me)}
-                selfId={state.me.kind === "member" ? state.me.memberId : undefined}
+      {accountPage}
+      <div className="records-screens" hidden={accountPage !== null}>
+        {onePerson ? (
+          deleted === undefined ? null : (
+            <JobSearchDeleted
+              onStartAgain={() => create(firstJobSearchName())}
+              onSignOut={onSignOut}
+            >
+              {accountDeletion}
+            </JobSearchDeleted>
+          )
+        ) : (
+          <div className="record-rail">
+            <div className="record-area">
+              <RecordPicker
+                ids={state.ids}
+                names={state.names}
+                chosen={chosen}
+                notice={noRecordNotice(state.me)}
+                limit={state.me.kind === "member" ? state.me.plan?.candidateRecords : undefined}
+                onChoose={choose}
+                onCreate={create}
               />
-            )}
-            {exists && canExportAndDelete(state.me) ? (
-              <RecordActions
-                key={chosen}
-                client={client}
-                recordId={chosen}
-                title={t`Download or delete this candidate's data`}
-                onDeleted={onDeleted}
-              />
-            ) : null}
+              {deleted === undefined ? null : (
+                <p className="notice" role="status">
+                  {t`Everything stored for ${deleted} was deleted.`}
+                </p>
+              )}
+              {chosen === undefined || !sharesAccess(state.me) ? null : (
+                <MembersPanel
+                  key={`${chosen}:${exists}`}
+                  client={client}
+                  recordId={chosen}
+                  exists={exists}
+                  manage={canManageMembers(state.me)}
+                  selfId={state.me.kind === "member" ? state.me.memberId : undefined}
+                />
+              )}
+              {exists && canExportAndDelete(state.me) ? (
+                <RecordActions
+                  key={chosen}
+                  client={client}
+                  recordId={chosen}
+                  title={t`Download or delete this candidate's data`}
+                  onDeleted={onDeleted}
+                />
+              ) : null}
+            </div>
           </div>
-        </div>
-      )}
-      {chosen === undefined ? null : (
-        <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
-          {children(chosen, onSaved, onePerson)}
-        </ReleaseAccess.Provider>
-      )}
+        )}
+        {chosen === undefined ? null : (
+          <ReleaseAccess.Provider value={canReleaseScreening(state.me)}>
+            {children(chosen, onSaved, onePerson)}
+          </ReleaseAccess.Provider>
+        )}
+      </div>
     </>
   );
 }

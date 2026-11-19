@@ -316,13 +316,6 @@ label:where(:not(.shared-screens *)) {
   box-shadow: 0 8px 24px rgba(15, 20, 26, 0.16);
 }
 
-.account-menu-body > .record-actions {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
-}
-
 /* A destructive action as one quiet line; its warning and confirm open in a dialog. */
 button.danger-link:where(:not(.shared-screens *)) {
   justify-self: start;
@@ -335,24 +328,6 @@ button.danger-link:where(:not(.shared-screens *)) {
 
 button.danger-link:where(:not(.shared-screens *)):hover {
   text-decoration: underline;
-}
-
-.record-actions > .eyebrow {
-  margin: 0;
-}
-
-.record-actions:not(details) {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.record-actions:not(details) > button:not(.danger-link) {
-  justify-self: start;
-}
-
-.record-actions:not(details) > .muted {
-  margin: 0;
-  font-size: 0.8125rem;
 }
 
 .danger-dialog .inline-form {
@@ -1767,4 +1742,58 @@ button.small:where(:not(.shared-screens *)) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* The account page: the safe download, then the deletes in a marked danger zone, never in the
+   account menu. The screens it covers stay mounted, so work in progress stays. */
+.records-screens:not([hidden]) {
+  display: contents;
+}
+
+.account-page {
+  display: grid;
+  gap: 1rem;
+  max-width: 40rem;
+  margin: 1rem auto;
+}
+
+.account-page > .muted {
+  margin: 0;
+}
+
+.account-section {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.account-section > h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.account-section > .muted {
+  margin: 0;
+}
+
+.account-section.danger-zone {
+  border-color: var(--red);
+}
+
+.account-section.danger-zone > h2 {
+  color: var(--red);
+}
+
+.download-everything {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.download-everything > button {
+  justify-self: start;
+}
+
+.download-everything > .muted {
+  margin: 0;
+  font-size: 0.8125rem;
 }

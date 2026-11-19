@@ -138,7 +138,7 @@ export const frenchHelpGuide: HelpGuide = {
       title: "Confidentialité et données",
       paragraphs: [
         "DraftLoop n’enregistre votre contenu qu’après votre consentement, et le garde dans l’UE. Il n’envoie aux fournisseurs de modèles que le contenu dont une étape a besoin.",
-        "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Depuis le menu du compte, vous pouvez tout télécharger, supprimer tous vos documents et candidatures, ou supprimer votre compte.",
+        "Marquez une section comme privée pour la garder hors des brouillons et loin des fournisseurs de modèles. Depuis le menu du compte, vous pouvez tout télécharger. Pour supprimer tous vos documents et candidatures, ou votre compte, ouvrez Paramètres du compte dans ce menu : les deux se trouvent dans sa Zone dangereuse et vous demandent d’abord de saisir une confirmation.",
       ],
       keywords: [
         "consentement",

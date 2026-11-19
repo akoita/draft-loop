@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef } from "react";
 
+import { AccountPageButton } from "./account-page.js";
 import type { ApiSchemas } from "./api-client.js";
 import { LegalLinks } from "./landing.js";
 import { OperatorButton } from "./operator.js";
@@ -13,8 +14,10 @@ export interface AccountMenuProps {
   readonly me: Me;
   /** True on a plan for one person and one job search: the menu names no team. */
   readonly onePerson: boolean;
-  /** The person's own data, such as download and delete, or nothing when they may not. */
+  /** The person's own data, such as Download everything; never a delete, which sits on the page. */
   readonly yourData?: ReactNode;
+  /** Opens the account page, whose danger zone holds the deletes. */
+  readonly onAccount?: (() => void) | undefined;
   readonly onSignOut: () => void;
   /** Opens the operator page; offered only when `/v1/me` says the caller may operate (#2829). */
   readonly onOperator?: (() => void) | undefined;
@@ -30,6 +33,7 @@ export function AccountMenu({
   me,
   onePerson,
   yourData,
+  onAccount,
   onSignOut,
   onOperator,
   newNotes,
@@ -66,6 +70,14 @@ export function AccountMenu({
       </summary>
       <div className="account-menu-body">
         {yourData}
+        {onAccount === undefined ? null : (
+          <AccountPageButton
+            onOpen={() => {
+              if (menu.current !== null) menu.current.open = false;
+              onAccount();
+            }}
+          />
+        )}
         {onOperator !== undefined && canOperate(me) ? (
           <OperatorButton
             newNotes={newNotes}

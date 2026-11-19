@@ -103,7 +103,7 @@ export const englishHelpGuide: HelpGuide = {
       title: "Privacy and your data",
       paragraphs: [
         "DraftLoop stores your material only after you give consent, and keeps it in the EU. It sends model providers only the material a step needs.",
-        "Mark a section as private to keep it out of drafts and away from model providers. From the account menu you can download everything, delete all your documents and applications, or delete your account.",
+        "Mark a section as private to keep it out of drafts and away from model providers. From the account menu you can download everything. To delete all your documents and applications, or your account, open Account settings in that menu: both sit in its Danger zone and ask you to type a confirmation first.",
       ],
       keywords: [
         "consent",

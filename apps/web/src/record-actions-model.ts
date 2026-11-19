@@ -34,6 +34,11 @@ export function deleteConfirmWord(): string {
   return t`DELETE`;
 }
 
+/** Whether the person typed the confirm word, in any case and with spaces around it. */
+export function isDeleteConfirmed(typed: string): boolean {
+  return typed.trim().toLocaleUpperCase() === deleteConfirmWord().toLocaleUpperCase();
+}
+
 /**
  * The request that deletes a record, once the person typed the confirm word; otherwise what to tell
  * them. The API's own `confirm` stays the record's id, which the screen fills in itself.
@@ -44,9 +49,10 @@ export function deleteRecordRequest(
 ):
   | { readonly request: ApiInput<"DELETE /v1/workspaces/{workspaceId}"> }
   | { readonly problem: string } {
-  const word = deleteConfirmWord();
-  if (typed.trim().toLocaleUpperCase() !== word.toLocaleUpperCase())
+  if (!isDeleteConfirmed(typed)) {
+    const word = deleteConfirmWord();
     return { problem: t`Type ${word} to confirm.` };
+  }
   return { request: { path: { workspaceId }, body: { confirm: workspaceId } } };
 }
 

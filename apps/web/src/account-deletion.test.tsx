@@ -5,6 +5,7 @@ import {
   AccountDeletionPanel,
   accountDeletedNotice,
   accountDeletionRefusal,
+  isAccountDeletionConfirmed,
 } from "./account-deletion.js";
 import { ApiRequestError } from "./api-client.js";
 
@@ -24,11 +25,26 @@ describe("account deletion", () => {
     expect(html).toContain('type="email"');
     expect(html).toContain("Delete my account");
     expect(html).not.toContain('role="alert"');
-    // One line in the menu; the warning and the typed address wait in the dialog.
+    // One line on the page; the warning and the typed address wait in the dialog.
     const [menu = "", dialog = ""] = html.split("<dialog");
     expect(menu).toContain('class="danger-link">Delete my account…</button>');
     expect(menu).not.toContain("for good");
     expect(dialog).toContain("delete-account-confirm");
+  });
+
+  it("keeps the final delete disabled until the sign-in address is typed back", () => {
+    const html = renderToStaticMarkup(
+      <AccountDeletionPanel
+        email="ada@example.test"
+        busy={false}
+        problem={undefined}
+        onDelete={() => {}}
+      />,
+    );
+    expect(html).toContain('<button type="submit" class="danger" disabled="">Delete my account');
+    expect(isAccountDeletionConfirmed("", "ada@example.test")).toBe(false);
+    expect(isAccountDeletionConfirmed("ada@example", "ada@example.test")).toBe(false);
+    expect(isAccountDeletionConfirmed(" Ada@Example.test ", "ada@example.test")).toBe(true);
   });
 
   it("shows the refusal and a busy button while deleting", () => {
