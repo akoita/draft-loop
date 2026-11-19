@@ -13,6 +13,7 @@ import {
 } from "./author-adjudication.js";
 import { fullDraftBudgetWording, fullDraftInstructions } from "./author-completeness-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
+import { projectCardInstructions } from "./author-project-card-prompts.js";
 import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
 import { automaticRoundAndVoiceInstructions } from "./author-voice-prompts.js";
 
@@ -293,7 +294,7 @@ const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
   it("records v18 for new author runs and v11 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v19");
+    expect(promptTemplateVersion("author")).toBe("cli-author-v20");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v11");
   });
 
@@ -720,5 +721,20 @@ describe("author prompt cli-author-v19", () => {
     expect(v19).toContain("every finding in findings counts as accepted");
     expect(v18).not.toContain(automaticRoundAndVoiceInstructions);
     expect(v19.replace(automaticRoundAndVoiceInstructions, "")).toBe(v18);
+  });
+});
+
+describe("author prompt cli-author-v20", () => {
+  it("is v19 with an approved project card written as one Projects line, linked only when public", () => {
+    const v19 = createAuthorAdjudicationPrompt("cli-author-v19", undefined).systemPrompt;
+    const v20 = createAuthorAdjudicationPrompt("cli-author-v20", undefined).systemPrompt;
+
+    expect(v20).toContain(projectCardInstructions);
+    expect(v20).toContain("A card without a Project and links section gets no link");
+    expect(v20).toContain("never round, combine or derive a new figure");
+    expect(v20).toContain("a project line that leaves out a listed URL is incomplete");
+    expect(v20).toContain("never write (public), (private) or (unknown) in the CV");
+    expect(v19).not.toContain(projectCardInstructions);
+    expect(v20.replace(projectCardInstructions, "")).toBe(v19);
   });
 });

@@ -9,6 +9,7 @@ import {
 } from "./author-fact-prompts.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 import { pageTargetLengthInstructions } from "./author-length-prompts.js";
+import { projectCardInstructions } from "./author-project-card-prompts.js";
 import { relevanceWeightedRoomInstructions } from "./author-relevance-prompts.js";
 import type { AuthorRevision } from "./author-revision-memory.js";
 import { structuredRoleInstructions } from "./author-structure-prompts.js";
@@ -271,6 +272,16 @@ const authorPromptTemplateVersions = Object.freeze({
     true,
     true,
   ),
+  // v20 writes an approved project card as a Projects line, with its link only when public (#2897).
+  "cli-author-v20": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${jobTailoredCvInstructions}${requirementCoverageInstructions}${candidateDirectionInstructions}${applicationPlanAuthorInstructions}${structuredRoleInstructions}${pageTargetLengthInstructions}${singleStatementInstructions}${coherentStatementInstructions}${fullDraftInstructions}${relevanceWeightedRoomInstructions}${automaticRoundAndVoiceInstructions}${projectCardInstructions}`,
+    32_768,
+    true,
+    true,
+    true,
+    true,
+    true,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -280,7 +291,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v19" : "cli-critic-v11";
+  return role === "author" ? "cli-author-v20" : "cli-critic-v11";
 }
 
 /** Whether the recorded author version states, and so can honour, the candidate's directions. */
@@ -376,7 +387,8 @@ export function createAuthorAdjudicationPrompt(
     authorPromptTemplateVersion === "cli-author-v16" ||
     authorPromptTemplateVersion === "cli-author-v17" ||
     authorPromptTemplateVersion === "cli-author-v18" ||
-    authorPromptTemplateVersion === "cli-author-v19";
+    authorPromptTemplateVersion === "cli-author-v19" ||
+    authorPromptTemplateVersion === "cli-author-v20";
   const usesV5FactualityRules =
     usesV6SystemPrompt || authorPromptTemplateVersion === "cli-author-v5";
   const systemPrompt = usesV6SystemPrompt

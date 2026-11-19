@@ -58,6 +58,11 @@ repository. Without an agent, `draft-loop evidence add-repo <path> --email
 The Work journal shows the card's counts and each highlight's source, so you
 can check them before you approve.
 
+In a CV, an approved card the job values becomes one line in a **Projects**
+section, with bullets that cite the card. A public card's line carries its
+repository or live link; a private card's line carries none. A number in the
+CV must match the card's count exactly, or validation flags it.
+
 ## How to test it
 
 - Walk steps 2 and 3 of the [local server stack](../operations/local-server-stack.md)
