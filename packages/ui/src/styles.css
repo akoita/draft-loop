@@ -4946,6 +4946,14 @@ input[type="text"].workspace-title-input {
   white-space: normal;
 }
 
+/* On the amber panel the outline buttons take the muted text colour as their border and a solid
+   fill, so they read as buttons in both themes (#2949): the dark theme's strong border is too
+   close to the amber wash to see. */
+.start-checklist-blocked .start-check-action {
+  border-color: var(--text-3);
+  background: var(--surface);
+}
+
 @media (max-width: 760px) {
   .start-check {
     grid-template-columns: auto minmax(0, 1fr);
@@ -11955,4 +11963,80 @@ body:has(.workspace-activity) .review-column > .claims-panel {
 .help-ask-source:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 1px;
+}
+
+/* Phones: every control a finger taps gets at least 44px of hit area (#2948). Buttons, selects
+   and disclosure summaries grow; text-like actions keep their look and gain the area through
+   vertical padding that a matching negative margin takes back out of the layout. Links inside a
+   sentence and controls whose whole card or label is the target are left as they are. */
+@media (max-width: 640px) {
+  .button,
+  :is(
+      .application-card-actions,
+      .application-card-nudge,
+      .finding-bulk-actions,
+      .finding-known-gaps,
+      .finding-actions
+    )
+    .button,
+  .finding-filter,
+  .agent-setup button,
+  .page-toolbar-lead .home-back,
+  .rail-button,
+  .workspace-title-edit-button,
+  .application-material-toggle,
+  .autopilot-toggle label,
+  .url-input,
+  select {
+    min-height: 44px;
+  }
+
+  .rail-button,
+  .header-theme-toggle,
+  .workspace-title-edit-button {
+    min-width: 44px;
+  }
+
+  summary {
+    padding-block: 12px;
+  }
+
+  .link-action,
+  .career-flow-link {
+    padding-block: 12px;
+    margin-block: -12px;
+  }
+
+  .view-toggle-option {
+    min-height: 44px;
+  }
+}
+
+/* Phones: dialogs and settings panels keep a 16px gutter and 16px of padding, so their content
+   gets the screen's width; a segmented choice wraps inside the padding instead of past it (#2950). */
+@media (max-width: 640px) {
+  .boot-shell {
+    padding-inline: 0;
+  }
+
+  .boot-panel,
+  .boot-panel.model-editor-panel,
+  .modal-card {
+    padding-inline: var(--space-4);
+  }
+
+  .model-editor-panel .model-profile-picker-actions,
+  .model-editor-panel .setup-form > .approval-actions {
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-4);
+  }
+
+  .modal-backdrop {
+    padding: var(--space-4);
+  }
+
+  .view-toggle {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
 }
