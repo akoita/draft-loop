@@ -97,7 +97,7 @@ describe("print HTML", () => {
     expect(html).toContain("text-align:left;color:#1b2329;");
     expect(html).toMatch(/h2\{[^}]*color:#0f6e5c;text-transform:uppercase;/u);
     expect(html).toContain("p.role .date{font-weight:700;color:#0f6e5c;}");
-    expect(html).toContain("p:not(.role):not(.contact),li{text-align:justify;}");
+    expect(html).toContain("p:not(.role):not(.contact),li:not(.plain){text-align:justify;}");
     expect(html).toContain("p.labelled{margin-bottom:2pt;padding-left:10pt;text-indent:-10pt;}");
     expect(html).not.toMatch(/letter-spacing/u);
     // The units keep the artifact's own text; the case transform is presentation only.

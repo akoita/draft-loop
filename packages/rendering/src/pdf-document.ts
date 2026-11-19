@@ -452,7 +452,8 @@ function pageCommands(
       const isLast = lineIndex === lines.length - 1;
       if (block.kind === "bullet") {
         const x = left + bulletTextOffset;
-        const wordSpacing = justified(line, x, isLast);
+        // A letter's or an answer's list, such as a guide's sources, is never justified (#2850).
+        const wordSpacing = block.prose === true ? 0 : justified(line, x, isLast);
         if (lineIndex === 0 && wordSpacing === 0) {
           place(text("F1", body, left, y - body, `${bulletPrefix}${line}`));
         } else {

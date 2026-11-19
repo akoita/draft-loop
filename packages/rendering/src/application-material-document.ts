@@ -1,6 +1,7 @@
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 import { type OutputFormat, type RenderedDocument, renderArtifact } from "./index.js";
+import { guideTrapLabels } from "./inline-label.js";
 import { getRenderingTemplate } from "./templates.js";
 
 /** The formats a saved cover letter or question set downloads as (#2481). */
@@ -46,7 +47,7 @@ const guideSectionTitles = {
     "never-say": "Never say",
     checklist: "Before the interview",
     sources: "Sources",
-    avoid: "Avoid:",
+    avoid: guideTrapLabels.en,
   },
   fr: {
     "read-first": "Si vous ne lisez qu’une chose",
@@ -65,7 +66,7 @@ const guideSectionTitles = {
     "never-say": "À ne jamais dire",
     checklist: "Avant l’entretien",
     sources: "Sources",
-    avoid: "À éviter :",
+    avoid: guideTrapLabels.fr,
   },
 } as const;
 
