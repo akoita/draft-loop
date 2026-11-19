@@ -85,6 +85,14 @@ describe("the beta retention sweep (#2540)", () => {
       message: "inactive beta organisation erased",
       fields: {
         erasure: { organisationId: "beta-old", records: 1, objectsRemoved: 2, rowsRemoved: 30 },
+        audit: {
+          action: "organisation_erased",
+          actor: "beta-retention",
+          organisationId: "beta-old",
+          records: 1,
+          objectsRemoved: 2,
+          rowsRemoved: 30,
+        },
       },
     });
   });

@@ -12,6 +12,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildApi } from "./app.js";
 import type { TenantEntitlementsFor } from "./entitlement-gate.js";
 import { registerFeedbackRoutes } from "./feedback-routes.js";
+import { cloudLoggingOptions } from "./logging.js";
 
 const ownerToken = "owner-token-for-tests-0123456789abcdef";
 const issuer = "https://id.example.test/realms/draft-loop";
@@ -138,9 +139,15 @@ async function signIn(memberId: string): Promise<string> {
   return `Bearer ${token}`;
 }
 
+let logLines: Record<string, unknown>[] = [];
+
 async function api(feedback: FeedbackStore, mode: "owner" | "oidc" = "oidc") {
+  logLines = [];
   app = await buildApi({
     ownerToken,
+    logger: cloudLoggingOptions({
+      write: (line) => logLines.push(JSON.parse(line) as Record<string, unknown>),
+    }),
     feedback,
     serverRelease: "server-v0.40.0",
     auth:
@@ -226,6 +233,11 @@ describe("feedback notes (#2828)", () => {
     expect(listed.json().notes.map(({ text }: FeedbackNote) => text)).toEqual([
       "More templates, please.",
     ]);
+    // The operator's read is audited, with counts and never a note's text (#2954).
+    expect(logLines.flatMap((line) => (line.audit === undefined ? [] : [line.audit]))).toEqual([
+      { action: "feedback_listed", actor: "owner-token", listed: 1, searched: false },
+    ]);
+    expect(JSON.stringify(logLines)).not.toContain("More templates");
   });
 
   it("pages and searches the operator list, with each status's count for the search", async () => {
@@ -489,6 +501,12 @@ describe("triaging notes (#2877)", () => {
       headers: operator,
     });
     expect(one.json()).toMatchObject({ noteId, status: "issue" });
+    expect(logLines.map((line) => line.audit)).toContainEqual({
+      action: "feedback_read",
+      actor: "owner-token",
+      noteId,
+      organisationId: "org-north",
+    });
     const unknown = await server.inject({
       method: "GET",
       url: "/v1/operator/feedback/no-such-note",

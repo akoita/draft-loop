@@ -16,6 +16,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { writeAuditLine } from "./audit-line.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { IdempotencyStore } from "./idempotency.js";
 
@@ -336,6 +337,7 @@ export function registerOperatorPlanRoutes(
       try {
         const assignment = await tenant.plans.currentPlanAssignment();
         const balance = await tenant.ledger.balance(now());
+        writeAuditLine(request, "organisation_credits_read", { organisationId });
         return {
           organisationId,
           assignment: assignment === undefined ? null : assignmentView(assignment),

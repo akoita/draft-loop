@@ -125,12 +125,19 @@ export async function sweepBetaRetention(
     }
     if (outcome.state === "erased") {
       erased += 1;
+      const counts = {
+        records: outcome.records,
+        objectsRemoved: outcome.objectsRemoved,
+        rowsRemoved: outcome.rowsRemoved,
+      };
       ports.log("INFO", "inactive beta organisation erased", {
-        erasure: {
+        erasure: { organisationId, ...counts },
+        // The same query that finds the API's audit lines finds this one (#2954).
+        audit: {
+          action: "organisation_erased",
+          actor: "beta-retention",
           organisationId,
-          records: outcome.records,
-          objectsRemoved: outcome.objectsRemoved,
-          rowsRemoved: outcome.rowsRemoved,
+          ...counts,
         },
       });
     }

@@ -232,6 +232,11 @@ const erasureLines = () =>
     .map((line) => JSON.parse(line) as Record<string, unknown>)
     .filter((entry) => entry.erasure !== undefined);
 
+const auditLines = () =>
+  logLines
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .flatMap((entry) => (entry.audit === undefined ? [] : [entry.audit]));
+
 describe("candidate record erasure route", () => {
   it("lets owners and admins erase a record they confirm, and nobody else", async () => {
     const memory = memoryErasure();
@@ -293,6 +298,15 @@ describe("candidate record erasure route", () => {
       memberId: "owner-1",
       message: "candidate record erased",
     });
+    expect(auditLines()).toEqual([
+      {
+        action: "record_erased",
+        actor: "owner-1",
+        workspaceId: "r1",
+        objectsRemoved: 0,
+        rowsRemoved: 42,
+      },
+    ]);
   });
 
   it("serves the owner token in owner-token mode", async () => {

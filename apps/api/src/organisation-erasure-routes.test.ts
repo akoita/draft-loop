@@ -214,6 +214,11 @@ const erasureLines = () =>
     .filter((entry) => entry.erasure !== undefined)
     .map((entry) => entry.erasure);
 
+const auditLines = () =>
+  logLines
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .flatMap((entry) => (entry.audit === undefined ? [] : [entry.audit]));
+
 describe("organisation erasure routes", () => {
   it("lets the owner delete their organisation, records and objects included", async () => {
     const server = await api();
@@ -238,6 +243,16 @@ describe("organisation erasure routes", () => {
     expect(tenants["org-south"]?.objects.size).toBe(3);
     expect(erasureLines()).toEqual([
       { organisationId: "org-north", records: 2, objectsRemoved: 3, rowsRemoved: 10 },
+    ]);
+    expect(auditLines()).toEqual([
+      {
+        action: "organisation_erased",
+        actor: "owner-north",
+        organisationId: "org-north",
+        records: 2,
+        objectsRemoved: 3,
+        rowsRemoved: 10,
+      },
     ]);
     // The owner's sign-in no longer resolves to any organisation.
     expect((await own("owner-north")).status).toBe(403);
@@ -327,6 +342,9 @@ describe("organisation erasure routes", () => {
     expect(owner.objects.size).toBe(0);
     expect(erasureLines()).toEqual([
       { organisationId: "owner", records: 2, objectsRemoved: 3, rowsRemoved: 10 },
+    ]);
+    expect(auditLines()).toEqual([
+      expect.objectContaining({ action: "organisation_erased", actor: "owner-token" }),
     ]);
     // Nothing is left to erase, and another unregistered id is still unknown.
     expect((await remove(server, "operator", url, "owner")).status).toBe(204);

@@ -6,6 +6,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import { writeAuditLine } from "./audit-line.js";
 import { apiError, apiErrorSchema } from "./errors.js";
 import type { TenantErasureFor } from "./record-erasure-routes.js";
 
@@ -59,6 +60,12 @@ async function answer(
     { erasure: { organisationId, records, objectsRemoved, rowsRemoved } },
     "organisation erased",
   );
+  writeAuditLine(request, "organisation_erased", {
+    organisationId,
+    records,
+    objectsRemoved,
+    rowsRemoved,
+  });
   return reply.code(204).send(null);
 }
 
