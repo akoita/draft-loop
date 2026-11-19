@@ -36,6 +36,7 @@ import { runSupportTicketRetention } from "./support-ticket-retention.js";
 import { tenantRunQuarantine } from "./tenant-quarantine.js";
 import {
   tenantAuthorConsent,
+  tenantCompanyConsent,
   tenantRecordErased,
   tenantRunConsent,
   tenantServices,
@@ -96,6 +97,12 @@ const consentFor = config.requireConsent
 const authorConsentFor = config.requireConsent
   ? tenantAuthorConsent({ tenancy, serviceFor, workspaceRoot })
   : undefined;
+// The fallback critic (#3131) needs the record's consent to name its company in a sign-in
+// deployment; elsewhere the deployment's provider setting is the only gate.
+const companyConsentFor = config.requireConsent
+  ? tenantCompanyConsent({ tenancy, serviceFor, workspaceRoot })
+  : undefined;
+const { criticFallback } = config;
 // A job queued before its record was erased ends without touching the record.
 const recordErased = tenantRecordErased({ tenancy, serviceFor, workspaceRoot });
 
@@ -121,6 +128,16 @@ const worker = await startWorker({
         onError: (error) =>
           console.error(logLine("ERROR", "run span not saved", { err: errorFields(error) })),
       }),
+    ...(criticFallback === undefined
+      ? {}
+      : {
+          criticFallbackFor: (job: WorkspaceJob) => ({
+            ...criticFallback,
+            permitted: async () =>
+              companyConsentFor === undefined ||
+              (await companyConsentFor(job, criticFallback.company)),
+          }),
+        }),
     budgetCeiling: config.budgetCeiling,
     // Material flagged after a run was queued, or with no result while screening is on, pauses the
     // run before any provider call.

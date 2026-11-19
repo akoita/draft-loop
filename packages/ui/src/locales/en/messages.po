@@ -4022,10 +4022,6 @@ msgstr "Final CV checks run again on your edits"
 msgid "Final round"
 msgstr "Final round"
 
-#: apps/web/src/operator-trace.tsx
-msgid "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
-msgstr "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
-
 #: packages/ui/src/review.tsx
 msgid "finding"
 msgstr "finding"
@@ -6582,6 +6578,10 @@ msgstr "Open {0}"
 msgid "Open a local workspace again. "
 msgstr "Open a local workspace again. "
 
+#: apps/web/src/operator-trace.tsx
+msgid "Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
+msgstr "Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Open a workspace first."
 msgstr "Open a workspace first."
@@ -6751,6 +6751,10 @@ msgstr "Or something else you would like to talk about"
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Order sections as {0}"
 msgstr "Order sections as {0}"
+
+#: apps/web/src/operator.tsx
+msgid "Organisation"
+msgstr "Organisation"
 
 #: apps/web/src/operator-trace.tsx
 msgid "Organisation id"
@@ -10101,6 +10105,10 @@ msgstr "The local model is still downloading, so runs fall back to keyword retri
 msgid "The local model was removed."
 msgstr "The local model was removed."
 
+#: apps/web/src/operator-trace.tsx
+msgid "The member's account space. Each feedback note shows it under Context, as Organisation."
+msgstr "The member's account space. Each feedback note shows it under Context, as Organisation."
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "The model could not be installed."
 msgstr "The model could not be installed."
@@ -11467,6 +11475,10 @@ msgstr "View progress"
 #: packages/ui/src/review.tsx
 msgid "View requirements"
 msgstr "View requirements"
+
+#: apps/web/src/operator.tsx
+msgid "View the run's trace"
+msgstr "View the run's trace"
 
 #: packages/ui/src/earlier-run-view.tsx
 msgid "Viewing an earlier run."

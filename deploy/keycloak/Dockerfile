@@ -6,8 +6,7 @@
 # A cold start of the stock image runs Keycloak's build step before anything else, which on one
 # vCPU adds tens of seconds to the first sign-in after the service scaled to zero.
 
-# 26.8.2-3 (2026-11-19): the same Keycloak rebuilt on OpenJDK 21.0.13.1, which fixes CVE-2026-114938.
-FROM docker.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3 AS build
+FROM docker.io/keycloak/keycloak:26.8.2-3@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3 AS build
 
 # Build options only. Run-time options (database URL, credentials, hostname, proxy headers) stay
 # with the deployment. A deployment that sets a different value for one of these must rebuild.
@@ -16,7 +15,7 @@ ENV KC_DB=postgres \
     KC_CACHE=local
 RUN /opt/keycloak/bin/kc.sh build
 
-FROM docker.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
+FROM docker.io/keycloak/keycloak:26.8.2-3@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
 COPY --from=build /opt/keycloak/ /opt/keycloak/
 ENV KC_DB=postgres \
     KC_HEALTH_ENABLED=true \

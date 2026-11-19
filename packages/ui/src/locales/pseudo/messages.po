@@ -4022,10 +4022,6 @@ msgstr ""
 msgid "Final round"
 msgstr ""
 
-#: apps/web/src/operator-trace.tsx
-msgid "Find a member's run by the organisation and run id its feedback note names. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
-msgstr ""
-
 #: packages/ui/src/review.tsx
 msgid "finding"
 msgstr ""
@@ -6581,6 +6577,10 @@ msgstr ""
 msgid "Open a local workspace again. "
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "Open a run from its feedback note with View the run's trace, or type the ids from the note's context. Steps, models, errors, tokens and cost only: never what the member wrote. Each read is written to the audit log."
+msgstr ""
+
 #: packages/ui/src/workspace-start-intro.tsx
 msgid "Open a workspace first."
 msgstr ""
@@ -6749,6 +6749,10 @@ msgstr ""
 #. placeholder {0}: (suggestion.sectionOrder ?? []).join(", ")
 #: packages/ui/src/preference-suggestions-panel.tsx
 msgid "Order sections as {0}"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "Organisation"
 msgstr ""
 
 #: apps/web/src/operator-trace.tsx
@@ -10100,6 +10104,10 @@ msgstr ""
 msgid "The local model was removed."
 msgstr ""
 
+#: apps/web/src/operator-trace.tsx
+msgid "The member's account space. Each feedback note shows it under Context, as Organisation."
+msgstr ""
+
 #: packages/ui/src/semantic-retrieval.tsx
 msgid "The model could not be installed."
 msgstr ""
@@ -11465,6 +11473,10 @@ msgstr ""
 
 #: packages/ui/src/review.tsx
 msgid "View requirements"
+msgstr ""
+
+#: apps/web/src/operator.tsx
+msgid "View the run's trace"
 msgstr ""
 
 #: packages/ui/src/earlier-run-view.tsx

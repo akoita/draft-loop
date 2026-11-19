@@ -73,6 +73,31 @@ describe("run job handler", () => {
     expect(requeue).not.toHaveBeenCalled();
   });
 
+  it("hands the run the deployment's fallback critic for its job (#3131)", async () => {
+    const criticFallback = {
+      company: "anthropic",
+      modelId: "claude-haiku-5-5",
+      permitted: async () => true,
+    };
+    const service = {
+      status: vi.fn<Service["status"]>(async () => snapshot("drafting")),
+      resume: vi.fn<Service["resume"]>(async () => snapshot("awaiting-approval")),
+    };
+    const criticFallbackFor = vi.fn(() => criticFallback);
+    const handler = createRunJobHandler({
+      serviceFor: () => service,
+      workspaceRoot: () => root,
+      allowProviderData: true,
+      budgetCeiling,
+      now: () => now,
+      criticFallbackFor,
+    });
+    await handler(job, { requeue: async () => undefined });
+
+    expect(criticFallbackFor).toHaveBeenCalledWith(job);
+    expect(service.resume).toHaveBeenCalledWith(expect.objectContaining({ criticFallback }));
+  });
+
   it("hands the run its span recorder and waits for its saves, also when the step throws", async () => {
     const flushed: string[] = [];
     const tracer = { startSpan: vi.fn() };

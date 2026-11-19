@@ -620,6 +620,28 @@ describe("the feedback inbox (#3002)", () => {
     expect(html).toContain("Chrome, Windows, 1280x800, fr-FR, light");
   });
 
+  it("names the note's organisation and offers the trace of the run it names (#3134)", () => {
+    const withRun: FeedbackNote = {
+      ...note,
+      context: { source: "web", serverRelease: "v1", plan: null, ids: { runId: "run-7" } },
+    };
+    const html = render(
+      <FeedbackSection
+        state={inboxOf([withRun])}
+        onTriage={triage}
+        onViewTrace={() => undefined}
+      />,
+    );
+    expect(html).toContain("<dt>Organisation</dt><dd>org-alder</dd>");
+    expect(html).toContain("View the run&#x27;s trace");
+
+    const withoutRun = render(
+      <FeedbackSection state={inboxOf([note])} onTriage={triage} onViewTrace={() => undefined} />,
+    );
+    expect(withoutRun).toContain("<dd>org-alder</dd>");
+    expect(withoutRun).not.toContain("View the run");
+  });
+
   it("drafts a public issue with the context and note id, never the member's words or ids", () => {
     const url = new URL(
       draftIssueUrl({

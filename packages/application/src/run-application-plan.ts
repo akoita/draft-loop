@@ -18,6 +18,7 @@ import {
   type ProviderApplicationPlannerDependencies,
 } from "./application-plan-agent.js";
 import { CliUserError } from "./cli-user-error.js";
+import type { RunCriticFallback } from "./critic-fallback.js";
 import type { ProviderCriticAgentDependencies } from "./provider-critic-agent.js";
 import type { PreferredRequirementEvidence } from "./requirement-achievement-plan.js";
 import type { RecordAuthorInput } from "./run-author-input.js";
@@ -55,6 +56,8 @@ export interface RunRecorders {
   readonly preferredEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
   /** The map's candidates per requirement for the critic (#2983); absent uses words. */
   readonly criticMapEvidence?: () => Promise<PreferredRequirementEvidence | undefined>;
+  /** The deployment's fallback critic (#3131); absent keeps the configured critic only. */
+  readonly criticFallback?: RunCriticFallback;
 }
 
 /** The recorders of a run; planning is on unless the run options turn it off. */
