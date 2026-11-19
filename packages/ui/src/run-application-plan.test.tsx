@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { createCapabilityPort, type NativeBridge } from "./bridge.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   applicationPlanCutKeys,
@@ -39,7 +39,7 @@ const plan: RunApplicationPlanView = {
 };
 
 function render(applicationPlan?: RunApplicationPlanView | null): string {
-  const state: DesktopReviewState = {
+  const state: ReviewScreenState = {
     ...createFixtureReviewState(),
     ...(applicationPlan === undefined ? {} : { applicationPlan }),
   };

@@ -19,7 +19,7 @@ import { t } from "@lingui/core/macro";
 import { type JSX, useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { MarkdownFileSaveResult } from "./bridge.js";
 import { BlockRedline, pairDraftSections } from "./draft-redline.js";
-import type { DesktopReviewState, ReviewArtifact } from "./model.js";
+import type { ReviewScreenState, ReviewArtifact } from "./model.js";
 import {
   comparisonMarkdownFits,
   runComparisonFileName,
@@ -38,7 +38,7 @@ import { type ChooseRunDraft, RunDraftChoice, runDraftChoiceOffered } from "./ru
 export type { ChooseRunDraft };
 
 /** Reads one of the application's runs for comparison without opening it. */
-export type LoadRunForComparison = (runId: string) => Promise<DesktopReviewState>;
+export type LoadRunForComparison = (runId: string) => Promise<ReviewScreenState>;
 
 /** Saves Markdown where the reviewer picks in a save dialog. */
 export type SaveMarkdownFile = (
@@ -66,7 +66,7 @@ function messageOf(reason: unknown): string {
  * leaves it unless something on the page already answered the key.
  */
 export function useRunComparison(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   loadRun: LoadRunForComparison | undefined,
   initial: RunComparisonState | null = null,
 ): RunComparisonControls {
@@ -121,7 +121,7 @@ function SideHeading({
 }: {
   readonly side: ComparisonSide;
   readonly id: string;
-  readonly runs: DesktopReviewState["applicationRuns"];
+  readonly runs: ReviewScreenState["applicationRuns"];
   readonly onChooseRun: ChooseRunDraft | undefined;
 }): JSX.Element {
   const { facts } = side;
@@ -330,7 +330,7 @@ export function RunComparisonView({
   onChooseRun,
 }: {
   readonly comparison: RunComparisonState;
-  readonly state: DesktopReviewState;
+  readonly state: ReviewScreenState;
   readonly onSwap: () => void;
   readonly onClose: () => void;
   /** Saves the exported comparison; absent when the host cannot save a file. */

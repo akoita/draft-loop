@@ -14,12 +14,12 @@ import {
   reloadStillValid,
   showAutoCreateHint,
 } from "./knowledge-current.js";
-import type { DesktopKnowledgeCapabilities } from "./native.js";
+import type { HostKnowledgeCapabilities } from "./native.js";
 import { submitOnEnter } from "./submit-on-enter.js";
 
 export interface KnowledgeWorkspaceProps {
   readonly workspaceId: string;
-  readonly capabilities: DesktopKnowledgeCapabilities;
+  readonly capabilities: HostKnowledgeCapabilities;
   readonly disabled: boolean;
   /** Bumped whenever the workspace's knowledge may have changed elsewhere, such as card 02. */
   readonly revision?: number;
@@ -35,8 +35,8 @@ export interface KnowledgeWorkspaceProps {
 }
 
 export function hasDesktopKnowledgeCapabilities(
-  capabilities: DesktopKnowledgeCapabilities,
-): capabilities is Required<DesktopKnowledgeCapabilities> {
+  capabilities: HostKnowledgeCapabilities,
+): capabilities is Required<HostKnowledgeCapabilities> {
   return (
     capabilities.createCandidateKnowledgeStore !== undefined &&
     capabilities.openCandidateKnowledgeStore !== undefined &&
@@ -49,9 +49,9 @@ export function hasDesktopKnowledgeCapabilities(
  * the hosted service with its one store per tenant, chooses among its bases but switches no store.
  */
 export function hasKnowledgeSelection(
-  capabilities: DesktopKnowledgeCapabilities,
-): capabilities is DesktopKnowledgeCapabilities &
-  Required<Pick<DesktopKnowledgeCapabilities, "selectCandidateKnowledgeBase">> {
+  capabilities: HostKnowledgeCapabilities,
+): capabilities is HostKnowledgeCapabilities &
+  Required<Pick<HostKnowledgeCapabilities, "selectCandidateKnowledgeBase">> {
   return capabilities.selectCandidateKnowledgeBase !== undefined;
 }
 

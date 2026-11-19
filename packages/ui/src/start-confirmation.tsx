@@ -4,7 +4,7 @@ import { countedNouns } from "./counted-nouns.js";
 import { formatLimitDuration } from "./execution-limits.js";
 import { HostStartDialog } from "./host-panels.js";
 import { localWriterWarningFor } from "./local-writer-warning.js";
-import type { CandidateProfileSelection, DesktopReviewState, ReviewAction } from "./model.js";
+import type { CandidateProfileSelection, ReviewScreenState, ReviewAction } from "./model.js";
 import {
   modelProfileEntryForReference,
   modelProfilePresets,
@@ -125,14 +125,14 @@ const sessionRouteLabels = (): Readonly<Record<"anthropic" | "openai", string>> 
 export const apiKeyRouteLabel = () => t`API key, billed per token`;
 export const demoRouteLabel = () => t`Demo, no provider call`;
 
-function routeOf(state: DesktopReviewState, company: string): ProviderRoute | null {
+function routeOf(state: ReviewScreenState, company: string): ProviderRoute | null {
   const provider = company.trim().toLowerCase();
   if (state.providerRoutes === undefined) return null;
   if (provider !== "anthropic" && provider !== "openai") return null;
   return state.providerRoutes[provider];
 }
 
-function routeLabel(state: DesktopReviewState, company: string): string | null {
+function routeLabel(state: ReviewScreenState, company: string): string | null {
   if (state.setup.fixtureMode) return demoRouteLabel();
   const route = routeOf(state, company);
   if (route === null) return null;
@@ -147,7 +147,7 @@ export const chosenRawJobDescriptionValue = () =>
 /** The requirements line when the application has no brief, so the run reads the job text. */
 export const jobTextRequirementsValue = () => t`Read from the job text (no requirements brief)`;
 
-function requirementsValue(state: DesktopReviewState, context: StartConfirmationContext): string {
+function requirementsValue(state: ReviewScreenState, context: StartConfirmationContext): string {
   if (context.action.requirementsSource === "job-description")
     return chosenRawJobDescriptionValue();
   const reviewed = context.reviewedRequirements;
@@ -228,7 +228,7 @@ export function requestStartEvidencePreview(
   };
 }
 
-function writingPolicyValue(state: DesktopReviewState): string {
+function writingPolicyValue(state: ReviewScreenState): string {
   if (state.setup.writingPolicyStatus === "unavailable") return t`Unavailable`;
   if (state.setup.writingPolicyStatus === "active") {
     return state.setup.writingPolicy === null
@@ -238,7 +238,7 @@ function writingPolicyValue(state: DesktopReviewState): string {
   return t`None`;
 }
 
-function callLimitValue(state: DesktopReviewState): string | null {
+function callLimitValue(state: ReviewScreenState): string | null {
   const routes = state.providerRoutes;
   if (state.setup.fixtureMode || routes === undefined) return null;
   const author = routeOf(state, state.providerTransmissionPreflight.author.company);
@@ -250,7 +250,7 @@ function callLimitValue(state: DesktopReviewState): string | null {
   return null;
 }
 
-function changedPairNote(state: DesktopReviewState): string | null {
+function changedPairNote(state: ReviewScreenState): string | null {
   const latest = state.applicationRuns?.find((row) => row.latest) ?? state.applicationRuns?.[0];
   if (latest === undefined || latest.authorModel === "" || latest.criticModel === "") return null;
   const { author, critic } = state.providerTransmissionPreflight;
@@ -276,7 +276,7 @@ export function startReasoningLevel(
 
 /** Everything the start confirmation shows, worked out from the review state alone. */
 export function startConfirmationSummary(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   context: StartConfirmationContext,
 ): StartConfirmationSummary {
   const { author, critic } = state.providerTransmissionPreflight;

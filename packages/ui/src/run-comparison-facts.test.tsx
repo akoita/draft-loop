@@ -4,7 +4,7 @@ import type { ApplicationRunRowView } from "./application-run-list.js";
 import type { ReviewCoverageView } from "./coverage-contract.js";
 import {
   createFixtureReviewState,
-  type DesktopReviewState,
+  type ReviewScreenState,
   type ReviewArtifact,
   type ReviewFinding,
   type RunWritingPolicyProjection,
@@ -107,7 +107,7 @@ function draft(id: string, opening: string): ReviewArtifact {
   };
 }
 
-const oldRun: DesktopReviewState = {
+const oldRun: ReviewScreenState = {
   ...fixture,
   runId: "run-old",
   applicationRuns: runs,
@@ -126,7 +126,7 @@ const oldRun: DesktopReviewState = {
   artifact: draft("artifact-old", "An earlier opening line."),
 };
 
-const newRun: DesktopReviewState = {
+const newRun: ReviewScreenState = {
   ...fixture,
   runId: "run-new",
   applicationRuns: runs,
@@ -145,7 +145,7 @@ const newRun: DesktopReviewState = {
   artifact: draft("artifact-new", "A sharper opening line."),
 };
 
-function withInputs(state: DesktopReviewState, runInputs: RunInputsView): DesktopReviewState {
+function withInputs(state: ReviewScreenState, runInputs: RunInputsView): ReviewScreenState {
   return { ...state, runInputs };
 }
 
@@ -183,7 +183,7 @@ describe("the facts each run recorded", () => {
   });
 
   it("reads models from the run's own row, never from the configured pair", () => {
-    const reconfigured: DesktopReviewState = {
+    const reconfigured: ReviewScreenState = {
       ...newRun,
       providerExposure: {
         ...newRun.providerExposure,
@@ -200,7 +200,7 @@ describe("the facts each run recorded", () => {
   });
 
   it("says not recorded for what a run did not record", () => {
-    const bare: DesktopReviewState = {
+    const bare: ReviewScreenState = {
       ...fixture,
       runId: "run-bare",
       applicationRuns: [row("run-bare", { authorModel: "", criticModel: "" })],

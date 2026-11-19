@@ -24,7 +24,7 @@ import { projectApprovalReadiness } from "@draft-loop/ui/approval-readiness";
 import type { RunWritingPolicyProjection } from "@draft-loop/ui/bridge";
 import { findingRequirement } from "@draft-loop/ui/finding-requirement";
 import type {
-  DesktopReviewState,
+  ReviewScreenState,
   FindingDecision,
   IndependentReviewView,
   ProviderFailureView,
@@ -76,7 +76,7 @@ function folderName(root: string): string {
   );
 }
 
-export function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
+export function runState(snapshot: RunSnapshot): ReviewScreenState["state"] {
   if (
     snapshot.state === "awaiting-approval" &&
     snapshot.artifact !== null &&
@@ -397,7 +397,7 @@ export function reviewState(
     anthropic: "api-key",
     openai: "api-key",
   },
-): DesktopReviewState {
+): ReviewScreenState {
   const artifact =
     snapshot.artifact === null
       ? {
@@ -482,7 +482,7 @@ export function emptyReviewState(
     anthropic: "api-key",
     openai: "api-key",
   },
-): DesktopReviewState {
+): ReviewScreenState {
   return {
     workspaceId: descriptor.id,
     workspaceName: overrides.workspaceName ?? folderName(descriptor.root),

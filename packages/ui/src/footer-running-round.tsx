@@ -12,7 +12,7 @@ import { t } from "@lingui/core/macro";
 import type { JSX } from "react";
 import { formatElapsedDuration } from "./elapsed-duration.js";
 import { executionLimitText } from "./execution-limits.js";
-import type { DesktopReviewState, ReviewExecutionView } from "./model.js";
+import type { ReviewScreenState, ReviewExecutionView } from "./model.js";
 import { reviewInProgress, runActivity } from "./review-run-status.js";
 
 /** The directions the candidate sent with Request revision, and the round they steer. */
@@ -24,7 +24,7 @@ export interface SentRevisionDirection {
 
 /** The directions request for the run on screen: they steer the round after the reviewed one. */
 export function sentRevisionDirection(
-  state: Pick<DesktopReviewState, "runId" | "round">,
+  state: Pick<ReviewScreenState, "runId" | "round">,
   direction: string,
 ): SentRevisionDirection | null {
   const text = direction.trim();
@@ -57,7 +57,7 @@ export function executionLine(execution: ReviewExecutionView): string | null {
 
 export interface FooterRunningRoundInput {
   readonly state: Pick<
-    DesktopReviewState,
+    ReviewScreenState,
     "runId" | "state" | "execution" | "round" | "artifact" | "setup" | "reviewComplete"
   >;
   readonly sentDirection: SentRevisionDirection | null;

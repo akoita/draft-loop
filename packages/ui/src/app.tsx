@@ -51,7 +51,7 @@ import { KNOWN_GAP_RATIONALE } from "./known-gaps.js";
 import { LocalWriterWarning } from "./local-writer-warning.js";
 import type {
   CandidateProfileSelection,
-  DesktopReviewState,
+  ReviewScreenState,
   FindingDecision,
   ReviewAction,
 } from "./model.js";
@@ -82,9 +82,9 @@ import {
 } from "./model-profile-picker-state.js";
 import { hasFallbackModelSuggestions, ModelSuggestionDatalist } from "./model-suggestions.js";
 import {
-  createDesktopReviewPort,
-  DesktopBridgeError,
-  type DesktopSetupPort,
+  createReviewScreenPort,
+  HostBridgeError,
+  type HostSetupPort,
   type WorkspaceModelSelection,
 } from "./native.js";
 import {
@@ -140,13 +140,13 @@ const runRefreshIntervalMs = 750;
 type BulkFindingDecision = Exclude<FindingDecision, "pending">;
 
 export async function dispatchFindingDecisions(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   findingIds: readonly string[],
   decision: BulkFindingDecision,
-  dispatch: (state: DesktopReviewState, action: ReviewAction) => Promise<DesktopReviewState>,
-  onProgress: (state: DesktopReviewState) => void = () => undefined,
+  dispatch: (state: ReviewScreenState, action: ReviewAction) => Promise<ReviewScreenState>,
+  onProgress: (state: ReviewScreenState) => void = () => undefined,
   rationale?: string,
-): Promise<DesktopReviewState> {
+): Promise<ReviewScreenState> {
   let next = state;
   for (const findingId of findingIds) {
     next = await dispatch(next, {
@@ -545,7 +545,7 @@ export function workspaceModelSelection(draft: WorkspaceSetupDraft): WorkspaceMo
  */
 export function workspaceSetupFailureMessage(reason: unknown, draft: WorkspaceSetupDraft): string {
   const base = messageOf(reason, t`The workspace could not be created.`);
-  const refusedInput = reason instanceof DesktopBridgeError && reason.code === "invalid-input";
+  const refusedInput = reason instanceof HostBridgeError && reason.code === "invalid-input";
   if (refusedInput && requiresLocalEndpoint(draft) && draft.localEndpoint.trim() !== "") {
     return t`${base} Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password.`;
   }
@@ -936,7 +936,7 @@ export function App({
   hostActions,
   startView,
 }: {
-  readonly port?: DesktopSetupPort;
+  readonly port?: HostSetupPort;
   /** The page the first workspace opens on, such as Career evidence from a shared link. */
   readonly startView?: WorkspaceView;
   /**
@@ -945,8 +945,8 @@ export function App({
    */
   readonly hostActions?: ReactNode;
 }) {
-  const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
-  const [state, setState] = useState<DesktopReviewState | null>(null);
+  const activePort = useMemo(() => port ?? createReviewScreenPort(), [port]);
+  const [state, setState] = useState<ReviewScreenState | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The startup load found no open workspace: show the start page without an error.
   const [noWorkspaceOpen, setNoWorkspaceOpen] = useState(false);
@@ -1511,7 +1511,7 @@ export function App({
       current?.workspaceId === workspaceId ? null : current,
     );
     setProfileResetEpoch((current) => current + 1);
-    let loaded: DesktopReviewState;
+    let loaded: ReviewScreenState;
     try {
       loaded = await activePort.load();
     } catch (reason: unknown) {
@@ -1743,7 +1743,7 @@ export function App({
   };
 
   /** The pair the next run uses: the loaded application's own, or the workspace's. */
-  const runPairSummary = (current: DesktopReviewState) => (
+  const runPairSummary = (current: ReviewScreenState) => (
     <WorkspaceModelSummary
       title={
         loadedApplicationPair === null
@@ -1757,7 +1757,7 @@ export function App({
     />
   );
 
-  const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
+  const prepareModelEditorDraft = (workspace: ReviewScreenState) => {
     const settings = workspaceModelSettingsDraft(workspace);
     setDraft((current) => workspaceModelEditorDraftFromState(current, workspace));
     setModelFilters({

@@ -137,7 +137,7 @@ import {
 import { normalizeFindingRequirement } from "./finding-requirement.js";
 import type {
   CriticFallbackView,
-  DesktopReviewState,
+  ReviewScreenState,
   IndependentReviewView,
   OpportunityBriefSelection,
   PendingWritingPolicyOverride,
@@ -1507,7 +1507,7 @@ const workspaceReadinessKeys = [
   "ready",
   "nextSteps",
 ] as const;
-const desktopReviewStateKeys = [
+const reviewScreenStateKeys = [
   "workspaceId",
   "workspaceName",
   "runId",
@@ -1631,7 +1631,7 @@ function normalizeReviewFindings(value: unknown): readonly unknown[] {
   });
 }
 
-export type ReviewStateResult = DesktopReviewState;
+export type ReviewStateResult = ReviewScreenState;
 
 /** Whether the file was saved, and the name the person gave it; no folder crosses back. */
 export interface MarkdownFileSaveResult {
@@ -5878,7 +5878,7 @@ function normalizeReviewProfileSuggestions(
 
 function normalizeReviewState(value: unknown): ReviewStateResult {
   if (!isRecord(value)) return invalidInput();
-  if (!hasOnlyKeys(value, desktopReviewStateKeys)) return invalidInput();
+  if (!hasOnlyKeys(value, reviewScreenStateKeys)) return invalidInput();
   if (
     typeof value.workspaceId !== "string" ||
     typeof value.runId !== "string" ||
@@ -6143,7 +6143,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...(providerRoutes === undefined ? {} : { providerRoutes }),
     ...(earlierRun === undefined ? {} : { earlierRun }),
     ...(profileSuggestions === undefined ? {} : { profileSuggestions }),
-  } as unknown as DesktopReviewState;
+  } as unknown as ReviewScreenState;
 }
 
 function normalizeMarkdownFileSaveResult(value: unknown): MarkdownFileSaveResult {

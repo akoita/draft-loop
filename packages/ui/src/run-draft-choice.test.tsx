@@ -7,7 +7,7 @@ import { bridgeCapabilities } from "./bridge-capabilities.js";
 import { chosenRunAllowsAction, normalizeEarlierRun } from "./earlier-run.js";
 import { EarlierRunNotice } from "./earlier-run-view.js";
 import { applicationChosenRunText, applicationRunToOpen } from "./home-model.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 import { RunComparisonView } from "./run-comparison.js";
 import { runComparisonReducer } from "./run-comparison-model.js";
@@ -29,7 +29,7 @@ function row(runId: string, extra: Partial<ApplicationRunRowView> = {}): Applica
   };
 }
 
-function comparisonOf(state: DesktopReviewState, otherRunId: string) {
+function comparisonOf(state: ReviewScreenState, otherRunId: string) {
   const chosen = runComparisonReducer(null, {
     type: "choose",
     workspaceId: state.workspaceId,
@@ -55,7 +55,7 @@ describe("Use this run's draft", () => {
   });
 
   it("shows the button on the earlier side of the comparison only", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       applicationRuns: [row(fixture.runId, { latest: true }), row("run-earlier")],
     };
@@ -83,7 +83,7 @@ describe("Use this run's draft", () => {
   });
 
   it("marks the chosen side and offers the latest run back", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...fixture,
       applicationRuns: [row(fixture.runId, { latest: true }), row("run-earlier", { chosen: true })],
     };

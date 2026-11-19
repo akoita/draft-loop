@@ -38,7 +38,7 @@ import { ExportTemplatePreview } from "./export-template-picker.js";
 import { ACCEPT_UNAVAILABLE_NOTE } from "./finding-decision-help.js";
 import { type FooterRunningRound, FooterRunningRoundStrip } from "./footer-running-round.js";
 import {
-  type DesktopReviewState,
+  type ReviewScreenState,
   type ExportFormat,
   exportFormatLabels,
   exportFormats,
@@ -140,7 +140,7 @@ export function compactReadinessBlockerGroup(
  * final CV checks then describe the reviewed version, before the edits, and run again at approval.
  */
 export function footerBlocker(
-  state: DesktopReviewState,
+  state: ReviewScreenState,
   readiness: ApprovalReadiness | null,
   verdict: SendVerdict | null,
   edited = false,
@@ -262,7 +262,7 @@ export function footerBlocker(
  * still running, an unacknowledged transmission).
  */
 export function revisionUnavailableReason(
-  state: Pick<DesktopReviewState, "state" | "approval" | "round" | "reviewComplete">,
+  state: Pick<ReviewScreenState, "state" | "approval" | "round" | "reviewComplete">,
   maximumRounds: number,
 ): string | null {
   if (state.approval === "approved" || state.state === "approved" || state.state === "exported") {

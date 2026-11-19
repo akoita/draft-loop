@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ApplicationJobResult } from "./application-job-contract.js";
 import { JobCopyActions, JobDescriptionView, jobOriginNote } from "./job-description-panel.js";
-import { createFixtureReviewState, type DesktopReviewState } from "./model.js";
+import { createFixtureReviewState, type ReviewScreenState } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
 import {
   availableReviewWorkTab,
@@ -95,7 +95,7 @@ describe("the Job tab", () => {
   });
 
   it("appears beside Findings in the review once a run exists, and only with a reader", () => {
-    const state: DesktopReviewState = {
+    const state: ReviewScreenState = {
       ...createFixtureReviewState(),
       state: "awaiting-approval",
       coverage: null,
