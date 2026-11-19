@@ -1010,6 +1010,7 @@ msgstr ""
 msgid "about {0}"
 msgstr ""
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "About DraftLoop"
 msgstr ""
@@ -4451,6 +4452,7 @@ msgstr ""
 msgid "Health > Notes"
 msgstr ""
 
+#: apps/web/src/help-menu.tsx
 #: packages/ui/src/help-panel.tsx
 msgid "Help"
 msgstr ""
@@ -6603,6 +6605,10 @@ msgstr ""
 msgid "Open the command palette"
 msgstr ""
 
+#: packages/ui/src/help-panel.tsx
+msgid "Open the full guide in a new tab"
+msgstr ""
+
 #: apps/web/src/operator.tsx
 msgid "Open the issue"
 msgstr ""
@@ -7224,6 +7230,10 @@ msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Questions written by"
+msgstr ""
+
+#: apps/web/src/help-menu.tsx
+msgid "Quick help"
 msgstr ""
 
 #: packages/ui/src/career-interview-panel.tsx
@@ -8648,6 +8658,7 @@ msgid "Send"
 msgstr ""
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/help-menu.tsx
 msgid "Send feedback"
 msgstr ""
 
@@ -11245,6 +11256,7 @@ msgstr ""
 msgid "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 msgstr ""
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "User guide"
 msgstr ""

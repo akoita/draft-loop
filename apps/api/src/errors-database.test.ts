@@ -1,3 +1,4 @@
+import { RunHistoryNotReadyError } from "@draft-loop/application";
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
 
@@ -38,5 +39,19 @@ describe("database errors", () => {
 
     expect(response.statusCode).toBe(500);
     expect(JSON.stringify(logs)).toContain("runs_pkey");
+  });
+
+  it("answers an approval or revision asked before the round is saved with a retryable 409", async () => {
+    const app = Fastify();
+    app.setErrorHandler(sendError);
+    app.post("/revision", async () => {
+      throw new RunHistoryNotReadyError("run-1");
+    });
+    const response = await app.inject({ method: "POST", url: "/revision" });
+    await app.close();
+
+    expect(response.statusCode).toBe(409);
+    expect(response.headers["retry-after"]).toBe("1");
+    expect(response.json().error.code).toBe("not_ready");
   });
 });

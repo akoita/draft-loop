@@ -350,7 +350,11 @@ describe.runIf(apiUrl !== undefined)("local server stack", () => {
       // Like a decision, a revision asked while the draft history is still being saved
       // answers a retryable 409 not_ready (#2210); a failure is not replayed for its key.
       let revision = await revise();
-      if (revision.status === 409 && revision.body.error?.code === "not_ready") {
+      for (
+        let attempt = 0;
+        attempt < 10 && revision.status === 409 && revision.body.error?.code === "not_ready";
+        attempt += 1
+      ) {
         await new Promise((resolve) => setTimeout(resolve, 1_000));
         revision = await revise();
       }

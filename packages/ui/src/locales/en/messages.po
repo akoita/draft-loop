@@ -1010,6 +1010,7 @@ msgstr "A technology I have not used"
 msgid "about {0}"
 msgstr "about {0}"
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "About DraftLoop"
 msgstr "About DraftLoop"
@@ -4451,6 +4452,7 @@ msgstr "Headings, top level first, separated by >"
 msgid "Health > Notes"
 msgstr "Health > Notes"
 
+#: apps/web/src/help-menu.tsx
 #: packages/ui/src/help-panel.tsx
 msgid "Help"
 msgstr "Help"
@@ -6604,6 +6606,10 @@ msgstr "Open the application"
 msgid "Open the command palette"
 msgstr "Open the command palette"
 
+#: packages/ui/src/help-panel.tsx
+msgid "Open the full guide in a new tab"
+msgstr "Open the full guide in a new tab"
+
 #: apps/web/src/operator.tsx
 msgid "Open the issue"
 msgstr "Open the issue"
@@ -7226,6 +7232,10 @@ msgstr "Questions to ask"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Questions written by"
 msgstr "Questions written by"
+
+#: apps/web/src/help-menu.tsx
+msgid "Quick help"
+msgstr "Quick help"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Quick replies"
@@ -8649,6 +8659,7 @@ msgid "Send"
 msgstr "Send"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/help-menu.tsx
 msgid "Send feedback"
 msgstr "Send feedback"
 
@@ -11246,6 +11257,7 @@ msgstr "Used for applications"
 msgid "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 msgstr "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "User guide"
 msgstr "User guide"

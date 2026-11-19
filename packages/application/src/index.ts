@@ -1080,6 +1080,7 @@ export * from "./knowledge-base.js";
 export * from "./knowledge-source-dedupe.js";
 export type { KnowledgeStoreOpener } from "./knowledge-store-opener.js";
 export * from "./legacy-evidence-migration.js";
+export { RunHistoryNotReadyError } from "./lifecycle-decision.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
 export type { AnthropicRouteFactory } from "./local-provider-adapter.js";

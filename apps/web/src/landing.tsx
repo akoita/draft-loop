@@ -35,6 +35,23 @@ export function LegalLinks({ newTab = false }: { readonly newTab?: boolean }) {
   );
 }
 
+/** The public About and User guide pages in the screen's language (#3083, #3096). */
+export function SitePageLinks({ newTab = false }: { readonly newTab?: boolean }) {
+  const target = newTab ? { target: "_blank", rel: "noopener" } : {};
+  const french = currentScreenLanguage() === "fr";
+  return (
+    <>
+      <a href={french ? "/about/fr/" : "/about/"} {...target}>
+        {t`About DraftLoop`}
+      </a>
+      {" · "}
+      <a href={french ? "/guide/fr/" : "/guide/"} {...target}>
+        {t`User guide`}
+      </a>
+    </>
+  );
+}
+
 export interface WaitlistFormViewProps {
   readonly email: string;
   readonly consent: boolean;
@@ -195,11 +212,7 @@ export function Landing({
           <WaitlistForm {...(fetchImpl === undefined ? {} : { fetchImpl })} />
         </section>
         <footer>
-          <a href={currentScreenLanguage() === "fr" ? "/about/fr/" : "/about/"}>
-            {t`About DraftLoop`}
-          </a>
-          {" · "}
-          <a href={currentScreenLanguage() === "fr" ? "/guide/fr/" : "/guide/"}>{t`User guide`}</a>
+          <SitePageLinks />
           {" · "}
           <LegalLinks />
         </footer>

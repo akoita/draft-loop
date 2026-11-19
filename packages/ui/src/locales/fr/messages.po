@@ -1004,6 +1004,7 @@ msgstr "Une technologie que je n’ai pas utilisée"
 msgid "about {0}"
 msgstr "environ {0}"
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "About DraftLoop"
 msgstr "À propos de DraftLoop"
@@ -4445,6 +4446,7 @@ msgstr "Titres, du plus haut niveau au plus bas, séparés par >"
 msgid "Health > Notes"
 msgstr "Santé > Notes"
 
+#: apps/web/src/help-menu.tsx
 #: packages/ui/src/help-panel.tsx
 msgid "Help"
 msgstr "Aide"
@@ -6598,6 +6600,10 @@ msgstr "Ouvrir la candidature"
 msgid "Open the command palette"
 msgstr "Ouvrir la palette de commandes"
 
+#: packages/ui/src/help-panel.tsx
+msgid "Open the full guide in a new tab"
+msgstr "Ouvrir le guide complet dans un nouvel onglet"
+
 #: apps/web/src/operator.tsx
 msgid "Open the issue"
 msgstr "Ouvrir le ticket"
@@ -7220,6 +7226,10 @@ msgstr "Questions à poser"
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Questions written by"
 msgstr "Questions rédigées par"
+
+#: apps/web/src/help-menu.tsx
+msgid "Quick help"
+msgstr "Aide rapide"
 
 #: packages/ui/src/career-interview-panel.tsx
 msgid "Quick replies"
@@ -8643,6 +8653,7 @@ msgid "Send"
 msgstr "Envoyer"
 
 #: apps/web/src/feedback.tsx
+#: apps/web/src/help-menu.tsx
 msgid "Send feedback"
 msgstr "Envoyer un avis"
 
@@ -11240,6 +11251,7 @@ msgstr "Utilisé pour les candidatures"
 msgid "Used one workspace per job? Choose the folder of that workspace, not an application, to import its job, briefs, runs and exports as a new application here. The other workspace is not changed, and profiles are not merged."
 msgstr "Vous utilisiez un espace de travail par offre ? Choisissez le dossier de cet espace de travail, pas une candidature, pour importer son offre, ses briefs, ses exécutions et ses exports comme nouvelle candidature ici. L’autre espace de travail n’est pas modifié, et les profils ne sont pas fusionnés."
 
+#: apps/web/src/help-menu.tsx
 #: apps/web/src/landing.tsx
 msgid "User guide"
 msgstr "Guide d’utilisation"

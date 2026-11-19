@@ -6,8 +6,7 @@ import { t } from "@lingui/core/macro";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { type ApiClient, ApiRequestError, type ApiSchemas } from "./api-client.js";
 import { useDisplayPreference } from "./display-preference.js";
-import { FeedbackButton } from "./feedback.js";
-import { WebHelpButton } from "./help-support.js";
+import { WebHelpMenu } from "./help-menu.js";
 import { OperatorButton, OperatorPage } from "./operator.js";
 import { operatorTarget } from "./operator-model.js";
 import { RecordContext } from "./record-context.js";
@@ -155,9 +154,8 @@ export function Shell({
     <>
       <ServiceStatus health={health} />
       <ScreenLanguageMenu />
-      <WebHelpButton client={client} mode={mode} />
-      {/* Owner-token mode has no members, so only sign-in mode sends feedback (#2828). */}
-      {mode === "sign-in" ? <FeedbackButton client={client} /> : null}
+      {/* Send feedback sits in the Help menu, in sign-in mode only (#2828). */}
+      <WebHelpMenu client={client} mode={mode} />
     </>
   );
   // Sign-in mode signs out from the account menu, which also says who is signed in. The owner
