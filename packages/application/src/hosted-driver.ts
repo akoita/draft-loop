@@ -52,6 +52,7 @@ export const hostedDriverMethods = [
   "getCanonicalCandidateProfile",
   "listCanonicalCandidateProfileVersions",
   "getCandidateProfileFreshness",
+  "estimateCanonicalCandidateProfileDerivation",
   "editCanonicalCandidateProfile",
   "reviewCanonicalCandidateProfile",
   "createApplication",

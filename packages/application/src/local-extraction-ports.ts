@@ -1,7 +1,7 @@
 import type { ModelSelection } from "@draft-loop/domain";
 import type { JsonObject } from "@draft-loop/providers";
 import { opportunityExtractionProposalJsonSchema } from "@draft-loop/schemas";
-
+import type { CanonicalProfileExtractionBudget } from "./candidate-profile-derivation-estimate.js";
 import type {
   CanonicalCandidateProfileExtractionPort,
   CanonicalCandidateProfileExtractionRequest,
@@ -33,6 +33,7 @@ import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
 } from "./opportunity-extraction.js";
+import { catalogModelPricing } from "./provider-model-pricing.js";
 
 /*
  * Extraction ports for the local driver. A fixture-mode (demo) workspace gets the deterministic
@@ -173,4 +174,18 @@ export function canonicalProfileExtractionPortFor(
   return config.fixtureMode
     ? createFixtureCanonicalCandidateProfileExtractionPort()
     : createProviderCanonicalCandidateProfileExtractionPort(config, options);
+}
+
+/** The extraction model's output budget and catalog price, for a derivation estimate (#3182). */
+export function canonicalProfileExtractionBudgetFor(
+  config: WorkspaceConfig,
+  options: Pick<ProviderCanonicalCandidateProfileExtractionOptions, "providerAuthMode"> = {},
+): CanonicalProfileExtractionBudget {
+  if (config.fixtureMode) return {};
+  const model = canonicalProfileExtractionModel(config.authorCompany, config.authorModel);
+  const anthropic = resolveProviderAuthModes(options.providerAuthMode).anthropic;
+  return {
+    maxOutputTokens: canonicalProfileRequest(model, anthropic).maxOutputTokens,
+    pricing: catalogModelPricing(model),
+  };
 }

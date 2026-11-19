@@ -36,6 +36,7 @@ import type {
 } from "./application-folders.js";
 import type { RecordApplicationJobPageCommand } from "./application-job-page.js";
 import type { CanonicalCandidateProfileDerivationResult } from "./candidate-profile-derivation.js";
+import type { CanonicalCandidateProfileDerivationEstimate } from "./candidate-profile-derivation-estimate.js";
 import type {
   CandidateProfileFreshness,
   CandidateProfileFreshnessCommand,
@@ -48,6 +49,7 @@ import type { RunCriticFallback } from "./critic-fallback.js";
 import type { EvidenceModePreview, EvidenceModePreviewCommand } from "./evidence-mode-preview.js";
 import type { ExportPreview, ExportPreviewCommand } from "./export-preview.js";
 import type { CompactHistoryCommand, CompactHistoryResult } from "./history-compaction.js";
+import type { EstimateLocalCanonicalProfileDerivationCommand } from "./local-profile-derivation.js";
 import type { ChoosableModelProfileEffort } from "./model-profile-efforts.js";
 import type {
   OpportunityDraftPatch,
@@ -565,6 +567,10 @@ export interface ApplicationDriver {
   readonly listCanonicalCandidateProfileVersions: (
     command: ListCanonicalCandidateProfileVersionsCommand,
   ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
+  /** What deriving the profile would send now, without a model call (#3182). */
+  readonly estimateCanonicalCandidateProfileDerivation?: (
+    command: EstimateLocalCanonicalProfileDerivationCommand,
+  ) => Promise<CanonicalCandidateProfileDerivationEstimate>;
   /** Whether the profile is current with the career evidence; offered by the local driver. */
   readonly getCandidateProfileFreshness?: (
     command: CandidateProfileFreshnessCommand,
@@ -842,6 +848,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.getCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
     listCanonicalCandidateProfileVersions: async (command) =>
       driver.listCanonicalCandidateProfileVersions({ ...command, root: requireRoot(command.root) }),
+    estimateCanonicalCandidateProfileDerivation: async (command) =>
+      requireApplicationApi(driver.estimateCanonicalCandidateProfileDerivation)({
+        ...command,
+        root: requireRoot(command.root),
+      }),
     getCandidateProfileFreshness: async (command) =>
       requireApplicationApi(driver.getCandidateProfileFreshness)({
         ...command,
@@ -1037,6 +1048,7 @@ export {
 } from "./application-job-page.js";
 export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
+export * from "./candidate-profile-derivation-estimate.js";
 export { userFixableProfileDerivationMessage } from "./candidate-profile-derivation-messages.js";
 export * from "./candidate-profile-extraction.js";
 export * from "./candidate-profile-freshness.js";

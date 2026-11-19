@@ -355,6 +355,16 @@ export interface ApiSchemas {
     readonly message?: string;
     readonly usage?: ApiSchemas["CareerProfileDerivationUsage"];
   };
+  "CareerProfileDerivationEstimate": {
+    readonly reusedSourceCount: number;
+    readonly extractedSourceCount: number;
+    readonly extractedCharacters: number;
+    readonly calls: number;
+    readonly estimatedUsd: {
+      readonly low: number;
+      readonly high: number;
+    } | null;
+  };
   "CareerProfileDerivationUsage": {
     readonly calls: number;
     readonly failedCalls: number;
@@ -2219,6 +2229,16 @@ export interface ApiOperations {
       readonly profileId: string;
     };
     readonly response: ApiSchemas["CareerProfileFreshness"];
+  };
+  "GET /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation-estimate": {
+    readonly path: {
+      readonly workspaceId: string;
+      readonly profileId: string;
+    };
+    readonly query?: {
+      readonly fullExtraction?: "true" | "false";
+    };
+    readonly response: ApiSchemas["CareerProfileDerivationEstimate"];
   };
   "POST /v1/workspaces/{workspaceId}/profiles/{profileId}/derivation": {
     readonly path: {
