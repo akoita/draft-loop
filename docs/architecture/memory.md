@@ -75,8 +75,10 @@ What each kind holds:
   rejected suggestion from coming back. Accepting writes a dated
   candidate-statement source with the quotes and saves one profile version
   citing it, without a model call; a reviewed profile stays reviewed. A
-  suggestion whose fact changed first becomes stale. The screen that offers
-  suggestions is planned (#3069).
+  suggestion whose fact changed first becomes stale. The Career profile page
+  offers them. An approval edit that changes a number, date or name is
+  matched to the fact it contradicts by a word diff, with no model call
+  (`fact-suggestion-edit.ts`); filing those at approval is next (#3167).
 - **`writing-policy`:** forbidden terms, section order and style preferences.
   Each run pins and enforces one version.
 - **`run-history`:** runs, rounds, findings, decisions and artifact versions,
